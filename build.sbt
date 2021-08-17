@@ -117,6 +117,7 @@ lazy val allAggregates = core.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
+  swaggerUi.projectRefs ++
   swaggerUiAkka.projectRefs ++
   redocAkka.projectRefs ++
   swaggerUiHttp4s.projectRefs ++
@@ -705,6 +706,15 @@ lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-doc
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
+lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-swagger-ui",
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-akka-http"))
   .settings(commonJvmSettings)
   .settings(
@@ -1199,6 +1209,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     asyncapiCirceYaml,
     asyncapiDocs,
     circeJson,
+    swaggerUi,
     swaggerUiAkka,
     swaggerUiHttp4s,
     swaggerUiZioHttp,

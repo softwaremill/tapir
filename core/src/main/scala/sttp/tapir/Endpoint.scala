@@ -3,6 +3,7 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
@@ -260,6 +261,17 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     * [[serverLogicPart]] and [[serverLogicForCurrent]].
     */
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = ServerEndpoint(this, _ => f)
+
+  /** Like [[serverLogic]], but specialised to the case when `E` (the error output type) is [[Nothing]], hence when
+    * the logic type can be simplified to `I => F[O]`.
+    */
+  def serverLogicInfallible[F[_]](f: I => F[O])(implicit eIsNothing: E =:= Nothing): ServerEndpoint[I, E, O, R, F] =
+    ServerEndpoint(this, implicit m => i => f(i).map(Right(_)))
+
+  /** Like [[serverLogic]], but specialised to the case when the logic function is pure, that is doesn't have any side
+    * effects.
+    */
+  def serverLogicPure[F[_]](f: I => Either[E, O]): ServerEndpoint[I, E, O, R, F] = ServerEndpoint(this, implicit m => i => f(i).unit)
 
   /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
     * errors.

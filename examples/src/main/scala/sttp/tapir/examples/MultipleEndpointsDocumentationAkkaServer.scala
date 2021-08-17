@@ -1,7 +1,6 @@
 package sttp.tapir.examples
 
 import java.util.concurrent.atomic.AtomicReference
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import io.circe.generic.auto._
@@ -12,7 +11,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import sttp.tapir.swagger.akkahttp.SwaggerAkka
+import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -56,13 +55,15 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
+  val swaggerUiRoute = AkkaHttpServerInterpreter().toRoute(new SwaggerUI(openApiYml).endpoints[Future])
+
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
   val routes = {
     import akka.http.scaladsl.server.Directives._
-    concat(booksListingRoute, addBookRoute, new SwaggerAkka(openApiYml).routes)
+    concat(booksListingRoute, addBookRoute, swaggerUiRoute)
   }
 
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { _ =>
@@ -73,5 +74,5 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   }
 
   // cleanup
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, Duration.Inf)
 }
