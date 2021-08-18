@@ -5,10 +5,11 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerMetricsTest,
+  ServerRejectTests,
+  ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
 }
@@ -42,7 +43,8 @@ class ZioHttpServerTest extends TestSuite {
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ServerAuthenticationTests(createServerTest).tests() ++
           new ServerMetricsTest(createServerTest).tests() ++
-          new ServerRejectTests(createServerTest, interpreter).tests()
+          new ServerRejectTests(createServerTest, interpreter).tests() ++
+          new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

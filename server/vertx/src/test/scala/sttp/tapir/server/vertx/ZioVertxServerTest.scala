@@ -10,6 +10,7 @@ import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
+  ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
 }
@@ -34,7 +35,8 @@ class ZioVertxServerTest extends TestSuite {
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerStreamingTests(createServerTest, ZioStreams).tests()
+        new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

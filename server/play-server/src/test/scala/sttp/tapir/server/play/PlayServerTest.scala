@@ -9,6 +9,7 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerStaticContentTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -29,7 +30,8 @@ class PlayServerTest extends TestSuite {
         new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
-        new PlayServerWithContextTest(backend).tests()
+        new PlayServerWithContextTest(backend).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

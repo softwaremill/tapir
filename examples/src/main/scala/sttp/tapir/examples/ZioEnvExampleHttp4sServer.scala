@@ -10,7 +10,7 @@ import zio.blocking.Blocking
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import sttp.tapir.swagger.http4s.SwaggerHttp4s
+import sttp.tapir.swagger.SwaggerUI
 import sttp.tapir.ztapir._
 import zio.clock.Clock
 import zio.console.Console
@@ -63,11 +63,14 @@ object ZioEnvExampleHttp4sServer extends App {
     OpenAPIDocsInterpreter().toOpenAPI(List(petEndpoint), "Our pets", "1.0").toYaml
   }
 
+  val swaggerRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
+    ZHttp4sServerInterpreter().from(SwaggerUI[RIO[PetService with Clock with Blocking, *]](yaml)).toRoutes
+
   // Starting the server
   val serve: ZIO[ZEnv with PetService, Throwable, Unit] = ZIO.runtime[ZEnv with PetService].flatMap { implicit runtime =>
     BlazeServerBuilder[RIO[PetService with Clock with Blocking, *]](runtime.platform.executor.asEC)
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> (petRoutes <+> new SwaggerHttp4s(yaml).routes)).orNotFound)
+      .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
       .serve
       .compile
       .drain

@@ -14,7 +14,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
-import sttp.tapir.swagger.http4s.SwaggerHttp4s
+import sttp.tapir.swagger.SwaggerUI
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
@@ -55,17 +55,19 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
   val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
   val addBookRoutes: HttpRoutes[IO] =
     Http4sServerInterpreter[IO]().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
-  val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages
   val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
+  val swaggerUIRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(SwaggerUI[IO](openApiYml))
+  val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes <+> swaggerUIRoutes
+
   override def run(args: List[String]): IO[ExitCode] = {
     // starting the server
     BlazeServerBuilder[IO](ec)
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> (routes <+> new SwaggerHttp4s(openApiYml).routes[IO])).orNotFound)
+      .withHttpApp(Router("/" -> (routes)).orNotFound)
       .resource
       .use { _ =>
         IO {

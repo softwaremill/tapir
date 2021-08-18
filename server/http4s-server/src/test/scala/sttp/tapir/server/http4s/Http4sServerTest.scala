@@ -21,6 +21,7 @@ import sttp.tapir.server.tests.{
   ServerFileMultipartTests,
   ServerMetricsTest,
   ServerRejectTests,
+  ServerStaticContentTests,
   ServerStreamingTests,
   ServerWebSocketTests,
   backendResource
@@ -121,6 +122,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       new ServerAuthenticationTests(createServerTest).tests() ++
       new ServerMetricsTest(createServerTest).tests() ++
       new ServerRejectTests(createServerTest, interpreter).tests() ++
+      new ServerStaticContentTests(interpreter, backend).tests() ++
       additionalTests()
   }
 }

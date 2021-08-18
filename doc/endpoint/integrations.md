@@ -131,3 +131,7 @@ object types {
 
 Resulting schema will be equivalent to `implicitly[Schema[Int]].map(i => Some(types.Amount(i)))`.
 Note that due to limitations of the `derevo` library one can't provide custom description for generated schema.
+
+## Next
+
+Read on about [serving static content](static.md).
