@@ -31,28 +31,26 @@ object SwaggerUI {
     val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
     val prefixAsPath = prefix.mkString("/")
 
-    val yamlEndpoint = infallibleEndpoint
-      .in(prefixInput)
+    val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
+    val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
+
+    val yamlEndpoint = baseEndpoint
       .in(yamlName)
       .out(stringBody)
       .serverLogicPure[F](_ => Right(yaml))
 
-    val redirectToIndexEndpoint = infallibleEndpoint
-      .in(prefixInput)
+    val redirectToIndexEndpoint = baseEndpoint
       .in(queryParams)
-      .out(statusCode(StatusCode.PermanentRedirect))
-      .out(header[String](HeaderNames.Location))
+      .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val paramsWithUrl = params.param("url", s"/$prefixAsPath/$yamlName")
         Right(s"/$prefixAsPath/index.html?${paramsWithUrl.toString}")
       }
 
-    val oauth2Endpoint = infallibleEndpoint
-      .in(prefixInput)
+    val oauth2Endpoint = baseEndpoint
       .in("oauth2-redirect.html")
       .in(queryParams)
-      .out(statusCode(StatusCode.PermanentRedirect))
-      .out(header[String](HeaderNames.Location))
+      .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
         Right(s"/$prefixAsPath/oauth2-redirect.html$queryString")

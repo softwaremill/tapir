@@ -118,10 +118,7 @@ lazy val allAggregates = core.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
   swaggerUi.projectRefs ++
-  redocAkka.projectRefs ++
-  redocHttp4s.projectRefs ++
-  redocPlay.projectRefs ++
-  redocZio.projectRefs ++
+  redoc.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -710,43 +707,11 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
-lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http"))
+lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-akka-http",
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val redocZio: ProjectMatrix = (projectMatrix in file("docs/redoc-zio-http"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-zio-http",
-    libraryDependencies ++= Seq(
-      "io.d11" %% "zhttp" % "1.0.0.0-RC17"
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-http4s",
-    libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
-  )
+  .settings(name := "tapir-redoc")
   .jvmPlatform(scalaVersions = scala2And3Versions)
-
-lazy val redocPlay: ProjectMatrix = (projectMatrix in file("docs/redoc-play"))
-  .enablePlugins(SbtTwirl)
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-play",
-    libraryDependencies += "com.typesafe.play" %% "play" % Versions.playServer
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core)
 
 // server
 
@@ -1146,6 +1111,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     asyncapiDocs,
     circeJson,
     swaggerUi,
+    redoc,
     zioHttp4sServer,
     zioHttp,
     sttpStubServer,
