@@ -9,8 +9,6 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
-  ServerRejectTests,
-  ServerStaticContentTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -26,7 +24,6 @@ class FinatraServerTest extends TestSuite {
     new ServerBasicTests(createServerTest, interpreter).tests() ++
       new ServerFileMultipartTests(createServerTest).tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests() ++
-      new ServerStaticContentTests(interpreter, backend).tests()
+      new ServerMetricsTest(createServerTest).tests()
   }
 }

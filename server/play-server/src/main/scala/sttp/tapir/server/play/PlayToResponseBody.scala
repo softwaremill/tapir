@@ -40,7 +40,7 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), None, contentType)
+        HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
       case RawBodyType.FileBody =>
         val path = v.asInstanceOf[File].toPath
