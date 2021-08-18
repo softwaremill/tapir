@@ -13,11 +13,16 @@ To use custom server options pass them as an argument to the interpreter's `appl
 For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
 
 ```scala
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
-val customServerOptions: AkkaHttpServerOptions = 
-  AkkaHttpServerOptions.customInterceptors(decodeFailureHandler = ???)
+val customDecodeFailureHandler: DecodeFailureHandler = ???
+
+val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customInterceptors
+  .decodeFailureHandler(customDecodeFailureHandler)
+  .options
   
 AkkaHttpServerInterpreter(customServerOptions)
 ```
