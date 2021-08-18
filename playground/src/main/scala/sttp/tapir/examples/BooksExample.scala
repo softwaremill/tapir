@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.examples.Endpoints.Limit
 import sttp.tapir.generic.auto._
-import sttp.tapir.swagger.SwaggerUI
 
 case class Country(name: String)
 case class Author(name: String, country: Country)
@@ -102,6 +101,7 @@ object BooksExample extends App with StrictLogging {
     import akka.http.scaladsl.server.Directives._
 
     import sttp.tapir.server.akkahttp._
+    import sttp.tapir.swagger.SwaggerUI
 
     import scala.concurrent.{Await, Future}
     import scala.concurrent.duration._
