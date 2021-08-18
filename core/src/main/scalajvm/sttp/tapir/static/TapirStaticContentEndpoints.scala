@@ -99,8 +99,6 @@ trait TapirStaticContentEndpoints {
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticEndpoint(prefix, inputStreamBody)
 
-  // def fileEndpoint(path)
-
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
     *
@@ -114,6 +112,17 @@ trait TapirStaticContentEndpoints {
       systemPath: String
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
     ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
+
+  /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
+    *
+    * {{{
+    * fileServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
+    * }}}
+    */
+  def fileServerEndpoint[F[_]](path: EndpointInput[Unit])(
+      systemPath: String
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
+    ServerEndpoint(removePath(filesEndpoint(path)), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
@@ -129,4 +138,20 @@ trait TapirStaticContentEndpoints {
       resourcePrefix: String
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
     ServerEndpoint(resourcesEndpoint(prefix), (m: MonadError[F]) => Resources(classLoader, resourcePrefix)(m))
+
+  /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`,
+    * using the given `path`.
+    *
+    * {{{
+    * resourceServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
+    * }}}
+    */
+  def resourceServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      classLoader: ClassLoader,
+      resourcePath: String
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
+    ServerEndpoint(removePath(resourcesEndpoint(prefix)), (m: MonadError[F]) => Resources(classLoader, resourcePath)(m))
+
+  private def removePath[T](e: Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
+    e.mapIn(i => i.copy(path = Nil))(i => i.copy(path = Nil))
 }

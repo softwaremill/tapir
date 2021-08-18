@@ -216,6 +216,30 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
         }
         .unsafeToFuture()
+    },
+    Test("serve a single file from the given system path") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(fileServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body shouldBe "f1 content")
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("serve a single resource") {
+      serveRoute(resourceServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test/r1.txt"))
+        .use { port =>
+          basicRequest
+            .get(uri"http://localhost:$port/$path")
+            .response(asStringAlways)
+            .send(backend)
+            .map(_.body shouldBe "Resource 1")
+        }
+        .unsafeToFuture()
     }
   )
 
