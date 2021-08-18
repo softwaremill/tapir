@@ -1243,5 +1243,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     zioJson,
     prometheusMetrics,
     opentelemetryMetrics,
-    sttpMockServer
+    sttpMockServer,
+    swaggerUi
   )
