@@ -922,6 +922,17 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)
 
+lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-netty-server",
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % "4.1.66.Final"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core, serverTests % Test)
+
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .settings(commonJvmSettings)
   .settings(
