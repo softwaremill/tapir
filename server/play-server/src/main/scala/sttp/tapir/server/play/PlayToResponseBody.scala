@@ -3,13 +3,13 @@ package sttp.tapir.server.play
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
-import play.api.mvc.{Codec, MultipartFormData}
+import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
-import sttp.model.{HasHeaders, MediaType, Part}
+import play.api.mvc.{Codec, MultipartFormData}
+import sttp.model.{HasHeaders, Part}
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
@@ -115,21 +115,6 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
 
       maybeData.map(MultipartFormData.DataPart(part.name, _))
     }
-  }
-
-  private def formatToContentType(format: CodecFormat): Option[String] = {
-    val result = format.mediaType.copy(charset = format.mediaType.charset.map(_.toLowerCase)) match {
-      case MediaType.ApplicationJson               => ContentTypes.JSON
-      case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(format.mediaType.charset.getOrElse("utf-8")))
-      case MediaType.TextPlainUtf8                 => ContentTypes.TEXT(Codec.utf_8)
-      case MediaType.TextHtml                      => ContentTypes.HTML(Codec.utf_8)
-      case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
-      case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
-      case MediaType.MultipartFormData             => "multipart/form-data"
-      case m                                       => m.toString()
-    }
-
-    Option(result)
   }
 
   private def multipartFormToStream[A](
