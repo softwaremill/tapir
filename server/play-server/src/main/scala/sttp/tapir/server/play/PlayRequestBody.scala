@@ -1,9 +1,11 @@
 package sttp.tapir.server.play
 
 import akka.stream.Materializer
-import akka.util.ByteString
-import play.api.mvc.{RawBuffer, Request}
+import akka.stream.scaladsl.Sink
+import akka.util.{ByteString, ByteStringBuilder}
+import play.api.mvc.Request
 import play.core.parsers.Multipart
+import sttp.capabilities.akka.AkkaStreams
 import sttp.model.Part
 import sttp.tapir.internal._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -14,18 +16,23 @@ import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: PlayServerOptions)(implicit mat: Materializer)
-    extends RequestBody[Future, NoStreams] {
+private[play] class PlayRequestBody(request: Request[AkkaStreams.BinaryStream], serverOptions: PlayServerOptions)(implicit
+    mat: Materializer
+) extends RequestBody[Future, AkkaStreams] {
 
-  override val streams: NoStreams = NoStreams
+  override val streams: AkkaStreams = AkkaStreams
+
+  private val byteStringBuilderSink: Sink[ByteString, Future[ByteStringBuilder]] = Sink.fold(ByteString.newBuilder)(_ append _)
 
   override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] = {
-    val body = request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
+    val body = request.body.runWith(byteStringBuilderSink).map(_.result())
     val charset = request.charset.map(Charset.forName)
-    toRaw(bodyType, charset, body)
+    body.flatMap(toRaw(bodyType, charset, _))
   }
 
-  override def toStream(): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(): streams.BinaryStream = {
+    request.body
+  }
 
   private def toRaw[R](bodyType: RawBodyType[R], charset: Option[Charset], body: ByteString)(implicit
       mat: Materializer
@@ -45,7 +52,7 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
     }
   }
 
-  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], m: RawBodyType.MultipartBody, body: ByteString)(implicit
+  private def multiPartRequestToRawBody(request: Request[AkkaStreams.BinaryStream], m: RawBodyType.MultipartBody, body: ByteString)(implicit
       mat: Materializer
   ): Future[RawValue[Seq[RawPart]]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(

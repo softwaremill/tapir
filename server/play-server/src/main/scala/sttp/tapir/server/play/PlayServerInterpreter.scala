@@ -1,13 +1,16 @@
 package sttp.tapir.server.play
 
 import akka.stream.Materializer
+import akka.util.ByteString
 import play.api.http.{HeaderNames, HttpEntity}
+import play.api.libs.streams.Accumulator
 import play.api.mvc._
 import play.api.routing.Router.Routes
+import sttp.capabilities.akka.AkkaStreams
 import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
@@ -23,25 +26,29 @@ trait PlayServerInterpreter {
 
   def playServerOptions: PlayServerOptions = PlayServerOptions.default
 
-  def toRoutes[I, E, O](e: Endpoint[I, E, O, Any])(
+  private val streamParser: BodyParser[AkkaStreams.BinaryStream] = BodyParser { _ =>
+    Accumulator.source[ByteString].map(Right.apply)
+  }
+
+  def toRoutes[I, E, O](e: Endpoint[I, E, O, AkkaStreams])(
       logic: I => Future[Either[E, O]]
   ): Routes = {
     toRoutes(e.serverLogic(logic))
   }
 
-  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
+  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, AkkaStreams])(logic: I => Future[O])(implicit
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): Routes = {
     toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Routes = {
+  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, AkkaStreams, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes[I, E, O](
-      serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
+      serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
@@ -58,10 +65,10 @@ trait PlayServerInterpreter {
       }
 
       override def apply(header: RequestHeader): Handler = {
-        playServerOptions.defaultActionBuilder.async(playServerOptions.playBodyParsers.raw) { request =>
+        playServerOptions.defaultActionBuilder.async(streamParser) { request =>
           implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
           val serverRequest = new PlayServerRequest(header)
-          val interpreter = new ServerInterpreter[Any, Future, HttpEntity, NoStreams](
+          val interpreter = new ServerInterpreter(
             new PlayRequestBody(request, playServerOptions),
             new PlayToResponseBody,
             playServerOptions.interceptors,
@@ -71,7 +78,7 @@ trait PlayServerInterpreter {
           interpreter(serverRequest, serverEndpoints).map {
             case RequestResult.Failure(_) =>
               Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity)
-            case RequestResult.Response(response) =>
+            case RequestResult.Response(response: ServerResponse[HttpEntity]) =>
               val headers: Map[String, String] = response.headers
                 .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
                   if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
