@@ -43,7 +43,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
       case a if a.tree.tpe <:< annotationType =>
         a.tree.children.tail match {
           case List(Literal(Constant(str: String))) => str
-          case _                                    => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
+          case _ => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
   }

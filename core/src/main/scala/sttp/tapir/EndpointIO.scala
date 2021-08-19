@@ -18,16 +18,14 @@ import scala.annotation.StaticAnnotation
 import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
-/** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
-  * The transput traits contain common functionality, shared by all inputs and outputs.
+/** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output). The
+  * transput traits contain common functionality, shared by all inputs and outputs.
   *
   * Note that implementations of `EndpointIO` can be used BOTH as inputs and outputs.
   *
   * The hierarchy is as follows:
   *
-  *                        /---> `EndpointInput`  >---\
-  * `EndpointTransput` >---                            ---> `EndpointIO`
-  *                        \---> `EndpointOutput` >---/
+  * /---> `EndpointInput` >---\ `EndpointTransput` >--- ---> `EndpointIO` \---> `EndpointOutput` >---/
   */
 sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
@@ -320,12 +318,11 @@ object EndpointOutput extends EndpointOutputMacros {
 
   /** Specifies a correspondence between `statusCode` and `output`.
     *
-    * A single status code can have multiple mappings, with different body content types. The mapping can then be
-    * chosen based on content type negotiation, or the content type header.
+    * A single status code can have multiple mappings, with different body content types. The mapping can then be chosen based on content
+    * type negotiation, or the content type header.
     *
-    * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
-    * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
-    * type parameters).
+    * The `appliesTo` function should determine, whether a runtime value matches the type `O`. This check cannot be in general done by
+    * checking the run-time class of the value, due to type erasure (if `O` has type parameters).
     */
   case class OneOfMapping[O] private[tapir] (
       statusCode: Option[sttp.model.StatusCode],
@@ -503,8 +500,8 @@ object EndpointIO {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 
-  /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class
-    * maps to an endpoint input/output.
+  /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint
+    * input/output.
     */
   object annotations {
     sealed trait EndpointInputAnnotation extends StaticAnnotation
@@ -528,18 +525,18 @@ object EndpointIO {
     class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
     class securitySchemeName(val name: String) extends StaticAnnotation
 
-    /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the
-      * segment's name with `{...}` (curly braces), and reference the name using [[annotations.path]].
+    /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with
+      * `{...}` (curly braces), and reference the name using [[annotations.path]].
       */
     class endpointInput(val path: String = "") extends EndpointInputAnnotation
 
-    /** Specifies the example value of the endpoint input/output. Note that this is distinct from
-      * [[Schema.annotations.encodedExample]], which sets the example on the schema associated with the input/output.
+    /** Specifies the example value of the endpoint input/output. Note that this is distinct from [[Schema.annotations.encodedExample]],
+      * which sets the example on the schema associated with the input/output.
       */
     class example(val example: Any) extends EndpointInputAnnotation with EndpointOutputAnnotation
 
-    /** Specifies the description of the endpoint input/output. Note that this is distinct from
-      * [[Schema.annotations.description]], which sets the description on the schema associated with the input/output.
+    /** Specifies the description of the endpoint input/output. Note that this is distinct from [[Schema.annotations.description]], which
+      * sets the description on the schema associated with the input/output.
       */
     class description(val text: String) extends EndpointInputAnnotation with EndpointOutputAnnotation
   }
@@ -621,40 +618,42 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
     copy(responsesInfo = responsesInfo.docsExtension(key, value))
 
-  /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
-    *          codecs decode will always have `finalFragment` set to `true`.
-    *          Note that only some interpreters expose fragmented frames.
+  /** @param c
+    *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always
+    *   have `finalFragment` set to `true`. Note that only some interpreters expose fragmented frames.
     */
   def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(concatenateFragmentedFrames = c)
 
   /** Note: some interpreters ignore this setting.
-    * @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
-    *          Note that only some interpreters expose ping-pong frames.
+    * @param i
+    *   If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding. Note that only some
+    *   interpreters expose ping-pong frames.
     */
   def ignorePong(i: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(ignorePong = i)
 
   /** Note: some interpreters ignore this setting.
-    * @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
-    *          back, and won't be passed to codecs for decoding.
-    *          Note that only some interpreters expose ping-pong frames.
+    * @param a
+    *   If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent back, and won't be passed
+    *   to codecs for decoding. Note that only some interpreters expose ping-pong frames.
     */
   def autoPongOnPing(a: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(autoPongOnPing = a)
 
   /** Note: some interpreters ignore this setting.
-    * @param d If `true`, [[WebSocketFrame.Close]] frames will be passed to the request codec for decoding (in server
-    *          interpreters).
+    * @param d
+    *   If `true`, [[WebSocketFrame.Close]] frames will be passed to the request codec for decoding (in server interpreters).
     */
   def decodeCloseRequests(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseRequests = d)
 
   /** Note: some interpreters ignore this setting.
-    * @param d If `true`, [[WebSocketFrame.Close]] frames will be passed to the response codec for decoding (in client
-    *          interpreters).
+    * @param d
+    *   If `true`, [[WebSocketFrame.Close]] frames will be passed to the response codec for decoding (in client interpreters).
     */
   def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
 
   /** Note: some interpreters ignore this setting.
-    * @param p If `Some`, send the given `Ping` frame at the given interval. If `None`, do not automatically send pings.
+    * @param p
+    *   If `Some`, send the given `Ping` frame at the given interval. If `None`, do not automatically send pings.
     */
   def autoPing(p: Option[(FiniteDuration, WebSocketFrame.Ping)]): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(autoPing = p)

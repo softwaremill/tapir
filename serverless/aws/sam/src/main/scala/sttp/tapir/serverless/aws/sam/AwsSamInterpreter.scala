@@ -13,7 +13,8 @@ trait AwsSamInterpreter {
 
   def toSamTemplate[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F]): SamTemplate =
     EndpointsToSamTemplate(
-      List(se.endpoint), awsSamOptions
+      List(se.endpoint),
+      awsSamOptions
     )
 
   def serverEndpointsToSamTemplate[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]]): SamTemplate =

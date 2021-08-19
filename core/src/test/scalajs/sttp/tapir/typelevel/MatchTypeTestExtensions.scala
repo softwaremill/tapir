@@ -6,6 +6,6 @@ trait MatchTypeTestExtensions {
     implicitly[MatchType[String]] -> "string",
     implicitly[MatchType[Boolean]] -> true,
     implicitly[MatchType[Char]] -> 'c',
-    implicitly[MatchType[Double]] -> 42.2d,
+    implicitly[MatchType[Double]] -> 42.2d
   )
 }

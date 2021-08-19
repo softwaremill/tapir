@@ -553,16 +553,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("expected_type_and_description_for_circe_json.yml")
 
     case class ExampleMessageIn(
-      @description("Circe Json Option description")
-      maybeJson: Option[Json] = Some(Json.fromString("test"))
+        @description("Circe Json Option description")
+        maybeJson: Option[Json] = Some(Json.fromString("test"))
     )
 
-    val myEndpoint = endpoint
-      .post
+    val myEndpoint = endpoint.post
       .in(jsonBody[ExampleMessageIn])
 
     val actualYaml = OpenAPIDocsInterpreter()
-      .toOpenAPI(myEndpoint, Info("Circe Jason Option", "1.0")).toYaml
+      .toOpenAPI(myEndpoint, Info("Circe Jason Option", "1.0"))
+      .toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
 

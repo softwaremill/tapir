@@ -11,8 +11,8 @@ object InputValueResult {
 
 object InputValue {
 
-  /** Returns the value of the input, tupled and mapped as described by the data structure. Values of basic inputs
-    * are taken as consecutive values from `values.basicInputsValues`. Hence, these should match (in order).
+  /** Returns the value of the input, tupled and mapped as described by the data structure. Values of basic inputs are taken as consecutive
+    * values from `values.basicInputsValues`. Hence, these should match (in order).
     */
   def apply(input: EndpointInput[_], values: DecodeBasicInputsResult.Values): InputValueResult =
     apply(input, values.basicInputsValues)

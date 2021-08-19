@@ -6,23 +6,25 @@ import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir.{EndpointInfo, EndpointInfoOps, EndpointInput, EndpointInputsOps, EndpointMetaOps, EndpointOutput, EndpointOutputsOps}
 import zio.ZIO
 
-/** An endpoint, with some of the server logic already provided, and some left unspecified.
-  * See [[RichZEndpoint.zServerLogicForCurrent]].
+/** An endpoint, with some of the server logic already provided, and some left unspecified. See [[RichZEndpoint.zServerLogicForCurrent]].
   *
-  * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of
-  * type `U`.
+  * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of type `U`.
   *
-  * The part of the server logic which is not provided, transforms a tuple: `(U, I)` either into an error, or a value
-  * of type `O`.
+  * The part of the server logic which is not provided, transforms a tuple: `(U, I)` either into an error, or a value of type `O`.
   *
-  * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs
-  * is fixed and cannot be changed.
+  * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs is fixed and cannot be
+  * changed.
   *
-  * @tparam R The environment needed by the partial server logic.
-  * @tparam U Type of partially transformed input.
-  * @tparam I Input parameter types.
-  * @tparam E Error output parameter types.
-  * @tparam O Output parameter types.
+  * @tparam R
+  *   The environment needed by the partial server logic.
+  * @tparam U
+  *   Type of partially transformed input.
+  * @tparam I
+  *   Input parameter types.
+  * @tparam E
+  *   Error output parameter types.
+  * @tparam O
+  *   Output parameter types.
   */
 abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, E, O])
     extends EndpointInputsOps[I, E, O, Nothing]

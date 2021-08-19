@@ -34,8 +34,8 @@ class ToNamedSchemas {
 
 object ToNamedSchemas {
 
-  /** Keeps only the first object data for each `SName`. In case of recursive objects, the first one is the
-    * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
+  /** Keeps only the first object data for each `SName`. In case of recursive objects, the first one is the most complete as it contains the
+    * built-up structure, unlike subsequent ones, which only represent leaves (#354).
     */
   def unique(objs: Iterable[NamedSchema]): Iterable[NamedSchema] = {
     val seen: collection.mutable.Set[TSchema.SName] = collection.mutable.Set()

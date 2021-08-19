@@ -13,14 +13,12 @@ trait SchemaMacros[T] {
 trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.generateSchemaForStringMap[V]
 
-  /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is,
-    * the schema type should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time
-    * and is not verified at run-time.
+  /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is, the schema type
+    * should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time and is not verified at run-time.
     *
     * The given `keyToString` conversion function is used during validation.
     *
-    * If you'd like this schema to be available as an implicit for a given type of keys, create an custom implicit,
-    * e.g.:
+    * If you'd like this schema to be available as an implicit for a given type of keys, create an custom implicit, e.g.:
     *
     * {{{
     * case class MyKey(value: String) extends AnyVal

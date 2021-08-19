@@ -15,13 +15,15 @@ object SwaggerUI {
     p.getProperty("version")
   }
 
-  /** Usage: pass `SwaggerUI[F](yaml)` endpoints to your server interpreter. Docs will be available using the `/docs`
-    * path.
+  /** Usage: pass `SwaggerUI[F](yaml)` endpoints to your server interpreter. Docs will be available using the `/docs` path.
     *
-    * @param yaml     The yaml with the OpenAPI documentation.
-    * @param prefix   The path prefix from which the documentation will be served, as a list of path segments. Defaults
-    *                 to `List(docs)`, so the address of the docs will be `/docs`.
-    * @param yamlName The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
+    * @param yaml
+    *   The yaml with the OpenAPI documentation.
+    * @param prefix
+    *   The path prefix from which the documentation will be served, as a list of path segments. Defaults to `List(docs)`, so the address of
+    *   the docs will be `/docs`.
+    * @param yamlName
+    *   The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
     */
   def apply[F[_]](
       yaml: String,

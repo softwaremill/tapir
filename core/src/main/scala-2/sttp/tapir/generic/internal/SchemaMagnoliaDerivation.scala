@@ -76,8 +76,7 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
-  /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in
-    * progress using a mutable Set.
+  /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in progress using a mutable Set.
     */
   private def withCache[T](typeName: TypeName, annotations: Seq[Any])(f: => Schema[T]): Schema[T] = {
     val cacheKey = typeName.full

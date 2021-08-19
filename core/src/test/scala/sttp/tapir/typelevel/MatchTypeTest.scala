@@ -82,20 +82,20 @@ class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matche
   }
 
   it should "provide implicit for recursive structure" in {
-    case class A(s: Option[A]) 
+    case class A(s: Option[A])
 
     lazy implicit val matchType: MatchType[A] = MatchType.gen
     var a: Any = null
 
     a = A(Some(A(None)))
     matchType(a) shouldBe true
-    
+
     a = Left(Left("plop"))
     matchType(a) shouldBe false
   }
 
   it should "work for list" in {
-    lazy implicit  val matchType: MatchType[List[Int]] = MatchType.gen
+    lazy implicit val matchType: MatchType[List[Int]] = MatchType.gen
 
     var a: Any = List(1)
     matchType(a) shouldBe true

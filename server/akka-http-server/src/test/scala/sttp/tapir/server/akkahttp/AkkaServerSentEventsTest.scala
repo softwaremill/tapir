@@ -92,7 +92,7 @@ class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
     val parsed = AkkaServerSentEvents.parseBytesToSSE(sseBytes)
     val futureEvents = parsed.runFold(List.empty[ServerSentEvent])((acc, event) => acc :+ event)
     futureEvents.map(events =>
-          events shouldBe List(
+      events shouldBe List(
         ServerSentEvent(Some("event1 data"), Some("event1"), Some("id1"), Some(5)),
         ServerSentEvent(
           Some("""event2 data1

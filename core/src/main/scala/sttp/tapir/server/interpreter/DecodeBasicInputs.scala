@@ -55,12 +55,11 @@ private case class DecodeInputsContext(request: ServerRequest, pathSegments: Lis
 object DecodeBasicInputs {
   case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
-  /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the
-    * input's value.
+  /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the input's value.
     *
-    * An exception is the body input, which is not decoded. This is because typically bodies can be only read once.
-    * That's why, all non-body inputs are used to decide if a request matches the endpoint, or not. If a body input
-    * is present, it is also returned as part of the result.
+    * An exception is the body input, which is not decoded. This is because typically bodies can be only read once. That's why, all non-body
+    * inputs are used to decide if a request matches the endpoint, or not. If a body input is present, it is also returned as part of the
+    * result.
     *
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
@@ -87,14 +86,12 @@ object DecodeBasicInputs {
     )(DecodeBasicInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }
 
-  /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results
-    * (not checking if this is a successful or failed decoding at this stage). This is collected as the
-    * `decodedPathInputs` value.
+  /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results (not checking if this is
+    * a successful or failed decoding at this stage). This is collected as the `decodedPathInputs` value.
     *
     * Once this is done, we check if there are remaining path segments. If yes - the decoding fails with a `Mismatch`.
     *
-    * Hence, a failure due to a mismatch in the number of segments takes **priority** over any potential failures in
-    * decoding the segments.
+    * Hence, a failure due to a mismatch in the number of segments takes **priority** over any potential failures in decoding the segments.
     */
   private def matchPath(
       pathInputs: Vector[IndexedBasicInput],
