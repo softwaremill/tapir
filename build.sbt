@@ -19,6 +19,7 @@ val documentationScalaVersion = scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
+lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -197,7 +198,8 @@ lazy val rootProject = (project in file("."))
         )
       )
       .value,
-    ideSkipProject := false
+    ideSkipProject := false,
+    generateMimeByExtensionDB := GenerateMimeByExtensionDB()
   )
   .aggregate(allAggregates: _*)
 

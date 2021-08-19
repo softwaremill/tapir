@@ -2,8 +2,7 @@ package sttp.tapir
 
 import sttp.model.MediaType
 import sttp.model.headers.ETag
-
-import scala.util.Try
+import sttp.tapir.internal.MimeByExtensionDB
 
 package object static {
   def defaultETag(lastModified: Long, length: Long): ETag = ETag(s"${lastModified.toHexString}-${length.toHexString}")
@@ -23,8 +22,8 @@ package object static {
     case None    => true
   }
 
-  private[tapir] def contentTypeFromName(name: String): MediaType =
-    Try(Option(java.nio.file.Files.probeContentType(new java.io.File(name).toPath))).toOption.flatten
-      .flatMap(ct => MediaType.parse(ct).toOption)
-      .getOrElse(MediaType.ApplicationOctetStream)
+  private[tapir] def contentTypeFromName(name: String): MediaType = {
+    val ext = name.substring(name.lastIndexOf(".") + 1)
+    MimeByExtensionDB(ext).getOrElse(MediaType.ApplicationOctetStream)
+  }
 }
