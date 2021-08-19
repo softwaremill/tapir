@@ -1,4 +1,6 @@
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
+import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
+import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
