@@ -9,17 +9,20 @@ trait EndpointHandler[F[_], B] {
 
   /** Called when the request has been successfully decoded into data. This is captured by the `ctx` parameter.
     *
-    * @tparam I The type of the endpoint's inputs.
-    * @return An effect, describing the server's response.
+    * @tparam I
+    *   The type of the endpoint's inputs.
+    * @return
+    *   An effect, describing the server's response.
     */
   def onDecodeSuccess[I](
       ctx: DecodeSuccessContext[F, I]
   )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]]
 
-  /** Called when the given request hasn't been successfully decoded, because of the given failure on the given
-    * input. This is captured by the `ctx` parameter.
+  /** Called when the given request hasn't been successfully decoded, because of the given failure on the given input. This is captured by
+    * the `ctx` parameter.
     *
-    * @return An effect, describing the optional server response. If `None`, the next endpoint will be tried (if any).
+    * @return
+    *   An effect, describing the optional server response. If `None`, the next endpoint will be tried (if any).
     */
   def onDecodeFailure(
       ctx: DecodeFailureContext

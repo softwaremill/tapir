@@ -3,11 +3,16 @@ package sttp.tapir.server
 import sttp.monad.MonadError
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 
-/** @tparam I Input parameter types.
-  * @tparam E Error output parameter types.
-  * @tparam O Output parameter types.
-  * @tparam R The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
-  * @tparam F The effect type used in the provided server logic.
+/** @tparam I
+  *   Input parameter types.
+  * @tparam E
+  *   Error output parameter types.
+  * @tparam O
+  *   Output parameter types.
+  * @tparam R
+  *   The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
+  * @tparam F
+  *   The effect type used in the provided server logic.
   */
 case class ServerEndpoint[I, E, O, -R, F[_]](endpoint: Endpoint[I, E, O, R], logic: MonadError[F] => I => F[Either[E, O]])
     extends EndpointInfoOps[I, E, O, R]

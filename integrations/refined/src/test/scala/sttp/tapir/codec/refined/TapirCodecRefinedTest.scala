@@ -132,34 +132,44 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     type IntConstraint = Interval.Open[W.`1`.T, W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, true))), _) => }
+    implicitly[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, true))), _) =>
+    }
   }
 
   "Generated validator for Interval.Close" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = Interval.Closed[W.`1`.T, W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) => }
+    implicitly[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
+    }
   }
 
   "Generated validator for Interval.OpenClose" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = Interval.OpenClosed[W.`1`.T, W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) => }
+    implicitly[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) =>
+    }
   }
 
   "Generated validator for Interval.ClosedOpen" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = Interval.ClosedOpen[W.`1`.T, W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) => }
+    implicitly[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) =>
+    }
   }
 
   "Generate validator for Or" should "use tapir Validator.any" in {
     type IntConstraint = Greater[W.`3`.T] Or Less[W.` -3`.T]
     type LimitedInt = Int Refined IntConstraint
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Any(List(Validator.Min(3, true), Validator.Max(-3, true))), _) => }
+    implicitly[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Any(List(Validator.Min(3, true), Validator.Max(-3, true))), _) =>
+    }
   }
 
   "TapirCodecRefined" should "compile using implicit schema for refined types" in {

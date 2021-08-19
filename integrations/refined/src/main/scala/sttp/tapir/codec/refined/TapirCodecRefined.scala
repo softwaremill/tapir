@@ -69,13 +69,22 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   ): PrimitiveValidatorForPredicate[N, GreaterEqual[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.snd))
 
-  implicit def validatorForAnd[N, LP, RP](implicit leftPredValidator: PrimitiveValidatorForPredicate[N, LP], rightPredValidator: PrimitiveValidatorForPredicate[N, RP], leftRefinedValidator: Validate[N, LP], rightRefinedValidator: Validate[N, RP]): ValidatorForPredicate[N, LP And RP] =
+  implicit def validatorForAnd[N, LP, RP](implicit
+      leftPredValidator: PrimitiveValidatorForPredicate[N, LP],
+      rightPredValidator: PrimitiveValidatorForPredicate[N, RP],
+      leftRefinedValidator: Validate[N, LP],
+      rightRefinedValidator: Validate[N, RP]
+  ): ValidatorForPredicate[N, LP And RP] =
     new ValidatorForPredicate[N, LP And RP] {
       override def validator: Validator[N] = Validator.all(leftPredValidator.validator, rightPredValidator.validator)
       override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
-        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](leftRefinedValidator -> leftPredValidator.validator, rightRefinedValidator -> rightPredValidator.validator)
-          .filter{case (refinedValidator, _) => refinedValidator.notValid(value)}
-          .map{case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value)}.toList
+        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](
+          leftRefinedValidator -> leftPredValidator.validator,
+          rightRefinedValidator -> rightPredValidator.validator
+        )
+          .filter { case (refinedValidator, _) => refinedValidator.notValid(value) }
+          .map { case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value) }
+          .toList
 
         if (primitivesErrors.isEmpty) {
           //this should not happen
@@ -86,13 +95,22 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       }
     }
 
-  implicit def validatorForOr[N, LP, RP](implicit leftPredValidator: PrimitiveValidatorForPredicate[N, LP], rightPredValidator: PrimitiveValidatorForPredicate[N, RP], leftRefinedValidator: Validate[N, LP], rightRefinedValidator: Validate[N, RP]): ValidatorForPredicate[N, LP Or RP] =
+  implicit def validatorForOr[N, LP, RP](implicit
+      leftPredValidator: PrimitiveValidatorForPredicate[N, LP],
+      rightPredValidator: PrimitiveValidatorForPredicate[N, RP],
+      leftRefinedValidator: Validate[N, LP],
+      rightRefinedValidator: Validate[N, RP]
+  ): ValidatorForPredicate[N, LP Or RP] =
     new ValidatorForPredicate[N, LP Or RP] {
       override def validator: Validator[N] = Validator.any(leftPredValidator.validator, rightPredValidator.validator)
       override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
-        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](leftRefinedValidator -> leftPredValidator.validator, rightRefinedValidator -> rightPredValidator.validator)
-          .filter{case (refinedValidator, _) => refinedValidator.notValid(value)}
-          .map{case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value)}.toList
+        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](
+          leftRefinedValidator -> leftPredValidator.validator,
+          rightRefinedValidator -> rightPredValidator.validator
+        )
+          .filter { case (refinedValidator, _) => refinedValidator.notValid(value) }
+          .map { case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value) }
+          .toList
 
         if (primitivesErrors.isEmpty) {
           //this should not happen

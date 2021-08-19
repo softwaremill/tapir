@@ -6,9 +6,11 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
-/** @param toEffect Converts the interpreter-specific value representing the log effect, into an `F`-effect, which
-  *                 can be composed with the result of processing a request.
-  * @tparam T Interpreter-specific value representing the log effect.
+/** @param toEffect
+  *   Converts the interpreter-specific value representing the log effect, into an `F`-effect, which can be composed with the result of
+  *   processing a request.
+  * @tparam T
+  *   Interpreter-specific value representing the log effect.
   */
 class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =

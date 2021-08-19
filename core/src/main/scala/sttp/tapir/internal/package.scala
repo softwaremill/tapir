@@ -12,11 +12,11 @@ import scala.util.{Failure, Success, Try}
 
 package object internal {
 
-  /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output:
-    * no parameters, a single parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
+  /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output: no parameters, a single
+    * parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
     *
-    * There are two views on parameters: [[ParamsAsAny]], where the parameters are represented as instances of
-    * the union type, or [[ParamsAsVector]], where the parameters are represented as a vector of size 0/1/2+.
+    * There are two views on parameters: [[ParamsAsAny]], where the parameters are represented as instances of the union type, or
+    * [[ParamsAsVector]], where the parameters are represented as a vector of size 0/1/2+.
     */
   sealed trait Params {
     def asAny: Any

@@ -9,7 +9,7 @@ import scala.concurrent.duration.Duration
 
 class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
   import SchemaApplyValidationTestData._
-  
+
   it should "validate openProduct" in {
     implicit val schemaForInt: Schema[Int] = Schema.schemaForInt.validate(Validator.min(10))
     val schema = implicitly[Schema[Map[String, Int]]]

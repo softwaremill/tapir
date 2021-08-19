@@ -9,26 +9,29 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.{headers, statusCode}
 
-/** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via
-  * `addInterceptor`, sitting between two configurable, default interceptor groups.
+/** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via `addInterceptor`, sitting
+  * between two configurable, default interceptor groups.
   *
   * The order of the interceptors corresponds to the ordering of the parameters.
   *
-  * Moreover, built-in interceptors can be customised or disabled. Once done, use `.options` to obtain the
-  * server interpreter options to use.
+  * Moreover, built-in interceptors can be customised or disabled. Once done, use `.options` to obtain the server interpreter options to
+  * use.
   *
-  * @param metricsInterceptor Whether to collect metrics.
-  * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
-  * @param exceptionHandler Whether to respond to exceptions in the server logic, or propagate them to the
-  *                         server.
-  * @param serverLog The server log using which an interceptor will be created, if any.
-  * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
-  *                               responses.
-  * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
-  *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
-  *                                        header.
-  * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created. Determines
-  *                             whether to respond when an input fails to decode.
+  * @param metricsInterceptor
+  *   Whether to collect metrics.
+  * @param rejectInterceptor
+  *   How to respond when decoding fails for all interpreted endpoints.
+  * @param exceptionHandler
+  *   Whether to respond to exceptions in the server logic, or propagate them to the server.
+  * @param serverLog
+  *   The server log using which an interceptor will be created, if any.
+  * @param additionalInterceptors
+  *   Additional interceptors, e.g. handling decode failures, or providing alternate responses.
+  * @param unsupportedMediaTypeInterceptor
+  *   Whether to return 415 (unsupported media type) if there's no body in the endpoint's outputs, which can satisfy the constraints from
+  *   the `Accept` header.
+  * @param decodeFailureHandler
+  *   The decode failure handler, from which an interceptor will be created. Determines whether to respond when an input fails to decode.
   */
 case class CustomInterceptors[F[_], L, O](
     createLogInterceptor: ServerLog[L] => Interceptor[F],
@@ -65,8 +68,7 @@ case class CustomInterceptors[F[_], L, O](
 
   def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, L, O] = copy(decodeFailureHandler = d)
 
-  /** Customise the way error messages are rendered in error responses, using the default exception and decode failure
-    * handlers.
+  /** Customise the way error messages are rendered in error responses, using the default exception and decode failure handlers.
     */
   def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, L, O] = {
     copy(

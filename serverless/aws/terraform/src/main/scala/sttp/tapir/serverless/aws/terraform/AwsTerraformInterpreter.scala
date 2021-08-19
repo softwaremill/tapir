@@ -15,7 +15,8 @@ trait AwsTerraformInterpreter {
 
   def toTerraformConfig[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F]): AwsTerraformApiGateway =
     EndpointsToTerraformConfig(
-      List(se.endpoint), awsTerraformOptions
+      List(se.endpoint),
+      awsTerraformOptions
     )
 
   def serverEndpointsToTerraformConfig[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]]): AwsTerraformApiGateway =

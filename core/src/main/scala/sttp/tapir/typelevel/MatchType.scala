@@ -2,7 +2,8 @@ package sttp.tapir.typelevel
 
 trait MatchType[T] {
 
-  /** @return is `a` a value of type `T`?
+  /** @return
+    *   is `a` a value of type `T`?
     */
   def apply(a: Any): Boolean
   def partial: PartialFunction[Any, Boolean] = { case a: Any =>

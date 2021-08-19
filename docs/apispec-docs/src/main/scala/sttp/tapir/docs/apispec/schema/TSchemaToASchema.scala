@@ -28,13 +28,13 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         )
       case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
-      case TSchemaType.SArray(el)                                           => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
+      case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
       case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
       case TSchemaType.SOption(el)                                          => apply(el)
-      case TSchemaType.SBinary()                                            => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
-      case TSchemaType.SDate()                                              => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
-      case TSchemaType.SDateTime()                                          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
-      case TSchemaType.SRef(fullName)                                       => Left(nameToSchemaReference.map(fullName))
+      case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
+      case TSchemaType.SRef(fullName) => Left(nameToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(schemas, d) =>
         Right(
           ASchema.apply(

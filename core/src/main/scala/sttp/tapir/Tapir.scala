@@ -69,8 +69,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
     *
-    * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with
-    * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
+    * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with various json libraries
+    * define `jsonBody` methods, which directly require the library-specific implicits.
     *
     * Unless you have defined a custom json codec, the `jsonBody` methods should be used.
     */
@@ -98,9 +98,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default,
-    * but can be later overridden by providing a custom `Content-Type` header value.
-    * @param s A supported streams implementation.
+  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default, but can be later
+    * overridden by providing a custom `Content-Type` header value.
+    * @param s
+    *   A supported streams implementation.
     */
   def streamBinaryBody[S](
       s: Streams[S]
@@ -108,10 +109,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None)
 
   /** Creates a stream body with a text schema.
-    * @param s A supported streams implementation.
-    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
-    *               header.
-    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
+    * @param s
+    *   A supported streams implementation.
+    * @param format
+    *   The media type to use by default. Can be later overridden by providing a custom `Content-Type` header.
+    * @param charset
+    *   An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamTextBody[S](
       s: Streams[S]
@@ -119,11 +122,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset)
 
   /** Creates a stream body with a text schema.
-    * @param s A supported streams implementation.
-    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
-    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
-    *               header.
-    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
+    * @param s
+    *   A supported streams implementation.
+    * @param schema
+    *   Schema of the body. This should be a schema for the "deserialized" stream.
+    * @param format
+    *   The media type to use by default. Can be later overridden by providing a custom `Content-Type` header.
+    * @param charset
+    *   An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamBody[S, T](
       s: Streams[S]
@@ -156,10 +162,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       )
   }
 
-  /** @tparam REQ The type of messages that are sent to the server.
-    * @tparam REQ_CF The codec format (media type) of messages that are sent to the server.
-    * @tparam RESP The type of messages that are received from the server.
-    * @tparam RESP_CF The codec format (media type) of messages that are received from the server.
+  /** @tparam REQ
+    *   The type of messages that are sent to the server.
+    * @tparam REQ_CF
+    *   The codec format (media type) of messages that are sent to the server.
+    * @tparam RESP
+    *   The type of messages that are received from the server.
+    * @tparam RESP_CF
+    *   The codec format (media type) of messages that are received from the server.
     */
   def webSocketBody[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat]: WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF] =
     new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
@@ -190,8 +200,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   def auth: TapirAuth.type = TapirAuth
 
-  /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by
-    * documentation interpreters and the provided value is discarded by client interpreters.
+  /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by documentation interpreters and
+    * the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
     EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
@@ -203,19 +213,19 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   /** Specifies a correspondence between status codes and outputs.
     *
-    * All outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the mappings are
-    * implementing cases classes.
+    * All outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the mappings are implementing cases
+    * classes.
     *
-    * A single status code can have multiple mappings (or there can be multiple default mappings), with different body
-    * content types. The mapping can then be chosen based on content type negotiation, or the content type header.
+    * A single status code can have multiple mappings (or there can be multiple default mappings), with different body content types. The
+    * mapping can then be chosen based on content type negotiation, or the content type header.
     *
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
   def oneOf[T](firstCase: OneOfMapping[_ <: T], otherCases: OneOfMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
 
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
-    * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting as a server)
+    * matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -234,8 +244,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       runtimeClass: Class[_]
   ): OneOfMapping[T] = oneOfMappingClassMatcher(statusCode, output, runtimeClass)
 
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
-    * matches the `matcher` predicate.
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server matches the
+    * `matcher` predicate.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -249,8 +259,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       matcher: PartialFunction[Any, Boolean]
   ): OneOfMapping[T] = oneOfMappingValueMatcher(statusCode, output)(matcher)
 
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value exactly matches one
-    * of the values provided in the second argument list.
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value exactly matches one of the values provided in the
+    * second argument list.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -274,9 +284,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   /** Experimental!
     *
-    * Create a one-of-mapping which uses `statusCode` and `output` if the provided value matches the target type, as
-    * checked by [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that
-    * classes of all fields match, to bypass issues caused by type erasure.
+    * Create a one-of-mapping which uses `statusCode` and `output` if the provided value matches the target type, as checked by
+    * [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass
+    * issues caused by type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -287,8 +297,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def statusMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
     oneOfMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
 
-  /** Create a fallback mapping to be used in [[oneOf]] output descriptions. Multiple such mappings can be specified,
-    * with different body content types.
+  /** Create a fallback mapping to be used in [[oneOf]] output descriptions. Multiple such mappings can be specified, with different body
+    * content types.
     */
   def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfMapping[T] = {
     OneOfMapping(None, output, _ => true)

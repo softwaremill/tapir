@@ -7,9 +7,7 @@ import sttp.capabilities.{Streams, WebSockets}
 import sttp.tapir.client.tests.ClientWebSocketTests
 import sttp.tapir.client.sttp.ws.akkahttp._
 
-class SttpAkkaClientWebSocketTests
-    extends SttpAkkaClientTests[WebSockets with AkkaStreams]
-    with ClientWebSocketTests[AkkaStreams] {
+class SttpAkkaClientWebSocketTests extends SttpAkkaClientTests[WebSockets with AkkaStreams] with ClientWebSocketTests[AkkaStreams] {
   override val streams: Streams[AkkaStreams] = AkkaStreams
   override def wsToPipe: WebSocketToPipe[WebSockets with AkkaStreams] = implicitly
 

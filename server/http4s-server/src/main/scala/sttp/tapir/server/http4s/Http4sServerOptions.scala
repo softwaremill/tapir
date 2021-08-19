@@ -9,9 +9,10 @@ import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
 
-/** @tparam F The effect type used for response body streams. Usually the same as `G`.
-  * @tparam G The effect type used for representing arbitrary side-effects, such as creating files or logging.
-  *           Usually the same as `F`.
+/** @tparam F
+  *   The effect type used for response body streams. Usually the same as `G`.
+  * @tparam G
+  *   The effect type used for representing arbitrary side-effects, such as creating files or logging. Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
     createFile: ServerRequest => G[TapirFile],
