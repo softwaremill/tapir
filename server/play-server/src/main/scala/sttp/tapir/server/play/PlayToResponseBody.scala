@@ -3,7 +3,7 @@ package sttp.tapir.server.play
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
+import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData}
 import sttp.capabilities.akka.AkkaStreams
@@ -13,7 +13,7 @@ import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.Charset
 import java.nio.file.Files
 
 class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
@@ -119,27 +119,8 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
     }
   }
 
-  private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String = {
-    val actualCharset = charset
-      .map(_.name())
-      .orElse(format.mediaType.charset)
-      .getOrElse(StandardCharsets.UTF_8.name())
-
-    implicit val playCodec: Codec = Codec.javaSupported(actualCharset)
-
-    format match {
-      case CodecFormat.Json()               => ContentTypes.JSON
-      case CodecFormat.Xml()                => ContentTypes.XML
-      case CodecFormat.TextPlain()          => ContentTypes.TEXT
-      case CodecFormat.TextHtml()           => ContentTypes.HTML
-      case CodecFormat.OctetStream()        => ContentTypes.BINARY
-      case CodecFormat.Zip()                => ContentTypes.withCharset("application/zip")
-      case CodecFormat.XWwwFormUrlencoded() => ContentTypes.FORM
-      case CodecFormat.MultipartFormData()  => ContentTypes.withCharset("multipart/form-data")
-      case CodecFormat.TextEventStream()    => ContentTypes.EVENT_STREAM
-      case f                                => ContentTypes.withCharset(f.mediaType.mainType + "/" + f.mediaType.subType)
-    }
-  }
+  private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String =
+    charset.fold(format.mediaType)(format.mediaType.charset(_)).toString()
 
   private def multipartFormToStream[A](
       dataParts: Seq[DataPart],
