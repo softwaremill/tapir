@@ -8,15 +8,19 @@ import magnolia._
 import scala.quoted.*
 
 trait SchemaMacros[T] { this: Schema[T] =>
-  inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${ SchemaMacros.modifyImpl[T, U]('this)('path)('modification)}
+  inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${
+    SchemaMacros.modifyImpl[T, U]('this)('path)('modification)
+  }
 }
 
 object SchemaMacros {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
-  def modifyImpl[T: Type, U: Type](base: Expr[Schema[T]])(path: Expr[T => U])(modification: Expr[Schema[U] => Schema[U]])(using Quotes): Expr[Schema[T]] = {
+  def modifyImpl[T: Type, U: Type](
+      base: Expr[Schema[T]]
+  )(path: Expr[T => U])(modification: Expr[Schema[U] => Schema[U]])(using Quotes): Expr[Schema[T]] = {
     import quotes.reflect.*
-    
+
     enum PathElement {
       case TermPathElement(term: String, xargs: String*) extends PathElement
       case FunctorPathElement(functor: String, method: String, xargs: String*) extends PathElement
@@ -26,19 +30,19 @@ object SchemaMacros {
       def typeSupported(modifyType: String) =
         Seq("ModifyEach", "ModifyEither", "ModifyEachMap")
           .exists(modifyType.endsWith)
-      
+
       tree match {
         /** Field access */
         case Select(deep, ident) =>
           toPath(deep, PathElement.TermPathElement(ident) :: acc)
         /** Method call with no arguments and using clause */
         case Apply(Apply(TypeApply(Ident(f), _), idents), _) if typeSupported(f) => {
-           val newAcc = acc match {
+          val newAcc = acc match {
             /** replace the term controlled by quicklens */
             case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs: _*) :: rest
             case elements => report.throwError(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
           }
-          
+
           idents.flatMap(toPath(_, newAcc))
         }
 
@@ -57,12 +61,14 @@ object SchemaMacros {
       case _ =>
         report.throwError(s"Unsupported path [$path]")
     }
-        
+
     '{
-      val pathValue = ${ Expr(pathElements.map {
-        case PathElement.TermPathElement(c) => c
-        case PathElement.FunctorPathElement(_, method, _ @_*) => method
-      }) }
+      val pathValue = ${
+        Expr(pathElements.map {
+          case PathElement.TermPathElement(c)                   => c
+          case PathElement.FunctorPathElement(_, method, _ @_*) => method
+        })
+      }
 
       $base.modifyUnsafe(pathValue: _*)($modification)
     }
@@ -74,14 +80,12 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[String, V]('{ summon[Schema[String]] }, '{ summon[Schema[V]] }, 'identity)
   }
 
-  /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is,
-    * the schema type should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time
-    * and is not verified at run-time.
+  /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is, the schema type
+    * should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time and is not verified at run-time.
     *
     * The given `keyToString` conversion function is used during validation.
     *
-    * If you'd like this schema to be available as an implicit for a given type of keys, create an custom implicit,
-    * e.g.:
+    * If you'd like this schema to be available as an implicit for a given type of keys, create an custom implicit, e.g.:
     *
     * {{{
     * case class MyKey(value: String) extends AnyVal
@@ -92,7 +96,9 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[K]] }, '{ summon[Schema[V]] }, 'keyToString)
   }
 
-  inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = ${
+  inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
+      mapping: (V, Schema[_])*
+  )(implicit conf: Configuration): Schema[E] = ${
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
   }
 }
@@ -101,8 +107,9 @@ object SchemaCompanionMacros {
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
 
-  def generateSchemaForMap[K: Type, V: Type](schemaForK: Expr[Schema[K]], schemaForV: Expr[Schema[V]], keyToString: Expr[K => String])(
-    using q: Quotes): Expr[Schema[Map[K, V]]] = {
+  def generateSchemaForMap[K: Type, V: Type](schemaForK: Expr[Schema[K]], schemaForV: Expr[Schema[V]], keyToString: Expr[K => String])(using
+      q: Quotes
+  ): Expr[Schema[Map[K, V]]] = {
 
     import quotes.reflect.*
 
@@ -115,8 +122,9 @@ object SchemaCompanionMacros {
 
     '{
       Schema(
-        SOpenProduct[Map[K, V], V](${schemaForV})(_.map { case (k, v) => ($keyToString(k), v) }),
-        Some(Schema.SName("Map", ${Expr(genericTypeParameters)})))
+        SOpenProduct[Map[K, V], V](${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
+        Some(Schema.SName("Map", ${ Expr(genericTypeParameters) }))
+      )
     }
   }
 
@@ -124,14 +132,14 @@ object SchemaCompanionMacros {
       mapping: Expr[Seq[(V, Schema[_])]]
   )(conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
     import q.reflect.*
-   
+
     def resolveFunctionName(f: Statement): String = f match {
-      case Inlined(_, _, block) => resolveFunctionName(block)
-      case Block(List(), block) => resolveFunctionName(block)
-      case Block(List(defdef), _) => resolveFunctionName(defdef)
-      case DefDef(_, _,_, Some(body)) => resolveFunctionName(body)
-      case Apply(fun, _) => resolveFunctionName(fun)
-      case Select(_ ,kind) => kind
+      case Inlined(_, _, block)        => resolveFunctionName(block)
+      case Block(List(), block)        => resolveFunctionName(block)
+      case Block(List(defdef), _)      => resolveFunctionName(defdef)
+      case DefDef(_, _, _, Some(body)) => resolveFunctionName(body)
+      case Apply(fun, _)               => resolveFunctionName(fun)
+      case Select(_, kind)             => kind
     }
 
     val tpe = TypeRepr.of[E]
@@ -149,17 +157,15 @@ object SchemaCompanionMacros {
       val mappingAsList = $mapping.toList
       val mappingAsMap = mappingAsList.toMap
       val discriminator = SDiscriminator(
-        _root_.sttp.tapir.FieldName(${Expr(functionName)}, $conf.toEncodedName(${Expr(functionName)})),
-        mappingAsMap.collect { case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
+        _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) })),
+        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
           $asString.apply(k) -> SRef(fname)
         }
       )
-      val sname = SName(SNameMacros.typeFullName[E], ${Expr(typeParams)})
+      val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
-      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(
-        e => mappingAsMap.get($extractor(e))
-      ), Some(sname))
+      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(e => mappingAsMap.get($extractor(e))), Some(sname))
     }
-  }  
+  }
 
 }
