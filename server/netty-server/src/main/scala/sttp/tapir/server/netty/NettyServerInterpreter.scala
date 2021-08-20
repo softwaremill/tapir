@@ -5,32 +5,10 @@ import scala.util.{Success, Try}
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.{ByteBuf, Unpooled}
-import io.netty.channel.{
-  Channel,
-  ChannelFutureListener,
-  ChannelHandlerContext,
-  ChannelInitializer,
-  ChannelOption,
-  SimpleChannelInboundHandler
-}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.http.{
-  DefaultFullHttpResponse,
-  FullHttpRequest,
-  FullHttpResponse,
-  HttpHeaderNames,
-  HttpHeaderValues,
-  HttpMethod,
-  HttpObjectAggregator,
-  HttpRequest,
-  HttpResponse,
-  HttpResponseStatus,
-  HttpServerCodec,
-  HttpUtil,
-  HttpVersion
-}
-import io.netty.util.CharsetUtil
+import io.netty.channel._
+import io.netty.handler.codec.http._
 import sttp.model.Method
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.internal.NoStreams
@@ -67,18 +45,21 @@ object NettyServerInterpreter {
       serverInterpreter(serverRequest, ses).map {
         case RequestResult.Response(response) => {
           val res = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1,
+            HttpVersion.valueOf(serverRequest.protocol),
             HttpResponseStatus.valueOf(response.code.code),
             response.body.getOrElse(Unpooled.EMPTY_BUFFER)
           )
 
-          // todo headers
-          res.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
-          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
+          response.headers.foreach(h => res.headers().set(h.name, h.value))
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
 
           res
         }
-        case RequestResult.Failure(failures) => ???
+        case RequestResult.Failure(_) => {
+          val res = new DefaultFullHttpResponse(HttpVersion.valueOf(serverRequest.protocol), HttpResponseStatus.valueOf(404))
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
+          res
+        }
       }
     }
 
@@ -86,7 +67,7 @@ object NettyServerInterpreter {
   }
 }
 
-class ServerHandler extends SimpleChannelInboundHandler[FullHttpRequest] { // or HttpRequest?
+class ServerHandler extends SimpleChannelInboundHandler[FullHttpRequest] {
 
   println("ServerHandler init")
 
@@ -95,26 +76,12 @@ class ServerHandler extends SimpleChannelInboundHandler[FullHttpRequest] { // or
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
     } else {
 
-      // todo: handler <-> interpreter connection doesn't work
-//      val helloWorld: Endpoint[String, Unit, String, Any] =
-//        endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
-//      val logic = List(helloWorld.serverLogic(name => Future.successful(Right(s"Hello, $name!"))))
-//      val requestHandler = NettyServerInterpreter.toHandler(logic)
-//      val resp = requestHandler(req)
-//      resp.map(flushResponse(ctx, req, _))
-
-      val respContent = "content for resp"
-
-      val res = new DefaultFullHttpResponse(
-        HttpVersion.HTTP_1_1,
-        HttpResponseStatus.OK,
-        Unpooled.copiedBuffer(respContent, CharsetUtil.UTF_8)
-      )
-
-      res.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
-      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
-
-      flushResponse(ctx, req, res)
+      val helloWorld: Endpoint[String, Unit, String, Any] =
+        endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
+      val logic = List(helloWorld.serverLogic(name => Future.successful(Right(s"Hello, $name!"): Either[Unit, String])))
+      val requestHandler = NettyServerInterpreter.toHandler(logic)
+      val resp = requestHandler(req)
+      resp.map(flushResponse(ctx, req, _))
     }
   }
 
