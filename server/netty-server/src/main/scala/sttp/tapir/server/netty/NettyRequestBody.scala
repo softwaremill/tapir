@@ -2,7 +2,7 @@ package sttp.tapir.server.netty
 
 import scala.concurrent.Future
 
-import io.netty.handler.codec.http.FullHttpRequest
+import io.netty.handler.codec.http.{FullHttpMessage, FullHttpRequest, HttpContent}
 import sttp.capabilities
 import sttp.tapir.RawBodyType
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -12,28 +12,17 @@ import io.netty.buffer.ByteBufInputStream
 import sttp.tapir.internal.NoStreams
 
 //todo: ChannelFuture or something with cats-effect?
-//todo: FullHttpRequest vs multipart?
-class NettyRequestBody(req: FullHttpRequest) extends RequestBody[Future, NoStreams] {
+//todo: FullHttpMessage OK?
+class NettyRequestBody(req: FullHttpMessage) extends RequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](bodyType: RawBodyType[RAW]): Future[RawValue[RAW]] = {
-    Future(req.content())
-      .map { cnt =>
-        bodyType match {
-          case RawBodyType.StringBody(charset) => cnt.toString(charset)
-          case RawBodyType.ByteArrayBody       => cnt.array()
-          case RawBodyType.ByteBufferBody      => cnt.nioBuffer()
-          case RawBodyType.InputStreamBody     => new ByteBufInputStream(cnt)
-        }
-      }
-      .map(RawValue(_))
-
     bodyType match {
-      case RawBodyType.StringBody(charset) => Future(req.content()).map(_.toString(charset)).map(RawValue(_))
-      case RawBodyType.ByteArrayBody       => Future(req.content()).map(_.array()).map(RawValue(_))
-      case RawBodyType.ByteBufferBody      => Future(req.content()).map(_.nioBuffer()).map(RawValue(_))
-      case RawBodyType.InputStreamBody     => Future(req.content()).map(new ByteBufInputStream(_)).map(RawValue(_))
+      case RawBodyType.StringBody(charset) => Future(RawValue(req.content().toString(charset)))
+      case RawBodyType.ByteArrayBody       => Future(RawValue(req.content().array()))
+      case RawBodyType.ByteBufferBody      => Future(RawValue(req.content().nioBuffer()))
+      case RawBodyType.InputStreamBody     => Future(RawValue(new ByteBufInputStream(req.content())))
       case RawBodyType.FileBody            => ???
       case RawBodyType.MultipartBody(_, _) => ???
     }
