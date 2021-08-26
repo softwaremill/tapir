@@ -22,6 +22,6 @@ case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetS
 
 object ConnectionInfo {
 
-  /** When no info can be retained from context. */
-  val NoInfo = ConnectionInfo(None, None, None)
+  /** When no info can be obtained from context. */
+  val NoInfo: ConnectionInfo = ConnectionInfo(None, None, None)
 }
