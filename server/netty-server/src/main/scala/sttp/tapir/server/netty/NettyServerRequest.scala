@@ -28,7 +28,7 @@ class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
   override lazy val uri: Uri = Uri.unsafeParse(req.uri())
 
   override lazy val pathSegments: List[String] =
-    uri.pathSegments.segments.map(_.v).toList
+    uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
 
   override lazy val headers: Seq[Header] =
     req.headers().toHeaderSeq ++ req.trailingHeaders().toHeaderSeq

@@ -4,7 +4,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import io.netty.buffer.{ByteBuf, ByteBufInputStream, Unpooled}
+import io.netty.buffer.{ByteBuf, Unpooled}
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
@@ -14,7 +14,6 @@ import sttp.tapir.server.interpreter.ToResponseBody
 class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  // FullHttpMessage - no ctor, hence ByteBuf for content only
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ByteBuf = {
     bodyType match {
       case RawBodyType.StringBody(charset) =>

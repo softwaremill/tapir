@@ -926,9 +926,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.66.Final"
-    )
+    libraryDependencies ++= Seq("io.netty" % "netty-all" % "4.1.66.Final") ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)

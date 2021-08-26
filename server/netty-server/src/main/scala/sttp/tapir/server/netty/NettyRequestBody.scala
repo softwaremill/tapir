@@ -1,19 +1,15 @@
 package sttp.tapir.server.netty
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-import io.netty.handler.codec.http.{FullHttpMessage, FullHttpRequest, HttpContent}
+import io.netty.handler.codec.http.FullHttpMessage
 import sttp.capabilities
 import sttp.tapir.RawBodyType
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import scala.concurrent.ExecutionContext.Implicits.global
-
 import io.netty.buffer.ByteBufInputStream
 import sttp.tapir.internal.NoStreams
 
-//todo: ChannelFuture or something with cats-effect?
-//todo: FullHttpMessage OK?
-class NettyRequestBody(req: FullHttpMessage) extends RequestBody[Future, NoStreams] {
+class NettyRequestBody(req: FullHttpMessage)(implicit val ec: ExecutionContext) extends RequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
