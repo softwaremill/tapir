@@ -17,12 +17,12 @@ class ValidatorScala3EnumTest extends AnyFlatSpec with Matchers {
 
 }
 
-enum ColorEnum { 
-  case Green  extends ColorEnum
-  case Pink   extends ColorEnum
+enum ColorEnum {
+  case Green extends ColorEnum
+  case Pink extends ColorEnum
 }
 
 enum ColorEnumWithParam {
-  case Red              extends ColorEnumWithParam
+  case Red extends ColorEnumWithParam
   case Green(s: String) extends ColorEnumWithParam
 }
