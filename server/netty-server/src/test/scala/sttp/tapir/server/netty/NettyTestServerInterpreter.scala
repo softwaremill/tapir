@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.buffer.Unpooled
+import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.{
   Channel,
@@ -38,14 +38,19 @@ import io.netty.handler.codec.http.{
   HttpVersion
 }
 import io.netty.handler.logging.LoggingHandler
-
+import sttp.tapir.model.ServerResponse
+import sttp.tapir.server.netty.NettyServerInterpreter.{NettyRoutingResult, RoutingFailureCode}
+import scala.jdk.CollectionConverters._
 class NettyTestServerInterpreter(implicit ec: ExecutionContext)
-    extends TestServerInterpreter[Future, Any, FullHttpRequest => Future[FullHttpResponse]] { //Any or NoStreams
+    extends TestServerInterpreter[Future, Any, FullHttpRequest => NettyRoutingResult] {
+  val acceptors = new NioEventLoopGroup()
+  val workers = new NioEventLoopGroup()
+
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
-  ): (FullHttpRequest => Future[FullHttpResponse]) = {
+  ): (FullHttpRequest => NettyRoutingResult) = {
     val serverOptions: NettyServerOptions = NettyServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
@@ -54,46 +59,71 @@ class NettyTestServerInterpreter(implicit ec: ExecutionContext)
     NettyServerInterpreter(serverOptions).toHandler(List(e))
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FullHttpRequest => Future[FullHttpResponse] = {
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FullHttpRequest => NettyRoutingResult = {
     NettyServerInterpreter().toHandler(es)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
-  ): FullHttpRequest => Future[FullHttpResponse] = {
+  ): FullHttpRequest => NettyRoutingResult = {
     //todo
     NettyServerInterpreter().toHandler(List(e.serverLogicRecoverErrors(fn)))
   }
-  //resources!
-  val acceptors = new NioEventLoopGroup()
-  val workers = new NioEventLoopGroup()
-  override def server(routes: NonEmptyList[FullHttpRequest => Future[FullHttpResponse]]): Resource[IO, Port] = {
+
+  override def server(routes: NonEmptyList[FullHttpRequest => NettyRoutingResult]): Resource[IO, Port] = {
 
     val bind = IO.fromFuture({
-      //todo: concat routes
-
-      class ServerHandler(val handlers: List[FullHttpRequest => Future[FullHttpResponse]])(implicit val ec: ExecutionContext)
+      class ServerHandler(val handlers: List[FullHttpRequest => NettyRoutingResult])(implicit val ec: ExecutionContext)
           extends SimpleChannelInboundHandler[FullHttpRequest] {
+
+        private lazy val routingFailureResp = {
+          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND)
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
+          res
+        }
+
+        private def toHttpResponse(serverResult: Either[Int, ServerResponse[ByteBuf]], req: FullHttpRequest) = {
+          val resp = serverResult match {
+            case Left(httpCode) =>
+              val error = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(httpCode))
+              error.headers().set(HttpHeaderNames.CONTENT_LENGTH, error.content().readableBytes())
+              error
+
+            case Right(interpreterResponse) =>
+              val res = new DefaultFullHttpResponse(
+                req.protocolVersion(),
+                HttpResponseStatus.valueOf(interpreterResponse.code.code),
+                interpreterResponse.body.getOrElse(Unpooled.EMPTY_BUFFER)
+              )
+
+              interpreterResponse.headers
+                .groupBy(_.name)
+                .foreach { case (k, v) =>
+                  res.headers().set(k, v.map(_.value).asJava)
+                }
+
+              res
+          }
+
+          resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes())
+          resp
+        }
 
         override def channelRead0(ctx: ChannelHandlerContext, req: FullHttpRequest): Unit = {
           if (HttpUtil.is100ContinueExpected(req)) {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
           } else {
-            //hmm
-            val req2 = req.copy().replace(Unpooled.copiedBuffer(req.content()))
-            // if 404 -> next
-            val xs: List[Future[FullHttpResponse]] = handlers.map(h => h(req2))
+            //todo: AbstractByteBuf.checkAccessible hack
+            val accessibleRequest = req.copy().replace(Unpooled.copiedBuffer(req.content()))
 
-            val us = Future.find(xs)(resp => resp.status().code() != 404)
+            val responses: List[Future[FullHttpResponse]] = handlers
+              .map(_.apply(accessibleRequest))
+              .map(_.map(toHttpResponse(_, accessibleRequest)))
 
-            us.map {
-              case Some(value) =>
-                flushResponse(ctx, req2, value)
-              case None =>
-                val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(404))
-                res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
-                flushResponse(ctx, req2, res)
-            }
+            Future
+              .find(responses)(_.status().code() != RoutingFailureCode)
+              .map(_.getOrElse(routingFailureResp))
+              .foreach(flushResponse(ctx, accessibleRequest, _))
           }
         }
 
@@ -105,10 +135,9 @@ class NettyTestServerInterpreter(implicit ec: ExecutionContext)
             ctx.writeAndFlush(res)
           }
         }
-
       }
 
-      class ServerInitializer(val handlers: List[FullHttpRequest => Future[FullHttpResponse]])(implicit val ec: ExecutionContext)
+      class ServerInitializer(val handlers: List[FullHttpRequest => NettyRoutingResult])(implicit val ec: ExecutionContext)
           extends ChannelInitializer[Channel] {
 
         def initChannel(ch: Channel) {
@@ -121,7 +150,7 @@ class NettyTestServerInterpreter(implicit ec: ExecutionContext)
       }
 
       val httpBootstrap = new ServerBootstrap()
-      // Configure the server
+
       httpBootstrap
         .group(acceptors, workers)
         .channel(classOf[NioServerSocketChannel])
@@ -136,20 +165,9 @@ class NettyTestServerInterpreter(implicit ec: ExecutionContext)
     })
 
     Resource
-      .make(bind)(binding =>
-        IO.fromFuture(IO {
-          Future {
-            binding.channel.closeFuture
-            //todo
-            //.sync
-//            workers.shutdownGracefully()
-//            acceptors.shutdownGracefully()
-          }
-        }).void
-      )
-      .map(x => {
-        val ch = x.channel()
-        x.channel().localAddress()
+      .make(bind)(binding => IO.fromFuture(IO(Future(binding.channel.closeFuture))).void)
+      .map(channelFuture => {
+        val ch = channelFuture.channel()
         ch.localAddress().toString.split(":").toList.last.toInt
       })
   }
