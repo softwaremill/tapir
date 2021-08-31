@@ -12,13 +12,15 @@ class NettyServerTest extends TestSuite with EitherValues {
     backendResource.flatMap { backend =>
       Resource.pure {
         implicit val m: FutureMonad = new FutureMonad()
-        val acceptors = new NioEventLoopGroup()
-        val workers = new NioEventLoopGroup()
+        val eventLoopGroup = new NioEventLoopGroup()
 
-        val interpreter = new NettyTestServerInterpreter(workers, acceptors)
+        val interpreter = new NettyTestServerInterpreter(eventLoopGroup)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-        new ServerBasicTests(createServerTest, interpreter).tests()
+        new ServerBasicTests(createServerTest, interpreter).tests() ++
+          new ServerAuthenticationTests(createServerTest).tests() ++
+          new ServerMetricsTest(createServerTest).tests() ++
+          new ServerRejectTests(createServerTest, interpreter).tests()
       }
     }
 }

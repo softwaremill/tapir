@@ -19,7 +19,7 @@ import sttp.tapir.server.netty.example.NettyServerInitializer
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
-class NettyTestServerInterpreter(workers: NioEventLoopGroup, acceptors: NioEventLoopGroup)(implicit ec: ExecutionContext)
+class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
     extends TestServerInterpreter[Future, Any, FullHttpRequest => NettyRoutingResult] {
 
   override def route[I, E, O](
@@ -50,7 +50,7 @@ class NettyTestServerInterpreter(workers: NioEventLoopGroup, acceptors: NioEvent
       val httpBootstrap = new ServerBootstrap()
 
       httpBootstrap
-        .group(acceptors, workers)
+        .group(eventLoopGroup)
         .channel(classOf[NioServerSocketChannel])
         .childHandler(new NettyServerInitializer(routes.toList))
         .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
