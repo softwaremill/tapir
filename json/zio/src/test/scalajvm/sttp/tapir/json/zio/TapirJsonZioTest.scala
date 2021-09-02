@@ -53,7 +53,7 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
   it should "encode to non-prettified Json" in {
     val customer = Customer("Alita", 1985, None)
     val codec = zioCodec[Customer]
-    val expected = """{"name":"Alita","yearOfBirth":1985,"lastPurchase":null}"""
+    val expected = """{"name":"Alita","yearOfBirth":1985}"""
     codec.encode(customer) shouldBe expected
   }
 
