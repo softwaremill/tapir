@@ -34,7 +34,7 @@ object Resources {
         if (isModified(resourcesInput, etag, lastModified)) {
           val contentType = contentTypeFromName(name)
           Right(
-            StaticOutput.Found(conn.getInputStream, Some(Instant.ofEpochMilli(lastModified)), Some(length), Some(contentType), etag)
+            StaticOutput.Found(conn.getInputStream, Some(Instant.ofEpochMilli(lastModified)), Some(length), Some(contentType), etag, Some(""), Some("a"))
           ): Either[StaticErrorOutput, StaticOutput[InputStream]]
         } else Right(StaticOutput.NotModified)
       }

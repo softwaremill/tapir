@@ -46,6 +46,11 @@ trait TapirStaticContentEndpoints {
     case Some(v) => DecodeResult.fromEitherString(v, ETag.parse(v)).map(Some(_))
   }(_.map(_.toString))
 
+  private val rangeHeader: EndpointIO[Option[RangeValue]] = header[Option[String]](HeaderNames.Range).mapDecode[Option[RangeValue]] {
+    case None    => DecodeResult.Value(None)
+    case Some(v) => DecodeResult.fromEitherString(v, RangeValue.fromString(v).map(Some(_)))
+  }(_.map(_.toString))
+
   private def staticEndpoint[T](
       prefix: EndpointInput[Unit],
       body: EndpointOutput[T]
@@ -85,8 +90,64 @@ trait TapirStaticContentEndpoints {
               .and(contentTypeHeader)
               .and(etagHeader)
               .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag])) =>
-                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5)
+                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, Some(""), Some("a"))
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag)),
+            classOf[StaticOutput.Found[T]]
+          )
+        )
+      )
+  }
+
+  private def staticEndpointRanged[T](
+    prefix: EndpointInput[Unit],
+    body: EndpointOutput[T]
+  ): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
+    endpoint.get
+      .in(prefix)
+      .in(
+        pathsWithoutDots
+          .and(ifNoneMatchHeader)
+          .and(ifModifiedSinceHeader)
+          .and(rangeHeader)
+          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[RangeValue])) => StaticInput(t._1, t._2, t._3, t._4))(fi =>
+            (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range)
+          )
+      )
+      .errorOut(
+        oneOf[StaticErrorOutput](
+          oneOfMappingClassMatcher(
+            StatusCode.NotFound,
+            emptyOutputAs(StaticErrorOutput.NotFound),
+            StaticErrorOutput.NotFound.getClass
+          ),
+          oneOfMappingClassMatcher(
+            StatusCode.BadRequest,
+            emptyOutputAs(StaticErrorOutput.BadRequest),
+            StaticErrorOutput.BadRequest.getClass
+          )
+          ,
+          oneOfMappingClassMatcher(
+            StatusCode.RangeNotSatisfiable,
+            emptyOutputAs(StaticErrorOutput.RangeNotSatisfiable),
+            StaticErrorOutput.RangeNotSatisfiable.getClass
+          )
+        )
+      )
+      .out(
+        oneOf[StaticOutput[T]](
+          oneOfMappingClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
+          oneOfMappingClassMatcher(
+            StatusCode.Ok,
+            body
+              .and(lastModifiedHeader)
+              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentTypeHeader)
+              .and(etagHeader)
+              .and(header[Option[String]](HeaderNames.AcceptRanges))
+              .and(header[Option[String]](HeaderNames.ContentRange))
+              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
+              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
             classOf[StaticOutput.Found[T]]
           )
         )
@@ -95,6 +156,9 @@ trait TapirStaticContentEndpoints {
 
   def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any] =
     staticEndpoint(prefix, fileBody)
+
+  def filesEndpointRanged(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any] =
+    staticEndpointRanged(prefix, fileBody)
 
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticEndpoint(prefix, inputStreamBody)
@@ -112,6 +176,11 @@ trait TapirStaticContentEndpoints {
       systemPath: String
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
     ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
+
+  def filesServerEndpointRanged[F[_]](prefix: EndpointInput[Unit])(
+    systemPath: String
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
+    ServerEndpoint(filesEndpointRanged(prefix), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *

@@ -1,5 +1,6 @@
 package sttp.tapir.static
 
+import sttp.model.Header
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -20,9 +21,16 @@ object Files {
       calculateETag: File => F[Option[ETag]]
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[File]]] = {
     Try(Paths.get(systemPath).toRealPath()) match {
-      case Success(realSystemPath) => (filesInput: StaticInput) => files(realSystemPath, calculateETag)(filesInput)
+      case Success(realSystemPath) => (filesInput: StaticInput) => checkRangeHeader(realSystemPath, calculateETag)(filesInput)
       case Failure(e)              => _ => MonadError[F].error(e)
     }
+  }
+
+  def checkRangeHeader[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]])(filesInput: StaticInput)(implicit
+    m: MonadError[F]
+  ): F[Either[StaticErrorOutput, StaticOutput[File]]] = filesInput.range match {
+    case Some(value) => files(realSystemPath, calculateETag, value)(filesInput)
+    case None =>  (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[File]]).unit
   }
 
   def defaultEtag[F[_]: MonadError](file: File): F[Option[ETag]] = MonadError[F].blocking {
@@ -30,7 +38,7 @@ object Files {
     else None
   }
 
-  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]])(filesInput: StaticInput)(implicit
+  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(filesInput: StaticInput)(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[File]]] = {
     val resolved = filesInput.path.foldLeft(realSystemPath)(_.resolve(_))
@@ -42,27 +50,28 @@ object Files {
         if (!realRequestedPath.startsWith(realSystemPath))
           (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[File]]).unit
         else if (realRequestedPath.toFile.isDirectory) {
-          files(realSystemPath, calculateETag)(filesInput.copy(path = filesInput.path :+ "index.html"))
-        } else fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
+          files(realSystemPath, calculateETag, range)(filesInput.copy(path = filesInput.path :+ "index.html"))
+        } else fileOutput(filesInput, realRequestedPath, calculateETag, range).map(Right(_))
       }
     })
   }
 
-  private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]])(implicit
+  private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
       m: MonadError[F]
   ): F[StaticOutput[File]] = for {
     etag <- calculateETag(file.toFile)
     lastModified <- m.blocking(file.toFile.lastModified())
     result <- {
-      if (isModified(filesInput, etag, lastModified)) found(file, etag, lastModified)
+      if (isModified(filesInput, etag, lastModified)) found(file, etag, lastModified, range)
       else StaticOutput.NotModified.unit
     }
   } yield result
 
-  private def found[F[_]](file: Path, etag: Option[ETag], lastModified: Long)(implicit m: MonadError[F]): F[StaticOutput[File]] = {
+  private def found[F[_]](file: Path, etag: Option[ETag], lastModified: Long, range: RangeValue)(implicit m: MonadError[F]): F[StaticOutput[File]] = {
     m.blocking(file.toFile.length()).map { contentLength =>
       val contentType = contentTypeFromName(file.toFile.getName)
-      StaticOutput.Found(file.toFile, Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentType), etag)
+      val contentRange = Some(range.unit + " " + range.start + "-" + range.end + "/" + contentLength)
+      StaticOutput.Found(file.toFile, Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentType), etag, Some("bytes"), contentRange)
     }
   }
 }

@@ -70,162 +70,41 @@ class ServerStaticContentTests[F[_], ROUTE](
     },
     Test("return 404 when files are not found") {
       withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
+        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
             basicRequest
-              .get(uri"http://localhost:$port/f3")
+              .headers(Header(HeaderNames.Range, "bytes=0-1"))
+              .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(_.code shouldBe StatusCode.NotFound)
+              .map(_.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true)
           }
           .unsafeToFuture()
       }
     },
-    Test("not return a file outside of the system path") {
+    Test("Returns 416 if range header not present") {
       withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath + "/d1"))
-          .use { port =>
-            basicRequest
-              .get(uri"http://localhost:$port/../f1")
-              .response(asStringAlways)
-              .send(backend)
-              .map(_.body should not be "f1 content")
-          }
-          .unsafeToFuture()
-      }
-    },
-    Test("return file metadata") {
-      withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
-          .use { port =>
-            basicRequest
-              .get(uri"http://localhost:$port/img.gif")
-              .response(asStringAlways)
-              .send(backend)
-              .map { r =>
-                r.contentLength shouldBe Some(11)
-                r.contentType shouldBe Some(MediaType.ImageGif.toString())
-                r.header(HeaderNames.LastModified)
-                  .flatMap(t => Header.parseHttpDate(t).toOption)
-                  .map(_.toEpochMilli)
-                  .get should be > (System.currentTimeMillis() - 10000L)
-                r.header(HeaderNames.Etag).isDefined shouldBe true
-              }
-          }
-          .unsafeToFuture()
-      }
-    },
-    Test("if an etag is present, only return the file if it doesn't match the etag") {
-      withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
-          .use { port =>
-            def get(etag: Option[String]) = basicRequest
-              .get(uri"http://localhost:$port/f1")
-              .header(HeaderNames.IfNoneMatch, etag)
-              .response(asStringAlways)
-              .send(backend)
-
-            get(None).flatMap { r1 =>
-              r1.code shouldBe StatusCode.Ok
-              val etag = r1.header(HeaderNames.Etag).get
-
-              get(Some(etag)).map { r2 =>
-                r2.code shouldBe StatusCode.NotModified
-              } >> get(Some(etag.replace("-", "-x"))).map { r2 =>
-                r2.code shouldBe StatusCode.Ok
-              }
-            }
-          }
-          .unsafeToFuture()
-      }
-    },
-    Test("serve resources") {
-      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
-        .use { port =>
-          def get(path: List[String]) = basicRequest
-            .get(uri"http://localhost:$port/$path")
-            .response(asStringAlways)
-            .send(backend)
-
-          get("r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
-            get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
-            get("d1/r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
-            get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
-        }
-        .unsafeToFuture()
-    },
-    Test("return 404 when a resource is not found") {
-      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
-        .use { port =>
-          basicRequest
-            .get(uri"http://localhost:$port/r3")
-            .response(asStringAlways)
-            .send(backend)
-            .map(_.code shouldBe StatusCode.NotFound)
-        }
-        .unsafeToFuture()
-    },
-    Test("not return a resource outside of the resource prefix directory") {
-      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
-        .use { port =>
-          basicRequest
-            .get(uri"http://localhost:$port/../test2/r5.txt")
-            .response(asStringAlways)
-            .send(backend)
-            .map(_.body should not be "Resource 5")
-        }
-        .unsafeToFuture()
-    },
-    Test("return resource metadata") {
-      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
-        .use { port =>
-          basicRequest
-            .get(uri"http://localhost:$port/r1.txt")
-            .response(asStringAlways)
-            .send(backend)
-            .map { r =>
-              r.contentLength shouldBe Some(10)
-              r.contentType shouldBe Some(MediaType.TextPlain.toString())
-              r.header(HeaderNames.LastModified)
-                .flatMap(t => Header.parseHttpDate(t).toOption)
-                .map(_.toEpochMilli)
-                .get should be > (1629180000000L) // 8:00 17 Aug 2021 when the test was written
-              r.header(HeaderNames.Etag).isDefined shouldBe true
-            }
-        }
-        .unsafeToFuture()
-    },
-    Test("if an etag is present, only return the resource if it doesn't match the etag") {
-      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
-        .use { port =>
-          def get(etag: Option[String]) = basicRequest
-            .get(uri"http://localhost:$port/r1.txt")
-            .header(HeaderNames.IfNoneMatch, etag)
-            .response(asStringAlways)
-            .send(backend)
-
-          get(None).flatMap { r1 =>
-            r1.code shouldBe StatusCode.Ok
-            val etag = r1.header(HeaderNames.Etag).get
-
-            get(Some(etag)).map { r2 =>
-              r2.code shouldBe StatusCode.NotModified
-            } >> get(Some(etag.replace("-", "-x"))).map { r2 =>
-              r2.code shouldBe StatusCode.Ok
-            }
-          }
-        }
-        .unsafeToFuture()
-    },
-    Test("serve a single file from the given system path") {
-      withTestFilesDirectory { testDir =>
-        serveRoute(fileServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
             basicRequest
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(_.body shouldBe "f1 content")
+              .map(_.code.code shouldBe 416)
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("Returns content range header with matching bytes") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=1-3"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true)
           }
           .unsafeToFuture()
       }
