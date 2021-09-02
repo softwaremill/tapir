@@ -6,7 +6,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.Part
-import sttp.tapir.RawBodyType
+import sttp.tapir.{RawBodyType, TapirFile}
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.interpreters.FromVFuture
@@ -42,24 +42,24 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       rc.fileUploads().asScala.headOption match {
         case Some(upload) =>
           Future.succeededFuture {
-            val file = new File(upload.uploadedFileName())
+            val file = TapirFile.fromFile(new File(upload.uploadedFileName()))
             RawValue(file, Seq(file))
           }
         case None if rc.getBody != null =>
-          val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+          val filePath = s"${serverOptions.uploadDirectory.toFile.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
           val fs = rc.vertx.fileSystem
           val result = fs
             .createFile(filePath)
             .flatMap(_ => fs.writeFile(filePath, rc.getBody))
             .flatMap(_ =>
               Future.succeededFuture {
-                val file = new File(filePath)
+                val file = TapirFile.fromFile(new File(filePath))
                 RawValue(file, Seq(file))
               }
             )
           result
         case None =>
-          Future.failedFuture[RawValue[File]]("No body")
+          Future.failedFuture[RawValue[TapirFile]]("No body")
       }
     case RawBodyType.MultipartBody(partTypes, defaultType) =>
       val defaultParts = defaultType
@@ -90,7 +90,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
       case RawBodyType.FileBody =>
         val f = rc.fileUploads.asScala.find(_.name == name).get
-        new File(f.uploadedFileName())
+        TapirFile.fromFile(new File(f.uploadedFileName()))
       case RawBodyType.MultipartBody(partTypes, _) =>
         partTypes.map { case (partName, rawBodyType) =>
           Part(partName, extractPart(partName, rawBodyType))

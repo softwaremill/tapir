@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
@@ -17,6 +17,7 @@ import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
+import java.nio.file.Path
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
 
@@ -184,6 +185,11 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
     id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
+  implicit val tapirFile: Codec[TapirFile, TapirFile, OctetStream] =
+    id[TapirFile, OctetStream](OctetStream(), Schema.schemaForTapirFile)
+  implicit val tapirFilePath: Codec[TapirFile, Path, OctetStream] =
+    tapirFile.mapDecode(file => Value(file.toPath))(path => TapirFile.fromPath(path))
+
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
   implicit val formMapCodecUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMapCodec(StandardCharsets.UTF_8)

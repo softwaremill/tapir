@@ -28,7 +28,7 @@ object VertxZioServerOptions {
       createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, RIO[R, *]](sl, (_, _) => RIO.unit),
       createOptions = (ci: CustomInterceptors[RIO[R, *], Unit, VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
-          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
+          TapirFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
           file => Task[Unit](Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

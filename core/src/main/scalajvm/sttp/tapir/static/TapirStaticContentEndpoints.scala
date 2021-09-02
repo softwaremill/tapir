@@ -154,10 +154,10 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any] =
+  def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
     staticEndpoint(prefix, fileBody)
 
-  def filesEndpointRanged(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any] =
+  def filesEndpointRanged(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
     staticEndpointRanged(prefix, fileBody)
 
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
@@ -174,12 +174,12 @@ trait TapirStaticContentEndpoints {
     */
   def filesServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
     ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
 
   def filesServerEndpointRanged[F[_]](prefix: EndpointInput[Unit])(
     systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
     ServerEndpoint(filesEndpointRanged(prefix), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
@@ -190,7 +190,7 @@ trait TapirStaticContentEndpoints {
     */
   def fileServerEndpoint[F[_]](path: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[File], Any, F] =
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
     ServerEndpoint(removePath(filesEndpoint(path)), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is

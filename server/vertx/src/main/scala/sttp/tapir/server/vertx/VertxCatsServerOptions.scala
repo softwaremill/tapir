@@ -35,7 +35,7 @@ object VertxCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
-          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
+          TapirFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
           file => Sync[F].delay(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

@@ -5,16 +5,9 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{basicRequest, multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
+import sttp.tapir.TapirFile
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.tapir.tests.{
-  FruitAmount,
-  FruitData,
-  Test,
-  in_file_multipart_out_multipart,
-  in_file_out_file,
-  in_raw_multipart_out_string,
-  in_simple_multipart_out_multipart
-}
+import sttp.tapir.tests.{FruitAmount, FruitData, Test, in_file_multipart_out_multipart, in_file_out_file, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
 
 import java.io.File
 import scala.concurrent.Await
@@ -34,7 +27,7 @@ class ServerFileMultipartTests[F[_], ROUTE](
 
   def basicTests(): List[Test] = {
     List(
-      testServer(in_file_out_file)((file: File) => pureResult(file.asRight[Unit])) { (backend, baseUri) =>
+      testServer(in_file_out_file)((file: TapirFile) => pureResult(file.asRight[Unit])) { (backend, baseUri) =>
         basicRequest
           .post(uri"$baseUri/api/echo")
           .body("pen pineapple apple pen")
@@ -56,7 +49,7 @@ class ServerFileMultipartTests[F[_], ROUTE](
       testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
         pureResult(
           FruitData(
-            Part("", writeToFile(Await.result(readFromFile(fd.data.body), 3.seconds).reverse), fd.data.otherDispositionParams, Nil)
+            Part("", TapirFile.fromFile(writeToFile(Await.result(readFromFile(fd.data.body.toFile), 3.seconds).reverse)), fd.data.otherDispositionParams, Nil)
               .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
           ).asRight[Unit]
         )

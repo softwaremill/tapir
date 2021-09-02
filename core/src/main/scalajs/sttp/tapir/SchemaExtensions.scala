@@ -1,3 +1,7 @@
 package sttp.tapir
 
-trait SchemaExtensions
+import sttp.tapir.SchemaType.SBinary
+
+trait SchemaExtensions {
+  implicit val schemaForJSFile: Schema[org.scalajs.dom.File] = Schema(SBinary())
+}

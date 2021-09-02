@@ -36,7 +36,7 @@ object VertxFutureServerOptions {
       createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
       createOptions = (ci: CustomInterceptors[Future, Unit, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
-          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
+          TapirFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
           defaultDeleteFile,
           ci.interceptors,
           None

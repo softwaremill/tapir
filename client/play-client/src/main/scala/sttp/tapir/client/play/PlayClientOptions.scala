@@ -1,10 +1,8 @@
 package sttp.tapir.client.play
 
-import java.io.File
+import sttp.tapir.{Defaults, TapirFile}
 
-import sttp.tapir.Defaults
-
-case class PlayClientOptions(createFile: () => File)
+case class PlayClientOptions(createFile: () => TapirFile)
 
 object PlayClientOptions {
   val default: PlayClientOptions = PlayClientOptions(Defaults.createTempFile)

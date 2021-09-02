@@ -30,7 +30,7 @@ object FinatraServerOptions extends Logging {
     // TODO: Make this streaming
     futurePool {
       val file = Defaults.createTempFile()
-      val outputStream = new FileOutputStream(file)
+      val outputStream = new FileOutputStream(file.toFile)
       outputStream.write(bytes)
       outputStream.close()
       file: TapirFile
