@@ -560,7 +560,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = scala2Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
