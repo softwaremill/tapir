@@ -14,15 +14,22 @@ trait TapirCodecEnumeratum {
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Schema[E] =
     Schema[E](SchemaType.SString()).validate(validatorEnumEntry)
 
-  implicit def plainCodecEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] =
+  def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit enum: Enum[E]): Codec[String, E, CodecFormat.TextPlain] =
     Codec.string
       .mapDecode { s =>
-        enum
-          .withNameOption(s)
+        f(s)
           .map(DecodeResult.Value(_))
           .getOrElse(DecodeResult.Mismatch(s"One of: ${enum.values.map(_.entryName).mkString(", ")}", s))
       }(_.entryName)
       .validate(validatorEnumEntry)
+
+  def plainCodecEnumEntryDecodeCaseInsensitive[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] = plainCodecEnumEntryUsing(
+    enum.withNameInsensitiveOption
+  )
+
+  implicit def plainCodecEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] = plainCodecEnumEntryUsing(
+    enum.withNameOption
+  )
 
   // Value enums
 
