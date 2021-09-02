@@ -22,7 +22,7 @@ object Versions {
   val enumeratum = "1.7.0"
   val zio = "1.0.11"
   val zioInteropCats = "3.1.1.0"
-  val zioJson = "0.1.5"
+  val zioJson = "0.2.0-M1"
   val playClient = "2.1.3"
   val playServer = "2.8.7"
   val tethys = "0.24.0"
