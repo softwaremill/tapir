@@ -3,11 +3,11 @@ package sttp.tapir.server.interpreter
 import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.internal.ParamsAsAny
+import sttp.tapir.internal.{ParamsAsAny, TapirFile}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],

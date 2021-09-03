@@ -4,7 +4,7 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
+import sttp.tapir.internal.{TapirFile, ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.{File, InputStream}
@@ -229,7 +229,6 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber[Double]()).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean())
   implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.empty)
-  implicit val schemaForNormalFile: Schema[File] = Schema(SBinary())
   implicit val schemaForTapirFile: Schema[TapirFile] = Schema(SBinary())
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary())
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())

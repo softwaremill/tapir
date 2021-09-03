@@ -1,6 +1,7 @@
 package sttp.tapir.client.http4s
 
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 
 case class Http4sClientOptions(createFile: () => TapirFile)
 

@@ -12,7 +12,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 import sttp.ws.WebSocketFrame
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
@@ -87,7 +87,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
-  def fileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
+  def tapirFileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

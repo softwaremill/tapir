@@ -11,7 +11,8 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.internal.TapirFile
 
 import java.io.ByteArrayInputStream
 

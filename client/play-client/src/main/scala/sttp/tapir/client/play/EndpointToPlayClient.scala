@@ -8,20 +8,8 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  DecodeResult,
-  Endpoint,
-  EndpointIO,
-  EndpointInput,
-  EndpointOutput,
-  Mapping,
-  RawBodyType,
-  StreamBodyIO,
-  WebSocketBodyOutput
-}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams, TapirFile}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
@@ -176,7 +164,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         // For some reason, Play comes with a Writeable for Supplier[InputStream] but not InputStream directly
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
-      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[File])
+      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[TapirFile].toFile)
       case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
 

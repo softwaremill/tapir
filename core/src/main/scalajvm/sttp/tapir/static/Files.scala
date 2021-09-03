@@ -1,10 +1,10 @@
 package sttp.tapir.static
 
-import sttp.model.Header
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.{RangeValue, TapirFile}
+import sttp.tapir.RangeValue
+import sttp.tapir.internal.TapirFile
 
 import java.io.File
 import java.nio.file.{LinkOption, Path, Paths}

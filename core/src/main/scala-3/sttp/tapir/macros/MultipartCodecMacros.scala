@@ -3,11 +3,12 @@ package sttp.tapir.macros
 import sttp.tapir.MultipartCodec
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.{CaseClass, CaseClassField}
-import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, PartCodec, RawBodyType, Schema, TapirFile}
+import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, PartCodec, RawBodyType, Schema}
 import sttp.model.Part
 
 import scala.annotation.tailrec
 import scala.quoted.*
+import sttp.tapir.internal.TapirFile
 
 import java.nio.charset.StandardCharsets
 

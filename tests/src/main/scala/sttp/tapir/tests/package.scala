@@ -1,19 +1,20 @@
 package sttp.tapir
 
+import com.softwaremill.tagging.{@@, Tagger}
+import io.circe.generic.auto._
+import io.circe.{Decoder, Encoder}
+import sttp.capabilities.Streams
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model._
+import sttp.tapir.Codec.{PlainCodec, XmlCodec}
+import sttp.tapir.CodecFormat.TextHtml
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import sttp.tapir.model._
+
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import io.circe.generic.auto._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import com.softwaremill.tagging.{@@, Tagger}
-import io.circe.{Decoder, Encoder}
-import sttp.capabilities.Streams
-import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.tapir.Codec.{PlainCodec, XmlCodec}
-import sttp.tapir.CodecFormat.TextHtml
-import sttp.tapir.model._
 
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Any] = endpoint.in(query[String]("fruit")).out(stringBody)
@@ -103,9 +104,6 @@ package object tests {
       .out(inputStreamBody)
       .out(header[Option[Long]]("Content-Length"))
       .name("input string output stream with header")
-
-  val in_file_out_file: Endpoint[TapirFile, Unit, TapirFile, Any] =
-    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
 
   val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Any] =
     endpoint.in("api" / "unit").out(jsonBody[Unit])

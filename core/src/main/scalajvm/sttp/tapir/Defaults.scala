@@ -1,5 +1,7 @@
 package sttp.tapir
 
+import sttp.tapir.internal.TapirFile
+
 import java.io.File
 
 object Defaults {

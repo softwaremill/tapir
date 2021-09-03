@@ -2,7 +2,8 @@ package sttp.tapir.server.interpreter
 
 import sttp.capabilities.Streams
 import sttp.model.Part
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.internal.TapirFile
+import sttp.tapir.{RawBodyType, RawPart}
 
 trait RequestBody[F[_], S] {
   val streams: Streams[S]

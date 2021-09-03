@@ -1,9 +1,10 @@
 package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.LoggerFactory
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task}
 
 import java.io.File

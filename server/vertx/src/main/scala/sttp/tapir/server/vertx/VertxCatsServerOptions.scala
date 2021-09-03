@@ -5,9 +5,10 @@ import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
 import io.vertx.core.logging.LoggerFactory
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
 

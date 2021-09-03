@@ -2,10 +2,11 @@ package sttp.tapir.server.akkahttp
 
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.Defaults
 
 import scala.concurrent.Future
 

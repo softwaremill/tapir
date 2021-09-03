@@ -6,7 +6,8 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.Part
-import sttp.tapir.{RawBodyType, TapirFile}
+import sttp.tapir.RawBodyType
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.interpreters.FromVFuture

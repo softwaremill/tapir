@@ -1,12 +1,13 @@
 package sttp.tapir.static
 
-import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.model.headers.ETag
+import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir._
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.ServerEndpoint
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.time.Instant
 
 /** Static content endpoints, including files and resources. */
@@ -155,10 +156,10 @@ trait TapirStaticContentEndpoints {
   }
 
   def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
-    staticEndpoint(prefix, fileBody)
+    staticEndpoint(prefix, tapirFileBody)
 
   def filesEndpointRanged(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
-    staticEndpointRanged(prefix, fileBody)
+    staticEndpointRanged(prefix, tapirFileBody)
 
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticEndpoint(prefix, inputStreamBody)

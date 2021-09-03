@@ -2,13 +2,12 @@ package sttp.tapir.server.finatra
 
 import com.twitter.io.{Buf, InputStreamReader, Reader}
 import org.apache.http.entity.ContentType
+import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
-import org.apache.http.entity.mime.content.{ByteArrayBody, ContentBody, FileBody, InputStreamBody, StringBody}
-import sttp.capabilities.Streams
-import sttp.model.{HasHeaders, Header, Part}
-import sttp.tapir.internal.NoStreams
-import sttp.tapir.{CodecFormat, RawBodyType, TapirFile, WebSocketBodyOutput}
+import sttp.model.{HasHeaders, Part}
+import sttp.tapir.internal.{NoStreams, TapirFile}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.charset.Charset

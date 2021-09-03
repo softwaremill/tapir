@@ -2,12 +2,11 @@ package sttp.tapir.server.http4s
 
 import cats.Applicative
 import cats.effect.Sync
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
-
-import java.io.File
 
 /** @tparam F
   *   The effect type used for response body streams. Usually the same as `G`.

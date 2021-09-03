@@ -3,9 +3,10 @@ package sttp.tapir.server.vertx
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
 import scala.concurrent.{ExecutionContext, Future}

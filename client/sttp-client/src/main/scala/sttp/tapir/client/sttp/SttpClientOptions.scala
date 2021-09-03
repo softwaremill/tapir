@@ -1,6 +1,7 @@
 package sttp.tapir.client.sttp
 
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.Defaults
+import sttp.tapir.internal.TapirFile
 
 case class SttpClientOptions(createFile: () => TapirFile)
 

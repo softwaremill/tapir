@@ -1,13 +1,13 @@
 package sttp.tapir.client.tests
 
 import java.io.InputStream
-
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.{DecodeResult, _}
 
@@ -32,7 +32,7 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
           v match {
             case is: InputStream => Future.successful(inputStreamToByteArray(is).toList)
             case a: Array[Byte]  => Future.successful(a.toList)
-            case f: TapirFile    => readFromFile(f)
+            case f: TapirFile    => readFromFile(f.toFile)
             case _               => Future.successful(v)
           }
 

@@ -2,14 +2,14 @@ package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink, Source}
-import akka.util.{ByteString, ByteStringBuilder}
+import akka.util.ByteString
 import play.api.mvc.Request
 import play.core.parsers.Multipart
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.Part
 import sttp.tapir.internal._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{RawBodyType, RawPart}
 
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
