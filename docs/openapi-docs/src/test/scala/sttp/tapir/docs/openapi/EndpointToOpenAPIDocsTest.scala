@@ -4,6 +4,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.fileTest.in_file_out_file
 
 class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
 

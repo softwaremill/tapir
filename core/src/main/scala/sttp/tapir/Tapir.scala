@@ -1,18 +1,18 @@
 package sttp.tapir
 
 import sttp.capabilities.Streams
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model._
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.MatchType
 import sttp.ws.WebSocketFrame
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt

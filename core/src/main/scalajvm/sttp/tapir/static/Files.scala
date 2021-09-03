@@ -71,8 +71,8 @@ object Files {
   private def found[F[_]](file: Path, etag: Option[ETag], lastModified: Long, range: RangeValue)(implicit m: MonadError[F]): F[StaticOutput[TapirFile]] = {
     m.blocking(file.toFile.length()).map { contentLength =>
       val contentType = contentTypeFromName(file.toFile.getName)
-      val contentRange = Some(range.unit + " " + range.start + "-" + range.end + "/" + contentLength)
-      StaticOutput.Found(TapirFile.fromFile(file.toFile), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentType), etag, Some("bytes"), contentRange)
+      val contentRange = Some(range.toContentRange(contentLength))
+      StaticOutput.Found(TapirFile.fromFile(file.toFile, range), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentType), etag, Some("bytes"), contentRange)
     }
   }
 }

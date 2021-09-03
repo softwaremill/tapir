@@ -11,4 +11,5 @@ trait TapirFileExtension { self: TapirFile =>
 trait TapirFileCompanionExtensions {
   def fromPath(path: Path): TapirFile = new TapirFile(path)
   def fromFile(file: java.io.File): TapirFile = fromPath(file.toPath)
+  def fromFile(file: java.io.File, range: RangeValue): TapirFile = new TapirFile(file.toPath, Some(range))
 }
