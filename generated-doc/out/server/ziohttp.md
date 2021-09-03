@@ -3,7 +3,7 @@
 To expose an endpoint as a [zio-http](https://github.com/dream11/zio-http) server, first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M8"
 ```
 
 Now import the object:

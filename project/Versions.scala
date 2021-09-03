@@ -1,5 +1,5 @@
 object Versions {
-  val http4s = "0.23.2"
+  val http4s = "0.23.3"
   val catsEffect = "3.2.5"
   val circe = "0.14.1"
   val circeYaml = "0.14.1"
@@ -22,7 +22,7 @@ object Versions {
   val enumeratum = "1.7.0"
   val zio = "1.0.11"
   val zioInteropCats = "3.1.1.0"
-  val zioJson = "0.1.5"
+  val zioJson = "0.2.0-M1"
   val playClient = "2.1.3"
   val playServer = "2.8.7"
   val tethys = "0.24.0"
