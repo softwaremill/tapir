@@ -1,15 +1,13 @@
 package sttp.tapir.server.netty
 
 import scala.concurrent.{ExecutionContext, Future}
-
-import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.buffer.ByteBuf
 import io.netty.handler.codec.http._
 import sttp.monad.FutureMonad
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.{NettyRoutingResult, RoutingFailureCode}
 

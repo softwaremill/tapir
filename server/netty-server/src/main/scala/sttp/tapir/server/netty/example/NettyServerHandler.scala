@@ -61,17 +61,14 @@ class NettyServerHandler(val handlers: List[FullHttpRequest => NettyRoutingResul
     if (HttpUtil.is100ContinueExpected(req)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
     } else {
-      //todo: AbstractByteBuf.checkAccessible hack
-      val accessibleRequest = req.copy().replace(Unpooled.copiedBuffer(req.content()))
-
       val responses: List[Future[FullHttpResponse]] = handlers
-        .map(_.apply(accessibleRequest))
-        .map(_.map(toHttpResponse(_, accessibleRequest)))
+        .map(_.apply(req.retainedDuplicate()))
+        .map(_.map(toHttpResponse(_, req)))
 
       Future
         .find(responses)(_.status().code() != NettyServerInterpreter.RoutingFailureCode)
         .map(_.getOrElse(routingFailureResp))
-        .foreach(flushResponse(ctx, accessibleRequest, _))
+        .map(flushResponse(ctx, req, _))
     }
   }
 
