@@ -1,13 +1,13 @@
 package sttp.tapir.server.tests
 
 import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
+import cats.effect.{IO, Resource}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
-import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
+import sttp.model.{Header, HeaderNames}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests._
@@ -119,9 +119,7 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(d => {
-                d.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true
-              })
+              .map(_.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true)
           }
           .unsafeToFuture()
       }
@@ -135,7 +133,7 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(d => d.body shouldBe "ont")
+              .map(_.body shouldBe "ont")
           }
           .unsafeToFuture()
       }

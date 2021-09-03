@@ -2,14 +2,14 @@ package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
-import akka.stream.scaladsl.{FileIO, StreamConverters}
+import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.{TapirFile, charset}
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RangeValue, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.RandomAccessFile
 import java.nio.charset.{Charset, StandardCharsets}
@@ -57,21 +57,23 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case RawBodyType.FileBody        => r.range
-        .map(range => {
-          val raf = new RandomAccessFile(r.toFile, "r")
-          val chunkSize = range.end - range.start
-          val dataArray = Array.ofDim[Byte](chunkSize)
-          raf.seek(range.start)
-          val bytesRead = raf.read(dataArray, 0, chunkSize)
-          val readChunk = dataArray.take(bytesRead)
-          HttpEntity(ct, readChunk)
-        })
+        .map(range => readFilePart(ct, r, range))
         .getOrElse(HttpEntity.fromPath(ct, r.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)
         body.toEntity()
     }
+  }
+
+  private def readFilePart[R](ct: ContentType, r: R, range: RangeValue): HttpEntity.Strict = {
+    val raf = new RandomAccessFile(r.asInstanceOf[TapirFile].toFile, "r")
+    val chunkSize = range.end - range.start
+    val dataArray = Array.ofDim[Byte](chunkSize)
+    raf.seek(range.start)
+    val bytesRead = raf.read(dataArray, 0, chunkSize)
+    val readChunk = dataArray.take(bytesRead)
+    HttpEntity(ct, readChunk)
   }
 
   private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStreams.BinaryStream): ResponseEntity = {
