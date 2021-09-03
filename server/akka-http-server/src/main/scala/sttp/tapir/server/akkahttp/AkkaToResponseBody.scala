@@ -2,15 +2,16 @@ package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
-import akka.stream.scaladsl.StreamConverters
+import akka.stream.scaladsl.{FileIO, StreamConverters}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
-import sttp.tapir.internal.charset
+import sttp.tapir.internal.{TapirFile, charset}
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
+import java.io.RandomAccessFile
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -55,7 +56,17 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
-      case RawBodyType.FileBody        => HttpEntity.fromPath(ct, r.toPath)
+      case RawBodyType.FileBody        => r.range
+        .map(range => {
+          val raf = new RandomAccessFile(r.toFile, "r")
+          val chunkSize = range.end - range.start
+          val dataArray = Array.ofDim[Byte](chunkSize)
+          raf.seek(range.start)
+          val bytesRead = raf.read(dataArray, 0, chunkSize)
+          val readChunk = dataArray.take(bytesRead)
+          HttpEntity(ct, readChunk)
+        })
+        .getOrElse(HttpEntity.fromPath(ct, r.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)

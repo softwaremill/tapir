@@ -119,7 +119,23 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(_.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true)
+              .map(d => {
+                d.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true
+              })
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("Should return bytes 4-7 from file") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=4-7"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(d => d.body shouldBe "ont")
           }
           .unsafeToFuture()
       }
