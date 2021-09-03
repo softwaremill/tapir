@@ -10,7 +10,7 @@ case class StaticInput(
     path: List[String],
     ifNoneMatch: Option[List[ETag]],
     ifModifiedSince: Option[Instant],
-    range: Option[RangeValue] = Some(RangeValue("a", 1, 1))
+    range: Option[RangeValue]
 )
 
 trait StaticErrorOutput
@@ -29,7 +29,7 @@ object StaticOutput {
       contentLength: Option[Long],
       contentType: Option[MediaType],
       etag: Option[ETag],
-      acceptRanges: Option[String],
-      contentRange: Option[String]
+      acceptRanges: Option[String] = None,
+      contentRange: Option[String] = None
   ) extends StaticOutput[T]
 }

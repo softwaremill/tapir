@@ -70,7 +70,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     },
     Test("return 404 when files are not found") {
       withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
             basicRequest
               .headers(Header(HeaderNames.Range, "bytes=0-1"))
@@ -82,11 +82,26 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
-    Test("Returns 416 if range header not present") {
+    Test("Should return whole while file if header not present ") {
       withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
             basicRequest
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body shouldBe "f1 content")
+
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("Should return 416 if over range") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=0-11"))
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
@@ -97,7 +112,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     },
     Test("Returns content range header with matching bytes") {
       withTestFilesDirectory { testDir =>
-        serveRoute(filesServerEndpointRanged[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
             basicRequest
               .headers(Header(HeaderNames.Range, "bytes=1-3"))

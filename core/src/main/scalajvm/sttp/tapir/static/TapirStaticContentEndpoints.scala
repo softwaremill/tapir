@@ -53,53 +53,6 @@ trait TapirStaticContentEndpoints {
   }(_.map(_.toString))
 
   private def staticEndpoint[T](
-      prefix: EndpointInput[Unit],
-      body: EndpointOutput[T]
-  ): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
-    endpoint.get
-      .in(prefix)
-      .in(
-        pathsWithoutDots
-          .and(ifNoneMatchHeader)
-          .and(ifModifiedSinceHeader)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant])) => StaticInput(t._1, t._2, t._3))(fi =>
-            (fi.path, fi.ifNoneMatch, fi.ifModifiedSince)
-          )
-      )
-      .errorOut(
-        oneOf[StaticErrorOutput](
-          oneOfMappingClassMatcher(
-            StatusCode.NotFound,
-            emptyOutputAs(StaticErrorOutput.NotFound),
-            StaticErrorOutput.NotFound.getClass
-          ),
-          oneOfMappingClassMatcher(
-            StatusCode.BadRequest,
-            emptyOutputAs(StaticErrorOutput.BadRequest),
-            StaticErrorOutput.BadRequest.getClass
-          )
-        )
-      )
-      .out(
-        oneOf[StaticOutput[T]](
-          oneOfMappingClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
-          oneOfMappingClassMatcher(
-            StatusCode.Ok,
-            body
-              .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
-              .and(contentTypeHeader)
-              .and(etagHeader)
-              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag])) =>
-                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, Some(""), Some("a"))
-              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag)),
-            classOf[StaticOutput.Found[T]]
-          )
-        )
-      )
-  }
-
-  private def staticEndpointRanged[T](
     prefix: EndpointInput[Unit],
     body: EndpointOutput[T]
   ): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
@@ -158,9 +111,6 @@ trait TapirStaticContentEndpoints {
   def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
     staticEndpoint(prefix, tapirFileBody)
 
-  def filesEndpointRanged(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
-    staticEndpointRanged(prefix, tapirFileBody)
-
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticEndpoint(prefix, inputStreamBody)
 
@@ -174,14 +124,9 @@ trait TapirStaticContentEndpoints {
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
   def filesServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
-      systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
-    ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
-
-  def filesServerEndpointRanged[F[_]](prefix: EndpointInput[Unit])(
     systemPath: String
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
-    ServerEndpoint(filesEndpointRanged(prefix), (m: MonadError[F]) => Files(systemPath)(m))
+    ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
