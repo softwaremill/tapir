@@ -1,4 +1,4 @@
-# 7. No effectful maps
+# 8. No effectful maps
 
 Date: 2021-01-26
 
