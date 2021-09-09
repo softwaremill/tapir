@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{MediaType, Method, StatusCode}
+import sttp.model.{ContentTypeRange, MediaType, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
@@ -211,7 +211,10 @@ package object internal {
         case m                                 => m
       }
 
-      supportedMediaTypes.exists(_ == contentToMatch)
+      val contentTypeRange =
+        ContentTypeRange(contentToMatch.mainType, contentToMatch.subType, contentToMatch.charset.getOrElse(ContentTypeRange.Wildcard))
+
+      supportedMediaTypes.exists(_.matches(contentTypeRange))
     }
   }
 
