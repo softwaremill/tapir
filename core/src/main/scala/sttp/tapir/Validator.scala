@@ -16,7 +16,6 @@ sealed trait Validator[T] {
 
   def or(other: Validator[T]): Validator[T] = Validator.any(this, other)
 
-  //TODO: Find a better name ?
   def show: Option[String]
 }
 object Validator extends ValidatorMacros {
@@ -225,7 +224,7 @@ object Validator extends ValidatorMacros {
     }
 
     override def apply(t: T): ValidationResult[T] = {
-      ValidationResult.partitionMap(
+      ValidationResult.partition(
         validators.toList.map(_.apply(t))
       ) match {
         case (Nil, _)     => ValidationResult.Valid(t)
@@ -248,7 +247,7 @@ object Validator extends ValidatorMacros {
     }
 
     override def apply(t: T): ValidationResult[T] =
-      ValidationResult.partitionMap(
+      ValidationResult.partition(
         validators.toList.map(_.apply(t))
       ) match {
         case (_, _ :: _)    => ValidationResult.Valid(t)
@@ -289,7 +288,7 @@ object ValidationResult {
       allMessages.map(_.value).mkString(",")
   }
 
-  def partitionMap[A](xs: List[ValidationResult[A]]): (List[Invalid[A]], List[Valid[A]]) = {
+  def partition[A](xs: List[ValidationResult[A]]): (List[Invalid[A]], List[Valid[A]]) = {
     val l = List.newBuilder[Invalid[A]]
     val r = List.newBuilder[Valid[A]]
 

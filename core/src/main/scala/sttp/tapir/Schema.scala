@@ -241,7 +241,7 @@ case class Schema[T](
   }
 
   private def combineMultipleValidationResults[V](value: V, results: List[ValidationResult[Any]]): ValidationResult[V] =
-    ValidationResult.partitionMap(results) match {
+    ValidationResult.partition(results) match {
       case (Nil, _)         => Valid[V](value)
       case (invalidList, _) => Invalid[V](value, invalidList.flatMap(a => a.errors))
     }
