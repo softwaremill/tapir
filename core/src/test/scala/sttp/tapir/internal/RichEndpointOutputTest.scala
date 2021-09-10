@@ -6,16 +6,13 @@ import sttp.model.MediaType
 import sttp.tapir._
 
 class RichEndpointOutputTest extends AnyFlatSpec with Matchers {
-  "output media type" should "match content type with lower case charset" in {
-    MediaType.parse("text/plain; charset=utf-8") match {
-      case Right(mediaType) =>
-        endpoint.put
-          .in("api" / path[String]("version"))
-          .out(stringBody)
-          .output
-          .hasBodyMatchingContent(mediaType) should be(true)
+  "output media type" should "match content type with lower and upper case charset" in {
+    val o = endpoint.put
+      .in("api" / path[String]("version"))
+      .out(stringBody)
+      .output
 
-      case Left(error) => fail(s"unable to parse media type: $error")
-    }
+    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=utf-8")) should be(true)
+    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=UTF-8")) should be(true)
   }
 }
