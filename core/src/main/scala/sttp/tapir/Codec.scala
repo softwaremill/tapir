@@ -13,7 +13,7 @@ import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFo
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
-import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
+import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
@@ -110,7 +110,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec {
+object Codec extends CodecExtensions with CodecMacros with FormCodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]

@@ -103,6 +103,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   }
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]].
+    * This requires that all subtypes of the sealed hierarchy `T` must be `object`s.
     *
     * @param encode
     *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with

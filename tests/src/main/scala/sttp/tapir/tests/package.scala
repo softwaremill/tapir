@@ -476,26 +476,26 @@ package object tests {
     }
 
     val in_enum_class: Endpoint[Color, Unit, Unit, Any] = {
-      implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.string
-          .map[Color]((_: String) match {
-            case "red"  => Red
-            case "blue" => Blue
-          })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnumeration)
-      }
+      implicit def plainCodecForColor: PlainCodec[Color] = Codec.derivedEnumeration[String, Color](
+        (_: String) match {
+          case "red"  => Some(Red)
+          case "blue" => Some(Blue)
+          case _      => None
+        },
+        _.toString.toLowerCase
+      )
       endpoint.in(query[Color]("color"))
     }
 
     val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Any] = {
-      implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.string
-          .map[Color]((_: String) match {
-            case "red"  => Red
-            case "blue" => Blue
-          })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnumeration)
-      }
+      implicit def plainCodecForColor: PlainCodec[Color] = Codec.derivedEnumeration[String, Color](
+        (_: String) match {
+          case "red"  => Some(Red)
+          case "blue" => Some(Blue)
+          case _      => None
+        },
+        _.toString.toLowerCase
+      )
       endpoint.in(query[Option[Color]]("color"))
     }
 

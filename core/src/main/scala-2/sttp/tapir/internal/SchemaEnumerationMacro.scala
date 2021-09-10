@@ -9,7 +9,7 @@ object SchemaEnumerationMacro {
 
     // this needs to be a macro so that we can call another macro - Validator.derivedEnumeration
     c.Expr[CreateDerivedEnumerationSchema[T]](q"""
-      new sttp.tapir.macros.DerivedEnumerationCreator(Validator.derivedEnumeration)
+      new sttp.tapir.macros.CreateDerivedEnumerationSchema(Validator.derivedEnumeration)
     """)
   }
 }

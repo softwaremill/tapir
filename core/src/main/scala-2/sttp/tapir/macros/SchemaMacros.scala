@@ -34,7 +34,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     macro OneOfMacro.generateOneOfUsingField[E, V]
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
 
-  /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]].
+  /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
+    * that all subtypes of the sealed hierarchy `T` must be `object`s.
     *
     * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
     * [[CreateDerivedEnumerationSchema]].
