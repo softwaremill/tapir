@@ -377,7 +377,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
 
   //
 
-  private[tapir] def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+  private[tapir] def listBinaryCodec[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
@@ -386,7 +386,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
     * The schema is copied from the base codec.
     */
   implicit def list[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    listBinarySchema(c).schema(c.schema.asIterable[List])
+    listBinaryCodec(c).schema(c.schema.asIterable[List])
 
   /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given base codec `c`.
     *
@@ -414,7 +414,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
     * The schema and validator are copied from the base codec.
     */
   implicit def listHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], U, CF] =
-    listBinarySchema(c)
+    listBinaryCodec(c)
       .mapDecode({
         case Nil     => DecodeResult.Missing
         case List(e) => DecodeResult.Value(e)
@@ -428,7 +428,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
     * The schema and validator are copied from the base codec.
     */
   implicit def listHeadOption[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Option[U], CF] =
-    listBinarySchema(c)
+    listBinaryCodec(c)
       .mapDecode({
         case Nil     => DecodeResult.Value(None)
         case List(e) => DecodeResult.Value(Some(e))
