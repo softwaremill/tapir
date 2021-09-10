@@ -102,8 +102,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
   }
 
-  /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]].
-    * This requires that all subtypes of the sealed hierarchy `T` must be `object`s.
+  /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
+    * that all subtypes of the sealed hierarchy `T` must be `object`s.
     *
     * @param encode
     *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
@@ -112,9 +112,9 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     *   The low-level representation of the enumeration. Defaults to a string.
     */
   inline def derivedEnumeration[T](
-    encode: Option[T => Any] = None,
-    schemaType: SchemaType[T] = SchemaType.SString[T](),
-    default: Option[T] = None
+      encode: Option[T => Any] = None,
+      schemaType: SchemaType[T] = SchemaType.SString[T](),
+      default: Option[T] = None
   ): Schema[T] = {
     val v0 = Validator.derivedEnumeration[T]
     val v = encode.fold(v0)(e => v0.encode(e))
