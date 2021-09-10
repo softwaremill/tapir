@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import sttp.tapir.Schema
+import sttp.tapir.{Validator, Schema, SchemaType}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.SchemaMagnoliaDerivation
 import magnolia._
@@ -100,6 +100,26 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
       mapping: (V, Schema[_])*
   )(implicit conf: Configuration): Schema[E] = ${
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
+  }
+
+  /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]].
+    *
+    * @param encode
+    *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
+    *   `schemaType`). This encoding will be used when generating documentation.
+    * @param schemaType
+    *   The low-level representation of the enumeration. Defaults to a string.
+    */
+  inline def derivedEnumeration[T](
+    encode: Option[T => Any] = None,
+    schemaType: SchemaType[T] = SchemaType.SString[T](),
+    default: Option[T] = None
+  ): Schema[T] = {
+    val v0 = Validator.derivedEnumeration[T]
+    val v = encode.fold(v0)(e => v0.encode(e))
+
+    val s0 = Schema.string.validate(v)
+    default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
   }
 }
 

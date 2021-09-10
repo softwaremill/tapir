@@ -520,7 +520,7 @@ package object tests {
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
+      implicit def schemaForColor: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
       endpoint.in(jsonBody[ColorWrapper])
     }
 
