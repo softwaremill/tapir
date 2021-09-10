@@ -18,10 +18,9 @@ import io.netty.handler.codec.http.{
   HttpVersion
 }
 import sttp.tapir.model.ServerResponse
-import sttp.tapir.server.netty.NettyServerInterpreter
-import sttp.tapir.server.netty.NettyServerInterpreter.NettyRoutingResult
+import sttp.tapir.server.netty.NettyServerInterpreter.Route
 
-class NettyServerHandler(val handlers: List[FullHttpRequest => NettyRoutingResult])(implicit val ec: ExecutionContext)
+class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
     extends SimpleChannelInboundHandler[FullHttpRequest] {
 
   private lazy val routingFailureResp = {
@@ -30,45 +29,41 @@ class NettyServerHandler(val handlers: List[FullHttpRequest => NettyRoutingResul
     res
   }
 
-  private def toHttpResponse(serverResult: Either[Int, ServerResponse[ByteBuf]], req: FullHttpRequest) = {
-    val resp = serverResult match {
-      case Left(httpCode) =>
-        val error = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(httpCode))
-        error.headers().set(HttpHeaderNames.CONTENT_LENGTH, error.content().readableBytes())
-        error
+  private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
+    val res = new DefaultFullHttpResponse(
+      req.protocolVersion(),
+      HttpResponseStatus.valueOf(interpreterResponse.code.code),
+      interpreterResponse.body.getOrElse(Unpooled.EMPTY_BUFFER)
+    )
 
-      case Right(interpreterResponse) =>
-        val res = new DefaultFullHttpResponse(
-          req.protocolVersion(),
-          HttpResponseStatus.valueOf(interpreterResponse.code.code),
-          interpreterResponse.body.getOrElse(Unpooled.EMPTY_BUFFER)
-        )
+    interpreterResponse.headers
+      .groupBy(_.name)
+      .foreach { case (k, v) =>
+        res.headers().set(k, v.map(_.value).asJava)
+      }
 
-        interpreterResponse.headers
-          .groupBy(_.name)
-          .foreach { case (k, v) =>
-            res.headers().set(k, v.map(_.value).asJava)
-          }
+    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
 
-        res
-    }
-
-    resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes())
-    resp
+    res
   }
 
-  override def channelRead0(ctx: ChannelHandlerContext, req: FullHttpRequest): Unit = {
-    if (HttpUtil.is100ContinueExpected(req)) {
+  override def channelRead0(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
+    if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
     } else {
-      val responses: List[Future[FullHttpResponse]] = handlers
-        .map(_.apply(req.retainedDuplicate()))
-        .map(_.map(toHttpResponse(_, req)))
+      val noRouteFound = Future.successful[Option[ServerResponse[ByteBuf]]](None)
+      val req = request.retainedDuplicate()
 
-      Future
-        .find(responses)(_.status().code() != NettyServerInterpreter.RoutingFailureCode)
+      handlers
+        .foldLeft(noRouteFound)((routingResult, nextHandler) => {
+          routingResult.flatMap {
+            case Some(success) => Future.successful(Some(success))
+            case None          => nextHandler(req)
+          }
+        })
+        .map(_.map(toHttpResponse(_, request)))
         .map(_.getOrElse(routingFailureResp))
-        .map(flushResponse(ctx, req, _))
+        .map(flushResponse(ctx, request, _))
     }
   }
 

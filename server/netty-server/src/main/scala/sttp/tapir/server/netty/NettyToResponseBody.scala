@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.nio.file.Files
 
 import io.netty.buffer.{ByteBuf, Unpooled}
 import sttp.capabilities
@@ -27,13 +28,9 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
+        Unpooled.copiedBuffer(stream.readAllBytes())
 
-        val buf = Unpooled.buffer()
-        //todo
-        buf.writeBytes(stream, 6000)
-        buf
-
-      case RawBodyType.FileBody         => ???
+      case RawBodyType.FileBody         => Unpooled.copiedBuffer(Files.readAllBytes(v.toPath))
       case m: RawBodyType.MultipartBody => ???
     }
   }

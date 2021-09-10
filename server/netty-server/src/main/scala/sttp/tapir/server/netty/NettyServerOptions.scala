@@ -3,11 +3,14 @@ package sttp.tapir.server.netty
 import scala.concurrent.Future
 
 import com.typesafe.scalalogging.Logger
+import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
 case class NettyServerOptions(
-    interceptors: List[Interceptor[Future]]
+    interceptors: List[Interceptor[Future]],
+    createFile: ServerRequest => Future[TapirFile] = _ => Future.successful(Defaults.createTempFile())
 )
 
 object NettyServerOptions {

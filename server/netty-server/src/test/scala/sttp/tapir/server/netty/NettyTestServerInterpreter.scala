@@ -9,24 +9,23 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.http.FullHttpRequest
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.netty.NettyServerInterpreter.NettyRoutingResult
+import sttp.tapir.server.netty.NettyServerInterpreter.Route
 import sttp.tapir.server.netty.example.NettyServerInitializer
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
-    extends TestServerInterpreter[Future, Any, FullHttpRequest => NettyRoutingResult] {
+    extends TestServerInterpreter[Future, Any, Route] {
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
-  ): (FullHttpRequest => NettyRoutingResult) = {
+  ): (Route) = {
     val serverOptions: NettyServerOptions = NettyServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
@@ -35,17 +34,17 @@ class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec:
     NettyServerInterpreter(serverOptions).toHandler(List(e))
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FullHttpRequest => NettyRoutingResult = {
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Route = {
     NettyServerInterpreter().toHandler(es)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
-  ): FullHttpRequest => NettyRoutingResult = {
+  ): Route = {
     NettyServerInterpreter().toHandler(List(e.serverLogicRecoverErrors(fn)))
   }
 
-  override def server(routes: NonEmptyList[FullHttpRequest => NettyRoutingResult]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
     val bind = IO.fromFuture({
       val httpBootstrap = new ServerBootstrap()
 
