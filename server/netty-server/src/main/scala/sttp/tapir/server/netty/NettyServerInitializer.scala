@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.example
+package sttp.tapir.server.netty
 
 import scala.concurrent.ExecutionContext
 

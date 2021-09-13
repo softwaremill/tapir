@@ -1,21 +1,11 @@
-package sttp.tapir.server.netty.example
+package sttp.tapir.server.netty
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
+
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
-import io.netty.handler.codec.http.{
-  DefaultFullHttpResponse,
-  FullHttpRequest,
-  FullHttpResponse,
-  HttpHeaderNames,
-  HttpHeaderValues,
-  HttpRequest,
-  HttpResponse,
-  HttpResponseStatus,
-  HttpUtil,
-  HttpVersion
-}
+import io.netty.handler.codec.http._
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
 

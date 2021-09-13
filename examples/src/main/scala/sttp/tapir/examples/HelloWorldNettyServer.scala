@@ -11,9 +11,8 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.NettyServerInterpreter
+import sttp.tapir.server.netty.{NettyServerInitializer, NettyServerInterpreter}
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
-import sttp.tapir.server.netty.example.NettyServerInitializer
 import sttp.tapir.{Endpoint, endpoint, query, stringBody}
 
 object HelloWorldNettyServer extends App {
