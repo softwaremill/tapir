@@ -1,26 +1,48 @@
 package sttp.tapir.server.netty
 
-import scala.concurrent.{blocking, Future}
-
 import com.typesafe.scalalogging.Logger
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.model.StatusCode
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.{Defaults, TapirFile, statusCode}
+
+import scala.concurrent.{Future, blocking}
 
 case class NettyServerOptions(
+    host: String,
+    port: Int,
     interceptors: List[Interceptor[Future]],
-    createFile: ServerRequest => Future[TapirFile] = _ => {
+    createFile: ServerRequest => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
+    noRouteMatchesOutput: ValuedEndpointOutput[_],
+    nettyOptions: NettyOptions
+) {
+  def host(s: String): NettyServerOptions = copy(host = s)
+  def port(p: Int): NettyServerOptions = copy(port = p)
+  def randomPort: NettyServerOptions = port(0)
+  def prependInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = interceptors :+ i)
+  def noRouteMatchesOutput(o: ValuedEndpointOutput[_]): NettyServerOptions = copy(noRouteMatchesOutput = o)
+  def nettyOptions(o: NettyOptions): NettyServerOptions = copy(nettyOptions = o)
+}
+
+object NettyServerOptions {
+  def default(interceptors: List[Interceptor[Future]]): NettyServerOptions = NettyServerOptions(
+    "localhost",
+    8080,
+    interceptors,
+    _ => {
       import scala.concurrent.ExecutionContext.Implicits.global
       Future(blocking(Defaults.createTempFile()))
     },
-    deleteFile: TapirFile => Future[Unit] = file => {
+    file => {
       import scala.concurrent.ExecutionContext.Implicits.global
       Future(blocking(Defaults.deleteFile()(file)))
-    }
-)
-
-object NettyServerOptions {
+    },
+    ValuedEndpointOutput(statusCode(StatusCode.NotFound), ()),
+    NettyOptions.default
+  )
 
   lazy val defaultServerLog: ServerLog[Logger => Future[Unit]] = DefaultServerLog(
     doLogWhenHandled = debugLog,
@@ -33,7 +55,7 @@ object NettyServerOptions {
     CustomInterceptors(
       createLogInterceptor =
         (sl: ServerLog[Logger => Future[Unit]]) => new ServerLogInterceptor[Logger => Future[Unit], Future](sl, (_, _) => Future.unit),
-      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyServerOptions]) => NettyServerOptions(ci.interceptors)
+      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 

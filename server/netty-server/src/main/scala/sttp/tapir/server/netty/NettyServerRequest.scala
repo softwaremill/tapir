@@ -5,7 +5,7 @@ import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import scala.jdk.CollectionConverters._
 
-class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
+case class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
   override lazy val protocol: String = req.protocolVersion().text()
 
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo.NoInfo

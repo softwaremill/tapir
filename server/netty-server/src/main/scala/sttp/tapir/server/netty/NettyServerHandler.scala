@@ -1,13 +1,13 @@
 package sttp.tapir.server.netty
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
-
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
     extends SimpleChannelInboundHandler[FullHttpRequest] {
@@ -38,7 +38,7 @@ class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionCo
 
       def run(hs: List[Route]): Future[ServerResponse[ByteBuf]] = hs match {
         case head :: tail =>
-          head(req).flatMap {
+          head(NettyServerRequest(req)).flatMap {
             case Some(success) => Future.successful(success)
             case None          => run(tail)
           }
