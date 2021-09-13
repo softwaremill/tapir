@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty
 
-import scala.concurrent.Future
+import scala.concurrent.{blocking, Future}
 
 import com.typesafe.scalalogging.Logger
 import sttp.tapir.{Defaults, TapirFile}
@@ -10,8 +10,14 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLog
 
 case class NettyServerOptions(
     interceptors: List[Interceptor[Future]],
-    createFile: ServerRequest => Future[TapirFile] = _ => Future.successful(Defaults.createTempFile()),
-    deleteFile: TapirFile => Future[Unit] = file => Future.successful(Defaults.deleteFile()(file))
+    createFile: ServerRequest => Future[TapirFile] = _ => {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      Future(blocking(Defaults.createTempFile()))
+    },
+    deleteFile: TapirFile => Future[Unit] = file => {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      Future(blocking(Defaults.deleteFile()(file)))
+    }
 )
 
 object NettyServerOptions {
