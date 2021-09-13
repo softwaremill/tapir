@@ -2,7 +2,6 @@ package sttp.tapir.server.netty.example
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
-
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http.{
@@ -22,12 +21,6 @@ import sttp.tapir.server.netty.NettyServerInterpreter.Route
 
 class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
     extends SimpleChannelInboundHandler[FullHttpRequest] {
-
-  private lazy val routingFailureResp = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND)
-    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
-    res
-  }
 
   private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
     val res = new DefaultFullHttpResponse(
@@ -49,20 +42,21 @@ class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionCo
 
   override def channelRead0(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
     if (HttpUtil.is100ContinueExpected(request)) {
-      ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
+      ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
     } else {
-      val noRouteFound = Future.successful[Option[ServerResponse[ByteBuf]]](None)
       val req = request.retainedDuplicate()
 
-      handlers
-        .foldLeft(noRouteFound)((routingResult, nextHandler) => {
-          routingResult.flatMap {
-            case Some(success) => Future.successful(Some(success))
-            case None          => nextHandler(req)
+      def run(hs: List[Route]): Future[ServerResponse[ByteBuf]] = hs match {
+        case head :: tail =>
+          head(req).flatMap {
+            case Some(success) => Future.successful(success)
+            case None          => run(tail)
           }
-        })
-        .map(_.map(toHttpResponse(_, request)))
-        .map(_.getOrElse(routingFailureResp))
+        case Nil => Future.successful(ServerResponse(sttp.model.StatusCode.NotFound, Nil, None))
+      }
+
+      run(handlers)
+        .map(toHttpResponse(_, request))
         .map(flushResponse(ctx, request, _))
     }
   }
