@@ -10,7 +10,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 class NettyServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
-      Resource.pure {
+      Resource.eval(IO.delay {
         implicit val m: FutureMonad = new FutureMonad()
         val eventLoopGroup = new NioEventLoopGroup()
 
@@ -21,6 +21,6 @@ class NettyServerTest extends TestSuite with EitherValues {
           new ServerAuthenticationTests(createServerTest).tests() ++
           new ServerMetricsTest(createServerTest).tests() ++
           new ServerRejectTests(createServerTest, interpreter).tests()
-      }
+      })
     }
 }
