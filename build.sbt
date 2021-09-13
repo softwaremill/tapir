@@ -136,6 +136,7 @@ lazy val allAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
+  nettyServer.projectRefs ++
   zioHttp4sServer.projectRefs ++
   zioHttp.projectRefs ++
   awsLambda.projectRefs ++
@@ -1224,6 +1225,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiZioHttp,
     zioHttp4sServer,
     zioHttp,
+    nettyServer,
     sttpStubServer,
     playJson,
     prometheusMetrics,

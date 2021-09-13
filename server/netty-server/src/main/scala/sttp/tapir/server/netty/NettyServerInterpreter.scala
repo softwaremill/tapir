@@ -26,7 +26,7 @@ trait NettyServerInterpreter {
         new NettyRequestBody(request, serverRequest, nettyServerOptions),
         new NettyToResponseBody,
         nettyServerOptions.interceptors,
-        null //todo
+        nettyServerOptions.deleteFile
       )
 
       serverInterpreter(serverRequest, ses)

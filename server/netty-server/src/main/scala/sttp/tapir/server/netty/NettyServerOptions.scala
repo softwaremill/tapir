@@ -10,7 +10,8 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLog
 
 case class NettyServerOptions(
     interceptors: List[Interceptor[Future]],
-    createFile: ServerRequest => Future[TapirFile] = _ => Future.successful(Defaults.createTempFile())
+    createFile: ServerRequest => Future[TapirFile] = _ => Future.successful(Defaults.createTempFile()),
+    deleteFile: TapirFile => Future[Unit] = file => Future.successful(Defaults.deleteFile()(file))
 )
 
 object NettyServerOptions {
