@@ -1226,6 +1226,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     opentelemetryMetrics,
     sttpMockServer,
-    nettyServer
+    nettyServer,
     swaggerUi
   )
