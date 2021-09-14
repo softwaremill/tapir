@@ -6,6 +6,7 @@ import io.vertx.core.http.{HttpHeaders, HttpServerResponse}
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.vertx.VertxServerOptions
@@ -28,7 +29,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
       case RawBodyType.InputStreamBody =>
         inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
-      case RawBodyType.FileBody         => resp.sendFile(v.asInstanceOf[File].getPath)
+      case RawBodyType.FileBody         => resp.sendFile(v.asInstanceOf[TapirFile].toPath.toString)
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }
     ()
@@ -111,7 +112,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           case RawBodyType.InputStreamBody =>
             inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
           case RawBodyType.FileBody =>
-            val file = r.asInstanceOf[File]
+            val file = r.asInstanceOf[TapirFile].toFile
             rc.vertx.fileSystem
               .readFile(file.getAbsolutePath)
               .flatMap { buf =>
