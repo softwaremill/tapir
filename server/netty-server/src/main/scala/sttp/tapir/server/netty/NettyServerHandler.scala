@@ -7,7 +7,7 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
     extends SimpleChannelInboundHandler[FullHttpRequest] {

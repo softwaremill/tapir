@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.{NettyServer, NettyServerOptions}
+import sttp.tapir.server.netty.NettyServer
 import sttp.tapir.{Endpoint, endpoint, query, stringBody}
 
 import scala.concurrent.ExecutionContext.Implicits.global

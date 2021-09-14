@@ -5,7 +5,7 @@ import io.netty.handler.codec.http.HttpHeaders
 import sttp.model.Header
 
 import scala.concurrent.{CancellationException, Future, Promise}
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
 
 package object netty {

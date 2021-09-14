@@ -3,7 +3,7 @@ package sttp.tapir.server.netty
 import io.netty.handler.codec.http.{FullHttpRequest, QueryStringDecoder}
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 case class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
   override lazy val protocol: String = req.protocolVersion().text()
