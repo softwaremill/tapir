@@ -9,6 +9,7 @@ import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
+  ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
 }
@@ -32,7 +33,8 @@ class CatsVertxServerTest extends TestSuite {
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests()
+        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

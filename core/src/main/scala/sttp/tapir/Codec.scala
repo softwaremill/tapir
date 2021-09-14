@@ -13,34 +13,35 @@ import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFo
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
-import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
+import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
 
-/** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values
-  * are formatted as `CF`.
+/** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values are formatted as `CF`.
   *
-  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`)
-  * Decoding can fail, and this is represented as a result of type [[DecodeResult]].
+  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`) Decoding can fail, and this is
+  * represented as a result of type [[DecodeResult]].
   *
-  * A codec also contains optional meta-data on the `schema` of the high-level value, as well as an instance
-  * of the format (which determines the media type of the low-level value).
+  * A codec also contains optional meta-data on the `schema` of the high-level value, as well as an instance of the format (which determines
+  * the media type of the low-level value).
   *
-  * Codec instances are used as implicit values, and are looked up when defining endpoint inputs/outputs. Depending
-  * on a particular endpoint input/output, it might require a codec which uses a specific format, or a specific
-  * low-level value.
+  * Codec instances are used as implicit values, and are looked up when defining endpoint inputs/outputs. Depending on a particular endpoint
+  * input/output, it might require a codec which uses a specific format, or a specific low-level value.
   *
-  * Codec instances can be derived basing on other values (e.g. such as json encoders/decoders when integrating with
-  * json libraries). Or, they can be defined by hand for custom types, usually customising an existing, simpler codec.
+  * Codec instances can be derived basing on other values (e.g. such as json encoders/decoders when integrating with json libraries). Or,
+  * they can be defined by hand for custom types, usually customising an existing, simpler codec.
   *
-  * Codecs can be chained with [[Mapping]]s using the `map` function.
+  * Codecs can be chained with [[Mapping]] s using the `map` function.
   *
-  * @tparam L The type of the low-level value.
-  * @tparam H The type of the high-level value.
-  * @tparam CF The format of encoded values. Corresponds to the media type.
+  * @tparam L
+  *   The type of the low-level value.
+  * @tparam H
+  *   The type of the high-level value.
+  * @tparam CF
+  *   The format of encoded values. Corresponds to the media type.
   */
 @implicitNotFound(msg = """Cannot find a codec between types: ${L} and ${H}, formatted as: ${CF}.
 Did you define a codec for: ${H}?
@@ -52,9 +53,9 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   def rawDecode(l: L): DecodeResult[H]
   def encode(h: H): L
 
-  /** - calls `rawDecode`
-    * - catches any exceptions that might occur, converting them to decode failures
-    * - validates the result
+  /**   - calls `rawDecode`
+    *   - catches any exceptions that might occur, converting them to decode failures
+    *   - validates the result
     */
   def decode(l: L): DecodeResult[H] = (Mapping.decode(l, rawDecode, schema.applyValidation), schema.default) match {
     case (DecodeResult.Missing, Some((d, _))) => DecodeResult.Value(d)
@@ -109,7 +110,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec {
+object Codec extends CodecExtensions with CodecMacros with FormCodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -248,11 +249,11 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
 
-  /** @param partCodecs For each supported part, a (raw body type, codec) pair which encodes the part value into a
-    *                   raw value of the given type. A single part value might be encoded as multiple (or none) raw
-    *                   values.
-    * @param defaultPartCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra
-    *                         parts should be discarded.
+  /** @param partCodecs
+    *   For each supported part, a (raw body type, codec) pair which encodes the part value into a raw value of the given type. A single
+    *   part value might be encoded as multiple (or none) raw values.
+    * @param defaultPartCodec
+    *   Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts should be discarded.
     */
   def multipartCodec(
       partCodecs: Map[String, PartCodec[_, _]],
@@ -311,8 +312,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
 
   implicit val webSocketFrameCodec: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
 
-  /** A codec which expects only text frames (all other frames cause a decoding error) and handles the text using
-    * the given `stringCodec`.
+  /** A codec which expects only text frames (all other frames cause a decoding error) and handles the text using the given `stringCodec`.
     */
   implicit def textWebSocketFrameCodec[A, CF <: CodecFormat](implicit
       stringCodec: Codec[String, A, CF]
@@ -325,8 +325,8 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       }(a => WebSocketFrame.text(stringCodec.encode(a)))
       .schema(stringCodec.schema)
 
-  /** A codec which expects only text and close frames (all other frames cause a decoding error). Close frames
-    * correspond to `None`, while text frames are handled using the given `stringCodec` and wrapped with `Some`.
+  /** A codec which expects only text and close frames (all other frames cause a decoding error). Close frames correspond to `None`, while
+    * text frames are handled using the given `stringCodec` and wrapped with `Some`.
     */
   implicit def textOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
       stringCodec: Codec[String, A, CF]
@@ -343,8 +343,8 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       }
       .schema(stringCodec.schema.asOption)
 
-  /** A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using
-    * the given `byteArrayCodec`.
+  /** A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using the given
+    * `byteArrayCodec`.
     */
   implicit def binaryWebSocketFrameCodec[A, CF <: CodecFormat](implicit
       byteArrayCodec: Codec[Array[Byte], A, CF]
@@ -357,8 +357,8 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       }(a => WebSocketFrame.binary(byteArrayCodec.encode(a)))
       .schema(byteArrayCodec.schema)
 
-  /** A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames
-    * correspond to `None`, while text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
+  /** A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames correspond to `None`, while
+    * text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
     */
   implicit def binaryOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
       byteArrayCodec: Codec[Array[Byte], A, CF]
@@ -377,20 +377,18 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
 
   //
 
-  private[tapir] def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+  private[tapir] def listBinaryCodec[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
-  /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
-    * base codec `c`.
+  /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given base codec `c`.
     *
     * The schema is copied from the base codec.
     */
   implicit def list[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    listBinarySchema(c).schema(c.schema.asIterable[List])
+    listBinaryCodec(c).schema(c.schema.asIterable[List])
 
-  /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given
-    * base codec `c`.
+  /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given base codec `c`.
     *
     * The schema is copied from the base codec.
     */
@@ -400,8 +398,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toSet))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Set])
 
-  /** Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given
-    * base codec `c`.
+  /** Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given base codec `c`.
     *
     * The schema and validator are copied from the base codec.
     */
@@ -411,13 +408,13 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Vector])
 
-  /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
-    * failure is returned. The given base codec `c` is used for decoding/encoding.
+  /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode failure is returned. The
+    * given base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
     */
   implicit def listHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], U, CF] =
-    listBinarySchema(c)
+    listBinaryCodec(c)
       .mapDecode({
         case Nil     => DecodeResult.Missing
         case List(e) => DecodeResult.Value(e)
@@ -425,13 +422,13 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       })(List(_))
       .schema(c.schema)
 
-  /** Create a codec which requires that a list of low-level values is empty or contains a single element. If it
-    * contains multiple elements, a decode failure is returned. The given base codec `c` is used for decoding/encoding.
+  /** Create a codec which requires that a list of low-level values is empty or contains a single element. If it contains multiple elements,
+    * a decode failure is returned. The given base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
     */
   implicit def listHeadOption[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Option[U], CF] =
-    listBinarySchema(c)
+    listBinaryCodec(c)
       .mapDecode({
         case Nil     => DecodeResult.Value(None)
         case List(e) => DecodeResult.Value(Some(e))
@@ -439,8 +436,8 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       })(_.toList)
       .schema(c.schema.asOption)
 
-  /** Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is
-    * returned. The given base codec `c` is used for decoding/encoding.
+  /** Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is returned. The given
+    * base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
     */
@@ -452,8 +449,8 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
       })(u => Some(c.encode(u)))
       .schema(c.schema)
 
-  /** Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given
-    * base codec `c` is used for decoding/encoding.
+  /** Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given base codec `c` is used for
+    * decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
     */
@@ -494,18 +491,16 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
   }
 }
 
-/** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec
-  * `List[T] <-> Either[A, B]`, given codecs `ca: T <-> A` and `cb: T <-> B`, we want to get
-  * `listHead(eitherRight(ca, cb))`, not `eitherRight(listHead(ca), listHead(cb))` (although they would
-  * function the same).
+/** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec `List[T] <-> Either[A, B]`, given
+  * codecs `ca: T <-> A` and `cb: T <-> B`, we want to get `listHead(eitherRight(ca, cb))`, not `eitherRight(listHead(ca), listHead(cb))`
+  * (although they would function the same).
   */
 trait LowPriorityCodec { this: Codec.type =>
 
-  /** Create a codec which during decoding, first tries to decode values on the right using `c2`. If this fails for any
-    * reason, decoding is done using `c1`. Both codecs must have the same low-level values and formats.
+  /** Create a codec which during decoding, first tries to decode values on the right using `c2`. If this fails for any reason, decoding is
+    * done using `c1`. Both codecs must have the same low-level values and formats.
     *
-    * For a left-biased variant see [[Codec.eitherLeft]]. This right-biased version is the default when using implicit
-    * codec resolution.
+    * For a left-biased variant see [[Codec.eitherLeft]]. This right-biased version is the default when using implicit codec resolution.
     *
     * The schema is defined to be an either schema as created by [[Schema.schemaForEither]].
     */
@@ -524,8 +519,8 @@ trait LowPriorityCodec { this: Codec.type =>
       .schema(Schema.schemaForEither(c1.schema, c2.schema))
   }
 
-  /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any
-    * reason, decoding is done using `c2`. Both codecs must have the same low-level values and formats.
+  /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any reason, decoding is
+    * done using `c2`. Both codecs must have the same low-level values and formats.
     *
     * For a right-biased variant see [[Codec.eitherRight]].
     *
@@ -547,8 +542,7 @@ trait LowPriorityCodec { this: Codec.type =>
   }
 }
 
-/** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec
-  * which further decodes it.
+/** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec which further decodes it.
   */
 case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[R], T, _ <: CodecFormat])
 

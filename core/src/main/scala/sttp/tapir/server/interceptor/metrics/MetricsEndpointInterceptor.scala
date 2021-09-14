@@ -56,7 +56,9 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
         }
       }
 
-      /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage. */
+      /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess`
+        * stage.
+        */
       override def onDecodeFailure(
           ctx: DecodeFailureContext
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {

@@ -35,12 +35,17 @@ trait OpenAPIDocsInterpreter {
   def toOpenAPI(es: Iterable[Endpoint[_, _, _, _]], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, es, openAPIDocsOptions, docsExtensions)
 
-  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]], title: String, version: String): OpenAPI = serverEndpointsToOpenAPI(ses, Info(title, version))
+  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]], title: String, version: String): OpenAPI =
+    serverEndpointsToOpenAPI(ses, Info(title, version))
 
   def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]], info: Info): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, ses.map(_.endpoint), openAPIDocsOptions, List.empty)
 
-  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
+  def serverEndpointsToOpenAPI[F[_]](
+      ses: Iterable[ServerEndpoint[_, _, _, _, F]],
+      info: Info,
+      docsExtensions: List[DocsExtension[_]]
+  ): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, ses.map(_.endpoint), openAPIDocsOptions, docsExtensions)
 }
 

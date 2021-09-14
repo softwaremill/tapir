@@ -8,7 +8,8 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.mockserver._
 
-/** @note - run the following docker command to setup mock-server locally
+/** @note
+  *   - run the following docker command to setup mock-server locally
   * {{{
   *   docker run -d --name tapir-mock-server --rm -p 1080:1080 mockserver/mockserver
   * }}}

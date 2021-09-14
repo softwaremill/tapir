@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M4"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M8"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -127,64 +127,37 @@ object manually or using f.e. [Quicklens](https://github.com/softwaremill/quickl
 
 ## Exposing OpenAPI documentation
 
-Exposing the OpenAPI documentation can be very application-specific. However, tapir contains modules which contain
-akka-http/http4s routes for exposing documentation using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
-[Redoc](https://github.com/Redocly/redoc):
+Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
+[Redoc](https://github.com/Redocly/redoc). The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint
+definitions, which given the documentation in yaml format, will expose it using the given context path. To use, add 
+as a dependency either:
 
 ```scala
-// Akka HTTP
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M4"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.19.0-M4"
-
-// Finatra
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.19.0-M4"
-
-// HTTP4S
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.19.0-M4"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.19.0-M4"
-
-// Play
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.19.0-M4"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.19.0-M4"
-
-// Vert.x
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "0.19.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.19.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.19.0-M8"
 ```
 
-Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
-your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
-
-```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M4" exclude("com.typesafe.akka", "akka-stream_2.12")
-```
-
-Usage example for akka-http:
+Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.swagger.akkahttp.SwaggerAkka
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.swagger.SwaggerUI
+
+import scala.concurrent.Future
 
 val myEndpoints: Seq[Endpoint[_, _, _, _]] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
+
 // add to your akka routes
-new SwaggerAkka(docsAsYaml).routes
+val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
-
-For redoc, use `RedocAkkaHttp`. 
-
-For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.
-
-For Play, use `SwaggerPlay` or `RedocPlay` classes.
-
-For Vert.x, use `SwaggerVertx` class.
-
-For zio-http, use `SwaggerZioHttp` class.
 
 ### Using with sbt-assembly
 
-The `tapir-swagger-ui-*` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
+The `tapir-swagger-ui` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
 You need to take additional measures if you package your application with [sbt-assembly](https://github.com/sbt/sbt-assembly)
 because the default merge strategy of the `assembly` task discards most artifacts in that directory.
 To avoid a `NullPointerException`, you need to include the following file explicitly:

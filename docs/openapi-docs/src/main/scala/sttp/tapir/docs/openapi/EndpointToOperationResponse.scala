@@ -46,10 +46,10 @@ private[openapi] class EndpointToOperationResponse(
     val headers = collectHeaders(outputs)
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes, _, _)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.StatusCode(possibleCodes, _, _) => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
       case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _)) => Vector(desc)
-      case EndpointIO.Empty(_, i)                                                     => if (i.description.nonEmpty) Vector(i.description.get) else Vector()
-      case _                                                                          => Vector()
+      case EndpointIO.Empty(_, i) => if (i.description.nonEmpty) Vector(i.description.get) else Vector()
+      case _                      => Vector()
     }
 
     val description = bodies.headOption.flatMap { case (desc, _) => desc }.getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

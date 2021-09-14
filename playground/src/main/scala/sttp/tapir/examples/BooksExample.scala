@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.examples.Endpoints.Limit
 import sttp.tapir.generic.auto._
-import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
 case class Country(name: String)
 case class Author(name: String, country: Country)
@@ -101,9 +100,14 @@ object BooksExample extends App with StrictLogging {
     import akka.http.scaladsl.Http
     import akka.http.scaladsl.server.Directives._
 
-    import scala.concurrent.Await
+    import sttp.tapir.server.akkahttp._
+    import sttp.tapir.swagger.SwaggerUI
+
+    import scala.concurrent.{Await, Future}
     import scala.concurrent.duration._
-    val routes = route ~ new SwaggerAkka(yaml).routes
+
+    val swaggerRoutes = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](yaml))
+    val routes = route ~ swaggerRoutes
     implicit val actorSystem: ActorSystem = ActorSystem()
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 

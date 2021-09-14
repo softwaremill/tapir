@@ -8,6 +8,7 @@ import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
@@ -18,11 +19,11 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, Any, Router.Routes] {
+class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, AkkaStreams, Router.Routes] {
   import actorSystem.dispatcher
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+      e: ServerEndpoint[I, E, O, AkkaStreams, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Routes = {
@@ -34,9 +35,9 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Routes = PlayServerInterpreter().toRoutes(es)
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, AkkaStreams, Future]]): Routes = PlayServerInterpreter().toRoutes(es)
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStreams], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {
     PlayServerInterpreter().toRoutesRecoverErrors(e)(fn)

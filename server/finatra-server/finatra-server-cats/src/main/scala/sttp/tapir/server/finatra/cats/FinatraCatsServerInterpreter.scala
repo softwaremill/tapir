@@ -57,8 +57,7 @@ trait FinatraCatsServerInterpreter[F[_]] extends Logging {
     override def ensure[T](f: F[T], e: => F[Unit]): F[T] = Async[F].guaranteeCase(f)(_ => e)
   }
 
-  /** Convert from a Scala Future to a Twitter Future
-    * Source: https://twitter.github.io/util/guide/util-cookbook/futures.html
+  /** Convert from a Scala Future to a Twitter Future Source: https://twitter.github.io/util/guide/util-cookbook/futures.html
     */
   private implicit class RichScalaFuture[A](val sf: ScalaFuture[A]) {
     def asTwitter(implicit e: ExecutionContext): Future[A] = {

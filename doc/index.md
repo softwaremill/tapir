@@ -136,6 +136,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/streaming
    endpoint/websockets
    endpoint/integrations
+   endpoint/static
 
 .. toctree::
    :maxdepth: 2

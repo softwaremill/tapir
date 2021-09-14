@@ -8,7 +8,7 @@ import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
-import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.{Endpoint, EndpointInput}
 

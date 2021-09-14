@@ -61,6 +61,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       new ServerAuthenticationTests(createServerTest).tests() ++
       new ServerMetricsTest(createServerTest).tests() ++
       new ServerRejectTests(createServerTest, interpreter).tests() ++
+      new ServerStaticContentTests(interpreter, backend).tests() ++
       additionalTests()
   }
 }

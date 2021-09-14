@@ -49,8 +49,8 @@ object TupleOps {
 
 /** Allows the definition of binary poly-functions (e.g. for folding over tuples).
   *
-  * Note: the poly-function implementation seen here is merely a stripped down version of
-  * what Miles Sabin made available with his awesome shapeless library. All credit goes to him!
+  * Note: the poly-function implementation seen here is merely a stripped down version of what Miles Sabin made available with his awesome
+  * shapeless library. All credit goes to him!
   */
 trait BinaryPolyFunc {
   def at[A, B] = new CaseBuilder[A, B]

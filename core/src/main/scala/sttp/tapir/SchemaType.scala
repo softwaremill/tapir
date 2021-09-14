@@ -7,8 +7,8 @@ sealed trait SchemaType[T] {
   def show: String
   def contramap[TT](g: TT => T): SchemaType[TT]
 
-  /** Adapt this schema to type `TT`. Only the meta-data is retained. Run-time functionality, which allows traversing
-    * collection elements, product fields, or coproduct subtypes is lost.
+  /** Adapt this schema to type `TT`. Only the meta-data is retained. Run-time functionality, which allows traversing collection elements,
+    * product fields, or coproduct subtypes is lost.
     */
   def as[TT]: SchemaType[TT]
 }

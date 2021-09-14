@@ -8,8 +8,7 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   val tpe = TypeRepr.of[T]
   val symbol = tpe.typeSymbol
 
-  if !symbol.flags.is(Flags.Case) then
-    report.throwError(s"Form codec can only be derived for case classes, but got: ${summon[Type[T]]}")
+  if !symbol.flags.is(Flags.Case) then report.throwError(s"Form codec can only be derived for case classes, but got: ${summon[Type[T]]}")
 
   def name = symbol.name
 
@@ -25,7 +24,7 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
         Select.unique(New(Inferred(tpe)), "<init>"),
         symbol.caseFields.zipWithIndex.map { (field: Symbol, i: Int) =>
           TypeApply(
-            Select.unique('{valuesVector.apply(${Expr(i)})}.asTerm, "asInstanceOf"),
+            Select.unique('{ valuesVector.apply(${ Expr(i) }) }.asTerm, "asInstanceOf"),
             List(Inferred(tpe.memberType(field)))
           )
         }
@@ -49,7 +48,7 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   /** Extracts an optional argument from an annotation with a single string-valued argument with a default value. */
   def extractOptStringArgFromAnnotation(annSymbol: Symbol): Option[Option[String]] = {
     symbol.getAnnotation(annSymbol).map {
-      case Apply(_, List(Select(_, "$lessinit$greater$default$1"))) => None
+      case Apply(_, List(Select(_, "$lessinit$greater$default$1")))             => None
       case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => Some(c.value.asInstanceOf[String])
       case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from class: ${symbol.name}")
     }
@@ -58,7 +57,11 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
 
 // The `symbol` is needed to get the field type and generate instance selects. The `constructorField` symbol is needed
 // to read annotations.
-class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(val symbol: q.reflect.Symbol, constructorField: q.reflect.Symbol, val tpe: q.reflect.TypeRepr) {
+class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
+    val symbol: q.reflect.Symbol,
+    constructorField: q.reflect.Symbol,
+    val tpe: q.reflect.TypeRepr
+) {
   import q.reflect.*
 
   def name = symbol.name
@@ -72,7 +75,7 @@ class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(val symbol: q.r
   /** Extracts an optional argument from an annotation with a single string-valued argument with a default value. */
   def extractOptStringArgFromAnnotation(annSymbol: Symbol): Option[Option[String]] = {
     constructorField.getAnnotation(annSymbol).map {
-      case Apply(_, List(Select(_, "$lessinit$greater$default$1"))) => None
+      case Apply(_, List(Select(_, "$lessinit$greater$default$1")))             => None
       case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => Some(c.value.asInstanceOf[String])
       case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
     }

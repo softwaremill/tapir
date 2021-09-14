@@ -25,8 +25,9 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests total" in {
     // given
     val provider = SdkMeterProvider.builder().build()
+    val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withRequestsTotal()
+    val metrics = OpenTelemetryMetrics[Id](meter).withRequestsTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
@@ -44,11 +45,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests active" in {
     // given
     val provider = SdkMeterProvider.builder().build()
+    val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi { name =>
       Thread.sleep(900)
       PersonsApi.defaultLogic(name)
     }.serverEp
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withRequestsActive()
+    val metrics = OpenTelemetryMetrics[Id](meter).withRequestsActive()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
@@ -72,8 +74,9 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect responses total" in {
     // given
     val provider = SdkMeterProvider.builder().build()
+    val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal()
+    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
       TestRequestBody,
       UnitToResponseBody,
@@ -117,6 +120,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect responses duration" in {
     // given
     val provider = SdkMeterProvider.builder().build()
+    val meter = provider.get("tapir-instrumentation")
     val waitServerEp: Int => ServerEndpoint[String, String, String, Any, Id] = millis => {
       PersonsApi { name =>
         Thread.sleep(millis)
@@ -124,7 +128,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       }.serverEp
     }
 
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesDuration()
+    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesDuration()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
@@ -150,7 +154,8 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val labels = MetricLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
     val provider = SdkMeterProvider.builder().build()
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal(labels)
+    val meter = provider.get("tapir-instrumentation")
+    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal(labels)
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
@@ -165,7 +170,8 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "metrics" should "be collected on exception when response from exception handler" in {
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
     val provider = SdkMeterProvider.builder().build()
-    val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal()
+    val meter = provider.get("tapir-instrumentation")
+    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
       TestRequestBody,
       StringToResponseBody,

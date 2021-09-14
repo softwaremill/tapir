@@ -15,7 +15,8 @@ import java.util.{Date, UUID}
 import scala.annotation.{StaticAnnotation, implicitNotFound}
 
 /** Describes the type `T`: its low-level representation, meta-data and validation rules.
-  * @param format The name of the format of the low-level representation of `T`.
+  * @param format
+  *   The name of the format of the low-level representation of `T`.
   */
 @implicitNotFound(
   msg = """Could not find Schema for type ${T}.
@@ -45,11 +46,10 @@ case class Schema[T](
     validator = validator.contramap(g)
   )
 
-  /** Adapt this schema to type `TT`. Only the meta-data is retained, except for default values and the validator
-    * (however, product field/subtypes validators are retained). Run-time functionality:
-    * - traversing collection elements, product fields, or coproduct subtypes
-    * - validating an instance of type `TT` the top-level type
-    * is lost.
+  /** Adapt this schema to type `TT`. Only the meta-data is retained, except for default values and the validator (however, product
+    * field/subtypes validators are retained). Run-time functionality:
+    *   - traversing collection elements, product fields, or coproduct subtypes
+    *   - validating an instance of type `TT` the top-level type is lost.
     */
   def as[TT]: Schema[TT] = copy(
     schemaType = schemaType.as[TT],
@@ -66,8 +66,8 @@ case class Schema[T](
       deprecated = deprecated
     )
 
-  /** Returns an array version of this schema, with the schema type wrapped in [[SArray]].
-    * Sets `isOptional` to true as the collection might be empty.
+  /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
+    * be empty.
     */
   def asArray: Schema[Array[T]] =
     Schema(
@@ -76,8 +76,8 @@ case class Schema[T](
       deprecated = deprecated
     )
 
-  /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
-    * Sets `isOptional` to true as the collection might be empty.
+  /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
+    * might be empty.
     */
   def asIterable[C[X] <: Iterable[X]]: Schema[C[T]] =
     Schema(
@@ -93,10 +93,10 @@ case class Schema[T](
 
   def encodedExample(e: Any): Schema[T] = copy(encodedExample = Some(e))
 
-  /** Adds a default value, which is used by [[Codec]]s during decoding and for documentation.
+  /** Adds a default value, which is used by [[Codec]] s during decoding and for documentation.
     *
-    * To represent the value in the documentation, an encoded form needs to be provided. The encoded form is inferred
-    * if missing and the given value is of a basic type (number, string, etc.).
+    * To represent the value in the documentation, an encoded form needs to be provided. The encoded form is inferred if missing and the
+    * given value is of a basic type (number, string, etc.).
     */
   def default(t: T, encoded: Option[Any] = None): Schema[T] = {
     val raw2 = encoded match {
@@ -163,9 +163,8 @@ case class Schema[T](
         copy(schemaType = schemaType2)
     }
 
-  /** Add a validator to this schema. If the validator contains a named enum validator:
-    * * the encode function is inferred if not yet defined, and the validators possible values are of a basic type
-    * * the name is set as the schema's name.
+  /** Add a validator to this schema. If the validator contains a named enum validator: * the encode function is inferred if not yet
+    * defined, and the validators possible values are of a basic type * the name is set as the schema's name.
     */
   def validate(v: Validator[T]): Schema[T] = {
     val v2 = v.inferEnumerationEncode
@@ -275,8 +274,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
     val Unit: SName = SName(fullName = "Unit")
   }
 
-  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using
-    * [[Schema.derived]].
+  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]].
     */
   object annotations {
     class description(val text: String) extends StaticAnnotation

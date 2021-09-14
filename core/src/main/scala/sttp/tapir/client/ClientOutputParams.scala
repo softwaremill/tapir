@@ -68,7 +68,7 @@ abstract class ClientOutputParams {
           case EndpointOutput.MappedPair(wrapped, codec) => apply(wrapped, body, meta).flatMap(p => decode(codec, p.asAny))
         }).map(ParamsAsAny.apply)
 
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
+      case EndpointOutput.Void() => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
       case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, meta)
       case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, meta)
     }

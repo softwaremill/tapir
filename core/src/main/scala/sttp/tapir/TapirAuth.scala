@@ -16,9 +16,10 @@ object TapirAuth {
       challenge: WWWAuthenticate = WWWAuthenticate.apiKey()
   ): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input, challenge, None)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix.
-    * To parse the data as a base64-encoded username/password combination, use: `basic[UsernamePassword]`
-    * @see UsernamePassword
+  /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a base64-encoded
+    * username/password combination, use: `basic[UsernamePassword]`
+    * @see
+    *   UsernamePassword
     */
   def basic[T: Codec[List[String], *, CodecFormat.TextPlain]](
       challenge: WWWAuthenticate = WWWAuthenticate.basic()

@@ -14,14 +14,13 @@ import sttp.tapir.server.interceptor.{
   ValuedEndpointOutput
 }
 
-/** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have
-  * been interpreted (doesn't do anything when interpreting a single endpoint).
+/** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have been interpreted
+  * (doesn't do anything when interpreting a single endpoint).
   *
-  * By default, if there's a method decode failure, this means that the path must have matched (as it's decoded first);
-  * then, returning a 405 (method not allowed).
+  * By default, if there's a method decode failure, this means that the path must have matched (as it's decoded first); then, returning a
+  * 405 (method not allowed).
   *
-  * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server
-  * implementation.
+  * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server implementation.
   */
 class RejectInterceptor[F[_]](handler: RequestResult.Failure => Option[StatusCode]) extends RequestInterceptor[F] {
   override def apply[B](

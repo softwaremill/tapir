@@ -15,8 +15,8 @@ interpreted as:
   * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
-  * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/server/ziohttp.md) `Http`
-  * [aws](https://tapir.softwaremill.com/en/latest/server/server/aws.md) through Lambda/SAM/Terraform
+  * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
+  * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
   * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html)
@@ -95,7 +95,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M8"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):

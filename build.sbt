@@ -1,4 +1,6 @@
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
+import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
+import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
 import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
@@ -9,7 +11,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.14"
 val scala2_13 = "2.13.6"
-val scala3 = "3.0.1"
+val scala3 = "3.0.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -19,6 +21,7 @@ val documentationScalaVersion = scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
+lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -86,8 +89,8 @@ val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaC
 val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.5",
-  "ch.qos.logback" % "logback-core" % "1.2.5",
+  "ch.qos.logback" % "logback-classic" % "1.2.6",
+  "ch.qos.logback" % "logback-core" % "1.2.6",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
@@ -117,16 +120,8 @@ lazy val allAggregates = core.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
-  swaggerUiAkka.projectRefs ++
-  redocAkka.projectRefs ++
-  swaggerUiHttp4s.projectRefs ++
-  redocHttp4s.projectRefs ++
-  swaggerUiFinatra.projectRefs ++
-  swaggerUiPlay.projectRefs ++
-  redocPlay.projectRefs ++
-  redocZio.projectRefs ++
-  swaggerUiVertx.projectRefs ++
-  swaggerUiZioHttp.projectRefs ++
+  swaggerUi.projectRefs ++
+  redoc.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -206,7 +201,8 @@ lazy val rootProject = (project in file("."))
         )
       )
       .value,
-    ideSkipProject := false
+    ideSkipProject := false,
+    generateMimeByExtensionDB := GenerateMimeByExtensionDB()
   )
   .aggregate(allAggregates: _*)
 
@@ -288,7 +284,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % "1.1.0",
+        "org.scala-js" %%% "scalajs-dom" % "1.2.0",
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
         "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.jsScalaJavaTime % Test
       )
@@ -542,8 +538,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.10.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.10.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.10.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.10.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -563,7 +559,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
@@ -577,7 +573,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.11.0",
+      "io.prometheus" % "simpleclient_common" % "0.12.0",
       scalaTest.value % Test
     )
   )
@@ -589,9 +585,9 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.4.1",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.4.1",
-      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.4.1-alpha" % Test,
+      "io.opentelemetry" % "opentelemetry-api" % "1.6.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.6.0",
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )
   )
@@ -707,112 +703,20 @@ lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-doc
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
-lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-akka-http"))
+lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-swagger-ui-akka-http",
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-akka-http",
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val redocZio: ProjectMatrix = (projectMatrix in file("docs/redoc-zio-http"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-zio-http",
-    libraryDependencies ++= Seq(
-      "io.d11" %% "zhttp" % "1.0.0.0-RC17"
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-http4s"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-swagger-ui-http4s",
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
-      scalaTest.value % Test
-    )
+    name := "tapir-swagger-ui",
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
 
-lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"))
+lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-http4s",
-    libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
-  )
+  .settings(name := "tapir-redoc")
   .jvmPlatform(scalaVersions = scala2And3Versions)
-
-lazy val swaggerUiFinatra: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-finatra"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-swagger-ui-finatra",
-    libraryDependencies ++= Seq(
-      "com.twitter" %% "finatra-http" % Versions.finatra,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val swaggerUiPlay: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-play"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-swagger-ui-play",
-    libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play" % Versions.playServer,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val redocPlay: ProjectMatrix = (projectMatrix in file("docs/redoc-play"))
-  .enablePlugins(SbtTwirl)
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-redoc-play",
-    libraryDependencies += "com.typesafe.play" %% "play" % Versions.playServer
-  )
-  .jvmPlatform(scalaVersions = scala2Versions)
-
-lazy val swaggerUiVertx: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-vertx"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-swagger-ui-vertx",
-    libraryDependencies ++= Seq(
-      "io.vertx" % "vertx-web" % Versions.vertx,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-
-lazy val swaggerUiZioHttp: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-zio-http"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-swagger-ui-zio-http",
-    libraryDependencies ++= Seq(
-      "io.d11" %% "zhttp" % "1.0.0.0-RC17",
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
-      scalaTest.value % Test
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
 
 // server
 
@@ -858,7 +762,7 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .settings(
     name := "tapir-sttp-stub-server"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
@@ -917,7 +821,8 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-server" % Versions.playServer,
       "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
-      "com.typesafe.play" %% "play" % Versions.playServer
+      "com.typesafe.play" %% "play" % Versions.playServer,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1220,9 +1125,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     asyncapiCirceYaml,
     asyncapiDocs,
     circeJson,
-    swaggerUiAkka,
-    swaggerUiHttp4s,
-    swaggerUiZioHttp,
+    swaggerUi,
+    redoc,
     zioHttp4sServer,
     zioHttp,
     nettyServer,
@@ -1258,11 +1162,9 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     asyncapiCirceYaml,
     openapiDocs,
     circeJson,
-    swaggerUiAkka,
-    swaggerUiHttp4s,
-    swaggerUiZioHttp,
     refined,
     cats,
+    swaggerUi,
     zioHttp4sServer,
     zioHttp
   )
@@ -1313,7 +1215,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     sttpClient,
     playClient,
     sttpStubServer,
-    swaggerUiAkka,
     tethysJson,
     uPickleJson,
     vertxServer,
@@ -1326,4 +1227,5 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     opentelemetryMetrics,
     sttpMockServer,
     nettyServer
+    swaggerUi
   )

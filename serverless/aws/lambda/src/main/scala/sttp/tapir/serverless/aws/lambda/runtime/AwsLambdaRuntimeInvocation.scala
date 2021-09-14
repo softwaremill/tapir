@@ -28,8 +28,8 @@ object AwsLambdaRuntimeInvocation extends StrictLogging {
 
     val runtimeApiInvocationUri = uri"http://$awsRuntimeApiHost/2018-06-01/runtime/invocation"
 
-    /** Make request (without a timeout as prescribed by the AWS Custom Lambda Runtime documentation).
-      * This is due to the possibility of the runtime being frozen between lambda function invocations.
+    /** Make request (without a timeout as prescribed by the AWS Custom Lambda Runtime documentation). This is due to the possibility of the
+      * runtime being frozen between lambda function invocations.
       */
     val nextEventRequest = basicRequest.get(uri"$runtimeApiInvocationUri/next").response(asStringAlways).readTimeout(0.seconds)
 

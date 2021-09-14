@@ -12,9 +12,12 @@ object PathMapping {
   type RouteDefinition = (Option[HttpMethod], String)
 
   /** Given a Router, creates a Vert.x Route matching the route definition
-    * @param router a Vert.x Router
-    * @param route the definition of the route (method, and path)
-    * @return a route, attached to the router
+    * @param router
+    *   a Vert.x Router
+    * @param route
+    *   the definition of the route (method, and path)
+    * @return
+    *   a route, attached to the router
     */
   private[vertx] def createRoute(router: Router, route: RouteDefinition): Route =
     route match {
@@ -23,8 +26,10 @@ object PathMapping {
     }
 
   /** Extracts the route definition from the endpoint inputs
-    * @param endpoint a Tapir endpoint
-    * @return the route definition matching the endpoint input definition
+    * @param endpoint
+    *   a Tapir endpoint
+    * @return
+    *   the route definition matching the endpoint input definition
     */
   private[vertx] def extractRouteDefinition(endpoint: Endpoint[_, _, _, _]): RouteDefinition =
     (MethodMapping.sttpToVertx(endpoint.httpMethod), extractVertxPath(endpoint))

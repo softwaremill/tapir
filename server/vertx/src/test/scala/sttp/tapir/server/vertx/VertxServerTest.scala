@@ -5,11 +5,12 @@ import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerRejectTests,
+  ServerStaticContentTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -33,7 +34,8 @@ class VertxServerTest extends TestSuite {
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests()
+        new ServerMetricsTest(createServerTest).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

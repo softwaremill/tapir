@@ -9,11 +9,11 @@ import scala.quoted.*
 
 trait ValidatorMacros {
 
-  /** Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
-    * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
-    * decoded in the first place (the decoder has no other option than to fail).
+  /** Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s. This enumeration will only be used for
+    * documentation, as a value outside of the allowed values will not be decoded in the first place (the decoder has no other option than
+    * to fail).
     */
-  inline def derivedEnumeration[T]: Validator.Enumeration[T] = ${ValidatorMacros.derivedEnumerationImpl[T]}
+  inline def derivedEnumeration[T]: Validator.Enumeration[T] = ${ ValidatorMacros.derivedEnumerationImpl[T] }
 }
 
 object ValidatorMacros {
@@ -31,16 +31,18 @@ object ValidatorMacros {
       if (children.exists(_.isClassDef)) {
         report.throwError("All children must be objects or enum cases.")
       } else {
-        val instances = children.map(x => tpe.memberType(x).asType match { 
-          case '[f] => Ref(x).asExprOf[f]
-        })
-        val name = '{Option(Schema.SName(${Expr(symbol.fullName)}))}
+        val instances = children.map(x =>
+          tpe.memberType(x).asType match {
+            case '[f] => Ref(x).asExprOf[f]
+          }
+        )
+        val name = '{ Option(Schema.SName(${ Expr(symbol.fullName) })) }
 
         '{
           Validator.Enumeration[T](
-            List(${Varargs(instances)}: _*).asInstanceOf[List[T]],
+            List(${ Varargs(instances) }: _*).asInstanceOf[List[T]],
             None,
-            ${name}
+            ${ name }
           )
         }
       }

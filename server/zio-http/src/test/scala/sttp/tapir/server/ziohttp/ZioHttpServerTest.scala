@@ -5,10 +5,11 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerMetricsTest,
+  ServerRejectTests,
+  ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
 }
@@ -43,6 +44,9 @@ class ZioHttpServerTest extends TestSuite {
           new ServerAuthenticationTests(createServerTest).tests() ++
           new ServerMetricsTest(createServerTest).tests() ++
           new ServerRejectTests(createServerTest, interpreter).tests()
+      // TODO: re-enable once a newer zio http is available. Currently these tests often fail with:
+      // Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [f2 content], parser state [STATUS_LINE]
+      //new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

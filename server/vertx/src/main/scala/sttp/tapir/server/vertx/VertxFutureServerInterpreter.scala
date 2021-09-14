@@ -24,36 +24,44 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     *
-    * @param logic the logic to associate with the endpoint
-    * @return A function, that given a router, will attach this endpoint to it
+    * @param logic
+    *   the logic to associate with the endpoint
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def route[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): Router => Route =
     route(e.serverLogic(logic))
 
-  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    * The logic will be executed in a blocking context
+  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling The logic will be executed in a
+    * blocking context
     *
-    * @param logic the logic to associate with the endpoint
-    * @return A function, that given a router, will attach this endpoint to it
+    * @param logic
+    *   the logic to associate with the endpoint
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): Router => Route =
     blockingRoute(e.serverLogic(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
     *
-    * @param logic the logic to associate with the endpoint
-    * @return A function, that given a router, will attach this endpoint to it
+    * @param logic
+    *   the logic to associate with the endpoint
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
     route(e.serverLogicRecoverErrors(logic))
 
-  /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
-    * The logic will be executed in a blocking context
+  /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling The logic will be executed in a blocking
+    * context
     *
-    * @param logic the logic to associate with the endpoint
-    * @return A function, that given a router, will attach this endpoint to it
+    * @param logic
+    *   the logic to associate with the endpoint
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[O]
@@ -62,17 +70,19 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     *
-    * @return A function, that given a router, will attach this endpoint to it
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
 
-  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    * The logic will be executed in a blocking context
+  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling The logic will be executed in a
+    * blocking context
     *
-    * @return A function, that given a router, will attach this endpoint to it
+    * @return
+    *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future]

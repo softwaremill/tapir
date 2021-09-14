@@ -5,22 +5,22 @@ import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.{DecodeResult, Endpoint}
 
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
-  * @tparam T Interpreter-specific value representing the log effect.
+  * @tparam T
+  *   Interpreter-specific value representing the log effect.
   */
 trait ServerLog[T] {
 
-  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors,
-    * haven't provided a response.
+  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, haven't provided a
+    * response.
     */
   def decodeFailureNotHandled(ctx: DecodeFailureContext): T
 
-  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors,
-    * provided a response.
+  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response.
     */
   def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T
 
-  /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
-    * providing a response, with the given status code.
+  /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
+    * with the given status code.
     */
   def requestHandled(e: Endpoint[_, _, _, _], statusCode: Int): T
 
