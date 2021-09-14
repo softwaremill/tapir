@@ -5,12 +5,12 @@ import io.netty.channel._
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
+import sttp.tapir.server.netty.internal.NettyServerHandler
 
 import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
 // TODO: reduce routes to a single route in Route.reduce?
-// TODO: compile warnings
 case class NettyServer(routes: Vector[Route], options: NettyServerOptions)(implicit ec: ExecutionContext) {
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future]): NettyServer = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyServerOptions): NettyServer =

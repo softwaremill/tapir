@@ -1,12 +1,11 @@
-package sttp.tapir.server.netty
-
-import scala.util.{Success, Try}
+package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.ByteBuf
 import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.server.interpreter.BodyListener
 
-import sttp.monad.syntax._
+import scala.util.{Success, Try}
 
 class NettyBodyListener[Future[_]](implicit m: MonadError[Future]) extends BodyListener[Future, ByteBuf] {
   override def onComplete(body: ByteBuf)(cb: Try[Unit] => Future[Unit]): Future[ByteBuf] = {

@@ -1,13 +1,15 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
+import sttp.tapir.server.netty.NettyServerRequest
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
     extends SimpleChannelInboundHandler[FullHttpRequest] {
@@ -33,6 +35,7 @@ class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionCo
   override def channelRead0(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
     if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
+      ()
     } else {
       val req = request.retainedDuplicate()
 
@@ -48,15 +51,23 @@ class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionCo
       run(handlers)
         .map(toHttpResponse(_, request))
         .map(flushResponse(ctx, request, _))
+        .onComplete {
+          case Failure(exception) => ctx.fireExceptionCaught(exception)
+          case Success(_)         => ()
+        }
+
+      ()
     }
   }
 
   def flushResponse(ctx: ChannelHandlerContext, req: HttpRequest, res: HttpResponse): Unit = {
     if (!HttpUtil.isKeepAlive(req)) {
       ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
+      ()
     } else {
       res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
       ctx.writeAndFlush(res)
+      ()
     }
   }
 }

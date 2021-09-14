@@ -1,7 +1,6 @@
 package sttp.tapir.server.netty
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import io.netty.buffer.ByteBuf
 import sttp.monad.FutureMonad
 import sttp.tapir.internal.NoStreams
@@ -10,6 +9,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.NettyServerInterpreter.Route
+import sttp.tapir.server.netty.internal.{NettyBodyListener, NettyRequestBody, NettyToResponseBody}
 
 trait NettyServerInterpreter {
   def nettyServerOptions: NettyServerOptions = NettyServerOptions.default
@@ -30,7 +30,7 @@ trait NettyServerInterpreter {
       serverInterpreter(request, ses)
         .map {
           case RequestResult.Response(response) => Some(response)
-          case RequestResult.Failure(f)         => None
+          case RequestResult.Failure(_)         => None
         }
     }
 

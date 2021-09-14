@@ -1,16 +1,16 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.internal
+
+import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
+import sttp.capabilities
+import sttp.tapir.RawBodyType
+import sttp.tapir.internal.NoStreams
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.netty.{NettyServerOptions, NettyServerRequest}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
-
 import scala.concurrent.{ExecutionContext, Future}
-
-import sttp.capabilities
-import sttp.tapir.RawBodyType
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
-import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.ServerRequest
 
 class NettyRequestBody(req: NettyServerRequest, serverRequest: ServerRequest, serverOptions: NettyServerOptions)(implicit
     val ec: ExecutionContext

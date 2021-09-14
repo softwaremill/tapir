@@ -1,16 +1,16 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.internal
+
+import io.netty.buffer.{ByteBuf, Unpooled}
+import sttp.capabilities
+import sttp.model.HasHeaders
+import sttp.tapir.internal.NoStreams
+import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
-
-import io.netty.buffer.{ByteBuf, Unpooled}
-import sttp.capabilities
-import sttp.model.HasHeaders
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.internal.NoStreams
-import sttp.tapir.server.interpreter.ToResponseBody
 
 class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
@@ -31,7 +31,7 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
         Unpooled.copiedBuffer(stream.readAllBytes())
 
       case RawBodyType.FileBody         => Unpooled.copiedBuffer(Files.readAllBytes(v.toPath))
-      case m: RawBodyType.MultipartBody => ???
+      case _: RawBodyType.MultipartBody => ???
     }
   }
 
