@@ -17,7 +17,7 @@ trait NettyServerInterpreter {
   def toRoute(
       ses: List[ServerEndpoint[_, _, _, Any, Future]]
   )(implicit ec: ExecutionContext): Route = {
-    val handler: Route = { request: NettyServerRequest =>
+    val handler: Route = { (request: NettyServerRequest) =>
       implicit val monad: FutureMonad = new FutureMonad()
       implicit val bodyListener: BodyListener[Future, ByteBuf] = new NettyBodyListener
       val serverInterpreter = new ServerInterpreter[Any, Future, ByteBuf, NoStreams](
