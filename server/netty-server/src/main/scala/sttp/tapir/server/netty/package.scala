@@ -1,17 +1,18 @@
 package sttp.tapir.server
 
+import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
+import scala.concurrent.{CancellationException, Future, Promise}
+import scala.util.{Failure, Success}
+
 import io.netty.channel.{Channel, ChannelFuture}
 import io.netty.handler.codec.http.HttpHeaders
 import sttp.model.Header
 
-import scala.concurrent.{CancellationException, Future, Promise}
-import scala.collection.JavaConverters._
-import scala.util.{Failure, Success}
-
 package object netty {
   private[netty] implicit class RichNettyHttpHeaders(underlying: HttpHeaders) {
     def toHeaderSeq: Seq[Header] =
-      underlying.asScala.map(e => Header(e.getKey, e.getValue)).toSeq
+      underlying.asScala.map(e => Header(e.getKey, e.getValue)).toList
   }
 
   private[netty] def nettyChannelFutureToScala(nettyFuture: ChannelFuture): Future[Channel] = {
