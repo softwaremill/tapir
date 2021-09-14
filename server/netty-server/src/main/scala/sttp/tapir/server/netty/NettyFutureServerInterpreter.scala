@@ -9,8 +9,8 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, NettyRequestBody, NettyToResponseBody}
 
-trait NettyServerInterpreter {
-  def nettyServerOptions: NettyServerOptions = NettyServerOptions.default
+trait NettyFutureServerInterpreter {
+  def nettyServerOptions: NettyFutureServerOptions = NettyFutureServerOptions.default
 
   def toRoute(
       ses: List[ServerEndpoint[_, _, _, Any, Future]]
@@ -36,10 +36,10 @@ trait NettyServerInterpreter {
   }
 }
 
-object NettyServerInterpreter {
-  def apply(serverOptions: NettyServerOptions = NettyServerOptions.default): NettyServerInterpreter = {
-    new NettyServerInterpreter {
-      override def nettyServerOptions: NettyServerOptions = serverOptions
+object NettyFutureServerInterpreter {
+  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default): NettyFutureServerInterpreter = {
+    new NettyFutureServerInterpreter {
+      override def nettyServerOptions: NettyFutureServerOptions = serverOptions
     }
   }
 }

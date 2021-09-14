@@ -21,26 +21,26 @@ class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec:
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Route = {
-    val serverOptions: NettyServerOptions = NettyServerOptions.customInterceptors
+    val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
 
-    NettyServerInterpreter(serverOptions).toRoute(List(e))
+    NettyFutureServerInterpreter(serverOptions).toRoute(List(e))
   }
 
   override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Route = {
-    NettyServerInterpreter().toRoute(es)
+    NettyFutureServerInterpreter().toRoute(es)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Route = {
-    NettyServerInterpreter().toRoute(List(e.serverLogicRecoverErrors(fn)))
+    NettyFutureServerInterpreter().toRoute(List(e.serverLogicRecoverErrors(fn)))
   }
 
   override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
-    val options = NettyServerOptions.default.nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup)).randomPort
+    val options = NettyFutureServerOptions.default.nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup)).randomPort
     val bind = IO.fromFuture(IO.delay(NettyServer(options).addRoutes(routes.toList).start()))
 
     Resource

@@ -8,7 +8,7 @@ import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{Future, blocking}
 
-case class NettyServerOptions(
+case class NettyFutureServerOptions(
     host: String,
     port: Int,
     interceptors: List[Interceptor[Future]],
@@ -16,16 +16,16 @@ case class NettyServerOptions(
     deleteFile: TapirFile => Future[Unit],
     nettyOptions: NettyOptions
 ) {
-  def host(s: String): NettyServerOptions = copy(host = s)
-  def port(p: Int): NettyServerOptions = copy(port = p)
-  def randomPort: NettyServerOptions = port(0)
-  def prependInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = interceptors :+ i)
-  def nettyOptions(o: NettyOptions): NettyServerOptions = copy(nettyOptions = o)
+  def host(s: String): NettyFutureServerOptions = copy(host = s)
+  def port(p: Int): NettyFutureServerOptions = copy(port = p)
+  def randomPort: NettyFutureServerOptions = port(0)
+  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
+  def nettyOptions(o: NettyOptions): NettyFutureServerOptions = copy(nettyOptions = o)
 }
 
-object NettyServerOptions {
-  def default(interceptors: List[Interceptor[Future]]): NettyServerOptions = NettyServerOptions(
+object NettyFutureServerOptions {
+  def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
     "localhost",
     8080,
     interceptors,
@@ -47,11 +47,11 @@ object NettyServerOptions {
     noLog = _ => Future.unit
   )
 
-  def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyServerOptions] = {
+  def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions] = {
     CustomInterceptors(
       createLogInterceptor =
         (sl: ServerLog[Logger => Future[Unit]]) => new ServerLogInterceptor[Logger => Future[Unit], Future](sl, (_, _) => Future.unit),
-      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyServerOptions]) => default(ci.interceptors)
+      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
@@ -63,5 +63,5 @@ object NettyServerOptions {
       }
     }
 
-  val default: NettyServerOptions = customInterceptors.options
+  val default: NettyFutureServerOptions = customInterceptors.options
 }

@@ -9,21 +9,21 @@ import sttp.tapir.server.netty.internal.{NettyServerHandler, nettyChannelFutureT
 import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
-case class NettyServer(routes: Vector[Route], options: NettyServerOptions)(implicit ec: ExecutionContext) {
+case class NettyServer(routes: Vector[Route], options: NettyFutureServerOptions)(implicit ec: ExecutionContext) {
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future]): NettyServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyServerOptions): NettyServer =
+  def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyFutureServerOptions): NettyServer =
     addEndpoints(List(se), overrideOptions)
   def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]]): NettyServer = addRoute(
-    NettyServerInterpreter(options).toRoute(ses)
+    NettyFutureServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]], overrideOptions: NettyServerOptions): NettyServer = addRoute(
-    NettyServerInterpreter(overrideOptions).toRoute(ses)
+  def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]], overrideOptions: NettyFutureServerOptions): NettyServer = addRoute(
+    NettyFutureServerInterpreter(overrideOptions).toRoute(ses)
   )
 
   def addRoute(r: Route): NettyServer = copy(routes = routes :+ r)
   def addRoutes(r: Iterable[Route]): NettyServer = copy(routes = routes ++ r)
 
-  def options(o: NettyServerOptions): NettyServer = copy(options = o)
+  def options(o: NettyFutureServerOptions): NettyServer = copy(options = o)
   def host(s: String): NettyServer = copy(options = options.host(s))
   def port(p: Int): NettyServer = copy(options = options.port(p))
 
@@ -60,7 +60,7 @@ case class NettyServer(routes: Vector[Route], options: NettyServerOptions)(impli
 }
 
 object NettyServer {
-  def apply(serverOptions: NettyServerOptions = NettyServerOptions.default)(implicit ec: ExecutionContext): NettyServer =
+  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default)(implicit ec: ExecutionContext): NettyServer =
     NettyServer(Vector.empty, serverOptions)
 }
 
