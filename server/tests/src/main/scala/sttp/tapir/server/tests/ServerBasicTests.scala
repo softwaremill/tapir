@@ -217,7 +217,7 @@ class ServerBasicTests[F[_], ROUTE](
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
     testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
-      pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2}").mkString("&").asRight[Unit])
+      pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2.toList}").mkString("&").asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri/api/echo/params?flag")

@@ -131,6 +131,7 @@ lazy val allAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
+  nettyServer.projectRefs ++
   zioHttp4sServer.projectRefs ++
   zioHttp.projectRefs ++
   awsLambda.projectRefs ++
@@ -827,6 +828,15 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)
 
+lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-netty-server",
+    libraryDependencies ++= Seq("io.netty" % "netty-all" % "4.1.66.Final") ++ loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, serverTests % Test)
+
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .settings(commonJvmSettings)
   .settings(
@@ -1119,6 +1129,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     redoc,
     zioHttp4sServer,
     zioHttp,
+    nettyServer,
     sttpStubServer,
     playJson,
     prometheusMetrics,
@@ -1215,5 +1226,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     opentelemetryMetrics,
     sttpMockServer,
+    nettyServer
     swaggerUi
   )
