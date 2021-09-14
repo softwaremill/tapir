@@ -22,8 +22,5 @@ private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerReques
   override def queryParameters: QueryParams = sttpUri.params
   override def method: Method = Method.unsafeApply(request.requestContext.http.method)
   override def uri: Uri = sttpUri
-  override def headers: Seq[Header] = request.headers
-    .map { case (n, v) => Header(n, v) }
-    .toSeq
-    .asInstanceOf[scala.collection.immutable.Seq[Header]]
+  override def headers: Seq[Header] = request.headers.map { case (n, v) => Header(n, v) }.toSeq
 }
