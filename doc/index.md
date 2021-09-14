@@ -8,6 +8,7 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
+  * [Netty](server/netty.md)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
   * [ZIO Http](server/ziohttp.md) `Http`
@@ -143,6 +144,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/akkahttp
    server/http4s
    server/zio-http4s
+   server/netty
    server/finatra
    server/play
    server/vertx

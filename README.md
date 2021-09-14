@@ -12,6 +12,7 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
+  * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/server/ziohttp.md) `Http`
