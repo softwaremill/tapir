@@ -7,6 +7,7 @@ import io.netty.handler.codec.http._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.Method
+import sttp.tapir.server.netty.internal.RichNettyHttpHeaders
 
 class NettyServerRequestSpec extends AnyFreeSpec with Matchers {
   val uri = JavaUri.create("/with%20space/another/last?param=value1&param=value2")

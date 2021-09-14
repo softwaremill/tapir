@@ -6,6 +6,7 @@ import org.scalatest.EitherValues
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
+import sttp.tapir.server.netty.internal.nettyFutureToScala
 
 class NettyServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =

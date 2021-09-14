@@ -7,7 +7,6 @@ import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.netty.NettyServerInterpreter.Route
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 

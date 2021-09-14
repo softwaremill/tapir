@@ -4,8 +4,7 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel._
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.NettyServerInterpreter.Route
-import sttp.tapir.server.netty.internal.NettyServerHandler
+import sttp.tapir.server.netty.internal.{NettyServerHandler, nettyChannelFutureToScala, nettyFutureToScala}
 
 import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}

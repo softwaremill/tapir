@@ -4,8 +4,7 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
 import sttp.tapir.model.ServerResponse
-import sttp.tapir.server.netty.NettyServerInterpreter.Route
-import sttp.tapir.server.netty.NettyServerRequest
+import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
