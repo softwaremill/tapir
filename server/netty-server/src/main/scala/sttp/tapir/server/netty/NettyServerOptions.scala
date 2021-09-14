@@ -1,11 +1,10 @@
 package sttp.tapir.server.netty
 
 import com.typesafe.scalalogging.Logger
-import sttp.model.StatusCode
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
-import sttp.tapir.{Defaults, TapirFile, statusCode}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{Future, blocking}
 
@@ -15,7 +14,6 @@ case class NettyServerOptions(
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    noRouteMatchesOutput: ValuedEndpointOutput[_],
     nettyOptions: NettyOptions
 ) {
   def host(s: String): NettyServerOptions = copy(host = s)
@@ -23,7 +21,6 @@ case class NettyServerOptions(
   def randomPort: NettyServerOptions = port(0)
   def prependInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Future]): NettyServerOptions = copy(interceptors = interceptors :+ i)
-  def noRouteMatchesOutput(o: ValuedEndpointOutput[_]): NettyServerOptions = copy(noRouteMatchesOutput = o)
   def nettyOptions(o: NettyOptions): NettyServerOptions = copy(nettyOptions = o)
 }
 
@@ -40,7 +37,6 @@ object NettyServerOptions {
       import scala.concurrent.ExecutionContext.Implicits.global
       Future(blocking(Defaults.deleteFile()(file)))
     },
-    ValuedEndpointOutput(statusCode(StatusCode.NotFound), ()),
     NettyOptions.default
   )
 

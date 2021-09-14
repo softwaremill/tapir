@@ -7,11 +7,10 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionContext)
-    extends SimpleChannelInboundHandler[FullHttpRequest] {
+class NettyServerHandler(route: Route)(implicit val ec: ExecutionContext) extends SimpleChannelInboundHandler[FullHttpRequest] {
 
   private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
     val res = new DefaultFullHttpResponse(
@@ -38,16 +37,11 @@ class NettyServerHandler(val handlers: List[Route])(implicit val ec: ExecutionCo
     } else {
       val req = request.retainedDuplicate()
 
-      def run(hs: List[Route]): Future[ServerResponse[ByteBuf]] = hs match {
-        case head :: tail =>
-          head(NettyServerRequest(req)).flatMap {
-            case Some(success) => Future.successful(success)
-            case None          => run(tail)
-          }
-        case Nil => Future.successful(ServerResponse(sttp.model.StatusCode.NotFound, Nil, None))
-      }
-
-      run(handlers)
+      route(NettyServerRequest(req))
+        .map {
+          case Some(response) => response
+          case None           => ServerResponse(sttp.model.StatusCode.NotFound, Nil, None)
+        }
         .map(toHttpResponse(_, request))
         .map(flushResponse(ctx, request, _))
         .onComplete {

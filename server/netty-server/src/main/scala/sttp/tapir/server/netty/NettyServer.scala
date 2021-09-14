@@ -9,7 +9,6 @@ import sttp.tapir.server.netty.internal.{NettyServerHandler, nettyChannelFutureT
 import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO: reduce routes to a single route in Route.reduce?
 case class NettyServer(routes: Vector[Route], options: NettyServerOptions)(implicit ec: ExecutionContext) {
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future]): NettyServer = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyServerOptions): NettyServer =
@@ -37,7 +36,7 @@ case class NettyServer(routes: Vector[Route], options: NettyServerOptions)(impli
       .channel(classOf[NioServerSocketChannel])
       .childHandler(new ChannelInitializer[Channel] {
         override def initChannel(ch: Channel): Unit =
-          options.nettyOptions.initPipeline(ch.pipeline(), new NettyServerHandler(routes.toList))
+          options.nettyOptions.initPipeline(ch.pipeline(), new NettyServerHandler(Route.combine(routes)))
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true) // https://github.com/netty/netty/issues/1692
