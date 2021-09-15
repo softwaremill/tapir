@@ -26,23 +26,18 @@ case class NettyCatsServerOptions[F[_]](
 }
 
 object NettyCatsServerOptions {
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customInterceptors(dispatcher).options
+
   def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
     NettyCatsServerOptions(
-      "localhost",
-      8080,
+      NettyDefaults.DefaultHost,
+      NettyDefaults.DefaultPort,
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
       dispatcher,
       NettyOptions.default
     )
-
-  def defaultServerLog[F[_]: Async]: ServerLog[Logger => F[Unit]] = DefaultServerLog(
-    doLogWhenHandled = debugLog[F],
-    doLogAllDecodeFailures = debugLog[F],
-    doLogExceptions = (msg: String, ex: Throwable) => log => Sync[F].delay(log.error(msg, ex)),
-    noLog = _ => Sync[F].unit
-  )
 
   def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]] =
     CustomInterceptors(
@@ -51,13 +46,13 @@ object NettyCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
-  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): Logger => F[Unit] = log =>
-    Sync[F].delay {
-      exOpt match {
-        case None     => log.debug(msg)
-        case Some(ex) => log.debug(s"$msg; exception: {}", ex)
-      }
-    }
+  def defaultServerLog[F[_]: Async]: ServerLog[Logger => F[Unit]] = DefaultServerLog(
+    doLogWhenHandled = debugLog[F],
+    doLogAllDecodeFailures = debugLog[F],
+    doLogExceptions = (msg: String, ex: Throwable) => log => Sync[F].delay(log.error(msg, ex)),
+    noLog = _ => Sync[F].unit
+  )
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customInterceptors(dispatcher).options
+  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): Logger => F[Unit] = log =>
+    Sync[F].delay(NettyDefaults.debugLog(log, msg, exOpt))
 }

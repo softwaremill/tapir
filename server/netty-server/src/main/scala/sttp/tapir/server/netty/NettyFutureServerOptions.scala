@@ -25,9 +25,11 @@ case class NettyFutureServerOptions(
 }
 
 object NettyFutureServerOptions {
+  val default: NettyFutureServerOptions = customInterceptors.options
+
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
-    "localhost",
-    8080,
+    NettyDefaults.DefaultHost,
+    NettyDefaults.DefaultPort,
     interceptors,
     _ => {
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,13 +42,6 @@ object NettyFutureServerOptions {
     NettyOptions.default
   )
 
-  lazy val defaultServerLog: ServerLog[Logger => Future[Unit]] = DefaultServerLog(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(msg, ex)),
-    noLog = _ => Future.unit
-  )
-
   def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions] = {
     CustomInterceptors(
       createLogInterceptor =
@@ -55,13 +50,13 @@ object NettyFutureServerOptions {
     ).serverLog(defaultServerLog)
   }
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Future[Unit] = log =>
-    Future.successful {
-      exOpt match {
-        case None     => log.debug(msg)
-        case Some(ex) => log.debug(s"$msg; exception: {}", ex)
-      }
-    }
+  lazy val defaultServerLog: ServerLog[Logger => Future[Unit]] = DefaultServerLog(
+    doLogWhenHandled = debugLog,
+    doLogAllDecodeFailures = debugLog,
+    doLogExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(msg, ex)),
+    noLog = _ => Future.unit
+  )
 
-  val default: NettyFutureServerOptions = customInterceptors.options
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Future[Unit] = log =>
+    Future.successful(NettyDefaults.debugLog(log, msg, exOpt))
 }
