@@ -10,7 +10,7 @@ import sttp.model.Method
 import sttp.tapir.server.netty.internal.RichNettyHttpHeaders
 
 class NettyServerRequestSpec extends AnyFreeSpec with Matchers {
-  val uri = JavaUri.create("/with%20space/another/last?param=value1&param=value2")
+  val uri: JavaUri = JavaUri.create("/with%20space/another/last?param=value1&param=value2")
 
   val headers = new DefaultHttpHeaders()
   headers.add(HttpHeaderNames.CONTENT_TYPE, "text/plain")
@@ -28,7 +28,7 @@ class NettyServerRequestSpec extends AnyFreeSpec with Matchers {
     trailingHeaders
   )
 
-  val nettyServerRequest = new NettyServerRequest(emptyPostRequest)
+  val nettyServerRequest: NettyServerRequest = NettyServerRequest(emptyPostRequest)
 
   "uri is the same as in request" in {
     nettyServerRequest.uri.toString should equal(uri.toString)

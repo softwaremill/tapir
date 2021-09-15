@@ -14,7 +14,7 @@ For example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.netty.{NettyServer, NettyServerBinding}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -25,7 +25,7 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogic(name => Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
 
-val binding: Future[NettyServerBinding] = NettyServer().addEndpoint(helloWorld).start()
+val binding: Future[NettyFutureServerBinding] = NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
 ## Configuration

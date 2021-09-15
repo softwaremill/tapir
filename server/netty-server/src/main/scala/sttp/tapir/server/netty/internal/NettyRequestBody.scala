@@ -2,31 +2,31 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import sttp.capabilities
-import sttp.tapir.RawBodyType
+import sttp.monad.MonadError
+import sttp.tapir.{RawBodyType, TapirFile}
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.ServerRequest
+import sttp.monad.syntax._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.server.netty.{NettyFutureServerOptions, NettyServerRequest}
+import sttp.tapir.server.netty.NettyServerRequest
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import scala.concurrent.{ExecutionContext, Future}
 
-class NettyRequestBody(req: NettyServerRequest, serverRequest: ServerRequest, serverOptions: NettyFutureServerOptions)(implicit
-    val ec: ExecutionContext
-) extends RequestBody[Future, NoStreams] {
+class NettyRequestBody[F[_]](req: NettyServerRequest, serverRequest: ServerRequest, createFile: ServerRequest => F[TapirFile])(implicit
+    monadError: MonadError[F]
+) extends RequestBody[F, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](bodyType: RawBodyType[RAW]): Future[RawValue[RAW]] = {
+  override def toRaw[RAW](bodyType: RawBodyType[RAW]): F[RawValue[RAW]] = {
     bodyType match {
-      case RawBodyType.StringBody(charset) => Future.successful(RawValue(req.req.content().toString(charset)))
-      case RawBodyType.ByteArrayBody       => Future.successful(RawValue(requestContent))
-      case RawBodyType.ByteBufferBody      => Future.successful(RawValue(ByteBuffer.wrap(requestContent)))
-      case RawBodyType.InputStreamBody     => Future.successful(RawValue(new ByteBufInputStream(req.req.content())))
+      case RawBodyType.StringBody(charset) => monadError.unit(RawValue(req.req.content().toString(charset)))
+      case RawBodyType.ByteArrayBody       => monadError.unit(RawValue(requestContent))
+      case RawBodyType.ByteBufferBody      => monadError.unit(RawValue(ByteBuffer.wrap(requestContent)))
+      case RawBodyType.InputStreamBody     => monadError.unit(RawValue(new ByteBufInputStream(req.req.content())))
       case RawBodyType.FileBody =>
-        serverOptions
-          .createFile(serverRequest)
+        createFile(serverRequest)
           .map(file => {
             Files.write(file.toPath, requestContent)
             RawValue(file, Seq(file))

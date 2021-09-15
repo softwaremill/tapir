@@ -13,14 +13,14 @@ import sttp.tapir.tests.Port
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
-    extends TestServerInterpreter[Future, Any, Route] {
+class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
+    extends TestServerInterpreter[Future, Any, FutureRoute] {
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
-  ): Route = {
+  ): FutureRoute = {
     val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
@@ -29,19 +29,19 @@ class NettyTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec:
     NettyFutureServerInterpreter(serverOptions).toRoute(List(e))
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Route = {
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FutureRoute = {
     NettyFutureServerInterpreter().toRoute(es)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
-  ): Route = {
+  ): FutureRoute = {
     NettyFutureServerInterpreter().toRoute(List(e.serverLogicRecoverErrors(fn)))
   }
 
-  override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[FutureRoute]): Resource[IO, Port] = {
     val options = NettyFutureServerOptions.default.nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup)).randomPort
-    val bind = IO.fromFuture(IO.delay(NettyServer(options).addRoutes(routes.toList).start()))
+    val bind = IO.fromFuture(IO.delay(NettyFutureServer(options).addRoutes(routes.toList).start()))
 
     Resource
       .make(bind)(binding => IO.fromFuture(IO.delay(binding.stop())))

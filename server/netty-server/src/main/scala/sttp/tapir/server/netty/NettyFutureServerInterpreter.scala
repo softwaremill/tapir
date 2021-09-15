@@ -10,16 +10,16 @@ import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, NettyRequestBody, NettyToResponseBody}
 
 trait NettyFutureServerInterpreter {
-  def nettyServerOptions: NettyFutureServerOptions = NettyFutureServerOptions.default
+  def nettyServerOptions: NettyFutureServerOptions
 
   def toRoute(
       ses: List[ServerEndpoint[_, _, _, Any, Future]]
-  )(implicit ec: ExecutionContext): Route = {
-    val handler: Route = { (request: NettyServerRequest) =>
+  )(implicit ec: ExecutionContext): FutureRoute = {
+    val handler: FutureRoute = { (request: NettyServerRequest) =>
       implicit val monad: FutureMonad = new FutureMonad()
       implicit val bodyListener: BodyListener[Future, ByteBuf] = new NettyBodyListener
       val serverInterpreter = new ServerInterpreter[Any, Future, ByteBuf, NoStreams](
-        new NettyRequestBody(request, request, nettyServerOptions),
+        new NettyRequestBody(request, request, nettyServerOptions.createFile),
         new NettyToResponseBody,
         nettyServerOptions.interceptors,
         nettyServerOptions.deleteFile

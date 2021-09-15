@@ -3,14 +3,16 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.concurrent.Future
 
-class NettyServerHandler(route: Route)(implicit val ec: ExecutionContext) extends SimpleChannelInboundHandler[FullHttpRequest] {
+class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Future[Unit])(implicit me: MonadError[F])
+    extends SimpleChannelInboundHandler[FullHttpRequest] {
 
   private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
     val res = new DefaultFullHttpResponse(
@@ -37,17 +39,19 @@ class NettyServerHandler(route: Route)(implicit val ec: ExecutionContext) extend
     } else {
       val req = request.retainedDuplicate()
 
-      route(NettyServerRequest(req))
-        .map {
-          case Some(response) => response
-          case None           => ServerResponse(sttp.model.StatusCode.NotFound, Nil, None)
-        }
-        .map(toHttpResponse(_, request))
-        .map(flushResponse(ctx, request, _))
-        .onComplete {
-          case Failure(exception) => ctx.fireExceptionCaught(exception)
-          case Success(_)         => ()
-        }
+      unsafeToFuture {
+        route(NettyServerRequest(req))
+          .map {
+            case Some(response) => response
+            case None           => ServerResponse(sttp.model.StatusCode.NotFound, Nil, None)
+          }
+          .map(toHttpResponse(_, request))
+          .map(flushResponse(ctx, request, _))
+          .handleError { case e: Exception =>
+            ctx.fireExceptionCaught(e)
+            me.unit(())
+          }
+      } // ignoring the result, exceptions should already be handled
 
       ()
     }
