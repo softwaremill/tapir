@@ -1,12 +1,10 @@
 package sttp.tapir.server.netty
 
-import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel._
-import io.netty.channel.socket.nio.NioServerSocketChannel
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.FutureUtil._
-import sttp.tapir.server.netty.internal.NettyServerHandler
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,22 +29,18 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
   def port(p: Int): NettyFutureServer = copy(options = options.port(p))
 
   def start(): Future[NettyFutureServerBinding] = {
-    val httpBootstrap = new ServerBootstrap()
     val eventLoopGroup = options.nettyOptions.eventLoopGroup()
     implicit val monadError: MonadError[Future] = new FutureMonad()
     val route = Route.combine(routes)
 
-    httpBootstrap
-      .group(eventLoopGroup)
-      .channel(classOf[NioServerSocketChannel])
-      .childHandler(new ChannelInitializer[Channel] {
-        override def initChannel(ch: Channel): Unit =
-          options.nettyOptions.initPipeline(ch.pipeline(), new NettyServerHandler(route, (f: Future[Unit]) => f))
-      })
-      .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
-      .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true) // https://github.com/netty/netty/issues/1692
+    val channelFuture = NettyBootstrap(
+      options.nettyOptions,
+      new NettyServerHandler(route, (f: Future[Unit]) => f),
+      eventLoopGroup,
+      options.host,
+      options.port
+    )
 
-    val channelFuture = httpBootstrap.bind(options.host, options.port)
     nettyChannelFutureToScala(channelFuture).map(ch =>
       NettyFutureServerBinding(
         ch.localAddress().asInstanceOf[InetSocketAddress],

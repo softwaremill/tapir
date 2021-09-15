@@ -3,13 +3,11 @@ package sttp.tapir.server.netty
 import cats.effect.{Async, IO, Resource}
 import cats.effect.std.Dispatcher
 import cats.syntax.all._
-import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel._
-import io.netty.channel.socket.nio.NioServerSocketChannel
 import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.CatsUtil._
-import sttp.tapir.server.netty.internal.NettyServerHandler
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.InetSocketAddress
 
@@ -32,23 +30,18 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
   def port(p: Int): NettyCatsServer[F] = copy(options = options.port(p))
 
   def start(): F[NettyCatsServerBinding[F]] = Async[F].defer {
-    val httpBootstrap = new ServerBootstrap()
     val eventLoopGroup = options.nettyOptions.eventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
 
-    httpBootstrap
-      .group(eventLoopGroup)
-      .channel(classOf[NioServerSocketChannel])
-      .childHandler(new ChannelInitializer[Channel] {
-        override def initChannel(ch: Channel): Unit =
-          options.nettyOptions
-            .initPipeline(ch.pipeline(), new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)))
-      })
-      .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
-      .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true) // https://github.com/netty/netty/issues/1692
+    val channelFuture = NettyBootstrap(
+      options.nettyOptions,
+      new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)),
+      eventLoopGroup,
+      options.host,
+      options.port
+    )
 
-    val channelFuture = httpBootstrap.bind(options.host, options.port)
     nettyChannelFutureToScala(channelFuture).map(ch =>
       NettyCatsServerBinding(
         ch.localAddress().asInstanceOf[InetSocketAddress],
