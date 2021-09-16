@@ -11,7 +11,7 @@ object SamTemplateExample extends App {
 
   val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
 
-  implicit val samOptions: AwsSamOptions = AwsSamOptions(
+  val samOptions: AwsSamOptions = AwsSamOptions(
     "PersonsApi",
     source =
       /** Specifying a fat jar build from example sources */
@@ -22,7 +22,7 @@ object SamTemplateExample extends App {
       )
   )
 
-  val templateYaml = AwsSamInterpreter.toSamTemplate(helloEndpoint).toYaml
+  val templateYaml = AwsSamInterpreter(samOptions).toSamTemplate(helloEndpoint).toYaml
 
   /** Write template to file, it's required to run the example using sam local */
   Files.write(Paths.get("template.yaml"), templateYaml.getBytes(UTF_8))

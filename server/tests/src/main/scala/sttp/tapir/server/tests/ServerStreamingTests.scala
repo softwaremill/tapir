@@ -8,7 +8,7 @@ import sttp.model.{Header, HeaderNames}
 import sttp.monad.MonadError
 import sttp.tapir.tests.{Test, in_stream_out_stream, in_stream_out_stream_with_content_length}
 
-class ServerStreamingTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest[F, S, ROUTE, B], streams: Streams[S])(implicit
+class ServerStreamingTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE], streams: Streams[S])(implicit
     m: MonadError[F]
 ) {
 
@@ -20,10 +20,13 @@ class ServerStreamingTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest
     val penPineapple = "pen pineapple apple pen"
 
     List(
-      testServer(in_stream_out_stream(streams))((s: streams.BinaryStream) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+      // TODO: remove explicit type parameters when https://github.com/lampepfl/dotty/issues/12803 fixed
+      testServer[streams.BinaryStream, Unit, streams.BinaryStream](in_stream_out_stream(streams))((s: streams.BinaryStream) =>
+        pureResult(s.asRight[Unit])
+      ) { (backend, baseUri) =>
         basicRequest.post(uri"$baseUri/api/echo").body(penPineapple).send(backend).map(_.body shouldBe Right(penPineapple))
       },
-      testServer(
+      testServer[(Long, streams.BinaryStream), Unit, (Long, streams.BinaryStream)](
         in_stream_out_stream_with_content_length(streams)
       )((in: (Long, streams.BinaryStream)) => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
         {

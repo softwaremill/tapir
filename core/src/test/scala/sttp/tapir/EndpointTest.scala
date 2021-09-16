@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 
@@ -114,16 +114,29 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   it should "compile one-of empty output of a custom type" in {
     sealed trait Error
-    final case class BadRequest(message: String) extends Error
-    final case object NotFound extends Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
 
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
           oneOfMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
+  }
+
+  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
+    assertDoesNotCompile("""
+      case class Wrapper[T](s: T)
+
+      endpoint.post
+        .errorOut(
+          sttp.tapir.oneOf(
+            oneOfMapping(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
+          )
+        )
+    """)
   }
 
   def pairToTuple(input: EndpointInput[_]): Any =
@@ -179,6 +192,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   val showTestData = List(
+    (endpoint.in("p1/p2"), "/p1%2Fp2 -> -/-"),
     (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
     (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
     (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
@@ -205,7 +219,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
-    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}")
+    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
+    (endpoint.in("p1/p2"), "/p1%2Fp2")
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
@@ -244,6 +259,14 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     input.codec.schema.applyValidation(Nil) shouldBe empty
   }
 
+  it should "map input and output" in {
+    case class Wrapper(s: String)
+
+    endpoint.in(query[String]("q1")).mapInTo[Wrapper]: Endpoint[Wrapper, Unit, Unit, Any]
+    endpoint.out(stringBody).mapOutTo[Wrapper]: Endpoint[Unit, Unit, Wrapper, Any]
+    endpoint.errorOut(stringBody).mapErrorOutTo[Wrapper]: Endpoint[Unit, Wrapper, Unit, Any]
+  }
+
   val httpMethodTestData = List(
     endpoint -> None,
     endpoint.in("api" / "cats" / path[String]).get -> Some(Method.GET),
@@ -274,7 +297,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .in(query[Int]("y"))
       .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
-    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, ""))
 
     base
@@ -295,7 +318,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
     def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
 
-    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
 
     val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
@@ -331,5 +354,62 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       case EndpointInput.Query("salutation", _, _) => true
       case _                                       => false
     } should have size (2)
+  }
+
+  "mapTo" should "properly map between tuples and case classes of arity 1" in {
+    // given
+    case class Wrapper(i: Int)
+    val mapped = query[Int]("q1").mapTo[Wrapper]
+    val codec: Codec[List[String], Wrapper, CodecFormat.TextPlain] = mapped.codec
+
+    // when
+    codec.encode(Wrapper(10)) shouldBe (List("10"))
+    codec.decode(List("10")) shouldBe DecodeResult.Value(Wrapper(10))
+  }
+
+  "mapTo" should "properly map between tuples and case classes of arity 2" in {
+    // given
+    case class Wrapper(i: Int, s: String)
+    val mapped = query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    val mapping: Mapping[(Int, String), Wrapper] = mapped match {
+      case EndpointInput.MappedPair(_, m) => m.asInstanceOf[Mapping[(Int, String), Wrapper]]
+      case _                              => fail()
+    }
+
+    // when
+    mapping.encode(Wrapper(10, "x")) shouldBe ((10, "x"))
+    mapping.decode((10, "x")) shouldBe DecodeResult.Value(Wrapper(10, "x"))
+  }
+
+  "mapTo" should "fail on invalid field type" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int, i2: Int)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
+
+  "mapTo" should "fail on redundant field" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int, s: String, c: Char)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
+
+  "mapTo" should "fail on missing field" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
+
+  "mapTo" should "compile for case class with defined companion object" in {
+    assertCompiles("""
+      import sttp.tapir.generic.auto._
+
+      case class Wrapper(i: Int, s: String)
+      object Wrapper
+
+      formBody[Wrapper]
+    """)
   }
 }

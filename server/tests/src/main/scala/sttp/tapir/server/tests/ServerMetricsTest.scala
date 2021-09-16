@@ -15,14 +15,14 @@ import sttp.tapir.tests.{Test, _}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.util.concurrent.atomic.AtomicInteger
 
-class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, Any, ROUTE, B])(implicit m: MonadError[F]) {
+class ServerMetricsTest[F[_], ROUTE](createServerTest: CreateServerTest[F, Any, ROUTE])(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] = List(
     {
       val reqCounter = newRequestCounter[F]
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
       testServer(in_json_out_json.name("metrics"), metricsInterceptor = metrics.some)(f =>
         (if (f.fruit == "apple") Right(f) else Left(())).unit
@@ -33,8 +33,10 @@ class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, An
           .send(backend)
           .map { r =>
             r.body shouldBe Right("""{"fruit":"apple","amount":1}""")
-            reqCounter.metric.value.get() shouldBe 1
-            resCounter.metric.value.get() shouldBe 1
+            eventually {
+              reqCounter.metric.value.get() shouldBe 1
+              resCounter.metric.value.get() shouldBe 1
+            }
           } >> basicRequest // onDecodeFailure path
           .post(uri"$baseUri/api/echo")
           .body("""{"invalid":"body",}""")
@@ -48,7 +50,7 @@ class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, An
       }
     }, {
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(resCounter), Seq.empty)
 
       testServer(in_input_stream_out_input_stream.name("metrics"), metricsInterceptor = metrics.some)(is =>
         (new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit].unit
@@ -66,7 +68,7 @@ class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, An
       }
     }, {
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(resCounter), Seq.empty)
 
       testServer(in_root_path.name("metrics"), metricsInterceptor = metrics.some)(_ => ().asRight[Unit].unit) { (backend, baseUri) =>
         basicRequest
@@ -82,7 +84,7 @@ class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, An
     }, {
       val reqCounter = newRequestCounter[F]
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
       testServer(in_root_path.name("metrics on exception"), metricsInterceptor = metrics.some) { _ =>
         Thread.sleep(100)

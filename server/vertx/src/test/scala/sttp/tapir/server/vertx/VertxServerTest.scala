@@ -9,6 +9,8 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerRejectTests,
+  ServerStaticContentTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -32,7 +34,8 @@ class VertxServerTest extends TestSuite {
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests()
+        new ServerMetricsTest(createServerTest).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

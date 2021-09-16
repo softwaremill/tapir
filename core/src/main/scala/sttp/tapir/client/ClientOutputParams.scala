@@ -2,15 +2,15 @@ package sttp.tapir.client
 
 import sttp.model.{HeaderNames, MediaType, ResponseMetadata}
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, _}
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointOutput, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
 abstract class ClientOutputParams {
   def apply(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] =
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
+          case EndpointIO.Body(_, codec, _)                               => decode(codec, body)
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => decode(codec, body)
           case EndpointOutput.WebSocketBodyWrapper(o)                     => decodeWebSocketBody(o, body)
           case EndpointIO.Header(name, codec, _)                          => codec.decode(meta.headers(name).toList)
           case EndpointIO.Headers(codec, _)                               => codec.decode(meta.headers.toList)
@@ -27,7 +27,7 @@ abstract class ClientOutputParams {
               .header(HeaderNames.ContentType)
               .map(MediaType.parse)
 
-            def applyMapping(m: EndpointOutput.OneOfMapping[_]) = apply(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
+            def applyMapping(m: EndpointOutput.OneOfMapping[_]) = apply(m.output, body, meta).flatMap(p => decode(codec, p.asAny))
 
             contentType match {
               case None =>
@@ -64,12 +64,11 @@ abstract class ClientOutputParams {
 
               case Some(Left(_)) => DecodeResult.Error(meta.statusText, new IllegalArgumentException("Unable to parse Content-Type header"))
             }
-          case EndpointIO.MappedPair(wrapped, codec)     => apply(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
-          case EndpointOutput.MappedPair(wrapped, codec) => apply(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
+          case EndpointIO.MappedPair(wrapped, codec)     => apply(wrapped, body, meta).flatMap(p => decode(codec, p.asAny))
+          case EndpointOutput.MappedPair(wrapped, codec) => apply(wrapped, body, meta).flatMap(p => decode(codec, p.asAny))
+        }).map(ParamsAsAny.apply)
 
-        }).map(ParamsAsAny)
-
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
+      case EndpointOutput.Void() => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
       case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, meta)
       case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, meta)
     }
@@ -85,6 +84,9 @@ abstract class ClientOutputParams {
     val r = apply(right, body, meta)
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
+
+  private def decode[L, H](codec: Codec[L, H, _ <: CodecFormat], v: Any): DecodeResult[H] = codec.decode(v.asInstanceOf[L])
+  private def decode[L, H](mapping: Mapping[L, H], v: Any): DecodeResult[H] = mapping.decode(v.asInstanceOf[L])
 
   def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any]
 }

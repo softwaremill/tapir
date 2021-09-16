@@ -1,48 +1,90 @@
 package sttp.tapir.server.finatra.cats
 
-import cats.effect.Effect
+import cats.effect.Async
+import cats.effect.std.Dispatcher
 import com.twitter.inject.Logging
-import io.catbird.util.Rerunnable
-import io.catbird.util.effect._
+import com.twitter.util.{Future, Promise}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerInterpreter, FinatraServerOptions}
 
+import scala.concurrent.{ExecutionContext, Future => ScalaFuture}
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
-trait FinatraCatsServerInterpreter extends Logging {
-  def toRoute[I, E, O, F[_]](
+trait FinatraCatsServerInterpreter[F[_]] extends Logging {
+
+  implicit def fa: Async[F]
+
+  def finatraCatsServerOptions: FinatraCatsServerOptions[F]
+
+  def toRoute[I, E, O](
       e: Endpoint[I, E, O, Any]
-  )(logic: I => F[Either[E, O]])(implicit serverOptions: FinatraServerOptions, eff: Effect[F]): FinatraRoute = {
+  )(logic: I => F[Either[E, O]]): FinatraRoute = {
     toRoute(e.serverLogic(logic))
   }
 
-  def toRouteRecoverErrors[I, E, O, F[_]](e: Endpoint[I, E, O, Any])(logic: I => F[O])(implicit
+  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => F[O])(implicit
       eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E],
-      eff: Effect[F]
+      eClassTag: ClassTag[E]
   ): FinatraRoute = {
     toRoute(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoute[I, E, O, F[_]](
+  def toRoute[I, E, O](
       e: ServerEndpoint[I, E, O, Any, F]
-  )(implicit serverOptions: FinatraServerOptions, eff: Effect[F]): FinatraRoute = {
-    FinatraServerInterpreter.toRoute(e.endpoint.serverLogic(i => eff.toIO(e.logic(new CatsMonadError)(i)).to[Rerunnable].run))
+  ): FinatraRoute = {
+    FinatraServerInterpreter(
+      FinatraServerOptions(finatraCatsServerOptions.createFile, finatraCatsServerOptions.deleteFile, finatraCatsServerOptions.interceptors)
+    ).toRoute(
+      e.endpoint.serverLogic { i =>
+        val scalaFutureResult = finatraCatsServerOptions.dispatcher.unsafeToFuture(e.logic(CatsMonadError)(i))
+        scalaFutureResult.asTwitter(cats.effect.unsafe.implicits.global.compute)
+      }
+    )
   }
 
-  private class CatsMonadError[F[_]](implicit F: Effect[F]) extends MonadError[F] {
-    override def unit[T](t: T): F[T] = F.pure(t)
-    override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
-    override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
-    override def error[T](t: Throwable): F[T] = F.raiseError(t)
-    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
-    override def eval[T](t: => T): F[T] = F.delay(t)
-    override def suspend[T](t: => F[T]): F[T] = F.defer(t)
-    override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
-    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
+  private object CatsMonadError extends MonadError[F] {
+    override def unit[T](t: T): F[T] = Async[F].pure(t)
+    override def map[T, T2](ft: F[T])(f: T => T2): F[T2] = Async[F].map(ft)(f)
+    override def flatMap[T, T2](ft: F[T])(f: T => F[T2]): F[T2] = Async[F].flatMap(ft)(f)
+    override def error[T](t: Throwable): F[T] = Async[F].raiseError(t)
+    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = Async[F].recoverWith(rt)(h)
+    override def eval[T](t: => T): F[T] = Async[F].delay(t)
+    override def suspend[T](t: => F[T]): F[T] = Async[F].defer(t)
+    override def flatten[T](ffa: F[F[T]]): F[T] = Async[F].flatten(ffa)
+    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = Async[F].guaranteeCase(f)(_ => e)
+  }
+
+  /** Convert from a Scala Future to a Twitter Future Source: https://twitter.github.io/util/guide/util-cookbook/futures.html
+    */
+  private implicit class RichScalaFuture[A](val sf: ScalaFuture[A]) {
+    def asTwitter(implicit e: ExecutionContext): Future[A] = {
+      val promise: Promise[A] = new Promise[A]()
+      sf.onComplete {
+        case Success(value)     => promise.setValue(value)
+        case Failure(exception) => promise.setException(exception)
+      }
+      promise
+    }
   }
 }
 
-object FinatraCatsServerInterpreter extends FinatraCatsServerInterpreter
+object FinatraCatsServerInterpreter {
+  def apply[F[_]](
+      dispatcher: Dispatcher[F]
+  )(implicit _fa: Async[F]): FinatraCatsServerInterpreter[F] = {
+    new FinatraCatsServerInterpreter[F] {
+      override implicit def fa: Async[F] = _fa
+      override def finatraCatsServerOptions: FinatraCatsServerOptions[F] = FinatraCatsServerOptions.default(dispatcher)
+    }
+  }
+
+  def apply[F[_]](serverOptions: FinatraCatsServerOptions[F])(implicit _fa: Async[F]): FinatraCatsServerInterpreter[F] = {
+    new FinatraCatsServerInterpreter[F] {
+      override implicit def fa: Async[F] = _fa
+      override def finatraCatsServerOptions: FinatraCatsServerOptions[F] = serverOptions
+    }
+  }
+}

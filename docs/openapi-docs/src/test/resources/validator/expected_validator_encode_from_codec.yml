@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /enums:
+    get:
+      operationId: getEnums
+      parameters:
+        - name: as
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - AA
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: query parameter as'
+          content:
+            text/plain:
+              schema:
+                type: string

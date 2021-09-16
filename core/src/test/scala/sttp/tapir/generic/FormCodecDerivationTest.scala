@@ -1,11 +1,13 @@
 package sttp.tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
-import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
+import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.auto._
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator, encodedName}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.TestUtil.field
 
 class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestExtensions with Matchers {
@@ -62,9 +64,9 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     val codec = implicitly[Codec[String, Test6, CodecFormat.XWwwFormUrlencoded]]
 
     // when
+    codec.schema.name shouldBe Some(SName("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"))
     codec.schema.schemaType shouldBe
       SProduct[Test6](
-        SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
         List(field(FieldName("f1"), implicitly[Schema[String]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }

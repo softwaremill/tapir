@@ -3,20 +3,22 @@ package sttp.tapir.server.finatra
 import com.twitter.finagle.http._
 import com.twitter.util.Future
 import com.twitter.util.logging.Logging
-import sttp.model.Header
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.{Endpoint, EndpointInput}
 
 import scala.reflect.ClassTag
 
 trait FinatraServerInterpreter extends Logging {
-  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])(implicit
-      serverOptions: FinatraServerOptions
-  ): FinatraRoute =
+
+  def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
+
+  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): FinatraRoute =
     toRoute(e.serverLogic(logic))
 
   def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
@@ -25,19 +27,19 @@ trait FinatraServerInterpreter extends Logging {
   ): FinatraRoute =
     toRoute(e.serverLogicRecoverErrors(logic))
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, Future])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, Future]): FinatraRoute = {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
-      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, Nothing](
-        new FinatraRequestBody(request, serverOptions),
+      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
+        new FinatraRequestBody(request, finatraServerOptions),
         new FinatraToResponseBody,
-        serverOptions.interceptors,
-        serverOptions.deleteFile
+        finatraServerOptions.interceptors,
+        finatraServerOptions.deleteFile
       )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
-        case None => Response(Status.NotFound)
-        case Some(response) =>
+        case RequestResult.Failure(_) => Response(Status.NotFound)
+        case RequestResult.Response(response) =>
           val status = Status(response.code.code)
           val responseWithContent = response.body match {
             case Some(fContent) =>
@@ -86,6 +88,14 @@ trait FinatraServerInterpreter extends Logging {
       }
       .getOrElse(Method("ANY"))
   }
+}
+
+object FinatraServerInterpreter {
+  def apply(serverOptions: FinatraServerOptions = FinatraServerOptions.default): FinatraServerInterpreter = {
+    new FinatraServerInterpreter {
+      override def finatraServerOptions: FinatraServerOptions = serverOptions
+    }
+  }
 
   private[finatra] implicit object FutureMonadError extends MonadError[Future] {
     override def unit[T](t: T): Future[T] = Future(t)
@@ -96,5 +106,3 @@ trait FinatraServerInterpreter extends Logging {
     override def ensure[T](f: Future[T], e: => Future[Unit]): Future[T] = f.ensure(e.toJavaFuture.get())
   }
 }
-
-object FinatraServerInterpreter extends FinatraServerInterpreter

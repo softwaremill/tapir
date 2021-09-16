@@ -7,8 +7,8 @@ exposing the endpoints using the [http4s](https://http4s.org) server.
 You'll need the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.18.0-M12"
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.18.0-M12"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M3"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.19.0-M3"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -48,11 +48,11 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 
 This adds the following method on `ZEndpoint`:
 
-* `def toRoutes[R](logic: I => ZIO[R, E, O]): HttpRoutes[ZIO[R with Clock, Throwable, *]]`
+* `def toRoutes[R](logic: I => ZIO[R, E, O]): HttpRoutes[ZIO[R with Clock with Blocking, Throwable, *]]`
 
 And the following methods on `ZServerEndpoint` or `List[ZServerEndpoint]`: 
 
-* `def toRoutes[R]: HttpRoutes[ZIO[R with Clock, Throwable, *]]`
+* `def toRoutes[R]: HttpRoutes[ZIO[R with Clock with Blocking, Throwable, *]]`
 
 Note that the resulting `HttpRoutes` always require a clock in their environment.
 
@@ -64,6 +64,7 @@ import org.http4s.HttpRoutes
 import sttp.tapir.ztapir._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import zio.{Has, RIO, ZIO}
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
 
@@ -76,8 +77,8 @@ val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit] = ???
 val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
 
 type Env = Service1 with Service2
-val routes: HttpRoutes[RIO[Env with Clock, *]] = 
-  ZHttp4sServerInterpreter.from(List(
+val routes: HttpRoutes[RIO[Env with Clock with Blocking, *]] = 
+  ZHttp4sServerInterpreter().from(List(
     serverEndpoint1.widen[Env], 
     serverEndpoint2.widen[Env]
   )).toRoutes // this is where zio-cats interop is needed

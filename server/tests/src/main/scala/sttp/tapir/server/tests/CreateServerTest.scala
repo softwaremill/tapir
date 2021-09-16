@@ -14,13 +14,14 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
+import cats.effect.unsafe.implicits.global
 
-trait CreateServerTest[F[_], +R, ROUTE, B] {
+trait CreateServerTest[F[_], +R, ROUTE] {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
   )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 
   def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
@@ -32,16 +33,17 @@ trait CreateServerTest[F[_], +R, ROUTE, B] {
   ): Test
 }
 
-class DefaultCreateServerTest[F[_], +R, ROUTE, B](
+class DefaultCreateServerTest[F[_], +R, ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    interpreter: TestServerInterpreter[F, R, ROUTE, B]
-) extends CreateServerTest[F, R, ROUTE, B]
+    interpreter: TestServerInterpreter[F, R, ROUTE]
+) extends CreateServerTest[F, R, ROUTE]
     with StrictLogging {
+
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
   )(
       fn: I => F[Either[E, O]]
   )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
@@ -75,7 +77,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
         .use { port =>
           runTest(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
-        .unsafeRunSync()
+        .unsafeToFuture()
     )
   }
 }

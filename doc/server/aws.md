@@ -8,7 +8,7 @@ For an overview of how this works in more detail, see [this blog post](https://b
 
 ## Serverless interpreters
 
-To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaRuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
+To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaIORuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
 
 Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`). To use, add the following dependency:
 

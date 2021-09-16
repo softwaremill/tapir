@@ -15,7 +15,7 @@ jobs:
       matrix:
         target-platform: [ "JVM", "JS" ]
     env:
-      JAVA_OPTS: -Xmx5G
+      JAVA_OPTS: "-Xmx3500M -Xss2M -Dsbt.task.timings=true"
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -30,7 +30,7 @@ jobs:
           ~/.sbt
           ~/.ivy2/cache
           ~/.coursier
-        key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
+        key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}-2
     - name: Install sam cli
       run: |
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
@@ -38,7 +38,7 @@ jobs:
         sudo ./sam-installation/install --update
         sam --version
     - name: Compile
-      run: sbt -v compile compileDocumentation
+      run: sbt -v Test/compile compileDocumentation
     - name: Test
       if: matrix.target-platform != 'JS'
       run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
@@ -60,6 +60,8 @@ jobs:
     needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-20.04
+    env:
+      JAVA_OPTS: "-Xmx3500M -Xss2M"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -74,7 +76,7 @@ jobs:
             ~/.sbt
             ~/.ivy2/cache
             ~/.coursier
-          key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
+          key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}-2
       - name: Compile
         run: sbt compile
       - name: Publish artifacts

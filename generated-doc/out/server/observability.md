@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "0.18.0-M12"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "0.19.0-M9"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -74,10 +74,12 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
   .withResponsesTotal()
   .withResponsesDuration()
 
-implicit val serverOptions: AkkaHttpServerOptions =
-  AkkaHttpServerOptions.customInterceptors(metricsInterceptor = Some(prometheusMetrics.metricsInterceptor()))
+val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customInterceptors
+  .metricsInterceptor(prometheusMetrics.metricsInterceptor())
+  .options
 
-val routes: Route = AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint)
+val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
 ```
 
 ### Custom metrics
@@ -122,23 +124,24 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "0.18.0-M12"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "0.19.0-M9"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
 of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters) from SDK.
 
-`OpenTelemetryMetrics` encapsulates metric instances and needs a `MetricProvider` from OpenTelemetry SDK to create
+`OpenTelemetryMetrics` encapsulates metric instances and needs a `Meter` from OpenTelemetry API to create
 default metrics, simply:
 
 ```scala
 import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics
-import io.opentelemetry.api.metrics.MeterProvider
+import io.opentelemetry.api.metrics.{Meter, MeterProvider}
 import scala.concurrent.Future
 
 val provider: MeterProvider = ???
+val meter: Meter = provider.get("instrumentation-name")
 
-val metrics = OpenTelemetryMetrics[Future](provider, "your-app-instrumentation", "1.0.0")
+val metrics = OpenTelemetryMetrics[Future](meter)
   .withRequestsTotal()
   .withRequestsActive()
   .withResponsesTotal()

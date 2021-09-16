@@ -1,18 +1,18 @@
 package sttp.tapir.server.http4s
 
 import cats.Monad
-import cats.effect.{Concurrent, Timer}
+import cats.effect.Temporal
+import cats.effect.std.Queue
+import cats.syntax.all._
 import fs2._
-import fs2.concurrent.Queue
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
 import scodec.bits.ByteVector
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.WebSocketFrame
-import cats.syntax.all._
 
 private[http4s] object Http4sWebSockets {
-  def pipeToBody[F[_]: Concurrent: Timer, REQ, RESP](
+  def pipeToBody[F[_]: Temporal, REQ, RESP](
       pipe: Pipe[F, REQ, RESP],
       o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
@@ -38,7 +38,7 @@ private[http4s] object Http4sWebSockets {
         .unNoneTerminate
         .through(pipe)
         .map(o.responses.encode)
-        .mergeHaltL(pongs.dequeue)
+        .mergeHaltL(Stream.repeatEval(pongs.take))
         .mergeHaltL(autoPings)
         .map(frameToHttp4sFrame)
     }
@@ -76,7 +76,7 @@ private[http4s] object Http4sWebSockets {
         case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
         case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
         case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
-        case (acc, f)                                                        => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
+        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
       }.collect { case (_, Some(f)) => f }
     } else {
       s
@@ -99,7 +99,7 @@ private[http4s] object Http4sWebSockets {
   ): Stream[F, WebSocketFrame] = {
     if (doAuto) {
       s.evalMap {
-        case WebSocketFrame.Ping(payload) => pongs.enqueue1(WebSocketFrame.Pong(payload)).map(_ => none[WebSocketFrame])
+        case WebSocketFrame.Ping(payload) => pongs.offer(WebSocketFrame.Pong(payload)).map(_ => none[WebSocketFrame])
         case f                            => f.some.pure[F]
       }.collect { case Some(f) =>
         f

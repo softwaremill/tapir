@@ -1,39 +1,38 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
+import sttp.tapir.EndpointInput.WWWAuthenticate
+import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
+import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.{FnComponents, ParamConcat}
+import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.{Seq, ListMap}
+import java.nio.charset.{Charset, StandardCharsets}
+import scala.annotation.StaticAnnotation
+import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
-/** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
-  * The transput traits contain common functionality, shared by all inputs and outputs.
+/** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output). The
+  * transput traits contain common functionality, shared by all inputs and outputs.
   *
   * Note that implementations of `EndpointIO` can be used BOTH as inputs and outputs.
   *
   * The hierarchy is as follows:
   *
-  *                        /---> `EndpointInput`  >---\
-  * `EndpointTransput` >---                            ---> `EndpointIO`
-  *                        \---> `EndpointOutput` >---/
+  * /---> `EndpointInput` >---\ `EndpointTransput` >--- ---> `EndpointIO` \---> `EndpointOutput` >---/
   */
-sealed trait EndpointTransput[T] {
+sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
 
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
@@ -95,7 +94,7 @@ sealed trait EndpointInput[T] extends EndpointTransput[T] {
   def /[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
 }
 
-object EndpointInput {
+object EndpointInput extends EndpointInputMacros {
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
@@ -115,7 +114,7 @@ object EndpointInput {
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
-    override def show = s"/$s"
+    override def show: String = s"/${UrlencodedData.encode(s)}"
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -208,7 +207,7 @@ object EndpointInput {
       override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
     }
     case class Oauth2[T](
-        authorizationUrl: String,
+        authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
         refreshUrl: Option[String],
@@ -268,7 +267,7 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
     EndpointOutput.Pair(this, other, mkCombine(concat), mkSplit(concat))
 }
 
-object EndpointOutput {
+object EndpointOutput extends EndpointOutputMacros {
   sealed trait Single[T] extends EndpointOutput[T]
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
@@ -319,12 +318,11 @@ object EndpointOutput {
 
   /** Specifies a correspondence between `statusCode` and `output`.
     *
-    * A single status code can have multiple mappings, with different body content types. The mapping can then be
-    * chosen based on content type negotiation, or the content type header.
+    * A single status code can have multiple mappings, with different body content types. The mapping can then be chosen based on content
+    * type negotiation, or the content type header.
     *
-    * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
-    * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
-    * type parameters).
+    * The `appliesTo` function should determine, whether a runtime value matches the type `O`. This check cannot be in general done by
+    * checking the run-time class of the value, due to type erasure (if `O` has type parameters).
     */
   case class OneOfMapping[O] private[tapir] (
       statusCode: Option[sttp.model.StatusCode],
@@ -501,6 +499,47 @@ object EndpointIO {
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
+
+  /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint
+    * input/output.
+    */
+  object annotations {
+    sealed trait EndpointInputAnnotation extends StaticAnnotation
+    sealed trait EndpointOutputAnnotation extends StaticAnnotation
+
+    class path extends EndpointInputAnnotation
+    class query(val name: String = "") extends EndpointInputAnnotation
+    class params extends EndpointInputAnnotation
+    class header(val name: String = "") extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class headers extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class cookie(val name: String = "") extends EndpointInputAnnotation
+    class cookies extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class setCookie(val name: String = "") extends EndpointOutputAnnotation
+    class setCookies extends EndpointOutputAnnotation
+    class statusCode extends EndpointOutputAnnotation
+    class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
+    class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
+    class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
+    class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
+    class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
+    class securitySchemeName(val name: String) extends StaticAnnotation
+
+    /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with
+      * `{...}` (curly braces), and reference the name using [[annotations.path]].
+      */
+    class endpointInput(val path: String = "") extends EndpointInputAnnotation
+
+    /** Specifies the example value of the endpoint input/output. Note that this is distinct from [[Schema.annotations.encodedExample]],
+      * which sets the example on the schema associated with the input/output.
+      */
+    class example(val example: Any) extends EndpointInputAnnotation with EndpointOutputAnnotation
+
+    /** Specifies the description of the endpoint input/output. Note that this is distinct from [[Schema.annotations.description]], which
+      * sets the description on the schema associated with the input/output.
+      */
+    class description(val text: String) extends EndpointInputAnnotation with EndpointOutputAnnotation
+  }
 }
 
 /*
@@ -579,40 +618,42 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
     copy(responsesInfo = responsesInfo.docsExtension(key, value))
 
-  /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
-    *          codecs decode will always have `finalFragment` set to `true`.
-    *          Note that only some interpreters expose fragmented frames.
+  /** @param c
+    *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always
+    *   have `finalFragment` set to `true`. Note that only some interpreters expose fragmented frames.
     */
   def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(concatenateFragmentedFrames = c)
 
   /** Note: some interpreters ignore this setting.
-    * @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
-    *          Note that only some interpreters expose ping-pong frames.
+    * @param i
+    *   If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding. Note that only some
+    *   interpreters expose ping-pong frames.
     */
   def ignorePong(i: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(ignorePong = i)
 
   /** Note: some interpreters ignore this setting.
-    * @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
-    *          back, and won't be passed to codecs for decoding.
-    *          Note that only some interpreters expose ping-pong frames.
+    * @param a
+    *   If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent back, and won't be passed
+    *   to codecs for decoding. Note that only some interpreters expose ping-pong frames.
     */
   def autoPongOnPing(a: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(autoPongOnPing = a)
 
   /** Note: some interpreters ignore this setting.
-    * @param d If `true`, [[WebSocketFrame.Close]] frames will be passed to the request codec for decoding (in server
-    *          interpreters).
+    * @param d
+    *   If `true`, [[WebSocketFrame.Close]] frames will be passed to the request codec for decoding (in server interpreters).
     */
   def decodeCloseRequests(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseRequests = d)
 
   /** Note: some interpreters ignore this setting.
-    * @param d If `true`, [[WebSocketFrame.Close]] frames will be passed to the response codec for decoding (in client
-    *          interpreters).
+    * @param d
+    *   If `true`, [[WebSocketFrame.Close]] frames will be passed to the response codec for decoding (in client interpreters).
     */
   def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
 
   /** Note: some interpreters ignore this setting.
-    * @param p If `Some`, send the given `Ping` frame at the given interval. If `None`, do not automatically send pings.
+    * @param p
+    *   If `Some`, send the given `Ping` frame at the given interval. If `None`, do not automatically send pings.
     */
   def autoPing(p: Option[(FiniteDuration, WebSocketFrame.Ping)]): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(autoPing = p)

@@ -6,24 +6,26 @@ import scala.util.{Failure, Success, Try}
 
 /** A bi-directional mapping between values of type `L` and values of type `H`.
   *
-  * Low-level values of type `L` can be **decoded** to a higher-level value of type `H`. The decoding can fail;
-  * this is represented by a result of type [[DecodeResult.Failure]]. Failures might occur due to format errors, wrong
-  * arity, exceptions, or validation errors. Validators can be added through the `validate` method.
+  * Low-level values of type `L` can be **decoded** to a higher-level value of type `H`. The decoding can fail; this is represented by a
+  * result of type [[DecodeResult.Failure]]. Failures might occur due to format errors, wrong arity, exceptions, or validation errors.
+  * Validators can be added through the `validate` method.
   *
   * High-level values of type `H` can be **encoded** as a low-level value of type `L`.
   *
   * Mappings can be chained using one of the `map` functions.
   *
-  * @tparam L The type of the low-level value.
-  * @tparam H The type of the high-level value.
+  * @tparam L
+  *   The type of the low-level value.
+  * @tparam H
+  *   The type of the high-level value.
   */
 trait Mapping[L, H] { outer =>
   def rawDecode(l: L): DecodeResult[H]
   def encode(h: H): L
 
-  /** - calls `rawDecode`
-    * - catches any exceptions that might occur, converting them to decode failures
-    * - validates the result
+  /**   - calls `rawDecode`
+    *   - catches any exceptions that might occur, converting them to decode failures
+    *   - validates the result
     */
   def decode(l: L): DecodeResult[H] = Mapping.decode(l, rawDecode, validator.apply)
 
@@ -59,8 +61,8 @@ object Mapping {
       override def validator: Validator[H] = Validator.pass
     }
 
-  /** A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (case
-    * insensitive,if present), otherwise an error is reported.
+  /** A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (case insensitive,if present),
+    * otherwise an error is reported.
     */
   def stringPrefixCaseInsensitive(prefix: String): Mapping[String, String] = {
     val prefixLength = prefix.length
@@ -100,7 +102,7 @@ object Mapping {
   }
 
   private[tapir] def addEncodeToEnumValidator[T](v: Validator[T], encode: T => Any): Validator[T] = v match {
-    case v @ Validator.Enum(_, None, _) => v.encode(encode)
-    case _                              => v
+    case v @ Validator.Enumeration(_, None, _) => v.encode(encode)
+    case _                                     => v
   }
 }

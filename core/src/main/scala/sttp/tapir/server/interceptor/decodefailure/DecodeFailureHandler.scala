@@ -10,23 +10,20 @@ import scala.annotation.tailrec
 
 trait DecodeFailureHandler {
 
-  /** Given the context in which a decode failure occurred (the request, the input and the failure), returns an optional
-    * response to the request. `None` indicates that no action should be taken, and the request might be passed
-    * for decoding to other endpoints.
+  /** Given the context in which a decode failure occurred (the request, the input and the failure), returns an optional response to the
+    * request. `None` indicates that no action should be taken, and the request might be passed for decoding to other endpoints.
     *
-    * Inputs are decoded in the following order: method, path, query, headers, body. Hence, if there's a decode failure
-    * on a query parameter, any method & path inputs of the input must have matched and must have been decoded
-    * successfully.
+    * Inputs are decoded in the following order: path, method, query, headers, body. Hence, if there's a decode failure on a query
+    * parameter, any method & path inputs of the input must have matched and must have been decoded successfully.
     */
   def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]]
 }
 
 /** A decode failure handler, which:
-  * - decides whether the given decode failure should lead to a response (and if so, with which status code and
-  *   headers), using `respond`
-  * - in case a response is sent, creates the message using `failureMessage`
-  * - in case a response is sent, creates the response using `response`, given the status code, headers, and
-  *   the created failure message. By default, the headers might include authentication challenge.
+  *   - decides whether the given decode failure should lead to a response (and if so, with which status code and headers), using `respond`
+  *   - in case a response is sent, creates the message using `failureMessage`
+  *   - in case a response is sent, creates the response using `response`, given the status code, headers, and the created failure message.
+  *     By default, the headers might include authentication challenge.
   */
 case class DefaultDecodeFailureHandler(
     respond: DecodeFailureContext => Option[(StatusCode, List[Header])],
@@ -47,17 +44,16 @@ object DefaultDecodeFailureHandler {
 
   /** The default implementation of the [[DecodeFailureHandler]].
     *
-    * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if
-    * decoding a path capture causes a validation error.
+    * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if decoding a path capture
+    * causes a validation error.
     *
-    * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
-    * `None` is returned, which is a signal to try the next endpoint.
+    * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error), `None` is returned,
+    * which is a signal to try the next endpoint.
     *
-    * The error messages contain information about the source of the decode error, and optionally the validation error
-    * detail that caused the failure.
+    * The error messages contain information about the source of the decode error, and optionally the validation error detail that caused
+    * the failure.
     *
-    * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server
-    * logic is invoked.
+    * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server logic is invoked.
     */
   def handler: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
     respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
@@ -68,10 +64,12 @@ object DefaultDecodeFailureHandler {
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
     ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
 
-  /** @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
-    * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
-    * @param badRequestOnPathInvalidIfPathShapeMatches Should a status 400 be returned if the shape of the path
-    * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
+  /** @param badRequestOnPathErrorIfPathShapeMatches
+    *   Should a status 400 be returned if the shape of the path of the request matches, but decoding some path segment fails with a
+    *   [[DecodeResult.Error]].
+    * @param badRequestOnPathInvalidIfPathShapeMatches
+    *   Should a status 400 be returned if the shape of the path of the request matches, but decoding some path segment fails with a
+    *   [[DecodeResult.InvalidValue]].
     */
   def respond(
       ctx: DecodeFailureContext,
@@ -120,7 +118,7 @@ object DefaultDecodeFailureHandler {
     }
   }
 
-  /** Default messages for [[DecodeResult.Failure]]s.
+  /** Default messages for [[DecodeResult.Failure]] s.
     */
   object FailureMessages {
 
@@ -171,7 +169,8 @@ object DefaultDecodeFailureHandler {
   object ValidationMessages {
 
     /** Default message describing why a value is invalid.
-      * @param valueName Name of the validated value to be used in error messages
+      * @param valueName
+      *   Name of the validated value to be used in error messages
       */
     def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String =
       ve match {
@@ -181,23 +180,25 @@ object DefaultDecodeFailureHandler {
               s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
             case Validator.Max(value, exclusive) =>
               s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-            case Validator.Pattern(value) => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
-            case Validator.MinLength(value) =>
-              s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
-            case Validator.MaxLength(value) =>
-              s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
-            case Validator.MinSize(value) =>
-              s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
-            case Validator.MaxSize(value) =>
-              s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
-            case Validator.Enum(possibleValues, _, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+            // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
+            case p: Validator.Pattern[T] => s"expected $valueName to match '${p.value}', but was '${ve.invalidValue}'"
+            case m: Validator.MinLength[T] =>
+              s"expected $valueName to have length greater than or equal to ${m.value}, but was ${ve.invalidValue}"
+            case m: Validator.MaxLength[T] =>
+              s"expected $valueName to have length less than or equal to ${m.value}, but was ${ve.invalidValue} "
+            case m: Validator.MinSize[T, Iterable] =>
+              s"expected size of $valueName to be greater than or equal to ${m.value}, but was ${ve.invalidValue.size}"
+            case m: Validator.MaxSize[T, Iterable] =>
+              s"expected size of $valueName to be less than or equal to ${m.value}, but was ${ve.invalidValue.size}"
+            case Validator.Enumeration(possibleValues, _, _) =>
+              s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
           }
         case c: ValidationError.Custom[T] =>
           s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"
       }
 
-    /** Default message describing the path to an invalid value.
-      * This is the path inside the validated object, e.g. `user.address.street.name`.
+    /** Default message describing the path to an invalid value. This is the path inside the validated object, e.g.
+      * `user.address.street.name`.
       */
     def pathMessage(ve: ValidationError[_]): Option[String] =
       ve.path match {

@@ -5,7 +5,6 @@ import com.twitter.finatra.http.request.RequestUtils
 import com.twitter.io.Buf
 import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
-import sttp.capabilities.Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -17,8 +16,8 @@ import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) extends RequestBody[Future, Nothing] {
-  override val streams: Streams[Nothing] = NoStreams
+class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) extends RequestBody[Future, NoStreams] {
+  override val streams: NoStreams = NoStreams
 
   override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] =
     toRaw(bodyType, request.content, request.charset.map(Charset.forName))

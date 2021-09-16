@@ -23,7 +23,7 @@ case class OAuthFlows(
 )
 
 case class OAuthFlow(
-    authorizationUrl: String,
+    authorizationUrl: Option[String],
     tokenUrl: Option[String],
     refreshUrl: Option[String],
     scopes: ListMap[String, String],

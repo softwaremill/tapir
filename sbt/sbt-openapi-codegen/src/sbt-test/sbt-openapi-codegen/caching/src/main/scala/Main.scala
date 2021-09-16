@@ -1,4 +1,3 @@
-
 object Main extends App {
   /*
   import sttp.tapir._
@@ -13,12 +12,12 @@ object Main extends App {
   val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] =
     endpoint
       .get
-      .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+      .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
       .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
       .in(header[AuthToken]("X-Auth-Token"))
       .errorOut(stringBody)
       .out(jsonBody[List[Book]])
-  */
+   */
   import sttp.tapir.generated._
   import sttp.tapir.docs.openapi._
   import sttp.tapir.openapi.circe.yaml._

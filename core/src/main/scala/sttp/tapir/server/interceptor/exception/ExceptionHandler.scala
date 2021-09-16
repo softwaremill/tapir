@@ -8,7 +8,11 @@ trait ExceptionHandler {
   def apply(ctx: ExceptionContext): Option[ValuedEndpointOutput[_]]
 }
 
-object DefaultExceptionHandler extends ExceptionHandler {
+case class DefaultExceptionHandler(response: (StatusCode, String) => ValuedEndpointOutput[_]) extends ExceptionHandler {
   override def apply(ctx: ExceptionContext): Option[ValuedEndpointOutput[_]] =
-    Some(ValuedEndpointOutput(statusCode.and(stringBody), (StatusCode.InternalServerError, "Internal server error")))
+    Some(response(StatusCode.InternalServerError, "Internal server error"))
+}
+
+object DefaultExceptionHandler {
+  val handler: DefaultExceptionHandler = DefaultExceptionHandler((sc, m) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
 }

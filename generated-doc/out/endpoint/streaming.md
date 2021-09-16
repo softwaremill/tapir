@@ -20,10 +20,10 @@ of `Endpoint`, which specifies the requirements regarding supported stream types
 When using a stream body, a schema must be provided for documentation. By default, when using `streamBinaryBody`,
 the schema will simply be that of a binary body. If you have a textual stream, you can use `streamTextBody`. In that
 case, you'll also need to provide the default format (media type) and optional charset to be used to determine the
-content type.
+content type. 
 
-If your application later deserializes the body as a list of values, you can use the `streamListBody` and 
-`streamIterableBody` methods. 
+To provide an arbitrary schema, use `streamBody`. Note, however, that this schema will only be used
+for generating documentation. The incoming stream data will not be validated using the schema validators.
 
 For example, to specify that the output is an akka-stream, which is a (presumably large) serialised list of json objects 
 mapping to the `Person` class:  
@@ -38,7 +38,7 @@ import akka.util.ByteString
 case class Person(name: String)
 
 // copying the derived json schema type
-endpoint.out(streamListBody(AkkaStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
+endpoint.out(streamBody(AkkaStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 

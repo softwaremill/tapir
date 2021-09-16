@@ -1,6 +1,6 @@
 package sttp.tapir.examples
 
-import cats.effect.{Blocker, ExitCode, IO, IOApp}
+import cats.effect.{ExitCode, IO, IOApp}
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import sttp.tapir._
@@ -9,8 +9,6 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 
 object Http4sClientExample extends IOApp with StrictLogging {
-  // The interpreter needs a Blocker instance in order to evaluate certain types of request/response bodies.
-  private implicit val blocker: Blocker = Blocker.liftExecutionContext(super.executionContext)
 
   case class User(id: Int, name: String)
 
@@ -40,7 +38,7 @@ object Http4sClientExample extends IOApp with StrictLogging {
     val userId = 5
 
     // Interpret the endpoint as a request and a response parser.
-    val (userRequest, parseResponse) = Http4sClientInterpreter[IO].toRequest(userEndpoint, baseUri = None).apply(userId)
+    val (userRequest, parseResponse) = Http4sClientInterpreter[IO]().toRequest(userEndpoint, baseUri = None).apply(userId)
 
     logger.info("Welcome to the http4s client interpreter example!")
     logger.info(s"The following request was derived from the endpoint definition: $userRequest")

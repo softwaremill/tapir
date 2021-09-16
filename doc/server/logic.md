@@ -26,7 +26,7 @@ val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Any, Future
   }
 
 val countCharactersRoute: Route = 
-  AkkaHttpServerInterpreter.toRoute(countCharactersServerEndpoint)
+  AkkaHttpServerInterpreter().toRoute(countCharactersServerEndpoint)
 ```
 
 A `ServerEndpoint` can then be converted to a route using `.toRoute`/`.toRoutes` methods (without any additional
@@ -46,7 +46,7 @@ val endpoint1 = endpoint.in("hello").out(stringBody)
 val endpoint2 = endpoint.in("ping").out(stringBody)
   .serverLogic { _ => Future.successful[Either[Unit, String]](Right("pong")) }
 
-val route: Route = AkkaHttpServerInterpreter.toRoute(List(endpoint1, endpoint2))
+val route: Route = AkkaHttpServerInterpreter().toRoute(List(endpoint1, endpoint2))
 ```
 
 Note that when dealing with endpoints which have multiple input parameters, the server logic function is a function

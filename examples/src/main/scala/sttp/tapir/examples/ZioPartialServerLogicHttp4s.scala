@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import org.http4s._
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
@@ -10,6 +10,7 @@ import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console._
 import zio.interop.catz._
@@ -56,8 +57,8 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
-    ZHttp4sServerInterpreter.from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock with Blocking, *]] =
+    ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
 
   // testing
   val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>
@@ -89,8 +90,8 @@ object ZioPartialServerLogicHttp4s extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
-      .flatMap { implicit runtime: Runtime[ZEnv with UserService with Console] =>
-        BlazeServerBuilder[RIO[UserService with Console with Clock, *]](runtime.platform.executor.asEC)
+      .flatMap { implicit runtime: Runtime[ZEnv & UserService & Console] =>
+        BlazeServerBuilder[RIO[UserService & Console & Clock & Blocking, *]](runtime.platform.executor.asEC)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
           .resource

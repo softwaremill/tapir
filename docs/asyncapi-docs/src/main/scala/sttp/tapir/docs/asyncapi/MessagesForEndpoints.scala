@@ -2,17 +2,17 @@ package sttp.tapir.docs.asyncapi
 
 import sttp.model.MediaType
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.asyncapi.{Message, SingleMessage}
-import sttp.tapir.docs.apispec.schema.{Schemas, ToObjectSchema, calculateUniqueKeys}
+import sttp.tapir.docs.apispec.schema.{Schemas, ToNamedSchemas, calculateUniqueKeys}
 import sttp.tapir.internal.IterableToListMap
-import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema, SchemaType => TSchemaType}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema}
 import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
 
-private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SObjectInfo => String, toObjectSchema: ToObjectSchema) {
-  private type CodecData = Either[(TSchemaType.SObjectInfo, MediaType), TSchema[_]]
+private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String, toNamedSchemas: ToNamedSchemas) {
+  private type CodecData = Either[(SName, MediaType), TSchema[_]]
 
   private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, _ <: CodecFormat], info: EndpointIO.Info[T])
 
@@ -31,7 +31,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SObje
   }
 
   private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
-    toObjectSchema.apply(codec).headOption match { // the first element, if any, corresponds to the object
+    toNamedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
       case Some(os) => Left((os._1, codec.format.mediaType))
       case None     => Right(codec.schema.copy(description = None, deprecated = false))
     }

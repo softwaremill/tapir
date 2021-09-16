@@ -5,19 +5,29 @@ import akka.http.scaladsl.server.Directives
 import akka.stream.scaladsl.{Flow, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import akka.http.scaladsl.server.Route
-import sttp.capabilities.{WebSockets, akka}
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerMetricsTest,
+  ServerRejectTests,
+  ServerStaticContentTests,
+  ServerStreamingTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
@@ -42,13 +52,13 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
-            .unsafeRunSync()
+            .unsafeToFuture()
         },
         Test("Send and receive SSE") {
           implicit val ec = actorSystem.dispatcher
@@ -58,7 +68,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .serverLogic[Future](_ => {
               Source(List(sse1, sse2)).asRight[Unit].unit(new FutureMonad())
             })
-          val route = AkkaHttpServerInterpreter.toRoute(e)
+          val route = AkkaHttpServerInterpreter().toRoute(e)
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
@@ -76,7 +86,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                 )
               }
             }
-            .unsafeRunSync()
+            .unsafeToFuture()
         }
       )
 
@@ -88,6 +98,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
+        new ServerRejectTests(createServerTest, interpreter).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests() ++
         additionalTests()
     }
   }

@@ -10,8 +10,8 @@ package object encoders {
 
   private val bufferSize = 1024
 
-  /** README: Tests are using a ByteArrayInputStream, which is totally fine,
-    * but other blocking implementations like FileInputStream etc. must maybe be wrapped in executeBlocking
+  /** README: Tests are using a ByteArrayInputStream, which is totally fine, but other blocking implementations like FileInputStream etc.
+    * must maybe be wrapped in executeBlocking
     */
   private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx): Future[Buffer] = {
     is match {

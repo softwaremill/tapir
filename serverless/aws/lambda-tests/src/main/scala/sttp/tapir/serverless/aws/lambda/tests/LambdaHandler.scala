@@ -1,6 +1,7 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe.Printer
 import io.circe.generic.auto._
@@ -15,9 +16,9 @@ import java.nio.charset.StandardCharsets
 object LambdaHandler extends RequestStreamHandler {
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
-    implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+    val options: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
 
-    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(allEndpoints.toList)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(allEndpoints.toList)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
 
     (decode[AwsRequest](json) match {

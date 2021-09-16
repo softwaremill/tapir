@@ -2,12 +2,8 @@ package sttp.tapir.server.finatra
 
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
-import sttp.tapir.server.interceptor.Interceptor
-import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
@@ -15,50 +11,20 @@ import java.io.FileOutputStream
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    interceptors: List[Interceptor[Future, FinatraContent]]
+    interceptors: List[Interceptor[Future]]
 )
 
 object FinatraServerOptions extends Logging {
 
-  /** Creates default [[FinatraServerOptions]] with custom interceptors, sitting between two interceptor groups:
-    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
-    *    when processing the request, and last when processing the response)),
-    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
-    *    typically be last when processing the request).
-    *
-    * The options can be then further customised using copy constructors or the methods to append/prepend
-    * interceptors.
-    *
-    * @param serverLog The server log using which an interceptor will be created, if any.
-    * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
-    *                               responses.
-    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
-    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
-    *                                        header.
-    * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
-    */
-  def customInterceptors(
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, FinatraContent]] = None,
-      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
-      additionalInterceptors: List[Interceptor[Future, FinatraContent]] = Nil,
-      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[Future, FinatraContent]] = Some(
-        new UnsupportedMediaTypeInterceptor()
-      ),
-      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): FinatraServerOptions =
-    FinatraServerOptions(
-      defaultCreateFile(futurePool),
-      defaultDeleteFile(futurePool),
-      metricsInterceptor.toList ++
-        exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
-        serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
-        additionalInterceptors ++
-        unsupportedMediaTypeInterceptor.toList ++
-        List(new DecodeFailureInterceptor[Future, FinatraContent](decodeFailureHandler))
-    )
+  /** Allows customising the interceptors used by the server interpreter. */
+  def customInterceptors: CustomInterceptors[Future, Unit, FinatraServerOptions] =
+    CustomInterceptors(
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_: Unit, _) => Future.Done),
+      createOptions = (ci: CustomInterceptors[Future, Unit, FinatraServerOptions]) =>
+        FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
+    ).serverLog(defaultServerLog)
 
-  implicit val default: FinatraServerOptions = customInterceptors()
+  val default: FinatraServerOptions = customInterceptors.options
 
   def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[TapirFile] = {
     // TODO: Make this streaming
@@ -73,7 +39,7 @@ object FinatraServerOptions extends Logging {
 
   def defaultDeleteFile(futurePool: FuturePool): TapirFile => Future[Unit] = file => { futurePool { Defaults.deleteFile()(file) } }
 
-  private lazy val futurePool = FuturePool.unboundedPool
+  private[finatra] lazy val futurePool = FuturePool.unboundedPool
 
   lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog,

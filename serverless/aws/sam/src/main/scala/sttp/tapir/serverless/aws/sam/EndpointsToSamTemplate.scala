@@ -5,7 +5,7 @@ import sttp.tapir.internal._
 import sttp.tapir.{Endpoint, EndpointInput}
 
 private[sam] object EndpointsToSamTemplate {
-  def apply(es: List[Endpoint[_, _, _, _]])(implicit options: AwsSamOptions): SamTemplate = {
+  def apply(es: List[Endpoint[_, _, _, _]], options: AwsSamOptions): SamTemplate = {
     val functionName = options.namePrefix + "Function"
     val httpApiName = options.namePrefix + "HttpApi"
 

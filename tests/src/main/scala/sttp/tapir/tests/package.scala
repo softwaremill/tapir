@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
@@ -45,13 +44,13 @@ package object tests {
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody).name("mapped query")
 
   val in_mapped_path_out_string: Endpoint[Fruit, Unit, String, Any] =
-    endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody).name("mapped path")
+    endpoint.in(("fruit" / path[String]).mapTo[Fruit]).out(stringBody).name("mapped path")
 
   val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String, Any] =
-    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody).name("mapped path path")
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount]).out(stringBody).name("mapped path path")
 
   val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String, Any] = endpoint
-    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
+    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount])
     .in(query[String]("color"))
     .out(stringBody)
     .name("query and mapped path path")
@@ -61,7 +60,7 @@ package object tests {
 
   val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount, Any] = endpoint
     .in(query[String]("fruit"))
-    .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
+    .out(stringBody.and(header[Int]("X-Role")).mapTo[FruitAmount])
     .name("out mapped")
 
   val in_header_before_path: Endpoint[(String, Int), Unit, (Int, String), Any] = endpoint
@@ -315,6 +314,9 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
+  val out_fixed_content_type_header: Endpoint[Unit, Unit, String, Any] =
+    endpoint.out(stringBody and header("Content-Type", "text/csv"))
+
   val out_json_or_default_json: Endpoint[String, Unit, Entity, Any] =
     endpoint.get
       .in("entity" / path[String]("type"))
@@ -381,12 +383,12 @@ package object tests {
           )
         )
 
-    val out_json_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+    val out_json_xml_different_schema: Endpoint[String, Unit, Entity, Any] =
       endpoint.get
         .in("content-negotiation" / "entity")
         .in(header[String]("Accept"))
         .out(
-          sttp.tapir.oneOf(
+          sttp.tapir.oneOf[Entity](
             oneOfMapping(StatusCode.Ok, jsonBody[Person]),
             oneOfMapping(StatusCode.Ok, xmlBody[Organization])
           )
@@ -457,45 +459,50 @@ package object tests {
       implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
         implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
       implicit def schemaForValidatedList[T: Schema]: Schema[ValidatedList[T]] =
-        implicitly[Schema[T]].asIterable.validate(Validator.minSize(1))
+        implicitly[Schema[T]].asIterable[List].validate(Validator.minSize(1)).map(l => Some(l.taggedWith[BasketOfFruits]))(l => l)
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
     val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Any] = {
+      // TODO: needed until Scala3 derivation supports
+      implicit val schemaForStringWrapper: Schema[StringWrapper] = Schema(SchemaType.SString())
+      implicit val encoderForStringWrapper: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val decoderForStringWrapper: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val encoderForIntWrapper: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decoderForIntWrapper: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
     }
 
     val in_enum_class: Endpoint[Color, Unit, Unit, Any] = {
-      implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.string
-          .map[Color]((_: String) match {
-            case "red"  => Red
-            case "blue" => Blue
-          })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnum)
-      }
+      implicit def plainCodecForColor: PlainCodec[Color] = Codec.derivedEnumeration[String, Color](
+        (_: String) match {
+          case "red"  => Some(Red)
+          case "blue" => Some(Blue)
+          case _      => None
+        },
+        _.toString.toLowerCase
+      )
       endpoint.in(query[Color]("color"))
     }
 
     val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Any] = {
-      implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.string
-          .map[Color]((_: String) match {
-            case "red"  => Red
-            case "blue" => Blue
-          })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnum)
-      }
+      implicit def plainCodecForColor: PlainCodec[Color] = Codec.derivedEnumeration[String, Color](
+        (_: String) match {
+          case "red"  => Some(Red)
+          case "blue" => Some(Blue)
+          case _      => None
+        },
+        _.toString.toLowerCase
+      )
       endpoint.in(query[Option[Color]]("color"))
     }
 
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Any] = {
       implicit def schemaForColor: Schema[Color] =
         Schema.string.validate(
-          Validator.enum(
+          Validator.enumeration(
             List(Blue, Red),
             {
               case Red  => Some("red")
@@ -508,12 +515,12 @@ package object tests {
 
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Any] = {
       implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
-        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
+        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enumeration(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
+      implicit def schemaForColor: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
       endpoint.in(jsonBody[ColorWrapper])
     }
 
@@ -524,19 +531,9 @@ package object tests {
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[List[IntWrapper]])
     }
-
-    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 
   //
 
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
-
   type Port = Int
 }
-
-case class ColorValue(color: Color, value: Int)
-
-sealed trait Color
-case object Blue extends Color
-case object Red extends Color

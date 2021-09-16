@@ -95,16 +95,16 @@ final case class Server(
 }
 
 final case class ServerVariable(
-    enum: Option[List[String]],
+    `enum`: Option[List[String]],
     default: String,
     description: Option[String],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
 
-  def enum(d: List[String]): ServerVariable = {
+  def `enum`(d: List[String]): ServerVariable = {
     require(d.contains(default), "ServerVariable#default must be one of the values in enum if enum is defined")
-    copy(enum = Some(d))
+    copy(`enum` = Some(d))
   }
   def default(d: String): ServerVariable = {
     require(`enum`.fold(true)(_.contains(d)), "ServerVariable#default must be one of the values in enum if enum is defined")
@@ -254,12 +254,12 @@ object Operation {
 
 final case class Parameter(
     name: String,
-    in: ParameterIn.ParameterIn,
+    in: ParameterIn,
     description: Option[String] = None,
     required: Option[Boolean] = None,
     deprecated: Option[Boolean] = None,
     allowEmptyValue: Option[Boolean] = None,
-    style: Option[ParameterStyle.ParameterStyle] = None,
+    style: Option[ParameterStyle] = None,
     explode: Option[Boolean] = None,
     allowReserved: Option[Boolean] = None,
     schema: Option[ReferenceOr[Schema]],
@@ -269,12 +269,12 @@ final case class Parameter(
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def name(updated: String): Parameter = copy(name = updated)
-  def in(updated: ParameterIn.ParameterIn): Parameter = copy(in = updated)
+  def in(updated: ParameterIn): Parameter = copy(in = updated)
   def description(updated: String): Parameter = copy(description = Some(updated))
   def required(updated: Boolean): Parameter = copy(required = Some(updated))
   def deprecated(updated: Boolean): Parameter = copy(deprecated = Some(updated))
   def allowEmptyValue(updated: Boolean): Parameter = copy(allowEmptyValue = Some(updated))
-  def style(updated: ParameterStyle.ParameterStyle): Parameter = copy(style = Some(updated))
+  def style(updated: ParameterStyle): Parameter = copy(style = Some(updated))
   def explode(updated: Boolean): Parameter = copy(explode = Some(updated))
   def allowReserved(updated: Boolean): Parameter = copy(allowReserved = Some(updated))
   def schema(updated: Schema): Parameter = copy(schema = Some(Right(updated)))
@@ -286,27 +286,23 @@ final case class Parameter(
   def addExtension(key: String, value: ExtensionValue): Parameter = copy(extensions = extensions.updated(key, value))
 }
 
-//todo: replace with something more modern
-object ParameterIn extends Enumeration {
-  type ParameterIn = Value
-
-  val Query: Value = Value("query")
-  val Header: Value = Value("header")
-  val Path: Value = Value("path")
-  val Cookie: Value = Value("cookie")
+sealed abstract class ParameterIn(val value: String)
+object ParameterIn {
+  case object Query extends ParameterIn("query")
+  case object Header extends ParameterIn("header")
+  case object Path extends ParameterIn("path")
+  case object Cookie extends ParameterIn("cookie")
 }
 
-//todo: replace with something more modern
+sealed abstract class ParameterStyle(val value: String)
 object ParameterStyle extends Enumeration {
-  type ParameterStyle = Value
-
-  val Simple: Value = Value("simple")
-  val Form: Value = Value("form")
-  val Matrix: Value = Value("matrix")
-  val Label: Value = Value("label")
-  val SpaceDelimited: Value = Value("spaceDelimited")
-  val PipeDelimited: Value = Value("pipeDelimited")
-  val DeepObject: Value = Value("deepObject")
+  case object Simple extends ParameterStyle("simple")
+  case object Form extends ParameterStyle("form")
+  case object Matrix extends ParameterStyle("matrix")
+  case object Label extends ParameterStyle("label")
+  case object SpaceDelimited extends ParameterStyle("spaceDelimited")
+  case object PipeDelimited extends ParameterStyle("pipeDelimited")
+  case object DeepObject extends ParameterStyle("deepObject")
 }
 
 final case class RequestBody(
@@ -347,7 +343,7 @@ object MediaType {
 final case class Encoding(
     contentType: Option[String] = None,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
-    style: Option[ParameterStyle.ParameterStyle] = None,
+    style: Option[ParameterStyle] = None,
     explode: Option[Boolean] = None,
     allowReserved: Option[Boolean] = None,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
@@ -355,7 +351,7 @@ final case class Encoding(
   def contentType(updated: String): Encoding = copy(contentType = Some(updated))
   def headers(updated: ListMap[String, ReferenceOr[Header]]): Encoding = copy(headers = updated)
   def addHeader(key: String, header: Header): Encoding = copy(headers = headers.updated(key, Right(header)))
-  def style(updated: ParameterStyle.ParameterStyle): Encoding = copy(style = Some(updated))
+  def style(updated: ParameterStyle): Encoding = copy(style = Some(updated))
   def explode(updated: Boolean): Encoding = copy(explode = Some(updated))
   def allowReserved(updated: Boolean): Encoding = copy(allowReserved = Some(updated))
   def extensions(updated: ListMap[String, ExtensionValue]): Encoding = copy(extensions = updated)
@@ -430,7 +426,7 @@ final case class Header(
     required: Option[Boolean] = None,
     deprecated: Option[Boolean] = None,
     allowEmptyValue: Option[Boolean] = None,
-    style: Option[ParameterStyle.ParameterStyle] = None,
+    style: Option[ParameterStyle] = None,
     explode: Option[Boolean] = None,
     allowReserved: Option[Boolean] = None,
     schema: Option[ReferenceOr[Schema]] = None,
@@ -442,7 +438,7 @@ final case class Header(
   def required(updated: Boolean): Header = copy(required = Some(updated))
   def deprecated(updated: Boolean): Header = copy(deprecated = Some(updated))
   def allowEmptyValue(updated: Boolean): Header = copy(allowEmptyValue = Some(updated))
-  def style(updated: ParameterStyle.ParameterStyle): Header = copy(style = Some(updated))
+  def style(updated: ParameterStyle): Header = copy(style = Some(updated))
   def explode(updated: Boolean): Header = copy(explode = Some(updated))
   def allowReserved(updated: Boolean): Header = copy(allowReserved = Some(updated))
   def schema(updated: Schema): Header = copy(schema = Some(Right(updated)))

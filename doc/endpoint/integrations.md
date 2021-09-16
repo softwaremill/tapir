@@ -63,7 +63,7 @@ trait EnumHelper { e: Enumeration =>
     implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
 
     // needs to be a def or lazy val so that the enumeration values are available!
-    implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enum(e.values.toList, v => Option(v)))
+    implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
 }
 object Color extends Enumeration with EnumHelper {
     type Color = Value
@@ -131,3 +131,7 @@ object types {
 
 Resulting schema will be equivalent to `implicitly[Schema[Int]].map(i => Some(types.Amount(i)))`.
 Note that due to limitations of the `derevo` library one can't provide custom description for generated schema.
+
+## Next
+
+Read on about [serving static content](static.md).

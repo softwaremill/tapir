@@ -11,7 +11,7 @@ import sttp.tapir.{CodecFormat, StreamBodyIO, streamTextBody}
 import java.nio.charset.Charset
 
 package object akkahttp {
-  private[akkahttp] type AkkaResponseBody = Either[Flow[Message, Message, Any], ResponseEntity]
+  type AkkaResponseBody = Either[Flow[Message, Message, Any], ResponseEntity]
 
   val serverSentEventsBody: StreamBodyIO[Source[ByteString, Any], Source[ServerSentEvent, Any], AkkaStreams] =
     streamTextBody(AkkaStreams)(CodecFormat.TextEventStream(), Some(Charset.forName("UTF-8")))

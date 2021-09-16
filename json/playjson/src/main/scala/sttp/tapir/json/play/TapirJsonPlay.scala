@@ -6,8 +6,8 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.Schema.SName
 
-import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonPlay {
@@ -40,18 +40,10 @@ trait TapirJsonPlay {
   // JsValue is a coproduct with unknown implementations
   implicit val schemaForPlayJsValue: Schema[JsValue] =
     Schema(
-      SCoproduct(
-        SObjectInfo("play.api.libs.json.JsValue"),
-        ListMap.empty,
-        None
-      )(_ => None)
+      SCoproduct(Nil, None)(_ => None),
+      None
     )
 
   implicit val schemaForPlayJsObject: Schema[JsObject] =
-    Schema(
-      SProduct(
-        SObjectInfo("play.api.libs.json.JsObject"),
-        Nil
-      )
-    )
+    Schema(SProduct(Nil), Some(SName("play.api.libs.json.JsObject")))
 }

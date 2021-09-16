@@ -3,6 +3,7 @@ package sttp.tapir.client.tests
 import java.io.InputStream
 
 import cats.effect._
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
@@ -20,10 +21,10 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
   type Port = Int
   var port: Port = 51823
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
-  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
+  def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
+  def safeSend[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, R], args: I, expectedResult: Either[E, O]): Unit = {
+  def testClient[I, E, O](e: Endpoint[I, E, O, R], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Future[Either[Any, Any]] = {

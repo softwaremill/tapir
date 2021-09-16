@@ -8,12 +8,12 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
-/** If no body in the endpoint's outputs satisfies the constraints from the request's `Accept` header, returns
-  * an empty response with status code 415, before any further processing (running the business logic) is done.
+/** If no body in the endpoint's outputs satisfies the constraints from the request's `Accept` header, returns an empty response with status
+  * code 415, before any further processing (running the business logic) is done.
   */
-class UnsupportedMediaTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B] {
+class UnsupportedMediaTypeInterceptor[F[_]] extends EndpointInterceptor[F] {
 
-  override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
+  override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[I](
           ctx: DecodeSuccessContext[F, I]

@@ -1,27 +1,24 @@
 package sttp.tapir.serverless.aws.lambda.runtime
 
-import cats.effect.{Blocker, ConcurrentEffect, ContextShift}
+import cats.effect.unsafe.implicits.global
+import cats.effect.{Async, IO}
 import cats.syntax.all._
-import com.typesafe.scalalogging.StrictLogging
-import org.http4s.client.blaze.BlazeClientBuilder
-import sttp.client3.http4s.Http4sBackend
+import sttp.client3.httpclient.fs2.HttpClientFs2Backend
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda._
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
-
-abstract class AwsLambdaRuntime[F[_]: ContextShift: ConcurrentEffect] extends StrictLogging {
-  def endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]]
-  implicit def executionContext: ExecutionContext = ExecutionContext.global
-  implicit def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
-
-  def main(args: Array[String]): Unit = {
-    val backend = Http4sBackend.usingBlazeClientBuilder(
-      BlazeClientBuilder[F](executionContext).withConnectTimeout(0.seconds),
-      Blocker.liftExecutionContext(implicitly)
-    )
-    val route: Route[F] = AwsCatsEffectServerInterpreter.toRoute(endpoints.toList)
-    ConcurrentEffect[F].toIO(AwsLambdaRuntimeLogic(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend)).foreverM.unsafeRunSync()
+object AwsLambdaRuntime {
+  def apply[F[_]: Async](endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]], serverOptions: AwsServerOptions[F]): F[Unit] = {
+    val backend = HttpClientFs2Backend.resource()
+    val route: Route[F] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(endpoints.toList)
+    AwsLambdaRuntimeInvocation.handleNext(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend).foreverM
   }
+}
+
+/** A runtime which uses the [[IO]] effect */
+abstract class AwsLambdaIORuntime {
+  def endpoints: Iterable[ServerEndpoint[_, _, _, Any, IO]]
+  def serverOptions: AwsServerOptions[IO] = AwsServerOptions.default
+
+  def main(args: Array[String]): Unit = AwsLambdaRuntime(endpoints, serverOptions).unsafeRunSync()
 }

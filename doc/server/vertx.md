@@ -37,7 +37,7 @@ import scala.concurrent.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Router => Route = VertxFutureServerInterpreter.route(anEndpoint)((logic _).tupled)
+val aRoute: Router => Route = VertxFutureServerInterpreter().route(anEndpoint)((logic _).tupled)
 ```
 
 In practice, routes will be mounted on a router, this router can then be used as a request handler for your http server. 
@@ -45,6 +45,7 @@ An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 import io.vertx.core.Vertx
 import io.vertx.ext.web._
@@ -59,7 +60,7 @@ object Main {
     val router = Router.router(vertx)
     val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here
-    val attach = route(anEndpoint)((logic _).tupled)
+    val attach = VertxFutureServerInterpreter().route(anEndpoint)((logic _).tupled)
     attach(router) // your endpoint is now attached to the router, and the route has been created
     Await.result(server.requestHandler(router).listen(9000).asScala, Duration.Inf)
   }
@@ -68,7 +69,7 @@ object Main {
 
 ## Configuration
 
-Every endpoint can be configured by providing an implicit `VertxFutureEndpointOptions`, see [server options](options.md) for details.
+Every endpoint can be configured by providing an instance of `VertxFutureEndpointOptions`, see [server options](options.md) for details.
 You can also provide your own `ExecutionContext` to execute the logic.
 
 ## Defining an endpoint together with the server logic
@@ -98,15 +99,15 @@ This object contains the following methods:
 Here is simple example which starts HTTP server with one route:
 ```scala mdoc:compile-only
 import cats.effect._
-import cats.syntax.flatMap._
+import cats.effect.std.Dispatcher
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
 
 object App extends IOApp {
-
-  val responseEndpoint =
+  val responseEndpoint: Endpoint[String, Unit, String, Any] =
     endpoint
       .in("response")
       .in(query[String]("key"))
@@ -115,38 +116,46 @@ object App extends IOApp {
   def handler(req: String): IO[Either[Unit, String]] =
     IO.pure(Right(req))
 
-  val attach = route(responseEndpoint)(handler)
-
-  override def run(args: List[String]): IO[ExitCode] =
-    Resource.make(IO.delay{
-      val vertx = Vertx.vertx()
-      val server = vertx.createHttpServer()
-      val router = Router.router(vertx)
-      attach(router)
-      server.requestHandler(router).listen(8080)
-    } >>= (_.asF[IO]))({ server =>
-      IO.delay(server.close) >>= (_.asF[IO].void)
-    }).use(_ => IO.never)
+  override def run(args: List[String]): IO[ExitCode] = {
+    Dispatcher[IO]
+      .flatMap { dispatcher =>
+        Resource
+          .make(
+            IO.delay {
+              val vertx = Vertx.vertx()
+              val server = vertx.createHttpServer()
+              val router = Router.router(vertx)
+              val attach = VertxCatsServerInterpreter[IO](dispatcher).route(responseEndpoint)(handler)
+              attach(router)
+              server.requestHandler(router).listen(8080)
+            }.flatMap(_.asF[IO])
+          )({ server =>
+            IO.delay(server.close).flatMap(_.asF[IO].void)
+          })
+      }
+      .use(_ => IO.never)
+  }
 }
 ```
 
 This interpreter also supports streaming using FS2 streams:
 ```scala mdoc:compile-only
 import cats.effect._
+import cats.effect.std.Dispatcher
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
-
-implicit val effect: ConcurrentEffect[IO] = ???
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter
 
 val streamedResponse =
   endpoint
     .in("stream")
     .in(query[Int]("key"))
     .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
+    
+def dispatcher: Dispatcher[IO] = ???
 
-val attach = route(streamedResponse) { key =>
+val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse) { key =>
   IO.pure(Right(Stream.chunk(Chunk.array("Hello world!".getBytes)).repeatN(key)))
 }
 ```
@@ -172,6 +181,7 @@ Here is simple example which starts HTTP server with one route:
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
+import sttp.tapir.server.vertx.VertxZioServerInterpreter
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 
 import zio._
@@ -185,7 +195,7 @@ object Short extends zio.App {
       .in(query[String]("key"))
       .out(plainBody[String])
 
-  val attach = route(responseEndpoint) { key => UIO.succeed(key) }
+  val attach = VertxZioServerInterpreter().route(responseEndpoint) { key => UIO.succeed(key) }
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZManaged.make(ZIO.effect {

@@ -17,6 +17,6 @@ trait MultipartCodecDerivationTestExtensions {
 
   def createTempFile() = new DomFileWithBody(
     Array(Array.empty[Byte].toTypedArray.asInstanceOf[js.Any]).toJSArray,
-    "temp.txt",
+    "temp.txt"
   )
 }

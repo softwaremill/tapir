@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.examples.Endpoints.Limit
 import sttp.tapir.generic.auto._
-import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
 case class Country(name: String)
 case class Author(name: String, country: Country)
@@ -43,7 +42,7 @@ object Endpoints {
     .out(jsonBody[Vector[Book]])
 
   val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
-    .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
+    .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
     .out(jsonBody[Vector[Book]])
 }
 
@@ -56,7 +55,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
+    val docs = OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
     docs.toYaml
   }
 
@@ -91,9 +90,9 @@ object BooksExample extends App with StrictLogging {
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
-    AkkaHttpServerInterpreter.toRoute(addBook)((bookAddLogic _).tupled) ~
-      AkkaHttpServerInterpreter.toRoute(booksListing)(bookListingLogic) ~
-      AkkaHttpServerInterpreter.toRoute(booksListingByGenre)(bookListingByGenreLogic)
+    AkkaHttpServerInterpreter().toRoute(addBook)((bookAddLogic _).tupled) ~
+      AkkaHttpServerInterpreter().toRoute(booksListing)(bookListingLogic) ~
+      AkkaHttpServerInterpreter().toRoute(booksListingByGenre)(bookListingByGenreLogic)
   }
 
   def startServer(route: Route, yaml: String): Unit = {
@@ -101,9 +100,14 @@ object BooksExample extends App with StrictLogging {
     import akka.http.scaladsl.Http
     import akka.http.scaladsl.server.Directives._
 
-    import scala.concurrent.Await
+    import sttp.tapir.server.akkahttp._
+    import sttp.tapir.swagger.SwaggerUI
+
+    import scala.concurrent.{Await, Future}
     import scala.concurrent.duration._
-    val routes = route ~ new SwaggerAkka(yaml).routes
+
+    val swaggerRoutes = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](yaml))
+    val routes = route ~ swaggerRoutes
     implicit val actorSystem: ActorSystem = ActorSystem()
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
@@ -114,7 +118,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.client3._
     import sttp.tapir.client.sttp._
 
-    val client = SttpClientInterpreter.toQuickClient(booksListing, Some(uri"http://localhost:8080"))
+    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))
 
     val result: Either[String, Vector[Book]] = client(Some(3))
 

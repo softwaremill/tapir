@@ -53,14 +53,13 @@ private case class DecodeInputsContext(request: ServerRequest, pathSegments: Lis
 }
 
 object DecodeBasicInputs {
-  private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
+  case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
-  /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the
-    * input's value.
+  /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the input's value.
     *
-    * An exception is the body input, which is not decoded. This is because typically bodies can be only read once.
-    * That's why, all non-body inputs are used to decide if a request matches the endpoint, or not. If a body input
-    * is present, it is also returned as part of the result.
+    * An exception is the body input, which is not decoded. This is because typically bodies can be only read once. That's why, all non-body
+    * inputs are used to decide if a request matches the endpoint, or not. If a body input is present, it is also returned as part of the
+    * result.
     *
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
@@ -69,10 +68,10 @@ object DecodeBasicInputs {
 
   private def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeBasicInputsResult = {
     // The first decoding failure is returned.
-    // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
-    // An exact-path check is done after method & path matching
+    // We decode in the following order: path, method, query, headers (incl. cookies), request, status, body
+    // An exact-path check is done after path & method matching
 
-    val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map(IndexedBasicInput.tupled)
+    val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map { case (el, i) => IndexedBasicInput(el, i) }
 
     val methodInputs = basicInputs.filter(t => isRequestMethod(t.input))
     val pathInputs = basicInputs.filter(t => isPath(t.input))
@@ -81,20 +80,18 @@ object DecodeBasicInputs {
     // we're using null as a placeholder for the future values. All except the body (which is determined by
     // interpreter-specific code), should be filled by the end of this method.
     compose(
-      matchOthers(methodInputs, _, _),
       matchPath(pathInputs, _, _),
+      matchOthers(methodInputs, _, _),
       matchOthers(otherInputs, _, _)
     )(DecodeBasicInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }
 
-  /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results
-    * (not checking if this is a successful or failed decoding at this stage). This is collected as the
-    * `decodedPathInputs` value.
+  /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results (not checking if this is
+    * a successful or failed decoding at this stage). This is collected as the `decodedPathInputs` value.
     *
     * Once this is done, we check if there are remaining path segments. If yes - the decoding fails with a `Mismatch`.
     *
-    * Hence, a failure due to a mismatch in the number of segments takes **priority** over any potential failures in
-    * decoding the segments.
+    * Hence, a failure due to a mismatch in the number of segments takes **priority** over any potential failures in decoding the segments.
     */
   private def matchPath(
       pathInputs: Vector[IndexedBasicInput],

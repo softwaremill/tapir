@@ -35,10 +35,10 @@ class RichEndpointInputTest extends AnyFlatSpec with Matchers {
     case class Wrap(value: String)
     val q1 = query[String]("q1")
     val q2 = query[Long]("q2")
-    val q3 = query[String]("q3").mapTo(Wrap)
+    val q3 = query[String]("q3").mapTo[Wrap]
 
     val h1 = header[String]("h1")
-    val h2 = header[String]("h2").mapTo(Wrap)
+    val h2 = header[String]("h2").mapTo[Wrap]
 
     val authB = auth.bearer[String]()
 

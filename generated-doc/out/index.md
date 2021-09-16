@@ -6,26 +6,32 @@ interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
-  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s.
+  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
+  * [Netty](server/netty.md)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [ZIO Http](server/ziohttp.md) `Http`
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
-  * [sttp](client/sttp.md).
-  * [Play](client/play.md).
-  * [Http4s](client/http4s.md).
+  * [sttp](client/sttp.md)
+  * [Play](client/play.md)
+  * [Http4s](client/http4s.md)
 * documentation. Currently supported:
-  * [OpenAPI](docs/openapi.md).
-  * [AsyncAPI](docs/asyncapi.md).
+  * [OpenAPI](docs/openapi.md)
+  * [AsyncAPI](docs/asyncapi.md)
 
 Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
 
-Tapir is available for Scala 2.12 and 2.13 on the JVM. The client interpreter is also available for Scala.JS.
+Tapir is available:
+
+* all modules - Scala 2.12 and 2.13 on the JVM
+* selected modules (core, http4s server, sttp client, openapi, some js and datatype integrations) - Scala 3 on the JVM  
+* selected modules (sttp client, some js and datatype integrations) - Scala 2.12 and 2.13 using Scala.JS.
 
 ## Code teaser
 
@@ -46,7 +52,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -58,7 +64,7 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
@@ -72,7 +78,7 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = AkkaHttpServerInterpreter
+val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing)((bookListingLogic _).tupled)
 
 
@@ -82,7 +88,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
-  SttpClientInterpreter
+  SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
@@ -130,7 +136,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/streaming
    endpoint/websockets
    endpoint/integrations
-   endpoint/zio
+   endpoint/static
 
 .. toctree::
    :maxdepth: 2
@@ -138,9 +144,12 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    server/akkahttp
    server/http4s
+   server/zio-http4s
+   server/netty
    server/finatra
    server/play
    server/vertx
+   server/ziohttp
    server/aws
    server/options
    server/logic

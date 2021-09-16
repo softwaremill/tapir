@@ -1,11 +1,13 @@
 package sttp.tapir.client.http4s
 
 import cats.Applicative
-import cats.effect.{Blocker, ContextShift, Effect, Sync}
+import cats.effect.Async
 import cats.implicits._
 import fs2.Chunk
+import fs2.io.file.Files
 import org.http4s._
 import org.http4s.headers.`Content-Type`
+import org.typelevel.ci.CIString
 import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.ResponseMetadata
@@ -29,9 +31,9 @@ import sttp.tapir.{
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 
-private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Http4sClientOptions) {
+private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions) {
 
-  def toHttp4sRequest[I, E, O, R, F[_]: ContextShift: Effect](
+  def toHttp4sRequest[I, E, O, R, F[_]: Async](
       e: Endpoint[I, E, O, R],
       baseUriStr: Option[String]
   ): I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) = { params =>
@@ -46,7 +48,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     (request, responseParser)
   }
 
-  def toHttp4sRequestUnsafe[I, E, O, R, F[_]: ContextShift: Effect](
+  def toHttp4sRequestUnsafe[I, E, O, R, F[_]: Async](
       e: Endpoint[I, E, O, R],
       baseUriStr: Option[String]
   ): I => (Request[F], Response[F] => F[Either[E, O]]) = { params =>
@@ -63,7 +65,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
   }
 
   @scala.annotation.tailrec
-  private def setInputParams[I, F[_]: ContextShift: Effect](
+  private def setInputParams[I, F[_]: Async](
       input: EndpointInput[I],
       params: Params,
       req: Request[F]
@@ -81,8 +83,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
         val uri = pathFragments.foldLeft(req.uri)(_.addPath(_))
         req.withUri(uri)
       case EndpointInput.Query(name, codec, _) =>
-        val encodedParams = codec.encode(value)
-        req.withUri(req.uri.withQueryParam(name, encodedParams))
+        codec.encode(value) match {
+          case values if values.nonEmpty => req.withUri(req.uri.withQueryParam(name, values))
+          case _                         => req
+        }
       case EndpointInput.Cookie(name, codec, _) =>
         codec.encode(value).foldLeft(req)(_.addCookie(name, _))
       case EndpointInput.QueryParams(codec, _) =>
@@ -95,22 +99,24 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
-        val headers = codec.encode(value).map(value => Header(name, value))
+        val headers = codec.encode(value).map(value => Header.Raw(CIString(name), value): Header.ToRaw)
         req.putHeaders(headers: _*)
       case EndpointIO.Headers(codec, _) =>
-        val headers = codec.encode(value).map(h => Header(h.name, h.value))
+        val headers = codec.encode(value).map(h => Header.Raw(CIString(h.name), h.value): Header.ToRaw)
         req.putHeaders(headers: _*)
-      case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header(h.name, h.value))
+      case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header.Raw(CIString(h.name), h.value))
       case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointInput.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointIO.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointIO.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
     }
   }
 
-  private def setBody[R, T, CF <: CodecFormat, F[_]: ContextShift: Effect](
+  private def setBody[R, T, CF <: CodecFormat, F[_]: Async](
       value: T,
       bodyType: RawBodyType[R],
       codec: Codec[R, T, CF],
@@ -128,10 +134,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
         val entityEncoder = EntityEncoder.chunkEncoder[F].contramap(Chunk.byteBuffer)
         req.withEntity(encoded.asInstanceOf[ByteBuffer])(entityEncoder)
       case RawBodyType.InputStreamBody =>
-        val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream](blocker)
+        val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream]
         req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(entityEncoder)
       case RawBodyType.FileBody =>
-        val entityEncoder = EntityEncoder.fileEncoder[F](blocker)
+        val entityEncoder = EntityEncoder.fileEncoder[F]
         req.withEntity(encoded.asInstanceOf[File])(entityEncoder)
       case _: RawBodyType.MultipartBody =>
         throw new IllegalArgumentException("Multipart body isn't supported yet")
@@ -151,7 +157,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
         throw new IllegalArgumentException("Only Fs2Streams streaming is supported")
     }
 
-  private def handleInputPair[I, F[_]: ContextShift: Effect](
+  private def handleInputPair[I, F[_]: Async](
       left: EndpointInput[_],
       right: EndpointInput[_],
       params: Params,
@@ -164,7 +170,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     setInputParams(right.asInstanceOf[EndpointInput[Any]], rightParams, req2)
   }
 
-  private def handleMapped[II, T, F[_]: ContextShift: Effect](
+  private def handleMapped[II, T, F[_]: Async](
       tuple: EndpointInput[II],
       codec: Mapping[T, II],
       params: Params,
@@ -172,7 +178,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
   ): Request[F] =
     setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
 
-  private def parseHttp4sResponse[I, E, O, R, F[_]: Sync: ContextShift](
+  private def parseHttp4sResponse[I, E, O, R, F[_]: Async](
       e: Endpoint[I, E, O, R]
   ): Response[F] => F[DecodeResult[Either[E, O]]] = { response =>
     val code = sttp.model.StatusCode(response.status.code)
@@ -181,7 +187,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     val output = if (code.isSuccess) e.output else e.errorOutput
 
     // headers with cookies
-    val headers = response.headers.toList.map(h => sttp.model.Header(h.name.toString(), h.value)).toVector
+    val headers = response.headers.headers.map(h => sttp.model.Header(h.name.toString, h.value)).toVector
 
     parser(response).map { responseBody =>
       val params = clientOutputParams(output, responseBody, ResponseMetadata(code, response.status.reason, headers))
@@ -189,7 +195,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     }
   }
 
-  private def responseFromOutput[F[_]: Sync: ContextShift](out: EndpointOutput[_]): Response[F] => F[Any] = { response =>
+  private def responseFromOutput[F[_]: Async](out: EndpointOutput[_]): Response[F] => F[Any] = { response =>
     bodyIsStream(out) match {
       case Some(streams) =>
         streams match {
@@ -211,7 +217,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
               response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_)).map(_.asInstanceOf[Any])
             case RawBodyType.FileBody =>
               val file = clientOptions.createFile()
-              response.body.through(fs2.io.file.writeAll(file.toPath, blocker)).compile.drain.map(_ => file.asInstanceOf[Any])
+              response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => file.asInstanceOf[Any])
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse[F[Any]](((): Any).pure[F])

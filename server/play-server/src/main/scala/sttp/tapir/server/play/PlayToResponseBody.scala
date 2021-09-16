@@ -3,21 +3,22 @@ package sttp.tapir.server.play
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
-import play.api.mvc.{Codec, MultipartFormData}
+import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
-import sttp.model.{HasHeaders, MediaType, Part}
-import sttp.tapir.internal.NoStreams
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import play.api.mvc.{Codec, MultipartFormData}
+import sttp.capabilities.akka.AkkaStreams
+import sttp.model.{HasHeaders, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
-  override val streams: NoStreams = NoStreams
+class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
+
+  override val streams: AkkaStreams = AkkaStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity = {
     fromRawValue(v, headers, bodyType)
@@ -40,7 +41,7 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), None, contentType)
+        HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
       case RawBodyType.FileBody =>
         val path = v.asInstanceOf[File].toPath
@@ -76,12 +77,13 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
     }
   }
 
-  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity =
-    throw new UnsupportedOperationException
+  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity = {
+    HttpEntity.Streamed(v, headers.contentLength, Option(formatToContentType(format, charset)))
+  }
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
   ): HttpEntity = throw new UnsupportedOperationException
 
   private def rawPartsToFilePart[T](
@@ -117,20 +119,8 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
     }
   }
 
-  private def formatToContentType(format: CodecFormat): Option[String] = {
-    val result = format.mediaType.copy(charset = format.mediaType.charset.map(_.toLowerCase)) match {
-      case MediaType.ApplicationJson               => ContentTypes.JSON
-      case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(format.mediaType.charset.getOrElse("utf-8")))
-      case MediaType.TextPlainUtf8                 => ContentTypes.TEXT(Codec.utf_8)
-      case MediaType.TextHtml                      => ContentTypes.HTML(Codec.utf_8)
-      case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
-      case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
-      case MediaType.MultipartFormData             => "multipart/form-data"
-      case m                                       => m.toString()
-    }
-
-    Option(result)
-  }
+  private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String =
+    charset.fold(format.mediaType)(format.mediaType.charset(_)).toString()
 
   private def multipartFormToStream[A](
       dataParts: Seq[DataPart],

@@ -1,7 +1,9 @@
 package sttp.tapir.ztapir
 
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
-import sttp.capabilities.Streams
+import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
 import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
@@ -62,14 +64,18 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     }
   }
 
-  private def errorToResponse(error: Throwable): UIO[Option[ServerResponse[ResponseBodyType]]] =
-    ZIO.some(ServerResponse(StatusCode.InternalServerError, scala.collection.immutable.Seq.empty[Header], Some(error.getMessage)))
+  private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
+    UIO(
+      RequestResult.Response(
+        ServerResponse(StatusCode.InternalServerError, scala.collection.immutable.Seq.empty[Header], Some(error.getMessage))
+      )
+    )
 
   final case class User(name: String)
 
   private def failedAutLogic(userName: String): UIO[User] = ZIO(10 / 0).orDie.as(User(userName))
 
-  val interpreter = new ServerInterpreter[Any, TestEffect, ResponseBodyType, RequestBodyType](
+  val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
     exampleRequestBody,
     exampleToResponse,
     List.empty,
@@ -84,7 +90,11 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     interpreter[Unit, TestError, String](testRequest, serverEndpoint)
       .catchAll(errorToResponse)
-      .map(maybeResponse => assert(maybeResponse.map(_.code))(equalTo(Some(StatusCode.InternalServerError))))
+      .map { result =>
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+        )
+      }
   }
 
   private val testZServerLogicPartErrorHandling = testM("zServerLogicPart error handling") {
@@ -98,7 +108,11 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     interpreter[String, TestError, String](testRequest, serverEndpoint)
       .catchAll(errorToResponse)
-      .map(maybeResponse => assert(maybeResponse.map(_.code))(equalTo(Some(StatusCode.InternalServerError))))
+      .map { result =>
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+        )
+      }
   }
 
   private val testZServerLogicForCurrentErrorHandling = testM("zServerLogicForCurrent error handling") {
@@ -114,6 +128,10 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     interpreter(testRequest, serverEndpoint)
       .catchAll(errorToResponse)
-      .map(maybeResponse => assert(maybeResponse.map(_.code))(equalTo(Some(StatusCode.InternalServerError))))
+      .map { result =>
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+        )
+      }
   }
 }

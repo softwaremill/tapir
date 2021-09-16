@@ -1,6 +1,7 @@
 package sttp.tapir.serverless.aws.examples
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe.Printer
@@ -22,9 +23,9 @@ object LambdaApiExample extends RequestStreamHandler {
     .out(stringBody)
     .serverLogic { _ => IO.pure(s"Hello!".asRight[Unit]) }
 
-  implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+  val options: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
 
-  val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(helloEndpoint)
+  val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 

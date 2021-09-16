@@ -7,35 +7,35 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
-    interceptors: List[Interceptor[F, B]],
+    interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
+  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
     apply(request, List(se))
 
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
-    callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request)
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[RequestResult[B]] =
+    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
-      is: List[Interceptor[F, B]],
-      eisAcc: List[EndpointInterceptor[F, B]],
+      is: List[Interceptor[F]],
+      eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B],
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse) }
-      case (i: RequestInterceptor[F, B]) :: tail =>
+      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
+      case (i: RequestInterceptor[F]) :: tail =>
         i(
           responder,
           { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
         )
-      case (ei: EndpointInterceptor[F, B]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
+      case (ei: EndpointInterceptor[F]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
     }
   }
 
@@ -43,26 +43,38 @@ class ServerInterpreter[R, F[_], B, S](
   private def firstNotNone(
       request: ServerRequest,
       ses: List[ServerEndpoint[_, _, _, R, F]],
-      endpointInterceptors: List[EndpointInterceptor[F, B]]
-  ): F[Option[ServerResponse[B]]] =
+      endpointInterceptors: List[EndpointInterceptor[F]],
+      accumulatedFailureContexts: List[DecodeFailureContext]
+  ): F[RequestResult[B]] =
     ses match {
-      case Nil => (None: Option[ServerResponse[B]]).unit
+      case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
         tryServerEndpoint(request, se, endpointInterceptors).flatMap {
-          case None => firstNotNone(request, tail, endpointInterceptors)
-          case r    => r.unit
+          case RequestResult.Failure(failureContexts) =>
+            firstNotNone(request, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
+          case r => r.unit
         }
     }
 
   private def tryServerEndpoint[I, E, O](
       request: ServerRequest,
       se: ServerEndpoint[I, E, O, R, F],
-      endpointInterceptors: List[EndpointInterceptor[F, B]]
-  ): F[Option[ServerResponse[B]]] = {
+      endpointInterceptors: List[EndpointInterceptor[F]]
+  ): F[RequestResult[B]] = {
     val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
 
     def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
       case (interceptor, handler) => interceptor(responder(defaultStatusCode), handler)
+    }
+
+    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+      val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
+      endpointHandler(defaultErrorStatusCode)
+        .onDecodeFailure(decodeFailureContext)
+        .map {
+          case Some(response) => RequestResult.Response(response)
+          case None           => RequestResult.Failure(List(decodeFailureContext))
+        }
     }
 
     decodeBody(decodedBasicInputs).flatMap {
@@ -71,12 +83,10 @@ class ServerInterpreter[R, F[_], B, S](
           case InputValueResult.Value(params, _) =>
             endpointHandler(defaultSuccessStatusCode)
               .onDecodeSuccess(interceptor.DecodeSuccessContext(se, params.asAny.asInstanceOf[I], request))
-              .map(Some(_))
-          case InputValueResult.Failure(input, failure) =>
-            endpointHandler(defaultErrorStatusCode).onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
+              .map(RequestResult.Response(_))
+          case InputValueResult.Failure(input, failure) => onDecodeFailure(input, failure)
         }
-      case DecodeBasicInputsResult.Failure(input, failure) =>
-        endpointHandler(defaultErrorStatusCode).onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
+      case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure)
     }
   }
 
@@ -95,7 +105,7 @@ class ServerInterpreter[R, F[_], B, S](
               }
             }
 
-          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _))), _)) =>
+          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {
               case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
               case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult

@@ -13,8 +13,8 @@ import sttp.tapir.server.interpreter.ToResponseBody
 import java.io.InputStream
 import java.nio.charset.Charset
 
-class FinatraToResponseBody extends ToResponseBody[FinatraContent, Nothing] {
-  override val streams: Streams[Nothing] = NoStreams
+class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
+  override val streams: NoStreams = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): FinatraContent = {
     bodyType match {
@@ -82,6 +82,6 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, Nothing] {
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): FinatraContent = throw new UnsupportedOperationException
 }

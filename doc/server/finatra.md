@@ -55,13 +55,14 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = FinatraServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
+val countCharactersRoute: FinatraRoute = FinatraServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 or a cats-effect's example:
 
 ```scala mdoc:compile-only
 import cats.effect.IO
+import cats.effect.std.Dispatcher
 import sttp.tapir._
 import sttp.tapir.server.finatra.FinatraRoute
 import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter
@@ -72,7 +73,9 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
+def dispatcher: Dispatcher[IO] = ???
+  
+val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter(dispatcher).toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`.  This means that 
@@ -85,7 +88,7 @@ import com.twitter.util.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val aRoute: FinatraRoute = FinatraServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
+val aRoute: FinatraRoute = FinatraServerInterpreter().toRoute(anEndpoint)((logic _).tupled)
 ```
 
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then

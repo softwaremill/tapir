@@ -1,5 +1,7 @@
 package sttp.tapir.client.tests
 
+import cats.effect.unsafe.implicits.global
+
 import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
@@ -143,12 +145,22 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       }
     }
 
-    testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
+    testClient[Unit, Unit, Unit](in_unit_out_json_unit, (), Right(()))
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
         .unsafeToFuture()
         .map(_ shouldBe Right("Location: secret"))
+    }
+
+    // when there's a 404, fetch API seems to throw an exception, not giving us the opportunity to parse the result
+    if (!platformIsScalaJS) {
+      test("not existing endpoint, with error output not matching 404") {
+        safeSend(not_existing_endpoint, port, ())
+          .unsafeToFuture()
+          .map(_ should matchPattern { case DecodeResult.Error(_, _: IllegalArgumentException) =>
+          })
+      }
     }
   }
 }

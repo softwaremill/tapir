@@ -4,14 +4,15 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import sttp.tapir.swagger.http4s.SwaggerHttp4s
+import sttp.tapir.swagger.SwaggerUI
 import sttp.tapir.ztapir._
 import zio.clock.Clock
+import zio.blocking.Blocking
 import zio.interop.catz._
 import zio.{App, ExitCode, IO, RIO, UIO, URIO, ZEnv, ZIO}
 
@@ -22,7 +23,7 @@ object ZioExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter
+  val petRoutes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
     .from(petEndpoint) { petId =>
       if (petId == 35) {
         UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
@@ -40,22 +41,25 @@ object ZioExampleHttp4sServer extends App {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.from(petServerEndpoint).toRoutes
+  val petServerRoutes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
 
   //
 
   val yaml: String = {
     import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter.toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
+    OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
   }
+
+  val swaggerRoutes: HttpRoutes[RIO[Clock with Blocking, *]] =
+    ZHttp4sServerInterpreter().from(SwaggerUI[RIO[Clock with Blocking, *]](yaml)).toRoutes
 
   // Starting the server
   val serve: ZIO[ZEnv, Throwable, Unit] =
     ZIO.runtime[ZEnv].flatMap { implicit runtime => // This is needed to derive cats-effect instances for that are needed by http4s
-      BlazeServerBuilder[RIO[Clock, *]](runtime.platform.executor.asEC)
+      BlazeServerBuilder[RIO[Clock with Blocking, *]](runtime.platform.executor.asEC)
         .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (petRoutes <+> new SwaggerHttp4s(yaml).routes)).orNotFound)
+        .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
         .serve
         .compile
         .drain

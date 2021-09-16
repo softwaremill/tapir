@@ -4,11 +4,11 @@ import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import sttp.tapir.server.interpreter.BodyListener
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-class AkkaBodyListener extends BodyListener[Future, AkkaResponseBody] {
+class AkkaBodyListener(implicit ec: ExecutionContext) extends BodyListener[Future, AkkaResponseBody] {
   override def onComplete(body: AkkaResponseBody)(cb: Try[Unit] => Future[Unit]): Future[AkkaResponseBody] = {
     body match {
       case ws @ Left(_) => cb(Success(())).map(_ => ws)

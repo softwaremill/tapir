@@ -30,11 +30,13 @@ import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerBasicTests[F[_], ROUTE, B](
-    createServerTest: CreateServerTest[F, Any, ROUTE, B],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE, B],
+class ServerBasicTests[F[_], ROUTE](
+    createServerTest: CreateServerTest[F, Any, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
-    inputStreamSupport: Boolean = true
+    inputStreamSupport: Boolean = true,
+    supportsUrlEncodedPathSegments: Boolean = true,
+    supportsMultipleSetCookieHeaders: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -62,6 +64,10 @@ class ServerBasicTests[F[_], ROUTE, B](
     },
     testServer(endpoint, "POST empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(baseUri).send(backend).map(_.body shouldBe Right(""))
+    },
+    testServer(out_fixed_content_type_header, "Fixed content-type header")((_: Unit) => pureResult("".asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest.get(baseUri).send(backend).map(_.headers.toSet should contain(Header("Content-Type", "text/csv")))
     },
     testServer(endpoint.get, "GET a GET endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
@@ -96,7 +102,11 @@ class ServerBasicTests[F[_], ROUTE, B](
     testServer(in_path_path_out_string, "with URL encoding") { case (fruit: String, amount: Int) =>
       pureResult(s"$fruit $amount".asRight[Unit])
     } { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri/fruit/apple%2Fred/amount/20").send(backend).map(_.body shouldBe Right("apple/red 20"))
+      if (supportsUrlEncodedPathSegments) {
+        basicRequest.get(uri"$baseUri/fruit/apple%2Fred/amount/20").send(backend).map(_.body shouldBe Right("apple/red 20"))
+      } else {
+        IO.pure(succeed)
+      }
     },
     testServer(in_path, "Empty path should not be passed to path capture decoding") { _ => pureResult(Right(())) } { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/api/").send(backend).map(_.code shouldBe StatusCode.NotFound)
@@ -207,7 +217,7 @@ class ServerBasicTests[F[_], ROUTE, B](
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
     testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
-      pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2}").mkString("&").asRight[Unit])
+      pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2.toList}").mkString("&").asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri/api/echo/params?flag")
@@ -238,7 +248,7 @@ class ServerBasicTests[F[_], ROUTE, B](
         .send(backend)
         .map { r =>
           if (multipleValueHeaderSupport) {
-            r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
+            r.headers.filter(_.is("hh")).map(_.value).toSet shouldBe Set("v3", "v2", "v1", "v0")
           } else {
             r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
           }
@@ -247,10 +257,14 @@ class ServerBasicTests[F[_], ROUTE, B](
     testServer(in_cookies_out_cookies)((cs: List[sttp.model.headers.Cookie]) =>
       pureResult(cs.map(c => CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
     ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
-        r.unsafeCookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
+      if (supportsMultipleSetCookieHeaders) {
+        basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
+          r.unsafeCookies.map(c => (c.name, c.value)).toSet shouldBe Set(("c1", "1v"), ("c2", "2v"))
+        }
+      } else {
+        IO.pure(succeed)
       }
-    },
+    }, // Fails because of lack in Zio Http support for Set-Cookie header https://github.com/dream11/zio-http/issues/187
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
     ) { (backend, baseUri) =>
@@ -385,8 +399,8 @@ class ServerBasicTests[F[_], ROUTE, B](
         basicRequest.get(uri"$baseUri/api/echo/hello").send(backend).map(_.code shouldBe StatusCode.NotFound) >>
           basicRequest.get(uri"$baseUri/api/echo/").send(backend).map(_.code shouldBe StatusCode.NotFound)
     },
-    testServer(in_string_out_status, "custom status code")((_: String) => pureResult(StatusCode(470).asRight[Unit])) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?fruit=apple").send(backend).map(_.code shouldBe StatusCode(470))
+    testServer(in_string_out_status, "custom status code")((_: String) => pureResult(StatusCode(431).asRight[Unit])) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?fruit=apple").send(backend).map(_.code shouldBe StatusCode(431))
     },
     testServer(in_string_out_status_from_string)((v: String) => pureResult((if (v == "apple") Right("x") else Left(10)).asRight[Unit])) {
       (backend, baseUri) =>
@@ -529,25 +543,25 @@ class ServerBasicTests[F[_], ROUTE, B](
         .header("A", "1")
         .header("X", "3")
         .send(backend)
-        .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("Y" -> "3", "B" -> "2"))
+        .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("y" -> "3", "b" -> "2"))
     },
     testServer(in_4query_out_4header_extended)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri?a=1&b=2&x=3&y=4")
         .send(backend)
-        .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
+        .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("a" -> "1", "b" -> "2", "x" -> "3", "y" -> "4"))
     },
     testServer(in_3query_out_3header_mapped_to_tuple)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri?p1=1&p2=2&p3=3")
         .send(backend)
-        .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "1", "P2" -> "2", "P3" -> "3"))
+        .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("p1" -> "1", "p2" -> "2", "p3" -> "3"))
     },
     testServer(in_2query_out_2query_mapped_to_unit)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri?p1=1&p2=2")
         .send(backend)
-        .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "DEFAULT_HEADER", "P2" -> "2"))
+        .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("p1" -> "DEFAULT_HEADER", "p2" -> "2"))
     },
     testServer(in_query_with_default_out_string)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
@@ -743,7 +757,7 @@ class ServerBasicTests[F[_], ROUTE, B](
         .in(query[String]("z"))
         .in(query[String]("u"))
         .out(plainBody[Int])
-        .serverLogicPart { t: (String, String) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
+        .serverLogicPart { (t: (String, String)) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
         .andThen { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
       "partial server logic - parts, one part, multiple values"
     ) { (backend, baseUri) =>

@@ -15,8 +15,8 @@ import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
-abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
-    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE, B],
+abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
+    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
     val streams: S
 )(implicit
     m: MonadError[F]
@@ -35,7 +35,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       "string client-terminated echo"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")
@@ -50,13 +50,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
 
       val reqCounter = newRequestCounter[F]
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
       testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>
         pureResult(stringEcho.asRight[Unit])
       ) { (backend, baseUri) =>
         basicRequest
-          .response(asWebSocket { ws: WebSocket[IO] =>
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {
               _ <- ws.sendText("test1")
               m <- ws.receiveText()
@@ -75,7 +75,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       (_: Unit) => pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("""{"f":"apple"}""")
             _ <- ws.sendText("""{"f":"orange"}""")
@@ -97,7 +97,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       }.asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")

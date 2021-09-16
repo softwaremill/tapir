@@ -1,6 +1,6 @@
 package sttp.tapir.docs
 
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
 
@@ -8,7 +8,7 @@ package object apispec {
   private[docs] type SchemeName = String
   private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
 
-  private[docs] val defaultSchemaName: SObjectInfo => String = info => {
+  private[docs] val defaultSchemaName: SName => String = info => {
     val shortName = info.fullName.split('.').last
     (shortName +: info.typeParameterShortNames).mkString("_")
   }
@@ -23,8 +23,7 @@ package object apispec {
     result
   }
 
-  private[docs] def rawToString[T](v: Any): String = v.toString
-  private[docs] def encodeToString[T](codec: Codec[_, T, _]): T => Option[String] = e => Some(rawToString(codec.encode(e)))
+  private def rawToString[T](v: Any): String = v.toString
 
   private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))

@@ -2,7 +2,6 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.effect.IO
 import cats.implicits._
-import com.softwaremill.macwire.wireSet
 import sttp.model.Header
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
@@ -39,5 +38,13 @@ package object tests {
       : ServerEndpoint[((String, String), String, String), Unit, ((String, String), String, String), Any, IO] =
     in_4query_out_4header_extended.in("echo" / "query").serverLogic { in => IO.pure(in.asRight[Unit]) }
 
-  val allEndpoints: Set[ServerEndpoint[_, _, _, Any, IO]] = wireSet[ServerEndpoint[_, _, _, Any, IO]]
+  val allEndpoints: Set[ServerEndpoint[_, _, _, Any, IO]] = Set(
+    health_endpoint,
+    in_path_path_out_string_endpoint,
+    in_string_out_string_endpoint,
+    in_json_out_json_endpoint,
+    in_headers_out_headers_endpoint,
+    in_input_stream_out_input_stream_endpoint,
+    in_4query_out_4header_extended_endpoint
+  )
 }

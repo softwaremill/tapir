@@ -1,14 +1,14 @@
 package sttp.tapir.json.circe
 
-import io.circe.DecodingFailure
+import io.circe.{Encoder, Errors, Json}
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 import sttp.tapir.generic.auto._
-import sttp.tapir.{DecodeResult, FieldName}
 
 class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
@@ -30,8 +30,10 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
-      List(JsonError("Attempt to decode value on failed cursor", List(FieldName("name"))))
-    error.underlying shouldBe a[DecodingFailure]
+      List(
+        JsonError("Attempt to decode value on failed cursor", List(FieldName("name"))),
+        JsonError("Attempt to decode value on failed cursor", List(FieldName("yearOfBirth")))
+      )
   }
 
   it should "return a JSON specific error on array decode failure" in {
@@ -46,8 +48,11 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
-      List(JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("serialNumber"))))
-    error.underlying shouldBe a[DecodingFailure]
+      List(
+        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("serialNumber"))),
+        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("price")))
+      )
+    error.underlying shouldBe a[Errors]
   }
 
   it should "return a coproduct schema for a Json" in {
@@ -58,4 +63,9 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     schemaForCirceJsonObject.schemaType shouldBe a[SProduct[_]]
   }
 
+  it should "represent big decimals as numbers" in {
+    val n = BigDecimal(10)
+    implicitly[Encoder[BigDecimal]].apply(n) shouldBe Json.fromDoubleOrNull(10)
+    implicitly[Schema[BigDecimal]] shouldBe Schema(SchemaType.SNumber())
+  }
 }

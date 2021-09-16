@@ -15,25 +15,27 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route, RoutingContext => Unit] {
+class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
   import VertxTestServerInterpreter._
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Router => Route = {
-    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
-      metricsInterceptor = metricsInterceptor,
-      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
-    VertxFutureServerInterpreter.route(e)
+    val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
+    VertxFutureServerInterpreter(options).route(e)
   }
+
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Router => Route = ???
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
-    VertxFutureServerInterpreter.routeRecoverErrors(e)(fn)
+    VertxFutureServerInterpreter().routeRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
@@ -46,7 +48,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
 
 object VertxTestServerInterpreter {
   def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
-    IO.async[A] { cb =>
+    IO.async_[A] { cb =>
       future
         .onFailure { cause => cb(Left(cause)) }
         .onSuccess { result => cb(Right(result)) }

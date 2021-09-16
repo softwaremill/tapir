@@ -2,6 +2,7 @@ package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
 import cats.effect.{IO, Resource}
+import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
@@ -9,6 +10,8 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerStaticContentTests,
+  ServerStreamingTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -25,15 +28,13 @@ class PlayServerTest extends TestSuite {
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(
-        createServerTest,
-        interpreter,
-        multipleValueHeaderSupport = false,
-        inputStreamSupport = false
-      ).tests() ++
-        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests()
-      new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests()
+      new ServerBasicTests(createServerTest, interpreter, multipleValueHeaderSupport = false, inputStreamSupport = false).tests() ++
+        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
+        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
+        new ServerAuthenticationTests(createServerTest).tests() ++
+        new ServerMetricsTest(createServerTest).tests() ++
+        new PlayServerWithContextTest(backend).tests() ++
+        new ServerStaticContentTests(interpreter, backend).tests()
     }
   }
 }

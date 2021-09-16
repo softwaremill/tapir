@@ -8,25 +8,30 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/** An endpoint, with some of the server logic already provided, and some left unspecified.
-  * See [[Endpoint.serverLogicForCurrent]].
+/** An endpoint, with some of the server logic already provided, and some left unspecified. See [[Endpoint.serverLogicForCurrent]].
   *
-  * The part of the server logic which is provided transforms some inputs of type `T`, either to an error of type `E`,
-  * or value of type `U`.
+  * The part of the server logic which is provided transforms some inputs of type `T`, either to an error of type `E`, or value of type `U`.
   *
-  * The part of the server logic which is not provided, will have to transform a tuple: `(U, I)` either into an error,
-  * or a value of type `O`.
+  * The part of the server logic which is not provided, will have to transform a tuple: `(U, I)` either into an error, or a value of type
+  * `O`.
   *
-  * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs
-  * is fixed and cannot be changed.
+  * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs is fixed and cannot be
+  * changed.
   *
-  * @tparam T Original type of the input, transformed into U
-  * @tparam U Type of partially transformed input.
-  * @tparam I Input parameter types.
-  * @tparam E Error output parameter types.
-  * @tparam O Output parameter types.
-  * @tparam R The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
-  * @tparam F The effect type used in the provided partial server logic.
+  * @tparam T
+  *   Original type of the input, transformed into U
+  * @tparam U
+  *   Type of partially transformed input.
+  * @tparam I
+  *   Input parameter types.
+  * @tparam E
+  *   Error output parameter types.
+  * @tparam O
+  *   Output parameter types.
+  * @tparam R
+  *   The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
+  * @tparam F
+  *   The effect type used in the provided partial server logic.
   */
 abstract class PartialServerEndpoint[T, U, I, E, O, -R, F[_]](partialEndpoint: Endpoint[I, E, O, R])
     extends EndpointInputsOps[I, E, O, R]

@@ -1,20 +1,22 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
+import cats.effect.Async
 import cats.syntax.all._
+import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
 import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.util.CaseInsensitiveString
+import org.http4s.Header.ToRaw.rawToRaw
+import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.model.{HasHeaders, Part, Header => SttpHeader}
+import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 
-private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift, G[_]](
+private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
     serverOptions: Http4sServerOptions[F, G]
 ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
@@ -39,17 +41,16 @@ private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
-        fs2.Stream.chunk(Chunk.bytes(bytes))
-      case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.bytes(r))
+        fs2.Stream.chunk(Chunk.array(bytes))
+      case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.array(r))
       case RawBodyType.ByteBufferBody => fs2.Stream.chunk(Chunk.byteBuffer(r))
       case RawBodyType.InputStreamBody =>
         fs2.io.readInputStream(
           r.pure[F],
-          serverOptions.ioChunkSize,
-          Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)
+          serverOptions.ioChunkSize
         )
       case RawBodyType.FileBody =>
-        fs2.io.file.readAll[F](r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize)
+        Files[F].readAll(r.toPath, serverOptions.ioChunkSize)
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
@@ -59,19 +60,22 @@ private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map { header =>
-        Header.Raw(CaseInsensitiveString(header.name), header.value)
+      val headers: List[Header.ToRaw] = part.headers.map { header =>
+        rawToRaw(Header.Raw(CIString(header.name), header.value))
       }.toList
 
-      val partContentType = part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
+      val partContentType =
+        part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
       val entity = rawValueToEntity(partType.asInstanceOf[RawBodyType[Any]], part.body)
 
-      val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
-      val contentDispositionHeader = `Content-Disposition`("form-data", dispositionParams)
+      val dispositionParams = (part.otherDispositionParams + (Part.NameDispositionParam -> part.name)).map { case (k, v) =>
+        CIString(k) -> v
+      }
+      val contentDispositionHeader: Header.ToRaw = `Content-Disposition`("form-data", dispositionParams)
 
-      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
+      val shouldAddCtHeader = part.headers.exists(_.is(HeaderNames.ContentType))
       val allHeaders = if (shouldAddCtHeader) {
-        Headers(partContentType :: contentDispositionHeader :: headers)
+        Headers.apply((partContentType: Header.ToRaw) :: contentDispositionHeader :: headers)
       } else {
         Headers(contentDispositionHeader :: headers)
       }

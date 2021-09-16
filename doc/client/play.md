@@ -53,7 +53,7 @@ def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
   val e: Endpoint[I, E, O, R] = ???
   val inputArgs: I = ???
   
-  val (req, responseParser) = PlayClientInterpreter
+  val (req, responseParser) = PlayClientInterpreter()
       .toRequestUnsafe(e, s"http://localhost:9000")
       .apply(inputArgs)
   

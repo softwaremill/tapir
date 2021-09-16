@@ -13,7 +13,7 @@ class VerifyJsonTest extends AnyFunSuite with Matchers {
   test("should match the expected json") {
     val expectedJson = load("expected.json")
 
-    val actualJson = OpenAPIDocsInterpreter.toOpenAPI(List(in_query_query_out_string, delete_endpoint), Info("Fruits", "1.0")).asJson
+    val actualJson = OpenAPIDocsInterpreter().toOpenAPI(List(in_query_query_out_string, delete_endpoint), Info("Fruits", "1.0")).asJson
     val actualJsonNoIndent = noIndentation(Printer.spaces2.print(actualJson))
 
     actualJsonNoIndent shouldBe expectedJson

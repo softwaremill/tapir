@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{MediaType, Method, StatusCode}
+import sttp.model.{ContentTypeRange, MediaType, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
@@ -12,11 +12,11 @@ import scala.util.{Failure, Success, Try}
 
 package object internal {
 
-  /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output:
-    * no parameters, a single parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
+  /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output: no parameters, a single
+    * parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
     *
-    * There are two views on parameters: [[ParamsAsAny]], where the parameters are represented as instances of
-    * the union type, or [[ParamsAsVector]], where the parameters are represented as a vector of size 0/1/2+.
+    * There are two views on parameters: [[ParamsAsAny]], where the parameters are represented as instances of the union type, or
+    * [[ParamsAsVector]], where the parameters are represented as a vector of size 0/1/2+.
     */
   sealed trait Params {
     def asAny: Any
@@ -131,7 +131,7 @@ package object internal {
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
-    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs are skipped.
+    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs without metadata are skipped.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
     def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
       asBasicOutputsOrList match {
@@ -171,9 +171,13 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
           Right(entries)
-        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
+        case e: EndpointIO.Empty[_]     => if (hasMetaData(e)) Left(Vector(e)) else Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
+    }
+
+    private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
+      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
@@ -207,7 +211,10 @@ package object internal {
         case m                                 => m
       }
 
-      supportedMediaTypes.exists(_ == contentToMatch)
+      val contentTypeRange =
+        ContentTypeRange(contentToMatch.mainType, contentToMatch.subType, contentToMatch.charset.getOrElse(ContentTypeRange.Wildcard))
+
+      supportedMediaTypes.exists(_.matches(contentTypeRange))
     }
   }
 
@@ -293,8 +300,14 @@ package object internal {
     }
   }
 
-  implicit class ValidatorSyntax(v: Validator[_]) {
+  implicit class SortListMap[K, V](m: immutable.ListMap[K, V]) {
+    def sortByKey(implicit ko: Ordering[K]): immutable.ListMap[K, V] = sortBy(_._1)
+    def sortBy[B: Ordering](f: ((K, V)) => B): immutable.ListMap[K, V] = {
+      m.toList.sortBy(f).toListMap
+    }
+  }
 
+  implicit class ValidatorSyntax[T](v: Validator[T]) {
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
       def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
         v match {
@@ -308,7 +321,31 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] =
+    def traversePrimitives[U](handle: PartialFunction[Validator.Primitive[_], Vector[U]]): Vector[U] =
       asPrimitiveValidators.collect(handle).flatten.toVector
+
+    def inferEnumerationEncode: Validator[T] = {
+      v match {
+        case Validator.Enumeration(possibleValues, None, name) =>
+          if (possibleValues.forall(isBasicValue)) Validator.Enumeration(possibleValues, Some((x: T) => Some(x)), name) else v
+        case Validator.Mapped(wrapped, g) => Validator.Mapped(wrapped.inferEnumerationEncode, g)
+        case Validator.All(validators)    => Validator.All(validators.map(_.inferEnumerationEncode))
+        case Validator.Any(validators)    => Validator.Any(validators.map(_.inferEnumerationEncode))
+        case _                            => v
+      }
+    }
+  }
+
+  def isBasicValue(v: Any): Boolean = v match {
+    case _: String     => true
+    case _: Int        => true
+    case _: Long       => true
+    case _: Float      => true
+    case _: Double     => true
+    case _: Boolean    => true
+    case _: BigDecimal => true
+    case _: BigInt     => true
+    case null          => true
+    case _             => false
   }
 }

@@ -19,23 +19,26 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route, AkkaResponseBody] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Route = {
-    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
-      metricsInterceptor = metricsInterceptor,
-      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
-    AkkaHttpServerInterpreter.toRoute(e)
+    val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
+    AkkaHttpServerInterpreter(serverOptions).toRoute(e)
   }
+
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future]]): Route =
+    AkkaHttpServerInterpreter().toRoute(es)
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Route = {
-    AkkaHttpServerInterpreter.toRouteRecoverErrors(e)(fn)
+    AkkaHttpServerInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {

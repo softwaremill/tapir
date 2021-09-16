@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M12"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M12"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.19.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.19.0-M9"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -26,7 +26,7 @@ case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
   webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
-val docs: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(echoWS, "Echo web socket", "1.0")
+val docs: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(echoWS, "Echo web socket", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
@@ -41,7 +41,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 ```scala
 import sttp.tapir.asyncapi.Server
 
-val docsWithServers: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(
+val docsWithServers: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(
   echoWS, 
   "Echo web socket", 
   "1.0",
@@ -63,15 +63,17 @@ println(docs.toYaml)
 
 ## Options
 
-Options can be customised by providing an implicit instance of `AsyncAPIDocsOptions`, when calling `.toAsyncAPI`.
+Options can be customised by providing an instance of `AsyncAPIDocsOptions` to the interpreter:
 
 * `subscribeOperationId`: basing on the endpoint's path and the entire endpoint, determines the id of the subscribe 
   operation. This can be later used by code generators as the name of the method to receive messages from the socket.
 * `publishOperationId`: as above, but for publishing (sending messages to the web socket).
-* `referenceEnums`: defines if enums should be converted to async api components and referenced later.
-  This option can be applied to all enums in the schema, or only specific ones.
-  `SObjectInfo` input parameter is a unique identifier of object in the schema.
-  By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+
+## Inlined and referenced schemas
+
+All named schemas (that is, schemas which have the `Schema.name` property defined) will be referenced at point of
+use, and their definitions will be part of the `components` section. If you'd like a schema to be inlined, instead
+of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 
 ## AsyncAPI Specification Extensions
 

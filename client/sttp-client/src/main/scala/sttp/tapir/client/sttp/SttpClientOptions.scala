@@ -5,5 +5,5 @@ import sttp.tapir.{Defaults, TapirFile}
 case class SttpClientOptions(createFile: () => TapirFile)
 
 object SttpClientOptions {
-  implicit val default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)
+  val default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)
 }

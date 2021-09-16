@@ -11,7 +11,7 @@ import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.Test
 
-class ServerAuthenticationTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest[F, S, ROUTE, B])(implicit m: MonadError[F])
+class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE])(implicit m: MonadError[F])
     extends Matchers {
   import createServerTest._
   private val Realm = "realm"

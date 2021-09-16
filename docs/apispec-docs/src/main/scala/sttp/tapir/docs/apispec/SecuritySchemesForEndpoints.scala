@@ -70,6 +70,6 @@ private[docs] object SecuritySchemesForEndpoints {
       case Vector(EndpointIO.Header(name, _, _))    => (name, "header")
       case Vector(EndpointInput.Query(name, _, _))  => (name, "query")
       case Vector(EndpointInput.Cookie(name, _, _)) => (name, "cookie")
-      case _                                        => throw new IllegalArgumentException(s"Api key authentication can only be read from headers, queries or cookies, not: $input")
+      case _ => throw new IllegalArgumentException(s"Api key authentication can only be read from headers, queries or cookies, not: $input")
     }
 }

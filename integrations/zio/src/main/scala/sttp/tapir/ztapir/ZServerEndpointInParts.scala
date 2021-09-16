@@ -8,19 +8,23 @@ import zio.ZIO
 
 /** An endpoint description together with partial server logic. See [[RichZEndpoint.zServerLogicPart]].
   *
-  * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of
-  * type `U`.
+  * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of type `U`.
   *
-  * The part of the server logic which is not provided, transforms a tuple: `(U, J)` either into an error of type `E`,
-  * or a value of type `O`.
+  * The part of the server logic which is not provided, transforms a tuple: `(U, J)` either into an error of type `E`, or a value of type
+  * `O`.
   *
-  * @tparam R The environment needed by the partial server logic.
-  * @tparam U The type of the value returned by the partial server logic.
-  * @tparam J Remaining input parameter types, for which logic has yet to be provided.
-  * @tparam I Entire input parameter types. `I = T + J`, where `T` is the part of the input consumed by the partial
-  *           logic, and converted to `U`.
-  * @tparam E Error output parameter types.
-  * @tparam O Output parameter types.
+  * @tparam R
+  *   The environment needed by the partial server logic.
+  * @tparam U
+  *   The type of the value returned by the partial server logic.
+  * @tparam J
+  *   Remaining input parameter types, for which logic has yet to be provided.
+  * @tparam I
+  *   Entire input parameter types. `I = T + J`, where `T` is the part of the input consumed by the partial logic, and converted to `U`.
+  * @tparam E
+  *   Error output parameter types.
+  * @tparam O
+  *   Output parameter types.
   */
 abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[I, E, O])
     extends EndpointInfoOps[I, E, O, Nothing]
@@ -47,8 +51,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
 
   override protected def showType: String = "FragmentedServerEndpoint"
 
-  /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and
-    * the remaining input.
+  /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and the remaining input.
     */
   def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2, I, E, O] =
     ServerEndpoint(
@@ -61,9 +64,8 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
       }
     )
 
-  /** Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be
-    * completed with a function accepting as arguments outputs of both previous and this server logic parts, and
-    * the input.
+  /** Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be completed with a
+    * function accepting as arguments outputs of both previous and this server logic parts, and the input.
     */
   def andThenPart[R2 <: R, T2, J2, V, UV](
       nextPart: T2 => ZIO[R2, E, V]

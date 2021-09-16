@@ -1,4 +1,3 @@
-
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(

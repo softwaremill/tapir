@@ -5,7 +5,7 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 import sttp.client3._
@@ -20,12 +20,9 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 
-object OAuth2GithubHttp4sServer extends App {
+object OAuth2GithubHttp4sServer extends IOApp {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val ce: ConcurrentEffect[IO] = IO.ioConcurrentEffect
 
   // github application details
   val clientId = "<put your client id here>"
@@ -40,7 +37,7 @@ object OAuth2GithubHttp4sServer extends App {
 
   case class AccessDetails(token: String)
 
-  val authorizationUrl = "https://github.com/login/oauth/authorize"
+  val authorizationUrl = Some("https://github.com/login/oauth/authorize")
   val accessTokenUrl = Some("https://github.com/login/oauth/access_token")
 
   val authOAuth2 = auth.oauth2.authorizationCode(authorizationUrl, ListMap.empty, accessTokenUrl)
@@ -69,11 +66,12 @@ object OAuth2GithubHttp4sServer extends App {
   // converting endpoints to routes
 
   // simply redirect to github auth service
-  val loginRoute: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
+  val loginRoute: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
 
   // after successful authorization github redirects you here
   def loginGithubRoute(backend: SttpBackend[IO, Any]): HttpRoutes[IO] =
-    Http4sServerInterpreter.toRoutes(loginGithub)(code =>
+    Http4sServerInterpreter[IO]().toRoutes(loginGithub)(code =>
       basicRequest
         .response(asStringAlways)
         .post(uri"$accessTokenUrl?client_id=$clientId&client_secret=$clientSecret&code=$code")
@@ -98,7 +96,7 @@ object OAuth2GithubHttp4sServer extends App {
   }
 
   // get user details from decoded jwt
-  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(secretPlace)(token =>
+  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(secretPlace)(token =>
     IO(
       for {
         authDetails <- authenticate(token)
@@ -109,20 +107,22 @@ object OAuth2GithubHttp4sServer extends App {
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
 
-  // starting the server
-  httpClient
-    .use(backend =>
-      BlazeServerBuilder[IO](ec)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
-        .resource
-        .use { _ =>
-          IO {
-            println("Go to: http://localhost:8080")
-            println("Press any key to exit ...")
-            scala.io.StdIn.readLine()
+  override def run(args: List[String]): IO[ExitCode] = {
+    // starting the server
+    httpClient
+      .use(backend =>
+        BlazeServerBuilder[IO](ec)
+          .bindHttp(8080, "localhost")
+          .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
+          .resource
+          .use { _ =>
+            IO {
+              println("Go to: http://localhost:8080")
+              println("Press any key to exit ...")
+              scala.io.StdIn.readLine()
+            }
           }
-        }
-    )
-    .unsafeRunSync()
+      )
+      .as(ExitCode.Success)
+  }
 }

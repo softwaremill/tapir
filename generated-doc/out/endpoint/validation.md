@@ -61,13 +61,20 @@ To customise error messages that are returned upon validation/decode failures by
 
 Validators for enumerations can be created using:
 
-* `Validator.derivedEnum`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
+* `Validator.derivedEnumeration`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
   macro determines the possible values
-* `Validator.enum`, which takes the list of possible values
+* `Validator.enumeration`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
-converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
-added to a codec (without any mapping etc.), for example:
+converts the enum value to a raw type (typically a string). This can be specified by:
+
+* explicitly providing it using the overloaded `enumeration` method with an `encode` parameter
+* by using one of the `.encode` methods on the `Validator.Enumeration` instance
+* when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
+* by adding the validator directly to a codec using `.validate` (the encode function is then taken from the codec)
+
+To simplify creation of schemas and codec, with a derived enum validator, `Schema.derivedEnumeration` and `Codec.derivedEnumeration`
+helper methods are available. For example:
 
 ```scala
 import sttp.tapir._
@@ -78,24 +85,28 @@ case object Blue extends Color
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.string
-    .map[Color]((_: String) match {
-      case "red"  => Red
-      case "blue" => Blue
-    })(_.toString.toLowerCase)
-    .validate(Validator.derivedEnum)
+  Codec.derivedEnumeration[String, Color](
+    (_: String) match {
+      case "red"  => Some(Red)
+      case "blue" => Some(Blue)
+      case _      => None
+    },
+    _.toString.toLowerCase
+  )
 }
 ```
 
-If the enum is nested within an object, regardless of whether the codec for that object is defined by hand or derived,
-we need to specify the encode function by hand:
+If the enum is nested within an object and its values aren't of a "basic" type (numbers, strings), regardless of whether 
+the codec for that object is defined by hand or derived, we need to specify the encode function by hand:
 
 ```scala
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
-```
+// providing the enum values by hand
+implicit def colorSchema: Schema[Color] = Schema.string.validate(
+  Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
 
-Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 
-codec is automatically derived. 
+// or deriving the enum values and using the helper function
+implicit def colorSchema2: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
+```
 
 ## Next
 

@@ -2,50 +2,57 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir._
 
 trait TapirCodecEnumeratum {
   // Regular enums
 
   def validatorEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Validator[E] =
-    Validator.enum(enum.values.toList, v => Some(v.entryName), Some(SObjectInfo(fullName(`enum`))))
+    Validator.enumeration(enum.values.toList, v => Some(v.entryName), Some(SName(fullName(`enum`))))
 
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Schema[E] =
-    Schema(SchemaType.SString(), validator = validatorEnumEntry)
+    Schema[E](SchemaType.SString()).validate(validatorEnumEntry)
 
-  implicit def plainCodecEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] =
+  def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit enum: Enum[E]): Codec[String, E, CodecFormat.TextPlain] =
     Codec.string
       .mapDecode { s =>
-        enum
-          .withNameOption(s)
+        f(s)
           .map(DecodeResult.Value(_))
           .getOrElse(DecodeResult.Mismatch(s"One of: ${enum.values.map(_.entryName).mkString(", ")}", s))
       }(_.entryName)
       .validate(validatorEnumEntry)
 
+  def plainCodecEnumEntryDecodeCaseInsensitive[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] = plainCodecEnumEntryUsing(
+    enum.withNameInsensitiveOption
+  )
+
+  implicit def plainCodecEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] = plainCodecEnumEntryUsing(
+    enum.withNameOption
+  )
+
   // Value enums
 
   def validatorValueEnumEntry[T, E <: ValueEnumEntry[T]](implicit enum: ValueEnum[T, E]): Validator[E] =
-    Validator.enum(enum.values.toList, v => Some(v.value), Some(SObjectInfo(fullName(`enum`))))
+    Validator.enumeration(enum.values.toList, v => Some(v.value), Some(SName(fullName(`enum`))))
 
   implicit def schemaForIntEnumEntry[E <: IntEnumEntry](implicit enum: IntEnum[E]): Schema[E] =
-    Schema(SchemaType.SInteger(), validator = validatorValueEnumEntry[Int, E])
+    Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Int, E])
 
   implicit def schemaForLongEnumEntry[E <: LongEnumEntry](implicit enum: LongEnum[E]): Schema[E] =
-    Schema(SchemaType.SInteger(), validator = validatorValueEnumEntry[Long, E])
+    Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Long, E])
 
   implicit def schemaForShortEnumEntry[E <: ShortEnumEntry](implicit enum: ShortEnum[E]): Schema[E] =
-    Schema(SchemaType.SInteger(), validator = validatorValueEnumEntry[Short, E])
+    Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Short, E])
 
   implicit def schemaForStringEnumEntry[E <: StringEnumEntry](implicit enum: StringEnum[E]): Schema[E] =
-    Schema(SchemaType.SString(), validator = validatorValueEnumEntry[String, E])
+    Schema[E](SchemaType.SString()).validate(validatorValueEnumEntry[String, E])
 
   implicit def schemaForByteEnumEntry[E <: ByteEnumEntry](implicit enum: ByteEnum[E]): Schema[E] =
-    Schema(SchemaType.SInteger(), validator = validatorValueEnumEntry[Byte, E])
+    Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Byte, E])
 
   implicit def schemaForCharEnumEntry[E <: CharEnumEntry](implicit enum: CharEnum[E]): Schema[E] =
-    Schema(SchemaType.SString(), validator = validatorValueEnumEntry[Char, E])
+    Schema[E](SchemaType.SString()).validate(validatorValueEnumEntry[Char, E])
 
   def plainCodecValueEnumEntry[T, E <: ValueEnumEntry[T]](implicit
       enum: ValueEnum[T, E],

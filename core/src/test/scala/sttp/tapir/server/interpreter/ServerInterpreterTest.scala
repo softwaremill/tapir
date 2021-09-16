@@ -7,6 +7,7 @@ import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 
@@ -16,21 +17,21 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
   it should "call the interceptors in the correct order" in {
     var callTrail: List[String] = Nil
 
-    class AddToTrailInterceptor(prefix: String) extends EndpointInterceptor[Id, Unit] {
-      override def apply(responder: Responder[Id, Unit], endpointHandler: EndpointHandler[Id, Unit]): EndpointHandler[Id, Unit] =
-        new EndpointHandler[Id, Unit] {
+    class AddToTrailInterceptor(prefix: String) extends EndpointInterceptor[Id] {
+      override def apply[B](responder: Responder[Id, B], endpointHandler: EndpointHandler[Id, B]): EndpointHandler[Id, B] =
+        new EndpointHandler[Id, B] {
           override def onDecodeSuccess[I](
               ctx: DecodeSuccessContext[Id, I]
-          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, Unit]): Id[ServerResponse[Unit]] = {
+          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponse[B]] = {
             callTrail ::= s"$prefix success"
-            endpointHandler.onDecodeSuccess(ctx)(idMonadError, unitBodyListener)
+            endpointHandler.onDecodeSuccess(ctx)(idMonadError, bodyListener)
           }
 
           override def onDecodeFailure(
               ctx: DecodeFailureContext
-          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, Unit]): Id[Option[ServerResponse[Unit]]] = {
+          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponse[B]]] = {
             callTrail ::= s"$prefix failure"
-            endpointHandler.onDecodeFailure(ctx)(idMonadError, unitBodyListener)
+            endpointHandler.onDecodeFailure(ctx)(idMonadError, bodyListener)
           }
         }
     }
@@ -48,11 +49,11 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     // given
     val interceptor1 = new AddToTrailInterceptor("1")
-    val interceptor2 = new RequestInterceptor[Id, Unit] {
-      override def apply(
-          responder: Responder[Id, Unit],
-          requestHandler: EndpointInterceptor[Id, Unit] => RequestHandler[Id, Unit]
-      ): RequestHandler[Id, Unit] = RequestHandler.from { (request, monad) =>
+    val interceptor2 = new RequestInterceptor[Id] {
+      override def apply[B](
+          responder: Responder[Id, B],
+          requestHandler: EndpointInterceptor[Id] => RequestHandler[Id, B]
+      ): RequestHandler[Id, B] = RequestHandler.from { (request, monad) =>
         callTrail ::= "2 request"
         requestHandler(new AddToTrailInterceptor("2")).apply(request)(monad)
       }
@@ -60,7 +61,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val interceptor3 = new AddToTrailInterceptor("3")
 
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, Nothing](
+      new ServerInterpreter[Any, Id, Unit, NoStreams](
         TestRequestBody,
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),

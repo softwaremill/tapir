@@ -1,19 +1,18 @@
 package sttp.tapir.client.sttp
 
-import sttp.capabilities.{Effect, Streams}
+import sttp.capabilities.Streams
 import sttp.tapir.WebSocketBodyOutput
 import sttp.ws.WebSocket
 
-/** Captures the logic of converting a [[WebSocket]] to a interpreter-specific pipe, which is then returned
-  * to the client. Implementations of this trait are looked up in the implicit scope by the compiler, depending
-  * on the capabilities that are required by the endpoint to be interpreted as a client.
+/** Captures the logic of converting a [[WebSocket]] to a interpreter-specific pipe, which is then returned to the client. Implementations
+  * of this trait are looked up in the implicit scope by the compiler, depending on the capabilities that are required by the endpoint to be
+  * interpreted as a client.
   *
-  * For capabilities `R`, where web sockets aren't included, the implementation just throws an unsupported exception
-  * (and this logic shouldn't ever be used). For capabilities which include web sockets, appropriate implementations
-  * should be imported, e.g. from the `sttp.tapir.client.sttp.ws.fs2._` or `sttp.tapir.client.sttp.ws.akka._`
-  * packages.
+  * For capabilities `R`, where web sockets aren't included, the implementation just throws an unsupported exception (and this logic
+  * shouldn't ever be used). For capabilities which include web sockets, appropriate implementations should be imported, e.g. from the
+  * `sttp.tapir.client.sttp.ws.fs2._` or `sttp.tapir.client.sttp.ws.akka._` packages.
   */
-trait WebSocketToPipe[R] {
+trait WebSocketToPipe[-R] {
   type S <: Streams[S]
   type F[_]
 
@@ -39,8 +38,6 @@ object WebSocketToPipe {
     override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Nothing]): Any =
       throw new RuntimeException("WebSockets are not supported")
   }
-  implicit def webSocketsNotSupportedForAny: WebSocketToPipe[Any] = notSupported
-  implicit def webSocketsNotSupportedForStreams[S <: Streams[S]]: WebSocketToPipe[S] = notSupported
-  implicit def webSocketsNotSupportedForEffect[F[_]]: WebSocketToPipe[Effect[F]] = notSupported
-  implicit def webSocketsNotSupportedForEffectWithStreams[F[_], S <: Streams[S]]: WebSocketToPipe[S with Effect[F]] = notSupported
+  // default case; supporting implementations can import
+  implicit def webSocketsNotSupported[T]: WebSocketToPipe[T] = notSupported
 }

@@ -2,7 +2,7 @@ package sttp.tapir.docs.asyncapi
 
 import sttp.tapir.apispec.SecurityRequirement
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
-import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToObjectSchema}
+import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
 import sttp.tapir.docs.apispec.{SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 import sttp.tapir.{EndpointInput, _}
@@ -19,9 +19,11 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
   ): AsyncAPI = {
     val wsEndpointsWithWrapper = es.map(e => (e, findWebSocket(e))).collect { case (e, Some(ws)) => (e, ws) }
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
-    val toObjectSchema = new ToObjectSchema(options.referenceEnums)
+    val toObjectSchema = new ToNamedSchemas
     val (keyToSchema, schemas) = new SchemasForEndpoints(wsEndpoints, options.schemaName, toObjectSchema).apply()
-    val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toObjectSchema)(wsEndpointsWithWrapper.map(_._2))
+    val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toObjectSchema)(
+      wsEndpointsWithWrapper.map(_._2)
+    )
     val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints)
     val channelCreator = new EndpointToAsyncAPIWebSocketChannel(schemas, codecToMessageKey, options)
     val componentsCreator = new EndpointToAsyncAPIComponents(keyToSchema, keyToMessage, securitySchemes)

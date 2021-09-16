@@ -1,10 +1,11 @@
 package sttp.tapir.server.vertx.streams
 
 import java.util.concurrent.atomic.AtomicReference
-
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import io.vertx.core.streams.WriteStream
+
+import scala.annotation.tailrec
 
 object Pipe {
   private sealed trait Action
@@ -15,6 +16,7 @@ object Pipe {
   private case object Pause extends Command
   private case object Resume extends Command
 
+  @tailrec
   def modify[A, B](ref: AtomicReference[A], f: A => (A, B)): B = {
     val oldA = ref.get
     val (newA, b) = f(oldA)
@@ -28,42 +30,46 @@ object Pipe {
   // Resume and Pause actions can be received simultanuously. This class is used in order to
   // process these actions sequentially.
   private case class BackpressureState(
-    // Shows whether Resume or Pause is processed right now.
-    inProgress: Boolean,
-    // Counts difference between received Resume and Pause events.
-    // Sometimes two Resume events can come in row. In this case second event can be ignored.
-    // For example, if active stream receives Resume and then Pause. Resume must be ignored
-    // because stream is already active. But Pause event also must be ignored because it
-    // compensates previous Resume event.
-    // This means that we should resume stream only if count is zero and pause stream only
-    // if count is one.
-    count: Int,
-    // Queue with unprocessed actions
-    queue: List[Command]
+      // Shows whether Resume or Pause is processed right now.
+      inProgress: Boolean,
+      // Counts difference between received Resume and Pause events.
+      // Sometimes two Resume events can come in row. In this case second event can be ignored.
+      // For example, if active stream receives Resume and then Pause. Resume must be ignored
+      // because stream is already active. But Pause event also must be ignored because it
+      // compensates previous Resume event.
+      // This means that we should resume stream only if count is zero and pause stream only
+      // if count is one.
+      count: Int,
+      // Queue with unprocessed actions
+      queue: List[Command]
   )
 
-  def applyBackpressureCommands(ref: AtomicReference[BackpressureState], request: ReadStream[Buffer]): Unit =
-    modify[BackpressureState, Action](ref, {
-      case state @ (BackpressureState(false, _, Nil) | BackpressureState(true, _, _))  =>
-        (state, Stop)
+  @tailrec
+  private def applyBackpressureCommands(ref: AtomicReference[BackpressureState], request: ReadStream[Buffer]): Unit =
+    modify[BackpressureState, Action](
+      ref,
+      {
+        case state @ (BackpressureState(false, _, Nil) | BackpressureState(true, _, _)) =>
+          (state, Stop)
 
-      case BackpressureState(false, 0, Resume :: tail) =>
-        (BackpressureState(true, 1, tail), Resume)
-      case BackpressureState(false, i, Resume :: tail) =>
-        (BackpressureState(true, i + 1, tail), Skip)
+        case BackpressureState(false, 0, Resume :: tail) =>
+          (BackpressureState(inProgress = true, 1, tail), Resume)
+        case BackpressureState(false, i, Resume :: tail) =>
+          (BackpressureState(inProgress = true, i + 1, tail), Skip)
 
-      case BackpressureState(false, 1, Pause :: tail) =>
-        (BackpressureState(true, 0, tail), Pause)
-      case BackpressureState(false, i, Pause :: tail) =>
-        (BackpressureState(true, i - 1, tail), Skip)
-    }) match {
+        case BackpressureState(false, 1, Pause :: tail) =>
+          (BackpressureState(inProgress = true, 0, tail), Pause)
+        case BackpressureState(false, i, Pause :: tail) =>
+          (BackpressureState(inProgress = true, i - 1, tail), Skip)
+      }
+    ) match {
       case Stop =>
         ()
       case act =>
         if (act == Resume) request.resume() else if (act == Pause) request.pause() else ()
         ref updateAndGet {
-          case BackpressureState(true, i, commands) => BackpressureState(false, i, commands)
-          case unexpected => throw new Exception(s"Unexpected state $unexpected")
+          case BackpressureState(true, i, commands) => BackpressureState(inProgress = false, i, commands)
+          case unexpected                           => throw new Exception(s"Unexpected state $unexpected")
         }
         applyBackpressureCommands(ref, request)
     }
@@ -74,9 +80,9 @@ object Pipe {
   // last buffer.
   private case class ProgressState(inProgress: Int, completed: Boolean)
 
-  def apply(request: ReadStream[Buffer], writeStream: WriteStream[Buffer]) = {
-    val progress = new AtomicReference(ProgressState(0, false))
-    val backpressure = new AtomicReference(BackpressureState(false, 1, Nil))
+  def apply(request: ReadStream[Buffer], writeStream: WriteStream[Buffer]): Unit = {
+    val progress = new AtomicReference(ProgressState(0, completed = false))
+    val backpressure = new AtomicReference(BackpressureState(inProgress = false, 1, Nil))
 
     writeStream.drainHandler { _ =>
       backpressure.updateAndGet(state => state.copy(queue = state.queue :+ Resume))
@@ -85,11 +91,14 @@ object Pipe {
 
     request.handler((data: Buffer) => {
       progress.getAndUpdate(s => s.copy(s.inProgress + 1))
-      writeStream.write(data, _ => {
-        val state = progress.updateAndGet(s => s.copy(s.inProgress - 1))
-        if (state.inProgress == 0 && state.completed) writeStream.end()
-        ()
-      })
+      writeStream.write(
+        data,
+        _ => {
+          val state = progress.updateAndGet(s => s.copy(s.inProgress - 1))
+          if (state.inProgress == 0 && state.completed) writeStream.end()
+          ()
+        }
+      )
       if (writeStream.writeQueueFull()) {
         backpressure.updateAndGet(state => state.copy(queue = state.queue :+ Pause))
         applyBackpressureCommands(backpressure, request)
@@ -110,4 +119,3 @@ object Pipe {
     ()
   }
 }
-

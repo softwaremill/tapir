@@ -12,12 +12,16 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
+  * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
+  * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
+  * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
-  * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
-  * [Play](https://tapir.softwaremill.com/en/latest/client/play.html).
+  * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html)
+  * [Play](https://tapir.softwaremill.com/en/latest/client/play.html)
+  * [http4s](https://tapir.softwaremill.com/en/latest/client/http4s.html)
 * documentation. Currently supported: 
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
@@ -41,7 +45,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -53,7 +57,7 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
@@ -77,7 +81,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
-  SttpClientInterpreter
+  SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
@@ -91,7 +95,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M12"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M9"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
