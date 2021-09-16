@@ -82,7 +82,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
-    Test("Should return whole while file if header not present ") {
+    Test("should return whole while file if header not present ") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
@@ -96,7 +96,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
-    Test("Should return 416 if over range") {
+    Test("should return 416 if over range") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
@@ -110,7 +110,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
-    Test("Returns content range header with matching bytes") {
+    Test("returns content range header with matching bytes") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
@@ -124,7 +124,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
-    Test("Should return bytes 4-7 from file") {
+    Test("should return bytes 4-7 from file") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
           .use { port =>
