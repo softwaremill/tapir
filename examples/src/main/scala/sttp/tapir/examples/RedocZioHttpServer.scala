@@ -6,7 +6,6 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.redoc.Redoc
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
@@ -17,10 +16,10 @@ import zio.{App, ExitCode, RIO, Task, URIO, ZIO}
 object RedocZioHttpServer extends App {
   case class Pet(species: String, url: String)
 
-  val petEndpoint: ServerEndpoint[Int, String, Pet, Any, RIO[Any, *]] =
-    endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet]).serverLogic { petId =>
-      if (petId == 35) ZIO.succeed(Right(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir")))
-      else ZIO.succeed(Left("Unknown pet id"))
+  val petEndpoint: ZServerEndpoint[Any, Int, String, Pet, Any] =
+    endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet]).zServerLogic { petId =>
+      if (petId == 35) ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      else ZIO.fail("Unknown pet id")
     }
 
   val petRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(petEndpoint)

@@ -4,7 +4,6 @@ import io.circe.generic.auto._
 import sttp.tapir.Endpoint
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.SwaggerUI
 import sttp.tapir.ztapir._
@@ -26,13 +25,12 @@ object ZioExampleZioHttpServer extends App {
     )
 
   // Same as above, but combining endpoint description with server logic:
-  // TODO: convert to zServerLogic once zio-http integration supports WebSockets
-  val petServerEndpoint: ServerEndpoint[Int, String, Pet, Any, Task] = petEndpoint.serverLogic { petId =>
-    (if (petId == 35) {
-       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
-     } else {
-       IO.fail("Unknown pet id")
-     }).either.resurrect
+  val petServerEndpoint: ZServerEndpoint[Any, Int, String, Pet, Any] = petEndpoint.zServerLogic { petId =>
+    if (petId == 35) {
+      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+    } else {
+      IO.fail("Unknown pet id")
+    }
   }
   val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))
 

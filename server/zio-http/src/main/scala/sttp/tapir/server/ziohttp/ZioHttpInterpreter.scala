@@ -5,10 +5,10 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
+import sttp.tapir.ztapir._
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
 import zio._
 import zio.stream.Stream
@@ -30,10 +30,10 @@ trait ZioHttpInterpreter[R] {
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(e.serverLogicRecoverErrors(logic)))
 
-  def toHttp[I, E, O](se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp[I, E, O](se: ZServerEndpoint[R, I, E, O, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ServerEndpoint[_, _, _, ZioStreams, RIO[R, *]]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(ses: List[ZServerEndpoint[R, _, _, _, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]

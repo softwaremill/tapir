@@ -86,7 +86,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     val testEndpoint: Endpoint[Unit, TestError, String, Any] = endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
 
     def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
-    val serverEndpoint: ZServerEndpoint[Any, Unit, TestError, String] = testEndpoint.zServerLogic(logic)
+    val serverEndpoint: ZServerEndpoint[Any, Unit, TestError, String, Any] = testEndpoint.zServerLogic(logic)
 
     interpreter[Unit, TestError, String](testRequest, serverEndpoint)
       .catchAll(errorToResponse)
@@ -103,7 +103,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     def logic(user: User, rest: Unit): ZIO[Any, TestError, String] = ZIO.succeed("Hello World")
 
-    val serverEndpoint: ZServerEndpoint[Any, String, TestError, String] =
+    val serverEndpoint: ZServerEndpoint[Any, String, TestError, String, Any] =
       testEndpoint.zServerLogicPart(failedAutLogic).andThen { case (user, rest) => logic(user, rest) }
 
     interpreter[String, TestError, String](testRequest, serverEndpoint)
@@ -116,14 +116,15 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private val testZServerLogicForCurrentErrorHandling = testM("zServerLogicForCurrent error handling") {
-    val securedEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, Unit] =
+    val securedEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, Unit, Any] =
       endpoint.in(header[String]("X-User-Name")).errorOut(plainBody[TestError]).zServerLogicForCurrent[Any, User](failedAutLogic)
 
-    val testPartialEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, String] = securedEndpoint.in("foo" / "bar").out(stringBody)
+    val testPartialEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, String, Any] =
+      securedEndpoint.in("foo" / "bar").out(stringBody)
 
     def logic(user: User, rest: Unit): ZIO[Any, TestError, String] = ZIO.succeed("Hello World")
 
-    val serverEndpoint: ZServerEndpoint[Any, (testPartialEndpoint.T, Unit), TestError, String] =
+    val serverEndpoint: ZServerEndpoint[Any, (testPartialEndpoint.T, Unit), TestError, String, Any] =
       testPartialEndpoint.serverLogic[Any]((logic _).tupled)
 
     interpreter(testRequest, serverEndpoint)

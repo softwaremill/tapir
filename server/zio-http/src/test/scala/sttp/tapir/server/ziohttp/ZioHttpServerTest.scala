@@ -9,7 +9,6 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerMetricsTest,
   ServerRejectTests,
-  ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
 }
