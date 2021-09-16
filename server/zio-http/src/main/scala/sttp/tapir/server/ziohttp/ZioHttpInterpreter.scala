@@ -13,22 +13,15 @@ import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header 
 import zio._
 import zio.stream.Stream
 
-import scala.reflect.ClassTag
-
 trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
   def toHttp[I, E, O](
       e: Endpoint[I, E, O, ZioStreams]
-  )(logic: I => RIO[R, Either[E, O]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
-    toHttp(List(e.serverLogic[RIO[R, *]](input => logic(input))))
+  )(logic: I => ZIO[R, E, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    toHttp(List(e.zServerLogic(input => logic(input))))
   }
-
-  def toHttpRecoverErrors[I, E, O](e: Endpoint[I, E, O, ZioStreams])(
-      logic: I => RIO[R, O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
-    toHttp(List(e.serverLogicRecoverErrors(logic)))
 
   def toHttp[I, E, O](se: ZServerEndpoint[R, I, E, O, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))

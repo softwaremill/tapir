@@ -11,7 +11,7 @@ import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
 import zio.console.{getStrLn, putStrLn}
-import zio.{App, ExitCode, RIO, Task, URIO, ZIO}
+import zio.{App, ExitCode, Task, URIO, ZIO}
 
 object RedocZioHttpServer extends App {
   case class Pet(species: String, url: String)

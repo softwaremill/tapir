@@ -32,8 +32,8 @@ object HelloWorldZioHttpServer extends App {
 
   // converting the endpoint descriptions to the Http type
   val app: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter().toHttp(helloWorld)(name => ZIO.succeed(Right(s"Hello, $name!"))) <>
-      ZioHttpInterpreter().toHttp(add) { case (x, y) => ZIO.succeed(Right(AddResult(x, y, x + y))) }
+    ZioHttpInterpreter().toHttp(helloWorld)(name => ZIO.succeed(s"Hello, $name!")) <>
+      ZioHttpInterpreter().toHttp(add) { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) }
 
   // starting the server
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =

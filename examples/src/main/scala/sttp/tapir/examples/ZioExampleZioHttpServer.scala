@@ -20,8 +20,8 @@ object ZioExampleZioHttpServer extends App {
 
   val petRoutes: HttpApp[Any, Throwable] =
     ZioHttpInterpreter().toHttp(petEndpoint)(petId =>
-      if (petId == 35) ZIO.succeed(Right(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir")))
-      else ZIO.succeed(Left("Unknown pet id"))
+      if (petId == 35) ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      else ZIO.fail("Unknown pet id")
     )
 
   // Same as above, but combining endpoint description with server logic:

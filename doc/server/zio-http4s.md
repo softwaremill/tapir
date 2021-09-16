@@ -1,10 +1,10 @@
 # Running as an http4s server using ZIO
 
 The `tapir-zio` module defines type aliases and extension methods which make it more ergonomic to work with 
-[ZIO](https://zio.dev) and tapir. Moreover, the `tapir-zio-http4s-server` contains an interpreter useful when
+[ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http4s-server` contains an interpreter useful when
 exposing the endpoints using the [http4s](https://http4s.org) server.
 
-You'll need the following dependency for the `ZEndpoint`, `ZServerEndpoint` type aliases and helper classes:
+You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-zio" % "@VERSION@"
@@ -37,7 +37,7 @@ Additionally, it defines the `ZEndpoint` type alias, which should be used instea
 When defining the business logic for an endpoint, the following methods are available, which replace the 
 [standard ones](logic.md):
 
-* `def zServerLogic(logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O]`
+* `def zServerLogic(logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C]`
 * `def zServerLogicPart(logicPart: T => ZIO[R, E, U])`
 * `def zServerLogicForCurrent(logicPart: I => ZIO[R, E, U])`
 
@@ -53,9 +53,9 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 
 To help with type-inference, you first need to call `ZHttp4sServerInterpreter().from()` providing:
 
-* an endpoint and logic: `def from[I, E, O](e: ZEndpoint[I, E, O])(logic: I => ZIO[R, E, O])`
-* a single server endpoint: `def from[I, E, O](se: ZServerEndpoint[R, I, E, O])`
-* multiple server endpoints: `def from(serverEndpoints: List[ZServerEndpoint[R, _, _, _]])`
+* an endpoint and logic: `def from[I, E, O, C](e: Endpoint[I, E, O, C])(logic: I => ZIO[R, E, O])`
+* a single server endpoint: `def from[I, E, O, C](se: ZServerEndpoint[R, I, E, O, C])`
+* multiple server endpoints: `def from[C](serverEndpoints: List[ZServerEndpoint[R, _, _, _, C]])`
 
 Then, call `.toRoutes` to obtain the http4s `HttpRoutes` instance. 
 
@@ -78,8 +78,8 @@ trait Component2
 type Service1 = Has[Component1]
 type Service2 = Has[Component2]
 
-val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit] = ???                              
-val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
+val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit, Any] = ???                              
+val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit, Any] = ???
 
 type Env = Service1 with Service2
 val routes: HttpRoutes[RIO[Env with Clock with Blocking, *]] = 
@@ -109,8 +109,10 @@ The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.or
 For example, to define an endpoint that returns event stream:
 
 ```scala mdoc:compile-only
+import sttp.capabilities.zio.ZioStreams
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEventsBody}
+import sttp.tapir.Endpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
 import zio.{UIO, RIO}
@@ -118,7 +120,7 @@ import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.stream.Stream
 
-val sseEndpoint: ZEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent]] = endpoint.get.out(serverSentEventsBody)
+val sseEndpoint: Endpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = endpoint.get.out(serverSentEventsBody)
 
 val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
   .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
