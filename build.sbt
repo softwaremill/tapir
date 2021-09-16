@@ -133,7 +133,7 @@ lazy val allAggregates = core.projectRefs ++
   vertxServer.projectRefs ++
   nettyServer.projectRefs ++
   zioHttp4sServer.projectRefs ++
-  zioHttp.projectRefs ++
+  zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
   awsSam.projectRefs ++
@@ -860,10 +860,10 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
-lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))
+lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-http",
+    name := "tapir-zio-http-server",
     libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1128,7 +1128,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUi,
     redoc,
     zioHttp4sServer,
-    zioHttp,
+    zioHttpServer,
     nettyServer,
     sttpStubServer,
     playJson,
@@ -1166,7 +1166,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     cats,
     swaggerUi,
     zioHttp4sServer,
-    zioHttp
+    zioHttpServer
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
@@ -1220,7 +1220,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioHttp4sServer,
-    zioHttp,
+    zioHttpServer,
     derevo,
     zioJson,
     prometheusMetrics,

@@ -1,7 +1,7 @@
 # Running as a zio-http server
 
 The `tapir-zio` module defines type aliases and extension methods which make it more ergonomic to work with
-[ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http` contains an interpreter useful when
+[ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http-server` contains an interpreter useful when
 exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http) server.
 
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
