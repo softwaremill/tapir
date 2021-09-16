@@ -29,7 +29,11 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
       case RawBodyType.InputStreamBody =>
         inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
-      case RawBodyType.FileBody         => resp.sendFile(v.asInstanceOf[TapirFile].toPath.toString)
+      case RawBodyType.FileBody         =>
+        val tapirFile = v.asInstanceOf[TapirFile]
+        tapirFile.range
+          .map(range =>  resp.sendFile(tapirFile.toPath.toString, range.start, range.end - range.start))
+          .getOrElse(resp.sendFile(tapirFile.toPath.toString))
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }
   }
