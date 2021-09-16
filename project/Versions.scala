@@ -24,7 +24,7 @@ object Versions {
   val zioInteropCats = "3.1.1.0"
   val zioJson = "0.2.0-M1"
   val playClient = "2.1.3"
-  val playServer = "2.8.7"
+  val playServer = "2.8.8"
   val tethys = "0.25.0"
   val vertx = "4.1.3"
   val jsScalaJavaTime = "2.3.0"
