@@ -185,7 +185,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
             case RawBodyType.ByteArrayBody       => asByteArrayAlways
             case RawBodyType.ByteBufferBody      => asByteArrayAlways.map(ByteBuffer.wrap)
             case RawBodyType.InputStreamBody     => asByteArrayAlways.map(new ByteArrayInputStream(_))
-            case RawBodyType.FileBody            => asFileAlways(clientOptions.createFile().toFile)
+            case RawBodyType.FileBody            => asFileAlways(clientOptions.createFile().toFile).map(TapirFile.fromFile)
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(ignore)
