@@ -47,8 +47,9 @@ object Files {
           files(realSystemPath, calculateETag)(filesInput.copy(path = filesInput.path :+ "index.html"))
         } else {
           filesInput.range match {
-            case Some(value) =>
-              if (value.validate(realRequestedPath.toFile.length())) fileOutput(filesInput, realRequestedPath, calculateETag, value).map(Right(_))
+            case Some(range) =>
+              val file = realRequestedPath.toFile
+              if (range.validate(file.length())) fileOutput(filesInput, file, calculateETag, range).map(Right(_))
               else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[TapirFile]]).unit
             case None => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
           }
@@ -57,17 +58,15 @@ object Files {
     })
   }
 
-  private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
+  private def fileOutput[F[_]](filesInput: StaticInput, file: File, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
     m: MonadError[F]
   ): F[StaticOutput[TapirFile]] = for {
-    etag <- calculateETag(file.toFile)
-    lastModified <- m.blocking(file.toFile.lastModified())
+    etag <- calculateETag(file)
+    lastModified <- m.unit(file.lastModified())
     result <-
-      if (isModified(filesInput, etag, lastModified)) {
-        // TODO: refactor can be done better
-        m.blocking(file.toFile).map(loadedFile =>
-          StaticOutput.Found(TapirFile.fromFile(loadedFile, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.end - range.start), Some(contentTypeFromName(file.toFile.getName)), etag, Some("bytes"), Some(range.toContentRange(loadedFile.length()))))
-      } else StaticOutput.NotModified.unit
+      if (isModified(filesInput, etag, lastModified))
+        m.unit(StaticOutput.Found(TapirFile.fromFile(file, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(range.contentRange(file.length()))))
+      else StaticOutput.NotModified.unit
   } yield result
 
   private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]])(implicit

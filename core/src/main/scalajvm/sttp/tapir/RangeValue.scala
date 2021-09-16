@@ -6,7 +6,9 @@ case class RangeValue(unit: String, start: Int, end: Int) {
   // TODO make it better
   def validate(contentLength: Long): Boolean = if (end < contentLength) true else false
 
-  def toContentRange(fileSize: Long): String = unit + " " + start + "-" + end + "/" + fileSize
+  def contentRange(fileSize: Long): String = unit + " " + start + "-" + end + "/" + fileSize
+
+  def contentLength: Int = end - start
 }
 
 object RangeValue {
