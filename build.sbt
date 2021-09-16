@@ -832,7 +832,10 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq("io.netty" % "netty-all" % "4.1.68.Final") ++ loggerDependencies
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % "4.1.68.Final",
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+    ) ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
