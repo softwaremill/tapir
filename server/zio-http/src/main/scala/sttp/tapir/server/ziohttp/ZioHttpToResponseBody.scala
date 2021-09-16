@@ -2,14 +2,13 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.internal.{FileChunk, TapirFile}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RangeValue, RawBodyType, WebSocketBodyOutput}
-import zio.{Chunk, stream}
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import zio.Chunk
 import zio.blocking.Blocking
 import zio.stream.{Stream, ZStream}
 
-import java.io.RandomAccessFile
 import java.nio.charset.Charset
 
 class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte], ZioStreams] {
@@ -40,20 +39,10 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
       case RawBodyType.FileBody            =>
         val tapirFile = r.asInstanceOf[TapirFile]
         tapirFile.range
-          .map(rangeValue => ZStream.fromChunk(Chunk.fromArray(prepareChunk(tapirFile, rangeValue))))
+          .map(range => FileChunk.prepare(tapirFile, range))
+          .map(chunk => ZStream.fromChunk(Chunk.fromArray(chunk)))
           .getOrElse(ZStream.fromFile(tapirFile.toPath).provideLayer(Blocking.live))
-
       case RawBodyType.MultipartBody(_, _) => Stream.empty
     }
-  }
-
-  private def prepareChunk[R, CF <: CodecFormat](tapirFile: TapirFile, rangeValue: RangeValue): Array[Byte] = {
-    val raf = new RandomAccessFile(tapirFile.toFile, "r")
-    val chunkSize = rangeValue.end - rangeValue.start
-    val dataArray = Array.ofDim[Byte](chunkSize)
-    raf.seek(rangeValue.start)
-    val bytesRead = raf.read(dataArray, 0, chunkSize)
-    val readChunk = dataArray.take(bytesRead)
-    readChunk
   }
 }

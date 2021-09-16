@@ -8,7 +8,7 @@ case class RangeValue(unit: String, start: Int, end: Int) {
 
   def contentRange(fileSize: Long): String = unit + " " + start + "-" + end + "/" + fileSize
 
-  def contentLength: Int = end - start
+  val contentLength: Int = end - start
 }
 
 object RangeValue {
