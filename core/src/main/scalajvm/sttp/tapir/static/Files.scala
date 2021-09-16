@@ -63,10 +63,11 @@ object Files {
     etag <- calculateETag(file.toFile)
     lastModified <- m.blocking(file.toFile.lastModified())
     result <-
-      if (isModified(filesInput, etag, lastModified))
-        m.blocking(file.toFile.length()).map(contentLength =>
-          StaticOutput.Found(TapirFile.fromFile(file.toFile, range), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentTypeFromName(file.toFile.getName)), etag, Some("bytes"), Some(range.toContentRange(contentLength))))
-      else StaticOutput.NotModified.unit
+      if (isModified(filesInput, etag, lastModified)) {
+        // TODO: refactor can be done better
+        m.blocking(file.toFile).map(loadedFile =>
+          StaticOutput.Found(TapirFile.fromFile(loadedFile, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.end - range.start), Some(contentTypeFromName(file.toFile.getName)), etag, Some("bytes"), Some(range.toContentRange(loadedFile.length()))))
+      } else StaticOutput.NotModified.unit
   } yield result
 
   private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]])(implicit

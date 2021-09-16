@@ -11,6 +11,7 @@ import org.http4s.Header.ToRaw.rawToRaw
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}
+import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
@@ -50,7 +51,11 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
           serverOptions.ioChunkSize
         )
       case RawBodyType.FileBody =>
-        Files[F].readAll(r.toPath, serverOptions.ioChunkSize)
+        val tapirFile = r.asInstanceOf[TapirFile]
+        tapirFile.range.map(rangeValue => {
+          val contentLength = rangeValue.end - rangeValue.start
+          Files[F].readRange(tapirFile.toPath, contentLength, rangeValue.start, rangeValue.end)
+        }).getOrElse(Files[F].readAll(tapirFile.toPath, serverOptions.ioChunkSize))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
