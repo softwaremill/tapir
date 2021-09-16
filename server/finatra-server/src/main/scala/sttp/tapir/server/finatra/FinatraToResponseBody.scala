@@ -7,9 +7,9 @@ import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, Multipart
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.internal.{NoStreams, TapirFile}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RangeValue, RawBodyType, WebSocketBodyOutput}
 
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, InputStream, RandomAccessFile}
 import java.nio.charset.Charset
 
 class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
@@ -22,7 +22,11 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
       case RawBodyType.ByteArrayBody   => FinatraContentBuf(Buf.ByteArray.Owned(v))
       case RawBodyType.ByteBufferBody  => FinatraContentBuf(Buf.ByteBuffer.Owned(v))
       case RawBodyType.InputStreamBody => FinatraContentReader(Reader.fromStream(v))
-      case RawBodyType.FileBody        => FinatraContentReader(Reader.fromFile(v.asInstanceOf[TapirFile].toFile))
+      case RawBodyType.FileBody        =>
+        val tapirFile = v.asInstanceOf[TapirFile]
+        tapirFile.range
+          .map(rangeValue => FinatraContentReader(Reader.fromBuf(Buf.ByteArray.Owned(prepareChunk(tapirFile, rangeValue)))))
+          .getOrElse(FinatraContentReader(Reader.fromFile(tapirFile.toFile)))
       case m: RawBodyType.MultipartBody =>
         val entity = MultipartEntityBuilder.create()
         v.flatMap(rawPartToFormBodyPart(m, _)).foreach { formBodyPart: FormBodyPart => entity.addPart(formBodyPart) }
@@ -32,6 +36,16 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
 
         FinatraContentReader(InputStreamReader(inputStream))
     }
+  }
+
+  private def prepareChunk[R, CF <: CodecFormat](tapirFile: TapirFile, rangeValue: RangeValue): Array[Byte] = {
+    val raf = new RandomAccessFile(tapirFile.toFile, "r")
+    val chunkSize = rangeValue.end - rangeValue.start
+    val dataArray = Array.ofDim[Byte](chunkSize)
+    raf.seek(rangeValue.start)
+    val bytesRead = raf.read(dataArray, 0, chunkSize)
+    val readChunk = dataArray.take(bytesRead)
+    readChunk
   }
 
   private def rawValueToContentBody[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): ContentBody = {

@@ -2,14 +2,7 @@ package sttp.tapir.server.finatra
 
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerMetricsTest,
-  backendResource
-}
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStaticContentTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class FinatraServerTest extends TestSuite {
@@ -21,6 +14,7 @@ class FinatraServerTest extends TestSuite {
     new ServerBasicTests(createServerTest, interpreter).tests() ++
       new ServerFileMultipartTests(createServerTest).tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests()
+      new ServerMetricsTest(createServerTest).tests() ++
+      new ServerStaticContentTests(interpreter, backend).tests()
   }
 }
