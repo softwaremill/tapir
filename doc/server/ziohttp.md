@@ -23,7 +23,6 @@ import sttp.tapir.ztapir._
 ```
 
 This brings into scope all of the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
-Additionally, it defines the `ZEndpoint` type alias, which should be used instead of `Endpoint`.
 
 ```eval_rst
 .. note::
