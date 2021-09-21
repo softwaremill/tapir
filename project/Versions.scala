@@ -20,7 +20,7 @@ object Versions {
   val scalaTestPlusScalaCheck = "3.2.10.0"
   val refined = "0.9.27"
   val enumeratum = "1.7.0"
-  val zio = "1.0.11"
+  val zio = "1.0.12"
   val zioInteropCats = "3.1.1.0"
   val zioJson = "0.2.0-M1"
   val playClient = "2.1.3"
