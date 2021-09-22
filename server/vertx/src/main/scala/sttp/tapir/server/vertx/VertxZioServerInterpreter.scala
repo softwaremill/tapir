@@ -80,14 +80,11 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     // if so, we need to use this fact to cancel the operation nonetheless
     val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
 
-    rc.response.exceptionHandler {
-      (t: Throwable) => {
-        println(t)
-        cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
-          c(Fiber.Id.None)
-        }
-        ()
+    rc.response.exceptionHandler { (t: Throwable) =>
+      cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+        c(Fiber.Id.None)
       }
+      ()
     }
 
     val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }

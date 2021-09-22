@@ -7,7 +7,6 @@ import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.internal.TapirFile
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.{DecodeResult, _}
 

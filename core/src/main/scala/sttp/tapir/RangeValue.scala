@@ -3,8 +3,8 @@ package sttp.tapir
 import scala.util.Try
 
 case class RangeValue(unit: String, start: Int, end: Int) {
-  // TODO make it better
-  def validate(contentLength: Long): Boolean = if (end < contentLength) true else false
+
+  def isValid(contentLength: Long): Boolean = if (end < contentLength) true else false
 
   def contentRange(fileSize: Long): String = unit + " " + start + "-" + end + "/" + fileSize
 

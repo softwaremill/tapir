@@ -49,7 +49,7 @@ object Files {
           filesInput.range match {
             case Some(range) =>
               val file = realRequestedPath.toFile
-              if (range.validate(file.length())) fileOutput(filesInput, file, calculateETag, range).map(Right(_))
+              if (range.isValid(file.length())) fileOutput(filesInput, file, calculateETag, range).map(Right(_))
               else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[TapirFile]]).unit
             case None => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
           }

@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
@@ -17,7 +17,6 @@ import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
-import java.nio.file.Path
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
 
