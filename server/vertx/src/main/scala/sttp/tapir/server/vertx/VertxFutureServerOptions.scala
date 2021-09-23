@@ -3,11 +3,10 @@ package sttp.tapir.server.vertx
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.{Defaults, File, FileRange}
+import sttp.tapir.{Defaults, File}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
-import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class VertxFutureServerOptions(
@@ -36,7 +35,7 @@ object VertxFutureServerOptions {
       createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
       createOptions = (ci: CustomInterceptors[Future, Unit, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
-          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
+          Defaults.createTempFile().getParentFile.getAbsoluteFile,
           defaultDeleteFile,
           ci.interceptors,
           None

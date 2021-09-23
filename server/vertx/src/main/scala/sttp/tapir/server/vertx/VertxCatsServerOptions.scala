@@ -9,8 +9,6 @@ import sttp.tapir.{Defaults, File}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
-import java.io.{File => JFile}
-
 final case class VertxCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
     uploadDirectory: File,
@@ -35,7 +33,7 @@ object VertxCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
-          JFile.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
+          Defaults.createTempFile().getParentFile.getAbsoluteFile,
           file => Sync[F].delay(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

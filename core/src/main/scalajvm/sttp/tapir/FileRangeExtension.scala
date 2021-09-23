@@ -1,6 +1,9 @@
 package sttp.tapir
 
+import java.nio.file.Path
+
 trait FileRangeExtension { self: FileRange =>
+  def toPath: Path = underlying.asInstanceOf[Path]
   def toFile: java.io.File = underlying.asInstanceOf[File]
 }
 
