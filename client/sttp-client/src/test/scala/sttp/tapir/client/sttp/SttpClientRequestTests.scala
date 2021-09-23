@@ -12,7 +12,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
   test("content-type header shouldn't be duplicated when converting to a part") {
     // given
     val testEndpoint = endpoint.post.in(multipartBody[FruitData])
-    val testFile = createTempFile().toFile
+    val testFile = createTempFile()
 
     // when
     val sttpClientRequest = SttpClientInterpreter()
