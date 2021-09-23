@@ -1,12 +1,9 @@
 package sttp.tapir
 
-import sttp.tapir.internal.TapirFile
-
-import java.io.File
 import java.nio.file.Path
 
 trait TapirExtensions {
-  type TapirTestFile = java.io.File
-  def pathBody: EndpointIO.Body[TapirFile, Path] = rawBinaryBody[TapirFile].map(_.toPath)(d => TapirFile.fromPath(d))
-  def fileBody: EndpointIO.Body[TapirFile, File] = rawBinaryBody[TapirFile].map(_.toFile)(d => TapirFile.fromFile(d))
+  type File = java.io.File
+  def pathBody: EndpointIO.Body[FileRange, Path] = rawBinaryBody[FileRange].map(_.toFile.toPath)(d => FileRange.from(d.toFile))
+  def fileBody: EndpointIO.Body[FileRange, File] = rawBinaryBody[FileRange].map(_.toFile)(d => FileRange.from(d))
 }

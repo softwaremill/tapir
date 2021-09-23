@@ -3,8 +3,7 @@ package sttp.tapir.static
 import sttp.model.headers.ETag
 import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.monad.MonadError
-import sttp.tapir._
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.{FileRange, _}
 import sttp.tapir.server.ServerEndpoint
 
 import java.io.InputStream
@@ -108,7 +107,7 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any] =
+  def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     staticEndpoint(prefix, tapirFileBody)
 
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
@@ -125,7 +124,7 @@ trait TapirStaticContentEndpoints {
     */
   def filesServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
     systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
     ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
@@ -136,7 +135,7 @@ trait TapirStaticContentEndpoints {
     */
   def fileServerEndpoint[F[_]](path: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[TapirFile], Any, F] =
+  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
     ServerEndpoint(removePath(filesEndpoint(path)), (m: MonadError[F]) => Files(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is

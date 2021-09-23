@@ -8,11 +8,10 @@ import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.internal.TapirFile
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -45,8 +44,8 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
         HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
       case RawBodyType.FileBody =>
-        val tapirFile = v.asInstanceOf[TapirFile]
-        val path = tapirFile.toPath
+        val tapirFile = v.asInstanceOf[FileRange]
+        val path = tapirFile.toFile.toPath
         tapirFile.range.map(range => {
           val file = FileIO.fromPath(path, range.contentLength, range.start)
           HttpEntity.Streamed(file, Option(range.contentLength), contentType)

@@ -1,15 +1,12 @@
 package sttp.tapir.macros
 
-import sttp.tapir.MultipartCodec
+import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, FileRange, MultipartCodec, PartCodec, RawBodyType, Schema}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.{CaseClass, CaseClassField}
-import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, PartCodec, RawBodyType, Schema}
 import sttp.model.Part
 
 import scala.annotation.tailrec
 import scala.quoted.*
-import sttp.tapir.internal.TapirFile
-
 import java.nio.charset.StandardCharsets
 
 trait MultipartCodecMacros {
@@ -36,7 +33,7 @@ object MultipartCodecMacros {
         () => Expr.summon[Codec[List[Array[Byte]], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteArrayBody, $c) }),
         () => Expr.summon[Codec[List[java.io.InputStream], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.InputStreamBody, $c) }),
         () => Expr.summon[Codec[List[java.nio.ByteBuffer], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteBufferBody, $c) }),
-        () => Expr.summon[Codec[List[TapirFile], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.FileBody, $c) })
+        () => Expr.summon[Codec[List[FileRange], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.FileBody, $c) })
       )
 
       @tailrec

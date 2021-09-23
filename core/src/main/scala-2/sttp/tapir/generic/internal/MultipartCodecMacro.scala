@@ -62,12 +62,7 @@ object MultipartCodecMacro {
         () =>
           (
             q"_root_.sttp.tapir.RawBodyType.FileBody",
-            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.sttp.tapir.internal.TapirFile], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
-          ),
-        () =>
-          (
-            q"_root_.sttp.tapir.RawBodyType.FileBody",
-            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.org.scalajs.dom.raw.File], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.sttp.tapir.FileRange], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
           )
       )
 

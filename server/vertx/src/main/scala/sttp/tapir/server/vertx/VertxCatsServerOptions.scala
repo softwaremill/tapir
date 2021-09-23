@@ -5,17 +5,16 @@ import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
 import io.vertx.core.logging.LoggerFactory
-import sttp.tapir.Defaults
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.{Defaults, File}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
-import java.io.File
+import java.io.{File => JFile}
 
 final case class VertxCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
-    uploadDirectory: TapirFile,
-    deleteFile: TapirFile => F[Unit],
+    uploadDirectory: File,
+    deleteFile: File => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {
@@ -36,7 +35,7 @@ object VertxCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
-          TapirFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
+          JFile.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
           file => Sync[F].delay(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

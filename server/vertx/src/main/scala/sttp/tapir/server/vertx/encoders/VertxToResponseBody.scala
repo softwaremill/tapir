@@ -6,13 +6,12 @@ import io.vertx.core.http.{HttpHeaders, HttpServerResponse}
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.internal.TapirFile
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -30,10 +29,10 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.InputStreamBody =>
         inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
       case RawBodyType.FileBody         =>
-        val tapirFile = v.asInstanceOf[TapirFile]
+        val tapirFile = v.asInstanceOf[FileRange]
         tapirFile.range
-          .map(range =>  resp.sendFile(tapirFile.toPath.toString, range.start, range.contentLength))
-          .getOrElse(resp.sendFile(tapirFile.toPath.toString))
+          .map(range =>  resp.sendFile(tapirFile.toFile.toPath.toString, range.start, range.contentLength))
+          .getOrElse(resp.sendFile(tapirFile.toFile.toPath.toString))
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }
   }
@@ -115,7 +114,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           case RawBodyType.InputStreamBody =>
             inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
           case RawBodyType.FileBody =>
-            val file = r.asInstanceOf[TapirFile].toFile
+            val file = r.asInstanceOf[FileRange].toFile
             rc.vertx.fileSystem
               .readFile(file.getAbsolutePath)
               .flatMap { buf =>

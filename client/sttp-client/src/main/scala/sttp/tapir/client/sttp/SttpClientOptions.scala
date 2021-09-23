@@ -1,9 +1,8 @@
 package sttp.tapir.client.sttp
 
-import sttp.tapir.Defaults
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.{Defaults, File}
 
-case class SttpClientOptions(createFile: () => TapirFile)
+case class SttpClientOptions(createFile: () => File)
 
 object SttpClientOptions {
   val default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)

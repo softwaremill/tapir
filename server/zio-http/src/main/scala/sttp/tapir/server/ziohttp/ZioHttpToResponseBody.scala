@@ -2,9 +2,9 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders
-import sttp.tapir.internal.{FileChunk, TapirFile}
+import sttp.tapir.internal.FileChunk
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import zio.Chunk
 import zio.blocking.Blocking
 import zio.stream.{Stream, ZStream}
@@ -37,11 +37,11 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
       case RawBodyType.ByteBufferBody      => Stream.fromChunk(Chunk.fromByteBuffer(r))
       case RawBodyType.InputStreamBody     => ZStream.fromInputStream(r).provideLayer(Blocking.live)
       case RawBodyType.FileBody            =>
-        val tapirFile = r.asInstanceOf[TapirFile]
+        val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range
           .map(range => FileChunk.prepare(tapirFile, range))
           .map(chunk => ZStream.fromChunk(Chunk.fromArray(chunk)))
-          .getOrElse(ZStream.fromFile(tapirFile.toPath).provideLayer(Blocking.live))
+          .getOrElse(ZStream.fromFile(tapirFile.toFile.toPath).provideLayer(Blocking.live))
       case RawBodyType.MultipartBody(_, _) => Stream.empty
     }
   }

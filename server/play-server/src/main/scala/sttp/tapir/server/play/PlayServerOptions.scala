@@ -4,8 +4,7 @@ import akka.stream.Materializer
 import play.api.Logger
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
-import sttp.tapir.Defaults
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.{Defaults, File}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -14,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class PlayServerOptions(
     temporaryFileCreator: TemporaryFileCreator,
-    deleteFile: TapirFile => Future[Unit],
+    deleteFile: File => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
     decodeFailureHandler: DecodeFailureHandler,
@@ -44,7 +43,7 @@ object PlayServerOptions {
         )
     ).serverLog(defaultServerLog)
 
-  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
+  val defaultDeleteFile: File => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.deleteFile()(file))
   }

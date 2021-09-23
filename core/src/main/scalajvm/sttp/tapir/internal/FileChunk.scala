@@ -1,12 +1,12 @@
 package sttp.tapir.internal
 
-import sttp.tapir.RangeValue
+import sttp.tapir.{FileRange, RangeValue}
 
 import java.io.RandomAccessFile
 
 object FileChunk {
 
-  def prepare(tapirFile: TapirFile, range: RangeValue): Array[Byte] = {
+  def prepare(tapirFile: FileRange, range: RangeValue): Array[Byte] = {
     val raf = new RandomAccessFile(tapirFile.toFile, "r")
     raf.seek(range.start)
     val dataArray = Array.ofDim[Byte](range.contentLength)

@@ -1,8 +1,7 @@
 package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.LoggerFactory
-import sttp.tapir.Defaults
-import sttp.tapir.internal.TapirFile
+import sttp.tapir.{Defaults, File}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import zio.{RIO, Task}
@@ -10,8 +9,8 @@ import zio.{RIO, Task}
 import java.io.File
 
 final case class VertxZioServerOptions[F[_]](
-    uploadDirectory: TapirFile,
-    deleteFile: TapirFile => F[Unit],
+    uploadDirectory: File,
+    deleteFile: File => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {
@@ -29,7 +28,7 @@ object VertxZioServerOptions {
       createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, RIO[R, *]](sl, (_, _) => RIO.unit),
       createOptions = (ci: CustomInterceptors[RIO[R, *], Unit, VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
-          TapirFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
+          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
           file => Task[Unit](Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

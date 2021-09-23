@@ -573,7 +573,7 @@ object RawBodyType {
   implicit case object ByteArrayBody extends Binary[Array[Byte]]
   implicit case object ByteBufferBody extends Binary[ByteBuffer]
   implicit case object InputStreamBody extends Binary[InputStream]
-  implicit case object FileBody extends Binary[TapirFile]
+  implicit case object FileBody extends Binary[FileRange]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)

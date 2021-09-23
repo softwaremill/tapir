@@ -1,12 +1,11 @@
 package sttp.tapir
 
 import org.scalajs.dom.File
-import sttp.tapir.internal.TapirFile
 
-trait TapirFileExtension { self: TapirFile =>
+trait FileRangeExtension { self: FileRange =>
   def toFile: File = underlying.asInstanceOf[File]
 }
 
-trait TapirFileCompanionExtensions {
-  def fromFile(file: File): TapirFile = new TapirFile(file)
+trait FileRangeCompanionExtensions {
+  def from(file: File): FileRange = new FileRange(file)
 }

@@ -7,10 +7,8 @@ import sttp.model.{MediaType, Part}
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.TapirFile
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, Schema}
+import sttp.tapir.{DecodeResult, FieldName, File, FileRange, MultipartCodec, Schema}
 
-import java.io.File
 import java.nio.charset.StandardCharsets
 
 class MultipartCodecDerivationTestJVM extends AnyFlatSpec with MultipartCodecDerivationTestExtensionsJVM with Matchers {
@@ -25,9 +23,9 @@ class MultipartCodecDerivationTestJVM extends AnyFlatSpec with MultipartCodecDer
     try {
       // when
       codec.encode(Test1(f)) shouldBe List(
-        Part("f1", TapirFile.fromFile(f), fileName = Some(f.getName), contentType = Some(MediaType.ApplicationOctetStream))
+        Part("f1", FileRange.from(f), fileName = Some(f.getName), contentType = Some(MediaType.ApplicationOctetStream))
       )
-      codec.decode(List(Part("f1", TapirFile.fromFile(f), fileName = Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
+      codec.decode(List(Part("f1", FileRange.from(f), fileName = Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
     } finally {
       f.delete()
     }
@@ -43,10 +41,10 @@ class MultipartCodecDerivationTestJVM extends AnyFlatSpec with MultipartCodecDer
     try {
       // when
       codec.encode(Test1(Part("?", Some(f), otherDispositionParams = Map("a1" -> "b1")), 12)) shouldBe List(
-        Part("f1", TapirFile.fromFile(f), otherDispositionParams = Map("a1" -> "b1"), contentType = Some(MediaType.ApplicationOctetStream)),
+        Part("f1", FileRange.from(f), otherDispositionParams = Map("a1" -> "b1"), contentType = Some(MediaType.ApplicationOctetStream)),
         Part("f2", "12", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
       )
-      codec.decode(List(Part("f1", TapirFile.fromFile(f), fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
+      codec.decode(List(Part("f1", FileRange.from(f), fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
         Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
       )
     } finally {

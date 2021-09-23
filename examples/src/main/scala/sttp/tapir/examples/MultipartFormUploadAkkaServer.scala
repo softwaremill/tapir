@@ -1,6 +1,6 @@
 package sttp.tapir.examples
 
-import java.io.{File, PrintWriter}
+import java.io.PrintWriter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -42,7 +42,7 @@ object MultipartFormUploadAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(setProfileRoute).map { _ =>
-    val testFile = File.createTempFile("user-123", ".jpg")
+    val testFile = java.io.File.createTempFile("user-123", ".jpg")
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
     // testing
