@@ -10,7 +10,8 @@ import sttp.tapir.{CodecFormat, StreamBodyIO, streamTextBody}
 import java.nio.charset.Charset
 
 package object http4s {
-  private[http4s] type Http4sResponseBody[F[_]] = Either[F[Pipe[F, WebSocketFrame, WebSocketFrame]], EntityBody[F]]
+  // either a web socket, or a stream with optional length (if known)
+  private[http4s] type Http4sResponseBody[F[_]] = Either[F[Pipe[F, WebSocketFrame, WebSocketFrame]], (EntityBody[F], Option[Long])]
 
   def serverSentEventsBody[F[_]]: StreamBodyIO[fs2.Stream[F, Byte], fs2.Stream[F, ServerSentEvent], Fs2Streams[F]] = {
     val fs2Streams = Fs2Streams[F]
