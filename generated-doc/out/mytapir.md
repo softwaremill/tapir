@@ -19,3 +19,13 @@ object MyTapir extends Tapir
 ```
 
 Then, a single `import MyTapir._` and all Tapir data types and interpreter methods will be in scope!
+
+You might also define an alias for `Endpoint`, with the capabilities that your endpoints use, e.g.:
+
+```scala
+import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.WebSockets
+import sttp.tapir.Endpoint
+
+type MyEndpoint[I, E, O] = Endpoint[I, E, O, AkkaStreams with WebSockets]
+```
