@@ -9,7 +9,7 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.14"
+val scala2_12 = "2.12.15"
 val scala2_13 = "2.13.6"
 val scala3 = "3.0.2"
 
