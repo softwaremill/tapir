@@ -205,7 +205,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
               val outputStream = Files.newOutputStream(f.toPath)
               outputStream.write(response.body[Array[Byte]])
               outputStream.close()
-              f
+              FileRange.from(f)
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(()) // Unit

@@ -205,7 +205,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
               response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_)).map(_.asInstanceOf[Any])
             case RawBodyType.FileBody =>
               val file = clientOptions.createFile()
-              response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => file.asInstanceOf[Any])
+              response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => FileRange.from(file))
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse[F[Any]](((): Any).pure[F])

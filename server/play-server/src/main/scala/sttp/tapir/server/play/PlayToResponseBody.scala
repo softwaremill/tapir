@@ -45,11 +45,11 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
 
       case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]
-        val path = tapirFile.toFile.toPath
         tapirFile.range.map(range => {
-          val file = FileIO.fromPath(path, range.contentLength, range.start)
+          val file = FileIO.fromPath(tapirFile.toPath, range.contentLength, range.start)
           HttpEntity.Streamed(file, Option(range.contentLength), contentType)
         }).getOrElse({
+          val path = tapirFile.toFile.toPath
           val fileSize = Some(Files.size(path))
           val file = FileIO.fromPath(path)
           HttpEntity.Streamed(file, fileSize, contentType)
