@@ -6,6 +6,7 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.tapir.Endpoint
 import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
@@ -26,7 +27,7 @@ object ZioPartialServerLogicHttp4s extends App {
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: ZPartialServerEndpoint[UserService, User, Unit, Int, Unit] = endpoint
+  val secureEndpoint: ZPartialServerEndpoint[UserService, User, Unit, Int, Unit, Any] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .zServerLogicForCurrent(UserService.auth)
@@ -41,7 +42,7 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // 2nd approach: define the endpoint entirely first
-  val secureHelloWorld2: ZEndpoint[(String, String), Int, String] = endpoint
+  val secureHelloWorld2: Endpoint[(String, String), Int, String, Any] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .get

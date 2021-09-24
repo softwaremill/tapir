@@ -40,7 +40,7 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
-    ZioHttpInterpreter().toHttpRecoverErrors(e)(fn)
+    ZioHttpInterpreter().toHttp(e.serverLogicRecoverErrors(fn))
 
   private val portCounter = new AtomicInteger(0) // no way to dynamically allocate ports
 

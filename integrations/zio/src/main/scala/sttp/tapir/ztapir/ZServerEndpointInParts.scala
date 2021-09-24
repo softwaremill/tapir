@@ -1,6 +1,6 @@
 package sttp.tapir.ztapir
 
-import sttp.tapir.{EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
+import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 import sttp.tapir.internal.{combine, split}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
@@ -25,10 +25,12 @@ import zio.ZIO
   *   Error output parameter types.
   * @tparam O
   *   Output parameter types.
+  * @tparam C
+  *   The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   */
-abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[I, E, O])
-    extends EndpointInfoOps[I, E, O, Nothing]
-    with EndpointMetaOps[I, E, O, Nothing] { outer =>
+abstract class ZServerEndpointInParts[R, U, J, I, E, O, -C](val endpoint: Endpoint[I, E, O, C])
+    extends EndpointInfoOps[I, E, O, C]
+    with EndpointMetaOps[I, E, O, C] { outer =>
 
   /** Part of the input, consumed by `logicFragment`.
     */
@@ -36,14 +38,14 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   protected def splitInput: I => (T, J)
   protected def logicFragment: T => ZIO[R, E, U]
 
-  override type EndpointType[_I, _E, _O, -_R] = ZServerEndpointInParts[R, U, J, _I, _E, _O]
+  override type EndpointType[_I, _E, _O, -_R] = ZServerEndpointInParts[R, U, J, _I, _E, _O, _R]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
   override def info: EndpointInfo = endpoint.info
 
-  override private[tapir] def withInfo(info: EndpointInfo): ZServerEndpointInParts[R, U, J, I, E, O] =
-    new ZServerEndpointInParts[R, U, J, I, E, O](endpoint.info(info)) {
+  override private[tapir] def withInfo(info: EndpointInfo): ZServerEndpointInParts[R, U, J, I, E, O, C] =
+    new ZServerEndpointInParts[R, U, J, I, E, O, C](endpoint.info(info)) {
       override type T = outer.T
       override def splitInput: I => (outer.T, J) = outer.splitInput
       override def logicFragment: T => ZIO[R, E, U] = outer.logicFragment
@@ -53,7 +55,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
 
   /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and the remaining input.
     */
-  def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2, I, E, O] =
+  def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2, I, E, O, C] =
     ServerEndpoint(
       endpoint,
       { _ => i =>
@@ -72,8 +74,8 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   )(implicit
       jMinusT2: ParamSubtract.Aux[J, T2, J2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
-  ): ZServerEndpointInParts[R2, UV, J2, I, E, O] =
-    new ZServerEndpointInParts[R2, UV, J2, I, E, O](endpoint) {
+  ): ZServerEndpointInParts[R2, UV, J2, I, E, O, C] =
+    new ZServerEndpointInParts[R2, UV, J2, I, E, O, C](endpoint) {
       override type T = (outer.T, T2)
 
       override def splitInput: I => ((outer.T, T2), J2) =
