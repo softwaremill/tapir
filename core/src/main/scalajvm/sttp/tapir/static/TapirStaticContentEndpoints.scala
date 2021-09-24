@@ -90,7 +90,7 @@ trait TapirStaticContentEndpoints {
         oneOf[StaticOutput[T]](
           oneOfMappingClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
           oneOfMappingClassMatcher(
-            StatusCode.Ok,
+            StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
               .and(header[Option[Long]](HeaderNames.ContentLength))
@@ -98,9 +98,21 @@ trait TapirStaticContentEndpoints {
               .and(etagHeader)
               .and(header[Option[String]](HeaderNames.AcceptRanges))
               .and(header[Option[String]](HeaderNames.ContentRange))
-              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
-                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
+              .map[StaticOutput.FoundPartial[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                StaticOutput.FoundPartial(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
+            classOf[StaticOutput.FoundPartial[T]]
+          ),
+          oneOfMappingClassMatcher(
+            StatusCode.Ok,
+            body
+              .and(lastModifiedHeader)
+              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentTypeHeader)
+              .and(etagHeader)
+              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag])) =>
+                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5)
+              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag)),
             classOf[StaticOutput.Found[T]]
           )
         )

@@ -23,13 +23,20 @@ object StaticErrorOutput {
 trait StaticOutput[+T]
 object StaticOutput {
   case object NotModified extends StaticOutput[Nothing]
+  case class FoundPartial[T](
+    body: T,
+    lastModified: Option[Instant],
+    contentLength: Option[Long],
+    contentType: Option[MediaType],
+    etag: Option[ETag],
+    acceptRanges: Option[String],
+    contentRange: Option[String]
+  ) extends StaticOutput[T]
   case class Found[T](
       body: T,
       lastModified: Option[Instant],
       contentLength: Option[Long],
       contentType: Option[MediaType],
-      etag: Option[ETag],
-      acceptRanges: Option[String] = None,
-      contentRange: Option[String] = None
+      etag: Option[ETag]
   ) extends StaticOutput[T]
 }

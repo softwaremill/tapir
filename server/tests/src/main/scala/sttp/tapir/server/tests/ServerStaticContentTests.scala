@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
-import sttp.model.{Header, HeaderNames}
+import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests._
@@ -96,6 +96,20 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
+    Test("returns 200 status code for whole file") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.code shouldBe StatusCode.Ok)
+
+          }
+          .unsafeToFuture()
+      }
+    },
     Test("should return 416 if over range") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
@@ -105,7 +119,7 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(_.code.code shouldBe 416)
+              .map(_.code shouldBe StatusCode.RangeNotSatisfiable)
           }
           .unsafeToFuture()
       }
@@ -120,6 +134,20 @@ class ServerStaticContentTests[F[_], ROUTE](
               .response(asStringAlways)
               .send(backend)
               .map(_.headers contains Header(HeaderNames.ContentRange, "bytes 1-3/10") shouldBe true)
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("returns 206 status code for partial content") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=1-3"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.code shouldBe StatusCode.PartialContent)
           }
           .unsafeToFuture()
       }

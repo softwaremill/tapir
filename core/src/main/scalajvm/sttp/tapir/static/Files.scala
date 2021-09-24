@@ -64,7 +64,7 @@ object Files {
     lastModified <- m.unit(file.lastModified())
     result <-
       if (isModified(filesInput, etag, lastModified))
-        m.unit(StaticOutput.Found(FileRange.from(file, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(range.contentRange(file.length()))))
+        m.unit(StaticOutput.FoundPartial(FileRange.from(file, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(range.contentRange(file.length()))))
       else StaticOutput.NotModified.unit
   } yield result
 
