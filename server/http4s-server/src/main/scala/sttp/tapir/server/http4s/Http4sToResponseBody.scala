@@ -6,7 +6,7 @@ import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
 import org.http4s._
-import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
+import org.http4s.headers.{`Content-Disposition`, `Content-Length`, `Content-Type`}
 import org.http4s.Header.ToRaw.rawToRaw
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
@@ -30,31 +30,34 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
       format: CodecFormat,
       charset: Option[Charset]
   ): Http4sResponseBody[F] =
-    Right(v)
+    Right((v, None))
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): Http4sResponseBody[F] = Left(Http4sWebSockets.pipeToBody(pipe, o))
 
-  private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): EntityBody[F] = {
+  private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): (EntityBody[F], Option[Long]) = {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
-        fs2.Stream.chunk(Chunk.array(bytes))
-      case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.array(r))
-      case RawBodyType.ByteBufferBody => fs2.Stream.chunk(Chunk.byteBuffer(r))
+        (fs2.Stream.chunk(Chunk.array(bytes)), Some(bytes.length))
+      case RawBodyType.ByteArrayBody  => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
+      case RawBodyType.ByteBufferBody => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
       case RawBodyType.InputStreamBody =>
-        fs2.io.readInputStream(
-          r.pure[F],
-          serverOptions.ioChunkSize
+        (
+          fs2.io.readInputStream(
+            r.pure[F],
+            serverOptions.ioChunkSize
+          ),
+          None
         )
       case RawBodyType.FileBody =>
-        Files[F].readAll(r.toPath, serverOptions.ioChunkSize)
+        (Files[F].readAll(r.toPath, serverOptions.ioChunkSize), Some(r.length))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
-        body
+        (body, None)
     }
   }
 
@@ -66,7 +69,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
 
       val partContentType =
         part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
-      val entity = rawValueToEntity(partType.asInstanceOf[RawBodyType[Any]], part.body)
+      val (entity, contentLength) = rawValueToEntity(partType.asInstanceOf[RawBodyType[Any]], part.body)
 
       val dispositionParams = (part.otherDispositionParams + (Part.NameDispositionParam -> part.name)).map { case (k, v) =>
         CIString(k) -> v
@@ -74,10 +77,16 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
       val contentDispositionHeader: Header.ToRaw = `Content-Disposition`("form-data", dispositionParams)
 
       val shouldAddCtHeader = part.headers.exists(_.is(HeaderNames.ContentType))
-      val allHeaders = if (shouldAddCtHeader) {
+      val allHeaders0 = if (shouldAddCtHeader) {
         Headers.apply((partContentType: Header.ToRaw) :: contentDispositionHeader :: headers)
       } else {
         Headers(contentDispositionHeader :: headers)
+      }
+
+      val shouldAddClHeader = part.headers.exists(_.is(HeaderNames.ContentLength))
+      val allHeaders = contentLength match {
+        case Some(cl) if shouldAddClHeader => allHeaders0.put(`Content-Length`(cl))
+        case _                             => allHeaders0
       }
 
       multipart.Part(allHeaders, entity)

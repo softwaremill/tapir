@@ -7,6 +7,7 @@ import cats.implicits._
 import cats.~>
 import fs2.{Pipe, Stream}
 import org.http4s._
+import org.http4s.headers.`Content-Length`
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
 import org.log4s.{Logger, getLogger}
@@ -84,8 +85,12 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
             WebSocketBuilder[F].copy(headers = headers, filterPingPongs = false).build(send, receive)
           }
         }
-      case Some(Right(entity)) =>
-        Response(status = statusCode, headers = headers, body = entity).pure[F]
+      case Some(Right((entity, contentLength))) =>
+        val headers2 = contentLength match {
+          case Some(value) if response.contentLength.isEmpty => headers.put(`Content-Length`(value))
+          case _                                             => headers
+        }
+        Response(status = statusCode, headers = headers2, body = entity).pure[F]
 
       case None => Response[F](status = statusCode, headers = headers).pure[F]
     }
