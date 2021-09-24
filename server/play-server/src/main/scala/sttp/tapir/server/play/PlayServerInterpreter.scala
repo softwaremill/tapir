@@ -54,7 +54,7 @@ trait PlayServerInterpreter {
 
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
-        val serverRequest = new PlayServerRequest(request)
+        val serverRequest = new PlayServerRequest(request, request)
         serverEndpoints.exists { se =>
           DecodeBasicInputs(se.input, serverRequest) match {
             case DecodeBasicInputsResult.Values(_, _) => true
@@ -67,7 +67,7 @@ trait PlayServerInterpreter {
       override def apply(header: RequestHeader): Handler = {
         playServerOptions.defaultActionBuilder.async(streamParser) { request =>
           implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
-          val serverRequest = new PlayServerRequest(header)
+          val serverRequest = new PlayServerRequest(header, request)
           val interpreter = new ServerInterpreter(
             new PlayRequestBody(request, playServerOptions),
             new PlayToResponseBody,
