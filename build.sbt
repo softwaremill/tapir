@@ -1149,7 +1149,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "io.swagger" % "swagger-annotations" % "1.6.2",
+      "io.swagger" % "swagger-annotations" % "1.6.3",
       "io.circe" %% "circe-generic-extras" % "0.14.1",
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp
     ),
