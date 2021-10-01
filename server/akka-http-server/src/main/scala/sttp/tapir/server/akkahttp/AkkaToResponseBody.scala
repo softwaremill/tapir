@@ -57,8 +57,8 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case RawBodyType.FileBody        =>
         val file = r.asInstanceOf[FileRange]
-        file.range
-          .map(r => StreamConverters.fromInputStream(() => FileChunk.prepare(file, r)))
+        FileChunk.prepare(file)
+          .map(f => StreamConverters.fromInputStream(() => f))
           .map(s => HttpEntity(ct, s))
           .getOrElse(HttpEntity.fromPath(ct, file.toFile.toPath))
       case m: RawBodyType.MultipartBody =>

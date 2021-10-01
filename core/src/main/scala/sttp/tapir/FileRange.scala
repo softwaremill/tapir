@@ -1,5 +1,7 @@
 package sttp.tapir
 
-case class FileRange(underlying: Any, range: Option[RangeValue] = None) extends FileRangeExtension
+import sttp.model.headers.Range
+
+case class FileRange(underlying: Any, range: Option[Range] = None) extends FileRangeExtension
 
 object FileRange extends FileRangeCompanionExtensions

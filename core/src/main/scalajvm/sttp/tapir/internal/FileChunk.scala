@@ -1,13 +1,23 @@
 package sttp.tapir.internal
 
-import sttp.tapir.{FileRange, RangeValue}
+import sttp.tapir.FileRange
 
 import java.io.{FileInputStream, IOException, InputStream}
 
 object FileChunk {
 
-  def prepare(tapirFile: FileRange, range: RangeValue): InputStream =
-    RangeInputStream(new FileInputStream(tapirFile.toPath.toFile), range.start, range.end)
+  def prepare(tapirFile: FileRange): Option[InputStream] = {
+    tapirFile.range match {
+      case Some(range) =>
+        (range.start, range.end) match {
+          case (Some(start), Some(end)) =>
+            val stream = RangeInputStream(new FileInputStream(tapirFile.toPath.toFile), start, end)
+            Some(stream)
+          case _ => None
+        }
+      case None => None
+    }
+  }
 }
 
 class RangeInputStream extends InputStream {
