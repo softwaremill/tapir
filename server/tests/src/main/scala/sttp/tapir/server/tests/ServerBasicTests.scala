@@ -264,6 +264,12 @@ class ServerBasicTests[F[_], ROUTE](
       } else {
         IO.pure(succeed)
       }
+    },
+    testServer(in_query_out_cookie, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
+      pureResult(CookieValueWithMeta.safeApply(q))
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+        .map(_.code shouldBe StatusCode.BadRequest)
     }, // Fails because of lack in Zio Http support for Set-Cookie header https://github.com/dream11/zio-http/issues/187
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
