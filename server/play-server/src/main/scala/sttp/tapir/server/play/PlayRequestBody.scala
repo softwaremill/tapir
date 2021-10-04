@@ -44,11 +44,11 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
       case RawBodyType.FileBody =>
         bodyAsFile match {
           case Some(file) =>
-            val tapirFile = FileRange.from(file)
+            val tapirFile = FileRange(file)
             Future.successful(RawValue(tapirFile, Seq(tapirFile)))
           case None =>
-            val file = FileRange.from(serverOptions.temporaryFileCreator.create().toFile)
-            body().runWith(FileIO.toPath(file.toFile.toPath)).map(_ => RawValue(file, Seq(file)))
+            val file = FileRange(serverOptions.temporaryFileCreator.create().toFile)
+            body().runWith(FileIO.toPath(file.file.toPath)).map(_ => RawValue(file, Seq(file)))
         }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }

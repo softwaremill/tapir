@@ -66,7 +66,7 @@ object Files {
     result <-
       if (isModified(filesInput, etag, lastModified)) {
         val contentRange = range.toContentRange(file.length(), range.unit).toString()
-        m.unit(StaticOutput.FoundPartial(FileRange.from(file, range), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(contentRange)))
+        m.unit(StaticOutput.FoundPartial(FileRange(file, Some(range)), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(contentRange)))
       }
       else StaticOutput.NotModified.unit
   } yield result
@@ -79,7 +79,7 @@ object Files {
     result <-
       if (isModified(filesInput, etag, lastModified))
         m.blocking(file.toFile.length()).map(contentLength =>
-          StaticOutput.Found(FileRange.from(file.toFile), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentTypeFromName(file.toFile.getName)), etag))
+          StaticOutput.Found(FileRange(file.toFile), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentTypeFromName(file.toFile.getName)), etag))
       else StaticOutput.NotModified.unit
   } yield result
 

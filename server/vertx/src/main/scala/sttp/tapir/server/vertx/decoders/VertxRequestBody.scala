@@ -42,7 +42,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       rc.fileUploads().asScala.headOption match {
         case Some(upload) =>
           Future.succeededFuture {
-            val file = FileRange.from(new File(upload.uploadedFileName()))
+            val file = FileRange(new File(upload.uploadedFileName()))
             RawValue(file, Seq(file))
           }
         case None if rc.getBody != null =>
@@ -53,7 +53,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
             .flatMap(_ => fs.writeFile(filePath, rc.getBody))
             .flatMap(_ =>
               Future.succeededFuture {
-                val file = FileRange.from(new File(filePath))
+                val file = FileRange(new File(filePath))
                 RawValue(file, Seq(file))
               }
             )
@@ -90,7 +90,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
       case RawBodyType.FileBody =>
         val f = rc.fileUploads.asScala.find(_.name == name).get
-        FileRange.from(new File(f.uploadedFileName()))
+        FileRange(new File(f.uploadedFileName()))
       case RawBodyType.MultipartBody(partTypes, _) =>
         partTypes.map { case (partName, rawBodyType) =>
           Part(partName, extractPart(partName, rawBodyType))

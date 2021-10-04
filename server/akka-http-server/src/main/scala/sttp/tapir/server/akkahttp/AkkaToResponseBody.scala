@@ -62,12 +62,12 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
           .flatMap(range =>
             (range.start, range.end) match {
               case (Some(start), Some(end)) =>
-                val source = FileIO.fromPath(file.toPath).map(_.slice(start.toInt, end.toInt))
+                val source = FileIO.fromPath(file.file.toPath).map(_.slice(start.toInt, end.toInt))
                 Some(HttpEntity(ct, source))
               case _ => None
             }
           )
-          .getOrElse(HttpEntity.fromPath(ct, file.toFile.toPath))
+          .getOrElse(HttpEntity.fromPath(ct, file.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)

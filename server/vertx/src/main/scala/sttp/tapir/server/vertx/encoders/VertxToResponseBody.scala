@@ -31,8 +31,8 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.FileBody         =>
         val tapirFile = v.asInstanceOf[FileRange]
         tapirFile.range
-          .flatMap(range => range.start.map(start => resp.sendFile(tapirFile.toPath.toString, start, range.contentLength)))
-          .getOrElse(resp.sendFile(tapirFile.toFile.toString))
+          .flatMap(range => range.start.map(start => resp.sendFile(tapirFile.file.toPath.toString, start, range.contentLength)))
+          .getOrElse(resp.sendFile(tapirFile.file.toString))
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }
   }
@@ -114,7 +114,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           case RawBodyType.InputStreamBody =>
             inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
           case RawBodyType.FileBody =>
-            val file = r.asInstanceOf[FileRange].toFile
+            val file = r.asInstanceOf[FileRange].file
             rc.vertx.fileSystem
               .readFile(file.getAbsolutePath)
               .flatMap { buf =>

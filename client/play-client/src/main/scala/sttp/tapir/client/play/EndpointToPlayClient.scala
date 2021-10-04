@@ -164,7 +164,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         // For some reason, Play comes with a Writeable for Supplier[InputStream] but not InputStream directly
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
-      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[FileRange].toFile)
+      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[FileRange].file)
       case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
 
@@ -205,7 +205,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
               val outputStream = Files.newOutputStream(f.toPath)
               outputStream.write(response.body[Array[Byte]])
               outputStream.close()
-              FileRange.from(f)
+              FileRange(f)
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(()) // Unit

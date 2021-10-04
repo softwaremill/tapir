@@ -88,7 +88,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
   def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody[FileRange]
-  def fileBody: EndpointIO.Body[FileRange, File] = rawBinaryBody[FileRange].map(_.toFile)(d => FileRange.from(d))
+  def fileBody: EndpointIO.Body[FileRange, File] = rawBinaryBody[FileRange].map(_.file)(d => FileRange(d))
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

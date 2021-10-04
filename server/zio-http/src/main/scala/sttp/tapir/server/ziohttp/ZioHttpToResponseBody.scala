@@ -41,14 +41,14 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
         tapirFile.range.flatMap(range =>
           (range.start, range.end) match {
             case (Some(start), Some(end)) =>
-              val stream = ZStream.fromFile(tapirFile.toPath)
+              val stream = ZStream.fromFile(tapirFile.file.toPath)
                 .drop(start)
                 .take(range.contentLength)
                 .provideLayer(Blocking.live)
               Some(stream)
             case _ => None
           }
-        ).getOrElse(ZStream.fromFile(tapirFile.toPath).provideLayer(Blocking.live))
+        ).getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
       case RawBodyType.MultipartBody(_, _) => Stream.empty
     }
   }

@@ -38,7 +38,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
-          t(body.through(fileSink).compile.drain.map(_ => RawValue(FileRange.from(file), Seq(FileRange.from(file)))))
+          t(body.through(fileSink).compile.drain.map(_ => RawValue(FileRange(file), Seq(FileRange(file)))))
         }
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?

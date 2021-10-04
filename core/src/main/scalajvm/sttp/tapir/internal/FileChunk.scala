@@ -11,7 +11,7 @@ object FileChunk {
       case Some(range) =>
         (range.start, range.end) match {
           case (Some(start), Some(end)) =>
-            val stream = RangeInputStream(new FileInputStream(tapirFile.toPath.toFile), start, end)
+            val stream = RangeInputStream(new FileInputStream(tapirFile.file), start, end)
             Some(stream)
           case _ => None
         }
