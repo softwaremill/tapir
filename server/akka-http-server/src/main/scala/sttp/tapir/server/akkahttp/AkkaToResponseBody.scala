@@ -2,11 +2,11 @@ package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
-import akka.stream.scaladsl.StreamConverters
+import akka.stream.scaladsl.{FileIO, StreamConverters}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
-import sttp.tapir.internal.{FileChunk, charset}
+import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
@@ -57,9 +57,16 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case RawBodyType.FileBody        =>
         val file = r.asInstanceOf[FileRange]
-        FileChunk.prepare(file)
-          .map(f => StreamConverters.fromInputStream(() => f))
-          .map(s => HttpEntity(ct, s))
+
+        file.range
+          .flatMap(range =>
+            (range.start, range.end) match {
+              case (Some(start), Some(end)) =>
+                val source = FileIO.fromPath(file.toPath).map(_.slice(start.toInt, end.toInt))
+                Some(HttpEntity(ct, source))
+              case _ => None
+            }
+          )
           .getOrElse(HttpEntity.fromPath(ct, file.toFile.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
