@@ -24,7 +24,7 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
           .flatMap { response =>
             toEffect(log.requestHandled(ctx.endpoint, response.code.code), ctx.request).map(_ => response)
           }
-          .handleError { case e: Exception =>
+          .handleError { case e: Throwable =>
             toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
           }
       }
@@ -41,7 +41,7 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
               toEffect(log.decodeFailureHandled(ctx, response), ctx.request)
                 .map(_ => r: Option[ServerResponse[B]])
           }
-          .handleError { case e: Exception =>
+          .handleError { case e: Throwable =>
             toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
           }
       }
