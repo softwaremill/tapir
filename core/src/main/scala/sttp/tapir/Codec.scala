@@ -110,7 +110,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec {
+object Codec extends FormCodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]

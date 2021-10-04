@@ -5,9 +5,8 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{basicRequest, multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
-import sttp.tapir.FruitData
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.tapir.tests.{FruitAmount, Test, in_file_multipart_out_multipart, in_file_out_file, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
+import sttp.tapir.tests.{FruitAmount, FruitData, Test, in_file_multipart_out_multipart, in_file_out_file, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
 
 import java.io.File
 import scala.concurrent.Await

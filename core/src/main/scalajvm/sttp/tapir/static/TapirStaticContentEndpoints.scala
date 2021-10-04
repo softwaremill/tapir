@@ -121,7 +121,7 @@ trait TapirStaticContentEndpoints {
   }
 
   def filesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
-    staticEndpoint(prefix, tapirFileBody)
+    staticEndpoint(prefix, fileRangeBody)
 
   def resourcesEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticEndpoint(prefix, inputStreamBody)
