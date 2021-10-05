@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import sttp.capabilities
 import sttp.monad.MonadError
-import sttp.tapir.{RawBodyType, TapirFile}
+import sttp.tapir.{File, FileRange, RawBodyType}
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
@@ -13,7 +13,7 @@ import sttp.tapir.server.netty.NettyServerRequest
 import java.nio.ByteBuffer
 import java.nio.file.Files
 
-class NettyRequestBody[F[_]](req: NettyServerRequest, serverRequest: ServerRequest, createFile: ServerRequest => F[TapirFile])(implicit
+class NettyRequestBody[F[_]](req: NettyServerRequest, serverRequest: ServerRequest, createFile: ServerRequest => F[File])(implicit
     monadError: MonadError[F]
 ) extends RequestBody[F, NoStreams] {
 
@@ -29,7 +29,7 @@ class NettyRequestBody[F[_]](req: NettyServerRequest, serverRequest: ServerReque
         createFile(serverRequest)
           .map(file => {
             Files.write(file.toPath, requestContent)
-            RawValue(file, Seq(file))
+            RawValue(FileRange(file), Seq(FileRange(file)))
           })
       case _: RawBodyType.MultipartBody => ???
     }

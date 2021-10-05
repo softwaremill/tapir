@@ -3,17 +3,17 @@ package sttp.tapir.server.netty
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import com.typesafe.scalalogging.Logger
-import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, File}
 
 case class NettyCatsServerOptions[F[_]](
     host: String,
     port: Int,
     interceptors: List[Interceptor[F]],
-    createFile: ServerRequest => F[TapirFile],
-    deleteFile: TapirFile => F[Unit],
+    createFile: ServerRequest => F[File],
+    deleteFile: File => F[Unit],
     dispatcher: Dispatcher[F],
     nettyOptions: NettyOptions
 ) {
