@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.ByteBuf
 import sttp.monad.syntax._
 import sttp.monad.MonadError
-import sttp.tapir.File
+import sttp.tapir.TapirFile
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
@@ -15,8 +15,8 @@ object NettyServerInterpreter {
   def toRoute[F[_]: MonadError](
       ses: List[ServerEndpoint[_, _, _, Any, F]],
       interceptors: List[Interceptor[F]],
-      createFile: ServerRequest => F[File],
-      deleteFile: File => F[Unit]
+      createFile: ServerRequest => F[TapirFile],
+      deleteFile: TapirFile => F[Unit]
   ): Route[F] = {
     val handler: Route[F] = { (request: NettyServerRequest) =>
       implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener

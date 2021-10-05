@@ -3,7 +3,7 @@ package sttp.tapir.generic
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType._
-import sttp.tapir.{DecodeResult, FieldName, File, FileRange, MultipartCodec, RawPart, Schema, Validator}
+import sttp.tapir.{DecodeResult, FieldName, TapirFile, FileRange, MultipartCodec, RawPart, Schema, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
@@ -142,7 +142,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
   it should "generate a codec for a case class with file part" in {
     // given
-    case class Test1(f1: File)
+    case class Test1(f1: TapirFile)
     val codec = implicitly[MultipartCodec[Test1]].codec
     val f = createTempFile()
 
@@ -161,7 +161,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
   it should "use the right schema for an optional file part with metadata 2" in {
     // given
-    case class Test1(f1: Part[Option[File]], f2: Int)
+    case class Test1(f1: Part[Option[TapirFile]], f2: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
     val f = createTempFile()
 
@@ -186,14 +186,14 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
   }
   it should "use the right schema for a two-arg case class" in {
     // given
-    case class Test1(f1: Part[File], f2: Int)
+    case class Test1(f1: Part[TapirFile], f2: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     codec.schema.name shouldBe Some(SName("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"))
     codec.schema.schemaType shouldBe
       SProduct[Test1](
-        List(field(FieldName("f1"), implicitly[Schema[File]]), field(FieldName("f2"), implicitly[Schema[Int]]))
+        List(field(FieldName("f1"), implicitly[Schema[TapirFile]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }
 

@@ -7,13 +7,13 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, File, StreamBodyIO}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, TapirFile, StreamBodyIO}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F]],
-    deleteFile: File => F[Unit]
+    deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
     apply(request, List(se))

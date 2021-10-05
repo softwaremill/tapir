@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.Logger
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{Future, blocking}
 
@@ -12,8 +12,8 @@ case class NettyFutureServerOptions(
     host: String,
     port: Int,
     interceptors: List[Interceptor[Future]],
-    createFile: ServerRequest => Future[File],
-    deleteFile: File => Future[Unit],
+    createFile: ServerRequest => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     nettyOptions: NettyOptions
 ) {
   def host(s: String): NettyFutureServerOptions = copy(host = s)

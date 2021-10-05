@@ -31,7 +31,7 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
           v match {
             case is: InputStream => Future.successful(inputStreamToByteArray(is).toList)
             case a: Array[Byte]  => Future.successful(a.toList)
-            case f: File         => readFromFile(f)
+            case f: TapirFile         => readFromFile(f)
             case _               => Future.successful(v)
           }
 

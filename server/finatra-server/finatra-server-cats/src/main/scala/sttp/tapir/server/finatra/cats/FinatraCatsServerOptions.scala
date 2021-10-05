@@ -3,15 +3,15 @@ package sttp.tapir.server.finatra.cats
 import cats.effect.std.Dispatcher
 import com.twitter.util.Future
 import com.twitter.util.logging.Logging
-import sttp.tapir.File
+import sttp.tapir.TapirFile
 import sttp.tapir.server.finatra.FinatraServerOptions
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 case class FinatraCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
-    createFile: Array[Byte] => Future[File],
-    deleteFile: File => Future[Unit],
+    createFile: Array[Byte] => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future]]
 )
 

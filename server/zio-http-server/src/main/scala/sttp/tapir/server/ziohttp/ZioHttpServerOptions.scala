@@ -3,12 +3,12 @@ package sttp.tapir.server.ziohttp
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task}
 
 case class ZioHttpServerOptions[R](
-    createFile: ServerRequest => Task[File],
-    deleteFile: File => RIO[R, Unit],
+    createFile: ServerRequest => Task[TapirFile],
+    deleteFile: TapirFile => RIO[R, Unit],
     interceptors: List[Interceptor[RIO[R, *]]]
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
@@ -31,9 +31,9 @@ object ZioHttpServerOptions {
         )
     )
 
-  def defaultCreateFile: ServerRequest => Task[File] = _ => Task.effect(Defaults.createTempFile())
+  def defaultCreateFile: ServerRequest => Task[TapirFile] = _ => Task.effect(Defaults.createTempFile())
 
-  def defaultDeleteFile[R]: File => Task[Unit] = file => Task.effect(Defaults.deleteFile()(file))
+  def defaultDeleteFile[R]: TapirFile => Task[Unit] = file => Task.effect(Defaults.deleteFile()(file))
 
   def default[R]: ZioHttpServerOptions[R] = customInterceptors.options
 }

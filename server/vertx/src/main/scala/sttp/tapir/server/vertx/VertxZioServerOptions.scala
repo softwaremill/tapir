@@ -1,14 +1,14 @@
 package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.LoggerFactory
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import zio.{RIO, Task}
 
 final case class VertxZioServerOptions[F[_]](
-    uploadDirectory: File,
-    deleteFile: File => F[Unit],
+    uploadDirectory: TapirFile,
+    deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {

@@ -3,15 +3,15 @@ package sttp.tapir.server.vertx
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class VertxFutureServerOptions(
-    uploadDirectory: File,
-    deleteFile: File => Future[Unit],
+    uploadDirectory: TapirFile,
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future]],
     private val specificExecutionContext: Option[ExecutionContext]
 ) extends VertxServerOptions[Future] {
@@ -42,7 +42,7 @@ object VertxFutureServerOptions {
         )
     ).serverLog(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
-  val defaultDeleteFile: File => Future[Unit] = file => {
+  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.deleteFile()(file))
   }

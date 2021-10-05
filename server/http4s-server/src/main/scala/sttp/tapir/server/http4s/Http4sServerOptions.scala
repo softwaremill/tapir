@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.Applicative
 import cats.effect.Sync
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -13,8 +13,8 @@ import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
   *   The effect type used for representing arbitrary side-effects, such as creating files or logging. Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
-    createFile: ServerRequest => G[File],
-    deleteFile: File => G[Unit],
+    createFile: ServerRequest => G[TapirFile],
+    deleteFile: TapirFile => G[Unit],
     ioChunkSize: Int,
     interceptors: List[Interceptor[G]]
 ) {
@@ -35,9 +35,9 @@ object Http4sServerOptions {
     ).serverLog(Log.defaultServerLog[G])
   }
 
-  def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[File] = _ => sync.blocking(Defaults.createTempFile())
+  def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[TapirFile] = _ => sync.blocking(Defaults.createTempFile())
 
-  def defaultDeleteFile[F[_]](implicit sync: Sync[F]): File => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
+  def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
   object Log {
     def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =

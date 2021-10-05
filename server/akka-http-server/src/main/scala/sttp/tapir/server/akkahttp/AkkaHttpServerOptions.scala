@@ -5,13 +5,13 @@ import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{blocking, Future}
 
 case class AkkaHttpServerOptions(
-    createFile: ServerRequest => Future[File],
-    deleteFile: File => Future[Unit],
+    createFile: ServerRequest => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future]]
 ) {
   def prependInterceptor(i: Interceptor[Future]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
@@ -28,12 +28,12 @@ object AkkaHttpServerOptions {
         AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
     ).serverLog(Log.defaultServerLog)
 
-  val defaultCreateFile: ServerRequest => Future[File] = { _ =>
+  val defaultCreateFile: ServerRequest => Future[TapirFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(blocking(Defaults.createTempFile()))
   }
 
-  val defaultDeleteFile: File => Future[Unit] = file => {
+  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(blocking(Defaults.deleteFile()(file)))
   }

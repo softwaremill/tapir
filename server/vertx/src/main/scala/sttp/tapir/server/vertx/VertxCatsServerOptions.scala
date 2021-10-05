@@ -5,14 +5,14 @@ import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
 import io.vertx.core.logging.LoggerFactory
-import sttp.tapir.{Defaults, File}
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 final case class VertxCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
-    uploadDirectory: File,
-    deleteFile: File => F[Unit],
+    uploadDirectory: TapirFile,
+    deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {
