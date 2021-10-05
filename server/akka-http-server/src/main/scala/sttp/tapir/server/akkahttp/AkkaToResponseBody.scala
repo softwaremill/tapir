@@ -59,17 +59,16 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
         val file = r.asInstanceOf[FileRange]
         file.range
           .map(r => {
+            val bytesTotal = r.end - r.start + 1
             val source = FileIO
               .fromPath(file.file.toPath, chunkSize = 8192, startPosition = r.start)
-              .statefulMapConcat { () =>
-                var left = r.end - r.start + 1
-                (next: ByteString) => {
-                  val current = next.length
-                  val oldLeft = left
-                  left -= current
-                  List(next.take(Math.min(oldLeft, current).toInt))
-                }
+              .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
+                val bytesInNext = next.length
+                val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext))
+                (bytesConsumed + bytesInNext, next.take(bytesFromNext.toInt))
               }
+              .takeWhile(_._1 < bytesTotal, inclusive = true)
+              .map(_._2)
             HttpEntity(ct, source)
           })
           .getOrElse(HttpEntity.fromPath(ct, file.file.toPath))
