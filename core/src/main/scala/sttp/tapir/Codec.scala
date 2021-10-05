@@ -185,7 +185,7 @@ object Codec extends FormCodecMacros with CodecMacros with LowPriorityCodec {
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
   implicit val fileRange: Codec[FileRange, FileRange, OctetStream] =
-    id[FileRange, OctetStream](OctetStream(), Schema.schemaForTapirFile)
+    id[FileRange, OctetStream](OctetStream(), Schema.schemaForFileRange)
   implicit val file: Codec[FileRange, File, OctetStream] = fileRange.map(_.file)(f => FileRange(f))
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
