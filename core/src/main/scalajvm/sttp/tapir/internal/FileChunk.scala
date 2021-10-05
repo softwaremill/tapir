@@ -9,7 +9,7 @@ object FileChunk {
   def prepare(tapirFile: FileRange): Option[InputStream] = {
     tapirFile.range match {
       case Some(range) =>
-        Some(RangeInputStream(new FileInputStream(tapirFile.file), range.start, range.end))
+        Some(RangeInputStream(new FileInputStream(tapirFile.file), range.start, range.end + 1))
       case None => None
     }
   }
@@ -19,11 +19,18 @@ class RangeInputStream extends InputStream {
 
   private var parent: InputStream = _
   private var remaining = 0L
+  private var closed = false
 
   @Override
   override def read(): Int = {
     remaining -= 1
-    if (remaining >= 0) parent.read() else -1
+    if (remaining >= 0) parent.read() else {
+      if (!closed) {
+        close()
+        closed = true
+      }
+      -1
+    }
   }
 
   @Override
