@@ -270,6 +270,16 @@ class ServerBasicTests[F[_], ROUTE](
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
         .map(_.code shouldBe StatusCode.BadRequest)
+    },
+    // Reproduces https://github.com/http4s/http4s/security/advisories/GHSA-5vcm-3xc3-w7x3
+    testServer(in_query_out_cookie_raw, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
+      pureResult((q, "test").asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body shouldBe Right("test")
+        }
     }, // Fails because of lack in Zio Http support for Set-Cookie header https://github.com/dream11/zio-http/issues/187
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
