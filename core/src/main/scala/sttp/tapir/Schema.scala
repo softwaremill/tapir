@@ -211,7 +211,7 @@ case class Schema[T](
   }
 }
 
-object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompanionMacros {
+object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   val ModifyCollectionElements = "each"
 
   /** Creates a schema for type `T`, where the low-level representation is a `String`. */
