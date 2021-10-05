@@ -229,7 +229,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber[Double]()).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean())
   implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.empty)
-  implicit val schemaForTapirFile: Schema[FileRange] = Schema(SBinary())
+  implicit val schemaForFileRange: Schema[FileRange] = Schema(SBinary())
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary())
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
@@ -249,7 +249,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString())
   implicit val schemaForBigInt: Schema[BigInt] = Schema(SString())
   implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SString())
-  implicit val schemaForFileRange: Schema[File] = Schema(SBinary())
+  implicit val schemaForFile: Schema[File] = Schema(SBinary())
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
