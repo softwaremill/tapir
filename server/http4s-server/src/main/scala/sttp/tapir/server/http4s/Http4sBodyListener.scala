@@ -13,11 +13,18 @@ class Http4sBodyListener[F[_], G[_]](gToF: G ~> F)(implicit m: MonadError[G], a:
   override def onComplete(body: Http4sResponseBody[F])(cb: Try[Unit] => G[Unit]): G[Http4sResponseBody[F]] = {
     body match {
       case ws @ Left(_) => cb(Success(())).map(_ => ws)
-      case Right(entity) =>
-        m.unit(Right(entity.onFinalizeCase {
-          case Succeeded | Canceled => gToF(cb(Success(())))
-          case Errored(ex)          => gToF(cb(Failure(ex)))
-        }))
+      case Right((entity, contentLength)) =>
+        m.unit(
+          Right(
+            (
+              entity.onFinalizeCase {
+                case Succeeded | Canceled => gToF(cb(Success(())))
+                case Errored(ex)          => gToF(cb(Failure(ex)))
+              },
+              contentLength
+            )
+          )
+        )
     }
   }
 }

@@ -19,3 +19,9 @@ trait ServerRequest extends RequestMetadata {
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])
+
+object ConnectionInfo {
+
+  /** When no info can be obtained from context. */
+  val NoInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+}

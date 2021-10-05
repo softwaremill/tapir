@@ -18,10 +18,9 @@ import scala.collection.immutable
 class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using trait") {
-    implicit val schemaForGame: Schema[Game] =
-      Schema.string[Game].validate(Validator.derivedEnumeration[Game].encode(_.toString.toLowerCase))
+    implicit val schemaForGame: Schema[Game] = Schema.derivedEnumeration[Game](encode = Some(_.toString.toLowerCase))
     implicit val schemaForEpisode: Schema[Episode] =
-      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase)).copy(name = None)
+      Schema.derivedEnumeration[Episode](encode = Some(_.toString.toLowerCase)).copy(name = None)
 
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(Seq(endpoint.in("totalWar").out(jsonBody[TotalWar]), endpoint.in("callOfDuty").out(jsonBody[CallOfDuty])), "Games", "1.0")

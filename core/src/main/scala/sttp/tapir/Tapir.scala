@@ -41,14 +41,18 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
-  def setCookie(name: String): EndpointIO.Header[CookieValueWithMeta] = {
+  def setCookie(name: String): EndpointIO.Header[CookieValueWithMeta] = setCookieOpt(name).mapDecode {
+    case None    => DecodeResult.Missing
+    case Some(v) => DecodeResult.Value(v)
+  }(Some(_))
+  def setCookieOpt(name: String): EndpointIO.Header[Option[CookieValueWithMeta]] = {
     setCookies.mapDecode(cs =>
       cs.filter(_.name == name) match {
-        case Nil     => DecodeResult.Missing
-        case List(c) => DecodeResult.Value(c.valueWithMeta)
+        case Nil     => DecodeResult.Value(None)
+        case List(c) => DecodeResult.Value(Some(c.valueWithMeta))
         case l       => DecodeResult.Multiple(l.map(_.toString))
       }
-    )(cv => List(CookieWithMeta(name, cv)))
+    )(cvo => cvo.map(cv => CookieWithMeta(name, cv)).toList)
   }
   def setCookies: EndpointIO.Header[List[CookieWithMeta]] = header[List[CookieWithMeta]](HeaderNames.SetCookie)
 

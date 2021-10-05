@@ -7,7 +7,7 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLog
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, File}
 
-import scala.concurrent.Future
+import scala.concurrent.{blocking, Future}
 
 case class AkkaHttpServerOptions(
     createFile: ServerRequest => Future[File],
@@ -30,12 +30,12 @@ object AkkaHttpServerOptions {
 
   val defaultCreateFile: ServerRequest => Future[File] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
-    Future(Defaults.createTempFile())
+    Future(blocking(Defaults.createTempFile()))
   }
 
   val defaultDeleteFile: File => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
-    Future(Defaults.deleteFile()(file))
+    Future(blocking(Defaults.deleteFile()(file)))
   }
 
   object Log {

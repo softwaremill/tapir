@@ -9,9 +9,9 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.14"
+val scala2_12 = "2.12.15"
 val scala2_13 = "2.13.6"
-val scala3 = "3.0.1"
+val scala3 = "3.0.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -89,8 +89,8 @@ val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaC
 val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.5",
-  "ch.qos.logback" % "logback-core" % "1.2.5",
+  "ch.qos.logback" % "logback-classic" % "1.2.6",
+  "ch.qos.logback" % "logback-core" % "1.2.6",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
@@ -131,8 +131,9 @@ lazy val allAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
+  nettyServer.projectRefs ++
   zioHttp4sServer.projectRefs ++
-  zioHttp.projectRefs ++
+  zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
   awsSam.projectRefs ++
@@ -537,8 +538,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.10.1",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.10.1" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.10.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.10.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -558,7 +559,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
@@ -584,8 +585,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.5.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.5.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.6.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.6.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )
@@ -761,7 +762,7 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .settings(
     name := "tapir-sttp-stub-server"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
@@ -827,6 +828,18 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)
 
+lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-netty-server",
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % "4.1.68.Final",
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+    ) ++ loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, serverTests % Test)
+
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .settings(commonJvmSettings)
   .settings(
@@ -850,10 +863,10 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
-lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))
+lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-http",
+    name := "tapir-zio-http-server",
     libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1118,7 +1131,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUi,
     redoc,
     zioHttp4sServer,
-    zioHttp,
+    zioHttpServer,
+    nettyServer,
     sttpStubServer,
     playJson,
     prometheusMetrics,
@@ -1135,7 +1149,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "io.swagger" % "swagger-annotations" % "1.6.2",
+      "io.swagger" % "swagger-annotations" % "1.6.3",
       "io.circe" %% "circe-generic-extras" % "0.14.1",
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp
     ),
@@ -1155,7 +1169,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     cats,
     swaggerUi,
     zioHttp4sServer,
-    zioHttp
+    zioHttpServer
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
@@ -1209,11 +1223,12 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioHttp4sServer,
-    zioHttp,
+    zioHttpServer,
     derevo,
     zioJson,
     prometheusMetrics,
     opentelemetryMetrics,
     sttpMockServer,
+    nettyServer,
     swaggerUi
   )

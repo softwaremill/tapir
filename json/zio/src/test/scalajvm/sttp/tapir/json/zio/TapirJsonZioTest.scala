@@ -6,10 +6,11 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
-import sttp.tapir.{DecodeResult, FieldName, Schema}
+import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
-import zio.json.DeriveJsonCodec
+import zio.json.{DeriveJsonCodec, JsonEncoder}
+import zio.json.ast.Json
 
 class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
 
@@ -52,7 +53,7 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
   it should "encode to non-prettified Json" in {
     val customer = Customer("Alita", 1985, None)
     val codec = zioCodec[Customer]
-    val expected = """{"name":"Alita","yearOfBirth":1985,"lastPurchase":null}"""
+    val expected = """{"name":"Alita","yearOfBirth":1985}"""
     codec.encode(customer) shouldBe expected
   }
 
@@ -93,4 +94,9 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
     schemaForZioJsonObject.schemaType shouldBe a[SProduct[_]]
   }
 
+  it should "represent big decimals as numbers" in {
+    val n = BigDecimal(10)
+    implicitly[JsonEncoder[BigDecimal]].toJsonAST(n) shouldBe Right(Json.Num(10))
+    implicitly[Schema[BigDecimal]] shouldBe Schema(SchemaType.SNumber())
+  }
 }

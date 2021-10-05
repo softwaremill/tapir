@@ -12,6 +12,7 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
+  * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
@@ -94,7 +95,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M10"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):

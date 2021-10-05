@@ -71,7 +71,10 @@ converts the enum value to a raw type (typically a string). This can be specifie
 * explicitly providing it using the overloaded `enumeration` method with an `encode` parameter
 * by using one of the `.encode` methods on the `Validator.Enumeration` instance
 * when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
-* by adding the validator directly to a codec; for example:
+* by adding the validator directly to a codec using `.validate` (the encode function is then taken from the codec)
+
+To simplify creation of schemas and codec, with a derived enum validator, `Schema.derivedEnumeration` and `Codec.derivedEnumeration`
+helper methods are available. For example:
 
 ```scala mdoc:silent:reset-object
 import sttp.tapir._
@@ -82,12 +85,14 @@ case object Blue extends Color
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.string
-    .map[Color]((_: String) match {
-      case "red"  => Red
-      case "blue" => Blue
-    })(_.toString.toLowerCase)
-    .validate(Validator.derivedEnumeration)
+  Codec.derivedEnumeration[String, Color](
+    (_: String) match {
+      case "red"  => Some(Red)
+      case "blue" => Some(Blue)
+      case _      => None
+    },
+    _.toString.toLowerCase
+  )
 }
 ```
 
@@ -95,7 +100,12 @@ If the enum is nested within an object and its values aren't of a "basic" type (
 the codec for that object is defined by hand or derived, we need to specify the encode function by hand:
 
 ```scala mdoc:silent
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
+// providing the enum values by hand
+implicit def colorSchema: Schema[Color] = Schema.string.validate(
+  Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
+
+// or deriving the enum values and using the helper function
+implicit def colorSchema2: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
 ```
 
 ## Next

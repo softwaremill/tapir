@@ -1,7 +1,5 @@
 package sttp.tapir.ztapir
 
-import sttp.capabilities.WebSockets
-import sttp.capabilities.zio.ZioStreams
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.ParamSubtract
@@ -9,11 +7,10 @@ import zio.{RIO, ZIO}
 import sttp.tapir.internal._
 
 trait ZTapir {
-  type ZEndpoint[I, E, O] = Endpoint[I, E, O, ZioStreams with WebSockets]
-  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, ZioStreams with WebSockets, RIO[R, *]]
+  type ZServerEndpoint[R, I, E, O, -C] = ServerEndpoint[I, E, O, C, RIO[R, *]]
 
-  implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
-    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either.resurrect)
+  implicit class RichZEndpoint[I, E, O, C](e: Endpoint[I, E, O, C]) {
+    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C] = ServerEndpoint(e, _ => logic(_).either.resurrect)
 
     /** Combine this endpoint description with a function, which implements a part of the server-side logic.
       *
@@ -35,9 +32,9 @@ trait ZTapir {
       */
     def zServerLogicPart[R, T, J, U](
         f: T => ZIO[R, E, U]
-    )(implicit iMinusT: ParamSubtract.Aux[I, T, J]): ZServerEndpointInParts[R, U, J, I, E, O] = {
+    )(implicit iMinusT: ParamSubtract.Aux[I, T, J]): ZServerEndpointInParts[R, U, J, I, E, O, C] = {
       type _T = T
-      new ZServerEndpointInParts[R, U, J, I, E, O](e) {
+      new ZServerEndpointInParts[R, U, J, I, E, O, C](e) {
         override type T = _T
         override def splitInput: I => (T, J) = i => split(i)(iMinusT)
         override def logicFragment: _T => ZIO[R, E, U] = f
@@ -60,17 +57,17 @@ trait ZTapir {
       * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in. Such an endpoint can
       * be then extended by multiple other endpoints.
       */
-    def zServerLogicForCurrent[R, U](f: I => ZIO[R, E, U]): ZPartialServerEndpoint[R, U, Unit, E, O] =
-      new ZPartialServerEndpoint[R, U, Unit, E, O](e.copy(input = emptyInput)) {
+    def zServerLogicForCurrent[R, U](f: I => ZIO[R, E, U]): ZPartialServerEndpoint[R, U, Unit, E, O, C] =
+      new ZPartialServerEndpoint[R, U, Unit, E, O, C](e.copy(input = emptyInput)) {
         override type T = I
         override def tInput: EndpointInput[T] = e.input
         override def partialLogic: T => ZIO[R, E, U] = f
       }
   }
 
-  implicit class RichZServiceEndpoint[R, I, E, O](zse: ZServerEndpoint[R, I, E, O]) {
+  implicit class RichZServiceEndpoint[R, I, E, O, C](zse: ZServerEndpoint[R, I, E, O, C]) {
 
     /** Extends the environment so that it can be made uniform across multiple endpoints. */
-    def widen[R2 <: R]: ZServerEndpoint[R2, I, E, O] = zse.asInstanceOf[ZServerEndpoint[R2, I, E, O]] // this is fine
+    def widen[R2 <: R]: ZServerEndpoint[R2, I, E, O, C] = zse.asInstanceOf[ZServerEndpoint[R2, I, E, O, C]] // this is fine
   }
 }

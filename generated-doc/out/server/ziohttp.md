@@ -1,12 +1,37 @@
-# Running as an zio-http server
+# Running as a zio-http server
 
-To expose an endpoint as a [zio-http](https://github.com/dream11/zio-http) server, first add the following dependency:
+The `tapir-zio` module defines type aliases and extension methods which make it more ergonomic to work with
+[ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http-server` contains an interpreter useful when
+exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http) server.
+
+You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M10"
 ```
 
-Now import the object:
+or just add the zio-http integration which already depends on `tapir-zio`:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M10"
+```
+
+Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
+
+```scala
+import sttp.tapir.ztapir._
+```
+
+This brings into scope all of the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
+
+```eval_rst
+.. note::
+
+  You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
+  ``import sttp.tapir.ztapir._`` import is meant as a complete replacement of ``import sttp.tapir._``.
+```
+
+## Exposing endpoints
 
 ```scala
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -14,14 +39,12 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 
 The `ZioHttpInterpreter` objects contains methods: `toHttp` and `toHttpRecoverErrors`.
 
-The `toHttp` method requires the logic of the endpoint to be given as a function of type:
+The `toHttp` method requires a `ZServerEndpoint` (see below), or that the logic of the endpoint is given as a function 
+of type:
 
 ```scala
-I => RIO[R, Either[E, O]]
+I => ZIO[R, E, O]
 ```
-
-The `toHttpRecoverErrors` method recovers errors from failed effects, and hence requires that `E` is a subclass of
-`Throwable` (an exception); it expects a function of type `I => RIO[R, O]`.
 
 For example:
 
@@ -31,8 +54,8 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
 
-def countCharacters(s: String): RIO[Any, Either[Unit, Int]] =
-  ZIO.succeed(Right(s.length))
+def countCharacters(s: String): ZIO[Any, Nothing, Int] =
+  ZIO.succeed(s.length)
 
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
@@ -50,11 +73,22 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
 
-def logic(s: String, i: Int): RIO[Any, Either[Unit,String]] = ???
+def logic(s: String, i: Int): ZIO[Any, Nothing, String] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
 val anHttp: Http[Any, Throwable, Request, Response[Any, Throwable]] = 
     ZioHttpInterpreter().toHttp(anEndpoint)((logic _).tupled)
 ```
+
+## Server logic
+
+When defining the business logic for an endpoint, the following methods are available, which replace the
+[standard ones](logic.md):
+
+* `def zServerLogic(logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C]`
+* `def zServerLogicPart(logicPart: T => ZIO[R, E, U])`
+* `def zServerLogicForCurrent(logicPart: I => ZIO[R, E, U])`
+
+The first defines complete server logic, while the second and third allow defining server logic in parts.
 
 ## Streaming
 
