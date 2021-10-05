@@ -52,7 +52,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       }
     )
 
-    new ServerBasicTests(createServerTest, interpreter).tests() ++
+    new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
       new ServerFileMultipartTests(createServerTest).tests() ++
       new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
       new ServerWebSocketTests(createServerTest, ZioStreams) {

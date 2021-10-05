@@ -19,7 +19,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val interpreter = new NettyFutureTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          val tests = new ServerBasicTests(createServerTest, interpreter).tests() ++
+          val tests = new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
             new ServerAuthenticationTests(createServerTest).tests() ++
             new ServerMetricsTest(createServerTest).tests() ++
             new ServerRejectTests(createServerTest, interpreter).tests()

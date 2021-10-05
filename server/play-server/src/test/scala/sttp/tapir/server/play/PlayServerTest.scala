@@ -28,7 +28,11 @@ class PlayServerTest extends TestSuite {
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(createServerTest, interpreter, multipleValueHeaderSupport = false, inputStreamSupport = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter,
+          multipleValueHeaderSupport = false,
+          inputStreamSupport = false,
+          invulnerableToUnsanitizedHeaders = false
+        ).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++

@@ -37,7 +37,8 @@ class ZioHttpServerTest extends TestSuite {
           multipleValueHeaderSupport = false,
           inputStreamSupport = true,
           supportsUrlEncodedPathSegments = false,
-          supportsMultipleSetCookieHeaders = false
+          supportsMultipleSetCookieHeaders = false,
+          invulnerableToUnsanitizedHeaders = false
         ).tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ServerAuthenticationTests(createServerTest).tests() ++

@@ -15,20 +15,12 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.tests.MultipleMediaTypes.{
-  organizationHtmlIso,
-  organizationHtmlUtf8,
-  organizationJson,
-  organizationXml,
-  out_json_xml_text_common_schema
-}
+import sttp.tapir.tests.MultipleMediaTypes.{organizationHtmlIso, organizationHtmlUtf8, organizationJson, organizationXml, out_json_xml_text_common_schema}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 class ServerBasicTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],
@@ -36,7 +28,8 @@ class ServerBasicTests[F[_], ROUTE](
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,
-    supportsMultipleSetCookieHeaders: Boolean = true
+    supportsMultipleSetCookieHeaders: Boolean = true,
+    invulnerableToUnsanitizedHeaders: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -275,11 +268,18 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_query_out_cookie_raw, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
       pureResult((q, "test").asRight[Unit])
     ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
-        .map { r =>
-          r.code shouldBe StatusCode.Ok
-          r.body shouldBe Right("test")
-        }
+      if (invulnerableToUnsanitizedHeaders) {
+        basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+          .map { r =>
+            if (r.code == StatusCode.Ok) {
+              r.body shouldBe Right("test")
+            } else {
+              r.code shouldBe StatusCode.InternalServerError
+            }
+          }
+      } else {
+        IO.pure(succeed)
+      }
     }, // Fails because of lack in Zio Http support for Set-Cookie header https://github.com/dream11/zio-http/issues/187
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
