@@ -31,7 +31,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.FileBody         =>
         val tapirFile = v.asInstanceOf[FileRange]
         tapirFile.range
-          .flatMap(range => range.start.map(start => resp.sendFile(tapirFile.file.toPath.toString, start, range.contentLength)))
+          .map(r => resp.sendFile(tapirFile.file.toPath.toString, r.start, r.contentLength))
           .getOrElse(resp.sendFile(tapirFile.file.toString))
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }

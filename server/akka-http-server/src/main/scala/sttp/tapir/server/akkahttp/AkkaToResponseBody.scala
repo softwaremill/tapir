@@ -57,26 +57,21 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case RawBodyType.FileBody =>
         val file = r.asInstanceOf[FileRange]
-
         file.range
-          .flatMap(range =>
-            (range.start, range.end) match {
-              case (Some(start), Some(end)) =>
-                val source = FileIO
-                  .fromPath(file.file.toPath, chunkSize = 8192, startPosition = start)
-                  .statefulMapConcat { () =>
-                    var left = end - start + 1
-                    (next: ByteString) => {
-                      val current = next.length
-                      val oldLeft = left
-                      left -= current
-                      List(next.take(Math.min(oldLeft, current).toInt))
-                    }
-                  }
-                Some(HttpEntity(ct, source))
-              case _ => None
-            }
-          )
+          .map(r => {
+            val source = FileIO
+              .fromPath(file.file.toPath, chunkSize = 8192, startPosition = r.start)
+              .statefulMapConcat { () =>
+                var left = r.end - r.start + 1
+                (next: ByteString) => {
+                  val current = next.length
+                  val oldLeft = left
+                  left -= current
+                  List(next.take(Math.min(oldLeft, current).toInt))
+                }
+              }
+            HttpEntity(ct, source)
+          })
           .getOrElse(HttpEntity.fromPath(ct, file.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))

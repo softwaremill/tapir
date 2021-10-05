@@ -3,8 +3,7 @@ package sttp.tapir.static
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.FileRange
-import sttp.model.headers.Range
+import sttp.tapir.{FileRange, RangeValue}
 
 import java.io.File
 import java.nio.file.{LinkOption, Path, Paths}
@@ -58,14 +57,14 @@ object Files {
     })
   }
 
-  private def fileOutput[F[_]](filesInput: StaticInput, file: File, calculateETag: File => F[Option[ETag]], range: Range)(implicit
+  private def fileOutput[F[_]](filesInput: StaticInput, file: File, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
     m: MonadError[F]
   ): F[StaticOutput[FileRange]] = for {
     etag <- calculateETag(file)
     lastModified <- m.unit(file.lastModified())
     result <-
       if (isModified(filesInput, etag, lastModified)) {
-        val contentRange = range.toContentRange(file.length(), range.unit).toString()
+        val contentRange = range.toContentRange(file.length()).toString()
         m.unit(StaticOutput.FoundPartial(FileRange(file, Some(range)), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(contentRange)))
       }
       else StaticOutput.NotModified.unit

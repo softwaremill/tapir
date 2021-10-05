@@ -16,7 +16,7 @@ import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, FileRange, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
 private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions) {
