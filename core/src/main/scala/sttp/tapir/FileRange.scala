@@ -10,7 +10,7 @@ case class RangeValue(start: Long, end: Long) {
   def toContentRange(fileSize: Long): ContentRange =
     ContentRange(ContentRangeUnits.Bytes, Some((start, end)), Some(fileSize))
 
-  val contentLength: Long = end - start
+  val contentLength: Long = end - start + 1
 
   def isValid(contentSize: Long): Boolean = end < contentSize
 }

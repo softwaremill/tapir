@@ -25,6 +25,9 @@ class RangeInputStream extends InputStream {
     remaining -= 1
     if (remaining >= 0) parent.read() else -1
   }
+
+  @Override
+  override def close(): Unit = parent.close()
 }
 
 object RangeInputStream {

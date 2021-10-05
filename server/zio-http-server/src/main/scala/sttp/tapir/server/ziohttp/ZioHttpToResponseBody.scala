@@ -2,7 +2,6 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders
-import sttp.tapir.internal.FileChunk
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import zio.Chunk

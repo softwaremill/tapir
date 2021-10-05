@@ -59,7 +59,7 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
         val file = r.asInstanceOf[FileRange]
         file.range
           .map(r => {
-            val bytesTotal = r.end - r.start + 1
+            val bytesTotal = r.contentLength
             val source = FileIO
               .fromPath(file.file.toPath, chunkSize = 8192, startPosition = r.start)
               .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
