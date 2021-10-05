@@ -161,7 +161,24 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map(_.body shouldBe "ont")
+              .map(_.body shouldBe "onte")
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("should return bytes 100000-200000 from file") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f5").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=100000-200000"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map { r =>
+                r.body.length shouldBe 100001
+                r.body.head shouldBe 'x'
+              }
           }
           .unsafeToFuture()
       }
@@ -193,6 +210,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     Files.write(parent.resolve("d1/f3"), "f3 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/index.html"), "index content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/d2/f4"), "f4 content".getBytes, StandardOpenOption.CREATE_NEW)
+    Files.write(parent.resolve("f5"), ("x" * 300000).getBytes, StandardOpenOption.CREATE_NEW)
     parent.toFile.deleteOnExit()
 
     import scala.concurrent.ExecutionContext.Implicits.global
