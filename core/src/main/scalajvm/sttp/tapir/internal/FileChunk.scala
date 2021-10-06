@@ -24,17 +24,18 @@ class RangeInputStream extends InputStream {
   @Override
   override def read(): Int = {
     remaining -= 1
-    if (remaining >= 0) parent.read() else {
-      if (!closed) {
-        close()
-        closed = true
-      }
+    if (remaining >= 0) parent.read()
+    else {
+      close()
       -1
     }
   }
 
   @Override
-  override def close(): Unit = parent.close()
+  override def close(): Unit = if (!closed) {
+    parent.close()
+    closed = true
+  }
 }
 
 object RangeInputStream {
