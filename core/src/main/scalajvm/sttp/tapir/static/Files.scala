@@ -47,9 +47,13 @@ object Files {
         } else {
           filesInput.range match {
             case Some(range) =>
-              val file = realRequestedPath.toFile
-              if (range.isValid(file.length())) fileOutput(filesInput, file, calculateETag, range).map(Right(_))
-              else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+              (range.start, range.end) match {
+                case (Some(start), Some(end)) =>
+                  val file = realRequestedPath.toFile
+                  if (range.isValid(file.length())) fileOutput(filesInput, file, calculateETag, RangeValue(start, end)).map(Right(_))
+                  else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+                case _ => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
+              }
             case None => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
           }
         }

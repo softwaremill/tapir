@@ -2,7 +2,7 @@ package sttp.tapir.static
 
 import sttp.model.MediaType
 import sttp.model.headers.ETag
-import sttp.tapir.RangeValue
+import sttp.model.headers.Range
 
 import java.time.Instant
 
@@ -10,7 +10,7 @@ case class StaticInput(
     path: List[String],
     ifNoneMatch: Option[List[ETag]],
     ifModifiedSince: Option[Instant],
-    range: Option[RangeValue]
+    range: Option[Range]
 )
 
 trait StaticErrorOutput

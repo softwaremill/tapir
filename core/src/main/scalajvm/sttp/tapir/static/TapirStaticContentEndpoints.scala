@@ -47,13 +47,9 @@ trait TapirStaticContentEndpoints {
     case Some(v) => DecodeResult.fromEitherString(v, ETag.parse(v)).map(Some(_))
   }(_.map(_.toString))
 
-  private val rangeHeaderValue: EndpointIO[Option[RangeValue]] = header[Option[String]](HeaderNames.Range).mapDecode[Option[RangeValue]] {
+  private val rangeHeader: EndpointIO[Option[Range]] = header[Option[String]](HeaderNames.Range).mapDecode[Option[Range]] {
     case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, Range.parse(v).map(_.headOption).map(_.flatMap(r => {
-     (r.start, r.end) match {
-      case (Some(start), Some(end)) => Some(RangeValue(start, end))
-      case _ => None
-    }})))
+    case Some(v) => DecodeResult.fromEitherString(v, Range.parse(v).map(_.headOption))
   }(_.map(_.toString))
 
   private def staticEndpoint[T](
@@ -66,8 +62,8 @@ trait TapirStaticContentEndpoints {
         pathsWithoutDots
           .and(ifNoneMatchHeader)
           .and(ifModifiedSinceHeader)
-          .and(rangeHeaderValue)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[RangeValue])) => StaticInput(t._1, t._2, t._3, t._4))(fi =>
+          .and(rangeHeader)
+          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range])) => StaticInput(t._1, t._2, t._3, t._4))(fi =>
             (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range)
           )
       )
