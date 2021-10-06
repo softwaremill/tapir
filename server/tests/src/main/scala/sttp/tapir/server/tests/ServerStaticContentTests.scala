@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
-import sttp.model.{Header, HeaderNames, StatusCode}
+import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests._
@@ -191,6 +191,58 @@ class ServerStaticContentTests[F[_], ROUTE](
             .response(asStringAlways)
             .send(backend)
             .map(_.body shouldBe "Resource 1")
+        }
+        .unsafeToFuture()
+    },
+    Test("not return a resource outside of the resource prefix directory") {
+      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        .use { port =>
+          basicRequest
+            .get(uri"http://localhost:$port/../test2/r5.txt")
+            .response(asStringAlways)
+            .send(backend)
+            .map(_.body should not be "Resource 5")
+        }
+        .unsafeToFuture()
+    },
+    Test("return resource metadata") {
+      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        .use { port =>
+          basicRequest
+            .get(uri"http://localhost:$port/r1.txt")
+            .response(asStringAlways)
+            .send(backend)
+            .map { r =>
+              r.contentLength shouldBe Some(10)
+              r.contentType shouldBe Some(MediaType.TextPlain.toString())
+              r.header(HeaderNames.LastModified)
+                .flatMap(t => Header.parseHttpDate(t).toOption)
+                .map(_.toEpochMilli)
+                .get should be > (1629180000000L) // 8:00 17 Aug 2021 when the test was written
+              r.header(HeaderNames.Etag).isDefined shouldBe true
+            }
+        }
+        .unsafeToFuture()
+    },
+    Test("if an etag is present, only return the resource if it doesn't match the etag") {
+      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        .use { port =>
+          def get(etag: Option[String]) = basicRequest
+            .get(uri"http://localhost:$port/r1.txt")
+            .header(HeaderNames.IfNoneMatch, etag)
+            .response(asStringAlways)
+            .send(backend)
+
+          get(None).flatMap { r1 =>
+            r1.code shouldBe StatusCode.Ok
+            val etag = r1.header(HeaderNames.Etag).get
+
+            get(Some(etag)).map { r2 =>
+              r2.code shouldBe StatusCode.NotModified
+            } >> get(Some(etag.replace("-", "-x"))).map { r2 =>
+              r2.code shouldBe StatusCode.Ok
+            }
+          }
         }
         .unsafeToFuture()
     }
