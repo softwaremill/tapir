@@ -9,7 +9,12 @@ object FileChunk {
   def prepare(tapirFile: FileRange): Option[InputStream] = {
     tapirFile.range match {
       case Some(range) =>
-        Some(RangeInputStream(new FileInputStream(tapirFile.file), range.start, range.end + 1))
+        (range.start, range.end) match {
+          case (Some(start), Some(end)) => Some(RangeInputStream(new FileInputStream(tapirFile.file), start, end + 1))
+          case (Some(start), None)      => Some(RangeInputStream(new FileInputStream(tapirFile.file), start, range.fileSize + 1))
+          case (None, Some(end))        => Some(RangeInputStream(new FileInputStream(tapirFile.file), range.fileSize - end, range.fileSize))
+          case _                        => None
+        }
       case None => None
     }
   }

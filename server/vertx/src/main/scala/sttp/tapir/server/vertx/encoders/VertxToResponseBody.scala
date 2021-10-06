@@ -20,21 +20,28 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
 ) extends ToResponseBody[RoutingContext => Future[Void], S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Future[Void] = { rc =>
-    val resp = rc.response
-    bodyType match {
-      case RawBodyType.StringBody(charset) => resp.end(v.toString, charset.toString)
-      case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(v.asInstanceOf[Array[Byte]]))
-      case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
-      case RawBodyType.InputStreamBody =>
-        inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
-      case RawBodyType.FileBody         =>
-        val tapirFile = v.asInstanceOf[FileRange]
-        tapirFile.range
-          .map(r => resp.sendFile(tapirFile.file.toPath.toString, r.start, r.contentLength))
-          .getOrElse(resp.sendFile(tapirFile.file.toString))
-      case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
-    }
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Future[Void] = {
+    rc =>
+      val resp = rc.response
+      bodyType match {
+        case RawBodyType.StringBody(charset) => resp.end(v.toString, charset.toString)
+        case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(v.asInstanceOf[Array[Byte]]))
+        case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
+        case RawBodyType.InputStreamBody =>
+          inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
+        case RawBodyType.FileBody =>
+          val tapirFile = v.asInstanceOf[FileRange]
+          tapirFile.range
+            .flatMap(r =>
+              (r.start, r.end) match {
+                case (Some(start), _)  => Some(resp.sendFile(tapirFile.file.toPath.toString, start, r.contentLength))
+                case (None, Some(end)) => Some(resp.sendFile(tapirFile.file.toPath.toString, r.fileSize - end, r.contentLength))
+                case _                 => None
+              }
+            )
+            .getOrElse(resp.sendFile(tapirFile.file.toString))
+        case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
+      }
   }
 
   override def fromStreamValue(
@@ -43,7 +50,9 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       format: CodecFormat,
       charset: Option[Charset]
   ): RoutingContext => Future[Void] = { rc =>
-    Future.succeededFuture(Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response)).mapEmpty()
+    Future
+      .succeededFuture(Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response))
+      .mapEmpty()
   }
 
   override def fromWebSocketPipe[REQ, RESP](

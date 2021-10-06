@@ -35,10 +35,18 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
       case RawBodyType.ByteArrayBody       => Stream.fromChunk(Chunk.fromArray(r))
       case RawBodyType.ByteBufferBody      => Stream.fromChunk(Chunk.fromByteBuffer(r))
       case RawBodyType.InputStreamBody     => ZStream.fromInputStream(r).provideLayer(Blocking.live)
-      case RawBodyType.FileBody            =>
+      case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range
-          .map(r => ZStream.fromFile(tapirFile.file.toPath).drop(r.start).take(r.contentLength).provideLayer(Blocking.live))
+          .flatMap(r =>
+            (r.start, r.end) match {
+              case (Some(start), _) =>
+                Some(ZStream.fromFile(tapirFile.file.toPath).drop(start).take(r.contentLength).provideLayer(Blocking.live))
+              case (None, Some(end)) =>
+                Some(ZStream.fromFile(tapirFile.file.toPath).drop(r.fileSize - end).take(r.contentLength).provideLayer(Blocking.live))
+              case _ => None
+            }
+          )
           .getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
       case RawBodyType.MultipartBody(_, _) => Stream.empty
     }
