@@ -49,42 +49,68 @@ object Files {
             case Some(range) =>
               (range.start, range.end) match {
                 case (Some(start), Some(end)) =>
-                  val file = realRequestedPath.toFile
-                  if (range.isValid(file.length())) fileOutput(filesInput, file, calculateETag, RangeValue(start, end)).map(Right(_))
+                  if (range.isValid(realRequestedPath.toFile.length()))
+                    rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(start, end)).map(Right(_))
                   else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-                case _ => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
+                case _ => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
               }
-            case None => fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
+            case None => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
           }
         }
       }
     })
   }
 
-  private def fileOutput[F[_]](filesInput: StaticInput, file: File, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
-    m: MonadError[F]
-  ): F[StaticOutput[FileRange]] = for {
-    etag <- calculateETag(file)
-    lastModified <- m.unit(file.lastModified())
-    result <-
-      if (isModified(filesInput, etag, lastModified)) {
-        val contentRange = range.toContentRange(file.length()).toString()
-        m.unit(StaticOutput.FoundPartial(FileRange(file, Some(range)), Some(Instant.ofEpochMilli(lastModified)), Some(range.contentLength), Some(contentTypeFromName(file.getName)), etag, Some("bytes"), Some(contentRange)))
-      }
-      else StaticOutput.NotModified.unit
-  } yield result
+  private def rangeFileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
+      m: MonadError[F]
+  ): F[StaticOutput[FileRange]] =
+    fileOutput(
+      filesInput,
+      file,
+      calculateETag,
+      (lastModified, fileLength, etag) =>
+        StaticOutput.FoundPartial(
+          FileRange(file.toFile, Some(range)),
+          Some(Instant.ofEpochMilli(lastModified)),
+          Some(range.contentLength),
+          Some(contentTypeFromName(file.toFile.getName)),
+          etag,
+          Some("bytes"),
+          Some(range.toContentRange(fileLength).toString())
+        )
+    )
 
-  private def fileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]])(implicit
+  private def wholeFileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]])(implicit
+      m: MonadError[F]
+  ): F[StaticOutput[FileRange]] = fileOutput(
+    filesInput,
+    file,
+    calculateETag,
+    (lastModified, fileLength, etag) =>
+      StaticOutput.Found(
+        FileRange(file.toFile),
+        Some(Instant.ofEpochMilli(lastModified)),
+        Some(fileLength),
+        Some(contentTypeFromName(file.toFile.getName)),
+        etag
+      )
+  )
+
+  private def fileOutput[F[_]](
+      filesInput: StaticInput,
+      file: Path,
+      calculateETag: File => F[Option[ETag]],
+      result: (Long, Long, Option[ETag]) => StaticOutput[FileRange]
+  )(implicit
       m: MonadError[F]
   ): F[StaticOutput[FileRange]] = for {
     etag <- calculateETag(file.toFile)
     lastModified <- m.blocking(file.toFile.lastModified())
     result <-
       if (isModified(filesInput, etag, lastModified))
-        m.blocking(file.toFile.length()).map(contentLength =>
-          StaticOutput.Found(FileRange(file.toFile), Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentTypeFromName(file.toFile.getName)), etag))
+        m.blocking(file.toFile.length())
+          .map(fileLength => result(lastModified, fileLength, etag))
       else StaticOutput.NotModified.unit
   } yield result
-
 
 }
