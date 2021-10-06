@@ -14,21 +14,9 @@ import sttp.model.ResponseMetadata
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  DecodeResult,
-  Endpoint,
-  EndpointIO,
-  EndpointInput,
-  EndpointOutput,
-  Mapping,
-  RawBodyType,
-  StreamBodyIO,
-  WebSocketBodyOutput
-}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, FileRange, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
 private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions) {
@@ -138,7 +126,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(entityEncoder)
       case RawBodyType.FileBody =>
         val entityEncoder = EntityEncoder.fileEncoder[F]
-        req.withEntity(encoded.asInstanceOf[File])(entityEncoder)
+        req.withEntity(encoded.asInstanceOf[FileRange].file)(entityEncoder)
       case _: RawBodyType.MultipartBody =>
         throw new IllegalArgumentException("Multipart body isn't supported yet")
     }
@@ -217,7 +205,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
               response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_)).map(_.asInstanceOf[Any])
             case RawBodyType.FileBody =>
               val file = clientOptions.createFile()
-              response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => file.asInstanceOf[Any])
+              response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => FileRange(file))
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse[F[Any]](((): Any).pure[F])

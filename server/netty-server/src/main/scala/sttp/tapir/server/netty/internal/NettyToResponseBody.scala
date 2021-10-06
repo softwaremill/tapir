@@ -30,7 +30,7 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
         val stream = v.asInstanceOf[InputStream]
         Unpooled.copiedBuffer(stream.readAllBytes())
 
-      case RawBodyType.FileBody         => Unpooled.copiedBuffer(Files.readAllBytes(v.toPath))
+      case RawBodyType.FileBody         => Unpooled.copiedBuffer(Files.readAllBytes(v.file.toPath))
       case _: RawBodyType.MultipartBody => ???
     }
   }

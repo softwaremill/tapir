@@ -3,10 +3,10 @@ package sttp.tapir.server.netty
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import com.typesafe.scalalogging.Logger
-import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 case class NettyCatsServerOptions[F[_]](
     host: String,

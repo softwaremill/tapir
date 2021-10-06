@@ -2,14 +2,14 @@ package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink, Source}
-import akka.util.{ByteString, ByteStringBuilder}
+import akka.util.ByteString
 import play.api.mvc.Request
 import play.core.parsers.Multipart
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.Part
 import sttp.tapir.internal._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
@@ -43,10 +43,12 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
       case RawBodyType.InputStreamBody => bodyAsByteString().map(b => RawValue(new ByteArrayInputStream(b.toArray)))
       case RawBodyType.FileBody =>
         bodyAsFile match {
-          case Some(file) => Future.successful(RawValue(file, Seq(file)))
+          case Some(file) =>
+            val tapirFile = FileRange(file)
+            Future.successful(RawValue(tapirFile, Seq(tapirFile)))
           case None =>
-            val file = serverOptions.temporaryFileCreator.create().toFile
-            body().runWith(FileIO.toPath(file.toPath)).map(_ => RawValue(file, Seq(file)))
+            val file = FileRange(serverOptions.temporaryFileCreator.create().toFile)
+            body().runWith(FileIO.toPath(file.file.toPath)).map(_ => RawValue(file, Seq(file)))
         }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }

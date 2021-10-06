@@ -25,10 +25,8 @@ import sttp.tapir.tests.MultipleMediaTypes.{
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 class ServerBasicTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],

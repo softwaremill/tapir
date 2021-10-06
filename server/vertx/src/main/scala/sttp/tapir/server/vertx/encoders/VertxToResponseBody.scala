@@ -6,21 +6,21 @@ import io.vertx.core.http.{HttpHeaders, HttpServerResponse}
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptions[F])(implicit
     val readStreamCompatible: ReadStreamCompatible[S]
-) extends ToResponseBody[RoutingContext => Unit, S] {
+) extends ToResponseBody[RoutingContext => Future[Void], S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Unit = { rc =>
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     bodyType match {
       case RawBodyType.StringBody(charset) => resp.end(v.toString, charset.toString)
@@ -28,10 +28,13 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
       case RawBodyType.InputStreamBody =>
         inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
-      case RawBodyType.FileBody         => resp.sendFile(v.asInstanceOf[File].getPath)
+      case RawBodyType.FileBody         =>
+        val tapirFile = v.asInstanceOf[FileRange]
+        tapirFile.range
+          .map(r => resp.sendFile(tapirFile.file.toPath.toString, r.start, r.contentLength))
+          .getOrElse(resp.sendFile(tapirFile.file.toString))
       case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
     }
-    ()
   }
 
   override def fromStreamValue(
@@ -39,14 +42,14 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): RoutingContext => Unit = { rc =>
-    Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response)
+  ): RoutingContext => Future[Void] = { rc =>
+    Future.succeededFuture(Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response)).mapEmpty()
   }
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
-  ): RoutingContext => Unit = throw new UnsupportedOperationException()
+  ): RoutingContext => Future[Void] = throw new UnsupportedOperationException()
 
   private def handleMultipleBodyParts[CF <: CodecFormat, R](
       multipart: RawBodyType[R] with RawBodyType.MultipartBody,
@@ -111,7 +114,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           case RawBodyType.InputStreamBody =>
             inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
           case RawBodyType.FileBody =>
-            val file = r.asInstanceOf[File]
+            val file = r.asInstanceOf[FileRange].file
             rc.vertx.fileSystem
               .readFile(file.getAbsolutePath)
               .flatMap { buf =>

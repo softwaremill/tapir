@@ -96,6 +96,9 @@ package object tests {
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream, Any] =
     endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
 
+  val in_file_out_file: Endpoint[TapirFile, Unit, TapirFile, Any] =
+    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
+
   val in_string_out_stream_with_header: Endpoint[String, Unit, (InputStream, Option[Long]), Any] =
     endpoint.post
       .in("api" / "echo")
@@ -103,9 +106,6 @@ package object tests {
       .out(inputStreamBody)
       .out(header[Option[Long]]("Content-Length"))
       .name("input string output stream with header")
-
-  val in_file_out_file: Endpoint[TapirFile, Unit, TapirFile, Any] =
-    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
 
   val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Any] =
     endpoint.in("api" / "unit").out(jsonBody[Unit])

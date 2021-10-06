@@ -9,9 +9,9 @@ import play.api.mvc.{Codec, MultipartFormData}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -44,10 +44,28 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
         HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
       case RawBodyType.FileBody =>
-        val path = v.asInstanceOf[File].toPath
-        val fileSize = Some(Files.size(path))
-        val file = FileIO.fromPath(path)
-        HttpEntity.Streamed(file, fileSize, contentType)
+        val tapirFile = v.asInstanceOf[FileRange]
+        tapirFile.range
+          .map(r => {
+            val bytesTotal = r.contentLength
+            val source = FileIO
+              .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = r.start)
+              .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
+                val bytesInNext = next.length
+                val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext))
+                (bytesConsumed + bytesInNext, next.take(bytesFromNext.toInt))
+              }
+              .takeWhile(_._1 < bytesTotal, inclusive = true)
+              .map(_._2)
+            HttpEntity.Streamed(source, Some(bytesTotal), contentType)
+          })
+          .getOrElse({
+            val path = tapirFile.file.toPath
+            val fileSize = Some(Files.size(path))
+            val file = FileIO.fromPath(path)
+            HttpEntity.Streamed(file, fileSize, contentType)
+          })
+
 
       case m: RawBodyType.MultipartBody =>
         val rawParts = v.asInstanceOf[Seq[RawPart]]

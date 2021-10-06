@@ -1,7 +1,6 @@
 package sttp.tapir.client.tests
 
 import cats.effect.unsafe.implicits.global
-
 import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword

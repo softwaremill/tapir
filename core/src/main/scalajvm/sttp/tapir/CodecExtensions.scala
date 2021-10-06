@@ -1,12 +1,10 @@
 package sttp.tapir
 
-import java.io.File
-import java.nio.file.Path
-
-import sttp.tapir.Codec.id
+import sttp.tapir.Codec.fileRange
 import sttp.tapir.CodecFormat.OctetStream
 
+import java.nio.file.Path
+
 trait CodecExtensions {
-  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Schema.schemaForFile)
-  implicit val path: Codec[File, Path, OctetStream] = file.map((_: File).toPath)(_.toFile)
+  implicit lazy val path: Codec[FileRange, Path, OctetStream] = fileRange.map(d => d.file.toPath)(e => FileRange(e.toFile))
 }

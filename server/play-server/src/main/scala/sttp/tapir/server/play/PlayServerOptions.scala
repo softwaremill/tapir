@@ -4,10 +4,10 @@ import akka.stream.Materializer
 import play.api.Logger
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future}
 

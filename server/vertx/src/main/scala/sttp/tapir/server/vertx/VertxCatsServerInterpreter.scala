@@ -68,9 +68,9 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
-    implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
+    implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Unit, S] = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
       new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,
@@ -81,9 +81,12 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     val result = interpreter(serverRequest, e)
       .flatMap {
         case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
-        case RequestResult.Response(response) => VertxOutputEncoders(response).apply(rc).pure
+        case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
       }
-      .handleError { e => rc.fail(e) }
+      .handleError { e =>
+        if (rc.response().bytesWritten() > 0) rc.response().end()
+        rc.fail(e)
+      }
 
     // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
     // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
