@@ -90,8 +90,8 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
 
   private def createSource[R, CF <: CodecFormat](
       tapirFile: FileRange,
-      bytesTotal: Long,
-      start: Long
+      start: Long,
+      bytesTotal: Long
   ): Source[ByteString, Future[IOResult]] =
     FileIO
       .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)

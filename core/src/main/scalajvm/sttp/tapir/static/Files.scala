@@ -48,7 +48,6 @@ object Files {
           filesInput.range match {
             case Some(range) =>
               val fileSize = realRequestedPath.toFile.length()
-              // TODO isValid impl is bad fix
               if (range.end.isEmpty || range.end.exists(_ < fileSize))
                 rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(range.start, range.end, fileSize)).map(Right(_))
               else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
@@ -66,8 +65,7 @@ object Files {
       filesInput,
       file,
       calculateETag,
-      // TODO: Refactor fileLength no longer needed
-      (lastModified, fileLength, etag) =>
+      (lastModified, _, etag) =>
         StaticOutput.FoundPartial(
           FileRange(file.toFile, Some(range)),
           Some(Instant.ofEpochMilli(lastModified)),

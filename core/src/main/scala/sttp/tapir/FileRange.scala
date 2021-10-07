@@ -11,8 +11,8 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
 
   def contentLength: Long = (start, end) match {
     case (Some(_start), Some(_end)) => _end - _start + 1
-    case (Some(_start), None)       => fileSize - _start + 1
-    case (None, Some(_end))         => _end + 1
+    case (Some(_start), None)       => fileSize - _start
+    case (None, Some(_end))         => _end
     case _                          => 0
   }
 }
