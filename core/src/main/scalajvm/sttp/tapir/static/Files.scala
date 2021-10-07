@@ -48,7 +48,8 @@ object Files {
           filesInput.range match {
             case Some(range) =>
               val fileSize = realRequestedPath.toFile.length()
-              if (range.isValid(fileSize))
+              // TODO isValid impl is bad fix
+              if (range.end.isEmpty || range.end.exists(_ < fileSize))
                 rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(range.start, range.end, fileSize)).map(Right(_))
               else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
             case None => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))

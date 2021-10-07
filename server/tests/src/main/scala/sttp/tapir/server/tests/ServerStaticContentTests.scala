@@ -183,6 +183,57 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
+    Test("should return last 200000 bytes from file") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f5").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=100000-"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map { r =>
+                r.body.length shouldBe 200000
+                r.body.head shouldBe 'x'
+              }
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("should return last 100000 bytes from file") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f5").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=-100000"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map { r =>
+                r.body.length shouldBe 100000
+                r.body.head shouldBe 'x'
+              }
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("should fail for incorrect range") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f5").toFile.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .headers(Header(HeaderNames.Range, "bytes=-"))
+              .get(uri"http://localhost:$port/test")
+              .response(asStringAlways)
+              .send(backend)
+              .map { r =>
+                // TODO change to 416
+                r.code shouldBe StatusCode(400)
+              }
+          }
+          .unsafeToFuture()
+      }
+    },
     Test("if an etag is present, only return the file if it doesn't match the etag") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
