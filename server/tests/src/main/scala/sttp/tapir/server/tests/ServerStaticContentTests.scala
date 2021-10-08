@@ -226,10 +226,7 @@ class ServerStaticContentTests[F[_], ROUTE](
               .get(uri"http://localhost:$port/test")
               .response(asStringAlways)
               .send(backend)
-              .map { r =>
-                // TODO change to 416
-                r.code shouldBe StatusCode(400)
-              }
+              .map { _.code shouldBe StatusCode(400) }
           }
           .unsafeToFuture()
       }

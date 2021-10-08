@@ -58,17 +58,7 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range
-          .flatMap(r =>
-            (r.start, r.end) match {
-              case (Some(start), _) =>
-                val source: Source[ByteString, Future[IOResult]] = createSource(tapirFile, start, r.contentLength)
-                Some(HttpEntity(ct, source))
-              case (None, Some(end)) =>
-                val source: Source[ByteString, Future[IOResult]] = createSource(tapirFile, r.fileSize - end, r.contentLength)
-                Some(HttpEntity(ct, source))
-              case _ => None
-            }
-          )
+          .flatMap(r => r.startAndEnd.map(s => HttpEntity(ct, createSource(tapirFile, s._1, r.contentLength))))
           .getOrElse(HttpEntity.fromPath(ct, tapirFile.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))

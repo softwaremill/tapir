@@ -55,17 +55,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         val stream = tapirFile.range
-          .flatMap(r =>
-            (r.start, r.end) match {
-              case (Some(start), Some(end)) =>
-                Some(Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, start, end + 1))
-              case (Some(start), None) =>
-                Some(Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, start, r.fileSize))
-              case (None, Some(end)) =>
-                Some(Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, r.fileSize - end, r.fileSize))
-              case _ => None
-            }
-          )
+          .flatMap(r => r.startAndEnd.map(s => Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, s._1, s._2)))
           .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))
         (stream, Some(tapirFile.file.length))
       case m: RawBodyType.MultipartBody =>

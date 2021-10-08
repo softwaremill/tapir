@@ -15,4 +15,11 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
     case (None, Some(_end))         => _end
     case _                          => 0
   }
+
+  val startAndEnd: Option[(Long, Long)] = (start, end) match {
+    case (Some(_start), Some(_end)) => Some((_start, _end + 1))
+    case (Some(_start), None)       => Some((_start, fileSize))
+    case (None, Some(_end))         => Some((fileSize - _end, fileSize))
+    case _                          => None
+  }
 }

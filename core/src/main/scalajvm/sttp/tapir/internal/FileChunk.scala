@@ -6,18 +6,8 @@ import java.io.{FileInputStream, IOException, InputStream}
 
 object FileChunk {
 
-  def prepare(tapirFile: FileRange): Option[InputStream] = {
-    tapirFile.range match {
-      case Some(range) =>
-        (range.start, range.end) match {
-          case (Some(start), Some(end)) => Some(RangeInputStream(new FileInputStream(tapirFile.file), start, end + 1))
-          case (Some(start), None)      => Some(RangeInputStream(new FileInputStream(tapirFile.file), start, range.fileSize + 1))
-          case (None, Some(end))        => Some(RangeInputStream(new FileInputStream(tapirFile.file), range.fileSize - end, range.fileSize))
-          case _                        => None
-        }
-      case None => None
-    }
-  }
+  def prepare(tapirFile: FileRange): Option[InputStream] =
+    tapirFile.range.flatMap(_.startAndEnd.map(s => RangeInputStream(new FileInputStream(tapirFile.file), s._1, s._2)))
 }
 
 class RangeInputStream extends InputStream {
