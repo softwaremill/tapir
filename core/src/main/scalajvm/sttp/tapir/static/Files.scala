@@ -47,13 +47,10 @@ object Files {
         } else {
           filesInput.range match {
             case Some(range) =>
-              (range.start, range.end) match {
-                case (Some(start), Some(end)) =>
-                  if (range.isValid(realRequestedPath.toFile.length()))
-                    rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(start, end)).map(Right(_))
-                  else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-                case _ => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
-              }
+              val fileSize = realRequestedPath.toFile.length()
+              if (range.isValid(fileSize))
+                rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(range.start, range.end, fileSize)).map(Right(_))
+              else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
             case None => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
           }
         }
@@ -68,7 +65,7 @@ object Files {
       filesInput,
       file,
       calculateETag,
-      (lastModified, fileLength, etag) =>
+      (lastModified, _, etag) =>
         StaticOutput.FoundPartial(
           FileRange(file.toFile, Some(range)),
           Some(Instant.ofEpochMilli(lastModified)),
@@ -76,7 +73,7 @@ object Files {
           Some(contentTypeFromName(file.toFile.getName)),
           etag,
           Some("bytes"),
-          Some(range.toContentRange(fileLength).toString())
+          Some(range.toContentRange.toString())
         )
     )
 

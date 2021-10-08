@@ -5,9 +5,9 @@ import cats.syntax.all._
 import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
+import org.http4s.Header.ToRaw.rawToRaw
 import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Length`, `Content-Type`}
-import org.http4s.Header.ToRaw.rawToRaw
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}
@@ -55,7 +55,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         val stream = tapirFile.range
-          .flatMap(r => Some(Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, r.start, r.end + 1)))
+          .flatMap(r => r.startAndEnd.map(s => Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, s._1, s._2)))
           .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))
         (stream, Some(tapirFile.file.length))
       case m: RawBodyType.MultipartBody =>
