@@ -23,6 +23,6 @@ class FinatraServerTest extends TestSuite {
       new ServerFileMultipartTests(createServerTest).tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
       new ServerMetricsTest(createServerTest).tests() ++
-      new ServerStaticContentTests(interpreter, backend, false).tests()
+      new ServerStaticContentTests(interpreter, backend, supportSettingContentLength = false).tests()
   }
 }
