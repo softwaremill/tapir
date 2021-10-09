@@ -7,7 +7,7 @@ import sttp.tapir.server.netty.internal.NettyServerInterpreter
 import scala.concurrent.{ExecutionContext, Future}
 
 trait NettyFutureServerInterpreter {
-  def nettyServerOptions: NettyFutureServerOptions
+  def nettyServerOptions: NettyFutureServerOptions[_]
 
   def toRoute(
       ses: List[ServerEndpoint[Any, Future]]
@@ -18,9 +18,9 @@ trait NettyFutureServerInterpreter {
 }
 
 object NettyFutureServerInterpreter {
-  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default): NettyFutureServerInterpreter = {
+  def apply(serverOptions: NettyFutureServerOptions[_] = NettyFutureServerOptions.default): NettyFutureServerInterpreter = {
     new NettyFutureServerInterpreter {
-      override def nettyServerOptions: NettyFutureServerOptions = serverOptions
+      override def nettyServerOptions: NettyFutureServerOptions[_] = serverOptions
     }
   }
 }

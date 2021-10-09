@@ -7,28 +7,29 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
+import java.net.{InetSocketAddress, SocketAddress}
 import scala.concurrent.{Future, blocking}
 
-case class NettyFutureServerOptions(
+case class NettyFutureServerOptions[S <: SocketAddress](
     host: String,
     port: Int,
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    nettyOptions: NettyOptions
+    nettyOptions: NettyOptions[S]
 ) {
-  def host(s: String): NettyFutureServerOptions = copy(host = s)
-  def port(p: Int): NettyFutureServerOptions = copy(port = p)
-  def randomPort: NettyFutureServerOptions = port(0)
-  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
-  def nettyOptions(o: NettyOptions): NettyFutureServerOptions = copy(nettyOptions = o)
+  def host(s: String): NettyFutureServerOptions[S] = copy(host = s)
+  def port(p: Int): NettyFutureServerOptions[S] = copy(port = p)
+  def randomPort: NettyFutureServerOptions[S] = port(0)
+  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[S] = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[S] = copy(interceptors = interceptors :+ i)
+  def nettyOptions[NEW_S <: SocketAddress](o: NettyOptions[NEW_S]): NettyFutureServerOptions[NEW_S] = copy(nettyOptions = o)
 }
 
 object NettyFutureServerOptions {
-  val default: NettyFutureServerOptions = customiseInterceptors.options
+  val default: NettyFutureServerOptions[InetSocketAddress] = customiseInterceptors.options
 
-  def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
+  def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions(
     NettyDefaults.DefaultHost,
     NettyDefaults.DefaultPort,
     interceptors,
@@ -40,7 +41,8 @@ object NettyFutureServerOptions {
       import scala.concurrent.ExecutionContext.Implicits.global
       Future(blocking(Defaults.deleteFile()(file)))
     },
-    NettyOptions.default
+//    NettyOptions.default
+    NettyOptionsBuilder.default.build
   )
 
   def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
@@ -48,6 +50,14 @@ object NettyFutureServerOptions {
       createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
+
+//  def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], DefaultOptions] = {
+//    CustomInterceptors(
+//      createLogInterceptor =
+//        (sl: ServerLog[Logger => Future[Unit]]) => new ServerLogInterceptor[Logger => Future[Unit], Future](sl, (_, _) => Future.unit),
+//      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], DefaultOptions]) => default(ci.interceptors)
+//    ).serverLog(defaultServerLog)
+//  }
 
   private val log = Logger[NettyFutureServerInterpreter]
 
