@@ -4,14 +4,15 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel._
 import sttp.tapir.server.netty.NettyOptions
 
+import java.net.SocketAddress
+
 object NettyBootstrap {
   def apply[F[_]](
       nettyOptions: NettyOptions,
       handler: => NettyServerHandler[F],
       eventLoopGroup: EventLoopGroup,
       serverChannel: Class[_ <: ServerChannel],
-      host: String,
-      port: Int
+      socketAddress: SocketAddress
   ): ChannelFuture = {
     val httpBootstrap = new ServerBootstrap()
 
@@ -24,6 +25,6 @@ object NettyBootstrap {
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true) // https://github.com/netty/netty/issues/1692
 
-    httpBootstrap.bind(host, port)
+    httpBootstrap.bind(socketAddress)
   }
 }

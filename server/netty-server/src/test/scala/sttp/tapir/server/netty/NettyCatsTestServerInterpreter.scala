@@ -8,6 +8,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -40,7 +41,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
 
   override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
     val options =
-      NettyCatsServerOptions.default[IO](dispatcher).nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup)).randomPort
+      NettyCatsServerOptions.default[IO](dispatcher).nettyOptions(NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build)
     val bind = NettyCatsServer(options).addRoutes(routes.toList).start()
 
     Resource

@@ -9,16 +9,11 @@ import sttp.tapir.{Defaults, TapirFile}
 import scala.concurrent.{Future, blocking}
 
 case class NettyFutureServerOptions(
-    host: String,
-    port: Int,
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
     nettyOptions: NettyOptions
 ) {
-  def host(s: String): NettyFutureServerOptions = copy(host = s)
-  def port(p: Int): NettyFutureServerOptions = copy(port = p)
-  def randomPort: NettyFutureServerOptions = port(0)
   def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
   def nettyOptions(o: NettyOptions): NettyFutureServerOptions = copy(nettyOptions = o)
@@ -28,8 +23,6 @@ object NettyFutureServerOptions {
   val default: NettyFutureServerOptions = customInterceptors.options
 
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
-    NettyDefaults.DefaultHost,
-    NettyDefaults.DefaultPort,
     interceptors,
     _ => {
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,7 +32,7 @@ object NettyFutureServerOptions {
       import scala.concurrent.ExecutionContext.Implicits.global
       Future(blocking(Defaults.deleteFile()(file)))
     },
-    NettyOptions.default
+    NettyOptionsBuilder.default.build
   )
 
   def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions] = {

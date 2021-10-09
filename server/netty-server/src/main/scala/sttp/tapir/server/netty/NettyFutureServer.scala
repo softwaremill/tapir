@@ -25,8 +25,6 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
   def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer = copy(routes = routes ++ r)
 
   def options(o: NettyFutureServerOptions): NettyFutureServer = copy(options = o)
-  def host(s: String): NettyFutureServer = copy(options = options.host(s))
-  def port(p: Int): NettyFutureServer = copy(options = options.port(p))
 
   def start(): Future[NettyFutureServerBinding] = {
     val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
@@ -38,8 +36,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       new NettyServerHandler(route, (f: Future[Unit]) => f),
       eventLoopGroup,
       options.nettyOptions.eventLoopConfig.serverChannel,
-      options.host,
-      options.port
+      options.nettyOptions.socketAddress
     )
 
     nettyChannelFutureToScala(channelFuture).map(ch =>

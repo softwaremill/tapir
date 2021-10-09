@@ -9,17 +9,12 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLog
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 case class NettyCatsServerOptions[F[_]](
-    host: String,
-    port: Int,
     interceptors: List[Interceptor[F]],
     createFile: ServerRequest => F[TapirFile],
     deleteFile: TapirFile => F[Unit],
     dispatcher: Dispatcher[F],
     nettyOptions: NettyOptions
 ) {
-  def host(s: String): NettyCatsServerOptions[F] = copy(host = s)
-  def port(p: Int): NettyCatsServerOptions[F] = copy(port = p)
-  def randomPort: NettyCatsServerOptions[F] = port(0)
   def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = interceptors :+ i)
   def nettyOptions(o: NettyOptions): NettyCatsServerOptions[F] = copy(nettyOptions = o)
@@ -30,13 +25,11 @@ object NettyCatsServerOptions {
 
   def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
     NettyCatsServerOptions(
-      NettyDefaults.DefaultHost,
-      NettyDefaults.DefaultPort,
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
       dispatcher,
-      NettyOptions.default
+      NettyOptionsBuilder.default.build
     )
 
   def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]] =

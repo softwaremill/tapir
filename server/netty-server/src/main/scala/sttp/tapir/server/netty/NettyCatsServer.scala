@@ -26,8 +26,6 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
   def addRoutes(r: Iterable[Route[F]]): NettyCatsServer[F] = copy(routes = routes ++ r)
 
   def options(o: NettyCatsServerOptions[F]): NettyCatsServer[F] = copy(options = o)
-  def host(s: String): NettyCatsServer[F] = copy(options = options.host(s))
-  def port(p: Int): NettyCatsServer[F] = copy(options = options.port(p))
 
   def start(): F[NettyCatsServerBinding[F]] = Async[F].defer {
     val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
@@ -39,10 +37,8 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)),
       eventLoopGroup,
       options.nettyOptions.eventLoopConfig.serverChannel,
-      options.host,
-      options.port
+      options.nettyOptions.socketAddress
     )
-
     nettyChannelFutureToScala(channelFuture).map(ch =>
       NettyCatsServerBinding(
         ch.localAddress().asInstanceOf[InetSocketAddress],
