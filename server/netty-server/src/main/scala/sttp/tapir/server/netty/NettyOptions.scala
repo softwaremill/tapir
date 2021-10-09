@@ -15,13 +15,13 @@ case class NettyOptions(
     initPipeline: (ChannelPipeline, ChannelHandler) => Unit
 ) {
   def shutdownEventLoopGroupOnClose(shutdown: Boolean): NettyOptions = copy(shutdownEventLoopGroupOnClose = shutdown)
-  def eventLoopConfig(g: EventLoopGroup, clz: Class[_ <: ServerChannel]): NettyOptions =
-    copy(eventLoopConfig = EventLoopConfig(() => g, clz), shutdownEventLoopGroupOnClose = false)
+  def eventLoopConfig(g: () => EventLoopGroup, clz: Class[_ <: ServerChannel]): NettyOptions =
+    copy(eventLoopConfig = EventLoopConfig(g, clz), shutdownEventLoopGroupOnClose = false)
   def eventLoopGroup(g: EventLoopGroup): NettyOptions = {
     g match {
-      case _: NioEventLoopGroup    => eventLoopConfig(g, classOf[NioServerSocketChannel])
-      case _: EpollEventLoopGroup  => eventLoopConfig(g, classOf[EpollServerSocketChannel])
-      case _: KQueueEventLoopGroup => eventLoopConfig(g, classOf[KQueueServerSocketChannel])
+      case _: NioEventLoopGroup    => eventLoopConfig(() => g, classOf[NioServerSocketChannel])
+      case _: EpollEventLoopGroup  => eventLoopConfig(() => g, classOf[EpollServerSocketChannel])
+      case _: KQueueEventLoopGroup => eventLoopConfig(() => g, classOf[KQueueServerSocketChannel])
       case other                   => throw new Exception(s"Unexpected EventLoopGroup of class ${other.getClass} provided")
     }
   }
