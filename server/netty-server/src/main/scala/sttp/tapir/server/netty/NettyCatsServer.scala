@@ -30,7 +30,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
   def port(p: Int): NettyCatsServer[F] = copy(options = options.port(p))
 
   def start(): F[NettyCatsServerBinding[F]] = Async[F].defer {
-    val eventLoopGroup = options.nettyOptions.eventLoopGroup()
+    val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
 
@@ -38,6 +38,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       options.nettyOptions,
       new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)),
       eventLoopGroup,
+      options.nettyOptions.eventLoopConfig.serverChannel,
       options.host,
       options.port
     )

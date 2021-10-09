@@ -29,7 +29,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
   def port(p: Int): NettyFutureServer = copy(options = options.port(p))
 
   def start(): Future[NettyFutureServerBinding] = {
-    val eventLoopGroup = options.nettyOptions.eventLoopGroup()
+    val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
     implicit val monadError: MonadError[Future] = new FutureMonad()
     val route = Route.combine(routes)
 
@@ -37,6 +37,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       options.nettyOptions,
       new NettyServerHandler(route, (f: Future[Unit]) => f),
       eventLoopGroup,
+      options.nettyOptions.eventLoopConfig.serverChannel,
       options.host,
       options.port
     )

@@ -1,8 +1,7 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
-import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel._
 import sttp.tapir.server.netty.NettyOptions
 
 object NettyBootstrap {
@@ -10,6 +9,7 @@ object NettyBootstrap {
       nettyOptions: NettyOptions,
       handler: => NettyServerHandler[F],
       eventLoopGroup: EventLoopGroup,
+      serverChannel: Class[_ <: ServerChannel],
       host: String,
       port: Int
   ): ChannelFuture = {
@@ -17,7 +17,7 @@ object NettyBootstrap {
 
     httpBootstrap
       .group(eventLoopGroup)
-      .channel(classOf[NioServerSocketChannel])
+      .channel(serverChannel)
       .childHandler(new ChannelInitializer[Channel] {
         override def initChannel(ch: Channel): Unit = nettyOptions.initPipeline(ch.pipeline(), handler)
       })
