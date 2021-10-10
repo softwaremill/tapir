@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyOptionsBuilder}
 import sttp.tapir.{Endpoint, endpoint, query, stringBody}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,7 +20,13 @@ object HelloWorldNettyServer extends App {
 
   // Creating handler for netty bootstrap
   val serverBinding =
-    Await.result(NettyFutureServer().port(8888).addEndpoint(helloWorldServerEndpoint).start(), Duration.Inf)
+    Await.result(
+      NettyFutureServer()
+        .options(NettyFutureServerOptions.default.nettyOptions(NettyOptionsBuilder.make().tcp().port(8888).build))
+        .addEndpoint(helloWorldServerEndpoint)
+        .start(),
+      Duration.Inf
+    )
 
   // Bind and start to accept incoming connections.
   val port = serverBinding.port
