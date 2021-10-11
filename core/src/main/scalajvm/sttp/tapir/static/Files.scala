@@ -1,5 +1,6 @@
 package sttp.tapir.static
 
+import sttp.model.ContentRangeUnits
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -12,7 +13,6 @@ import scala.util.{Failure, Success, Try}
 
 object Files {
   // inspired by org.http4s.server.staticcontent.FileService
-
   def apply[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
     apply(systemPath, defaultEtag[F])
 

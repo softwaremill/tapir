@@ -1,11 +1,10 @@
 package sttp.tapir.static
 
-import sttp.model.headers.ETag
+import sttp.model.headers.{ETag, Range}
 import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.monad.MonadError
-import sttp.tapir.{FileRange, _}
 import sttp.tapir.server.ServerEndpoint
-import sttp.model.headers.Range
+import sttp.tapir.{FileRange, _}
 
 import java.io.InputStream
 import java.time.Instant
@@ -53,8 +52,8 @@ trait TapirStaticContentEndpoints {
   }(_.map(_.toString))
 
   private def staticEndpoint[T](
-    prefix: EndpointInput[Unit],
-    body: EndpointOutput[T]
+      prefix: EndpointInput[Unit],
+      body: EndpointOutput[T]
   ): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
     endpoint.get
       .in(prefix)
@@ -63,8 +62,8 @@ trait TapirStaticContentEndpoints {
           .and(ifNoneMatchHeader)
           .and(ifModifiedSinceHeader)
           .and(rangeHeader)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range])) => StaticInput(t._1, t._2, t._3, t._4))(fi =>
-            (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range)
+          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range])) => StaticInput(t._1, t._2, t._3, t._4))(
+            fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range)
           )
       )
       .errorOut(
@@ -78,8 +77,7 @@ trait TapirStaticContentEndpoints {
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
-          )
-          ,
+          ),
           oneOfMappingClassMatcher(
             StatusCode.RangeNotSatisfiable,
             emptyOutputAs(StaticErrorOutput.RangeNotSatisfiable),
@@ -99,8 +97,9 @@ trait TapirStaticContentEndpoints {
               .and(etagHeader)
               .and(header[Option[String]](HeaderNames.AcceptRanges))
               .and(header[Option[String]](HeaderNames.ContentRange))
-              .map[StaticOutput.FoundPartial[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
-                StaticOutput.FoundPartial(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
+              .map[StaticOutput.FoundPartial[T]](
+                (t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                  StaticOutput.FoundPartial(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
             classOf[StaticOutput.FoundPartial[T]]
           ),
@@ -115,6 +114,36 @@ trait TapirStaticContentEndpoints {
                 StaticOutput.Found(t._1, t._2, t._3, t._4, t._5)
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag)),
             classOf[StaticOutput.Found[T]]
+          )
+        )
+      )
+  }
+
+  private def headEndpoint(
+      prefix: EndpointInput[Unit]
+  ): Endpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
+    endpoint.head
+      .in(prefix)
+      .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
+      .errorOut(
+        oneOf[StaticErrorOutput](
+          oneOfMappingClassMatcher(
+            StatusCode.BadRequest,
+            emptyOutputAs(StaticErrorOutput.BadRequest),
+            StaticErrorOutput.BadRequest.getClass
+          )
+        )
+      )
+      .out(
+        oneOf[HeadOutput](
+          oneOfMappingClassMatcher(
+            StatusCode.Ok,
+            header[Option[String]](HeaderNames.AcceptRanges)
+              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .map[HeadOutput.SupportRanges]((t: (Option[String], Option[Long])) => HeadOutput.SupportRanges(t._1, t._2))(fo =>
+                (fo.acceptRanges, fo.contentLength)
+              ),
+            classOf[HeadOutput.SupportRanges]
           )
         )
       )
@@ -136,9 +165,15 @@ trait TapirStaticContentEndpoints {
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
   def filesServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
-    systemPath: String
+      systemPath: String
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
     ServerEndpoint(filesEndpoint(prefix), (m: MonadError[F]) => Files(systemPath)(m))
+
+  /** A server endpoint, used to verify if sever supports range requests for file under particular path */
+  def headServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      systemPath: String
+  ): ServerEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any, F] =
+    ServerEndpoint(headEndpoint(prefix), (m: MonadError[F]) => FilesUtil(systemPath)(m))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
