@@ -70,6 +70,24 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("Should return acceptRanges for head request") {
+        withTestFilesDirectory { testDir =>
+          val file = testDir.toPath.resolve("f1").toFile
+          serveRoute(headServerEndpoint("test")(file.getAbsolutePath))
+            .use { port =>
+              basicRequest
+                .head(uri"http://localhost:$port/test")
+                .response(asStringAlways)
+                .send(backend)
+                .map(r => {
+                  r.code shouldBe StatusCode(200)
+                  r.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true
+                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                })
+            }
+            .unsafeToFuture()
+        }
+      },
       Test("return 404 when files are not found") {
         withTestFilesDirectory { testDir =>
           serveRoute(filesServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
