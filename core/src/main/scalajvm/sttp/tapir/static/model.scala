@@ -25,7 +25,7 @@ object StaticErrorOutput {
 
 trait HeadOutput
 object HeadOutput {
-  case class SupportRanges(acceptRanges: Option[String], contentLength: Option[Long]) extends HeadOutput
+  case class SupportRanges(acceptRanges: Option[String], contentLength: Option[Long], contentType: Option[MediaType]) extends HeadOutput
   case class NotSupportRanges() extends HeadOutput
 }
 

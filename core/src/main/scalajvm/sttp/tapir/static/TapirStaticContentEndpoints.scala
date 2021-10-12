@@ -140,9 +140,10 @@ trait TapirStaticContentEndpoints {
             StatusCode.Ok,
             header[Option[String]](HeaderNames.AcceptRanges)
               .and(header[Option[Long]](HeaderNames.ContentLength))
-              .map[HeadOutput.SupportRanges]((t: (Option[String], Option[Long])) => HeadOutput.SupportRanges(t._1, t._2))(fo =>
-                (fo.acceptRanges, fo.contentLength)
-              ),
+              .and(contentTypeHeader)
+              .map[HeadOutput.SupportRanges]((t: (Option[String], Option[Long], Option[MediaType])) =>
+                HeadOutput.SupportRanges(t._1, t._2, t._3)
+              )(fo => (fo.acceptRanges, fo.contentLength, fo.contentType)),
             classOf[HeadOutput.SupportRanges]
           )
         )
