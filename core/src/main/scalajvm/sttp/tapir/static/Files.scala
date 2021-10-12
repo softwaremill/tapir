@@ -12,11 +12,32 @@ import java.time.Instant
 import scala.util.{Failure, Success, Try}
 
 object Files {
-  // inspired by org.http4s.server.staticcontent.FileService
-  def apply[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    apply(systemPath, defaultEtag[F])
 
-  def apply[F[_]: MonadError](
+  // inspired by org.http4s.server.staticcontent.FileService
+  def head[F[_]: MonadError](
+      systemPath: String
+  ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = {
+    Try(Paths.get(systemPath).toRealPath()) match {
+      case Success(realSystemPath) =>
+        _ =>
+          val file = realSystemPath.toFile
+          MonadError[F].blocking(
+            Right(
+              HeadOutput.Found(
+                Some(ContentRangeUnits.Bytes),
+                Some(file.length()),
+                Some(contentTypeFromName(file.getName))
+              )
+            )
+          )
+      case Failure(e) => _ => MonadError[F].error(e)
+    }
+  }
+
+  def get[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
+    get(systemPath, defaultEtag[F])
+
+  def get[F[_]: MonadError](
       systemPath: String,
       calculateETag: File => F[Option[ETag]]
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
