@@ -72,7 +72,7 @@ object Files {
           Some(range.contentLength),
           Some(contentTypeFromName(file.toFile.getName)),
           etag,
-          Some("bytes"),
+          Some(ContentRangeUnits.Bytes),
           Some(range.toContentRange.toString())
         )
     )
