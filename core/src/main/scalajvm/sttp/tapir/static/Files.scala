@@ -17,11 +17,11 @@ object Files {
   def head[F[_]: MonadError](
       systemPath: String
   ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = {
-    Try(Paths.get(systemPath).toRealPath()) match {
-      case Success(realSystemPath) =>
+    Try(MonadError[F].blocking(Paths.get(systemPath).toRealPath())) match {
+      case Success(wrapped) =>
         _ =>
-          val file = realSystemPath.toFile
-          MonadError[F].blocking(
+          wrapped.map(path => {
+            val file = path.toFile
             Right(
               HeadOutput.Found(
                 Some(ContentRangeUnits.Bytes),
@@ -29,7 +29,7 @@ object Files {
                 Some(contentTypeFromName(file.getName))
               )
             )
-          )
+          })
       case Failure(e) => _ => MonadError[F].error(e)
     }
   }
@@ -41,9 +41,9 @@ object Files {
       systemPath: String,
       calculateETag: File => F[Option[ETag]]
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
-    Try(Paths.get(systemPath).toRealPath()) match {
-      case Success(realSystemPath) => (filesInput: StaticInput) => files(realSystemPath, calculateETag)(filesInput)
-      case Failure(e)              => _ => MonadError[F].error(e)
+    Try(MonadError[F].blocking(Paths.get(systemPath).toRealPath())) match {
+      case Success(wrapped) => (filesInput: StaticInput) => wrapped.flatMap(path => files(path, calculateETag)(filesInput))
+      case Failure(e)       => _ => MonadError[F].error(e)
     }
   }
 
