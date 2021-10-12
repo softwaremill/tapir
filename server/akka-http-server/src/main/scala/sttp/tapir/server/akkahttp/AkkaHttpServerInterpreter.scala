@@ -76,7 +76,7 @@ trait AkkaHttpServerInterpreter {
       case Some(Right(entity)) =>
         complete(HttpResponse(entity = entity, status = statusCode, headers = akkaHeaders))
       case None =>
-        if (requestMethod.is(Method.HEAD)) {
+        if (requestMethod.is(Method.HEAD) && response.contentLength.isDefined) {
           val contentLength: Long = response.contentLength.getOrElse(0)
           val contentType: ContentType = response.contentType match {
             case Some(t) => ContentType.parse(t).getOrElse(ContentTypes.NoContentType)
