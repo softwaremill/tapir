@@ -7,7 +7,8 @@ import sttp.model.{Header, HeaderNames, MediaType, Part}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Defaults.createTempFile
-import sttp.tapir.tests.FruitData
+import sttp.tapir.tests.data
+import sttp.tapir.tests.data.FruitData
 
 class SttpClientRequestTests extends AnyFunSuite with Matchers {
   test("content-type header shouldn't be duplicated when converting to a part") {
@@ -18,7 +19,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
     // when
     val sttpClientRequest = SttpClientInterpreter()
       .toRequest(testEndpoint, Some(uri"http://localhost"))
-      .apply(tests.FruitData(Part("image", testFile, contentType = Some(MediaType.ImageJpeg))))
+      .apply(data.FruitData(Part("image", testFile, contentType = Some(MediaType.ImageJpeg))))
 
     // then
     val part = sttpClientRequest.body.asInstanceOf[MultipartBody[Any]].parts.head

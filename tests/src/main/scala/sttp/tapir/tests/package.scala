@@ -14,6 +14,24 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.Codec.{PlainCodec, XmlCodec}
 import sttp.tapir.CodecFormat.TextHtml
 import sttp.tapir.model._
+import sttp.tapir.tests.data.{
+  BasketOfFruits,
+  Blue,
+  Color,
+  ColorValue,
+  ColorWrapper,
+  Entity,
+  Fruit,
+  FruitAmount,
+  FruitAmountWrapper,
+  FruitData,
+  IntWrapper,
+  Organization,
+  Person,
+  Red,
+  StringWrapper,
+  ValidFruitAmount
+}
 
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Any] = endpoint.in(query[String]("fruit")).out(stringBody)
@@ -454,7 +472,7 @@ package object tests {
       implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
       implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
 
-      import sttp.tapir.tests.BasketOfFruits._
+      import sttp.tapir.tests.data.BasketOfFruits._
       implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
       implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
         implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])

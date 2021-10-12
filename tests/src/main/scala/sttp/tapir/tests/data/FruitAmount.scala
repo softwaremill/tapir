@@ -1,4 +1,4 @@
-package sttp.tapir.tests
+package sttp.tapir.tests.data
 
 case class FruitAmount(fruit: String, amount: Int)
 

@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi.dtos
 
+import sttp.tapir.tests.data.Entity
 import sttp.tapir.{Schema, Validator}
-import sttp.tapir.tests.Entity
 
 // TODO: move back to VerifyYamlTest companion after https://github.com/lampepfl/dotty/issues/12849 is fixed
 object VerifyYamlCoproductTestData {

@@ -7,6 +7,7 @@ import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests._
+import sttp.tapir.tests.data.FruitAmount
 
 import java.io.{ByteArrayInputStream, InputStream}
 

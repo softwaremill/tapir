@@ -6,7 +6,15 @@ import sttp.client3.{basicRequest, multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.tapir.tests.{FruitAmount, FruitData, Test, in_file_multipart_out_multipart, in_file_out_file, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
+import sttp.tapir.tests.data.{FruitAmount, FruitData}
+import sttp.tapir.tests.{
+  Test,
+  data,
+  in_file_multipart_out_multipart,
+  in_file_out_file,
+  in_raw_multipart_out_string,
+  in_simple_multipart_out_multipart
+}
 
 import java.io.File
 import scala.concurrent.Await
@@ -47,10 +55,12 @@ class ServerFileMultipartTests[F[_], ROUTE](
       },
       testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
         pureResult(
-          FruitData(
-            Part("", writeToFile(Await.result(readFromFile(fd.data.body), 3.seconds).reverse), fd.data.otherDispositionParams, Nil)
-              .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
-          ).asRight[Unit]
+          data
+            .FruitData(
+              Part("", writeToFile(Await.result(readFromFile(fd.data.body), 3.seconds).reverse), fd.data.otherDispositionParams, Nil)
+                .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
+            )
+            .asRight[Unit]
         )
       ) { (backend, baseUri) =>
         val file = writeToFile("peach mario")
@@ -90,9 +100,11 @@ class ServerFileMultipartTests[F[_], ROUTE](
   def multipartInlineHeaderTests(): List[Test] = List(
     testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
       pureResult(
-        FruitData(
-          Part("", fd.data.body, fd.data.otherDispositionParams, fd.data.headers)
-        ).asRight[Unit]
+        data
+          .FruitData(
+            Part("", fd.data.body, fd.data.otherDispositionParams, fd.data.headers)
+          )
+          .asRight[Unit]
       )
     ) { (backend, baseUri) =>
       val file = writeToFile("peach mario")

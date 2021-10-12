@@ -9,8 +9,9 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.tests._
+import sttp.tapir.tests.{data, _}
 import sttp.tapir.docs.openapi.dtos.VerifyYamlValidatorTestData._
+import sttp.tapir.tests.data.{Entity, FruitAmount}
 
 class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
 
@@ -102,12 +103,12 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
   test("use enum validator for a cats non-empty-list of enums") {
     import cats.data.NonEmptyList
     import sttp.tapir.integ.cats.codec._
-    implicit def schemaForColor: Schema[Color] =
-      Schema.string.validate(Validator.enumeration(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
+    implicit def schemaForColor: Schema[data.Color] =
+      Schema.string.validate(Validator.enumeration(List(data.Blue, data.Red), { c => Some(c.toString.toLowerCase()) }))
 
     val expectedYaml = load("validator/expected_valid_enum_cats_nel.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.in(jsonBody[NonEmptyList[Color]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.in(jsonBody[NonEmptyList[data.Color]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }

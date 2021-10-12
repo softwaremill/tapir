@@ -12,7 +12,8 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest._
-import sttp.tapir.tests.{Fruit, Test}
+import sttp.tapir.tests.Test
+import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](

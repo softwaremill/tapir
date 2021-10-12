@@ -2,6 +2,7 @@ package sttp.tapir.client.tests
 
 import cats.effect.unsafe.implicits.global
 import sttp.tapir.tests._
+import sttp.tapir.tests.data.{FruitAmount, FruitAmountWrapper}
 
 trait ClientMultipartTests { this: ClientTests[Any] =>
 

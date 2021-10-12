@@ -24,6 +24,7 @@ import sttp.tapir.tests.MultipleMediaTypes.{
 }
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
+import sttp.tapir.tests.data.{BasketOfFruits, Fruit, FruitAmount, FruitError, IntWrapper, Organization, Person, ValidFruitAmount}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer

@@ -6,6 +6,7 @@ import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.TestUtil.writeToFile
 import sttp.tapir.tests._
+import sttp.tapir.tests.data.{Fruit, FruitAmount, Organization, Person}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
