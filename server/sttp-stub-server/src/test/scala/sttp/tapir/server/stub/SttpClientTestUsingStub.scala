@@ -10,6 +10,11 @@ import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.monad.MonadError
+import sttp.tapir.tests.Mapping.{
+  in_2query_out_2query_mapped_to_unit,
+  in_3query_out_3header_mapped_to_tuple,
+  in_header_out_header_unit_extended
+}
 
 class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
   implicit val idMonad: MonadError[Identity] = IdMonad

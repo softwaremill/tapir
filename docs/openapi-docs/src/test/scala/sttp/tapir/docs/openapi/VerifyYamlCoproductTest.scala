@@ -10,7 +10,6 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.tests.Organization
 import sttp.tapir.tests.data.{Entity, Organization, Person}
 
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {

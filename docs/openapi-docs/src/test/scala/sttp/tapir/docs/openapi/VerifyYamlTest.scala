@@ -19,7 +19,8 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.tests._
+import sttp.tapir.tests.Basic._
+import sttp.tapir.tests.Multipart
 import sttp.tapir.tests.data.{FruitAmount, Person}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
@@ -130,7 +131,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support multipart") {
     val expectedYaml = load("expected_multipart.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(Multipart.in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

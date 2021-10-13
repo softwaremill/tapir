@@ -2,18 +2,10 @@ package sttp.tapir.server.vertx
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
-import io.vertx.ext.web.{Route, Router, RoutingContext}
+import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerStaticContentTests,
-  ServerStreamingTests,
-  backendResource
-}
+import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.Task
 
@@ -29,14 +21,12 @@ class ZioVertxServerTest extends TestSuite {
         new DefaultCreateServerTest(backend, interpreter)
           .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route]]
 
-      new ServerBasicTests(createServerTest, interpreter).tests() ++
-        new ServerFileMultipartTests(
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false).tests() ++
+        new ServerMultipartTests(
           createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
-        new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
-        new ServerStaticContentTests(interpreter, backend).tests()
+        new ServerStreamingTests(createServerTest, ZioStreams).tests()
     }
   }
 }

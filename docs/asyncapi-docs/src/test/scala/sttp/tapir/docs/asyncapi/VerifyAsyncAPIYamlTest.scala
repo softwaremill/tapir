@@ -10,7 +10,6 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
-import sttp.tapir.tests.FruitAmount
 import sttp.tapir.{CodecFormat, auth, endpoint, header, query, webSocketBody}
 import sttp.tapir.json.circe._
 import sttp.tapir._

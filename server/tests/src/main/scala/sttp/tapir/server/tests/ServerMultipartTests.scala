@@ -2,45 +2,28 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3.{basicRequest, multipartFile, _}
+import sttp.client3.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
+import sttp.tapir.tests.Multipart.{in_file_multipart_out_multipart, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import sttp.tapir.tests.data.{FruitAmount, FruitData}
-import sttp.tapir.tests.{
-  Test,
-  data,
-  in_file_multipart_out_multipart,
-  in_file_out_file,
-  in_raw_multipart_out_string,
-  in_simple_multipart_out_multipart
-}
+import sttp.tapir.tests.{Test, data}
 
-import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerFileMultipartTests[F[_], ROUTE](
+class ServerMultipartTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],
     multipartInlineHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
-
-  private val basicStringRequest = basicRequest.response(asStringAlways)
-  private def pureResult[T](t: T): F[T] = m.unit(t)
 
   def tests(): List[Test] =
     basicTests() ++ (if (multipartInlineHeaderSupport) multipartInlineHeaderTests() else Nil)
 
   def basicTests(): List[Test] = {
     List(
-      testServer(in_file_out_file)((file: File) => pureResult(file.asRight[Unit])) { (backend, baseUri) =>
-        basicRequest
-          .post(uri"$baseUri/api/echo")
-          .body("pen pineapple apple pen")
-          .send(backend)
-          .map(_.body shouldBe Right("pen pineapple apple pen"))
-      },
       testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
         pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
       ) { (backend, baseUri) =>

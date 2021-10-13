@@ -282,7 +282,7 @@ class ServerStaticContentTests[F[_], ROUTE](
         serveRoute(resourceServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test/r1.txt"))
           .use { port =>
             basicRequest
-              .get(uri"http://localhost:$port/$path")
+              .get(uri"http://localhost:$port/test/r1.txt")
               .response(asStringAlways)
               .send(backend)
               .map(_.body shouldBe "Resource 1")
