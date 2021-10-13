@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
 import akka.stream.scaladsl.{Flow, Source}
 import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
+import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
@@ -16,18 +16,7 @@ import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerMetricsTest,
-  ServerRejectTests,
-  ServerStaticContentTests,
-  ServerStreamingTests,
-  ServerWebSocketTests,
-  backendResource
-}
+import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
@@ -35,9 +24,9 @@ import scala.concurrent.Future
 import scala.util.Random
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
-  def randomUUID = Some(UUID.randomUUID().toString)
-  val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
-  val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+  private def randomUUID = Some(UUID.randomUUID().toString)
+  private val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+  private val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
   def actorSystemResource: Resource[IO, ActorSystem] =
     Resource.make(IO.delay(ActorSystem()))(actorSystem => IO.fromFuture(IO.delay(actorSystem.terminate())).void)
@@ -90,16 +79,11 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         }
       )
 
-      new ServerBasicTests(createServerTest, interpreter).tests() ++
-        new ServerFileMultipartTests(createServerTest).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend).tests() ++
+        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
-        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
-        new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests() ++
-        new ServerRejectTests(createServerTest, interpreter).tests() ++
-        new ServerStaticContentTests(interpreter, backend).tests() ++
         additionalTests()
     }
   }

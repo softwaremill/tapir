@@ -7,7 +7,7 @@ import sttp.tapir._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
-import sttp.tapir.tests.Fruit
+import sttp.tapir.tests.data.Fruit
 import sttp.ws.WebSocketFrame
 
 trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>

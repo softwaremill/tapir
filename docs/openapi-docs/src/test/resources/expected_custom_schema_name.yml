@@ -61,7 +61,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/sttp.tapir.tests.FruitAmount'
+                $ref: '#/components/schemas/sttp.tapir.tests.data.FruitAmount'
         '400':
           description: 'Invalid value for: path parameter p2, Invalid value for: query
                         parameter color'
@@ -77,7 +77,7 @@ paths:
           description: ok
 components:
   schemas:
-    sttp.tapir.tests.FruitAmount:
+    sttp.tapir.tests.data.FruitAmount:
       required:
         - fruit
         - amount

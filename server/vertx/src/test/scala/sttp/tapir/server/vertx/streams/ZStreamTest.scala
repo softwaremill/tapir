@@ -16,9 +16,9 @@ import sttp.tapir.server.vertx.VertxZioServerOptions
 
 class ZStreamTest extends AsyncFlatSpec with Matchers {
 
-  val runtime = Runtime.default.mapPlatform(_.withTracingConfig(TracingConfig.disabled))
+  private val runtime = Runtime.default.mapPlatform(_.withTracingConfig(TracingConfig.disabled))
 
-  val options = VertxZioServerOptions.default.copy(maxQueueSizeForReadStream = 4)
+  private val options = VertxZioServerOptions.default.copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)

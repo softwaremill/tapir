@@ -9,8 +9,9 @@ import sttp.monad.syntax._
 import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest._
+import sttp.tapir.tests.Basic.{in_input_stream_out_input_stream, in_json_out_json, in_root_path}
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
-import sttp.tapir.tests.{Test, _}
+import sttp.tapir.tests.Test
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.util.concurrent.atomic.AtomicInteger

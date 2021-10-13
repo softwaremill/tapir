@@ -9,7 +9,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.tests.MultipleMediaTypes
+import sttp.tapir.tests.ContentNegotiation
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -96,7 +96,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for common schema") {
     val expectedYaml = load("oneOf/expected_multiple_media_types_common_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ContentNegotiation.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
@@ -105,7 +105,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for different schema") {
     val expectedYaml = load("oneOf/expected_multiple_media_types_different_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ContentNegotiation.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml

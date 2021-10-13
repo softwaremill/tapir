@@ -1,7 +1,7 @@
-package sttp.tapir.tests
+package sttp.tapir.tests.data
 
 import com.softwaremill.tagging.@@
-import sttp.tapir.tests.BasketOfFruits._
+import sttp.tapir.tests.data.BasketOfFruits._
 
 case class BasketOfFruits(fruits: ValidatedList[ValidFruitAmount])
 

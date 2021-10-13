@@ -4,6 +4,12 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.tests.Authentication._
+import sttp.tapir.tests.Basic._
+import sttp.tapir.tests.Files._
+import sttp.tapir.tests.Mapping._
+import sttp.tapir.tests.Multipart._
+import sttp.tapir.tests.OneOf._
 
 class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
 
@@ -103,8 +109,8 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     out_json_or_default_json,
     out_no_content_or_ok_empty_output,
     out_json_or_empty_output_no_content,
-    MultipleMediaTypes.out_json_xml_text_common_schema,
-    MultipleMediaTypes.out_json_xml_different_schema,
+    ContentNegotiation.out_json_xml_text_common_schema,
+    ContentNegotiation.out_json_xml_different_schema,
     Validation.in_query_tagged,
     Validation.in_query,
     Validation.in_valid_json,

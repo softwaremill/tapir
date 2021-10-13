@@ -3,10 +3,12 @@ package sttp.tapir.server.finatra.cats
 import cats.effect.{IO, Resource}
 import sttp.client3.impl.cats.CatsMonadAsyncError
 import sttp.tapir.server.tests.{
+  AllServerTests,
   DefaultCreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
-  ServerFileMultipartTests,
+  ServerMultipartTests,
+  ServerStaticContentTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
@@ -16,10 +18,9 @@ class FinatraServerCatsTests extends TestSuite {
     implicit val m: CatsMonadAsyncError[IO] = new CatsMonadAsyncError[IO]()
 
     val interpreter = new FinatraCatsTestServerInterpreter(dispatcher)
-    val createTestServer = new DefaultCreateServerTest(backend, interpreter)
+    val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    new ServerBasicTests(createTestServer, interpreter).tests() ++
-      new ServerFileMultipartTests(createTestServer).tests() ++
-      new ServerAuthenticationTests(createTestServer).tests()
+    new AllServerTests(createServerTest, interpreter, backend, staticContent = false, reject = false, metrics = false).tests() ++
+      new ServerStaticContentTests(interpreter, backend, supportSettingContentLength = false).tests()
   }
 }

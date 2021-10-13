@@ -7,17 +7,17 @@ channels:
     subscribe:
       operationId: onFruit
       message:
-        $ref: '#/components/messages/sttp.tapir.tests.Fruit'
+        $ref: '#/components/messages/sttp.tapir.tests.data.Fruit'
     publish:
       operationId: sendFruit
       message:
-        $ref: '#/components/messages/sttp.tapir.tests.Fruit'
+        $ref: '#/components/messages/sttp.tapir.tests.data.Fruit'
     bindings:
       ws:
         method: GET
 components:
   schemas:
-    sttp.tapir.tests.Fruit:
+    sttp.tapir.tests.data.Fruit:
       required:
         - f
       type: object
@@ -25,7 +25,7 @@ components:
         f:
           type: string
   messages:
-    sttp.tapir.tests.Fruit:
+    sttp.tapir.tests.data.Fruit:
       payload:
-        $ref: '#/components/schemas/sttp.tapir.tests.Fruit'
+        $ref: '#/components/schemas/sttp.tapir.tests.data.Fruit'
       contentType: application/json
