@@ -92,7 +92,7 @@ class ServerStaticContentTests[F[_], ROUTE](
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f1").toFile
           val headAndGetEndpoint = fileHeadAndGetServerEndpoints[F]("test")(file.getAbsolutePath)
-          serveRoute(headAndGetEndpoint._1)
+          serveRoute(headAndGetEndpoint.head)
             .use { port =>
               basicRequest
                 .head(uri"http://localhost:$port/test")
@@ -105,7 +105,7 @@ class ServerStaticContentTests[F[_], ROUTE](
                 })
             }
             .unsafeToFuture()
-          serveRoute(headAndGetEndpoint._2)
+          serveRoute(headAndGetEndpoint.last)
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=3-6"))

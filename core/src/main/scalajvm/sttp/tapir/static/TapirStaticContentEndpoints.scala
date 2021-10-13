@@ -180,11 +180,8 @@ trait TapirStaticContentEndpoints {
 
   def fileHeadAndGetServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
-  ): (
-      ServerEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any, F],
-      ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F]
-  ) =
-    (filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
+  ): List[ServerEndpoint[_, StaticErrorOutput, _, Any, F]] =
+    List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
