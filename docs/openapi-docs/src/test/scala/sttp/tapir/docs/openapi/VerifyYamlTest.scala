@@ -252,7 +252,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
           SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
         )
       ),
-      Some(SName("tapir.tests.FruitAmount", Nil))
+      Some(SName("tapir.tests.data.FruitAmount", Nil))
     ).description("Amount of fruits")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
