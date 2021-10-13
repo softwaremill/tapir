@@ -88,6 +88,40 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("Should create head and get endpoints") {
+        withTestFilesDirectory { testDir =>
+          val file = testDir.toPath.resolve("f1").toFile
+          val headAndGetEndpoint = fileHeadAndGetServerEndpoints[F]("test")(file.getAbsolutePath)
+          serveRoute(headAndGetEndpoint._1)
+            .use { port =>
+              basicRequest
+                .head(uri"http://localhost:$port/test")
+                .response(asStringAlways)
+                .send(backend)
+                .map(r => {
+                  r.code shouldBe StatusCode(200)
+                  r.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true
+                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                })
+            }
+            .unsafeToFuture()
+          serveRoute(headAndGetEndpoint._2)
+            .use { port =>
+              basicRequest
+                .headers(Header(HeaderNames.Range, "bytes=3-6"))
+                .get(uri"http://localhost:$port/test")
+                .response(asStringAlways)
+                .send(backend)
+                .map(r => {
+                  r.body shouldBe "cont"
+                  r.code shouldBe StatusCode(206)
+                  r.headers contains Header(HeaderNames.ContentLength, "4") shouldBe true
+                  r.headers contains Header(HeaderNames.ContentRange, "bytes 3-6/10") shouldBe true
+                })
+            }
+            .unsafeToFuture()
+        }
+      },
       Test("return 404 when files are not found") {
         withTestFilesDirectory { testDir =>
           serveRoute(filesGetServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
