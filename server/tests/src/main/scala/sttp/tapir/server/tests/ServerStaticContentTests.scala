@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
-import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
+import sttp.model.{ContentRangeUnits, Header, HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests._
@@ -80,8 +80,8 @@ class ServerStaticContentTests[F[_], ROUTE](
                 .response(asStringAlways)
                 .send(backend)
                 .map(r => {
-                  r.code shouldBe StatusCode(200)
-                  r.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true
+                  r.code shouldBe StatusCode.Ok
+                  r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
                   r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
                 })
             }
@@ -99,8 +99,8 @@ class ServerStaticContentTests[F[_], ROUTE](
                 .response(asStringAlways)
                 .send(backend)
                 .map(r => {
-                  r.code shouldBe StatusCode(200)
-                  r.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true
+                  r.code shouldBe StatusCode.Ok
+                  r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
                   r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
                 })
             }
@@ -114,8 +114,8 @@ class ServerStaticContentTests[F[_], ROUTE](
                 .send(backend)
                 .map(r => {
                   r.body shouldBe "cont"
-                  r.code shouldBe StatusCode(206)
-                  r.headers contains Header(HeaderNames.ContentLength, "4") shouldBe true
+                  r.code shouldBe StatusCode.PartialContent
+                  r.body.length shouldBe 4
                   r.headers contains Header(HeaderNames.ContentRange, "bytes 3-6/10") shouldBe true
                 })
             }
@@ -131,7 +131,7 @@ class ServerStaticContentTests[F[_], ROUTE](
                 .get(uri"http://localhost:$port/test")
                 .response(asStringAlways)
                 .send(backend)
-                .map(_.headers contains Header(HeaderNames.AcceptRanges, "bytes") shouldBe true)
+                .map(_.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true)
             }
             .unsafeToFuture()
         }
@@ -280,7 +280,7 @@ class ServerStaticContentTests[F[_], ROUTE](
                 .get(uri"http://localhost:$port/test")
                 .response(asStringAlways)
                 .send(backend)
-                .map { _.code shouldBe StatusCode(400) }
+                .map { _.code shouldBe StatusCode.BadRequest }
             }
             .unsafeToFuture()
         }
