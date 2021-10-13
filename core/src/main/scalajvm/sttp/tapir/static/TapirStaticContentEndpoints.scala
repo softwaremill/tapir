@@ -178,7 +178,8 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any, F] =
     ServerEndpoint(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
 
-  def fileHeadAndGetServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
+  /** Create pair of endpoints (head, get) for particular file */
+  def fileServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
   ): List[ServerEndpoint[_, StaticErrorOutput, _, Any, F]] =
     List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
