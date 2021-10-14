@@ -131,6 +131,11 @@ trait TapirStaticContentEndpoints {
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
+          ),
+          oneOfMappingClassMatcher(
+            StatusCode.NotFound,
+            emptyOutputAs(StaticErrorOutput.NotFound),
+            StaticErrorOutput.NotFound.getClass
           )
         )
       )

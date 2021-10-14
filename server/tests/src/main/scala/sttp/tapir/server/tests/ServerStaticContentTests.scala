@@ -3,7 +3,6 @@ package sttp.tapir.server.tests
 import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
-import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -89,10 +88,22 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("Should return 404 for HEAD request and not existing file ") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(filesHeadServerEndpoint(emptyInput)(testDir.getAbsolutePath))
+            .use { port =>
+              basicRequest
+                .head(uri"http://localhost:$port/test")
+                .response(asStringAlways)
+                .send(backend)
+                .map(_.code shouldBe StatusCode.NotFound)
+            }
+            .unsafeToFuture()
+        }
+      },
       Test("Should create head and get endpoints") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f2").toFile
-          // FIX this test
           val headAndGetEndpoint = fileServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serveRoute(headAndGetEndpoint.head)
             .use { port =>

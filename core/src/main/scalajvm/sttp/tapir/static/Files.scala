@@ -15,11 +15,14 @@ object Files {
   // inspired by org.http4s.server.staticcontent.FileService
   def head[F[_]: MonadError](
       systemPath: String
-  ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { _ =>
+  ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { input =>
     MonadError[F]
       .blocking {
-        val file = Paths.get(systemPath).toRealPath().toFile
-        Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
+        val resolved = input.path.foldLeft(Paths.get(systemPath).toRealPath())(_.resolve(_))
+        if (java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+          val file = resolved.toFile
+          Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
+        } else Left(StaticErrorOutput.NotFound)
       }
   }
 
