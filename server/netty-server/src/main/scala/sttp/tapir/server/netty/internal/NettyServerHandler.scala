@@ -48,7 +48,10 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Futur
           .map(toHttpResponse(_, request))
           .map(flushResponse(ctx, request, _))
           .handleError { case e: Exception =>
-            ctx.fireExceptionCaught(e)
+            // send 500
+            val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+            res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+            flushResponse(ctx, request, res)
             me.unit(())
           }
       } // ignoring the result, exceptions should already be handled
