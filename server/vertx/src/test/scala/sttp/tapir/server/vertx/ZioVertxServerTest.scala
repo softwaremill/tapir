@@ -29,7 +29,7 @@ class ZioVertxServerTest extends TestSuite {
         new DefaultCreateServerTest(backend, interpreter)
           .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route]]
 
-      new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter).tests() ++
         new ServerFileMultipartTests(
           createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
