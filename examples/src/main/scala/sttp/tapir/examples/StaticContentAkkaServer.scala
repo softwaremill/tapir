@@ -14,9 +14,6 @@ import scala.concurrent.{Await, Future}
 
 object StaticContentAkkaServer extends App {
   private val parent: Path = Files.createTempDirectory("akka-static-example")
-
-  parent.resolve("d1/d2").toFile.mkdirs()
-
   Files.write(parent.resolve("f1"), "f1 content".getBytes, StandardOpenOption.CREATE_NEW)
 
   private val exampleFile = parent.resolve("f1").toFile
@@ -39,7 +36,7 @@ object StaticContentAkkaServer extends App {
 
     assert(headResponse.code == StatusCode.Ok)
     assert(headResponse.headers.contains(Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes)))
-    assert(headResponse.headers contains Header(HeaderNames.ContentLength, exampleFile.length.toString))
+    assert(headResponse.headers.contains(Header(HeaderNames.ContentLength, exampleFile.length.toString)))
 
     val getResponse = basicRequest
       .headers(Header(HeaderNames.Range, "bytes=3-6"))
@@ -50,7 +47,7 @@ object StaticContentAkkaServer extends App {
     assert(getResponse.body == "cont")
     assert(getResponse.code == StatusCode.PartialContent)
     assert(getResponse.body.length == 4)
-    assert(getResponse.headers contains Header(HeaderNames.ContentRange, "bytes 3-6/10"))
+    assert(getResponse.headers.contains(Header(HeaderNames.ContentRange, "bytes 3-6/10")))
 
   }
 
