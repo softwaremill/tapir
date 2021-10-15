@@ -21,8 +21,8 @@ object HelloWorldNettyServer extends App {
   // Creating handler for netty bootstrap
   val serverBinding =
     Await.result(
-      NettyFutureServer()
-        .options(NettyFutureServerOptions.default.nettyOptions(NettyOptionsBuilder.make().tcp().port(8888).build))
+      NettyFutureServer
+        .tcp(_.port(8888))
         .addEndpoint(helloWorldServerEndpoint)
         .start(),
       Duration.Inf

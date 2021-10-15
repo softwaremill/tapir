@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import io.netty.channel._
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.netty.NettyOptionsBuilder.{DomainSocketOptionsBuilder, TcpOptionsBuilder}
 import sttp.tapir.server.netty.internal.FutureUtil._
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
@@ -23,8 +24,6 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
 
   def addRoute(r: FutureRoute): NettyFutureServer = copy(routes = routes :+ r)
   def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer = copy(routes = routes ++ r)
-
-  def options(o: NettyFutureServerOptions): NettyFutureServer = copy(options = o)
 
   def start(): Future[NettyFutureServerBinding] = {
     val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
@@ -59,6 +58,18 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
 object NettyFutureServer {
   def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default)(implicit ec: ExecutionContext): NettyFutureServer =
     NettyFutureServer(Vector.empty, serverOptions)
+
+  def tcp(f: TcpOptionsBuilder => TcpOptionsBuilder = identity)(implicit ec: ExecutionContext): NettyFutureServer = {
+    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.copy(nettyOptions = f(NettyOptionsBuilder.make().tcp()).build))
+  }
+
+  def unixDomainSocket(f: DomainSocketOptionsBuilder => DomainSocketOptionsBuilder = identity)(implicit ec: ExecutionContext): NettyFutureServer = {
+    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.copy(nettyOptions = f(NettyOptionsBuilder.make().domainSocket()).build))
+  }
+}
+
+case class NettyServerOptionsBuilder(options: NettyFutureServerOptions) {
+
 }
 
 case class NettyFutureServerBinding(localSocket: InetSocketAddress, stop: () => Future[Unit]) {

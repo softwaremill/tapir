@@ -8,11 +8,16 @@ import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 import sttp.tapir.server.netty.NettyOptionsBuilder.{DomainSocketOptionsBuilder, TcpOptionsBuilder}
 
 import java.net.InetSocketAddress
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
+import java.util.UUID
 
 case class NettyOptionsBuilder(initPipeline: (ChannelPipeline, ChannelHandler) => Unit) {
   def tcp(): TcpOptionsBuilder = TcpOptionsBuilder(this, NettyDefaults.DefaultHost, NettyDefaults.DefaultPort)
-  def domainSocket(path: Path): DomainSocketOptionsBuilder = DomainSocketOptionsBuilder(this, path)
+  def domainSocket(): DomainSocketOptionsBuilder = DomainSocketOptionsBuilder(this, tempFile)
+
+  private def tempFile = {
+    Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)
+  }
 }
 
 object NettyOptionsBuilder {
@@ -33,6 +38,7 @@ object NettyOptionsBuilder {
       shutdownOnClose: Boolean = true,
       eventLoopConfig: EventLoopConfig = EventLoopConfig.unixDomainSocket
   ) {
+    def path(path: Path) = copy(path = path)
     def eventLoopGroup(g: EventLoopGroup): DomainSocketOptionsBuilder =
       copy(eventLoopConfig = EventLoopConfig.useExisting(g), shutdownOnClose = true)
     def noShutdownOnClose: DomainSocketOptionsBuilder = copy(shutdownOnClose = false)
