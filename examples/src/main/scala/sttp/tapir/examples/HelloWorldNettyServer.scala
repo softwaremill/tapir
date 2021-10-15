@@ -29,8 +29,8 @@ object HelloWorldNettyServer extends App {
     )
 
   // Bind and start to accept incoming connections.
-  val port = serverBinding.port
-  println(s"Server started at port = ${serverBinding.port}")
+  val port = serverBinding.localSocket.getPort
+  println(s"Server started at port = ${serverBinding.localSocket.getPort}")
 
   val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
   val badUrl = uri"http://localhost:$port/bad_url"
