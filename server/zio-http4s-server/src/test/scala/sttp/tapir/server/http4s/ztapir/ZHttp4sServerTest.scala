@@ -52,16 +52,11 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       }
     )
 
-    new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
-      new ServerFileMultipartTests(createServerTest).tests() ++
+    new AllServerTests(createServerTest, interpreter, backend).tests() ++
       new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
       new ServerWebSocketTests(createServerTest, ZioStreams) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
-      new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests() ++
-      new ServerRejectTests(createServerTest, interpreter).tests() ++
-      new ServerStaticContentTests(interpreter, backend).tests() ++
       additionalTests()
   }
 }

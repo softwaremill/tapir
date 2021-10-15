@@ -1,7 +1,6 @@
 package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.Logger
-import io.vertx.ext.web.RoutingContext
 import sttp.tapir.TapirFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}

@@ -15,11 +15,12 @@ import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.tests.{
+  AllServerTests,
   DefaultCreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
-  ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerMultipartTests,
   ServerRejectTests,
   ServerStaticContentTests,
   ServerStreamingTests,
@@ -113,16 +114,11 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       }
     )
 
-    new ServerBasicTests(createServerTest, interpreter).tests() ++
-      new ServerFileMultipartTests(createServerTest).tests() ++
+    new AllServerTests(createServerTest, interpreter, backend).tests() ++
       new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
       new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
-      new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests() ++
-      new ServerRejectTests(createServerTest, interpreter).tests() ++
-      new ServerStaticContentTests(interpreter, backend).tests() ++
       additionalTests()
   }
 }

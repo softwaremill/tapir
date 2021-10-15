@@ -110,7 +110,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with CodecMacros with FormCodecMacros with LowPriorityCodec {
+object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -184,6 +184,9 @@ object Codec extends CodecExtensions with CodecMacros with FormCodecMacros with 
     id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
+  implicit val fileRange: Codec[FileRange, FileRange, OctetStream] =
+    id[FileRange, OctetStream](OctetStream(), Schema.schemaForFileRange)
+  implicit val file: Codec[FileRange, TapirFile, OctetStream] = fileRange.map(_.file)(f => FileRange(f))
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
   implicit val formMapCodecUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMapCodec(StandardCharsets.UTF_8)
@@ -573,7 +576,7 @@ object RawBodyType {
   implicit case object ByteArrayBody extends Binary[Array[Byte]]
   implicit case object ByteBufferBody extends Binary[ByteBuffer]
   implicit case object InputStreamBody extends Binary[InputStream]
-  implicit case object FileBody extends Binary[TapirFile]
+  implicit case object FileBody extends Binary[FileRange]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)

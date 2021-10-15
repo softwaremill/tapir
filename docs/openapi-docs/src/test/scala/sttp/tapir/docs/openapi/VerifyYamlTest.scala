@@ -19,7 +19,9 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.tests.{Person, _}
+import sttp.tapir.tests.Basic._
+import sttp.tapir.tests.Multipart
+import sttp.tapir.tests.data.{FruitAmount, Person}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
@@ -129,7 +131,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support multipart") {
     val expectedYaml = load("expected_multipart.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(Multipart.in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -250,7 +252,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
           SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
         )
       ),
-      Some(SName("tapir.tests.FruitAmount", Nil))
+      Some(SName("tapir.tests.data.FruitAmount", Nil))
     ).description("Amount of fruits")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml

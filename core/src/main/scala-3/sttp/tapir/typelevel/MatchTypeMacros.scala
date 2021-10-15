@@ -3,7 +3,7 @@ package sttp.tapir.typelevel
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 import scala.reflect.classTag
-import magnolia.*
+import magnolia1.*
 
 trait MatchTypeMacros {
   inline implicit def gen[T: ClassTag](using Mirror.Of[T]): MatchType[T] = {

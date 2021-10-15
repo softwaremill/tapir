@@ -1,7 +1,6 @@
 package sttp.tapir.client.tests
 
 import java.io.InputStream
-
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.implicits._
@@ -32,7 +31,7 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
           v match {
             case is: InputStream => Future.successful(inputStreamToByteArray(is).toList)
             case a: Array[Byte]  => Future.successful(a.toList)
-            case f: TapirFile    => readFromFile(f)
+            case f: TapirFile         => readFromFile(f)
             case _               => Future.successful(v)
           }
 

@@ -261,7 +261,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
           Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M9"
+            "com.softwaremill.magnolia1_3" %%% "magnolia" % "1.0.0-M7"
           )
         case _ =>
           Seq(
@@ -585,8 +585,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.6.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.6.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.7.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.7.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )

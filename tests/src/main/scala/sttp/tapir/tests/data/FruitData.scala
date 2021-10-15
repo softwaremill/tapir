@@ -1,4 +1,4 @@
-package sttp.tapir.tests
+package sttp.tapir.tests.data
 
 import sttp.model.Part
 import sttp.tapir.TapirFile

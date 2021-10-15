@@ -2,12 +2,10 @@ package sttp.tapir.server.http4s
 
 import cats.Applicative
 import cats.effect.Sync
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
-
-import java.io.File
 
 /** @tparam F
   *   The effect type used for response body streams. Usually the same as `G`.
@@ -37,7 +35,7 @@ object Http4sServerOptions {
     ).serverLog(Log.defaultServerLog[G])
   }
 
-  def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[File] = _ => sync.blocking(Defaults.createTempFile())
+  def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[TapirFile] = _ => sync.blocking(Defaults.createTempFile())
 
   def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 

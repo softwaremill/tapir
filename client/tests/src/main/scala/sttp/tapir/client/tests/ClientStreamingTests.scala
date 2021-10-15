@@ -2,7 +2,7 @@ package sttp.tapir.client.tests
 
 import cats.effect.unsafe.implicits.global
 import sttp.capabilities.Streams
-import sttp.tapir.tests.in_stream_out_stream
+import sttp.tapir.tests.Streaming.in_stream_out_stream
 
 trait ClientStreamingTests[S] { this: ClientTests[S] =>
   val streams: Streams[S]

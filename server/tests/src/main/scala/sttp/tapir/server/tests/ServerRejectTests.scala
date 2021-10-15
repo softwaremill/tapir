@@ -18,8 +18,6 @@ class ServerRejectTests[F[_], ROUTE](
   import createServerTest._
   import serverInterpreter._
 
-  private def pureResult[T](t: T): F[T] = m.unit(t)
-
   def tests(): List[Test] = List(
     testServer(
       "given a list of endpoints, should return 405 for unsupported methods",

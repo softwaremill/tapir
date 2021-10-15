@@ -7,7 +7,7 @@ import SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.mutable
-import magnolia._
+import magnolia1._
 import scala.deriving.Mirror
 
 trait SchemaMagnoliaDerivation {

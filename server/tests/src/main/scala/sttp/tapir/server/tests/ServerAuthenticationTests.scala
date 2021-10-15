@@ -9,6 +9,12 @@ import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.tests.Authentication.{
+  in_auth_apikey_header_out_string,
+  in_auth_apikey_query_out_string,
+  in_auth_basic_out_string,
+  in_auth_bearer_out_string
+}
 import sttp.tapir.tests.Test
 
 class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE])(implicit m: MonadError[F])
@@ -44,7 +50,26 @@ class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTe
     )
   }
 
-  def tests(): List[Test] = missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
+  def tests(): List[Test] = List(
+    // auth
+    testServer(in_auth_apikey_header_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth").header("X-Api-Key", "1234").send(backend).map(_.body shouldBe "1234")
+    },
+    testServer(in_auth_apikey_query_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth?api-key=1234").send(backend).map(_.body shouldBe "1234")
+    },
+    testServer(in_auth_basic_out_string)((up: UsernamePassword) => pureResult(up.toString.asRight[Unit])) { (backend, baseUri) =>
+      basicStringRequest
+        .get(uri"$baseUri/auth")
+        .auth
+        .basic("teddy", "bear")
+        .send(backend)
+        .map(_.body shouldBe "UsernamePassword(teddy,Some(bear))")
+    },
+    testServer(in_auth_bearer_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map(_.body shouldBe "1234")
+    }
+  ) ++ missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
     testServer(endpoint, s"missing $authType")(_ => result) { (backend, baseUri) =>

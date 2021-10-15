@@ -9,21 +9,9 @@ import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  DecodeResult,
-  Endpoint,
-  EndpointIO,
-  EndpointInput,
-  EndpointOutput,
-  Mapping,
-  RawBodyType,
-  StreamBodyIO,
-  WebSocketBodyOutput
-}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, FileRange, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
-import java.io.{ByteArrayInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.util.function.Supplier
@@ -176,7 +164,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         // For some reason, Play comes with a Writeable for Supplier[InputStream] but not InputStream directly
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
-      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[File])
+      case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[FileRange].file)
       case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
 
@@ -217,7 +205,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
               val outputStream = Files.newOutputStream(f.toPath)
               outputStream.write(response.body[Array[Byte]])
               outputStream.close()
-              f
+              FileRange(f)
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(()) // Unit

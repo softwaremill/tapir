@@ -1,4 +1,4 @@
-package sttp.tapir.tests
+package sttp.tapir.tests.data
 
 sealed trait Entity {
   def name: String

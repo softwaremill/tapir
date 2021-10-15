@@ -4,15 +4,7 @@ import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerStaticContentTests,
-  ServerStreamingTests,
-  backendResource
-}
+import sttp.tapir.server.tests._
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -27,14 +19,12 @@ class CatsVertxServerTest extends TestSuite {
       val interpreter = new CatsVertxTestServerInterpreter(vertx, dispatcher)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(createServerTest, interpreter).tests() ++
-        new ServerFileMultipartTests(
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false).tests() ++
+        new ServerMultipartTests(
           createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
-        new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests() ++
-        new ServerStaticContentTests(interpreter, backend).tests()
+        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests()
     }
   }
 }

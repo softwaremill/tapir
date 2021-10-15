@@ -1,14 +1,14 @@
 package sttp.tapir
 
 import sttp.capabilities.Streams
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model._
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.MatchType
 import sttp.ws.WebSocketFrame
 
@@ -91,7 +91,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
-  def fileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
+  def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody[FileRange]
+  def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody[FileRange].map(_.file)(d => FileRange(d))
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

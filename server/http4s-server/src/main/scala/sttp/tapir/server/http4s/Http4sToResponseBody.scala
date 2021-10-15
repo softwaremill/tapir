@@ -5,14 +5,14 @@ import cats.syntax.all._
 import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
+import org.http4s.Header.ToRaw.rawToRaw
 import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Length`, `Content-Type`}
-import org.http4s.Header.ToRaw.rawToRaw
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 
@@ -53,7 +53,11 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
           None
         )
       case RawBodyType.FileBody =>
-        (Files[F].readAll(r.toPath, serverOptions.ioChunkSize), Some(r.length))
+        val tapirFile = r.asInstanceOf[FileRange]
+        val stream = tapirFile.range
+          .flatMap(r => r.startAndEnd.map(s => Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, s._1, s._2)))
+          .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))
+        (stream, Some(tapirFile.file.length))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body

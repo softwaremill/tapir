@@ -3,7 +3,7 @@ package sttp.tapir.macros
 import sttp.tapir.{Validator, Schema, SchemaType}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.SchemaMagnoliaDerivation
-import magnolia._
+import magnolia1._
 
 import scala.quoted.*
 

@@ -5,11 +5,12 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
+  AllServerTests,
   DefaultCreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
-  ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerMultipartTests,
   ServerStaticContentTests,
   ServerStreamingTests,
   backendResource
@@ -28,17 +29,11 @@ class PlayServerTest extends TestSuite {
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(createServerTest, interpreter,
-          multipleValueHeaderSupport = false,
-          inputStreamSupport = false,
-          invulnerableToUnsanitizedHeaders = false
-        ).tests() ++
-        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
-        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
-        new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests() ++
-        new PlayServerWithContextTest(backend).tests() ++
-        new ServerStaticContentTests(interpreter, backend).tests()
+      new ServerBasicTests(createServerTest, interpreter, multipleValueHeaderSupport = false, inputStreamSupport = false, invulnerableToUnsanitizedHeaders = false).tests() ++
+        new ServerMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
+        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false).tests()
+      new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
+        new PlayServerWithContextTest(backend).tests()
     }
   }
 }

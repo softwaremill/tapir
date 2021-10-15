@@ -211,7 +211,7 @@ case class Schema[T](
   }
 }
 
-object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompanionMacros {
+object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   val ModifyCollectionElements = "each"
 
   /** Creates a schema for type `T`, where the low-level representation is a `String`. */
@@ -229,7 +229,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber[Double]()).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean())
   implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.empty)
-  implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
+  implicit val schemaForFileRange: Schema[FileRange] = Schema(SBinary())
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary())
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
@@ -249,6 +249,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString())
   implicit val schemaForBigInt: Schema[BigInt] = Schema(SString())
   implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SString())
+  implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray

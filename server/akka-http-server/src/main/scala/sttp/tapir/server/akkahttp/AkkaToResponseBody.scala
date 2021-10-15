@@ -1,18 +1,18 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
-import akka.stream.Materializer
-import akka.stream.scaladsl.StreamConverters
+import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
+import akka.stream.{IOResult, Materializer}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.{Charset, StandardCharsets}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Materializer)
@@ -55,13 +55,32 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
-      case RawBodyType.FileBody        => HttpEntity.fromPath(ct, r.toPath)
+      case RawBodyType.FileBody =>
+        val tapirFile = r.asInstanceOf[FileRange]
+        tapirFile.range
+          .flatMap(r => r.startAndEnd.map(s => HttpEntity(ct, createSource(tapirFile, s._1, r.contentLength))))
+          .getOrElse(HttpEntity.fromPath(ct, tapirFile.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)
         body.toEntity()
     }
   }
+
+  private def createSource[R, CF <: CodecFormat](
+      tapirFile: FileRange,
+      start: Long,
+      bytesTotal: Long
+  ): Source[ByteString, Future[IOResult]] =
+    FileIO
+      .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)
+      .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
+        val bytesInNext = next.length
+        val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext))
+        (bytesConsumed + bytesInNext, next.take(bytesFromNext.toInt))
+      }
+      .takeWhile(_._1 < bytesTotal, inclusive = true)
+      .map(_._2)
 
   private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStreams.BinaryStream): ResponseEntity = {
     contentLength match {

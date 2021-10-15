@@ -96,8 +96,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
-    implicit val bodyListener: BodyListener[Future, RoutingContext => Unit] = new VertxBodyListener[Future]
-    val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, NoStreams](
+    implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
+    val interpreter = new ServerInterpreter[Any, Future, RoutingContext => VFuture[Void], NoStreams](
       new VertxRequestBody(rc, vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible),
       new VertxToResponseBody(vertxFutureServerOptions)(ReadStreamCompatible.incompatible),
       vertxFutureServerOptions.interceptors,
@@ -108,10 +108,11 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     interpreter(serverRequest, e)
       .flatMap {
         case RequestResult.Failure(_)         => FutureFromVFuture(rc.response.setStatusCode(404).end())
-        case RequestResult.Response(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
       }
       .failed
       .foreach { e =>
+        if (rc.response().bytesWritten() > 0) rc.response().end()
         rc.fail(e)
       }
   }

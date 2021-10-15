@@ -1,12 +1,13 @@
 package sttp.tapir.server.vertx.encoders
 
+import io.vertx.core.Future
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.model.ServerResponse
 
 import scala.util.{Failure, Success, Try}
 
 object VertxOutputEncoders {
-  private[vertx] def apply(serverResponse: ServerResponse[RoutingContext => Unit]): RoutingContext => Unit = { rc =>
+  private[vertx] def apply(serverResponse: ServerResponse[RoutingContext => Future[Void]]): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     Try {
       resp.setStatusCode(serverResponse.code.code)
@@ -16,7 +17,7 @@ object VertxOutputEncoders {
         case None => resp.end()
       }
     } match {
-      case Success(_) => ()
+      case Success(r) => r
       case Failure(ex) =>
         // send 500
         resp.setStatusCode(500)

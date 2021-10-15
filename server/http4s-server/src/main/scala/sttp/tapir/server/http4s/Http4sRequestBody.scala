@@ -11,7 +11,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
 import java.io.ByteArrayInputStream
 
@@ -38,7 +38,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
-          t(body.through(fileSink).compile.drain.map(_ => RawValue(file, Seq(file))))
+          t(body.through(fileSink).compile.drain.map(_ => RawValue(FileRange(file), Seq(FileRange(file)))))
         }
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?
@@ -50,7 +50,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
               .map { case (part, codecMeta) => toRawPart(part, codecMeta).asInstanceOf[F[RawPart]] }
 
             val rawParts: F[RawValue[Vector[RawPart]]] = rawPartsF.sequence.map { parts =>
-              RawValue(parts, parts collect { case _ @Part(_, f: TapirFile, _, _) => f })
+              RawValue(parts, parts collect { case _ @Part(_, f: FileRange, _, _) => f })
             }
 
             rawParts.asInstanceOf[F[RawValue[R]]] // R is Vector[RawPart]

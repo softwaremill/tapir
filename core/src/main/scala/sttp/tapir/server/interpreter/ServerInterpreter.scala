@@ -7,7 +7,7 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, TapirFile, StreamBodyIO}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
@@ -100,7 +100,7 @@ class ServerInterpreter[R, F[_], B, S](
                 case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
                 case failure: DecodeResult.Failure =>
                   v.createdFiles
-                    .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f)))
+                    .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
                     .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
               }
             }

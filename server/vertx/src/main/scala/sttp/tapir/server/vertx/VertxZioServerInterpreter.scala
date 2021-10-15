@@ -48,9 +48,9 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
-    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Unit] = new VertxBodyListener[RIO[R, *]]
+    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
+    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, vertxZioServerOptions, fromVFuture)(zioReadStream),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
@@ -58,13 +58,21 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     )
     val serverRequest = new VertxServerRequest(rc)
 
-    val result = interpreter(serverRequest, e)
+    val result: ZIO[R, Throwable, Any] = interpreter(serverRequest, e)
       .flatMap {
         case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
-        case RequestResult.Response(response)             => Task.succeed(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Response(response)             =>
+          Task.effectAsync((k: Task[Unit] => Unit) => {
+            VertxOutputEncoders(response).apply(rc).onComplete(d => {
+              if(d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
+            })
+          })
       }
       .catchAll { e =>
-        RIO.effect(rc.fail(e))
+        RIO.effect({
+          if (rc.response().bytesWritten() > 0) rc.response().end()
+          rc.fail(e)
+        })
       }
 
     // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler

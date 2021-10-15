@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi.dtos
 
-import sttp.tapir.tests.FruitAmount
+import sttp.tapir.tests.data.FruitAmount
 
 // TODO: move back to VerifyYamlTest companion after https://github.com/lampepfl/dotty/issues/12849 is fixed
 object VerifyYamlTestData {

@@ -2,9 +2,9 @@ package sttp.tapir.server.finatra
 
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
 
@@ -33,7 +33,7 @@ object FinatraServerOptions extends Logging {
       val outputStream = new FileOutputStream(file)
       outputStream.write(bytes)
       outputStream.close()
-      file: TapirFile
+      file
     }
   }
 
