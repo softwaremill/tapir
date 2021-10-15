@@ -117,21 +117,22 @@ class ServerStaticContentTests[F[_], ROUTE](
                   r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
                 })
             }
-            .unsafeToFuture()
-          serveRoute(headAndGetEndpoint.last)
-            .use { port =>
-              basicRequest
-                .headers(Header(HeaderNames.Range, "bytes=3-6"))
-                .get(uri"http://localhost:$port/test/f2")
-                .response(asStringAlways)
-                .send(backend)
-                .map(r => {
-                  r.body shouldBe "cont"
-                  r.code shouldBe StatusCode.PartialContent
-                  r.body.length shouldBe 4
-                  r.headers contains Header(HeaderNames.ContentRange, "bytes 3-6/10") shouldBe true
-                })
-            }
+            .flatMap(_ => {
+              serveRoute(headAndGetEndpoint.last)
+                .use { port =>
+                  basicRequest
+                    .headers(Header(HeaderNames.Range, "bytes=3-6"))
+                    .get(uri"http://localhost:$port/test/f2")
+                    .response(asStringAlways)
+                    .send(backend)
+                    .map(r => {
+                      r.body shouldBe "cont"
+                      r.code shouldBe StatusCode.PartialContent
+                      r.body.length shouldBe 4
+                      r.headers contains Header(HeaderNames.ContentRange, "bytes 3-6/10") shouldBe true
+                    })
+                }
+            })
             .unsafeToFuture()
         }
       },
