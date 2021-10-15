@@ -58,7 +58,7 @@ object SwaggerUI {
         Right(s"/$prefixAsPath/oauth2-redirect.html$queryString")
       }
 
-    val resourcesEndpoint = resourcesServerEndpoint[F](prefixInput)(
+    val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
