@@ -48,6 +48,8 @@ class HttpServer(port: Port) {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
       if (f == "papaya") {
         Accepted("29")
+      } else if (f == "apricot") {
+        Ok("30")
       } else {
         Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header.Raw(CIString("X-Role"), f.length.toString))
       }
@@ -150,6 +152,13 @@ class HttpServer(port: Port) {
     case GET -> Root / "entity" / entityType =>
       if (entityType == "person") Created("""{"name":"mary","age":20}""")
       else Ok("""{"name":"work"}""")
+
+    case GET -> Root / "one-of" :? fruitParam(f) =>
+      if (f == "apple") BadRequest("""{"name":"apple"}""")
+      else if (f == "pear") BadRequest("""{"availableInDays":10}""")
+      else if (f.length < 3) BadRequest(s"""{"length":${f.length}""")
+      else if (f == "orange") Ok()
+      else BadRequest("""{"availableFruit":["orange"]}""")
 
     case r @ GET -> Root / "content-negotiation" / "organization" =>
       fromAcceptHeader(r) {

@@ -216,4 +216,4 @@ variants of the methods, which recover errors from failed effects: `serverLogicP
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
-this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.md).
+this can be customised by using a [status code output](../endpoint/ios.md).

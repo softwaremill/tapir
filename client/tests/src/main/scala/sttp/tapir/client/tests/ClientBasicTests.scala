@@ -6,7 +6,7 @@ import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.TestUtil.writeToFile
 import sttp.tapir.tests._
-import sttp.tapir.tests.data.{Fruit, FruitAmount, Organization, Person}
+import sttp.tapir.tests.data.{Fruit, FruitAmount, FruitErrorDetail, Organization, Person}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -133,7 +133,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       test("not existing endpoint, with error output not matching 404") {
         safeSend(not_existing_endpoint, port, ())
           .unsafeToFuture()
-          .map(_ should matchPattern { case DecodeResult.Error(_, _: IllegalArgumentException) =>
+          .map(_ should matchPattern { case DecodeResult.Mismatch(_, _) =>
           })
       }
     }
@@ -175,6 +175,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     import sttp.tapir.tests.OneOf._
     testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
     testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
+    testClient(in_string_out_status_from_string.name("status one of 3"), "apricot", Right(Right("30")))
     testClient(in_int_out_value_form_exact_match.name("first exact status of 2"), 1, Right("B"))
     testClient(in_int_out_value_form_exact_match.name("second exact status of 2"), 2, Right("A"))
     testClient(out_json_or_default_json.name("person"), "person", Right(Person("mary", 20)))
@@ -185,5 +186,10 @@ trait ClientBasicTests { this: ClientTests[Any] =>
 
     // when no content response should pick first non body mapping
     testClient(out_json_or_empty_output_no_content, 204, Right(Left(())))
+
+    // nested one-of
+    testClient(in_string_out_error_detail_nested.in("one-of").name("orange"), "orange", Right(()))
+    testClient(in_string_out_error_detail_nested.in("one-of").name("kiwi"), "kiwi", Left(FruitErrorDetail.Unknown(List("orange"))))
+    testClient(in_string_out_error_detail_nested.in("one-of").name("apple"), "apple", Left(FruitErrorDetail.AlreadyPicked("apple")))
   }
 }

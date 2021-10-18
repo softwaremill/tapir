@@ -25,6 +25,7 @@ For inputs, these are:
 For both inputs/outputs:
 
 * `header[T](name)` captures a header with the given name
+* `header[T](name, value)` maps to a fixed header with the given name and value
 * `headers` captures all headers, represented as `List[Header]`
 * `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
 * `setCookie(name)` captures the value & metadata of the a `Set-Cookie` header with a matching name 
@@ -219,6 +220,25 @@ To match only the root path, use an empty string: `endpoint.in("")` will match `
 To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
 `paths`, e.g.: `endpoint.in("api" / "download").in(paths)"`.
 
+## Status codes 
+
+### Arbitrary status codes
+
+To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
+`sttp.model.StatusCode`. The companion object contains known status codes as constants. This type of output is used only 
+when interpreting the endpoint as a server. If your endpoint returns varying status codes which you would like to have 
+listed in documentation use `statusCode.description(code1, "code1 description").description(code2, "code2 description")` 
+output.
+
+### Fixed status code
+
+A fixed status code can be specified using the `statusCode(code)` output.
+
+### In server interpreters
+
+Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with
+`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
+
 ## Next
 
-Read on about [status codes](statuscodes.md).
+Read on about [one-of mappings](oneof.md).

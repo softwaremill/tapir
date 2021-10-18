@@ -1,22 +1,26 @@
-# Status codes
+# One-of mappings
 
-## Arbitrary status codes
+Outputs with multiple variants can be specified using the `oneOf` output. Each variant  is defined using a one-of 
+mapping. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the mappings 
+are implementing case classes.
 
-To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
-`sttp.model.StatusCode`. The companion object contains known status 
-codes as constants. This type of output is used only when interpreting the endpoint as a server. If your endpoint returns varying status codes
-which you would like to have listed in documentation use `statusCode.description(code1, "code1 description").description(code2, "code2 description")` output.
+Each one-of mapping needs an `appliesTo` function to determine at run-time, if the variant should be used for a given 
+value. This function is inferred at compile time when using `oneOfMapping`, but can also be provided by hand, or if
+the compile-time inference fails, using one of the other factory methods (see below). A catch-all mapping can be defined
+using `oneOfDefaultMapping`, and should be placed as the last mapping in the list of possible variants.
 
-## Fixed status code
+When encoding such an output to a response, the first matching output is chosen, using the following rules:
+1. the mappings `appliesTo` method, applied to the output value (as returned by the server logic) must return `true`.
+2. when a fixed content type is specified by the output, it must match the request's `Accept` header (if present). 
+   This implements content negotiation.
 
-A fixed status code can be specified using the `statusCode(code)` output.
+When decoding from a response, the first output which decodes successfully is chosen.
 
-## Different outputs for status codes
+The outputs might vary in status codes, headers (e.g. different content types), and body implementations. However, for 
+bodies, only replayable ones can be used, and they need to have the same raw representation (e.g. all byte-array-base, 
+or all file-based).
 
-It is also possible to specify how status codes correspond with different outputs. All mappings should have a common supertype,
-which is also the type of the output. These mappings are used to determine the status code when interpreting an endpoint
-as a server, as well as when generating documentation and to deserialise client responses to the appropriate type,
-basing on the status code.
+Note that exhaustiveness of the mappings (that all subtypes of `T` are covered) is not checked.
 
 For example, below is a specification for an endpoint where the error output is a sealed trait `ErrorInfo`; 
 such a specification can then be refined and reused for other endpoints:
@@ -37,23 +41,13 @@ case object NoContent extends ErrorInfo
 // here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
-    oneOfMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
-    oneOfMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-    oneOfMapping(StatusCode.NoContent, emptyOutputAs(NoContent)),
+    oneOfMapping(statusCode(StatusCode.NotFound).and(jsonBody[NotFound].description("not found"))),
+    oneOfMapping(statusCode(StatusCode.Unauthorized.and(jsonBody[Unauthorized].description("unauthorized")))),
+    oneOfMapping(statusCode(StatusCode.NoContent.and(emptyOutputAs(NoContent)))),
     oneOfDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )
 ```
-
-Each mapping, defined using the `oneOfMapping` method is a case class, containing the output description as well as
-the status code. Moreover, default mappings can be defined using `oneOfDefaultMapping`:
-
-* for servers, the default status code for error outputs is `400`, and for normal outputs `200` (unless a `statusCode` 
-  is used in the nested output)
-* for clients, a default mapping is a catch-all. 
-
-Both `oneOfMapping` and `oneOfDefaultMapping` return a value of type `OneOfMapping`. A list of these values can be
-dynamically assembled (e.g. using a default set of cases, plus endpoint-specific mappings), and provided to `oneOf`.
 
 ## One-of-mapping and type erasure
 
@@ -129,11 +123,6 @@ val baseEndpoint = endpoint.errorOut(
   )
 )
 ```
-
-## Server interpreters
-
-Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with 
-`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
 
 ## Next
 

@@ -129,50 +129,22 @@ package object internal {
     }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
-    // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
+    // Outputs may have many variants because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
     // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs without metadata are skipped.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
-    def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
-      asBasicOutputsOrList match {
-        case Left(outputs) => (None -> outputs) :: Nil
-        case Right(list)   => list
-      }
-
-    private[internal] type BasicOutputsOrList = Either[BasicOutputs, List[(Option[StatusCode], BasicOutputs)]]
-    private[internal] def asBasicOutputsOrList: BasicOutputsOrList = {
-      def throwMultipleOneOfMappings = throw new IllegalArgumentException(s"Multiple one-of mappings in output $output")
-
-      def mergeMultiple(v: Vector[BasicOutputsOrList]): BasicOutputsOrList =
-        v.foldLeft(Left(Vector.empty): BasicOutputsOrList) {
-          case (Left(os1), Left(os2))    => Left(os1 ++ os2)
-          case (Left(os1), Right(osMap)) => Right(osMap.map { case (sc, os2) => sc -> (os1 ++ os2) })
-          case (Right(osMap), Left(os2)) => Right(osMap.map { case (sc, os1) => sc -> (os1 ++ os2) })
-          case (Right(_), Right(_))      => throwMultipleOneOfMappings
-        }
+    def asBasicOutputsList: List[BasicOutputs] = {
+      def product(l: List[BasicOutputs], r: List[BasicOutputs]): List[BasicOutputs] = l.flatMap(o1 => r.map(o2 => o1 ++ o2))
 
       output match {
-        case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
-        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
-        case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrList
-        case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrList
-        case _: EndpointOutput.Void[_]              => Left(Vector.empty)
-        case s: EndpointOutput.OneOf[_, _] =>
-          Right(
-            s.mappings
-              .map(c => (c.output.asBasicOutputsOrList, c.statusCode))
-              .map {
-                case (Left(basicOutputs), statusCode) => statusCode -> basicOutputs
-                case (Right(_), _)                    => throwMultipleOneOfMappings
-              }
-              .toList
-          )
-        case f: EndpointOutput.FixedStatusCode[_] => Right((Some(f.statusCode) -> Vector(f)) :: Nil)
-        case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
-          val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
-          Right(entries)
-        case e: EndpointIO.Empty[_]     => if (hasMetaData(e)) Left(Vector(e)) else Left(Vector.empty)
-        case b: EndpointOutput.Basic[_] => Left(Vector(b))
+        case EndpointOutput.Pair(left, right, _, _) => product(left.asBasicOutputsList, right.asBasicOutputsList)
+        case EndpointIO.Pair(left, right, _, _)     => product(left.asBasicOutputsList, right.asBasicOutputsList)
+        case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsList
+        case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
+        case _: EndpointOutput.Void[_]              => List(Vector.empty)
+        case s: EndpointOutput.OneOf[_, _]          => s.mappings.flatMap(_.output.asBasicOutputsList)
+        case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
+        case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
     }
 
@@ -246,7 +218,11 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: Seq[String]): String = s"one of(${mappings.mkString("|")})"
+  def showOneOf(mappings: List[String]): String = mappings.distinct match {
+    case Nil     => ""
+    case List(o) => o
+    case l       => s"one of(${l.mkString("|")})"
+  }
 
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {

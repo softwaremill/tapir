@@ -76,7 +76,7 @@ object ConvertStreams {
         EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointOutput.OneOf(mappings, mapping) =>
         EndpointOutput.OneOf[Any, Any](
-          mappings.map(m => OneOfMapping(m.statusCode, forOutput(m.output), m.appliesTo)),
+          mappings.map(m => OneOfMapping(forOutput(m.output), m.appliesTo)),
           mapping.asInstanceOf[Mapping[Any, Any]]
         )
       // all other cases - unchanged

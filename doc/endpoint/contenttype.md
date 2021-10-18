@@ -13,8 +13,7 @@ user-provided value will override this default:
 
 ## Multiple content types
 
-Multiple, alternative content types can be specified using `oneOf`, similarly as when specifying [status code](statuscodes.md)
-mappings. 
+Multiple, alternative content types can be specified using [`oneOf`](oneof.md). 
 
 On the server side, the appropriate mapping will be chosen using content negotiation, via the `Accept` header, using
 the [configurable](../server/options.md) `ContentTypeInterceptor`. Note that both the base media type, and the charset
