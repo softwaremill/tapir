@@ -355,6 +355,23 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       },
+      Test("should serve single gzipped resource") {
+        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
+        val bytes = loader.getResourceAsStream("test/r3.gz").readAllBytes()
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3"))
+          .use { port =>
+            emptyRequest
+              .acceptEncoding("gzip")
+              .get(uri"http://localhost:$port/test/r3")
+              .response(asByteArrayAlways)
+              .send(backend)
+              .map(r => {
+                r.body shouldBe bytes
+                r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+              })
+          }
+          .unsafeToFuture()
+      },
       Test("not return a resource outside of the resource prefix directory") {
         serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
           .use { port =>
