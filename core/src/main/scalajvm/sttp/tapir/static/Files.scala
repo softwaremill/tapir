@@ -98,7 +98,8 @@ object Files {
         Some(Instant.ofEpochMilli(lastModified)),
         Some(fileLength),
         Some(contentTypeFromName(file.toFile.getName)),
-        etag
+        etag,
+        None
       )
   )
 

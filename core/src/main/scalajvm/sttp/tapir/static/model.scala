@@ -9,7 +9,8 @@ case class StaticInput(
     path: List[String],
     ifNoneMatch: Option[List[ETag]],
     ifModifiedSince: Option[Instant],
-    range: Option[Range]
+    range: Option[Range],
+    acceptEncoding: Option[String]
 )
 
 case class HeadInput(
@@ -45,6 +46,7 @@ object StaticOutput {
       lastModified: Option[Instant],
       contentLength: Option[Long],
       contentType: Option[MediaType],
-      etag: Option[ETag]
+      etag: Option[ETag],
+      contentEncoding: Option[String]
   ) extends StaticOutput[T]
 }
