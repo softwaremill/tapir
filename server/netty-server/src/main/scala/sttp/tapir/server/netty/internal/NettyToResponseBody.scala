@@ -18,19 +18,19 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ByteBuf = {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
-        Unpooled.copiedBuffer(v.toString, charset)
+        Unpooled.wrappedBuffer(v.toString.getBytes(charset))
       case RawBodyType.ByteArrayBody =>
         val bytes = v.asInstanceOf[Array[Byte]]
-        Unpooled.copiedBuffer(bytes)
+        Unpooled.wrappedBuffer(bytes)
       case RawBodyType.ByteBufferBody =>
         val byteBuffer = v.asInstanceOf[ByteBuffer]
-        Unpooled.copiedBuffer(byteBuffer)
+        Unpooled.wrappedBuffer(byteBuffer)
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        Unpooled.copiedBuffer(stream.readAllBytes())
+        Unpooled.wrappedBuffer(stream.readAllBytes())
 
-      case RawBodyType.FileBody         => Unpooled.copiedBuffer(Files.readAllBytes(v.file.toPath))
+      case RawBodyType.FileBody         => Unpooled.wrappedBuffer(Files.readAllBytes(v.file.toPath))
       case _: RawBodyType.MultipartBody => ???
     }
   }
