@@ -1,8 +1,7 @@
 package sttp.tapir.static
 
 import sttp.model.MediaType
-import sttp.model.headers.ETag
-import sttp.model.headers.Range
+import sttp.model.headers.{ETag, Range}
 
 import java.time.Instant
 
@@ -13,11 +12,20 @@ case class StaticInput(
     range: Option[Range]
 )
 
+case class HeadInput(
+    path: List[String]
+)
+
 trait StaticErrorOutput
 object StaticErrorOutput {
   case object NotFound extends StaticErrorOutput
   case object BadRequest extends StaticErrorOutput
   case object RangeNotSatisfiable extends StaticErrorOutput
+}
+
+trait HeadOutput
+object HeadOutput {
+  case class Found(acceptRanges: Option[String], contentLength: Option[Long], contentType: Option[MediaType]) extends HeadOutput
 }
 
 trait StaticOutput[+T]

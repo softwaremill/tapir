@@ -1,6 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{
   complete,
   extractExecutionContext,
@@ -12,8 +12,10 @@ import akka.http.scaladsl.server.Directives.{
   respondWithHeaders
 }
 import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.Source
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
+import sttp.model.{HeaderNames, Method}
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
@@ -55,14 +57,14 @@ trait AkkaHttpServerInterpreter {
 
           onSuccess(interpreter(serverRequest, ses)) {
             case RequestResult.Failure(_)         => reject
-            case RequestResult.Response(response) => serverResponseToAkka(response)
+            case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)
           }
         }
       }
     }
   }
 
-  private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody]): Route = {
+  private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody], requestMethod: Method): Route = {
     val statusCode = StatusCodes.getForKey(response.code.code).getOrElse(StatusCodes.custom(response.code.code, ""))
     val akkaHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
@@ -73,7 +75,21 @@ trait AkkaHttpServerInterpreter {
         }
       case Some(Right(entity)) =>
         complete(HttpResponse(entity = entity, status = statusCode, headers = akkaHeaders))
-      case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
+      case None =>
+        if (requestMethod.is(Method.HEAD) && response.contentLength.isDefined) {
+          val contentLength: Long = response.contentLength.getOrElse(0)
+          val contentType: ContentType = response.contentType match {
+            case Some(t) => ContentType.parse(t).getOrElse(ContentTypes.NoContentType)
+            case None    => ContentTypes.NoContentType
+          }
+          complete(
+            HttpResponse(
+              status = statusCode,
+              headers = akkaHeaders,
+              entity = HttpEntity.Default(contentType, contentLength, Source.empty)
+            )
+          )
+        } else complete(HttpResponse(statusCode, headers = akkaHeaders))
     }
   }
 }
