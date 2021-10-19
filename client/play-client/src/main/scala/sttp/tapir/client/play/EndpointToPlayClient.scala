@@ -9,7 +9,20 @@ import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, FileRange, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{
+  Codec,
+  CodecFormat,
+  DecodeResult,
+  Endpoint,
+  EndpointIO,
+  EndpointInput,
+  EndpointOutput,
+  FileRange,
+  Mapping,
+  RawBodyType,
+  StreamBodyIO,
+  WebSocketBodyOutput
+}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
@@ -29,7 +42,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     def responseParser(response: StandaloneWSResponse): DecodeResult[Either[E, O]] = {
       parsePlayResponse(e)(response) match {
         case DecodeResult.Error(o, e) =>
-          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req.method} ${req.uri}", e))
+          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from: $o, request ${req.method} ${req.uri}", e))
         case other => other
       }
     }

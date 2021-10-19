@@ -316,21 +316,23 @@ object EndpointOutput extends EndpointOutputMacros {
     override def show: String = wrapped.show
   }
 
-  /** Specifies a correspondence between `statusCode` and `output`.
+  /** Specifies one possible `output`.
     *
-    * A single status code can have multiple mappings, with different body content types. The mapping can then be chosen based on content
-    * type negotiation, or the content type header.
+    * When encoding to a response, this output is used if:
+    *   1. `appliesTo` applied to the output value (as returned by the server logic) returns `true`.
+    *   1. when a fixed content type specified by the output matches the request's `Accept` header
+    *
+    * When decoding from a response, this output is used if it decodes successfully.
     *
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`. This check cannot be in general done by
     * checking the run-time class of the value, due to type erasure (if `O` has type parameters).
     */
   case class OneOfMapping[O] private[tapir] (
-      statusCode: Option[sttp.model.StatusCode],
       output: EndpointOutput[O],
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: Seq[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](mappings: List[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))

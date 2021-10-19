@@ -73,34 +73,6 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
-  it should "not allow to map status code multiple times to same format same charset" in {
-    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
-
-    the[RuntimeException] thrownBy {
-      endpoint.get
-        .out(
-          sttp.tapir.oneOf(
-            oneOfMapping(StatusCode.Accepted, stringBody),
-            oneOfMapping(StatusCode.Accepted, plainBody)
-          )
-        )
-    }
-  }
-
-  it should "not allow to map default status code multiple times to same format same charset" in {
-    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
-
-    the[RuntimeException] thrownBy {
-      endpoint.get
-        .out(
-          sttp.tapir.oneOf(
-            oneOfDefaultMapping(stringBody),
-            oneOfDefaultMapping(plainBody)
-          )
-        )
-    }
-  }
-
   it should "allow to map status code multiple times to same format different charset" in {
     implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
     endpoint.get
@@ -147,7 +119,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       case i                                     => i
     }
 
-  it should "combine two inputs" in {
+  "tupling" should "combine two inputs" in {
     val i1 = query[String]("q1")
     val i2 = query[String]("q2")
     pairToTuple(endpoint.in(i1).in(i2).input) shouldBe ((((), i1), i2))
@@ -200,7 +172,23 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       endpoint.post.in(query[String]("q1")).in(query[Option[Int]]("q2")).in(stringBody).errorOut(stringBody),
       "POST ?q1 ?q2 {body as text/plain (UTF-8)} -> {body as text/plain (UTF-8)}/-"
     ),
-    (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}")
+    (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}"),
+    (
+      endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(byteArrayBody))),
+      "GET -> -/one of({body as text/plain (UTF-8)}|{body as application/octet-stream})"
+    ),
+    // same one-of mappings should be flattened to a single clause
+    (endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(stringBody))), "GET -> -/{body as text/plain (UTF-8)}"),
+    // nested same one-of mappings should also be flattened
+    (
+      endpoint.get.out(
+        sttp.tapir.oneOf(
+          oneOfMapping(byteArrayBody),
+          oneOfMapping(sttp.tapir.oneOf(oneOfMapping(byteArrayBody), oneOfMapping(byteArrayBody)))
+        )
+      ),
+      "GET -> -/{body as application/octet-stream}"
+    )
   )
 
   for ((testShowEndpoint, expectedShowResult) <- showTestData) {

@@ -66,7 +66,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
 
         val chosenMapping = chooseOneOfMapping(applicableMappings)
-        apply(chosenMapping.output, ParamsAsAny(enc), chosenMapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
+        apply(chosenMapping.output, ParamsAsAny(enc), ov)
 
       case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
     }
