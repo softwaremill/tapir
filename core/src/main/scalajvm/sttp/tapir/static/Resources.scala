@@ -33,7 +33,7 @@ object Resources {
       .flatMap(maybeUrl =>
         m.blocking(
           maybeUrl
-            .map(url => readResource(useETags, resourcesInput, url, None, Some("gzip")))
+            .map(url => readResource(useETags, resourcesInput, url, Some(MediaType.ApplicationGzip), Some("gzip")))
             .getOrElse(
               Option(classLoader.getResource(name))
                 .map(url => readResource(useETags, resourcesInput, url, Some(contentTypeFromName(name)), None))
