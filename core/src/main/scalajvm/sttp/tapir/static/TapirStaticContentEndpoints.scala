@@ -54,18 +54,19 @@ trait TapirStaticContentEndpoints {
   private val acceptEncodingHeader: EndpointIO[Option[String]] =
     header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[Option[String]] {
       case None => DecodeResult.Value(None)
-      case Some(v) => {
-        DecodeResult.fromEitherString(v, Right(Some(v)))
-      }
-    }(_.map(_.toString))
+      case Some(v) =>
+        val option = v.split(",").headOption
+        val right =
+          if (option.exists(_.equals("gzip"))) Right(option)
+          else Right(Option.empty)
+        DecodeResult.fromEitherString(v, right)
+    }(header => header)
 
   private val contentEncodingHeader: EndpointIO[Option[String]] =
     header[Option[String]](HeaderNames.ContentEncoding).mapDecode[Option[String]] {
-      case None => DecodeResult.Value(None)
-      case Some(v) => {
-        DecodeResult.fromEitherString(v, Right(Some(v)))
-      }
-    }(_.map(_.toString))
+      case None    => DecodeResult.Value(None)
+      case Some(v) => DecodeResult.fromEitherString(v, Right(Some(v)))
+    }(header => header)
 
   private def staticGetEndpoint[T](
       prefix: EndpointInput[Unit],
