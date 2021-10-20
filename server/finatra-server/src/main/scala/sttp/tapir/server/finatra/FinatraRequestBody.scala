@@ -39,10 +39,10 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
         Future.value[R](new String(asByteArray, charset.getOrElse(defaultCharset))).map(RawValue(_))
-      case RawBodyType.ByteArrayBody    => Future.value[R](asByteArray).map(RawValue(_))
-      case RawBodyType.ByteBufferBody   => Future.value[R](asByteBuffer).map(RawValue(_))
-      case RawBodyType.InputStreamBody  => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
-      case RawBodyType.FileBody         => serverOptions.createFile(asByteArray).map(f => FileRange(f)).map(file => RawValue(file, Seq(file)))
+      case RawBodyType.ByteArrayBody   => Future.value[R](asByteArray).map(RawValue(_))
+      case RawBodyType.ByteBufferBody  => Future.value[R](asByteBuffer).map(RawValue(_))
+      case RawBodyType.InputStreamBody => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
+      case RawBodyType.FileBody => serverOptions.createFile(asByteArray).map(f => FileRange(f)).map(file => RawValue(file, Seq(file)))
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m).map(RawValue.fromParts)
     }
   }

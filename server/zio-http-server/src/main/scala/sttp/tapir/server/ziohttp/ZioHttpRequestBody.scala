@@ -27,7 +27,8 @@ class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serv
     case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
     case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
-    case RawBodyType.FileBody            => serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
+    case RawBodyType.FileBody =>
+      serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
     case RawBodyType.MultipartBody(_, _) => Task.never
   }
 

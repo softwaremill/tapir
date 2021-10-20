@@ -61,11 +61,13 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     val result: ZIO[R, Throwable, Any] = interpreter(serverRequest, e)
       .flatMap {
         case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
-        case RequestResult.Response(response)             =>
+        case RequestResult.Response(response) =>
           Task.effectAsync((k: Task[Unit] => Unit) => {
-            VertxOutputEncoders(response).apply(rc).onComplete(d => {
-              if(d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
-            })
+            VertxOutputEncoders(response)
+              .apply(rc)
+              .onComplete(d => {
+                if (d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
+              })
           })
       }
       .catchAll { e =>
