@@ -9,6 +9,7 @@ import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
 
 import scala.collection.immutable
@@ -20,6 +21,13 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     class AddToTrailInterceptor(prefix: String) extends EndpointInterceptor[Id] {
       override def apply[B](responder: Responder[Id, B], endpointHandler: EndpointHandler[Id, B]): EndpointHandler[Id, B] =
         new EndpointHandler[Id, B] {
+          override def beforeDecode(request: ServerRequest, serverEndpoint: ServerEndpoint[_, _, _, _, Id])(implicit
+              monad: MonadError[Id]
+          ): Id[BeforeDecodeResult[Id, B]] = {
+            callTrail ::= s"$prefix before"
+            endpointHandler.beforeDecode(request, serverEndpoint)(idMonadError)
+          }
+
           override def onDecodeSuccess[I](
               ctx: DecodeSuccessContext[Id, I]
           )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponse[B]] = {
@@ -74,6 +82,6 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     interpreter.apply(testRequest, endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(())))
 
     // then
-    callTrail.reverse shouldBe List("2 request", "1 success", "2 success", "3 success")
+    callTrail.reverse shouldBe List("2 request", "1 before", "2 before", "3 before", "1 success", "2 success", "3 success")
   }
 }

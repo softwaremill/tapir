@@ -41,8 +41,8 @@ The following request interceptors are provided by default (and if enabled, call
   
 ## Endpoint interceptors
 
-An `EndpointInterceptor` allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs 
-have been decoded successfully, or when decoding has failed.
+An `EndpointInterceptor` allows intercepting the handling of a request by an endpoint, before an endpoint's inputs
+are decoded, and when either the endpoint's inputs have been decoded successfully, or when decoding has failed.
 
 The following interceptors are used by default, and if enabled, called in this order:
 

@@ -57,36 +57,40 @@ class ServerInterpreter[R, F[_], B, S](
     }
 
   private def tryServerEndpoint[I, E, O](
-      request: ServerRequest,
-      se: ServerEndpoint[I, E, O, R, F],
+      originalRequest: ServerRequest,
+      originalServerEndpoint: ServerEndpoint[I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
-    val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
-
-    def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
-      case (interceptor, handler) => interceptor(responder(defaultStatusCode), handler)
+    val endpointHandler: EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) { case (interceptor, handler) =>
+      interceptor(responder(defaultSuccessStatusCode), handler)
     }
 
-    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
-      val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
-      endpointHandler(defaultErrorStatusCode)
-        .onDecodeFailure(decodeFailureContext)
-        .map {
-          case Some(response) => RequestResult.Response(response)
-          case None           => RequestResult.Failure(List(decodeFailureContext))
-        }
-    }
+    endpointHandler.beforeDecode(originalRequest, originalServerEndpoint).flatMap {
+      case BeforeDecodeResult.Response(response) => (RequestResult.Response(response): RequestResult[B]).unit
+      case BeforeDecodeResult.DecodeUsing(request, serverEndpoint) =>
+        val decodedBasicInputs = DecodeBasicInputs(serverEndpoint.endpoint.input, request)
 
-    decodeBody(decodedBasicInputs).flatMap {
-      case values: DecodeBasicInputsResult.Values =>
-        InputValue(se.endpoint.input, values) match {
-          case InputValueResult.Value(params, _) =>
-            endpointHandler(defaultSuccessStatusCode)
-              .onDecodeSuccess(interceptor.DecodeSuccessContext(se, params.asAny.asInstanceOf[I], request))
-              .map(RequestResult.Response(_))
-          case InputValueResult.Failure(input, failure) => onDecodeFailure(input, failure)
+        def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+          val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, serverEndpoint.endpoint, request)
+          endpointHandler
+            .onDecodeFailure(decodeFailureContext)
+            .map {
+              case Some(response) => RequestResult.Response(response)
+              case None           => RequestResult.Failure(List(decodeFailureContext))
+            }
         }
-      case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure)
+
+        decodeBody(decodedBasicInputs).flatMap {
+          case values: DecodeBasicInputsResult.Values =>
+            InputValue(serverEndpoint.endpoint.input, values) match {
+              case InputValueResult.Value(params, _) =>
+                endpointHandler
+                  .onDecodeSuccess(interceptor.DecodeSuccessContext.fromAnyInput(serverEndpoint, params.asAny, request))
+                  .map(RequestResult.Response(_))
+              case InputValueResult.Failure(input, failure) => onDecodeFailure(input, failure)
+            }
+          case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure)
+        }
     }
   }
 
@@ -117,6 +121,11 @@ class ServerInterpreter[R, F[_], B, S](
     }
 
   private val defaultEndpointHandler: EndpointHandler[F, B] = new EndpointHandler[F, B] {
+    override def beforeDecode(request: ServerRequest, serverEndpoint: ServerEndpoint[_, _, _, _, F])(implicit
+        monad: MonadError[F]
+    ): F[BeforeDecodeResult[F, B]] =
+      (BeforeDecodeResult.DecodeUsing(request, serverEndpoint): BeforeDecodeResult[F, B]).unit
+
     override def onDecodeSuccess[I](
         ctx: DecodeSuccessContext[F, I]
     )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =

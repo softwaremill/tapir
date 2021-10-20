@@ -1,11 +1,20 @@
 package sttp.tapir.server.interceptor
 
 import sttp.monad.MonadError
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.BodyListener
 
 /** Handles the result of decoding a request using an endpoint's inputs. */
 trait EndpointHandler[F[_], B] {
+
+  /** Called before an endpoint is attempted to be decoded, using the given request.
+    * @return
+    *   Either a response, or data using which the decoding will be done.
+    */
+  def beforeDecode(request: ServerRequest, serverEndpoint: ServerEndpoint[_, _, _, _, F])(implicit
+      monad: MonadError[F]
+  ): F[BeforeDecodeResult[F, B]]
 
   /** Called when the request has been successfully decoded into data. This is captured by the `ctx` parameter.
     *
