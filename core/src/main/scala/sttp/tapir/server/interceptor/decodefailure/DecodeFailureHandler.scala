@@ -134,7 +134,8 @@ object DefaultDecodeFailureHandler {
         case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
         case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
         case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
-        case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
+        case _: EndpointInput.ExtractFromRequest[_]  => "Invalid request"
+        case _: EndpointInput.ExtractAttribute[_, _] => "Invalid request"
         case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
         case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
         case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"

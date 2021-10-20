@@ -127,9 +127,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.FixedHeader(h, _, _) =>
         val req2 = req.addHttpHeaders(h.name -> h.value)
         req2
-      case EndpointInput.ExtractFromRequest(_, _, _) =>
-        // ignoring
-        req
+      case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
+      case EndpointInput.ExtractAttribute(_, _, _)   => req // ignoring
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)

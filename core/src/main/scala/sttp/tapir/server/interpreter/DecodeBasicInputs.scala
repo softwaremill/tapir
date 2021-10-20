@@ -260,8 +260,11 @@ object DecodeBasicInputs {
       case EndpointIO.Headers(codec, _) =>
         (codec.decode(ctx.headers.map((sttp.model.Header.apply _).tupled).toList), ctx)
 
-      case EndpointInput.ExtractFromRequest(codec, _, _) =>
+      case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.request), ctx)
+
+      case EndpointInput.ExtractAttribute(codec, key, _) =>
+        (codec.decode(ctx.request.attribute(key)), ctx)
 
       case EndpointIO.Empty(codec, _) =>
         (codec.decode(()), ctx)

@@ -112,20 +112,21 @@ package object internal {
 
   def basicInputSortIndex(i: EndpointInput.Basic[_]): Int =
     i match {
-      case _: EndpointInput.FixedMethod[_]        => 0
-      case _: EndpointInput.FixedPath[_]          => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture[_]       => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams[_]        => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers[_]               => 3
-      case _: EndpointIO.FixedHeader[_]           => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _]               => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-      case _: EndpointIO.Empty[_]                 => 7
+      case _: EndpointInput.FixedMethod[_]         => 0
+      case _: EndpointInput.FixedPath[_]           => 1
+      case _: EndpointInput.PathCapture[_]         => 1
+      case _: EndpointInput.PathsCapture[_]        => 1
+      case _: EndpointInput.Query[_]               => 2
+      case _: EndpointInput.QueryParams[_]         => 2
+      case _: EndpointInput.Cookie[_]              => 3
+      case _: EndpointIO.Header[_]                 => 3
+      case _: EndpointIO.Headers[_]                => 3
+      case _: EndpointIO.FixedHeader[_]            => 3
+      case _: EndpointInput.ExtractFromRequest[_]  => 4
+      case _: EndpointInput.ExtractAttribute[_, _] => 4
+      case _: EndpointIO.Body[_, _]                => 6
+      case _: EndpointIO.StreamBodyWrapper[_, _]   => 6
+      case _: EndpointIO.Empty[_]                  => 7
     }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {

@@ -97,9 +97,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointIO.FixedHeader(h, _, _) =>
         val req2 = req.header(h)
         (uri, req2)
-      case EndpointInput.ExtractFromRequest(_, _, _) =>
-        // ignoring
-        (uri, req)
+      case EndpointInput.ExtractFromRequest(_, _)    => (uri, req) // ignoring
+      case EndpointInput.ExtractAttribute(_, _, _)   => (uri, req) // ignoring
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, uri, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req)

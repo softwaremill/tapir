@@ -106,7 +106,8 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         val headers = codec.encode(value).map(h => Header.Raw(CIString(h.name), h.value): Header.ToRaw)
         req.putHeaders(headers: _*)
       case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header.Raw(CIString(h.name), h.value))
-      case EndpointInput.ExtractFromRequest(_, _, _) => req // ignoring
+      case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
+      case EndpointInput.ExtractAttribute(_, _, _)   => req // ignoring
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)

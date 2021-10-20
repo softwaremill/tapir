@@ -209,7 +209,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
-    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty, None)
+    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
 
   /** Extract an attribute from a server request. The attribute must be previously set e.g. in an interceptor. This input is only used by
     * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
@@ -222,8 +222,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   /** Extract an attribute from a server request. The attribute should be previously set e.g. in an interceptor. This input is only used by
     * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
     */
-  def extractOptionalAttribute[T](key: AttributeKey[T]): EndpointInput[Option[T]] =
-    extractFromRequest(_.attribute(key)).showAs(s"request attribute ${key.asShortString}")
+  def extractOptionalAttribute[A](key: AttributeKey[A]): EndpointInput.ExtractAttribute[A, Option[A]] =
+    EndpointInput.ExtractAttribute(Codec.idPlain[Option[A]](), key, EndpointIO.Info.empty)
 
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)

@@ -28,18 +28,19 @@ class SchemasForEndpoints(
 
   private def forInput(input: EndpointInput[_]): List[NamedSchema] = {
     input match {
-      case EndpointInput.FixedMethod(_, _, _)     => List.empty
-      case EndpointInput.FixedPath(_, _, _)       => List.empty
-      case EndpointInput.PathCapture(_, codec, _) => toNamedSchemas(codec)
-      case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, codec, _)       => toNamedSchemas(codec)
-      case EndpointInput.Cookie(_, codec, _)      => toNamedSchemas(codec)
-      case EndpointInput.QueryParams(_, _)        => List.empty
-      case _: EndpointInput.Auth[_]               => List.empty
-      case _: EndpointInput.ExtractFromRequest[_] => List.empty
-      case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
-      case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
-      case op: EndpointIO[_]                      => forIO(op)
+      case EndpointInput.FixedMethod(_, _, _)      => List.empty
+      case EndpointInput.FixedPath(_, _, _)        => List.empty
+      case EndpointInput.PathCapture(_, codec, _)  => toNamedSchemas(codec)
+      case EndpointInput.PathsCapture(_, _)        => List.empty
+      case EndpointInput.Query(_, codec, _)        => toNamedSchemas(codec)
+      case EndpointInput.Cookie(_, codec, _)       => toNamedSchemas(codec)
+      case EndpointInput.QueryParams(_, _)         => List.empty
+      case _: EndpointInput.Auth[_]                => List.empty
+      case _: EndpointInput.ExtractFromRequest[_]  => List.empty
+      case _: EndpointInput.ExtractAttribute[_, _] => List.empty
+      case EndpointInput.MappedPair(wrapped, _)    => forInput(wrapped)
+      case EndpointInput.Pair(left, right, _, _)   => forInput(left) ++ forInput(right)
+      case op: EndpointIO[_]                       => forIO(op)
     }
   }
   private def forOutput(output: EndpointOutput[_]): List[NamedSchema] = {

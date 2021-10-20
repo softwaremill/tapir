@@ -9,7 +9,7 @@ import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{AttributeKey, ServerRequest}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
@@ -160,14 +160,22 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = addValidatorShow(s"{cookie $name}", codec.schema)
   }
 
-  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T], showAs: Option[String]) extends Basic[T] {
+  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = ExtractFromRequest[X]
     override private[tapir] type L = ServerRequest
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[ServerRequest, U, TextPlain], i: Info[U]): ExtractFromRequest[U] =
       copy(codec = c, info = i)
-    override def show: String = s"{${showAs.getOrElse("data from request")}}"
-    def showAs(s: String): ExtractFromRequest[T] = copy(showAs = Some(s))
+    override def show: String = "{data from request}"
+  }
+
+  case class ExtractAttribute[A, T](codec: Codec[Option[A], T, TextPlain], key: AttributeKey[A], info: Info[T]) extends Basic[T] {
+    override private[tapir] type ThisType[X] = ExtractAttribute[A, X]
+    override private[tapir] type L = Option[A]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Option[A], U, TextPlain], i: Info[U]): ExtractAttribute[A, U] =
+      copy(codec = c, info = i)
+    override def show: String = s"{attribute ${key.asShortString}}"
   }
 
   //
