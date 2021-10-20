@@ -7,7 +7,7 @@ import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{AttributeKey, ServerRequest}
 import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.MatchType
 import sttp.ws.WebSocketFrame
@@ -209,7 +209,21 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
-    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
+    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty, None)
+
+  /** Extract an attribute from a server request. The attribute must be previously set e.g. in an interceptor. This input is only used by
+    * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
+    */
+  def extractRequiredAttribute[T](key: AttributeKey[T]): EndpointInput[T] = extractOptionalAttribute(key).mapDecode {
+    case None    => DecodeResult.Missing
+    case Some(v) => DecodeResult.Value(v)
+  }(Some(_))
+
+  /** Extract an attribute from a server request. The attribute should be previously set e.g. in an interceptor. This input is only used by
+    * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
+    */
+  def extractOptionalAttribute[T](key: AttributeKey[T]): EndpointInput[Option[T]] =
+    extractFromRequest(_.attribute(key)).showAs(s"request attribute ${key.asShortString}")
 
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)

@@ -6,13 +6,13 @@ import java.net.InetSocketAddress
 import io.vertx.core.net.SocketAddress
 import io.vertx.ext.web.RoutingContext
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, AttributeMap, ConnectionInfo, ServerRequest}
 import sttp.tapir.server.vertx.routing.MethodMapping
 
 import scala.collection.immutable._
 import scala.collection.JavaConverters._
 
-private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerRequest {
+private[vertx] class VertxServerRequest(rc: RoutingContext, attributeMap: AttributeMap = new AttributeMap()) extends ServerRequest {
   lazy val connectionInfo: ConnectionInfo = {
     val conn = rc.request.connection
     ConnectionInfo(
@@ -40,4 +40,7 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
 
   private def asInetSocketAddress(address: SocketAddress): InetSocketAddress =
     InetSocketAddress.createUnresolved(address.host, address.port)
+
+  override def attribute[T](key: AttributeKey[T]): Option[T] = attributeMap.get(key)
+  override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = new VertxServerRequest(rc, attributeMap.put(key, value))
 }

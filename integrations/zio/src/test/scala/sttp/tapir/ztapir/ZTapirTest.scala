@@ -6,7 +6,7 @@ import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, Serve
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
 import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest, ServerResponse}
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec
@@ -56,6 +56,8 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     override def method: Method = ???
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
+    override def attribute[T](key: AttributeKey[T]): Option[T] = None
+    override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = this
   }
 
   implicit val bodyListener: BodyListener[TestEffect, ResponseBodyType] = new BodyListener[TestEffect, ResponseBodyType] {

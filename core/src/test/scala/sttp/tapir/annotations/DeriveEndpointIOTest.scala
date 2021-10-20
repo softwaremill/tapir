@@ -417,7 +417,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         name1 == name2 && info1 == info2
       case (l, r) => // TODO: remove work-around after https://github.com/lampepfl/dotty/issues/12241 is fixed
         (l, r) match {
-          case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
+          case (ExtractFromRequest(_, info1, _), ExtractFromRequest(_, info2, _)) =>
             info1 == info2
           case (ApiKey(input1, challenge1, securitySchemeName1), ApiKey(input2, challenge2, securitySchemeName2)) =>
             challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)

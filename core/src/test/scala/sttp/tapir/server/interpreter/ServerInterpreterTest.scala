@@ -8,7 +8,7 @@ import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 
 import scala.collection.immutable
@@ -45,6 +45,8 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
       override def method: Method = Method.GET
       override def uri: Uri = uri"http://example.com"
       override def headers: immutable.Seq[Header] = Nil
+      override def attribute[T](key: AttributeKey[T]): Option[T] = None
+      override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = this
     }
 
     // given

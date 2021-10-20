@@ -1,13 +1,13 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, AttributeMap, ConnectionInfo, ServerRequest}
 import zhttp.http.Request
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
-class ZioHttpServerRequest(req: Request) extends ServerRequest {
+class ZioHttpServerRequest(req: Request, attributeMap: AttributeMap = new AttributeMap()) extends ServerRequest {
   override def protocol: String = "HTTP/1.1" // missing field in request
 
   private def remote: Option[InetSocketAddress] =
@@ -23,4 +23,7 @@ class ZioHttpServerRequest(req: Request) extends ServerRequest {
   override lazy val method: SttpMethod = SttpMethod(req.method.asJHttpMethod.name().toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.toString)
   override lazy val headers: Seq[SttpHeader] = req.headers.map(h => SttpHeader(h.name.toString, h.value.toString))
+
+  override def attribute[T](key: AttributeKey[T]): Option[T] = attributeMap.get(key)
+  override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = new ZioHttpServerRequest(req, attributeMap.put(key, value))
 }

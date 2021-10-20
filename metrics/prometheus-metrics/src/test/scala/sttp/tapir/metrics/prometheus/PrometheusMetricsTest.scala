@@ -14,7 +14,7 @@ import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -214,6 +214,8 @@ object PrometheusMetricsTest {
     override def method: Method = Method.GET
     override def uri: Uri = uri"http://example.com/metrics"
     override def headers: immutable.Seq[Header] = Nil
+    override def attribute[T](key: AttributeKey[T]): Option[T] = None
+    override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = this
   }
 }
 

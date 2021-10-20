@@ -2,7 +2,7 @@ package sttp.tapir.internal.server
 
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest}
 import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -31,5 +31,7 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     override def method: Method = Method.GET
     override def uri: Uri = ???
     override def headers: Seq[Header] = Nil
+    override def attribute[T](key: AttributeKey[T]): Option[T] = None
+    override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = this
   }
 }

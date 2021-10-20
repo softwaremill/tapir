@@ -7,7 +7,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
 
@@ -98,6 +98,8 @@ object TestUtil {
         override def method: Method = Method.GET
         override def uri: Uri = uri"http://example.com/person"
         override def headers: immutable.Seq[Header] = Nil
+        override def attribute[T](key: AttributeKey[T]): Option[T] = None
+        override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = this
       }
     }
   }

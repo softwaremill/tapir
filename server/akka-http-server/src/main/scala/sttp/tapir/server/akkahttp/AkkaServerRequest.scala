@@ -4,12 +4,12 @@ import akka.http.scaladsl.server.RequestContext
 import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
 import akka.http.scaladsl.model.{Uri => AkkaUri}
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, AttributeMap, ConnectionInfo, ServerRequest}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
-private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest {
+private[akkahttp] class AkkaServerRequest(ctx: RequestContext, attributeMap: AttributeMap = new AttributeMap()) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def underlying: Any = ctx
@@ -39,4 +39,7 @@ private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerReq
     val akkaHeaders = contentType :: contentLength.toList ++ ctx.request.headers
     akkaHeaders.filterNot(_.value == EmptyContentType).map(h => Header(h.name(), h.value()))
   }
+
+  override def attribute[T](key: AttributeKey[T]): Option[T] = attributeMap.get(key)
+  override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = new AkkaServerRequest(ctx, attributeMap.put(key, value))
 }

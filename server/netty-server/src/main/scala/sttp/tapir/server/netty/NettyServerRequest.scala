@@ -4,10 +4,10 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import io.netty.handler.codec.http.{FullHttpRequest, QueryStringDecoder}
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, AttributeMap, ConnectionInfo, ServerRequest}
 import sttp.tapir.server.netty.internal.RichNettyHttpHeaders
 
-case class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
+case class NettyServerRequest(req: FullHttpRequest, attributeMap: AttributeMap = new AttributeMap()) extends ServerRequest {
   override lazy val protocol: String = req.protocolVersion().text()
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo.NoInfo
   override lazy val underlying: Any = req
@@ -25,4 +25,7 @@ case class NettyServerRequest(req: FullHttpRequest) extends ServerRequest {
   override lazy val uri: Uri = Uri.unsafeParse(req.uri())
   override lazy val pathSegments: List[String] = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
   override lazy val headers: Seq[Header] = req.headers().toHeaderSeq ++ req.trailingHeaders().toHeaderSeq
+
+  override def attribute[T](key: AttributeKey[T]): Option[T] = attributeMap.get(key)
+  override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = new NettyServerRequest(req, attributeMap.put(key, value))
 }

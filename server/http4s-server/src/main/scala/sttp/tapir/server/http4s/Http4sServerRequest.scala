@@ -2,11 +2,11 @@ package sttp.tapir.server.http4s
 
 import org.http4s.Request
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{AttributeKey, AttributeMap, ConnectionInfo, ServerRequest}
 
 import scala.collection.immutable.Seq
 
-private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerRequest {
+private[http4s] class Http4sServerRequest[F[_]](req: Request[F], attributeMap: AttributeMap = new AttributeMap()) extends ServerRequest {
   override def protocol: String = req.httpVersion.toString()
   override lazy val connectionInfo: ConnectionInfo =
     ConnectionInfo(req.server.map(_.toInetSocketAddress), req.remote.map(_.toInetSocketAddress), req.isSecure)
@@ -24,4 +24,7 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
   override def method: Method = Method(req.method.name.toUpperCase)
   override def uri: Uri = Uri.unsafeParse(req.uri.toString())
   override lazy val headers: Seq[Header] = req.headers.headers.map(h => Header(h.name.toString, h.value))
+
+  override def attribute[T](key: AttributeKey[T]): Option[T] = attributeMap.get(key)
+  override def withAttribute[T](key: AttributeKey[T], value: T): ServerRequest = new Http4sServerRequest(req, attributeMap.put(key, value))
 }
