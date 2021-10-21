@@ -175,7 +175,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Option[A], U, TextPlain], i: Info[U]): ExtractAttribute[A, U] =
       copy(codec = c, info = i)
-    override def show: String = s"{attribute ${key.asShortString}}"
+    override def show: String = s"{attribute ${key.shortName}}"
   }
 
   //

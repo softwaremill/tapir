@@ -214,7 +214,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   /** Extract an attribute from a server request. The attribute must be previously set e.g. in an interceptor. This input is only used by
     * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
     */
-  def extractRequiredAttribute[T](key: AttributeKey[T]): EndpointInput[T] = extractOptionalAttribute(key).mapDecode {
+  def extractRequiredAttribute[A: ClassTag]: EndpointInput[A] = extractOptionalAttribute[A].mapDecode {
     case None    => DecodeResult.Missing
     case Some(v) => DecodeResult.Value(v)
   }(Some(_))
@@ -222,8 +222,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   /** Extract an attribute from a server request. The attribute should be previously set e.g. in an interceptor. This input is only used by
     * server interpreters, it is ignored by documentation interpreters and the provided value is discarded by client interpreters.
     */
-  def extractOptionalAttribute[A](key: AttributeKey[A]): EndpointInput.ExtractAttribute[A, Option[A]] =
-    EndpointInput.ExtractAttribute(Codec.idPlain[Option[A]](), key, EndpointIO.Info.empty)
+  def extractOptionalAttribute[A: ClassTag]: EndpointInput.ExtractAttribute[A, Option[A]] =
+    EndpointInput.ExtractAttribute(Codec.idPlain[Option[A]](), AttributeKey[A], EndpointIO.Info.empty)
 
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)

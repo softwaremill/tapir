@@ -33,18 +33,16 @@ object ConnectionInfo {
   val NoInfo: ConnectionInfo = ConnectionInfo(None, None, None)
 }
 
-class AttributeKey[T: ClassTag] {
-  def asString: String = implicitly[ClassTag[T]].runtimeClass.getName
-  def asShortString: String = implicitly[ClassTag[T]].runtimeClass.getSimpleName
-}
+case class AttributeKey[T](name: String, shortName: String)
 object AttributeKey {
-  def apply[T: ClassTag]: AttributeKey[T] = new AttributeKey[T]
+  def apply[T: ClassTag]: AttributeKey[T] =
+    AttributeKey[T](implicitly[ClassTag[T]].runtimeClass.getName, implicitly[ClassTag[T]].runtimeClass.getSimpleName)
 }
 
 /** A map keyed by types (through [[AttributeKey]]). */
 class AttributeMap(underlying: Map[String, Any]) {
   def this() = this(Map.empty)
 
-  def get[T](key: AttributeKey[T]): Option[T] = underlying.get(key.asString).asInstanceOf[Option[T]]
-  def put[T](key: AttributeKey[T], value: T): AttributeMap = new AttributeMap(underlying + (key.asString -> value))
+  def get[T](key: AttributeKey[T]): Option[T] = underlying.get(key.name).asInstanceOf[Option[T]]
+  def put[T](key: AttributeKey[T], value: T): AttributeMap = new AttributeMap(underlying + (key.name -> value))
 }

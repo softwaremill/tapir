@@ -57,6 +57,10 @@ case class CustomInterceptors[F[_], L, O](
   def serverLog(log: ServerLog[L]): CustomInterceptors[F, L, O] = copy(serverLog = Some(log))
   def serverLog(log: Option[ServerLog[L]]): CustomInterceptors[F, L, O] = copy(serverLog = log)
 
+  /** Adds an interceptor that will be called:
+    *   - after the metrics, reject, exception, previously added interceptors via [[addInterceptor]]
+    *   - before the media type and decode failure interceptors
+    */
   def addInterceptor(i: Interceptor[F]): CustomInterceptors[F, L, O] =
     copy(additionalInterceptors = additionalInterceptors :+ i)
 
