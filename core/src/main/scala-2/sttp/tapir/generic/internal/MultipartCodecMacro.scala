@@ -102,7 +102,7 @@ object MultipartCodecMacro {
           q"$base.fileName(o.$fieldName.getName)"
         } else if (fieldTypeName.startsWith("java.nio.Path")) {
           q"$base.fileName(o.$fieldName.toFile.getName)"
-        } else if (fieldTypeName.startsWith("org.scalajs.dom.raw.File")) {
+        } else if (fieldTypeName.startsWith("org.scalajs.dom.File")) {
           q"$base.fileName(o.$fieldName.name)"
         } else {
           base

@@ -85,7 +85,7 @@ object MultipartCodecMacros {
               '{ $base.fileName(${ getter(fieldVal.asTerm, "getName").asExprOf[String] }) }
             } else if fieldTypeName.startsWith("java.nio.Path") then
               '{ $base.fileName(${ getter(getter(fieldVal.asTerm, "toFile"), "getName").asExprOf[String] }) }
-            else if fieldTypeName.startsWith("org.scalajs.dom.raw.File") then
+            else if fieldTypeName.startsWith("org.scalajs.dom.File") then
               '{ $base.fileName(${ getter(fieldVal.asTerm, "name").asExprOf[String] }) }
             else base
 
