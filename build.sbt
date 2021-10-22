@@ -284,7 +284,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % "1.2.0",
+        "org.scala-js" %%% "scalajs-dom" % "2.0.0",
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
         "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.jsScalaJavaTime % Test
       )
