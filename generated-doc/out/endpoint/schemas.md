@@ -155,6 +155,7 @@ field of a case class. One way the automatic & semi-automatic derivation can be 
 * `@encodedExample` sets example value for a case class field which is used in the documentation in the encoded form
 * `@format` sets the format for a case class field
 * `@deprecated` marks a case class's field as deprecated
+* `@validate` will add the given validator to a case class field
 
 These annotations will adjust schemas, after they are looked up using the normal implicit mechanisms.
 
