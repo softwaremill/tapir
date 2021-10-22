@@ -8,8 +8,8 @@ import sttp.tapir.dom.experimental.{File => DomFileWithBody}
 
 object Defaults {
   def createTempFile: () => TapirFile = () =>
-      new DomFileWithBody(
-        Array(Array.empty[Byte].toTypedArray.asInstanceOf[js.Any]).toJSArray,
-        "temp.txt"
-      )
+    new DomFileWithBody(
+      Array(Array.empty[Byte].toTypedArray.asInstanceOf[js.Any]).toJSArray,
+      "temp.txt"
+    )
 }

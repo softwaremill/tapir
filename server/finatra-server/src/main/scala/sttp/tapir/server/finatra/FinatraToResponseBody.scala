@@ -22,9 +22,10 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
       case RawBodyType.ByteArrayBody   => FinatraContentBuf(Buf.ByteArray.Owned(v))
       case RawBodyType.ByteBufferBody  => FinatraContentBuf(Buf.ByteBuffer.Owned(v))
       case RawBodyType.InputStreamBody => FinatraContentReader(Reader.fromStream(v))
-      case RawBodyType.FileBody        =>
+      case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]
-        FileChunk.prepare(tapirFile)
+        FileChunk
+          .prepare(tapirFile)
           .map(s => FinatraContentReader(Reader.fromStream(s)))
           .getOrElse(FinatraContentReader(Reader.fromFile(tapirFile.file)))
       case m: RawBodyType.MultipartBody =>

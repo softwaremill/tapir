@@ -14,7 +14,20 @@ import sttp.model.ResponseMetadata
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, FileRange, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{
+  Codec,
+  CodecFormat,
+  DecodeResult,
+  Endpoint,
+  EndpointIO,
+  EndpointInput,
+  EndpointOutput,
+  FileRange,
+  Mapping,
+  RawBodyType,
+  StreamBodyIO,
+  WebSocketBodyOutput
+}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
