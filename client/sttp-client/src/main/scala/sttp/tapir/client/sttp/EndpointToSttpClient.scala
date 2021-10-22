@@ -39,7 +39,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
     }.map {
       case DecodeResult.Error(o, e) =>
-        DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
+        DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from: $o, request: ${req2.method} ${req2.uri}", e))
       case other => other
     }
 

@@ -1,5 +1,6 @@
 package sttp.tapir.static
 
+import sttp.model.ContentRangeUnits
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -8,23 +9,31 @@ import sttp.tapir.{FileRange, RangeValue}
 import java.io.File
 import java.nio.file.{LinkOption, Path, Paths}
 import java.time.Instant
-import scala.util.{Failure, Success, Try}
 
 object Files {
+
   // inspired by org.http4s.server.staticcontent.FileService
+  def head[F[_]: MonadError](
+      systemPath: String
+  ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { input =>
+    MonadError[F]
+      .blocking {
+        val resolved = input.path.foldLeft(Paths.get(systemPath).toRealPath())(_.resolve(_))
+        if (java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+          val file = resolved.toFile
+          Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
+        } else Left(StaticErrorOutput.NotFound)
+      }
+  }
 
-  def apply[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    apply(systemPath, defaultEtag[F])
+  def get[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
+    get(systemPath, defaultEtag[F])
 
-  def apply[F[_]: MonadError](
+  def get[F[_]: MonadError](
       systemPath: String,
       calculateETag: File => F[Option[ETag]]
-  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
-    Try(Paths.get(systemPath).toRealPath()) match {
-      case Success(realSystemPath) => (filesInput: StaticInput) => files(realSystemPath, calculateETag)(filesInput)
-      case Failure(e)              => _ => MonadError[F].error(e)
-    }
-  }
+  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
+    filesInput => MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, calculateETag)(filesInput))
 
   def defaultEtag[F[_]: MonadError](file: File): F[Option[ETag]] = MonadError[F].blocking {
     if (file.isFile) Some(defaultETag(file.lastModified(), file.length()))
@@ -72,7 +81,7 @@ object Files {
           Some(range.contentLength),
           Some(contentTypeFromName(file.toFile.getName)),
           etag,
-          Some("bytes"),
+          Some(ContentRangeUnits.Bytes),
           Some(range.toContentRange.toString())
         )
     )

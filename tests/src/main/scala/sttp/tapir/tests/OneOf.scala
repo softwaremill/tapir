@@ -4,7 +4,7 @@ import io.circe.generic.auto._
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.tests.data.{Entity, Organization, Person}
+import sttp.tapir.tests.data.{Entity, FruitErrorDetail, Organization, Person}
 import sttp.tapir._
 
 object OneOf {
@@ -88,6 +88,22 @@ object OneOf {
         oneOf[Either[Unit, Person]](
           oneOfMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
           oneOfMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+        )
+      )
+
+  val in_string_out_error_detail_nested: Endpoint[String, FruitErrorDetail, Unit, Any] =
+    endpoint
+      .in(query[String]("fruit"))
+      .errorOut(
+        oneOf[FruitErrorDetail](
+          oneOfMapping(
+            oneOf[FruitErrorDetail.HarvestError](
+              oneOfMapping(jsonBody[FruitErrorDetail.AlreadyPicked]),
+              oneOfMapping(jsonBody[FruitErrorDetail.NotYetGrown])
+            )
+          ),
+          oneOfMapping(jsonBody[FruitErrorDetail.NameTooShort]),
+          oneOfMapping(jsonBody[FruitErrorDetail.Unknown])
         )
       )
 }

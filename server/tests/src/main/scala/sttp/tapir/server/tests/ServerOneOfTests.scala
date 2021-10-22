@@ -7,6 +7,7 @@ import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.tests.OneOf.{
   in_int_out_value_form_exact_match,
+  in_string_out_error_detail_nested,
   in_string_out_status_from_string,
   in_string_out_status_from_string_one_empty,
   in_string_out_status_from_type_erasure_using_partial_matcher,
@@ -57,6 +58,32 @@ class ServerOneOfTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri?fruit=nothing").send(backend).map(_.code shouldBe StatusCode.NoContent) >>
         basicRequest.get(uri"$baseUri?fruit=right").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri?fruit=left").send(backend).map(_.code shouldBe StatusCode.Accepted)
+    },
+    testServer(in_string_out_error_detail_nested)((v: String) =>
+      pureResult {
+        v match {
+          case "apple"           => Left(FruitErrorDetail.NotYetGrown(10))
+          case "orange"          => Left(FruitErrorDetail.AlreadyPicked("orange"))
+          case "pear"            => Right(())
+          case _ if v.length < 3 => Left(FruitErrorDetail.NameTooShort(v.length))
+          case _                 => Left(FruitErrorDetail.Unknown(List("pear")))
+        }
+      }
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?fruit=apple").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
+        basicRequest
+          .response(asStringAlways)
+          .get(uri"$baseUri?fruit=apple")
+          .send(backend)
+          .map(_.body should include("\"availableInDays\"")) >>
+        basicRequest.response(asStringAlways).get(uri"$baseUri?fruit=orange").send(backend).map(_.body should include("\"name\"")) >>
+        basicRequest.response(asStringAlways).get(uri"$baseUri?fruit=m").send(backend).map(_.body should include("\"length\"")) >>
+        basicRequest
+          .response(asStringAlways)
+          .get(uri"$baseUri?fruit=tomato")
+          .send(backend)
+          .map(_.body should include("\"availableFruit\"")) >>
+        basicRequest.get(uri"$baseUri?fruit=pear").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }

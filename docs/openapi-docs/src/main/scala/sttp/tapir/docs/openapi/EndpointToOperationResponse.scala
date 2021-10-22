@@ -1,5 +1,6 @@
 package sttp.tapir.docs.openapi
 
+import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.exampleValue
@@ -26,10 +27,24 @@ private[openapi] class EndpointToOperationResponse(
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
+
+    /** The list of status codes that are defined by the given outputs, or `List(None)` if there are none. */
+    def statusCodesInOutputs(os: Vector[EndpointOutput.Basic[_]]): List[Option[StatusCode]] =
+      os.collectFirst {
+        case EndpointOutput.FixedStatusCode(statusCode, _, _)                             => List(Some(statusCode))
+        case EndpointOutput.StatusCode(documentedCodes, _, _) if documentedCodes.nonEmpty => documentedCodes.keys.map(Some(_)).toList
+      }.getOrElse(List(None))
+
     val outputs = output.asBasicOutputsList
-    val statusCodes = outputs.map { case (sc, _) => sc }.distinct
-    val outputsByStatusCode = outputs.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
-    val docsExtensions = outputs.flatMap(_._2.flatMap(_.info.docsExtensions))
+
+    val statusCodeAndOutputs: List[(Option[StatusCode], Vector[EndpointOutput.Basic[_]])] =
+      outputs.flatMap(os => statusCodesInOutputs(os).map(_ -> os))
+    val outputsByStatusCode: Map[Option[StatusCode], List[EndpointOutput.Basic[_]]] =
+      statusCodeAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
+
+    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct
+
+    val docsExtensions = outputs.flatMap(_.flatMap(_.info.docsExtensions))
     statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
       outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response =>

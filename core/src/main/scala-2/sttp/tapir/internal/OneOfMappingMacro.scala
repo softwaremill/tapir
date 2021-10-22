@@ -9,9 +9,25 @@ import scala.reflect.macros.blackbox
 
 object OneOfMappingMacro {
   def generateClassMatcherIfErasedSameAsType[O: c.WeakTypeTag](c: blackbox.Context)(
-      statusCode: c.Expr[StatusCode],
       output: c.Expr[EndpointOutput[O]]
   )(ct: c.Expr[ClassTag[O]]): c.Expr[OneOfMapping[O]] = {
+    import c.universe._
+    mustBeEqualToItsErasure[O](c)
+    c.Expr[OneOfMapping[O]](q"_root_.sttp.tapir.oneOfMappingClassMatcher($output, $ct.runtimeClass)")
+  }
+
+  def generateClassMatcherIfErasedSameAsTypeWithStatusCode[O: c.WeakTypeTag](c: blackbox.Context)(
+      code: c.Expr[StatusCode],
+      output: c.Expr[EndpointOutput[O]]
+  )(ct: c.Expr[ClassTag[O]]): c.Expr[OneOfMapping[O]] = {
+    import c.universe._
+    mustBeEqualToItsErasure[O](c)
+    c.Expr[OneOfMapping[O]](
+      q"_root_.sttp.tapir.oneOfMappingClassMatcher(_root_.sttp.tapir.statusCode($code).and($output), $ct.runtimeClass)"
+    )
+  }
+
+  private def mustBeEqualToItsErasure[O: c.WeakTypeTag](c: blackbox.Context): Unit = {
     import c.universe._
 
     val t = implicitly[c.WeakTypeTag[O]].tpe.dealias
@@ -23,7 +39,5 @@ object OneOfMappingMacro {
           s"that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead"
       )
     }
-
-    c.Expr[OneOfMapping[O]](q"_root_.sttp.tapir.oneOfMappingClassMatcher($statusCode, $output, $ct.runtimeClass)")
   }
 }

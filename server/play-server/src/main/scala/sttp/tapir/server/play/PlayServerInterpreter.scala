@@ -1,13 +1,15 @@
 package sttp.tapir.server.play
 
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.streams.Accumulator
 import play.api.mvc._
 import play.api.routing.Router.Routes
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.StatusCode
+import sttp.model.{Method, StatusCode}
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
@@ -93,7 +95,10 @@ trait PlayServerInterpreter {
               val status = response.code.code
               response.body match {
                 case Some(entity) => Result(ResponseHeader(status, headers), entity)
-                case None         => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
+                case None =>
+                  if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
+                    Result(ResponseHeader(status, headers), HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType))
+                  else Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
               }
           }
         }
