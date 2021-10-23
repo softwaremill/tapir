@@ -124,7 +124,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    endpoint/basics
    endpoint/ios
-   endpoint/statuscodes
+   endpoint/oneof
    endpoint/codecs
    endpoint/customtypes
    endpoint/schemas
