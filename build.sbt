@@ -464,7 +464,7 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
