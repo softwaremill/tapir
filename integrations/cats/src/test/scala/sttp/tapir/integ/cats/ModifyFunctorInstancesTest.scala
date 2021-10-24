@@ -40,8 +40,3 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
       }
   }
 }
-
-case class NonEmptyListWrapper(f1: NonEmptyList[String])
-case class NonEmptySetWrapper(f1: NonEmptySet[String])
-case class ChainWrapper(f1: Chain[String])
-case class NonEmptyChainWrapper(f1: NonEmptyChain[String])
