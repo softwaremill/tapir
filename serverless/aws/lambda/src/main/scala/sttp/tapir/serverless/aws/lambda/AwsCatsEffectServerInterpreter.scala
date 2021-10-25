@@ -34,7 +34,7 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 
-    { request: AwsRequest =>
+    { (request: AwsRequest) =>
       val serverRequest = new AwsServerRequest(request)
       val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
         new AwsRequestBody[F](request),

@@ -281,7 +281,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2And3Versions
   )
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "org.scala-js" %%% "scalajs-dom" % "2.0.0",
@@ -305,7 +305,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(core, circeJson, cats)
@@ -337,7 +337,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
     )
   )
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -449,7 +449,7 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
@@ -883,7 +883,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
       "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, cats, circeJson, awsSam, sttpStubServer % "test", tests % "test", serverTests)
 
 // integration tests for lambda interpreter
@@ -950,7 +950,7 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
       "io.circe" %% "circe-generic" % Versions.circe
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, tests % Test)
 
 lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
@@ -998,7 +998,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(tests)
@@ -1046,7 +1046,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test

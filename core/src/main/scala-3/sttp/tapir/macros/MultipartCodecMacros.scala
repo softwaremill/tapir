@@ -68,7 +68,10 @@ object MultipartCodecMacros {
     }
 
     def termMethodByNameUnsafe(term: Term, name: String): Symbol = term.tpe.typeSymbol.memberMethod(name).head
-    def getter(term: Term, name: String): Term = term.select(termMethodByNameUnsafe(term, name)).appliedToNone
+    def getter(term: Term, name: String, skipArgList: Boolean = false): Term = {
+      val base = term.select(termMethodByNameUnsafe(term, name))
+      if (skipArgList) base else base.appliedToNone
+    }
 
     def encodeDefBody(tTerm: Term): Term = {
       val fieldsEncode = caseClass.fields.map { field =>
@@ -86,7 +89,7 @@ object MultipartCodecMacros {
             } else if fieldTypeName.startsWith("java.nio.Path") then
               '{ $base.fileName(${ getter(getter(fieldVal.asTerm, "toFile"), "getName").asExprOf[String] }) }
             else if fieldTypeName.startsWith("org.scalajs.dom.File") then
-              '{ $base.fileName(${ getter(fieldVal.asTerm, "name").asExprOf[String] }) }
+              '{ $base.fileName(${ getter(fieldVal.asTerm, "name", skipArgList = true).asExprOf[String] }) }
             else base
 
         fieldEncode
