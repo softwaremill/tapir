@@ -357,7 +357,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       },
       Test("should serve single gzipped resource") {
         val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", preGzipped = true))
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", useGzippedIfAvailable = true))
           .use { port =>
             emptyRequest
               .acceptEncoding("gzip")
@@ -375,7 +375,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       },
       Test("should return 404 for preGzipped endpoint without correct header") {
         val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", preGzipped = true))
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", useGzippedIfAvailable = true))
           .use { port =>
             emptyRequest
               .get(uri"http://localhost:$port/test/r3")
@@ -387,7 +387,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       },
       Test("should serve resource at path for preGzipped endpoint without correct header") {
         val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", preGzipped = true))
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", useGzippedIfAvailable = true))
           .use { port =>
             emptyRequest
               .get(uri"http://localhost:$port/test/r3.txt")

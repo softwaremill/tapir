@@ -13,16 +13,16 @@ object Resources {
       classLoader: ClassLoader,
       resourcePrefix: String,
       useETags: Boolean = true,
-      preGzipped: Boolean = false
+      useGzippedIfAvailable: Boolean = false
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = (resourcesInput: StaticInput) =>
-    resources(classLoader, resourcePrefix.split("/").toList, useETags, preGzipped)(resourcesInput)
+    resources(classLoader, resourcePrefix.split("/").toList, useETags, useGzippedIfAvailable)(resourcesInput)
 
-  private def resources[F[_]](classLoader: ClassLoader, resourcePrefix: List[String], useETags: Boolean, preGzipped: Boolean)(
+  private def resources[F[_]](classLoader: ClassLoader, resourcePrefix: List[String], useETags: Boolean, useGzippedIfAvailable: Boolean)(
       resourcesInput: StaticInput
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = {
-    val gzippedResource = preGzipped && resourcesInput.acceptEncoding.exists(_.equals("gzip"))
+    val gzippedResource = useGzippedIfAvailable && resourcesInput.acceptEncoding.exists(_.equals("gzip"))
     val name = (resourcePrefix ++ resourcesInput.path).mkString("/")
 
     val gzipUrl: F[Option[URL]] =
