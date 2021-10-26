@@ -24,7 +24,6 @@ object HelloWorldNettyServer extends App {
       NettyFutureServer
         .tcp
         .port(8080)
-        .endpoints
         .addEndpoint(helloWorldServerEndpoint)
         .start(),
       Duration.Inf

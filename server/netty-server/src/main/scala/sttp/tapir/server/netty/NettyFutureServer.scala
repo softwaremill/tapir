@@ -12,7 +12,9 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
-case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], options: NettyFutureServerOptions)(implicit ec: ExecutionContext) {
+abstract class NettyFutureServer[S <: SocketAddress](private var routes: Vector[FutureRoute])(implicit ec: ExecutionContext) {
+  def options: NettyFutureServerOptions
+
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future]): NettyFutureServer[S] = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyFutureServerOptions): NettyFutureServer[S] =
     addEndpoints(List(se), overrideOptions)
@@ -24,8 +26,14 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
       NettyFutureServerInterpreter(overrideOptions).toRoute(ses)
     )
 
-  def addRoute(r: FutureRoute): NettyFutureServer[S] = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer[S] = copy(routes = routes ++ r)
+  def addRoute(r: FutureRoute): NettyFutureServer[S] = {
+    routes = routes :+ r
+    this
+  }
+  def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer[S] = {
+    routes = routes ++ r
+    this
+  }
 
   def start(): Future[NettyFutureServerBinding[S]] = {
     val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
@@ -57,30 +65,38 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
   }
 }
 
-case class TcpFutureServerBuilder(nettyOptions: TcpOptionsBuilder)(implicit ec: ExecutionContext) {
-  def port(port: Int) = copy(nettyOptions = nettyOptions.port(port))
-  def host(host: String) = copy(nettyOptions = nettyOptions.host(host))
+class TcpFutureServerBuilder(private var nettyOptions: TcpOptionsBuilder)(implicit ec: ExecutionContext) extends NettyFutureServer[InetSocketAddress](Vector.empty) {
+  def port(port: Int) = {
+    nettyOptions = nettyOptions.port(port)
+    this
+  }
+  def host(host: String) = {
+    nettyOptions = nettyOptions.host(host)
+    this
+  }
 
-  def endpoints: NettyFutureServer[InetSocketAddress] = NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.nettyOptions(nettyOptions.build))
+  override def options: NettyFutureServerOptions = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
 }
 
-case class DomainSocketFutureServerBuilder(nettyOptions: DomainSocketOptionsBuilder)(implicit ec: ExecutionContext) {
-  def path(path: Path) = copy(nettyOptions = nettyOptions.path(path))
+class DomainSocketFutureServerBuilder(private var nettyOptions: DomainSocketOptionsBuilder)(implicit ec: ExecutionContext) extends NettyFutureServer[DomainSocketAddress](Vector.empty) {
+  def path(path: Path) = {
+    nettyOptions = nettyOptions.path(path)
+    this
+  }
 
-  def endpoints: NettyFutureServer[DomainSocketAddress] = NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.nettyOptions(nettyOptions.build))
-
+  override def options: NettyFutureServerOptions = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
 }
 
 object NettyFutureServer {
   def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default)(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] =
-    NettyFutureServer(Vector.empty, serverOptions)
+    ???//NettyFutureServer(Vector.empty, serverOptions)
 
   def tcp(implicit ec: ExecutionContext) = {
-    TcpFutureServerBuilder(NettyOptionsBuilder.make().tcp())
+    new TcpFutureServerBuilder(NettyOptionsBuilder.make().tcp())
   }
 
   def unixDomainSocket(implicit ec: ExecutionContext) = {
-    DomainSocketFutureServerBuilder(NettyOptionsBuilder.make().domainSocket())
+    new DomainSocketFutureServerBuilder(NettyOptionsBuilder.make().domainSocket())
   }
 }
 
