@@ -22,7 +22,9 @@ object HelloWorldNettyServer extends App {
   val serverBinding =
     Await.result(
       NettyFutureServer
-        .tcp(_.port(8888))
+        .tcp
+        .port(8080)
+        .endpoints
         .addEndpoint(helloWorldServerEndpoint)
         .start(),
       Duration.Inf

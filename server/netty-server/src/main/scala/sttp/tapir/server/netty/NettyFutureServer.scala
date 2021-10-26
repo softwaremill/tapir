@@ -9,6 +9,7 @@ import sttp.tapir.server.netty.internal.FutureUtil._
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}
+import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
 case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], options: NettyFutureServerOptions)(implicit ec: ExecutionContext) {
@@ -56,16 +57,30 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
   }
 }
 
+case class TcpFutureServerBuilder(nettyOptions: TcpOptionsBuilder)(implicit ec: ExecutionContext) {
+  def port(port: Int) = copy(nettyOptions = nettyOptions.port(port))
+  def host(host: String) = copy(nettyOptions = nettyOptions.host(host))
+
+  def endpoints: NettyFutureServer[InetSocketAddress] = NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.nettyOptions(nettyOptions.build))
+}
+
+case class DomainSocketFutureServerBuilder(nettyOptions: DomainSocketOptionsBuilder)(implicit ec: ExecutionContext) {
+  def path(path: Path) = copy(nettyOptions = nettyOptions.path(path))
+
+  def endpoints: NettyFutureServer[DomainSocketAddress] = NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.nettyOptions(nettyOptions.build))
+
+}
+
 object NettyFutureServer {
   def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default)(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] =
     NettyFutureServer(Vector.empty, serverOptions)
 
-  def tcp(f: TcpOptionsBuilder => TcpOptionsBuilder = identity)(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] = {
-    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.copy(nettyOptions = f(NettyOptionsBuilder.make().tcp()).build))
+  def tcp(implicit ec: ExecutionContext) = {
+    TcpFutureServerBuilder(NettyOptionsBuilder.make().tcp())
   }
 
-  def unixDomainSocket(f: DomainSocketOptionsBuilder => DomainSocketOptionsBuilder = identity)(implicit ec: ExecutionContext): NettyFutureServer[DomainSocketAddress] = {
-    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default.copy(nettyOptions = f(NettyOptionsBuilder.make().domainSocket()).build))
+  def unixDomainSocket(implicit ec: ExecutionContext) = {
+    DomainSocketFutureServerBuilder(NettyOptionsBuilder.make().domainSocket())
   }
 }
 
