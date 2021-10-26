@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import com.typesafe.scalalogging.Logger
+import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.Streams
@@ -26,7 +26,7 @@ import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
-  private val logger = Logger[VertxCatsServerInterpreter[F]]
+  private val logger = LoggerFactory.getLogger(VertxCatsServerInterpreter.getClass)
 
   implicit def fa: Async[F]
 

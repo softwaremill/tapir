@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx
 
-import com.typesafe.scalalogging.Logger
+import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
@@ -21,7 +21,7 @@ import scala.reflect.ClassTag
 
 trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
-  private val logger = Logger[VertxFutureServerInterpreter]
+  private val logger = LoggerFactory.getLogger(VertxFutureServerInterpreter.getClass)
 
   def vertxFutureServerOptions: VertxFutureServerOptions = VertxFutureServerOptions.default
 

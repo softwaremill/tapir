@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx
 
-import com.typesafe.scalalogging.Logger
+import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
@@ -22,7 +22,7 @@ import scala.reflect.ClassTag
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
-  private val logger = Logger[VertxZioServerInterpreter[R]]
+  private val logger = LoggerFactory.getLogger(VertxZioServerInterpreter.getClass)
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 

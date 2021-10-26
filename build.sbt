@@ -849,7 +849,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
-    ) ++ loggerDependencies
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
