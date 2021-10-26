@@ -51,6 +51,18 @@ trait TapirStaticContentEndpoints {
     case Some(v) => DecodeResult.fromEitherString(v, Range.parse(v).map(_.headOption))
   }(_.map(_.toString))
 
+  private val acceptEncodingHeader: EndpointIO[Option[String]] =
+    header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[Option[String]] {
+      case None    => DecodeResult.Value(None)
+      case Some(v) => DecodeResult.fromEitherString(v, Right(v).map(h => Option(h)))
+    }(header => header)
+
+  private val contentEncodingHeader: EndpointIO[Option[String]] =
+    header[Option[String]](HeaderNames.ContentEncoding).mapDecode[Option[String]] {
+      case None    => DecodeResult.Value(None)
+      case Some(v) => DecodeResult.fromEitherString(v, Right(Some(v)))
+    }(header => header)
+
   private def staticGetEndpoint[T](
       prefix: EndpointInput[Unit],
       body: EndpointOutput[T]
@@ -62,9 +74,10 @@ trait TapirStaticContentEndpoints {
           .and(ifNoneMatchHeader)
           .and(ifModifiedSinceHeader)
           .and(rangeHeader)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range])) => StaticInput(t._1, t._2, t._3, t._4))(
-            fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range)
-          )
+          .and(acceptEncodingHeader)
+          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range], Option[String])) =>
+            StaticInput(t._1, t._2, t._3, t._4, t._5)
+          )(fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range, fi.acceptEncoding))
       )
       .errorOut(
         oneOf[StaticErrorOutput](
@@ -110,9 +123,10 @@ trait TapirStaticContentEndpoints {
               .and(header[Option[Long]](HeaderNames.ContentLength))
               .and(contentTypeHeader)
               .and(etagHeader)
-              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag])) =>
-                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5)
-              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag)),
+              .and(contentEncodingHeader)
+              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String])) =>
+                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6)
+              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.contentEncoding)),
             classOf[StaticOutput.Found[T]]
           )
         )
@@ -223,9 +237,13 @@ trait TapirStaticContentEndpoints {
     */
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
-      resourcePath: String
+      resourcePath: String,
+      useGzippedIfAvailable: Boolean = false
   ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
-    ServerEndpoint(removePath(resourcesGetEndpoint(prefix)), (m: MonadError[F]) => Resources(classLoader, resourcePath)(m))
+    ServerEndpoint(
+      removePath(resourcesGetEndpoint(prefix)),
+      (m: MonadError[F]) => Resources(classLoader, resourcePath, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+    )
 
   private def removePath[T](e: Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
     e.mapIn(i => i.copy(path = Nil))(i => i.copy(path = Nil))

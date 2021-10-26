@@ -355,6 +355,48 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       },
+      Test("should serve single gzipped resource") {
+        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", useGzippedIfAvailable = true))
+          .use { port =>
+            emptyRequest
+              .acceptEncoding("gzip")
+              .get(uri"http://localhost:$port/test/r3.txt")
+              .response(asStringAlways)
+              .send(backend)
+              .map(r => {
+                r.code shouldBe StatusCode.Ok
+                r.body shouldBe "Gzipped resource"
+                r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+                r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
+              })
+          }
+          .unsafeToFuture()
+      },
+      Test("should return 404 for resources without extension") {
+        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", useGzippedIfAvailable = true))
+          .use { port =>
+            emptyRequest
+              .get(uri"http://localhost:$port/test/r3")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.code shouldBe StatusCode.NotFound)
+          }
+          .unsafeToFuture()
+      },
+      Test("should serve resource at path for preGzipped endpoint without correct header") {
+        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", useGzippedIfAvailable = true))
+          .use { port =>
+            emptyRequest
+              .get(uri"http://localhost:$port/test/r3.txt")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body shouldBe "Resource 3")
+          }
+          .unsafeToFuture()
+      },
       Test("not return a resource outside of the resource prefix directory") {
         serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
           .use { port =>
