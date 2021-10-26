@@ -1,5 +1,6 @@
 package sttp.tapir.server.vertx
 
+import com.typesafe.scalalogging.Logger
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
@@ -10,7 +11,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxZioServerInterpreter.{RioFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
-import sttp.tapir.server.vertx.encoders.{VertxToResponseBody, VertxOutputEncoders}
+import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
@@ -20,6 +21,8 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
+
+  private val logger = Logger[VertxZioServerInterpreter[R]]
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
@@ -68,10 +71,11 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
             })
           })
       }
-      .catchAll { e =>
+      .catchAll { ex =>
         RIO.effect({
+          logger.error("Error while processing the request", ex)
           if (rc.response().bytesWritten() > 0) rc.response().end()
-          rc.fail(e)
+          rc.fail(ex)
         })
       }
 

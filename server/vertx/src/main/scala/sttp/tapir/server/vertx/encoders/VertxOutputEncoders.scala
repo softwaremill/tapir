@@ -18,11 +18,7 @@ object VertxOutputEncoders {
       }
     } match {
       case Success(r) => r
-      case Failure(ex) =>
-        // send 500
-        resp.setStatusCode(500)
-        resp.headers.clear()
-        resp.end()
+      case Failure(ex) => Future.failedFuture(ex)
     }
   }
 }

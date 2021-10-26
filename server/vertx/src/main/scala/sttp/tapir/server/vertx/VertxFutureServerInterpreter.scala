@@ -1,5 +1,6 @@
 package sttp.tapir.server.vertx
 
+import com.typesafe.scalalogging.Logger
 import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
@@ -19,6 +20,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 
 trait VertxFutureServerInterpreter extends CommonServerInterpreter {
+
+  private val logger = Logger[VertxFutureServerInterpreter]
 
   def vertxFutureServerOptions: VertxFutureServerOptions = VertxFutureServerOptions.default
 
@@ -111,9 +114,10 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
         case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
       }
       .failed
-      .foreach { e =>
+      .foreach { ex =>
+        logger.error("Error while processing the request", ex)
         if (rc.response().bytesWritten() > 0) rc.response().end()
-        rc.fail(e)
+        rc.fail(ex)
       }
   }
 }
