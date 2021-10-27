@@ -124,9 +124,6 @@ object Basic {
   val in_set_cookie_value_out_set_cookie_value: Endpoint[CookieValueWithMeta, Unit, CookieValueWithMeta, Any] =
     endpoint.get.in("api" / "echo" / "headers").in(setCookie("c1")).out(setCookie("c1"))
 
-  val in_query_out_cookie: Endpoint[String, String, CookieValueWithMeta, Any] =
-    endpoint.get.in("").in(query[String]("q")).out(setCookie("q")).errorOut(stringBody)
-
   val in_query_out_cookie_raw: Endpoint[String, Unit, (String, String), Any] =
     endpoint.get.in("").in(query[String]("q")).out(header[String]("Set-Cookie")).out(stringBody)
 
