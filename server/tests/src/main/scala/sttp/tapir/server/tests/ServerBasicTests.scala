@@ -207,12 +207,6 @@ class ServerBasicTests[F[_], ROUTE](
         IO.pure(succeed)
       }
     },
-    testServer(in_query_out_cookie, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
-      pureResult(CookieValueWithMeta.safeApply(q))
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
-        .map(_.code shouldBe StatusCode.BadRequest)
-    },
     // Reproduces https://github.com/http4s/http4s/security/advisories/GHSA-5vcm-3xc3-w7x3
     testServer(in_query_out_cookie_raw, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
       pureResult((q, "test").asRight[Unit])
