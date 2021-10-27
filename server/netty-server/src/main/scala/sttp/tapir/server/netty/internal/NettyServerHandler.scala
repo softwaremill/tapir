@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.internal
 
+import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
@@ -13,6 +14,8 @@ import scala.concurrent.Future
 
 class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Future[Unit])(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[FullHttpRequest] {
+
+  private val logger = Logger[NettyServerHandler[F]]
 
   private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
     val res = new DefaultFullHttpResponse(
@@ -47,8 +50,12 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Futur
           }
           .map(toHttpResponse(_, request))
           .map(flushResponse(ctx, request, _))
-          .handleError { case e: Exception =>
-            ctx.fireExceptionCaught(e)
+          .handleError { case ex: Exception =>
+            logger.error("Error while processing the request", ex)
+            // send 500
+            val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+            res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+            flushResponse(ctx, request, res)
             me.unit(())
           }
       } // ignoring the result, exceptions should already be handled

@@ -27,7 +27,8 @@ class ServerBasicTests[F[_], ROUTE](
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,
-    supportsMultipleSetCookieHeaders: Boolean = true
+    supportsMultipleSetCookieHeaders: Boolean = true,
+    invulnerableToUnsanitizedHeaders: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -202,6 +203,23 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
           r.unsafeCookies.map(c => (c.name, c.value)).toSet shouldBe Set(("c1", "1v"), ("c2", "2v"))
         }
+      } else {
+        IO.pure(succeed)
+      }
+    },
+    // Reproduces https://github.com/http4s/http4s/security/advisories/GHSA-5vcm-3xc3-w7x3
+    testServer(in_query_out_cookie_raw, "should be invulnerable to response splitting from unsanitized headers")((q: String) =>
+      pureResult((q, "test").asRight[Unit])
+    ) { (backend, baseUri) =>
+      if (invulnerableToUnsanitizedHeaders) {
+        basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+          .map { r =>
+            if (r.code == StatusCode.Ok) {
+              r.body shouldBe Right("test")
+            } else {
+              r.code shouldBe StatusCode.InternalServerError
+            }
+          }
       } else {
         IO.pure(succeed)
       }

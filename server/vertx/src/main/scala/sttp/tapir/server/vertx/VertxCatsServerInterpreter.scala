@@ -3,6 +3,7 @@ package sttp.tapir.server.vertx
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
+import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.Streams
@@ -24,6 +25,8 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
+
+  private val logger = LoggerFactory.getLogger(VertxCatsServerInterpreter.getClass)
 
   implicit def fa: Async[F]
 
@@ -83,9 +86,10 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
         case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
         case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
       }
-      .handleError { e =>
+      .handleError { ex =>
+        logger.error("Error while processing the request", ex)
         if (rc.response().bytesWritten() > 0) rc.response().end()
-        rc.fail(e)
+        rc.fail(ex)
       }
 
     // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
