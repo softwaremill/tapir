@@ -2,72 +2,43 @@ package sttp.tapir.ztapir
 
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.typelevel.ParamSubtract
 import zio.{RIO, ZIO}
-import sttp.tapir.internal._
 
 trait ZTapir {
-  type ZServerEndpoint[R, I, E, O, -C] = ServerEndpoint[I, E, O, C, RIO[R, *]]
+  type ZServerEndpoint[R, A, U, I, E, O, -C] = ServerEndpoint[A, U, I, E, O, C, RIO[R, *]]
 
-  implicit class RichZEndpoint[I, E, O, C](e: Endpoint[I, E, O, C]) {
-    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C] = ServerEndpoint(e, _ => logic(_).either.resurrect)
+  implicit class RichZEndpoint[A, I, E, O, C](e: Endpoint[A, I, E, O, C]) {
 
-    /** Combine this endpoint description with a function, which implements a part of the server-side logic.
+    /** Combine this public endpoint description with a function, which implements the server-side logic. The logic returns a result, which
+      * is either an error or a successful output, wrapped in an effect type `F`. For secure endpoints, use [[zServerSecurityLogic]].
       *
-      * Subsequent parts of the logic can be provided later using [[ZServerEndpointInParts.andThenPart]], consuming successive input parts.
-      * Finally, the logic can be completed, given a function which accepts as arguments the results of applying on part-functions, and the
-      * remaining input. The final result is then a [[ZServerEndpoint]].
+      * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
+      *
+      * Both the endpoint and logic function are considered complete, and cannot be later extended through the returned [[ServerEndpoint]]
+      * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
+      * specified.
+      */
+    def zServerLogic[R](logic: I => ZIO[R, E, O])(implicit aIsUnit: A =:= Unit): ZServerEndpoint[R, Unit, Unit, I, E, O, C] =
+      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, I, E, O, C]], _ => logic(_).either.resurrect)
+
+    /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
+      *
+      * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then the main server logic can be provided,
+      * given a function which accepts as arguments the result of the security logic and the remaining input. The final result is then a
+      * [[ServerEndpoint]].
       *
       * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
       *
-      * When using this method, the endpoint description is considered complete, and cannot be later extended through the returned
-      * [[ZServerEndpointInParts]] value. However, each part of the server logic can consume only a part of the input. To provide the logic
-      * in parts, while still being able to extend the endpoint description, see [[zServerLogicForCurrent]].
-      *
-      * An example use-case is providing authorization logic, followed by server logic (using an authorized user), given a complete endpoint
-      * description.
-      *
-      * Note that the type of the `f` partial server logic function cannot be inferred, it must be explicitly given (e.g. by providing a
-      * function or method value).
+      * An example use-case is defining an endpoint with fully-defined errors, and with security logic built-in. Such an endpoint can be
+      * then extended by multiple other endpoints, by specifying different inputs, outputs and the main logic.
       */
-    def zServerLogicPart[R, T, J, U](
-        f: T => ZIO[R, E, U]
-    )(implicit iMinusT: ParamSubtract.Aux[I, T, J]): ZServerEndpointInParts[R, U, J, I, E, O, C] = {
-      type _T = T
-      new ZServerEndpointInParts[R, U, J, I, E, O, C](e) {
-        override type T = _T
-        override def splitInput: I => (T, J) = i => split(i)(iMinusT)
-        override def logicFragment: _T => ZIO[R, E, U] = f
-      }
-    }
-
-    /** Combine this endpoint description with a function, which implements a part of the server-side logic, for the entire input defined so
-      * far.
-      *
-      * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then, either further parts of the server
-      * logic can be provided (again, consuming the whole input defined so far). Or, the entire remaining server logic can be provided,
-      * given a function which accepts as arguments the results of applying the part-functions, and the remaining input. The final result is
-      * then a [[ZServerEndpoint]].
-      *
-      * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
-      *
-      * When using this method, each logic part consumes the whole input defined so far. To provide the server logic in parts, where only
-      * part of the input is consumed (but the endpoint cannot be later extended), see the [[zServerLogicPart]] function.
-      *
-      * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in. Such an endpoint can
-      * be then extended by multiple other endpoints.
-      */
-    def zServerLogicForCurrent[R, U](f: I => ZIO[R, E, U]): ZPartialServerEndpoint[R, U, Unit, E, O, C] =
-      new ZPartialServerEndpoint[R, U, Unit, E, O, C](e.copy(input = emptyInput)) {
-        override type T = I
-        override def tInput: EndpointInput[T] = e.input
-        override def partialLogic: T => ZIO[R, E, U] = f
-      }
+    def zServerSecurityLogic[R, U](f: A => ZIO[R, E, U]): ZPartialServerEndpoint[R, A, U, I, E, O, C] =
+      ZPartialServerEndpoint(e, f)
   }
 
-  implicit class RichZServiceEndpoint[R, I, E, O, C](zse: ZServerEndpoint[R, I, E, O, C]) {
+  implicit class RichZServiceEndpoint[R, A, U, I, E, O, C](zse: ZServerEndpoint[R, A, U, I, E, O, C]) {
 
     /** Extends the environment so that it can be made uniform across multiple endpoints. */
-    def widen[R2 <: R]: ZServerEndpoint[R2, I, E, O, C] = zse.asInstanceOf[ZServerEndpoint[R2, I, E, O, C]] // this is fine
+    def widen[R2 <: R]: ZServerEndpoint[R2, A, U, I, E, O, C] = zse.asInstanceOf[ZServerEndpoint[R2, A, U, I, E, O, C]] // this is fine
   }
 }

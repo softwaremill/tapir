@@ -10,7 +10,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.{Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
 
 import scala.reflect.ClassTag
 
@@ -18,16 +18,7 @@ trait FinatraServerInterpreter extends Logging {
 
   def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
 
-  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): FinatraRoute =
-    toRoute(e.serverLogic(logic))
-
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): FinatraRoute =
-    toRoute(e.serverLogicRecoverErrors(logic))
-
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, Future]): FinatraRoute = {
+  def toRoute[A, U, I, E, O](se: ServerEndpoint[A, U, I, E, O, Any, Future]): FinatraRoute = {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
       val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
@@ -80,7 +71,7 @@ trait FinatraServerInterpreter extends Logging {
     if (p.isEmpty) "/:*" else p
   }
 
-  private[finatra] def httpMethod(endpoint: Endpoint[_, _, _, _]): Method = {
+  private[finatra] def httpMethod(endpoint: AnyEndpoint): Method = {
     endpoint.input
       .asVectorOfBasicInputs()
       .collectFirst { case FixedMethod(m, _, _) =>

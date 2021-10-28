@@ -5,17 +5,17 @@ import sttp.monad.syntax._
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 
 /** @tparam A
-  *   Security input parameter types.
+  *   *"Auth"*: Security input parameter types.
   * @tparam U
-  *   Security input parameter types.
+  *   *"User"*: The type returned by the security logic
   * @tparam I
-  *   Input parameter types.
+  *   *Input* parameter types.
   * @tparam E
-  *   Error output parameter types.
+  *   *Error* output parameter types.
   * @tparam O
-  *   Output parameter types.
+  *   *Output* parameter types.
   * @tparam R
-  *   The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
+  *   *Requirements*: The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   * @tparam F
   *   The effect type used in the provided server logic.
   */

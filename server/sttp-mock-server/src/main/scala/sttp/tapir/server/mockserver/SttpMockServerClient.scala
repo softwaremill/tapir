@@ -24,13 +24,13 @@ class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: Stt
 
   private val F = backend.responseMonad
 
-  def whenInputMatches[E, I, O](
-      endpoint: Endpoint[I, E, O, Any]
-  )(input: I): SttpMockServerClient.TypeAwareWhenRequest[F, I, E, O] =
-    new SttpMockServerClient.TypeAwareWhenRequest[F, I, E, O](endpoint, input, baseUri)(backend)
+  def whenInputMatches[A, E, I, O](
+      endpoint: Endpoint[A, I, E, O, Any]
+  )(input: I): SttpMockServerClient.TypeAwareWhenRequest[F, A, I, E, O] =
+    new SttpMockServerClient.TypeAwareWhenRequest[F, A, I, E, O](endpoint, input, baseUri)(backend)
 
-  def verifyRequest[E, I, O](
-      endpoint: Endpoint[I, E, O, Any],
+  def verifyRequest[A, E, I, O](
+      endpoint: Endpoint[A, I, E, O, Any],
       times: VerificationTimes = VerificationTimes.exactlyOnce
   )(input: I): F[ExpectationMatched] = {
 
@@ -79,7 +79,7 @@ object SttpMockServerClient {
   def apply[F[_]](baseUri: Uri, backend: SttpBackend[F, Any]): SttpMockServerClient[F] =
     new SttpMockServerClient[F](baseUri, backend)
 
-  class TypeAwareWhenRequest[F[_], I, E, O] private[mockserver] (endpoint: Endpoint[I, E, O, Any], input: I, baseUri: Uri)(
+  class TypeAwareWhenRequest[F[_], A, I, E, O] private[mockserver] (endpoint: Endpoint[A, I, E, O, Any], input: I, baseUri: Uri)(
       backend: SttpBackend[F, Any]
   ) {
 
@@ -120,7 +120,7 @@ object SttpMockServerClient {
 
   }
 
-  private def toExpectationRequest[E, I, O](endpoint: Endpoint[I, E, O, Any], input: I): ExpectationRequestDefinition = {
+  private def toExpectationRequest[A, E, I, O](endpoint: Endpoint[A, I, E, O, Any], input: I): ExpectationRequestDefinition = {
     val request = SttpClientInterpreter().toRequest(endpoint, None).apply(input)
     ExpectationRequestDefinition(
       method = request.method,
@@ -167,8 +167,8 @@ object SttpMockServerClient {
     }
   }
 
-  private def toOutputValues[E, I, O](
-      endpoint: Endpoint[I, E, O, Any]
+  private def toOutputValues[A, E, I, O](
+      endpoint: Endpoint[A, I, E, O, Any]
   )(expectedOutput: Either[E, O]): OutputValues[Any] = {
 
     val responseValue = expectedOutput.merge

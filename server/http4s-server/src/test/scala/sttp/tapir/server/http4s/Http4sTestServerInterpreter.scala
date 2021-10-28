@@ -8,7 +8,6 @@ import org.http4s.syntax.kleisli._
 import org.http4s.{HttpRoutes, Request, Response}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -16,13 +15,12 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
+  override def route[A, U, I, E, O](
+      e: ServerEndpoint[A, U, I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): HttpRoutes[IO] = {
@@ -34,14 +32,8 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO]]): HttpRoutes[IO] = {
+  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Fs2Streams[IO] with WebSockets, IO]]): HttpRoutes[IO] = {
     Http4sServerInterpreter[IO]().toRoutes(es)
-  }
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
-      eClassTag: ClassTag[E]
-  ): HttpRoutes[IO] = {
-    Http4sServerInterpreter[IO]().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {

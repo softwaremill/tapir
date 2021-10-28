@@ -5,7 +5,6 @@ import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
@@ -18,7 +17,6 @@ import sttp.tapir.server.vertx.streams.zio._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference
-import scala.reflect.ClassTag
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
@@ -26,29 +24,15 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
-  def route[I, E, O](e: Endpoint[I, E, O, ZioStreams])(logic: I => ZIO[R, E, O])(implicit
-      runtime: Runtime[R]
-  ): Router => Route =
-    route(ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]](e, _ => logic(_).either))
-
-  def route[I, E, O](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(implicit
+  def route[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, ZioStreams, RIO[R, *]])(implicit
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
 
-  def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, ZioStreams])(
-      logic: I => RIO[R, O]
-  )(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E],
-      runtime: Runtime[R]
-  ): Router => Route =
-    route(e.serverLogicRecoverErrors(logic))
-
-  private def endpointHandler[I, E, O, A](
-      e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
+  private def endpointHandler[A, U, I, E, O](
+      e: ServerEndpoint[A, U, I, E, O, ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]

@@ -15,9 +15,9 @@ class ZEndpointTest extends AnyFlatSpec with Matchers {
     type Service1 = Has[Component1]
     type Service2 = Has[Component2]
 
-    val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit, Any] =
+    val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit, Unit, Unit, Any] =
       endpoint.serverLogic(_ => ZIO.succeed(Right(())): ZIO[Service1, Nothing, Either[Unit, Unit]])
-    val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit, Any] =
+    val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit, Unit, Unit, Any] =
       endpoint.serverLogic(_ => ZIO.succeed(Right(())): ZIO[Service2, Nothing, Either[Unit, Unit]])
 
     type Env = Service1 with Service2

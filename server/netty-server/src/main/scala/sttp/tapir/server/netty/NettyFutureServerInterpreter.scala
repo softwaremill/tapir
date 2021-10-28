@@ -10,7 +10,7 @@ trait NettyFutureServerInterpreter {
   def nettyServerOptions: NettyFutureServerOptions
 
   def toRoute(
-      ses: List[ServerEndpoint[_, _, _, Any, Future]]
+      ses: List[ServerEndpoint[_, _, _, _, _, Any, Future]]
   )(implicit ec: ExecutionContext): FutureRoute = {
     implicit val monad: FutureMonad = new FutureMonad()
     NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)

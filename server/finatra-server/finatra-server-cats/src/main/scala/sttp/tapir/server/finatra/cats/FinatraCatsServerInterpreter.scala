@@ -5,12 +5,10 @@ import cats.effect.std.Dispatcher
 import com.twitter.inject.Logging
 import com.twitter.util.{Future, Promise}
 import sttp.monad.MonadError
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerInterpreter, FinatraServerOptions}
 
 import scala.concurrent.{ExecutionContext, Future => ScalaFuture}
-import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
 
 trait FinatraCatsServerInterpreter[F[_]] extends Logging {
@@ -19,29 +17,21 @@ trait FinatraCatsServerInterpreter[F[_]] extends Logging {
 
   def finatraCatsServerOptions: FinatraCatsServerOptions[F]
 
-  def toRoute[I, E, O](
-      e: Endpoint[I, E, O, Any]
-  )(logic: I => F[Either[E, O]]): FinatraRoute = {
-    toRoute(e.serverLogic(logic))
-  }
-
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => F[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): FinatraRoute = {
-    toRoute(e.serverLogicRecoverErrors(logic))
-  }
-
-  def toRoute[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, F]
+  def toRoute[A, U, I, E, O](
+      e: ServerEndpoint[A, U, I, E, O, Any, F]
   ): FinatraRoute = {
     FinatraServerInterpreter(
       FinatraServerOptions(finatraCatsServerOptions.createFile, finatraCatsServerOptions.deleteFile, finatraCatsServerOptions.interceptors)
     ).toRoute(
-      e.endpoint.serverLogic { i =>
-        val scalaFutureResult = finatraCatsServerOptions.dispatcher.unsafeToFuture(e.logic(CatsMonadError)(i))
-        scalaFutureResult.asTwitter(cats.effect.unsafe.implicits.global.compute)
-      }
+      e.endpoint
+        .serverSecurityLogic { a =>
+          val scalaFutureResult = finatraCatsServerOptions.dispatcher.unsafeToFuture(e.securityLogic(CatsMonadError)(a))
+          scalaFutureResult.asTwitter(cats.effect.unsafe.implicits.global.compute)
+        }
+        .serverLogic { u => i =>
+          val scalaFutureResult = finatraCatsServerOptions.dispatcher.unsafeToFuture(e.logic(CatsMonadError)(u)(i))
+          scalaFutureResult.asTwitter(cats.effect.unsafe.implicits.global.compute)
+        }
     )
   }
 

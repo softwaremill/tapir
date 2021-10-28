@@ -249,12 +249,13 @@ trait EndpointMetaOps[A, I, E, O, -R] {
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
 
   /** Combine this public endpoint description with a function, which implements the server-side logic. The logic returns a result, which is
-    * either an error or a successful output, wrapped in an effect type `F`. For secure endpoint, use [[serverSecurityLogic]].
+    * either an error or a successful output, wrapped in an effect type `F`. For secure endpoints, use [[serverSecurityLogic]].
     *
     * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
     *
     * Both the endpoint and logic function are considered complete, and cannot be later extended through the returned [[ServerEndpoint]]
-    * value (except for endpoint meta-data). To provide only the security logic, see [[serverSecurityLogic]].
+    * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
+    * specified.
     */
   def serverLogic[F[_]](f: I => F[Either[E, O]])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], _ => f)

@@ -4,7 +4,6 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
-import sttp.tapir.Endpoint
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -17,7 +16,6 @@ import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.reflect.ClassTag
 
 trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
@@ -27,56 +25,10 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     *
-    * @param logic
-    *   the logic to associate with the endpoint
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): Router => Route =
-    route(e.serverLogic(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling The logic will be executed in a
-    * blocking context
-    *
-    * @param logic
-    *   the logic to associate with the endpoint
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def blockingRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]]): Router => Route =
-    blockingRoute(e.serverLogic(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
-    *
-    * @param logic
-    *   the logic to associate with the endpoint
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
-      logic: I => Future[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
-    route(e.serverLogicRecoverErrors(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling The logic will be executed in a blocking
-    * context
-    *
-    * @param logic
-    *   the logic to associate with the endpoint
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def blockingRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
-      logic: I => Future[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
-    blockingRoute(e.serverLogicRecoverErrors(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    *
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Router => Route = { router =>
+  def route[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, Any, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
@@ -87,15 +39,15 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future]
+  def blockingRoute[A, U, I, E, O](
+      e: ServerEndpoint[A, U, I, E, O, Any, Future]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e))
   }
 
-  private def endpointHandler[I, E, O, A](
-      e: ServerEndpoint[I, E, O, Any, Future]
+  private def endpointHandler[A, U, I, E, O](
+      e: ServerEndpoint[A, U, I, E, O, Any, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
