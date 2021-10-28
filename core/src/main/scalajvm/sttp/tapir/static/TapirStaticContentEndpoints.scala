@@ -66,7 +66,7 @@ trait TapirStaticContentEndpoints {
   private def staticGetEndpoint[T](
       prefix: EndpointInput[Unit],
       body: EndpointOutput[T]
-  ): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
+  ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
     endpoint.get
       .in(prefix)
       .in(
@@ -135,7 +135,7 @@ trait TapirStaticContentEndpoints {
 
   private def staticHeadEndpoint(
       prefix: EndpointInput[Unit]
-  ): Endpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
+  ): PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
     endpoint.head
       .in(prefix)
       .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
@@ -169,10 +169,10 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  def filesGetEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
+  def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     staticGetEndpoint(prefix, fileRangeBody)
 
-  def resourcesGetEndpoint(prefix: EndpointInput[Unit]): Endpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
+  def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticGetEndpoint(prefix, inputStreamBody)
 
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
@@ -186,21 +186,21 @@ trait TapirStaticContentEndpoints {
     */
   def filesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
-    ServerEndpoint(filesGetEndpoint(prefix), (m: MonadError[F]) => Files.get(systemPath)(m))
+  ): ServerEndpoint[Unit, Unit, StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
+    ServerEndpoint.public(filesGetEndpoint(prefix), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
   def filesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any, F] =
-    ServerEndpoint(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
+  ): ServerEndpoint[Unit, Unit, HeadInput, StaticErrorOutput, HeadOutput, Any, F] =
+    ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
 
   /** Create pair of endpoints (head, get) for particular file */
   def fileServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
       systemPath: String
-  ): List[ServerEndpoint[_, StaticErrorOutput, _, Any, F]] =
+  ): List[ServerEndpoint[_, _, _, StaticErrorOutput, _, Any, F]] =
     List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
@@ -211,8 +211,8 @@ trait TapirStaticContentEndpoints {
     */
   def fileGetServerEndpoint[F[_]](path: EndpointInput[Unit])(
       systemPath: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
-    ServerEndpoint(removePath(filesGetEndpoint(path)), (m: MonadError[F]) => Files.get(systemPath)(m))
+  ): ServerEndpoint[Unit, Unit, StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any, F] =
+    ServerEndpoint.public(removePath(filesGetEndpoint(path)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
@@ -226,8 +226,8 @@ trait TapirStaticContentEndpoints {
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
-    ServerEndpoint(resourcesGetEndpoint(prefix), (m: MonadError[F]) => Resources(classLoader, resourcePrefix)(m))
+  ): ServerEndpoint[Unit, Unit, StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
+    ServerEndpoint.public(resourcesGetEndpoint(prefix), (m: MonadError[F]) => Resources(classLoader, resourcePrefix)(m))
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
     *
@@ -239,12 +239,12 @@ trait TapirStaticContentEndpoints {
       classLoader: ClassLoader,
       resourcePath: String,
       useGzippedIfAvailable: Boolean = false
-  ): ServerEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
-    ServerEndpoint(
+  ): ServerEndpoint[Unit, Unit, StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any, F] =
+    ServerEndpoint.public(
       removePath(resourcesGetEndpoint(prefix)),
       (m: MonadError[F]) => Resources(classLoader, resourcePath, useGzippedIfAvailable = useGzippedIfAvailable)(m)
     )
 
-  private def removePath[T](e: Endpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
+  private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
     e.mapIn(i => i.copy(path = Nil))(i => i.copy(path = Nil))
 }

@@ -8,4 +8,7 @@ package object tapir extends Tapir {
   type AnyPart = Part[_]
   // used in multipart codecs
   type AnyListCodec = Codec[_ <: List[_], _, _ <: CodecFormat]
+
+  type AnyEndpoint = Endpoint[_, _, _, _, _]
+  type PublicEndpoint[I, E, O, R] = Endpoint[Unit, I, E, O, R]
 }

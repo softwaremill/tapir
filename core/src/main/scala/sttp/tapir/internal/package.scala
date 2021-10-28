@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{ContentTypeRange, MediaType, Method, StatusCode}
+import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
@@ -235,21 +235,29 @@ package object internal {
     exactValues.contains(v)
   }
 
-  def recoverErrors[I, E, O, F[_]](
-      f: I => F[O]
-  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => I => F[Either[E, O]] = { implicit monad => i =>
-    import sttp.monad.syntax._
-    Try(f(i).map(Right(_): Either[E, O])) match {
-      case Success(value) =>
-        monad.handleError(value) {
-          case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
-        }
-      case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
-      case Failure(exception)                                                 => monad.error(exception)
-    }
+  def recoverErrors2[T, U, E, O, F[_]](
+      f: T => U => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => U => F[Either[E, O]] = {
+    implicit monad => t => u =>
+      import sttp.monad.syntax._
+      Try(f(t)(u).map(Right(_): Either[E, O])) match {
+        case Success(value) =>
+          monad.handleError(value) {
+            case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
+          }
+        case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
+        case Failure(exception)                                                 => monad.error(exception)
+      }
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  def recoverErrors1[T, E, O, F[_]](
+      f: T => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => F[Either[E, O]] = { m =>
+    val result = recoverErrors2((_: Unit) => f)
+    result(m)(())
+  }
+
+  def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
     e.output
       .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
         Vector(ws)

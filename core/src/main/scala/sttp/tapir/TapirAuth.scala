@@ -1,7 +1,6 @@
 package sttp.tapir
 
 import sttp.tapir.EndpointInput.{Auth, WWWAuthenticate}
-import sttp.tapir.model.UsernamePassword
 
 import scala.collection.immutable.ListMap
 

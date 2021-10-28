@@ -5,26 +5,31 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
-import sttp.tapir.internal._
-import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+import sttp.tapir.server.PartialServerEndpoint
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 
 class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
   "endpoint" should "compile inputs" in {
-    endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Any]
-    endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Any]
+    endpoint.in(query[String]("q1")): PublicEndpoint[String, Unit, Unit, Any]
+    endpoint.in(query[String]("q1").and(query[Int]("q2"))): PublicEndpoint[(String, Int), Unit, Unit, Any]
 
-    endpoint.in(header[String]("h1")): Endpoint[String, Unit, Unit, Any]
-    endpoint.in(header[String]("h1").and(header[Int]("h2"))): Endpoint[(String, Int), Unit, Unit, Any]
+    endpoint.in(header[String]("h1")): PublicEndpoint[String, Unit, Unit, Any]
+    endpoint.in(header[String]("h1").and(header[Int]("h2"))): PublicEndpoint[(String, Int), Unit, Unit, Any]
 
-    endpoint.in("p" / "p2" / "p3"): Endpoint[Unit, Unit, Unit, Any]
-    endpoint.in("p" / "p2" / "p3" / path[String]): Endpoint[String, Unit, Unit, Any]
-    endpoint.in("p" / "p2" / "p3" / path[String] / path[Int]): Endpoint[(String, Int), Unit, Unit, Any]
+    endpoint.in("p" / "p2" / "p3"): PublicEndpoint[Unit, Unit, Unit, Any]
+    endpoint.in("p" / "p2" / "p3" / path[String]): PublicEndpoint[String, Unit, Unit, Any]
+    endpoint.in("p" / "p2" / "p3" / path[String] / path[Int]): PublicEndpoint[(String, Int), Unit, Unit, Any]
 
-    endpoint.in(stringBody): Endpoint[String, Unit, Unit, Any]
-    endpoint.in(stringBody).in(path[Int]): Endpoint[(String, Int), Unit, Unit, Any]
+    endpoint.in(stringBody): PublicEndpoint[String, Unit, Unit, Any]
+    endpoint.in(stringBody).in(path[Int]): PublicEndpoint[(String, Int), Unit, Unit, Any]
+  }
+
+  it should "compile security inputs" in {
+    endpoint.securityIn(query[String]("q1")): Endpoint[String, Unit, Unit, Unit, Any]
+    endpoint.securityIn(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Unit, Any]
+    endpoint.securityIn(stringBody).securityIn(path[Int]): Endpoint[(String, Int), Unit, Unit, Unit, Any]
   }
 
   trait TestStreams extends Streams[TestStreams] {
@@ -34,33 +39,33 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBinaryBody(TestStreams)): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
       .in(streamBinaryBody(TestStreams))
-      .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
+      .in(path[Int]): PublicEndpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
   it should "compile outputs" in {
-    endpoint.out(header[String]("h1")): Endpoint[Unit, Unit, String, Any]
-    endpoint.out(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, Unit, (String, Int), Any]
+    endpoint.out(header[String]("h1")): PublicEndpoint[Unit, Unit, String, Any]
+    endpoint.out(header[String]("h1").and(header[Int]("h2"))): PublicEndpoint[Unit, Unit, (String, Int), Any]
 
-    endpoint.out(stringBody): Endpoint[Unit, Unit, String, Any]
-    endpoint.out(stringBody).out(header[Int]("h1")): Endpoint[Unit, Unit, (String, Int), Any]
+    endpoint.out(stringBody): PublicEndpoint[Unit, Unit, String, Any]
+    endpoint.out(stringBody).out(header[Int]("h1")): PublicEndpoint[Unit, Unit, (String, Int), Any]
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBinaryBody(TestStreams)): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
       .out(streamBinaryBody(TestStreams))
-      .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
+      .out(header[Int]("h1")): PublicEndpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
   it should "compile error outputs" in {
-    endpoint.errorOut(header[String]("h1")): Endpoint[Unit, String, Unit, Any]
-    endpoint.errorOut(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, (String, Int), Unit, Any]
+    endpoint.errorOut(header[String]("h1")): PublicEndpoint[Unit, String, Unit, Any]
+    endpoint.errorOut(header[String]("h1").and(header[Int]("h2"))): PublicEndpoint[Unit, (String, Int), Unit, Any]
 
-    endpoint.errorOut(stringBody): Endpoint[Unit, String, Unit, Any]
-    endpoint.errorOut(stringBody).errorOut(header[Int]("h1")): Endpoint[Unit, (String, Int), Unit, Any]
+    endpoint.errorOut(stringBody): PublicEndpoint[Unit, String, Unit, Any]
+    endpoint.errorOut(stringBody).errorOut(header[Int]("h1")): PublicEndpoint[Unit, (String, Int), Unit, Any]
   }
 
   it should "compile one-of empty output" in {
@@ -140,9 +145,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     val i4 = query[String]("q4")
     val i34 = i3.and(i4)
 
-    def extend[I, E, O](e: Endpoint[I, E, O, Any]): Endpoint[(I, String, String), E, O, Any] = e.in(i34)
-    val extended1: Endpoint[(String, String, String), Unit, Unit, Any] = extend(endpoint.in(i1))
-    val extended2: Endpoint[((String, String), String, String), Unit, Unit, Any] = extend(endpoint.in(i1.and(i2)))
+    def extend[I, E, O](e: PublicEndpoint[I, E, O, Any]): PublicEndpoint[(I, String, String), E, O, Any] = e.in(i34)
+    val extended1: PublicEndpoint[(String, String, String), Unit, Unit, Any] = extend(endpoint.in(i1))
+    val extended2: PublicEndpoint[((String, String), String, String), Unit, Unit, Any] = extend(endpoint.in(i1.and(i2)))
 
     pairToTuple(extended1.input) shouldBe ((((), i1), (i3, i4)))
     pairToTuple(extended2.input) shouldBe ((((), (i1, i2)), (i3, i4)))
@@ -155,9 +160,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     val i4 = query[String]("q4")
     val i34 = i3.and(i4)
 
-    def extend[I, E, O](e: Endpoint[I, E, O, Any]): Endpoint[(String, String, I), E, O, Any] = e.prependIn(i34)
-    val extended1: Endpoint[(String, String, String), Unit, Unit, Any] = extend(endpoint.in(i1))
-    val extended2: Endpoint[(String, String, (String, String)), Unit, Unit, Any] = extend(endpoint.in(i1.and(i2)))
+    def extend[I, E, O](e: PublicEndpoint[I, E, O, Any]): PublicEndpoint[(String, String, I), E, O, Any] = e.prependIn(i34)
+    val extended1: PublicEndpoint[(String, String, String), Unit, Unit, Any] = extend(endpoint.in(i1))
+    val extended2: PublicEndpoint[(String, String, (String, String)), Unit, Unit, Any] = extend(endpoint.in(i1.and(i2)))
 
     pairToTuple(extended1.input) shouldBe (((i3, i4), ((), i1)))
     pairToTuple(extended2.input) shouldBe (((i3, i4), ((), (i1, i2))))
@@ -250,9 +255,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   it should "map input and output" in {
     case class Wrapper(s: String)
 
-    endpoint.in(query[String]("q1")).mapInTo[Wrapper]: Endpoint[Wrapper, Unit, Unit, Any]
-    endpoint.out(stringBody).mapOutTo[Wrapper]: Endpoint[Unit, Unit, Wrapper, Any]
-    endpoint.errorOut(stringBody).mapErrorOutTo[Wrapper]: Endpoint[Unit, Wrapper, Unit, Any]
+    endpoint.in(query[String]("q1")).mapInTo[Wrapper]: PublicEndpoint[Wrapper, Unit, Unit, Any]
+    endpoint.out(stringBody).mapOutTo[Wrapper]: PublicEndpoint[Unit, Unit, Wrapper, Any]
+    endpoint.errorOut(stringBody).mapErrorOutTo[Wrapper]: PublicEndpoint[Unit, Wrapper, Unit, Any]
   }
 
   val httpMethodTestData = List(
@@ -277,71 +282,25 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   "compile" should "work for endpoint descriptions providing partial server logic using serverLogicForCurrent" in {
     case class User1(x: String, y: Int)
-    case class User2(z: Double)
-    case class Result(u1: User1, u2: User2, a: String)
+    case class Result(u1: User1, z: Double, a: String)
     val base: PartialServerEndpoint[(String, Int), User1, Unit, String, Unit, Any, Future] = endpoint
       .errorOut(stringBody)
-      .in(query[String]("x"))
-      .in(query[Int]("y"))
-      .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
+      .securityIn(query[String]("x"))
+      .securityIn(query[Int]("y"))
+      .serverSecurityLogic { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
     implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
-    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, ""))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, 0.0d, ""))
 
     base
       .in(query[Double]("z"))
-      .serverLogicForCurrent { z => Future.successful(Right(User2(z)): Either[String, User2]) }
       .in(query[String]("a"))
       .out(plainBody[Result])
-      .serverLogic { case ((u1, u2), a) =>
-        Future.successful(Right(Result(u1, u2, a)): Either[String, Result])
+      .serverLogic { u =>
+        { case (z, a) =>
+          Future.successful(Right(Result(u, z, a)): Either[String, Result])
+        }
       }
-  }
-
-  "compile" should "work for endpoint descriptions providing partial server logic using serverLogicPart" in {
-    case class User1(x: String)
-    case class User2(x: Int)
-    case class Result(u1: User1, u2: User2, d: Double)
-
-    def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
-    def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
-
-    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
-    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
-
-    val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
-      .in(query[String]("x"))
-      .in(query[Int]("y"))
-      .in(query[Double]("z"))
-      .errorOut(stringBody)
-      .out(plainBody[Result])
-      .serverLogicPart(parse1)
-      .andThenPart(parse2)
-      .andThen { case ((user1, user2), d) =>
-        Future.successful(Right(Result(user1, user2, d)): Either[String, Result])
-      }
-  }
-
-  "PartialServerEndpoint" should "include all inputs when recovering the endpoint" in {
-    val pe: PartialServerEndpoint[String, String, Unit, Int, Unit, Any, Future] =
-      endpoint
-        .in("secure")
-        .in(query[String]("token"))
-        .errorOut(plainBody[Int])
-        .serverLogicForCurrent(_ => Future.successful(Right(""): Either[Int, String]))
-
-    val e = pe.get
-      .in("hello")
-      .in(query[String]("salutation"))
-      .out(stringBody)
-      .endpoint
-
-    val basicInputs = e.input.asVectorOfBasicInputs()
-    basicInputs.filter {
-      case EndpointInput.Query("token", _, _)      => true
-      case EndpointInput.Query("salutation", _, _) => true
-      case _                                       => false
-    } should have size (2)
   }
 
   "mapTo" should "properly map between tuples and case classes of arity 1" in {

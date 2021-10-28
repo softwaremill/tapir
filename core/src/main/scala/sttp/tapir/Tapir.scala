@@ -341,15 +341,16 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
-    Endpoint[Unit, Nothing, Unit, Any](
+  val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
+    Endpoint[Unit, Unit, Nothing, Unit, Any](
+      emptyInput,
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
       EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
     )
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
+  val endpoint: PublicEndpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
 }
 
 trait TapirComputedInputs { this: Tapir =>

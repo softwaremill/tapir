@@ -2,26 +2,25 @@ package sttp.tapir.server
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir._
 import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/** An endpoint, with some of the server logic already provided, and some left unspecified. See [[Endpoint.serverLogicForCurrent]].
+/** An endpoint with the security logic provided, and the main logic yet unspecified. See [[Endpoint.serverSecurityLogic]].
   *
-  * The part of the server logic which is provided transforms some inputs of type `T`, either to an error of type `E`, or value of type `U`.
+  * The provided security part of the server logic transforms inputs of type `A`, either to an error of type `E`, or value of type `U`.
   *
   * The part of the server logic which is not provided, will have to transform a tuple: `(U, I)` either into an error, or a value of type
   * `O`.
   *
   * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs is fixed and cannot be
-  * changed.
+  * changed. Hence, it's possible to create a base, secured input, and then specialise it with inputs, outputs and logic as needed.
   *
-  * @tparam T
-  *   Original type of the input, transformed into U
+  * @tparam A
+  *   Type of the security inputs, transformed into U
   * @tparam U
-  *   Type of partially transformed input.
+  *   Type of transformed security input.
   * @tparam I
   *   Input parameter types.
   * @tparam E
@@ -33,82 +32,40 @@ import scala.reflect.ClassTag
   * @tparam F
   *   The effect type used in the provided partial server logic.
   */
-abstract class PartialServerEndpoint[T, U, I, E, O, -R, F[_]](partialEndpoint: Endpoint[I, E, O, R])
-    extends EndpointInputsOps[I, E, O, R]
-    with EndpointOutputsOps[I, E, O, R]
-    with EndpointInfoOps[I, E, O, R]
-    with EndpointMetaOps[I, E, O, R] { outer =>
-  protected def tInput: EndpointInput[T]
-  protected def partialLogic: MonadError[F] => T => F[Either[E, U]]
+case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
+    endpoint: Endpoint[A, I, E, O, R],
+    securityLogic: MonadError[F] => A => F[Either[E, U]]
+) extends EndpointInputsOps[A, I, E, O, R]
+    with EndpointOutputsOps[A, I, E, O, R]
+    with EndpointInfoOps[A, I, E, O, R]
+    with EndpointMetaOps[A, I, E, O, R] { outer =>
+  override type EndpointType[_A, _I, _E, _O, -_R] = PartialServerEndpoint[_A, U, _I, _E, _O, _R, F]
 
-  override type EndpointType[_I, _E, _O, -_R] = PartialServerEndpoint[T, U, _I, _E, _O, _R, F]
+  override def securityInput: EndpointInput[A] = endpoint.securityInput
+  override def input: EndpointInput[I] = endpoint.input
+  override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
+  override def output: EndpointOutput[O] = endpoint.output
+  override def info: EndpointInfo = endpoint.info
 
-  def endpoint: Endpoint[(T, I), E, O, R] = partialEndpoint.prependIn(tInput)
+  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): PartialServerEndpoint[A, U, I2, E, O, R with R2, F] =
+    copy(endpoint = endpoint.copy(input = input))
+  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
+  override private[tapir] def withInfo(info: EndpointInfo) = copy(endpoint = endpoint.copy(info = info))
 
-  override def input: EndpointInput[I] = partialEndpoint.input
-  def errorOutput: EndpointOutput[E] = partialEndpoint.errorOutput
-  override def output: EndpointOutput[O] = partialEndpoint.output
-  override def info: EndpointInfo = partialEndpoint.info
-
-  private def withEndpoint[I2, O2, R2 <: R](e2: Endpoint[I2, E, O2, R2]): PartialServerEndpoint[T, U, I2, E, O2, R2, F] =
-    new PartialServerEndpoint[T, U, I2, E, O2, R2, F](e2) {
-      override protected def tInput: EndpointInput[T] = outer.tInput
-      override protected def partialLogic: MonadError[F] => T => F[Either[E, U]] = outer.partialLogic
-    }
-  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): PartialServerEndpoint[T, U, I2, E, O, R with R2, F] =
-    withEndpoint(partialEndpoint.withInput(input))
-  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = withEndpoint(partialEndpoint.withOutput(output))
-  override private[tapir] def withInfo(info: EndpointInfo) = withEndpoint(partialEndpoint.withInfo(info))
-
-  override protected def additionalInputsForShow: Vector[EndpointInput.Basic[_]] = tInput.asVectorOfBasicInputs()
   override protected def showType: String = "PartialServerEndpoint"
 
-  def serverLogicForCurrent[V, UV](
-      f: I => F[Either[E, V]]
-  )(implicit concat: ParamConcat.Aux[U, V, UV]): PartialServerEndpoint[(T, I), UV, Unit, E, O, R, F] = serverLogicForCurrentM(_ => f)
+  def serverLogic(f: U => I => F[Either[E, O]]): ServerEndpoint[A, U, I, E, O, R, F] = ServerEndpoint(endpoint, securityLogic, _ => f)
 
-  def serverLogicForCurrentRecoverErrors[V, UV](
-      f: I => F[V]
-  )(implicit
-      concat: ParamConcat.Aux[U, V, UV],
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): PartialServerEndpoint[(T, I), UV, Unit, E, O, R, F] =
-    serverLogicForCurrentM(recoverErrors(f))
+  def serverLogicInfallible(
+      f: I => F[O]
+  )(implicit eIsNothing: E =:= Nothing): ServerEndpoint[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Right(_)))
 
-  private def serverLogicForCurrentM[V, UV](
-      _f: MonadError[F] => I => F[Either[E, V]]
-  )(implicit concat: ParamConcat.Aux[U, V, UV]): PartialServerEndpoint[(T, I), UV, Unit, E, O, R, F] =
-    new PartialServerEndpoint[(T, I), UV, Unit, E, O, R, F](partialEndpoint.copy(input = emptyInput)) {
-      override def tInput: EndpointInput[(T, I)] = outer.tInput.and(outer.partialEndpoint.input)
-      override def partialLogic: MonadError[F] => ((T, I)) => F[Either[E, UV]] =
-        implicit monad => { case (t, i) =>
-          outer.partialLogic(monad)(t).flatMap {
-            case Left(e) => (Left(e): Either[E, UV]).unit
-            case Right(u) =>
-              _f(monad)(i).map {
-                _.map(v => mkCombine(concat).apply(ParamsAsAny(u), ParamsAsAny(v)).asAny.asInstanceOf[UV])
-              }
-          }
-        }
-    }
-
-  def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, R, F] = serverLogicM(_ => g)
+  def serverLogicPure(f: I => Either[E, O]): ServerEndpoint[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).unit)
 
   def serverLogicRecoverErrors(
-      g: ((U, I)) => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[(T, I), E, O, R, F] =
-    serverLogicM(recoverErrors(g))
-
-  private def serverLogicM(g: MonadError[F] => ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, R, F] =
-    ServerEndpoint[(T, I), E, O, R, F](
-      endpoint,
-      (m: MonadError[F]) => { case (t, i) =>
-        implicit val monad: MonadError[F] = m
-        partialLogic(monad)(t).flatMap {
-          case Left(e)  => (Left(e): Either[E, O]).unit
-          case Right(u) => g(m)((u, i))
-        }
-      }
-    )
+      f: U => I => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, recoverErrors2[U, I, E, O, F](f))
 }
