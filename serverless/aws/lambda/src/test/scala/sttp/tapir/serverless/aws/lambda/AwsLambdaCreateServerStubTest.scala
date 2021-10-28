@@ -10,7 +10,7 @@ import sttp.client3
 import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{ByteArrayBody, ByteBufferBody, InputStreamBody, NoBody, Request, Response, StringBody, SttpBackend, _}
 import sttp.model.{Header, StatusCode, Uri}
-import sttp.tapir.Endpoint
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
@@ -22,7 +22,7 @@ import sttp.tapir.tests.Test
 class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]] {
 
   override def testServer[I, E, O](
-      e: Endpoint[I, E, O, Any],
+      e: PublicEndpoint[I, E, O, Any],
       testNameSuffix: String,
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
@@ -33,13 +33,13 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
       .copy(encodeResponseBody = false)
-    val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
+    val se: ServerEndpoint[Unit, Unit, I, E, O, Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
-  override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
+  override def testServerLogic[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     val serverOptions: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)

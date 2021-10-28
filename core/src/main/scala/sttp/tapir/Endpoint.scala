@@ -248,8 +248,8 @@ trait EndpointMetaOps[A, I, E, O, -R] {
 
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
 
-  /** Combine this endpoint description with a function, which implements the server-side logic. The logic returns a result, which is either
-    * an error or a successful output, wrapped in an effect type `F`.
+  /** Combine this public endpoint description with a function, which implements the server-side logic. The logic returns a result, which is
+    * either an error or a successful output, wrapped in an effect type `F`. For secure endpoint, use [[serverSecurityLogic]].
     *
     * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
     *
