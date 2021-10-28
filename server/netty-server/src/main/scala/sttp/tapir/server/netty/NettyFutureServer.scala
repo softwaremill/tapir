@@ -13,15 +13,15 @@ import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
 abstract class NettyFutureServer[S <: SocketAddress](private var routes: Vector[FutureRoute])(implicit ec: ExecutionContext) {
-  def options: NettyFutureServerOptions
+  def options: NettyFutureServerOptions[S]
 
   def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future]): NettyFutureServer[S] = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyFutureServerOptions): NettyFutureServer[S] =
+  def addEndpoint(se: ServerEndpoint[_, _, _, Any, Future], overrideOptions: NettyFutureServerOptions[S]): NettyFutureServer[S] =
     addEndpoints(List(se), overrideOptions)
   def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]]): NettyFutureServer[S] = addRoute(
     NettyFutureServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]], overrideOptions: NettyFutureServerOptions): NettyFutureServer[S] =
+  def addEndpoints(ses: List[ServerEndpoint[_, _, _, Any, Future]], overrideOptions: NettyFutureServerOptions[S]): NettyFutureServer[S] =
     addRoute(
       NettyFutureServerInterpreter(overrideOptions).toRoute(ses)
     )
@@ -65,7 +65,11 @@ abstract class NettyFutureServer[S <: SocketAddress](private var routes: Vector[
   }
 }
 
-class TcpFutureServerBuilder(private var nettyOptions: TcpOptionsBuilder)(implicit ec: ExecutionContext) extends NettyFutureServer[InetSocketAddress](Vector.empty) {
+class TcpFutureServerBuilder(private var nettyOptions: TcpOptionsBuilder)(implicit ec: ExecutionContext)
+    extends NettyFutureServer[InetSocketAddress](Vector.empty) {
+  def eventLoopGroup(group: EventLoopGroup) = {
+    nettyOptions = nettyOptions.eventLoopGroup(group)
+  }
   def port(port: Int) = {
     nettyOptions = nettyOptions.port(port)
     this
@@ -75,21 +79,30 @@ class TcpFutureServerBuilder(private var nettyOptions: TcpOptionsBuilder)(implic
     this
   }
 
-  override def options: NettyFutureServerOptions = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
+  override def options: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
 }
 
-class DomainSocketFutureServerBuilder(private var nettyOptions: DomainSocketOptionsBuilder)(implicit ec: ExecutionContext) extends NettyFutureServer[DomainSocketAddress](Vector.empty) {
+class DomainSocketFutureServerBuilder(private var nettyOptions: DomainSocketOptionsBuilder)(implicit ec: ExecutionContext)
+    extends NettyFutureServer[DomainSocketAddress](Vector.empty) {
   def path(path: Path) = {
     nettyOptions = nettyOptions.path(path)
     this
   }
+  def eventLoopGroup(group: EventLoopGroup) = {
+    nettyOptions = nettyOptions.eventLoopGroup(group)
+  }
 
-  override def options: NettyFutureServerOptions = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
+  override def options: NettyFutureServerOptions[DomainSocketAddress] = NettyFutureServerOptions.default.nettyOptions(nettyOptions.build)
 }
 
 object NettyFutureServer {
-  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default)(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] =
-    ???//NettyFutureServer(Vector.empty, serverOptions)
+  def apply(
+      serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions.default
+  )(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] = {
+    new NettyFutureServer[InetSocketAddress](Vector.empty) {
+      override def options: NettyFutureServerOptions[InetSocketAddress] = serverOptions
+    }
+  }
 
   def tcp(implicit ec: ExecutionContext) = {
     new TcpFutureServerBuilder(NettyOptionsBuilder.make().tcp())
@@ -98,10 +111,6 @@ object NettyFutureServer {
   def unixDomainSocket(implicit ec: ExecutionContext) = {
     new DomainSocketFutureServerBuilder(NettyOptionsBuilder.make().domainSocket())
   }
-}
-
-case class NettyServerOptionsBuilder(options: NettyFutureServerOptions) {
-
 }
 
 case class NettyFutureServerBinding[S <: SocketAddress](localSocket: S, stop: () => Future[Unit])

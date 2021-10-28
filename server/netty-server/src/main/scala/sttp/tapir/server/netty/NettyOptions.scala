@@ -9,8 +9,8 @@ import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 
 import java.net.SocketAddress
 
-case class NettyOptions(
-    socketAddress: SocketAddress,
+case class NettyOptions[S <: SocketAddress](
+    socketAddress: S,
     eventLoopConfig: EventLoopConfig,
     shutdownEventLoopGroupOnClose: Boolean,
     initPipeline: (ChannelPipeline, ChannelHandler) => Unit

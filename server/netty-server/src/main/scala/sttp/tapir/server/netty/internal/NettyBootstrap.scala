@@ -8,7 +8,7 @@ import java.net.SocketAddress
 
 object NettyBootstrap {
   def apply[F[_]](
-      nettyOptions: NettyOptions,
+      nettyOptions: NettyOptions[_],
       handler: => NettyServerHandler[F],
       eventLoopGroup: EventLoopGroup,
       serverChannel: Class[_ <: ServerChannel],

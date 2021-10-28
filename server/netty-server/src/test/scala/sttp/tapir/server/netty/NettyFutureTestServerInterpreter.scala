@@ -10,6 +10,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
+import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
@@ -21,7 +22,7 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): FutureRoute = {
-    val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.customInterceptors
+    val serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
@@ -40,7 +41,9 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
   }
 
   override def server(routes: NonEmptyList[FutureRoute]): Resource[IO, Port] = {
-    val options = NettyFutureServerOptions.default.nettyOptions(NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build)
+    val options = NettyFutureServerOptions.default.nettyOptions(
+      NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build
+    )
     val bind = IO.fromFuture(IO.delay(NettyFutureServer(options).addRoutes(routes.toList).start()))
 
     Resource

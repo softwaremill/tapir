@@ -41,7 +41,9 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
 
   override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
     val options =
-      NettyCatsServerOptions.default[IO](dispatcher).nettyOptions(NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build)
+      NettyCatsServerOptions
+        .default[IO](dispatcher)
+        .nettyOptions(NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build)
     val bind = NettyCatsServer(options).addRoutes(routes.toList).start()
 
     Resource

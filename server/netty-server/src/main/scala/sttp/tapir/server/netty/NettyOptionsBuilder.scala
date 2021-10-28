@@ -42,7 +42,7 @@ object NettyOptionsBuilder {
     def eventLoopGroup(g: EventLoopGroup): DomainSocketOptionsBuilder =
       copy(eventLoopConfig = EventLoopConfig.useExisting(g), shutdownOnClose = true)
     def noShutdownOnClose: DomainSocketOptionsBuilder = copy(shutdownOnClose = false)
-    def build: NettyOptions = NettyOptions(
+    def build: NettyOptions[DomainSocketAddress] = NettyOptions(
       new DomainSocketAddress(path.toFile),
       EventLoopConfig.unixDomainSocket,
       shutdownOnClose,
@@ -63,7 +63,7 @@ object NettyOptionsBuilder {
     def noShutdownOnClose: TcpOptionsBuilder = copy(shutdownOnClose = false)
     def eventLoopGroup(g: EventLoopGroup): TcpOptionsBuilder =
       copy(eventLoopConfig = EventLoopConfig.useExisting(g), shutdownOnClose = true)
-    def build: NettyOptions = NettyOptions(
+    def build: NettyOptions[InetSocketAddress] = NettyOptions(
       new InetSocketAddress(host, port),
       eventLoopConfig,
       shutdownOnClose,
