@@ -8,22 +8,24 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
-case class NettyCatsServerOptions[F[_]](
+import java.net.{InetSocketAddress, SocketAddress}
+
+case class NettyCatsServerOptions[F[_], S <: SocketAddress](
     interceptors: List[Interceptor[F]],
     createFile: ServerRequest => F[TapirFile],
     deleteFile: TapirFile => F[Unit],
     dispatcher: Dispatcher[F],
-    nettyOptions: NettyOptions
+    nettyOptions: NettyOptions[S]
 ) {
-  def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = interceptors :+ i)
-  def nettyOptions(o: NettyOptions): NettyCatsServerOptions[F] = copy(nettyOptions = o)
+  def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F, S] = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F, S] = copy(interceptors = interceptors :+ i)
+  def nettyOptions[NEW_S <: SocketAddress](o: NettyOptions[NEW_S]): NettyCatsServerOptions[F, NEW_S] = copy(nettyOptions = o)
 }
 
 object NettyCatsServerOptions {
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F, InetSocketAddress] = customInterceptors(dispatcher).options
 
-  def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
+  def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F, InetSocketAddress] =
     NettyCatsServerOptions(
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
@@ -32,11 +34,14 @@ object NettyCatsServerOptions {
       NettyOptionsBuilder.default.build
     )
 
-  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]] =
+  def customInterceptors[F[_]: Async](
+      dispatcher: Dispatcher[F]
+  ): CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F, InetSocketAddress]] =
     CustomInterceptors(
       createLogInterceptor =
         (sl: ServerLog[Logger => F[Unit]]) => new ServerLogInterceptor[Logger => F[Unit], F](sl, (_, _) => Sync[F].unit),
-      createOptions = (ci: CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
+      createOptions =
+        (ci: CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F, InetSocketAddress]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
   def defaultServerLog[F[_]: Async]: ServerLog[Logger => F[Unit]] = DefaultServerLog(

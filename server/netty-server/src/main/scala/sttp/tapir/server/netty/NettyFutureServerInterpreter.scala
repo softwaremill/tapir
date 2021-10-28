@@ -4,7 +4,6 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.NettyServerInterpreter
 
-import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
 trait NettyFutureServerInterpreter {
