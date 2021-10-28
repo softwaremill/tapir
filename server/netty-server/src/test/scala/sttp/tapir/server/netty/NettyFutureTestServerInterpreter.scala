@@ -45,6 +45,6 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
 
     Resource
       .make(bind)(binding => IO.fromFuture(IO.delay(binding.stop())))
-      .map(_.port)
+      .map(b => b.localSocket.getPort)
   }
 }
