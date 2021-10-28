@@ -12,6 +12,7 @@ import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
+import java.net.InetSocketAddress
 import scala.reflect.ClassTag
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
@@ -22,7 +23,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): Route[IO] = {
-    val serverOptions: NettyCatsServerOptions[IO] = NettyCatsServerOptions
+    val serverOptions: NettyCatsServerOptions[IO, InetSocketAddress] = NettyCatsServerOptions
       .customInterceptors[IO](dispatcher)
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
