@@ -21,6 +21,7 @@ import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import java.net.InetSocketAddress
 
 val helloWorld = endpoint
   .get
@@ -28,7 +29,7 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogic(name => Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
 
-val binding: Future[NettyFutureServerBinding] = 
+val binding: Future[NettyFutureServerBinding[InetSocketAddress]] = 
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
