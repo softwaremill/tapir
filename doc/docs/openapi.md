@@ -134,10 +134,14 @@ object manually or using f.e. [Quicklens](https://github.com/softwaremill/quickl
 Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
 [Redoc](https://github.com/Redocly/redoc). The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint
 definitions, which given the documentation in yaml format, will expose it using the given context path. To use, add 
-as a dependency either:
-
+as a dependency either 
+`tapir-swagger-ui`:
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "@VERSION@"
+```
+
+or `tapir-redoc`:
+```scala
 "com.softwaremill.sttp.tapir" %% "tapir-redoc" % "@VERSION@"
 ```
 
