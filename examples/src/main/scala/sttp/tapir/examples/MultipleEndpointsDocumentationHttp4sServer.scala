@@ -24,12 +24,12 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
 
-  val booksListing: Endpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
+  val booksListing: PublicEndpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
     .in("books")
     .in("list" / "all")
     .out(jsonBody[Vector[Book]])
 
-  val addBook: Endpoint[Book, Unit, Unit, Any] = endpoint.post
+  val addBook: PublicEndpoint[Book, Unit, Unit, Any] = endpoint.post
     .in("books")
     .in("add")
     .in(
@@ -52,9 +52,12 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(booksListing.serverLogicSuccess(_ => IO(books.get())))
   val addBookRoutes: HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+    Http4sServerInterpreter[IO]().toRoutes(
+      addBook.serverLogicSuccess(book => IO((books.getAndUpdate(books => books :+ book): Unit)))
+    )
 
   // generating the documentation in yml; extension methods come from imported packages
   val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")

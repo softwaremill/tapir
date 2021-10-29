@@ -15,11 +15,12 @@ import scala.concurrent.ExecutionContext
 object HelloWorldHttp4sServer extends IOApp {
   // the endpoint: single fixed path input ("hello"), single query parameter
   // corresponds to: GET /hello?name=...
-  val helloWorld: Endpoint[String, Unit, String, Any] =
+  val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
+  val helloWorldRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(helloWorld.serverLogic(name => IO(s"Hello, $name!".asRight[Unit])))
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 

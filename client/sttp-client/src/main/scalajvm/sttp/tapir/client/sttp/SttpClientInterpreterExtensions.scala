@@ -4,9 +4,7 @@ import sttp.client3.HttpURLConnectionBackend
 import sttp.model.Uri
 import sttp.tapir.{Endpoint, PublicEndpoint}
 
-trait SttpClientInterpreterExtensions {
-
-  this: SttpClientInterpreter =>
+trait SttpClientInterpreterExtensions { this: SttpClientInterpreter =>
 
   // public
 

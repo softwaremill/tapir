@@ -14,7 +14,7 @@ import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // corresponds to: GET /?amount=...
-  val amountEndpoint: Endpoint[Int, String, Unit, Any] = endpoint.get.in(query[Int]("amount")).errorOut(stringBody)
+  val amountEndpoint: PublicEndpoint[Int, String, Unit, Any] = endpoint.get.in(query[Int]("amount")).errorOut(stringBody)
 
   // by default, decoding errors will be returned as a 400 response with body e.g. "Invalid value for: query parameter amount"
   // the defaults are defined in ServerDefaults
@@ -31,7 +31,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     })
     .options
 
-  val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint)(_ => Future.successful(Right(())))
+  val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

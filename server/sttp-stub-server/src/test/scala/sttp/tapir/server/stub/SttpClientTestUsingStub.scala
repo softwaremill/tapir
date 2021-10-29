@@ -4,9 +4,8 @@ import sttp.client3._
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
-import sttp.tapir.Endpoint
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.client.sttp._
-import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.monad.MonadError
@@ -35,7 +34,7 @@ class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
     response.header("P2") shouldBe Some("b")
   }
 
-  def testClient[I, E, O](endpoint: Endpoint[I, E, O, Any], inputValue: I, outputValue: Either[E, O])(
+  def testClient[I, E, O](endpoint: PublicEndpoint[I, E, O, Any], inputValue: I, outputValue: Either[E, O])(
       verifyResponse: Response[Either[E, O]] => Unit
   ): Unit = {
     test(s"calling $endpoint with $inputValue should result in $outputValue") {

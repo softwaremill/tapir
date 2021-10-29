@@ -6,7 +6,6 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
-import sttp.tapir.Endpoint
 import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
@@ -18,48 +17,29 @@ import zio.interop.catz._
 
 object ZioPartialServerLogicHttp4s extends App {
 
-  def greet(input: (User, String)): ZIO[Console, Nothing, String] =
-    input match {
-      case (user, salutation) =>
-        val greeting = s"$salutation, ${user.name}!"
-
-        putStrLn(greeting).as(greeting).orDie
-    }
+  def greet(user: User, salutation: String): ZIO[Console, Nothing, String] = {
+    val greeting = s"$salutation, ${user.name}!"
+    putStrLn(greeting).as(greeting).orDie
+  }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: ZPartialServerEndpoint[UserService, User, Unit, Int, Unit, Any] = endpoint
-    .in(header[String]("X-AUTH-TOKEN"))
+  val secureEndpoint: ZPartialServerEndpoint[UserService, String, User, Unit, Int, Unit, Any] = endpoint
+    .securityIn(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
-    .zServerLogicForCurrent(UserService.auth)
+    .zServerSecurityLogic(UserService.auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
   val secureHelloWorld1WithLogic = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .serverLogic(greet)
-
-  // ---
-
-  // 2nd approach: define the endpoint entirely first
-  val secureHelloWorld2: Endpoint[(String, String), Int, String, Any] = endpoint
-    .in(header[String]("X-AUTH-TOKEN"))
-    .errorOut(plainBody[Int])
-    .get
-    .in("hello2")
-    .in(query[String]("salutation"))
-    .out(stringBody)
-
-  // then, provide the server logic in parts
-  val secureHelloWorld2WithLogic = secureHelloWorld2
-    .zServerLogicPart(UserService.auth)
-    .andThen(greet)
+    .serverLogic(u => s => greet(u, s))
 
   // ---
 
   // interpreting as routes
   val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock with Blocking, *]] =
-    ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
+    ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic)).toRoutes
 
   // testing
   val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>

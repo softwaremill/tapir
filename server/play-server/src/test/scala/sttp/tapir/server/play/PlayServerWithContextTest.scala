@@ -18,7 +18,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Any])(implicit _actorSy
 
   def tests(): List[Test] = List(
     Test("server with play.http.context set") {
-      val e = endpoint.get.in("hello").out(stringBody).serverLogic[Future](_ => Future.successful(Right("world")))
+      val e = endpoint.get.in("hello").out(stringBody).serverLogicSuccess(_ => Future.successful("world"))
       val components = new DefaultAkkaHttpServerComponents {
         override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
         override lazy val actorSystem: ActorSystem = ActorSystem("tapir", defaultExecutionContext = Some(_actorSystem.dispatcher))

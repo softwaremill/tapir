@@ -30,7 +30,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
     private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
 
     // The path for this endpoint will be '/books/add', as we are using the base endpoint
-    val addBook: Endpoint[(Book, AuthToken), String, Unit, Any] = baseEndpoint.post
+    val addBook: PublicEndpoint[(Book, AuthToken), String, Unit, Any] = baseEndpoint.post
       .in("add")
       .in(
         jsonBody[Book]
@@ -42,12 +42,12 @@ object BooksExampleSemiauto extends App with StrictLogging {
     // Re-usable parameter description
     private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
 
-    val booksListing: Endpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
+    val booksListing: PublicEndpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
       .in("list" / "all")
       .in(limitParameter)
       .out(jsonBody[Vector[Book]])
 
-    val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
+    val booksListingByGenre: PublicEndpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
       .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
       .out(jsonBody[Vector[Book]])
   }
@@ -133,9 +133,9 @@ object BooksExampleSemiauto extends App with StrictLogging {
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
     concat(
-      AkkaHttpServerInterpreter().toRoute(addBook)((bookAddLogic _).tupled),
-      AkkaHttpServerInterpreter().toRoute(booksListing)(bookListingLogic),
-      AkkaHttpServerInterpreter().toRoute(booksListingByGenre)(bookListingByGenreLogic)
+      AkkaHttpServerInterpreter().toRoute(addBook.serverLogic((bookAddLogic _).tupled)),
+      AkkaHttpServerInterpreter().toRoute(booksListing.serverLogic(bookListingLogic)),
+      AkkaHttpServerInterpreter().toRoute(booksListingByGenre.serverLogic(bookListingByGenreLogic))
     )
   }
 

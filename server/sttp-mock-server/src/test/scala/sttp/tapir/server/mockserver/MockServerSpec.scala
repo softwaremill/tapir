@@ -120,7 +120,7 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
     }
 
     val expectations = mockServerClient
-      .whenInputMatches(plainEndpoint)(sampleIn)
+      .whenInputMatches(plainEndpoint)((), sampleIn)
       .thenSuccess(sampleOut)
 
     expectations should have size 1
@@ -249,7 +249,7 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
     }
 
     val expectations = mockServerClient
-      .whenInputMatches(plainEndpoint)(sampleIn)
+      .whenInputMatches(plainEndpoint)((), sampleIn)
       .thenError(sampleOut, statusCode = StatusCode.InternalServerError)
 
     expectations should have size 1
@@ -375,7 +375,7 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
     }
 
     val expectations = mockServerClient
-      .whenInputMatches(jsonEndpoint)(sampleIn)
+      .whenInputMatches(jsonEndpoint)((), sampleIn)
       .thenSuccess(sampleOut)
 
     expectations should have size 1
@@ -496,7 +496,7 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
     }
 
     val expectations = mockServerClient
-      .whenInputMatches(jsonEndpoint)(sampleIn)
+      .whenInputMatches(jsonEndpoint)((), sampleIn)
       .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
 
     expectations should have size 1

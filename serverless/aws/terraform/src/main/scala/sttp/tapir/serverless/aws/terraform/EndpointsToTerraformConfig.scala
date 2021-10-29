@@ -5,7 +5,7 @@ import sttp.tapir.internal._
 import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 private[terraform] object EndpointsToTerraformConfig {
-  def apply(eps: List[AnyEndpoint], options: AwsTerraformOptions): AwsTerraformApiGateway = {
+  def apply(eps: List[AnyEndpoint]): AwsTerraformApiGateway = {
 
     val routes: Seq[AwsApiGatewayRoute] = eps.map { endpoint =>
       val method = endpoint.httpMethod.getOrElse(Method("ANY"))

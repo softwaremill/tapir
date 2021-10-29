@@ -27,41 +27,25 @@ object PartialServerLogicAkka extends App {
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
   val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = endpoint
-    .in(header[String]("X-AUTH-TOKEN"))
+    .securityIn(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
-    .serverLogicForCurrent(auth)
+    .serverSecurityLogic(auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  val secureHelloWorld1WithLogic: ServerEndpoint[(String, String), Int, String, Any, Future] = secureEndpoint.get
+  val secureHelloWorld1WithLogic: ServerEndpoint[String, User, String, Int, String, Any, Future] = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .serverLogic { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
-
-  // ---
-
-  // 2nd approach: define the endpoint entirely first
-  val secureHelloWorld2: Endpoint[(String, String), Int, String, Any] = endpoint
-    .in(header[String]("X-AUTH-TOKEN"))
-    .errorOut(plainBody[Int])
-    .get
-    .in("hello2")
-    .in(query[String]("salutation"))
-    .out(stringBody)
-
-  // then, provide the server logic in parts
-  val secureHelloWorld2WithLogic = secureHelloWorld2
-    .serverLogicPart(auth)
-    .andThen { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
+    .serverLogic { user => salutation => Future(Right(s"$salutation, ${user.name}!")) }
 
   // ---
 
   // interpreting as routes
   val helloWorld1Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld1WithLogic)
-  val helloWorld2Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld2WithLogic)
+  //TODO val helloWorld2Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld2WithLogic)
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route, helloWorld2Route)).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 

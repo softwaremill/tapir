@@ -4,17 +4,7 @@ import akka.actor.ActorSystem
 import cats.effect.{IO, Resource}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
-import sttp.tapir.server.tests.{
-  AllServerTests,
-  DefaultCreateServerTest,
-  ServerSecurityTests,
-  ServerBasicTests,
-  ServerMetricsTest,
-  ServerMultipartTests,
-  ServerStaticContentTests,
-  ServerStreamingTests,
-  backendResource
-}
+import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 class PlayServerTest extends TestSuite {

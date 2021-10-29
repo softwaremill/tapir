@@ -257,16 +257,26 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
     * specified.
     */
-  def serverLogic[F[_]](f: I => F[Either[E, O]])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
-    ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], _ => f)
+  def serverLogic[F[_]](f: I => F[Either[E, O]])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] = {
+    import sttp.monad.syntax._
+    ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(x => x))
+  }
 
-  /** Like [[serverLogic]], but specialised to the case when `E` (the error output type) is [[Nothing]], hence when the logic type can be
+  /** Like [[serverLogic]], but specialised to the case when the result is always a success (`Right`), hence when the logic type can be
     * simplified to `I => F[O]`.
     */
-  def serverLogicInfallible[F[_]](
+  def serverLogicSuccess[F[_]](
       f: I => F[O]
-  )(implicit eIsNothing: E =:= Nothing, aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+  )(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(Right(_)))
+
+  /** Like [[serverLogic]], but specialised to the case when the result is always an error (`Left`), hence when the logic type can be
+    * simplified to `I => F[E]`.
+    */
+  def serverLogicError[F[_]](
+      f: I => F[E]
+  )(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+    ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(Left(_)))
 
   /** Like [[serverLogic]], but specialised to the case when the logic function is pure, that is doesn't have any side effects. */
   def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
@@ -294,13 +304,21 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def serverSecurityLogic[U, F[_]](f: A => F[Either[E, U]]): PartialServerEndpoint[A, U, I, E, O, R, F] =
     PartialServerEndpoint(this, _ => f)
 
-  /** Like [[serverSecurityLogic]], but specialised to the case when `E` (the error output type) is [[Nothing]], hence when the logic type
-    * can be simplified to `A => F[U]`.
+  /** Like [[serverSecurityLogic]], but specialised to the case when the result is always a success (`Right`), hence when the logic type can
+    * be simplified to `A => F[U]`.
     */
-  def serverSecurityLogicInfallible[U, F[_]](
+  def serverSecurityLogicSuccess[U, F[_]](
       f: A => F[U]
-  )(implicit eIsNothing: E =:= Nothing): PartialServerEndpoint[A, U, I, E, O, R, F] =
+  ): PartialServerEndpoint[A, U, I, E, O, R, F] =
     PartialServerEndpoint(this, implicit m => a => f(a).map(Right(_)))
+
+  /** Like [[serverSecurityLogic]], but specialised to the case when the result is always an error (`Left`), hence when the logic type can
+    * be simplified to `A => F[E]`.
+    */
+  def serverSecurityLogicError[U, F[_]](
+      f: A => F[E]
+  ): PartialServerEndpoint[A, U, I, E, O, R, F] =
+    PartialServerEndpoint(this, implicit m => a => f(a).map(Left(_)))
 
   /** Like [[serverSecurityLogic]], but specialised to the case when the logic function is pure, that is doesn't have any side effects. */
   def serverSecurityLogicPure[U, F[_]](f: A => Either[E, U]): PartialServerEndpoint[A, U, I, E, O, R, F] =

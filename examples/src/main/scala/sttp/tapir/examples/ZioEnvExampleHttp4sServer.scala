@@ -3,16 +3,16 @@ package sttp.tapir.examples
 import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s._
-import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
 import org.http4s.syntax.kleisli._
-import sttp.tapir.Endpoint
-import zio.blocking.Blocking
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 import sttp.tapir.ztapir._
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console.Console
 import zio.interop.catz._
@@ -46,14 +46,15 @@ object ZioEnvExampleHttp4sServer extends App {
   import PetLayer.PetService
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
-  val petEndpoint: Endpoint[Int, String, Pet, Any] =
+  val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
   val petRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
-    ZHttp4sServerInterpreter().from(petEndpoint)(petId => PetService.find(petId)).toRoutes
+    ZHttp4sServerInterpreter().from(petEndpoint.zServerLogic(petId => PetService.find(petId))).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
-  val petServerEndpoint: ZServerEndpoint[PetService, Int, String, Pet, Any] = petEndpoint.zServerLogic(petId => PetService.find(petId))
+  val petServerEndpoint: ZServerEndpoint[PetService, Unit, Unit, Int, String, Pet, Any] =
+    petEndpoint.zServerLogic(petId => PetService.find(petId))
   val petServerRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
     ZHttp4sServerInterpreter().from(List(petServerEndpoint)).toRoutes
 

@@ -1,5 +1,6 @@
 package sttp.tapir.examples
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
@@ -27,12 +28,14 @@ object WebSocketAkkaServer extends App {
   // The web socket endpoint: GET /ping.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // strings, and responses will be returned as json.
-  val wsEndpoint: Endpoint[Unit, Unit, Flow[String, Response, Any], AkkaStreams with WebSockets] =
+  val wsEndpoint: PublicEndpoint[Unit, Unit, Flow[String, Response, Any], AkkaStreams with WebSockets] =
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
   // Implementation of the web socket: a flow which echoes incoming messages
   val wsRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(wsEndpoint)(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
+    AkkaHttpServerInterpreter().toRoute(
+      wsEndpoint.serverLogicSuccess(_ => Future.successful(Flow.fromFunction((in: String) => Response(in)): Flow[String, Response, Any]))
+    )
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

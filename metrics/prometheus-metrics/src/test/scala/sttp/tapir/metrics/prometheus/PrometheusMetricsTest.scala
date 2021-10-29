@@ -1,7 +1,6 @@
 package sttp.tapir.metrics.prometheus
 
 import io.prometheus.client.CollectorRegistry
-import org.scalatest.Assertions
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
@@ -99,7 +98,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect responses duration" in {
     // given
     val clock = new TestClock()
-    val waitServerEp: Long => ServerEndpoint[String, String, String, Any, Id] = millis => {
+    val waitServerEp: Long => ServerEndpoint[Unit, Unit, String, String, String, Any, Id] = millis => {
       PersonsApi { name =>
         clock.forward(millis)
         PersonsApi.defaultLogic(name)

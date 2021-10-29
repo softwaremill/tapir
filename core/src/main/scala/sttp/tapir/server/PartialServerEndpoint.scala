@@ -56,10 +56,11 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
 
   def serverLogic(f: U => I => F[Either[E, O]]): ServerEndpoint[A, U, I, E, O, R, F] = ServerEndpoint(endpoint, securityLogic, _ => f)
 
-  def serverLogicInfallible(
-      f: I => F[O]
-  )(implicit eIsNothing: E =:= Nothing): ServerEndpoint[A, U, I, E, O, R, F] =
+  def serverLogicSuccess(f: I => F[O]): ServerEndpoint[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Right(_)))
+
+  def serverLogicError(f: I => F[E]): ServerEndpoint[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Left(_)))
 
   def serverLogicPure(f: I => Either[E, O]): ServerEndpoint[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).unit)

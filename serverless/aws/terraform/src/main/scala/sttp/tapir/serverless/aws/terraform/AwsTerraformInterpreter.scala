@@ -5,28 +5,21 @@ import sttp.tapir.server.ServerEndpoint
 
 trait AwsTerraformInterpreter {
 
-  def awsTerraformOptions: AwsTerraformOptions
-
-  def toTerraformConfig[I, E, O, S](e: Endpoint[I, E, O, S]): AwsTerraformApiGateway =
-    EndpointsToTerraformConfig(List(e), awsTerraformOptions)
+  def toTerraformConfig[A, I, E, O, S](e: Endpoint[A, I, E, O, S]): AwsTerraformApiGateway =
+    EndpointsToTerraformConfig(List(e))
 
   def toTerraformConfig(es: Iterable[AnyEndpoint]): AwsTerraformApiGateway =
-    EndpointsToTerraformConfig(es.toList, awsTerraformOptions)
+    EndpointsToTerraformConfig(es.toList)
 
-  def toTerraformConfig[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F]): AwsTerraformApiGateway =
+  def toTerraformConfig[A, U, I, E, O, S, F[_]](se: ServerEndpoint[A, U, I, E, O, S, F]): AwsTerraformApiGateway =
     EndpointsToTerraformConfig(
-      List(se.endpoint),
-      awsTerraformOptions
+      List(se.endpoint)
     )
 
-  def serverEndpointsToTerraformConfig[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]]): AwsTerraformApiGateway =
-    EndpointsToTerraformConfig(ses.map(_.endpoint).toList, awsTerraformOptions)
+  def serverEndpointsToTerraformConfig[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, _, _, F]]): AwsTerraformApiGateway =
+    EndpointsToTerraformConfig(ses.map(_.endpoint).toList)
 }
 
 object AwsTerraformInterpreter {
-  def apply(terraformOptions: AwsTerraformOptions): AwsTerraformInterpreter = {
-    new AwsTerraformInterpreter {
-      override def awsTerraformOptions: AwsTerraformOptions = terraformOptions
-    }
-  }
+  def apply(): AwsTerraformInterpreter = new AwsTerraformInterpreter {}
 }

@@ -5,7 +5,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
-import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, Endpoint, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
@@ -20,7 +20,7 @@ import scala.util.{Success, Try}
 object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   def spec: ZSpec[TestEnvironment, Any] =
-    suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerLogicPartErrorHandling, testZServerLogicForCurrentErrorHandling)
+    suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling)
 
   type ResponseBodyType = String
 
@@ -83,12 +83,13 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   )
 
   private val testZServerLogicErrorHandling = testM("zServerLogic error handling") {
-    val testEndpoint: Endpoint[Unit, TestError, String, Any] = endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
+    val testEndpoint: PublicEndpoint[Unit, TestError, String, Any] =
+      endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
 
     def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
-    val serverEndpoint: ZServerEndpoint[Any, Unit, TestError, String, Any] = testEndpoint.zServerLogic(logic)
+    val serverEndpoint: ZServerEndpoint[Any, Unit, Unit, Unit, TestError, String, Any] = testEndpoint.zServerLogic(logic)
 
-    interpreter[Unit, TestError, String](testRequest, serverEndpoint)
+    interpreter[Unit, Unit, Unit, TestError, String](testRequest, serverEndpoint)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
@@ -97,35 +98,17 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       }
   }
 
-  private val testZServerLogicPartErrorHandling = testM("zServerLogicPart error handling") {
-    val testEndpoint: Endpoint[String, TestError, String, Any] =
-      endpoint.in(header[String]("X-User-Name")).in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
+  private val testZServerSecurityLogicErrorHandling = testM("zServerLogicForCurrent error handling") {
+    val securedEndpoint: ZPartialServerEndpoint[Any, String, User, Unit, TestError, Unit, Any] =
+      endpoint.securityIn(header[String]("X-User-Name")).errorOut(plainBody[TestError]).zServerSecurityLogic[Any, User](failedAutLogic)
 
-    def logic(user: User, rest: Unit): ZIO[Any, TestError, String] = ZIO.succeed("Hello World")
-
-    val serverEndpoint: ZServerEndpoint[Any, String, TestError, String, Any] =
-      testEndpoint.zServerLogicPart(failedAutLogic).andThen { case (user, rest) => logic(user, rest) }
-
-    interpreter[String, TestError, String](testRequest, serverEndpoint)
-      .catchAll(errorToResponse)
-      .map { result =>
-        assert(result)(
-          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
-        )
-      }
-  }
-
-  private val testZServerLogicForCurrentErrorHandling = testM("zServerLogicForCurrent error handling") {
-    val securedEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, Unit, Any] =
-      endpoint.in(header[String]("X-User-Name")).errorOut(plainBody[TestError]).zServerLogicForCurrent[Any, User](failedAutLogic)
-
-    val testPartialEndpoint: ZPartialServerEndpoint[Any, User, Unit, TestError, String, Any] =
+    val testPartialEndpoint: ZPartialServerEndpoint[Any, String, User, Unit, TestError, String, Any] =
       securedEndpoint.in("foo" / "bar").out(stringBody)
 
     def logic(user: User, rest: Unit): ZIO[Any, TestError, String] = ZIO.succeed("Hello World")
 
-    val serverEndpoint: ZServerEndpoint[Any, (testPartialEndpoint.T, Unit), TestError, String, Any] =
-      testPartialEndpoint.serverLogic[Any]((logic _).tupled)
+    val serverEndpoint: ZServerEndpoint[Any, String, User, Unit, TestError, String, Any] =
+      testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
     interpreter(testRequest, serverEndpoint)
       .catchAll(errorToResponse)
