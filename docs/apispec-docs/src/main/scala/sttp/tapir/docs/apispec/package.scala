@@ -36,16 +36,16 @@ package object apispec {
     }
   }
 
-  private[docs] def nameAllPathCapturesInEndpoint(e: AnyEndpoint): AnyEndpoint = {
-    val (input2, _) = new EndpointInputMapper[Int](
+  private[docs] def nameAllPathCapturesInEndpoint(e: AnyEndpoint): AnyEndpoint =
+    e.copy(securityInput = namePathCapturesInInput(e.securityInput), input = namePathCapturesInInput(e.input))
+
+  private def namePathCapturesInInput(i: EndpointInput[_]): EndpointInput[_] =
+    new EndpointInputMapper[Int](
       { case (EndpointInput.PathCapture(None, codec, info), i) =>
         (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
       },
       PartialFunction.empty
-    ).mapInput(e.input, 1)
-
-    e.copy(input = input2)
-  }
+    ).mapInput(i, 1)._1
 
   private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs

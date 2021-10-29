@@ -34,7 +34,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
       val req3: RequestT[Identity, _, _] =
         req2.copy(
-          method = sttp.model.Method(e.input.method.orElse(e.securityInput.method).getOrElse(Method.GET).method): Identity[Method],
+          method = sttp.model.Method(e.httpMethod.getOrElse(Method.GET).method): Identity[Method],
           uri = uri2: Identity[Uri]
         )
 

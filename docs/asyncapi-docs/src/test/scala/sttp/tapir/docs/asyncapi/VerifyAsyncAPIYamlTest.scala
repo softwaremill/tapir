@@ -95,8 +95,8 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
   test("should support server security") {
     val e = endpoint.post
+      .securityIn(auth.apiKey(header[String](HeaderNames.Authorization)))
       .in("fruit")
-      .in(auth.apiKey(header[String](HeaderNames.Authorization)))
       .out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
 
     val expectedYaml = loadYaml("expected_security.yml")

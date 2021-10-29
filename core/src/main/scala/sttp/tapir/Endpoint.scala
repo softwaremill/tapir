@@ -58,6 +58,11 @@ case class Endpoint[A, I, E, O, -R](
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[A, I, E, O2, R with R2] = this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[A, I, E, O, R] = this.copy(info = info)
   override protected def showType: String = "Endpoint"
+
+  def httpMethod: Option[Method] = {
+    import sttp.tapir.internal._
+    input.method.orElse(securityInput.method)
+  }
 }
 
 trait EndpointSecurityInputsOps[A, I, E, O, -R] extends EndpointSecurityInputsMacros[A, I, E, O, R] {
@@ -119,11 +124,6 @@ trait EndpointInputsOps[A, I, E, O, -R] extends EndpointInputsMacros[A, I, E, O,
 
   def mapInDecode[II](f: I => DecodeResult[II])(g: II => I): EndpointType[A, II, E, O, R] =
     withInput(input.mapDecode(f)(g))
-
-  def httpMethod: Option[Method] = {
-    import sttp.tapir.internal._
-    input.method
-  }
 }
 
 trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros[A, I, E, O, R] {

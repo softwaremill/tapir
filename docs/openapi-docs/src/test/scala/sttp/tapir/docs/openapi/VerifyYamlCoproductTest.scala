@@ -36,7 +36,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using coproduct types") {
     val expectedYaml = load("coproduct/expected_coproduct.yml")
 
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
@@ -52,7 +52,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
       Schema.oneOfUsingField[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = load("coproduct/expected_coproduct_discriminator.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -63,7 +63,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types") {
     val expectedYaml = load("coproduct/expected_coproduct_nested.yml")
 
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
@@ -79,7 +79,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
       Schema.oneOfUsingField[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = load("coproduct/expected_coproduct_discriminator_nested.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

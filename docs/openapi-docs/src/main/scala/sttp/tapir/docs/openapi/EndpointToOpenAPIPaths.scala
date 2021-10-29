@@ -18,9 +18,9 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
 
-    val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
-    val method = e.input.method.getOrElse(Method.GET)
+    val method = e.httpMethod.getOrElse(Method.GET)
 
     val defaultId = options.operationIdGenerator(pathComponents, method)
 
@@ -59,12 +59,13 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   }
 
   private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
-    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
+    val auths = e.securityInput.auths ++ e.input.auths
+    val securityRequirement: SecurityRequirement = auths.flatMap {
       case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
 
     if (securityRequirement.isEmpty) List.empty
     else {

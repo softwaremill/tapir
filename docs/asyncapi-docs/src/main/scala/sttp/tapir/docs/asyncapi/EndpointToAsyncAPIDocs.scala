@@ -48,12 +48,13 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
   }
 
   private def securityRequirements(securitySchemes: SecuritySchemes, e: AnyEndpoint): List[SecurityRequirement] = {
-    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
+    val auths = e.securityInput.auths ++ e.input.auths
+    val securityRequirement: SecurityRequirement = auths.flatMap {
       case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
 
     if (securityRequirement.isEmpty) List.empty
     else {

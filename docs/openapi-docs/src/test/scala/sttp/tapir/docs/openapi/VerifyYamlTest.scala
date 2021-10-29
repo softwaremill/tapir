@@ -27,7 +27,7 @@ import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 import java.time.{Instant, LocalDateTime}
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
-  val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
+  val all_the_way: Endpoint[Unit, (FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount])
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
@@ -43,7 +43,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Any] = endpoint.out(jsonBody[F1])
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, Unit, F1, Any] = endpoint.out(jsonBody[F1])
 
   test("should match the expected yaml when schema is recursive") {
     val expectedYaml = load("expected_recursive.yml")
@@ -82,7 +82,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
   object TestStreams extends TestStreams
 
-  val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
+  val streaming_endpoint: Endpoint[Unit, Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
     .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
     .out(streamBinaryBody(TestStreams))
 
@@ -161,7 +161,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should handle classes with same name") {
-    val e: Endpoint[APet, Unit, BPet, Any] = endpoint
+    val e: Endpoint[Unit, APet, Unit, BPet, Any] = endpoint
       .in(jsonBody[APet])
       .out(jsonBody[BPet])
     val expectedYaml = load("expected_same_fullnames.yml")
@@ -173,7 +173,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should unfold nested hierarchy") {
-    val e: Endpoint[Book, Unit, String, Any] = endpoint
+    val e: Endpoint[Unit, Book, Unit, String, Any] = endpoint
       .in(jsonBody[Book])
       .out(stringBody)
     val expectedYaml = load("expected_unfolded_hierarchy.yml")
