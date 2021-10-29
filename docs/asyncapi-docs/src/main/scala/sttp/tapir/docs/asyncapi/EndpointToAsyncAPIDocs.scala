@@ -13,7 +13,7 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
   def toAsyncAPI(
       info: Info,
       servers: Iterable[(String, Server)],
-      es: Iterable[Endpoint[_, _, _, _]],
+      es: Iterable[AnyEndpoint],
       options: AsyncAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): AsyncAPI = {
@@ -43,11 +43,11 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     )
   }
 
-  private def securityRequirements(securitySchemes: SecuritySchemes, es: Iterable[Endpoint[_, _, _, _]]): List[SecurityRequirement] = {
+  private def securityRequirements(securitySchemes: SecuritySchemes, es: Iterable[AnyEndpoint]): List[SecurityRequirement] = {
     ListSet(es.toList.flatMap(securityRequirements(securitySchemes, _)): _*).toList
   }
 
-  private def securityRequirements(securitySchemes: SecuritySchemes, e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
+  private def securityRequirements(securitySchemes: SecuritySchemes, e: AnyEndpoint): List[SecurityRequirement] = {
     val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
       case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))

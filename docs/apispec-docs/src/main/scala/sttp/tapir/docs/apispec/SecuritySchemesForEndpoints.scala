@@ -2,12 +2,12 @@ package sttp.tapir.docs.apispec
 
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
-import sttp.tapir.{Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
 
 private[docs] object SecuritySchemesForEndpoints {
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): SecuritySchemes = {
+  def apply(es: Iterable[AnyEndpoint]): SecuritySchemes = {
     val auths = es.flatMap(e => e.input.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet

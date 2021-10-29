@@ -2,7 +2,7 @@ package sttp.tapir.docs
 
 import sttp.tapir.Schema.SName
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
-import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
+import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 package object apispec {
   private[docs] type SchemeName = String
@@ -36,7 +36,7 @@ package object apispec {
     }
   }
 
-  private[docs] def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
+  private[docs] def nameAllPathCapturesInEndpoint(e: AnyEndpoint): AnyEndpoint = {
     val (input2, _) = new EndpointInputMapper[Int](
       { case (EndpointInput.PathCapture(None, codec, info), i) =>
         (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)

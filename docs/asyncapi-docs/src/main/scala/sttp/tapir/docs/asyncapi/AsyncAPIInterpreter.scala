@@ -1,6 +1,6 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.{DocsExtension, Endpoint}
+import sttp.tapir.{AnyEndpoint, DocsExtension, Endpoint}
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir.server.ServerEndpoint
 
@@ -43,16 +43,16 @@ trait AsyncAPIInterpreter {
       docsExtensions: List[DocsExtension[_]]
   ): AsyncAPI = EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, Seq(se.endpoint), asyncAPIDocsOptions, docsExtensions)
 
-  def toAsyncAPI(es: Iterable[Endpoint[_, _, _, _]], title: String, version: String): AsyncAPI =
+  def toAsyncAPI(es: Iterable[AnyEndpoint], title: String, version: String): AsyncAPI =
     toAsyncAPI(es, Info(title, version), Nil)
-  def toAsyncAPI(es: Iterable[Endpoint[_, _, _, _]], title: String, version: String, servers: Iterable[(String, Server)]): AsyncAPI =
+  def toAsyncAPI(es: Iterable[AnyEndpoint], title: String, version: String, servers: Iterable[(String, Server)]): AsyncAPI =
     toAsyncAPI(es, Info(title, version), servers)
-  def toAsyncAPI(es: Iterable[Endpoint[_, _, _, _]], info: Info): AsyncAPI =
+  def toAsyncAPI(es: Iterable[AnyEndpoint], info: Info): AsyncAPI =
     toAsyncAPI(es, info, Nil)
-  def toAsyncAPI(es: Iterable[Endpoint[_, _, _, _]], info: Info, servers: Iterable[(String, Server)]): AsyncAPI =
+  def toAsyncAPI(es: Iterable[AnyEndpoint], info: Info, servers: Iterable[(String, Server)]): AsyncAPI =
     EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, es, asyncAPIDocsOptions, List.empty)
   def toAsyncAPI(
-      es: Iterable[Endpoint[_, _, _, _]],
+      es: Iterable[AnyEndpoint],
       info: Info,
       servers: Iterable[(String, Server)],
       docsExtensions: List[DocsExtension[_]]

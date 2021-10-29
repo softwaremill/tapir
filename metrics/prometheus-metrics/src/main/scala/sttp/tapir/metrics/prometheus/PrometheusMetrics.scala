@@ -35,7 +35,7 @@ case class PrometheusMetrics[F[_]](
     copy(metrics = metrics :+ responsesDuration(registry, namespace, labels, clock))
   def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
-  def metricsInterceptor(ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F] =
+  def metricsInterceptor(ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
     new MetricsRequestInterceptor[F](metrics, ignoreEndpoints :+ metricsEndpoint.endpoint)
 }
 

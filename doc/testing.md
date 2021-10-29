@@ -150,7 +150,7 @@ result == out
 It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such
 case when all matching requests will be handled by the first endpoint; the second endpoint will always be omitted. 
 To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
-type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
+type `List[AnyEndpoint]` an outputs `Set[ShadowedEndpoint]`.
 
 Example 1:
 

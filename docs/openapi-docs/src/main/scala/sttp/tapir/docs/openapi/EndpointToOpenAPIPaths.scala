@@ -15,7 +15,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private val codecToMediaType = new CodecToMediaType(schemas)
   private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
 
-  def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
+  def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
 
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
@@ -39,7 +39,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
+  private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
@@ -58,7 +58,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     )
   }
 
-  private def operationSecurity(e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
+  private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
     val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
       case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))

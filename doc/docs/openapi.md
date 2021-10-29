@@ -152,7 +152,7 @@ import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
 
-val myEndpoints: Seq[Endpoint[_, _, _, _]] = ???
+val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
 
 // add to your akka routes

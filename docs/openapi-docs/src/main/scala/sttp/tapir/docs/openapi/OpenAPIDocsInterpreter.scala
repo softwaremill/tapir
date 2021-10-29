@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.{Endpoint, DocsExtension}
+import sttp.tapir.{AnyEndpoint, DocsExtension, Endpoint}
 import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.server.ServerEndpoint
 
@@ -26,13 +26,13 @@ trait OpenAPIDocsInterpreter {
   def toOpenAPI[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, Seq(se.endpoint), openAPIDocsOptions, docsExtensions)
 
-  def toOpenAPI(es: Iterable[Endpoint[_, _, _, _]], title: String, version: String): OpenAPI =
+  def toOpenAPI(es: Iterable[AnyEndpoint], title: String, version: String): OpenAPI =
     toOpenAPI(es, Info(title, version))
 
-  def toOpenAPI(es: Iterable[Endpoint[_, _, _, _]], info: Info): OpenAPI =
+  def toOpenAPI(es: Iterable[AnyEndpoint], info: Info): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, es, openAPIDocsOptions, List.empty)
 
-  def toOpenAPI(es: Iterable[Endpoint[_, _, _, _]], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
+  def toOpenAPI(es: Iterable[AnyEndpoint], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, es, openAPIDocsOptions, docsExtensions)
 
   def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]], title: String, version: String): OpenAPI =

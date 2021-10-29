@@ -15,7 +15,7 @@ private[openapi] class EndpointToOperationResponse(
     codecToMediaType: CodecToMediaType,
     options: OpenAPIDocsOptions
 ) {
-  def apply(e: Endpoint[_, _, _, _]): ListMap[ResponsesKey, ReferenceOr[Response]] = {
+  def apply(e: AnyEndpoint): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     // There always needs to be at least a 200 empty response
     outputToResponses(e.output, ResponsesCodeKey(200), Some(Response.Empty)) ++
       inputToDefaultErrorResponses(e.input) ++

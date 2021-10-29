@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.sam
 
-import sttp.tapir.Endpoint
+import sttp.tapir.{AnyEndpoint, Endpoint}
 import sttp.tapir.server.ServerEndpoint
 
 trait AwsSamInterpreter {
@@ -9,7 +9,7 @@ trait AwsSamInterpreter {
 
   def toSamTemplate[I, E, O, S](e: Endpoint[I, E, O, S]): SamTemplate = EndpointsToSamTemplate(List(e), awsSamOptions)
 
-  def toSamTemplate(es: Iterable[Endpoint[_, _, _, _]]): SamTemplate = EndpointsToSamTemplate(es.toList, awsSamOptions)
+  def toSamTemplate(es: Iterable[AnyEndpoint]): SamTemplate = EndpointsToSamTemplate(es.toList, awsSamOptions)
 
   def toSamTemplate[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F]): SamTemplate =
     EndpointsToSamTemplate(

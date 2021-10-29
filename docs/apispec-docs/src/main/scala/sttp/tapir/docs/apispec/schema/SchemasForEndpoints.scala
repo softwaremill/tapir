@@ -8,7 +8,7 @@ import sttp.tapir.internal.IterableToListMap
 import scala.collection.immutable.ListMap
 
 class SchemasForEndpoints(
-    es: Iterable[Endpoint[_, _, _, _]],
+    es: Iterable[AnyEndpoint],
     schemaName: SName => String,
     toNamedSchemas: ToNamedSchemas
 ) {

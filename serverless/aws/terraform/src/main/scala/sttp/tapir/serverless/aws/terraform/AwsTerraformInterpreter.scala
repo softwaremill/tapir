@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.terraform
 
-import sttp.tapir.Endpoint
+import sttp.tapir.{AnyEndpoint, Endpoint}
 import sttp.tapir.server.ServerEndpoint
 
 trait AwsTerraformInterpreter {
@@ -10,7 +10,7 @@ trait AwsTerraformInterpreter {
   def toTerraformConfig[I, E, O, S](e: Endpoint[I, E, O, S]): AwsTerraformApiGateway =
     EndpointsToTerraformConfig(List(e), awsTerraformOptions)
 
-  def toTerraformConfig(es: Iterable[Endpoint[_, _, _, _]]): AwsTerraformApiGateway =
+  def toTerraformConfig(es: Iterable[AnyEndpoint]): AwsTerraformApiGateway =
     EndpointsToTerraformConfig(es.toList, awsTerraformOptions)
 
   def toTerraformConfig[I, E, O, S, F[_]](se: ServerEndpoint[I, E, O, S, F]): AwsTerraformApiGateway =
