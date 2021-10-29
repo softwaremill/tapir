@@ -110,10 +110,10 @@ object DefaultDecodeFailureHandler {
     import sttp.tapir.internal.RichEndpointInput
     ctx.failure match {
       case DecodeResult.Missing =>
-        val missingAuth = ctx.endpoint.input.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[_] =>
+        def missingAuth(i: EndpointInput[_]) = i.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[_] =>
           a
         }
-        missingAuth.getOrElse(ctx.failingInput)
+        missingAuth(ctx.endpoint.securityInput).orElse(missingAuth(ctx.endpoint.input)).getOrElse(ctx.failingInput)
       case _ => ctx.failingInput
     }
   }

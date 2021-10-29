@@ -96,10 +96,10 @@ class HttpServer(port: Port) {
 
     case DELETE -> Root / "api" / "delete" => Ok()
 
-    case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
+    case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) :? amountOptParam(am) =>
       val authHeader = r.headers.get(CIString("Authorization")).map(_.head.value)
       val xApiKey = r.headers.get(CIString("X-Api-Key")).map(_.head.value)
-      Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
+      Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; ApiKeyParam=$ak; AmountParam=$am")
 
     case GET -> Root / "mapping" :? numParam(v) =>
       if (v % 2 == 0) Accepted("A") else Ok("B")

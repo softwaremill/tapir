@@ -7,7 +7,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   AllServerTests,
   DefaultCreateServerTest,
-  ServerAuthenticationTests,
+  ServerSecurityTests,
   ServerBasicTests,
   ServerMetricsTest,
   ServerMultipartTests,
@@ -29,7 +29,13 @@ class PlayServerTest extends TestSuite {
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(createServerTest, interpreter, multipleValueHeaderSupport = false, inputStreamSupport = false, invulnerableToUnsanitizedHeaders = false).tests() ++
+      new ServerBasicTests(
+        createServerTest,
+        interpreter,
+        multipleValueHeaderSupport = false,
+        inputStreamSupport = false,
+        invulnerableToUnsanitizedHeaders = false
+      ).tests() ++
         new ServerMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++

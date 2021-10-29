@@ -16,7 +16,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
 
   def tests(): Unit = {
     basicTests()
-    authTests()
+    securityTests()
     mappingTest()
     oneOfTests()
     fileTests()
@@ -174,17 +174,38 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(in_file_out_file, (), testFile, Right(testFile))
   }
 
-  def authTests(): Unit = {
-    import sttp.tapir.tests.Authentication._
-    testClient(in_auth_apikey_header_out_string, (), "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
-    testClient(in_auth_apikey_query_out_string, (), "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
+  def securityTests(): Unit = {
+    import sttp.tapir.tests.Security._
     testClient(
-      in_auth_basic_out_string,
+      in_security_apikey_header_out_string,
+      "1234",
       (),
-      UsernamePassword("teddy", Some("bear")),
-      Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None")
+      Right("Authorization=None; X-Api-Key=Some(1234); ApiKeyParam=None; AmountParam=None")
     )
-    testClient(in_auth_bearer_out_string, (), "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
+    testClient(
+      in_security_apikey_header_in_amount_out_string,
+      "1234",
+      59,
+      Right("Authorization=None; X-Api-Key=Some(1234); ApiKeyParam=None; AmountParam=Some(59)")
+    )
+    testClient(
+      in_security_apikey_query_out_string,
+      "1234",
+      (),
+      Right("Authorization=None; X-Api-Key=None; ApiKeyParam=Some(1234); AmountParam=None")
+    )
+    testClient(
+      in_security_basic_out_string,
+      UsernamePassword("teddy", Some("bear")),
+      (),
+      Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; ApiKeyParam=None; AmountParam=None")
+    )
+    testClient(
+      in_security_bearer_out_string,
+      "1234",
+      (),
+      Right("Authorization=Some(Bearer 1234); X-Api-Key=None; ApiKeyParam=None; AmountParam=None")
+    )
   }
 
   def oneOfTests(): Unit = {
