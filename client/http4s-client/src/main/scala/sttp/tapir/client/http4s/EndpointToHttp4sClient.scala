@@ -34,26 +34,27 @@ import java.nio.ByteBuffer
 
 private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions) {
 
-  def toHttp4sRequest[I, E, O, R, F[_]: Async](
-      e: Endpoint[I, E, O, R],
+  def toHttp4sRequest[A, I, E, O, R, F[_]: Async](
+      e: Endpoint[A, I, E, O, R],
       baseUriStr: Option[String]
-  ): I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) = { params =>
+  ): A => I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) = { aParams => iParams =>
     val baseUri = Uri.unsafeFromString(baseUriStr.getOrElse("/"))
     val baseRequest = Request[F](uri = baseUri)
-    val request = setInputParams[I, F](e.input, ParamsAsAny(params), baseRequest)
+    val request0 = setInputParams[A, F](e.securityInput, ParamsAsAny(aParams), baseRequest)
+    val request1 = setInputParams[I, F](e.input, ParamsAsAny(iParams), request0)
 
     def responseParser(response: Response[F]): F[DecodeResult[Either[E, O]]] = {
       parseHttp4sResponse(e).apply(response)
     }
 
-    (request, responseParser)
+    (request1, responseParser)
   }
 
-  def toHttp4sRequestUnsafe[I, E, O, R, F[_]: Async](
-      e: Endpoint[I, E, O, R],
+  def toHttp4sRequestUnsafe[A, I, E, O, R, F[_]: Async](
+      e: Endpoint[A, I, E, O, R],
       baseUriStr: Option[String]
-  ): I => (Request[F], Response[F] => F[Either[E, O]]) = { params =>
-    val (request, safeResponseParser) = toHttp4sRequest[I, E, O, R, F](e, baseUriStr).apply(params)
+  ): A => I => (Request[F], Response[F] => F[Either[E, O]]) = { aParams => iParams =>
+    val (request, safeResponseParser) = toHttp4sRequest[A, I, E, O, R, F](e, baseUriStr).apply(aParams).apply(iParams)
 
     def unsafeResponseParser(response: Response[F]): F[Either[E, O]] =
       safeResponseParser(response).map {
@@ -179,8 +180,8 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
   ): Request[F] =
     setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
 
-  private def parseHttp4sResponse[I, E, O, R, F[_]: Async](
-      e: Endpoint[I, E, O, R]
+  private def parseHttp4sResponse[A, I, E, O, R, F[_]: Async](
+      e: Endpoint[A, I, E, O, R]
   ): Response[F] => F[DecodeResult[Either[E, O]]] = { response =>
     val code = sttp.model.StatusCode(response.status.code)
 

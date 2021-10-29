@@ -9,14 +9,22 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import scala.concurrent.ExecutionContext.global
 
 abstract class Http4sClientTests[R] extends ClientTests[R] {
-  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
-    val (request, parseResponse) = Http4sClientInterpreter[IO]().toRequestUnsafe(e, Some(s"http://localhost:$port")).apply(args)
+  override def send[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
+      port: Port,
+      securityArgs: A,
+      args: I,
+      scheme: String = "http"
+  ): IO[Either[E, O]] = {
+    val (request, parseResponse) =
+      Http4sClientInterpreter[IO]().toSecureRequestUnsafe(e, Some(s"http://localhost:$port")).apply(securityArgs).apply(args)
 
     sendAndParseResponse(request, parseResponse)
   }
 
-  override def safeSend[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]] = {
-    val (request, parseResponse) = Http4sClientInterpreter[IO]().toRequest(e, Some(s"http://localhost:$port")).apply(args)
+  override def safeSend[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I): IO[DecodeResult[Either[E, O]]] = {
+    val (request, parseResponse) =
+      Http4sClientInterpreter[IO]().toSecureRequest(e, Some(s"http://localhost:$port")).apply(securityArgs).apply(args)
 
     sendAndParseResponse(request, parseResponse)
   }
