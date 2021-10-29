@@ -13,7 +13,7 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
   def streamingTests(): Unit = {
     test(in_stream_out_stream(streams).showDetail) {
       // TODO: remove explicit type parameters when https://github.com/lampepfl/dotty/issues/12803 fixed
-      send[streams.BinaryStream, Unit, streams.BinaryStream](in_stream_out_stream(streams), port, mkStream("mango cranberry"))
+      send[Unit, streams.BinaryStream, Unit, streams.BinaryStream](in_stream_out_stream(streams), port, (), mkStream("mango cranberry"))
         .map(_.toOption.get)
         .map(rmStream)
         .map(_ shouldBe "mango cranberry")

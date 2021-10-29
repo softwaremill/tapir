@@ -14,36 +14,48 @@ import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
 private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
-  def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
-    val (uri, req1) =
-      setInputParams(
-        e.input,
-        ParamsAsAny(params),
-        baseUri.getOrElse(Uri(None, None, Uri.EmptyPath, Nil, None)),
-        basicRequest.asInstanceOf[PartialAnyRequest]
-      )
+  def toSttpRequest[A, E, O, I](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri]): A => I => Request[DecodeResult[Either[E, O]], R] = {
+    aParams => iParams =>
+      val (uri1, req1) =
+        setInputParams(
+          e.securityInput,
+          ParamsAsAny(aParams),
+          baseUri.getOrElse(Uri(None, None, Uri.EmptyPath, Nil, None)),
+          basicRequest.asInstanceOf[PartialAnyRequest]
+        )
 
-    val req2: RequestT[Identity, _, _] =
-      req1.copy(method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method): Identity[Method], uri = uri: Identity[Uri])
+      val (uri2, req2) =
+        setInputParams(
+          e.input,
+          ParamsAsAny(iParams),
+          uri1,
+          req1
+        )
 
-    val isWebSocket = bodyIsWebSocket(e.output)
+      val req3: RequestT[Identity, _, _] =
+        req2.copy(
+          method = sttp.model.Method(e.input.method.orElse(e.securityInput.method).getOrElse(Method.GET).method): Identity[Method],
+          uri = uri2: Identity[Uri]
+        )
 
-    def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == StatusCode.SwitchingProtocols else meta.isSuccess
+      val isWebSocket = bodyIsWebSocket(e.output)
 
-    val responseAs = fromMetadata(
-      responseAsFromOutputs(e.errorOutput, isWebSocket = false),
-      ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
-    ).mapWithMetadata { (body, meta) =>
-      val output = if (isSuccess(meta)) e.output else e.errorOutput
-      val params = clientOutputParams(output, body, meta)
-      params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
-    }.map {
-      case DecodeResult.Error(o, e) =>
-        DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from: $o, request: ${req2.method} ${req2.uri}", e))
-      case other => other
-    }
+      def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == StatusCode.SwitchingProtocols else meta.isSuccess
 
-    req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
+      val responseAs = fromMetadata(
+        responseAsFromOutputs(e.errorOutput, isWebSocket = false),
+        ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
+      ).mapWithMetadata { (body, meta) =>
+        val output = if (isSuccess(meta)) e.output else e.errorOutput
+        val params = clientOutputParams(output, body, meta)
+        params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
+      }.map {
+        case DecodeResult.Error(o, e) =>
+          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from: $o, request: ${req3.method} ${req3.uri}", e))
+        case other => other
+      }
+
+      req3.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
   private type PartialAnyRequest = PartialRequest[_, _]

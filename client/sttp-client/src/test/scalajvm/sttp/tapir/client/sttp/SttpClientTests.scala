@@ -15,18 +15,30 @@ abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends Clie
   val backend: SttpBackend[IO, R] = HttpClientFs2Backend[IO](dispatcher).unsafeRunSync()
   def wsToPipe: WebSocketToPipe[R]
 
-  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+  override def send[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
+      port: Port,
+      securityArgs: A,
+      args: I,
+      scheme: String = "http"
+  ): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    SttpClientInterpreter().toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body)
+    SttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 
-  override def safeSend[I, E, O](
-      e: Endpoint[I, E, O, R],
+  override def safeSend[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
       port: Port,
+      securityArgs: A,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    SttpClientInterpreter().toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)
+    SttpClientInterpreter().toSecureRequest(e, Some(uri"http://localhost:$port")).apply(securityArgs).apply(args).send(backend).map(_.body)
   }
 
   override protected def afterAll(): Unit = {

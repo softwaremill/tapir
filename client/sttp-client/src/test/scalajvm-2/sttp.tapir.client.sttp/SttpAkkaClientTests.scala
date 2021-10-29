@@ -9,28 +9,49 @@ import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends ClientTests[R] {
-  implicit val actorSystem = ActorSystem("tests")
-  val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
+  implicit val actorSystem: ActorSystem = ActorSystem("tests")
+  val backend: SttpBackend[Future, AkkaStreams with WebSockets] = AkkaHttpBackend.usingActorSystem(actorSystem)
   def wsToPipe: WebSocketToPipe[R]
 
-  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+  override def send[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
+      port: Port,
+      securityArgs: A,
+      args: I,
+      scheme: String = "http"
+  ): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     IO.fromFuture(
       IO(
-        SttpClientInterpreter().toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body)
+        SttpClientInterpreter()
+          .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+          .apply(securityArgs)
+          .apply(args)
+          .send(backend)
+          .map(_.body)
       )
     )
   }
 
-  override def safeSend[I, E, O](
-      e: Endpoint[I, E, O, R],
+  override def safeSend[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
       port: Port,
+      securityArgs: A,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(IO(SttpClientInterpreter().toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)))
+    IO.fromFuture(
+      IO(
+        SttpClientInterpreter()
+          .toSecureRequest(e, Some(uri"http://localhost:$port"))
+          .apply(securityArgs)
+          .apply(args)
+          .send(backend)
+          .map(_.body)
+      )
+    )
   }
 }
