@@ -6,12 +6,13 @@ import cats.effect.unsafe.implicits.global
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
+import sttp.client3.impl.cats.implicits._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.{Header, StatusCode}
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeInvocationTest._
-import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsServerOptions}
+import sttp.tapir.serverless.aws.lambda.{AwsServerInterpreter, AwsServerOptions}
 
 import scala.collection.immutable.Seq
 
@@ -23,7 +24,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     // given
     var hello = ""
 
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic { _ =>
+    val route = AwsServerInterpreter(options).toRoute(testEp.serverLogic { _ =>
       hello = "hello"
       IO.pure(().asRight[Unit])
     })
@@ -44,7 +45,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
   test("should handle error while fetching event") {
     // given
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
+    val route = AwsServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
@@ -59,7 +60,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
   test("should handle decode failure") {
     // given
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
+    val route = AwsServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
@@ -76,7 +77,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
   test("should handle missing lambda-runtime-aws-request-id header") {
     // given
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
+    val route = AwsServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
@@ -91,7 +92,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
   test("should handle error from server logic") {
     // given
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp)(_ => throw new RuntimeException)
+    val route = AwsServerInterpreter(options).toRoute(testEp)(_ => throw new RuntimeException)
 
     val backend = SttpBackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
@@ -108,7 +109,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
   test("should handle error when sending response to lambda") {
     // given
-    val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
+    val route = AwsServerInterpreter(options).toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)

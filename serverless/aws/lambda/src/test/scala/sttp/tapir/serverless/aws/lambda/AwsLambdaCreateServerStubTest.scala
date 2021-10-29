@@ -34,7 +34,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
       .options
       .copy(encodeResponseBody = false)
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
-    val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
+    val route: Route[IO] = AwsServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
@@ -43,7 +43,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     val serverOptions: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
-    val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
+    val route: Route[IO] = AwsServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }

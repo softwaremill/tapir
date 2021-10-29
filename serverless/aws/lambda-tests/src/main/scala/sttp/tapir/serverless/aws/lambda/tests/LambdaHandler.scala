@@ -7,6 +7,7 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import sttp.client3.impl.cats.implicits._
 import sttp.model.StatusCode
 import sttp.tapir.serverless.aws.lambda._
 
@@ -18,7 +19,7 @@ object LambdaHandler extends RequestStreamHandler {
 
     val options: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
 
-    val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(allEndpoints.toList)
+    val route: Route[IO] = AwsServerInterpreter(options).toRoute(allEndpoints.toList)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
 
     (decode[AwsRequest](json) match {

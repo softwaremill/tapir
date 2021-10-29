@@ -8,6 +8,7 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import sttp.client3.impl.cats.implicits._
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
@@ -25,7 +26,7 @@ object LambdaApiExample extends RequestStreamHandler {
 
   val options: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
 
-  val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)
+  val route: Route[IO] = AwsServerInterpreter(options).toRoute(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
