@@ -87,7 +87,7 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
           .toList
 
         if (primitivesErrors.isEmpty) {
-          //this should not happen
+          // this should not happen
           List(ValidationError.Custom(value, refinedErrorMessage, List()))
         } else {
           primitivesErrors
@@ -113,7 +113,7 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
           .toList
 
         if (primitivesErrors.isEmpty) {
-          //this should not happen
+          // this should not happen
           List(ValidationError.Custom(value, refinedErrorMessage, List()))
         } else {
           primitivesErrors
@@ -154,7 +154,7 @@ trait LowPriorityValidatorForPredicate {
             List(ValidationError.Custom(v, implicitly[ClassTag[P]].runtimeClass.toString))
           }
         }
-      ) //for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
+      ) // for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
       override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
         List(ValidationError.Custom[V](value, refinedErrorMessage))

@@ -42,7 +42,7 @@ class EndpointGenerator {
   }
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter]): String = {
-    //.in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
+    // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val inPath = url.split('/').filter(_.nonEmpty) map { segment =>
       if (segment.startsWith("{")) {
         val name = segment.drop(1).dropRight(1)
@@ -64,8 +64,8 @@ class EndpointGenerator {
   }
 
   private def ins(parameters: Seq[OpenapiParameter], requestBody: Option[OpenapiRequestBody]): String = {
-    //.in(query[Limit]("limit").description("Maximum number of books to retrieve"))
-    //.in(header[AuthToken]("X-Auth-Token"))
+    // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
+    // .in(header[AuthToken]("X-Auth-Token"))
     val params = parameters
       .filter(_.in != "path")
       .map { param =>
@@ -88,8 +88,8 @@ class EndpointGenerator {
   }
 
   private def outs(responses: Seq[OpenapiResponse]) = {
-    //.errorOut(stringBody)
-    //.out(jsonBody[List[Book]])
+    // .errorOut(stringBody)
+    // .out(jsonBody[List[Book]])
     responses
       .map { resp =>
         if (resp.content.size != 1) throw new NotImplementedError("We can handle only one return content!")

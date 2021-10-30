@@ -12,7 +12,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
   import io.circe._
 
   it should "parse basic-structure (object) yaml" in {
-    //https://swagger.io/docs/specification/basic-structure/
+    // https://swagger.io/docs/specification/basic-structure/
     val yaml = """
       |schemas:
       |  User:
@@ -45,7 +45,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
   }
 
   it should "parse basic-response (array) yaml" in {
-    //https://swagger.io/docs/specification/basic-structure/
+    // https://swagger.io/docs/specification/basic-structure/
     val yaml = """application/json:
                  |  schema:
                  |    type: array

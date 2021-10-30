@@ -40,7 +40,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Mike"), serverEp)
     interpreter.apply(PersonsApi.request("Janusz"), serverEp)
 
-    //then
+    // then
     collectorRegistryCodec
       .encode(metrics.registry)
       .contains("tapir_requests_total{path=\"/person\",method=\"GET\",} 3.0") shouldBe true

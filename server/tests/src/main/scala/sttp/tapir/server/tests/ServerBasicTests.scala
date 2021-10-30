@@ -212,7 +212,9 @@ class ServerBasicTests[F[_], ROUTE](
       pureResult((q, "test").asRight[Unit])
     ) { (backend, baseUri) =>
       if (invulnerableToUnsanitizedHeaders) {
-        basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+        basicRequest
+          .get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you")
+          .send(backend)
           .map { r =>
             if (r.code == StatusCode.Ok) {
               r.body shouldBe Right("test")
