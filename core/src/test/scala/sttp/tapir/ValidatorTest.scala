@@ -38,6 +38,51 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v(max - 1) shouldBe empty
   }
 
+  it should "validate for positive value" in {
+    val value = 1
+    val wrongNegative = -1
+    val wrongZero = 0
+    val v = Validator.positive[Int]
+    v(wrongNegative) shouldBe List(ValidationError.Primitive[Int](v, wrongNegative))
+    v(wrongZero) shouldBe List(ValidationError.Primitive[Int](v, wrongZero))
+    v(value) shouldBe empty
+  }
+
+  it should "validate for positiveOrZero value" in {
+    val wrongNegative = -1
+    val positiveValue = 1
+    val zeroValue = 0
+    val v = Validator.positiveOrZero[Int]
+    v(wrongNegative) shouldBe List(ValidationError.Primitive[Int](v, wrongNegative))
+    v(zeroValue) shouldBe empty
+    v(positiveValue) shouldBe empty
+  }
+
+  it should "validate for negative value" in {
+    val value = -1
+    val wrongPositive = 1
+    val wrongZero = 0
+    val v = Validator.negative[Int]
+    v(wrongPositive) shouldBe List(ValidationError.Primitive(v, wrongPositive))
+    v(wrongZero) shouldBe List(ValidationError.Primitive(v, wrongZero))
+    v(value) shouldBe empty
+  }
+
+  it should "validate for in range value" in {
+    val min = 0
+    val max = 1
+    val value1 = 0
+    val value2 = 1
+    val wrongMaxOut = 2
+    val wrongMinOut = -1
+    val v = Validator.inRange(min, max)
+
+    v(wrongMaxOut) shouldBe List(ValidationError.Primitive(Validator.max(max), wrongMaxOut))
+    v(wrongMinOut) shouldBe List(ValidationError.Primitive(Validator.min(min), wrongMinOut))
+    v(value1) shouldBe empty
+    v(value2) shouldBe empty
+  }
+
   it should "validate for maxSize of collection" in {
     val expected = 1
     val actual = List(1, 2, 3)
@@ -50,6 +95,19 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val expected = 3
     val v = Validator.minSize[Int, List](expected)
     v(List(1, 2)) shouldBe List(ValidationError.Primitive(v, List(1, 2)))
+    v(List(1, 2, 3)) shouldBe empty
+  }
+
+  it should "validate for nonEmpty of collection" in {
+    val v = Validator.nonEmpty[Int, List]
+    v(List()) shouldBe List(ValidationError.Primitive[List[Int]](Validator.minSize[Int, List](1), List()))
+    v(List(1)) shouldBe empty
+  }
+
+  it should "validate for fixedSize of collection" in {
+    val v = Validator.fixedSize[Int, List](3)
+    v(List(1, 2)) shouldBe List(ValidationError.Primitive(Validator.minSize[Int, List](3), List(1, 2)))
+    v(List(1, 2, 3, 4)) shouldBe List(ValidationError.Primitive(Validator.maxSize[Int, List](3), List(1, 2, 3, 4)))
     v(List(1, 2, 3)) shouldBe empty
   }
 
@@ -72,6 +130,19 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val v = Validator.maxLength[String](expected)
     v("ab") shouldBe List(ValidationError.Primitive(v, "ab"))
     v("a") shouldBe empty
+  }
+
+  it should "validate for fixedLength of string" in {
+    val v = Validator.fixedLength[String](3)
+    v("ab") shouldBe List(ValidationError.Primitive(Validator.minLength(3), "ab"))
+    v("abcd") shouldBe List(ValidationError.Primitive(Validator.maxLength(3), "abcd"))
+    v("abc") shouldBe empty
+  }
+
+  it should "validate for nonEmptyString of string" in {
+    val v = Validator.nonEmptyString[String]
+    v("") shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
+    v("abc") shouldBe empty
   }
 
   it should "validate with any of validators" in {
