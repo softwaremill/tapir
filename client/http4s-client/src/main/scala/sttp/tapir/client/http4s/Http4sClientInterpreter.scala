@@ -1,7 +1,7 @@
 package sttp.tapir.client.http4s
 
 import cats.effect.Async
-import org.http4s.{Request, Response}
+import org.http4s.{Request, Response, Uri}
 import sttp.tapir.{DecodeResult, Endpoint}
 
 abstract class Http4sClientInterpreter[F[_]: Async] {
@@ -18,7 +18,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     */
   def toRequest[I, E, O, R](
       e: Endpoint[I, E, O, R],
-      baseUri: Option[String]
+      baseUri: Option[Uri]
   ): I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequest[I, E, O, R, F](e, baseUri)
 
@@ -30,7 +30,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     *   - an `org.http4s.Request[F]`, which can be sent using an http4s client, or run against `org.http4s.HttpRoutes[F]`;
     *   - a response parser that extracts the expected entity from the received `org.http4s.Response[F]`.
     */
-  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[String]): I => (Request[F], Response[F] => F[Either[E, O]]) =
+  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => (Request[F], Response[F] => F[Either[E, O]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestUnsafe[I, E, O, R, F](e, baseUri)
 }
 
