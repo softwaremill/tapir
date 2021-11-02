@@ -29,7 +29,7 @@ object SwaggerUI {
       yaml: String,
       prefix: List[String] = List("docs"),
       yamlName: String = "docs.yaml"
-  ): List[ServerEndpoint[_, _, _, _, _, Any, F]] = {
+  ): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
     val prefixAsPath = prefix.mkString("/")
 

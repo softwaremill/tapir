@@ -39,9 +39,10 @@ import zio.ZIO
 case class ZPartialServerEndpoint[R, A, U, I, E, O, -C](endpoint: Endpoint[A, I, E, O, C], securityLogic: A => ZIO[R, E, U])
     extends EndpointInputsOps[A, I, E, O, C]
     with EndpointOutputsOps[A, I, E, O, C]
-    with EndpointInfoOps[A, I, E, O, C]
-    with EndpointMetaOps[A, I, E, O, C] { outer =>
+    with EndpointInfoOps[C]
+    with EndpointMetaOps { outer =>
 
+  override type ThisType[-_R] = ZPartialServerEndpoint[R, A, U, I, E, O, _R]
   override type EndpointType[_A, _I, _E, _O, -_R] = ZPartialServerEndpoint[R, _A, U, _I, _E, _O, _R]
 
   override def securityInput: EndpointInput[A] = endpoint.securityInput
@@ -57,10 +58,10 @@ case class ZPartialServerEndpoint[R, A, U, I, E, O, -C](endpoint: Endpoint[A, I,
 
   override protected def showType: String = "PartialServerEndpoint"
 
-  def serverLogic[R0](logic: U => I => ZIO[R0, E, O]): ZServerEndpoint[R with R0, A, U, I, E, O, C] =
+  def serverLogic[R0](logic: U => I => ZIO[R0, E, O]): ZServerEndpoint[R with R0, C] =
     ServerEndpoint(
       endpoint,
-      _ => securityLogic(_).either.resurrect,
-      _ => u => i => logic(u)(i).either.resurrect
+      _ => securityLogic(_: A).either.resurrect,
+      _ => (u: U) => (i: I) => logic(u)(i).either.resurrect
     )
 }

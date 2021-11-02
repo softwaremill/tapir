@@ -98,7 +98,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect responses duration" in {
     // given
     val clock = new TestClock()
-    val waitServerEp: Long => ServerEndpoint[Unit, Unit, String, String, String, Any, Id] = millis => {
+    val waitServerEp: Long => ServerEndpoint[Any, Id] = millis => {
       PersonsApi { name =>
         clock.forward(millis)
         PersonsApi.defaultLogic(name)

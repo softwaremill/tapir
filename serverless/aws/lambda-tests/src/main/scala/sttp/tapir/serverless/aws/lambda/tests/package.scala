@@ -16,35 +16,34 @@ import java.io.{ByteArrayInputStream, InputStream}
 package object tests {
 
   // this endpoint is used to wait until sam local starts up before running actual tests
-  val health_endpoint: ServerEndpoint[Unit, Unit, Unit, Unit, Unit, Any, IO] =
+  val health_endpoint: ServerEndpoint[Any, IO] =
     endpoint.get.in("health").serverLogic(_ => IO.pure(().asRight[Unit]))
 
-  val in_path_path_out_string_endpoint: ServerEndpoint[Unit, Unit, (String, Port), Unit, String, Any, IO] =
+  val in_path_path_out_string_endpoint: ServerEndpoint[Any, IO] =
     in_path_path_out_string.serverLogic { case (fruit: String, amount: Int) =>
       IO.pure(s"$fruit $amount".asRight[Unit])
     }
 
-  val in_string_out_string_endpoint: ServerEndpoint[Unit, Unit, String, Unit, String, Any, IO] =
+  val in_string_out_string_endpoint: ServerEndpoint[Any, IO] =
     in_string_out_string.in("string").serverLogic(s => IO.pure(s.asRight[Unit]))
 
-  val in_json_out_json_endpoint: ServerEndpoint[Unit, Unit, FruitAmount, Unit, FruitAmount, Any, IO] =
+  val in_json_out_json_endpoint: ServerEndpoint[Any, IO] =
     in_json_out_json.in("json").serverLogic(fa => IO.pure(fa.asRight[Unit]))
 
-  val in_headers_out_headers_endpoint: ServerEndpoint[Unit, Unit, List[Header], Unit, List[Header], Any, IO] =
+  val in_headers_out_headers_endpoint: ServerEndpoint[Any, IO] =
     in_headers_out_headers.serverLogic { headers =>
       IO.pure(headers.asRight[Unit])
     }
 
-  val in_input_stream_out_input_stream_endpoint: ServerEndpoint[Unit, Unit, InputStream, Unit, InputStream, Any, IO] =
+  val in_input_stream_out_input_stream_endpoint: ServerEndpoint[Any, IO] =
     in_input_stream_out_input_stream.in("is").serverLogic { is =>
       IO.pure((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     }
 
-  val in_4query_out_4header_extended_endpoint
-      : ServerEndpoint[Unit, Unit, ((String, String), String, String), Unit, ((String, String), String, String), Any, IO] =
+  val in_4query_out_4header_extended_endpoint: ServerEndpoint[Any, IO] =
     in_4query_out_4header_extended.in("echo" / "query").serverLogic { in => IO.pure(in.asRight[Unit]) }
 
-  val allEndpoints: Set[ServerEndpoint[_, _, _, _, _, Any, IO]] = Set(
+  val allEndpoints: Set[ServerEndpoint[Any, IO]] = Set(
     health_endpoint,
     in_path_path_out_string_endpoint,
     in_string_out_string_endpoint,

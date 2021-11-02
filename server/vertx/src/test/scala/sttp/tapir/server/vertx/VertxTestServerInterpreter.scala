@@ -18,8 +18,8 @@ import scala.reflect.ClassTag
 class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
   import VertxTestServerInterpreter._
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Router => Route = {
@@ -30,7 +30,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
     VertxFutureServerInterpreter(options).route(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Any, Future]]): Router => Route = ???
+  override def route(es: List[ServerEndpoint[Any, Future]]): Router => Route = ???
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

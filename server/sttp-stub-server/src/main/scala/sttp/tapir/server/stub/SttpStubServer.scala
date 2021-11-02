@@ -31,14 +31,14 @@ trait SttpStubServer {
     def whenInputMatches[A, I, E, O](endpoint: Endpoint[A, I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[A, I, E, O] =
       new TypeAwareWhenRequest(endpoint, _whenInputMatches(endpoint.input)(inputMatcher))
 
-    def whenRequestMatchesEndpointThenLogic[A, U, I, E, O](
-        endpoint: ServerEndpoint[A, U, I, E, O, R, F],
+    def whenRequestMatchesEndpointThenLogic(
+        endpoint: ServerEndpoint[R, F],
         interceptors: List[Interceptor[F]] = Nil
     ): SttpBackendStub[F, R] =
       _whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    def whenSecurityInputMatchesThenLogic[A, U, I, E, O](
-        endpoint: ServerEndpoint[A, U, I, E, O, R, F],
+    def whenSecurityInputMatchesThenLogic[A](
+        endpoint: ServerEndpoint.Full[A, _, _, _, _, R, F],
         interceptors: List[Interceptor[F]] = Nil
     )(
         securityInputMatcher: A => Boolean
@@ -47,7 +47,10 @@ trait SttpStubServer {
         interpretRequest(req, endpoint, interceptors)
       )
 
-    def whenInputMatchesThenLogic[A, U, I, E, O](endpoint: ServerEndpoint[A, U, I, E, O, R, F], interceptors: List[Interceptor[F]] = Nil)(
+    def whenInputMatchesThenLogic[I](
+        endpoint: ServerEndpoint.Full[_, _, I, _, _, R, F],
+        interceptors: List[Interceptor[F]] = Nil
+    )(
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
       _whenInputMatches(endpoint.endpoint.input)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
@@ -100,9 +103,9 @@ trait SttpStubServer {
       }
     }
 
-    private def interpretRequest[A, U, I, E, O](
+    private def interpretRequest(
         req: Request[_, _],
-        endpoint: ServerEndpoint[A, U, I, E, O, R, F],
+        endpoint: ServerEndpoint[R, F],
         interceptors: List[Interceptor[F]]
     ): F[Response[_]] = {
       def toResponse(sRequest: ServerRequest, sResponse: ServerResponse[Any]): Response[Any] = {
@@ -125,8 +128,8 @@ trait SttpStubServer {
         )
       val sRequest = new SttpRequest(req)
       stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
-        case RequestResult.Response(sResponse)            => toResponse(sRequest, sResponse)
-        case RequestResult.Failure(decodeFailureContexts) => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
+        case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
+        case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
       }
     }
 

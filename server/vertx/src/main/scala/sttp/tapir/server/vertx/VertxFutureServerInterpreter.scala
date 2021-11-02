@@ -28,7 +28,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, Any, Future]): Router => Route = { router =>
+  def route[A, U, I, E, O](e: ServerEndpoint[Any, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
@@ -39,15 +39,13 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future]
-  ): Router => Route = { router =>
+  def blockingRoute(e: ServerEndpoint[Any, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e))
   }
 
-  private def endpointHandler[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future]
+  private def endpointHandler(
+      e: ServerEndpoint[Any, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()

@@ -17,8 +17,8 @@ trait FinatraCatsServerInterpreter[F[_]] extends Logging {
 
   def finatraCatsServerOptions: FinatraCatsServerOptions[F]
 
-  def toRoute[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, F]
+  def toRoute(
+      e: ServerEndpoint[Any, F]
   ): FinatraRoute = {
     FinatraServerInterpreter(
       FinatraServerOptions(finatraCatsServerOptions.createFile, finatraCatsServerOptions.deleteFile, finatraCatsServerOptions.interceptors)

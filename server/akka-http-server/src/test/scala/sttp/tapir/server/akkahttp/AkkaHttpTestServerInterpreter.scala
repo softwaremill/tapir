@@ -18,8 +18,8 @@ import scala.concurrent.Future
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, AkkaStreams with WebSockets, Future],
+  override def route(
+      e: ServerEndpoint[AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Route = {
@@ -30,7 +30,7 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     AkkaHttpServerInterpreter(serverOptions).toRoute(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, AkkaStreams with WebSockets, Future]]): Route =
+  override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route =
     AkkaHttpServerInterpreter().toRoute(es)
 
   override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {

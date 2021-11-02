@@ -27,8 +27,8 @@ class ZHttp4sTestServerInterpreter
     ]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[A, U, I, E, O](
-      e: ZServerEndpoint[Clock with Blocking, A, U, I, E, O, ZioStreams with WebSockets],
+  override def route(
+      e: ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
@@ -41,8 +41,8 @@ class ZHttp4sTestServerInterpreter
     ZHttp4sServerInterpreter(serverOptions).from(e).toRoutes
   }
 
-  override def route[A, U, I, E, O](
-      es: List[ZServerEndpoint[Clock with Blocking, A, U, I, E, O, ZioStreams with WebSockets]]
+  override def route(
+      es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
     ZHttp4sServerInterpreter().from(es).toRoutes
   }

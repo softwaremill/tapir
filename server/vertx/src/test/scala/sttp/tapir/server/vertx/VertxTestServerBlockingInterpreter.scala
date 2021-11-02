@@ -9,8 +9,8 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import scala.concurrent.Future
 
 class VertxTestServerBlockingInterpreter(vertx: Vertx) extends VertxTestServerInterpreter(vertx) {
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Router => Route = {

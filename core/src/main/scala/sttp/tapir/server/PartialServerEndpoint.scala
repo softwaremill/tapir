@@ -11,16 +11,16 @@ import scala.reflect.ClassTag
   *
   * The provided security part of the server logic transforms inputs of type `A`, either to an error of type `E`, or value of type `U`.
   *
-  * The part of the server logic which is not provided, will have to transform a tuple: `(U, I)` either into an error, or a value of type
-  * `O`.
+  * The part of the server logic which is not provided, will have to transform both `U` and the rest of the input `I` either into an error,
+  * or a value of type `O`.
   *
   * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs is fixed and cannot be
   * changed. Hence, it's possible to create a base, secured input, and then specialise it with inputs, outputs and logic as needed.
   *
   * @tparam A
-  *   Type of the security inputs, transformed into U
+  *   "Auth": Security input parameter types, which the security logic accepts and returns a `U` or an error `E`.
   * @tparam U
-  *   Type of transformed security input.
+  *   "User": The type of the value returned by the security logic.
   * @tparam I
   *   Input parameter types.
   * @tparam E
@@ -37,8 +37,9 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
     securityLogic: MonadError[F] => A => F[Either[E, U]]
 ) extends EndpointInputsOps[A, I, E, O, R]
     with EndpointOutputsOps[A, I, E, O, R]
-    with EndpointInfoOps[A, I, E, O, R]
-    with EndpointMetaOps[A, I, E, O, R] { outer =>
+    with EndpointInfoOps[R]
+    with EndpointMetaOps { outer =>
+  override type ThisType[-_R] = PartialServerEndpoint[A, U, I, E, O, _R, F]
   override type EndpointType[_A, _I, _E, _O, -_R] = PartialServerEndpoint[_A, U, _I, _E, _O, _R, F]
 
   override def securityInput: EndpointInput[A] = endpoint.securityInput
@@ -54,19 +55,19 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
 
   override protected def showType: String = "PartialServerEndpoint"
 
-  def serverLogic(f: U => I => F[Either[E, O]]): ServerEndpoint[A, U, I, E, O, R, F] = ServerEndpoint(endpoint, securityLogic, _ => f)
+  def serverLogic(f: U => I => F[Either[E, O]]): ServerEndpoint.Full[A, U, I, E, O, R, F] = ServerEndpoint(endpoint, securityLogic, _ => f)
 
-  def serverLogicSuccess(f: I => F[O]): ServerEndpoint[A, U, I, E, O, R, F] =
+  def serverLogicSuccess(f: I => F[O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Right(_)))
 
-  def serverLogicError(f: I => F[E]): ServerEndpoint[A, U, I, E, O, R, F] =
+  def serverLogicError(f: I => F[E]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Left(_)))
 
-  def serverLogicPure(f: I => Either[E, O]): ServerEndpoint[A, U, I, E, O, R, F] =
+  def serverLogicPure(f: I => Either[E, O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).unit)
 
   def serverLogicRecoverErrors(
       f: U => I => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[A, U, I, E, O, R, F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, recoverErrors2[U, I, E, O, F](f))
 }

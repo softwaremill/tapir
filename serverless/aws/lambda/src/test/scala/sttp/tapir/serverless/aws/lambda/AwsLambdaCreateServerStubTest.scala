@@ -33,13 +33,13 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
       .copy(encodeResponseBody = false)
-    val se: ServerEndpoint[Unit, Unit, I, E, O, Any, IO] = e.serverLogic(fn)
+    val se: ServerEndpoint[Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
-  override def testServerLogic[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, Any, IO], testNameSuffix: String)(
+  override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     val serverOptions: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)

@@ -11,11 +11,11 @@ import sttp.tapir.tests.Port
 import scala.reflect.ClassTag
 
 trait TestServerInterpreter[F[_], +R, ROUTE] {
-  def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, R, F],
+  def route(
+      e: ServerEndpoint[R, F],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
   ): ROUTE
-  def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, R, F]]): ROUTE
+  def route(es: List[ServerEndpoint[R, F]]): ROUTE
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
 }

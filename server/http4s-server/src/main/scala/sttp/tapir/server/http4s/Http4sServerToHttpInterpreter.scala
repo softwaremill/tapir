@@ -32,11 +32,11 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   //
 
-  def toHttp[A, U, I, E, O](se: ServerEndpoint[A, U, I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] =
+  def toHttp(se: ServerEndpoint[Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] =
     toHttp(List(se))(fToG)(gToF)
 
   def toHttp(
-      serverEndpoints: List[ServerEndpoint[_, _, _, _, _, Fs2Streams[F] with WebSockets, G]]
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]]
   )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)

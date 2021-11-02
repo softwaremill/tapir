@@ -19,8 +19,8 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
 
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Fs2Streams[IO], IO],
+  override def route(
+      e: ServerEndpoint[Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): Router => Route = {
@@ -33,7 +33,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
     VertxCatsServerInterpreter(options).route(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Fs2Streams[IO], IO]]): Router => Route = ???
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]]): Router => Route = ???
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

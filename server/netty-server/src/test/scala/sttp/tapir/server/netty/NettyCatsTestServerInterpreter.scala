@@ -13,8 +13,8 @@ import sttp.tapir.tests.Port
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Any, Route[IO]] {
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, IO],
+  override def route(
+      e: ServerEndpoint[Any, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): Route[IO] = {
@@ -27,7 +27,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     NettyCatsServerInterpreter(serverOptions).toRoute(List(e))
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Any, IO]]): Route[IO] =
+  override def route(es: List[ServerEndpoint[Any, IO]]): Route[IO] =
     NettyCatsServerInterpreter[IO](dispatcher).toRoute(es)
 
   override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {

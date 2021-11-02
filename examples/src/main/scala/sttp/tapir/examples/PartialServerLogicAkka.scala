@@ -32,7 +32,7 @@ object PartialServerLogicAkka extends App {
     .serverSecurityLogic(auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  val secureHelloWorld1WithLogic: ServerEndpoint[String, User, String, Int, String, Any, Future] = secureEndpoint.get
+  val secureHelloWorld1WithLogic: ServerEndpoint[Any, Future] = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)

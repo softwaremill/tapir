@@ -14,8 +14,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
     extends TestServerInterpreter[Future, Any, FutureRoute] {
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): FutureRoute = {
@@ -27,7 +27,7 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     NettyFutureServerInterpreter(serverOptions).toRoute(List(e))
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Any, Future]]): FutureRoute = {
+  override def route(es: List[ServerEndpoint[Any, Future]]): FutureRoute = {
     NettyFutureServerInterpreter().toRoute(es)
   }
 

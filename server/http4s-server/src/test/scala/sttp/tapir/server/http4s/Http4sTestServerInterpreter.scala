@@ -19,8 +19,8 @@ import scala.concurrent.ExecutionContext
 class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Fs2Streams[IO] with WebSockets, IO],
+  override def route(
+      e: ServerEndpoint[Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): HttpRoutes[IO] = {
@@ -32,7 +32,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Fs2Streams[IO] with WebSockets, IO]]): HttpRoutes[IO] = {
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]]): HttpRoutes[IO] = {
     Http4sServerInterpreter[IO]().toRoutes(es)
   }
 

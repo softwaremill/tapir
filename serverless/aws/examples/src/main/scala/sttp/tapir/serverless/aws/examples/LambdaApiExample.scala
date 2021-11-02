@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 object LambdaApiExample extends RequestStreamHandler {
 
-  val helloEndpoint: ServerEndpoint[Unit, Unit, Unit, Unit, String, Any, IO] = endpoint.get
+  val helloEndpoint: ServerEndpoint[Any, IO] = endpoint.get
     .in("api" / "hello")
     .out(stringBody)
     .serverLogic { _ => IO.pure(s"Hello!".asRight[Unit]) }

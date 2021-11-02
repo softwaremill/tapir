@@ -87,9 +87,9 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
 
     def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
-    val serverEndpoint: ZServerEndpoint[Any, Unit, Unit, Unit, TestError, String, Any] = testEndpoint.zServerLogic(logic)
+    val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
-    interpreter[Unit, Unit, Unit, TestError, String](testRequest, serverEndpoint)
+    interpreter(testRequest, serverEndpoint)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
@@ -107,7 +107,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     def logic(user: User, rest: Unit): ZIO[Any, TestError, String] = ZIO.succeed("Hello World")
 
-    val serverEndpoint: ZServerEndpoint[Any, String, User, Unit, TestError, String, Any] =
+    val serverEndpoint: ZServerEndpoint[Any, Any] =
       testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
     interpreter(testRequest, serverEndpoint)

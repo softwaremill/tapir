@@ -18,8 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
     extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]]] {
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, ZioStreams, Task],
+  override def route(
+      e: ServerEndpoint[ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
@@ -30,8 +30,8 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
     ZioHttpInterpreter(serverOptions).toHttp(e)
   }
 
-  override def route[A, U, I, E, O](
-      es: List[ServerEndpoint[A, U, I, E, O, ZioStreams, Task]]
+  override def route(
+      es: List[ServerEndpoint[ZioStreams, Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
     ZioHttpInterpreter().toHttp(es)
 

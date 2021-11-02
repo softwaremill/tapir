@@ -15,10 +15,10 @@ class ServerInterpreter[R, F[_], B, S](
     interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply[A, U, I, E, O](request: ServerRequest, se: ServerEndpoint[A, U, I, E, O, R, F]): F[RequestResult[B]] =
+  def apply(request: ServerRequest, se: ServerEndpoint[R, F]): F[RequestResult[B]] =
     apply(request, List(se))
 
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, _, _, R, F]]): F[RequestResult[B]] =
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[R, F]]): F[RequestResult[B]] =
     monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
@@ -26,7 +26,7 @@ class ServerInterpreter[R, F[_], B, S](
       is: List[Interceptor[F]],
       eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B],
-      ses: List[ServerEndpoint[_, _, _, _, _, R, F]]
+      ses: List[ServerEndpoint[R, F]]
   ): RequestHandler[F, B] = {
     is match {
       case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
@@ -42,14 +42,14 @@ class ServerInterpreter[R, F[_], B, S](
   /** Try decoding subsequent server endpoints, until a non-None response is returned. */
   private def firstNotNone(
       request: ServerRequest,
-      ses: List[ServerEndpoint[_, _, _, _, _, R, F]],
+      ses: List[ServerEndpoint[R, F]],
       endpointInterceptors: List[EndpointInterceptor[F]],
       accumulatedFailureContexts: List[DecodeFailureContext]
   ): F[RequestResult[B]] =
     ses match {
       case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
-        tryServerEndpoint(request, se, endpointInterceptors).flatMap {
+        tryServerEndpoint[se.A, se.U, se.I, se.E, se.O](request, se, endpointInterceptors).flatMap {
           case RequestResult.Failure(failureContexts) =>
             firstNotNone(request, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
           case r => r.unit
@@ -58,7 +58,7 @@ class ServerInterpreter[R, F[_], B, S](
 
   private def tryServerEndpoint[A, U, I, E, O](
       request: ServerRequest,
-      se: ServerEndpoint[A, U, I, E, O, R, F],
+      se: ServerEndpoint.Full[A, U, I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
     val defaultSecurityFailureResponse = ServerResponse[B](StatusCode.InternalServerError, Nil, None).unit
@@ -149,19 +149,11 @@ class ServerInterpreter[R, F[_], B, S](
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[F, U, I]
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
-        runLogic(ctx.serverEndpoint, ctx.u, ctx.i, ctx.request)
-
-      private def runLogic[U, I, E, O](
-          serverEndpoint: ServerEndpoint[_, U, I, E, O, _, F],
-          u: U,
-          i: I,
-          request: ServerRequest
-      ): F[ServerResponse[B]] =
-        serverEndpoint
-          .logic(implicitly)(u)(i)
+        ctx.serverEndpoint
+          .logic(implicitly)(ctx.u)(ctx.i)
           .flatMap {
-            case Right(result) => responder(defaultSuccessStatusCode)(request, ValuedEndpointOutput(serverEndpoint.output, result))
-            case Left(err)     => responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(serverEndpoint.errorOutput, err))
+            case Right(result) => responder(defaultSuccessStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.output, result))
+            case Left(err)     => responder(defaultErrorStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.errorOutput, err))
           }
 
       override def onSecurityFailure[A](

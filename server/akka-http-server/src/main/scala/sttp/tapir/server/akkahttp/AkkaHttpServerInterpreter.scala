@@ -29,9 +29,9 @@ trait AkkaHttpServerInterpreter {
 
   def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
-  def toRoute[A, U, I, E, O](se: ServerEndpoint[A, U, I, E, O, AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
+  def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, _, _, AkkaStreams with WebSockets, Future]]): Route = {
+  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     extractRequestContext { ctx =>
       extractExecutionContext { implicit ec =>
         extractMaterializer { implicit mat =>

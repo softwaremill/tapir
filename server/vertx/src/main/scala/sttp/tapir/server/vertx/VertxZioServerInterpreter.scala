@@ -24,15 +24,15 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
-  def route[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, ZioStreams, RIO[R, *]])(implicit
+  def route[A, U, I, E, O](e: ServerEndpoint[ZioStreams, RIO[R, *]])(implicit
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
 
-  private def endpointHandler[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, ZioStreams, RIO[R, *]]
+  private def endpointHandler(
+      e: ServerEndpoint[ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]

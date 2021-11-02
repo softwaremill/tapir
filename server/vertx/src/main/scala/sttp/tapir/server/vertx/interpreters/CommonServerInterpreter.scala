@@ -6,7 +6,7 @@ import sttp.tapir.server.vertx.handlers.attachDefaultHandlers
 import sttp.tapir.server.vertx.routing.PathMapping.{RouteDefinition, createRoute}
 
 trait CommonServerInterpreter {
-  protected def mountWithDefaultHandlers[F[_], A, U, I, E, O, C](e: ServerEndpoint[A, U, I, E, O, C, F])(
+  protected def mountWithDefaultHandlers[C, F[_]](e: ServerEndpoint[C, F])(
       router: Router,
       routeDef: RouteDefinition
   ): Route =

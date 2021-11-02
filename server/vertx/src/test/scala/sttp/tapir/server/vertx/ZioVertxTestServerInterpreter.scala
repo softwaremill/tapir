@@ -16,8 +16,8 @@ import zio.{Runtime, Task}
 class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, ZioStreams, Task],
+  override def route(
+      e: ServerEndpoint[ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task]] = None
   ): Router => Route = {
@@ -29,7 +29,7 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
     VertxZioServerInterpreter(options).route(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, ZioStreams, Task]]): Router => Route = ???
+  override def route(es: List[ServerEndpoint[ZioStreams, Task]]): Router => Route = ???
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

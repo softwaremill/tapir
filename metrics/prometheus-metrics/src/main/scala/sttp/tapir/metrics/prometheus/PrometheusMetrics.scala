@@ -20,9 +20,9 @@ case class PrometheusMetrics[F[_]](
 ) {
   import PrometheusMetrics._
 
-  lazy val metricsEndpoint: ServerEndpoint[Unit, Unit, Unit, Unit, CollectorRegistry, Any, F] = ServerEndpoint.public(
+  lazy val metricsEndpoint: ServerEndpoint[Any, F] = ServerEndpoint.public(
     endpoint.get.in("metrics").out(plainBody[CollectorRegistry]),
-    (monad: MonadError[F]) => _ => monad.eval(Right(registry): Either[Unit, CollectorRegistry])
+    (monad: MonadError[F]) => (_: Unit) => monad.eval(Right(registry): Either[Unit, CollectorRegistry])
   )
 
   def withRequestsTotal(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =

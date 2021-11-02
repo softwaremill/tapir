@@ -21,8 +21,8 @@ class AwsLambdaStubHttpTest extends TestSuite {
 
 object AwsLambdaStubHttpTest {
   private val testServerInterpreter = new TestServerInterpreter[IO, Any, Route[IO]] {
-    override def route[A, U, I, E, O](
-        e: ServerEndpoint[A, U, I, E, O, Any, IO],
+    override def route(
+        e: ServerEndpoint[Any, IO],
         decodeFailureHandler: Option[DecodeFailureHandler],
         metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
     ): Route[IO] = {
@@ -36,7 +36,7 @@ object AwsLambdaStubHttpTest {
       AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     }
 
-    override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Any, IO]]): Route[IO] =
+    override def route(es: List[ServerEndpoint[Any, IO]]): Route[IO] =
       AwsCatsEffectServerInterpreter[IO]().toRoute(es)
 
     override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???

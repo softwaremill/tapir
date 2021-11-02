@@ -14,8 +14,8 @@ import sttp.tapir.tests.Port
 import scala.concurrent.duration.DurationInt
 
 class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute] {
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): FinatraRoute = {
@@ -27,7 +27,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     FinatraServerInterpreter(serverOptions).toRoute(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, Any, Future]]): FinatraRoute = ???
+  override def route(es: List[ServerEndpoint[Any, Future]]): FinatraRoute = ???
 
   override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
 }

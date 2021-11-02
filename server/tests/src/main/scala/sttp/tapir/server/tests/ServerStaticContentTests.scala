@@ -506,7 +506,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     else baseTests
   }
 
-  def serveRoute[A, U, I, E, O](e: ServerEndpoint[A, U, I, E, O, Any, F]): Resource[IO, Port] =
+  def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(NonEmptyList.of(serverInterpreter.route(e)))
 
   def withTestFilesDirectory[T](t: File => Future[T]): Future[T] = {

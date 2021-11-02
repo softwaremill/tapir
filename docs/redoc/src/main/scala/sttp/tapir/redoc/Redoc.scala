@@ -12,7 +12,7 @@ object Redoc {
       yamlName: String = "docs.yaml",
       htmlName: String = "index.html",
       redocVersion: String = "2.0.0-rc.56"
-  ): List[ServerEndpoint[_, _, _, _, _, Any, F]] = {
+  ): List[ServerEndpoint[Any, F]] = {
     val html: String =
       s"""
          |<!DOCTYPE html>

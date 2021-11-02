@@ -13,7 +13,7 @@ import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 object NettyServerInterpreter {
   def toRoute[F[_]: MonadError](
-      ses: List[ServerEndpoint[_, _, _, _, _, Any, F]],
+      ses: List[ServerEndpoint[Any, F]],
       interceptors: List[Interceptor[F]],
       createFile: ServerRequest => F[TapirFile],
       deleteFile: TapirFile => F[Unit]

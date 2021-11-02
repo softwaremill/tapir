@@ -7,17 +7,17 @@ trait AwsSamInterpreter {
 
   def awsSamOptions: AwsSamOptions
 
-  def toSamTemplate[A, I, E, O, S](e: Endpoint[A, I, E, O, S]): SamTemplate = EndpointsToSamTemplate(List(e), awsSamOptions)
+  def toSamTemplate[A, I, E, O, R](e: Endpoint[A, I, E, O, R]): SamTemplate = EndpointsToSamTemplate(List(e), awsSamOptions)
 
   def toSamTemplate(es: Iterable[AnyEndpoint]): SamTemplate = EndpointsToSamTemplate(es.toList, awsSamOptions)
 
-  def toSamTemplate[A, U, I, E, O, S, F[_]](se: ServerEndpoint[A, U, I, E, O, S, F]): SamTemplate =
+  def toSamTemplate[R, F[_]](se: ServerEndpoint[R, F]): SamTemplate =
     EndpointsToSamTemplate(
       List(se.endpoint),
       awsSamOptions
     )
 
-  def serverEndpointsToSamTemplate[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, _, _, F]]): SamTemplate =
+  def serverEndpointsToSamTemplate[F[_]](ses: Iterable[ServerEndpoint[_, F]]): SamTemplate =
     EndpointsToSamTemplate(ses.map(_.endpoint).toList, awsSamOptions)
 }
 

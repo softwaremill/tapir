@@ -20,8 +20,8 @@ import scala.concurrent.Future
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, AkkaStreams, Router.Routes] {
   import actorSystem.dispatcher
 
-  override def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, AkkaStreams, Future],
+  override def route(
+      e: ServerEndpoint[AkkaStreams, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Routes = {
@@ -33,7 +33,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def route[A, U, I, E, O](es: List[ServerEndpoint[A, U, I, E, O, AkkaStreams, Future]]): Routes =
+  override def route(es: List[ServerEndpoint[AkkaStreams, Future]]): Routes =
     PlayServerInterpreter().toRoutes(es)
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {

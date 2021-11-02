@@ -9,9 +9,9 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 
 trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] {
-  def toRoutes[A, U, I, E, O](se: ServerEndpoint[A, U, I, E, O, Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
+  def toRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
 
-  def toRoutes(serverEndpoints: List[ServerEndpoint[_, _, _, _, _, Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
+  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
     toHttp(serverEndpoints)(fToG)(gToF)
   }
 }

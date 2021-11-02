@@ -15,10 +15,10 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
 
   def awsServerOptions: AwsServerOptions[F] = AwsServerOptions.default[F]
 
-  def toRoute[A, U, I, E, O](se: ServerEndpoint[A, U, I, E, O, Any, F]): Route[F] =
+  def toRoute(se: ServerEndpoint[Any, F]): Route[F] =
     toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, _, _, Any, F]]): Route[F] = {
+  def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 

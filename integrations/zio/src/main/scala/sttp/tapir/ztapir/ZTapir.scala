@@ -5,7 +5,7 @@ import sttp.tapir.server.ServerEndpoint
 import zio.{RIO, ZIO}
 
 trait ZTapir {
-  type ZServerEndpoint[R, A, U, I, E, O, -C] = ServerEndpoint[A, U, I, E, O, C, RIO[R, *]]
+  type ZServerEndpoint[R, -C] = ServerEndpoint[C, RIO[R, *]]
 
   implicit class RichZEndpoint[A, I, E, O, C](e: Endpoint[A, I, E, O, C]) {
 
@@ -18,8 +18,8 @@ trait ZTapir {
       * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
       * specified.
       */
-    def zServerLogic[R](logic: I => ZIO[R, E, O])(implicit aIsUnit: A =:= Unit): ZServerEndpoint[R, Unit, Unit, I, E, O, C] =
-      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, I, E, O, C]], _ => logic(_).either.resurrect)
+    def zServerLogic[R](logic: I => ZIO[R, E, O])(implicit aIsUnit: A =:= Unit): ZServerEndpoint[R, C] =
+      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, I, E, O, C]], _ => logic(_: I).either.resurrect)
 
     /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
       *
@@ -36,9 +36,9 @@ trait ZTapir {
       ZPartialServerEndpoint(e, f)
   }
 
-  implicit class RichZServiceEndpoint[R, A, U, I, E, O, C](zse: ZServerEndpoint[R, A, U, I, E, O, C]) {
+  implicit class RichZServiceEndpoint[R, A, U, I, E, O, C](zse: ZServerEndpoint[R, C]) {
 
     /** Extends the environment so that it can be made uniform across multiple endpoints. */
-    def widen[R2 <: R]: ZServerEndpoint[R2, A, U, I, E, O, C] = zse.asInstanceOf[ZServerEndpoint[R2, A, U, I, E, O, C]] // this is fine
+    def widen[R2 <: R]: ZServerEndpoint[R2, C] = zse.asInstanceOf[ZServerEndpoint[R2, C]] // this is fine
   }
 }

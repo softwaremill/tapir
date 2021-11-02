@@ -15,16 +15,16 @@ trait ZHttp4sServerInterpreter[R] {
   def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
     Http4sServerOptions.default
 
-  def from[A, U, I, E, O](se: ZServerEndpoint[R, A, U, I, E, O, ZioStreams with WebSockets]): ServerEndpointsToRoutes = from(List(se))
+  def from(se: ZServerEndpoint[R, ZioStreams with WebSockets]): ServerEndpointsToRoutes = from(List(se))
 
-  def from(serverEndpoints: List[ZServerEndpoint[R, _, _, _, _, _, ZioStreams with WebSockets]]): ServerEndpointsToRoutes =
+  def from(serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]): ServerEndpointsToRoutes =
     new ServerEndpointsToRoutes(serverEndpoints)
 
   // This is needed to avoid too eager type inference. Having ZHttp4sServerInterpreter.toRoutes would require users
   // to explicitly provide the env type (R) as a type argument - so that it's not automatically inferred to include
   // Clock
   class ServerEndpointsToRoutes(
-      serverEndpoints: List[ZServerEndpoint[R, _, _, _, _, _, ZioStreams with WebSockets]]
+      serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(

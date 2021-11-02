@@ -13,12 +13,14 @@ import sttp.tapir.typelevel.ParamConcat
 
 import scala.reflect.ClassTag
 
-/** A description of an endpoint with the given inputs & outputs. The inputs are divided into two parts: security and regular inputs. There
-  * are also two kinds of outputs: error outputs and regular outputs.
+/** A description of an endpoint with the given inputs & outputs. The inputs are divided into two parts: security (`A`) and regular inputs
+  * (`I`). There are also two kinds of outputs: error outputs (`E`) and regular outputs (`O`).
   *
-  * An endpoint can be interpreted as a server, client or documentation. When interpreting an endpoint as a server, the inputs are decoded
-  * and the security logic is run first, before decoding the body. This allows short-circuiting further processing in case security checks
-  * fail.
+  * An endpoint can be interpreted as a server, client or documentation. The endpoint requires that server/client interpreters meet the
+  * capabilities specified by `R` (if any).
+  *
+  * When interpreting an endpoint as a server, the inputs are decoded and the security logic is run first, before decoding the body. This
+  * allows short-circuiting further processing in case security checks fail.
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *
@@ -45,11 +47,12 @@ case class Endpoint[A, I, E, O, -R](
     with EndpointInputsOps[A, I, E, O, R]
     with EndpointErrorOutputsOps[A, I, E, O, R]
     with EndpointOutputsOps[A, I, E, O, R]
-    with EndpointInfoOps[A, I, E, O, R]
-    with EndpointMetaOps[A, I, E, O, R]
+    with EndpointInfoOps[R]
+    with EndpointMetaOps
     with EndpointServerLogicOps[A, I, E, O, R] { outer =>
 
   override type EndpointType[_A, _I, _E, _O, -_R] = Endpoint[_A, _I, _E, _O, _R]
+  override type ThisType[-_R] = Endpoint[A, I, E, O, _R]
   override private[tapir] def withSecurityInput[A2, R2](securityInput: EndpointInput[A2]): Endpoint[A2, I, E, O, R with R2] =
     this.copy(securityInput = securityInput)
   override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[A, I2, E, O, R with R2] = this.copy(input = input)
@@ -182,28 +185,27 @@ trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, 
     withOutput(output.mapDecode(f)(g))
 }
 
-trait EndpointInfoOps[A, I, E, O, -R] {
-  type EndpointType[_A, _I, _E, _O, -_R]
+trait EndpointInfoOps[-R] {
+  type ThisType[-_R]
   def info: EndpointInfo
-  private[tapir] def withInfo(info: EndpointInfo): EndpointType[A, I, E, O, R]
+  private[tapir] def withInfo(info: EndpointInfo): ThisType[R]
 
-  def name(n: String): EndpointType[A, I, E, O, R] = withInfo(info.name(n))
-  def summary(s: String): EndpointType[A, I, E, O, R] = withInfo(info.summary(s))
-  def description(d: String): EndpointType[A, I, E, O, R] = withInfo(info.description(d))
-  def tags(ts: List[String]): EndpointType[A, I, E, O, R] = withInfo(info.tags(ts))
-  def tag(t: String): EndpointType[A, I, E, O, R] = withInfo(info.tag(t))
-  def deprecated(): EndpointType[A, I, E, O, R] = withInfo(info.deprecated(true))
-  def docsExtension[D: JsonCodec](key: String, value: D): EndpointType[A, I, E, O, R] = withInfo(info.docsExtension(key, value))
+  def name(n: String): ThisType[R] = withInfo(info.name(n))
+  def summary(s: String): ThisType[R] = withInfo(info.summary(s))
+  def description(d: String): ThisType[R] = withInfo(info.description(d))
+  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
+  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
+  def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
+  def docsExtension[D: JsonCodec](key: String, value: D): ThisType[R] = withInfo(info.docsExtension(key, value))
 
-  def info(i: EndpointInfo): EndpointType[A, I, E, O, R] = withInfo(i)
+  def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
 
-trait EndpointMetaOps[A, I, E, O, -R] {
-  type EndpointType[_A, _I, _E, _O, -_R]
-  def securityInput: EndpointInput[A]
-  def input: EndpointInput[I]
-  def errorOutput: EndpointOutput[E]
-  def output: EndpointOutput[O]
+trait EndpointMetaOps {
+  def securityInput: EndpointInput[_]
+  def input: EndpointInput[_]
+  def errorOutput: EndpointOutput[_]
+  def output: EndpointOutput[_]
   def info: EndpointInfo
 
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
@@ -257,7 +259,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
     * specified.
     */
-  def serverLogic[F[_]](f: I => F[Either[E, O]])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] = {
+  def serverLogic[F[_]](f: I => F[Either[E, O]])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] = {
     import sttp.monad.syntax._
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(x => x))
   }
@@ -267,7 +269,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     */
   def serverLogicSuccess[F[_]](
       f: I => F[O]
-  )(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+  )(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(Right(_)))
 
   /** Like [[serverLogic]], but specialised to the case when the result is always an error (`Left`), hence when the logic type can be
@@ -275,17 +277,17 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     */
   def serverLogicError[F[_]](
       f: I => F[E]
-  )(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+  )(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).map(Left(_)))
 
   /** Like [[serverLogic]], but specialised to the case when the logic function is pure, that is doesn't have any side effects. */
-  def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+  def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit)
 
   /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint errors. */
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint[Unit, Unit, I, E, O, R, F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], recoverErrors1[I, E, O, F](f))
 
   //

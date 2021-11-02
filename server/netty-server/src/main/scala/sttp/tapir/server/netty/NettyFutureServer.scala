@@ -10,13 +10,13 @@ import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
 case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureServerOptions)(implicit ec: ExecutionContext) {
-  def addEndpoint(se: ServerEndpoint[_, _, _, _, _, Any, Future]): NettyFutureServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[_, _, _, _, _, Any, Future], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
+  def addEndpoint(se: ServerEndpoint[Any, Future]): NettyFutureServer = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[Any, Future], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[_, _, _, _, _, Any, Future]]): NettyFutureServer = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Any, Future]]): NettyFutureServer = addRoute(
     NettyFutureServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[_, _, _, _, _, Any, Future]], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
+  def addEndpoints(ses: List[ServerEndpoint[Any, Future]], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
     addRoute(
       NettyFutureServerInterpreter(overrideOptions).toRoute(ses)
     )

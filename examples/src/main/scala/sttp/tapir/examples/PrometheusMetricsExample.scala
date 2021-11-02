@@ -21,7 +21,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   case class Person(name: String)
 
   // Simple endpoint returning 200 or 400 response with string body
-  val personEndpoint: ServerEndpoint[Unit, Unit, Person, String, String, Any, Future] =
+  val personEndpoint: ServerEndpoint[Any, Future] =
     endpoint.post
       .in("person")
       .in(jsonBody[Person])

@@ -34,15 +34,15 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[A, U, I, E, O](
-      e: ServerEndpoint[A, U, I, E, O, Fs2Streams[F], F]
+  def route(
+      e: ServerEndpoint[Fs2Streams[F], F]
   ): Router => Route = { router =>
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
-  private def endpointHandler[A, U, I, E, O, S <: Streams[S]](
-      e: ServerEndpoint[A, U, I, E, O, Fs2Streams[F], F],
+  private def endpointHandler[S <: Streams[S]](
+      e: ServerEndpoint[Fs2Streams[F], F],
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]

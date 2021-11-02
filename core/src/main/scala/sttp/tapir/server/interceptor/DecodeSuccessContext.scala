@@ -5,7 +5,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 
 case class DecodeSuccessContext[F[_], U, I](
-    serverEndpoint: ServerEndpoint[_, U, I, _, _, _, F],
+    serverEndpoint: ServerEndpoint.Full[_, U, I, _, _, _, F],
     u: U,
     i: I,
     request: ServerRequest
