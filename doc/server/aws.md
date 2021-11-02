@@ -31,7 +31,7 @@ Add one of the following dependencies:
 ## Examples
 
 In our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples)
-you'll find a `LambdaApiExample` handler which uses `AwsServerInterpreter` to route a hello endpoint along
+you'll find a `LambdaApiExample` handler which uses `AwsCatsEffectServerInterpreter` to route a hello endpoint along
 with `SamTemplateExample` and `TerraformConfigExample` which interpret endpoints to SAM/Terraform configuration. Go
 ahead and clone tapir project and select `project awsExamples` from sbt shell.
 
@@ -65,3 +65,23 @@ That will create `api_gateway.tf.json` configuration and deploy Api Gateway and 
 output the url of the created API Gateway which you can call followed by `/api/hello` path.
 
 To destroy all the created resources run `terraform destroy`.
+
+## Scala.js interpreter
+
+`LambdaApiJsExample` demonstrates how to create an API route,
+that can be built into Node.js module with Scala.js plugin.
+Such module can be deployed as an AWS Lambda function with Node.js runtime.
+The main benefit is the reduced deployment time.
+Initialization of JVM-based application (with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
+
+`LambdaApiJsExample` uses `AwsFutureServerInterpreter` and `JsRoute[Future]`,
+which is an alias for the route function `AwsJsRequest => Future[AwsJsResponse]`
+
+### SAM example
+
+SAM template and application module can be generated and deployed locally with following commands:
+
+* to generate AWS Lambda yaml file run `sbt "project awsExamples; runMain sttp.tapir.serverless.aws.examples.SamJsTemplateExample"`
+* to build Node.js module run `sbt "project awsExamplesJS; fastLinkJS"`, it will create all-in-one JS file
+  under `tapir/serverless/aws/examples/target/js-2.13/tapir-aws-examples-fastopt/main.js`
+* open a terminal and in tapir root directory run `sam local start-api --warm-containers EAGER`
