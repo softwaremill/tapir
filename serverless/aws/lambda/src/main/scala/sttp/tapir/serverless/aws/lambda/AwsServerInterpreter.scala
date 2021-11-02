@@ -11,7 +11,7 @@ import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
 
-abstract class AwsServerInterpreter[F[_]: MonadError] {
+private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
   def awsServerOptions: AwsServerOptions[F]
 
@@ -47,21 +47,6 @@ abstract class AwsServerInterpreter[F[_]: MonadError] {
           val headers = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
           AwsResponse(cookies, isBase64Encoded = awsServerOptions.encodeResponseBody, res.code.code, headers, res.body.getOrElse(""))
       }
-    }
-  }
-}
-
-object AwsServerInterpreter {
-
-  def apply[F[_]: MonadError](serverOptions: AwsServerOptions[F]): AwsServerInterpreter[F] = {
-    new AwsServerInterpreter[F] {
-      override def awsServerOptions: AwsServerOptions[F] = serverOptions
-    }
-  }
-
-  def apply[F[_]: MonadError](): AwsServerInterpreter[F] = {
-    new AwsServerInterpreter[F] {
-      override def awsServerOptions: AwsServerOptions[F] = AwsServerOptions.default[F]
     }
   }
 }

@@ -940,7 +940,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests)
+  .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, serverTests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)

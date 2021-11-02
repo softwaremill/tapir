@@ -13,23 +13,19 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 object LambdaApiJsExample {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val monad: MonadError[Future] = new FutureMonad()
 
   val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, Future] = endpoint.get
     .in("api" / "hello")
     .out(stringBody)
     .serverLogic { _ => Future(s"Hello!".asRight[Unit]) }
 
-  val options: AwsServerOptions[Future] = AwsServerOptions.default[Future].copy(encodeResponseBody = false)
+  val options: AwsServerOptions[Future] = AwsFutureServerOptions.default.copy(encodeResponseBody = false)
 
-  val route: JsRoute[Future] = AwsServerInterpreter(options).toRoute(helloEndpoint).toJsRoute
-
-  def main(event: AwsJsRequest): Future[AwsJsResponse] = route(event)
+  val route: JsRoute[Future] = AwsFutureServerInterpreter(options).toRoute(helloEndpoint).toJsRoute
 
   @JSExportTopLevel(name="handler")
-  val handler: scala.scalajs.js.Function2[AwsJsRequest, Any, scala.scalajs.js.Promise[AwsJsResponse]] = {
-    (event: AwsJsRequest, _) =>
-      import scala.scalajs.js.JSConverters._
-      main(event).toJSPromise
+  def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] = {
+    import scala.scalajs.js.JSConverters._
+    route(event).toJSPromise
   }
 }

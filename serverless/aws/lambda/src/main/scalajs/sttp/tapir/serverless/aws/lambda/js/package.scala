@@ -1,14 +1,14 @@
 package sttp.tapir.serverless.aws.lambda
 
-import sttp.monad.MonadError
+import scala.concurrent.{ExecutionContext, Future}
 
 package object js {
   type JsRoute[F[_]] = AwsJsRequest => F[AwsJsResponse]
 
-  implicit class ToJsRouteConverter[F[_]](route: Route[F]) {
-    def toJsRoute(implicit monad: MonadError[F]): JsRoute[F] = {
+  implicit class ToJsRouteConverter(route: Route[Future]) {
+    def toJsRoute(implicit ec: ExecutionContext): JsRoute[Future] = {
       awsJsRequest: AwsJsRequest =>
-        monad.map(route.apply(AwsJsRequest.toAwsRequest(awsJsRequest)))(AwsJsResponse.fromAwsResponse)
+        route.apply(AwsJsRequest.toAwsRequest(awsJsRequest)).map(AwsJsResponse.fromAwsResponse)
     }
   }
 }
