@@ -1,7 +1,6 @@
 package sttp.tapir.serverless.aws.examples
 
 import cats.syntax.all._
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda._
@@ -21,11 +20,8 @@ object LambdaApiJsExample {
 
   val options: AwsServerOptions[Future] = AwsFutureServerOptions.default.copy(encodeResponseBody = false)
 
-  val route: JsRoute[Future] = AwsFutureServerInterpreter(options).toRoute(helloEndpoint).toJsRoute
+  val route: Route[Future] = AwsFutureServerInterpreter(options).toRoute(helloEndpoint)
 
   @JSExportTopLevel(name="handler")
-  def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] = {
-    import scala.scalajs.js.JSConverters._
-    route(event).toJSPromise
-  }
+  def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] = AwsJsRouteHandler.handler(event, route)
 }
