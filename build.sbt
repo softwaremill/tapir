@@ -885,7 +885,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2Versions)
-  .dependsOn(core, cats, circeJson, awsSam, tests % "test")
+  .dependsOn(core, cats, circeJson, tests % "test")
 
 // integration tests for lambda interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
@@ -952,7 +952,6 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .jsPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, tests % Test)
 
 lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
@@ -967,7 +966,6 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .jsPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
@@ -995,7 +993,10 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
       scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
     )
   )
-  .dependsOn(awsLambda, awsSam, awsTerraform)
+  .dependsOn(awsLambda)
+
+lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12))
+lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13))
 
 // client
 
