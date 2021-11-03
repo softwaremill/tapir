@@ -3,7 +3,7 @@ package sttp.tapir
 import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
+import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat}
 
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
@@ -54,11 +54,6 @@ package object internal {
 
   def combine[T, U, TU](t: T, u: U)(concat: ParamConcat.Aux[T, U, TU]): TU =
     mkCombine(concat).apply(ParamsAsAny(t), ParamsAsAny(u)).asAny.asInstanceOf[TU]
-
-  def split[T, U, TU](tu: TU)(subtract: ParamSubtract.Aux[TU, T, U]): (T, U) = {
-    val (pt, pu) = mkSplit(subtract).apply(ParamsAsAny(tu))
-    (pt.asAny.asInstanceOf[T], pu.asAny.asInstanceOf[U])
-  }
 
   //
 
