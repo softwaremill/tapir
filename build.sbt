@@ -971,7 +971,10 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-aws-examples"
+    name := "tapir-aws-examples",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %%% "cats" % Versions.sttp
+    )
   )
   .jvmPlatform(
     scalaVersions = scala2Versions,
