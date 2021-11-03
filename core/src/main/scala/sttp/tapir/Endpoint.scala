@@ -16,11 +16,15 @@ import scala.reflect.ClassTag
 /** A description of an endpoint with the given inputs & outputs. The inputs are divided into two parts: security (`A`) and regular inputs
   * (`I`). There are also two kinds of outputs: error outputs (`E`) and regular outputs (`O`).
   *
+  * In case there are no security inputs, the [[PublicEndpoint]] alias can be used, which omits the `A` parameter type.
+  *
   * An endpoint can be interpreted as a server, client or documentation. The endpoint requires that server/client interpreters meet the
   * capabilities specified by `R` (if any).
   *
-  * When interpreting an endpoint as a server, the inputs are decoded and the security logic is run first, before decoding the body. This
-  * allows short-circuiting further processing in case security checks fail.
+  * When interpreting an endpoint as a server, the inputs are decoded and the security logic is run first, before decoding the body in the
+  * regular inputs. This allows short-circuiting further processing in case security checks fail. Server logic can be provided using
+  * [[EndpointServerLogicOps.serverSecurityLogic]] variants for secure endpoints, and [[EndpointServerLogicOps.serverLogic]] variants for
+  * public endpoints.
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *
