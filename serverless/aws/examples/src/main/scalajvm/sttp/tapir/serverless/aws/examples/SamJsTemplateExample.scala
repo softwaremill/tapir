@@ -14,7 +14,7 @@ object SamJsTemplateExample extends App {
   val samOptions: AwsSamOptions = AwsSamOptions(
     "PersonsApi",
     source =
-      /** Specifying a fat jar build from example sources */
+      /** Specifying a Node.js module build from example sources */
       CodeSource(
         runtime = "nodejs14.x",
         codeUri = jsPath,
