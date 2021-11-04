@@ -183,6 +183,7 @@ object EndpointInput extends EndpointInputMacros {
     def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
   }
 
+  /** Authentication credentials metadata, used when generating documentation, along with an input. */
   sealed trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
     def challenge: WWWAuthenticate
