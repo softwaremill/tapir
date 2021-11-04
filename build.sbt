@@ -884,7 +884,8 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core, cats, circeJson, awsSam, sttpStubServer % "test", tests % "test", serverTests)
+  .jsPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core, cats, circeJson, tests % "test")
 
 // integration tests for lambda interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
@@ -939,7 +940,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests)
+  .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, serverTests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)
@@ -968,21 +969,37 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
-  .settings(commonJvmSettings)
-  .settings(
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
-  )
+  .settings(commonSettings)
   .settings(
     name := "tapir-aws-examples",
-    assembly / assemblyJarName := "tapir-aws-examples.jar",
-    assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
-      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
-      case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
-    }
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %%% "cats" % Versions.sttp
+    )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(awsLambda, awsSam, awsTerraform)
+  .jvmPlatform(
+    scalaVersions = scala2Versions,
+    settings = commonJvmSettings ++ Seq(
+      assembly / assemblyJarName := "tapir-aws-examples.jar",
+      assembly / assemblyMergeStrategy := {
+        case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
+        case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+        case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+        case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
+      },
+      libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+    )
+  )
+  .jsPlatform(
+    scalaVersions = scala2Versions,
+    settings = commonJsSettings ++ Seq(
+      scalaJSUseMainModuleInitializer := false,
+      scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
+    )
+  )
+  .dependsOn(awsLambda)
+
+lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12))
+lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13))
 
 // client
 

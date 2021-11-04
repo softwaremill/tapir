@@ -11,7 +11,7 @@ import sttp.model.{Header, StatusCode}
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeInvocationTest._
-import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsServerOptions}
+import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsCatsEffectServerOptions, AwsServerOptions}
 
 import scala.collection.immutable.Seq
 
@@ -125,7 +125,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 }
 
 object AwsLambdaRuntimeInvocationTest {
-  val options: AwsServerOptions[IO] = AwsServerOptions.default[IO]
+  val options: AwsServerOptions[IO] = AwsCatsEffectServerOptions.default[IO]
 
   val awsRequest: String =
     """
