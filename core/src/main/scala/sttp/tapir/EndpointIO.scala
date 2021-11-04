@@ -1,11 +1,11 @@
 package sttp.tapir
 
 import sttp.capabilities.Streams
-import sttp.model.{Header, Method}
+import sttp.model.headers.WWWAuthenticateChallenge
+import sttp.model.Method
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
-import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
@@ -171,73 +171,45 @@ object EndpointInput extends EndpointInputMacros {
 
   //
 
-  case class WWWAuthenticate(values: List[String]) {
-    def headers: List[Header] = values.map(Header("WWW-Authenticate", _))
-  }
-
-  object WWWAuthenticate {
-    val DefaultRealm = "default realm"
-    def basic(realm: String = DefaultRealm): WWWAuthenticate = single("Basic", realm)
-    def bearer(realm: String = DefaultRealm): WWWAuthenticate = single("Bearer", realm)
-    def apiKey(realm: String = DefaultRealm): WWWAuthenticate = single("ApiKey", realm)
-    def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
-  }
-
-  /** Authentication credentials metadata, used when generating documentation, along with an input. */
-  sealed trait Auth[T] extends EndpointInput.Single[T] {
-    def input: EndpointInput.Single[T]
-    def challenge: WWWAuthenticate
-    def securitySchemeName: Option[String]
-    def securitySchemeName(name: String): ThisType[T]
-  }
-
-  object Auth {
-    case class ApiKey[T](input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String]) extends Auth[T] {
-      override private[tapir] type ThisType[X] = ApiKey[X]
-      override def show: String = s"auth(api key, via ${input.show})"
-      override def map[U](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
-
-      override def securitySchemeName(name: String): ApiKey[T] = copy(securitySchemeName = Some(name))
+  /** An input with authentication credentials metadata, used when generating documentation. */
+  case class Auth[T, INFO <: AuthInfo](
+      input: EndpointInput.Single[T],
+      securitySchemeName: Option[String],
+      challenge: WWWAuthenticateChallenge,
+      authInfo: INFO
+  ) extends EndpointInput.Single[T] {
+    override private[tapir] type ThisType[X] = Auth[X, INFO]
+    override def show: String = authInfo match {
+      case AuthInfo.Http(scheme)       => s"auth($scheme http, via ${input.show})"
+      case AuthInfo.ApiKey()           => s"auth(api key, via ${input.show})"
+      case AuthInfo.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
+      case AuthInfo.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
+      case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
     }
-    case class Http[T](scheme: String, input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String])
-        extends Auth[T] {
-      override private[tapir] type ThisType[X] = Http[X]
-      override def show: String = s"auth($scheme http, via ${input.show})"
-      override def map[U](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
+    override def map[U](mapping: Mapping[T, U]): Auth[U, INFO] = copy(input = input.map(mapping))
 
-      override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
+    def securitySchemeName(name: String): Auth[T, INFO] = copy(securitySchemeName = Some(name))
+    def challengeRealm(realm: String): Auth[T, INFO] = copy(challenge = challenge.realm(realm))
+    def requiredScopes(requiredScopes: Seq[String])(implicit ev: INFO =:= AuthInfo.OAuth2): Auth[T, AuthInfo.ScopedOAuth2] =
+      copy(authInfo = authInfo.requiredScopes(requiredScopes))
+  }
+
+  sealed trait AuthInfo
+  object AuthInfo {
+    case class Http(scheme: String) extends AuthInfo {
+      def scheme(s: String): Http = copy(scheme = s)
     }
-    case class Oauth2[T](
+    case class ApiKey() extends AuthInfo
+    case class OAuth2(
         authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
-        refreshUrl: Option[String],
-        input: EndpointInput.Single[T],
-        challenge: WWWAuthenticate,
-        securitySchemeName: Option[String]
-    ) extends Auth[T] {
-      override private[tapir] type ThisType[X] = Oauth2[X]
-      override def show: String = s"auth(oauth2, via ${input.show})"
-      override def map[U](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
-
-      def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
-
-      override def securitySchemeName(name: String): Oauth2[T] = copy(securitySchemeName = Some(name))
+        refreshUrl: Option[String]
+    ) extends AuthInfo {
+      def requiredScopes(requiredScopes: Seq[String]): ScopedOAuth2 = ScopedOAuth2(this, requiredScopes)
     }
-
-    case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[T] {
+    case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthInfo {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
-
-      override private[tapir] type ThisType[X] = ScopedOauth2[X]
-      override def show: String = s"scoped(${oauth2.show})"
-      override def map[U](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
-
-      override def input: Single[T] = oauth2.input
-
-      override def challenge: WWWAuthenticate = oauth2.challenge
-      override def securitySchemeName: Option[String] = oauth2.securitySchemeName
-
-      override def securitySchemeName(name: String): ScopedOauth2[T] = copy(oauth2 = oauth2.securitySchemeName(name))
     }
   }
 
@@ -523,9 +495,9 @@ object EndpointIO {
     class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
     class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
     class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
-    class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
-    class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
-    class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
+    class apikey(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge("ApiKey")) extends StaticAnnotation
+    class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
+    class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
     class securitySchemeName(val name: String) extends StaticAnnotation
 
     /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with

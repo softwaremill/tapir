@@ -37,7 +37,7 @@ class SchemasForEndpoints(
       case EndpointInput.Query(_, codec, _)       => toNamedSchemas(codec)
       case EndpointInput.Cookie(_, codec, _)      => toNamedSchemas(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
-      case _: EndpointInput.Auth[_]               => List.empty
+      case _: EndpointInput.Auth[_, _]            => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)

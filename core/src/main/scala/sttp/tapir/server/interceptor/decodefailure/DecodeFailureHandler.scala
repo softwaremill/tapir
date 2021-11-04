@@ -98,7 +98,7 @@ object DefaultDecodeFailureHandler {
           if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
             (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
         Some(onlyStatus(StatusCode.BadRequest))
-      case a: EndpointInput.Auth[_] => Some((StatusCode.Unauthorized, a.challenge.headers))
+      case a: EndpointInput.Auth[_, _] => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
       case _: EndpointInput.Basic[_] => None
       // all other inputs (tuples, mapped) - responding with bad request
@@ -110,7 +110,7 @@ object DefaultDecodeFailureHandler {
     import sttp.tapir.internal.RichEndpointInput
     ctx.failure match {
       case DecodeResult.Missing =>
-        def missingAuth(i: EndpointInput[_]) = i.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[_] =>
+        def missingAuth(i: EndpointInput[_]) = i.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[_, _] =>
           a
         }
         missingAuth(ctx.endpoint.securityInput).orElse(missingAuth(ctx.endpoint.input)).getOrElse(ctx.failingInput)
@@ -135,7 +135,7 @@ object DefaultDecodeFailureHandler {
         case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
         case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
         case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
-        case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
+        case a: EndpointInput.Auth[_, _]             => failureSourceMessage(a.input)
         case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
         case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
         case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"

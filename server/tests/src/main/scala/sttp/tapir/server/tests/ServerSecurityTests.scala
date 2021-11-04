@@ -4,9 +4,9 @@ import cats.implicits._
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
 import sttp.model.Uri.QuerySegment
+import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{StatusCode, _}
 import sttp.monad.MonadError
-import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.Security.{
@@ -24,10 +24,10 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
 
   private val base = endpoint.post.securityIn("secret" / path[Long]("id")).in(query[String]("q"))
 
-  private val basic = base.securityIn(auth.basic[UsernamePassword](WWWAuthenticate.basic(Realm)))
-  private val bearer = base.securityIn(auth.bearer[String](WWWAuthenticate.bearer(Realm)))
-  private val apiKeyInQuery = base.securityIn(auth.apiKey(query[String]("token"), WWWAuthenticate.apiKey(Realm)))
-  private val apiKeyInHeader = base.securityIn(auth.apiKey(header[String]("x-api-key"), WWWAuthenticate.apiKey(Realm)))
+  private val basic = base.securityIn(auth.basic[UsernamePassword](WWWAuthenticateChallenge.basic(Realm)))
+  private val bearer = base.securityIn(auth.bearer[String](WWWAuthenticateChallenge.bearer(Realm)))
+  private val apiKeyInQuery = base.securityIn(auth.apiKey(query[String]("token"), WWWAuthenticateChallenge("ApiKey").realm(Realm)))
+  private val apiKeyInHeader = base.securityIn(auth.apiKey(header[String]("x-api-key"), WWWAuthenticateChallenge("ApiKey").realm(Realm)))
 
   private val result = m.unit(().asRight[Unit])
 

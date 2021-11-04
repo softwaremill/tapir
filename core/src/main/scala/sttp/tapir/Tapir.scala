@@ -201,7 +201,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
-  /** Inputs which describe authentication credentials and metadata. */
+  /** Inputs which describe authentication credentials with metadata. */
   def auth: TapirAuth.type = TapirAuth
 
   /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by documentation interpreters and

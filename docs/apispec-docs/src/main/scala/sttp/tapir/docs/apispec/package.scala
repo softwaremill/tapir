@@ -6,7 +6,7 @@ import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 package object apispec {
   private[docs] type SchemeName = String
-  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
+  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
 
   private[docs] val defaultSchemaName: SName => String = info => {
     val shortName = info.fullName.split('.').last

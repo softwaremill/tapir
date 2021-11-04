@@ -34,14 +34,14 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme =
-    a match {
-      case EndpointInput.Auth.ApiKey(input, _, _) =>
-        val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
+  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]): SecurityScheme =
+    a.authInfo match {
+      case EndpointInput.AuthInfo.ApiKey() =>
+        val (name, in) = apiKeyInputNameAndIn(a.input.asVectorOfBasicInputs())
         SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
-      case EndpointInput.Auth.Http(scheme, _, _, _) =>
+      case EndpointInput.AuthInfo.Http(scheme) =>
         SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
-      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _) =>
+      case EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
         SecurityScheme(
           "oauth2",
           None,
@@ -52,7 +52,7 @@ private[docs] object SecuritySchemesForEndpoints {
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
           None
         )
-      case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _), _) =>
+      case EndpointInput.AuthInfo.ScopedOAuth2(EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
         SecurityScheme(
           "oauth2",
           None,
@@ -63,6 +63,7 @@ private[docs] object SecuritySchemesForEndpoints {
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
           None
         )
+      case _ => throw new RuntimeException("Impossible, but the compiler complains.")
     }
 
   private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =

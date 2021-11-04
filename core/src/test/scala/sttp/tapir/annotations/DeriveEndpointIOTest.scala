@@ -4,14 +4,13 @@ import java.nio.charset.StandardCharsets
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, Cookie => ModelCookie}
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge, Cookie => ModelCookie}
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
 import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
-import sttp.tapir.EndpointInput.Auth._
 import sttp.tapir.RawBodyType.StringBody
 
 object JsonCodecs {
@@ -51,11 +50,11 @@ final case class TapirRequestTest3(
 )
 
 final case class TapirRequestTest4(
-    @apikey(challenge = WWWAuthenticate.apiKey("api realm")) @query
+    @apikey(challenge = WWWAuthenticateChallenge("ApiKey")) @query
     param1: Int,
-    @basic(challenge = WWWAuthenticate.basic("basic realm"))
+    @basic(challenge = WWWAuthenticateChallenge.basic("basic realm"))
     basicAuth: UsernamePassword,
-    @bearer(challenge = WWWAuthenticate.bearer("bearer realm"))
+    @bearer(challenge = WWWAuthenticateChallenge.bearer("bearer realm"))
     token: String
 )
 
@@ -164,9 +163,9 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
 
   it should "derive correct input for auth annotations" in {
     val expectedInput = TapirAuth
-      .apiKey(query[Int]("param1"), challenge = WWWAuthenticate.apiKey("api realm"))
-      .and(TapirAuth.basic[UsernamePassword](challenge = WWWAuthenticate.basic("basic realm")))
-      .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
+      .apiKey(query[Int]("param1"), challenge = WWWAuthenticateChallenge("ApiKey"))
+      .and(TapirAuth.basic[UsernamePassword](challenge = WWWAuthenticateChallenge.basic("basic realm")))
+      .and(TapirAuth.bearer[String](challenge = WWWAuthenticateChallenge.bearer("bearer realm")))
       .mapTo[TapirRequestTest4]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest4], expectedInput) shouldBe true
@@ -419,10 +418,8 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         (l, r) match {
           case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
             info1 == info2
-          case (ApiKey(input1, challenge1, securitySchemeName1), ApiKey(input2, challenge2, securitySchemeName2)) =>
-            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
-          case (Http(scheme1, input1, challenge1, securitySchemeName1), Http(scheme2, input2, challenge2, securitySchemeName2)) =>
-            challenge1 == challenge2 && scheme1 == scheme2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
+          case (Auth(input1, securitySchemeName1, challenge1, info1), Auth(input2, securitySchemeName2, challenge2, info2)) =>
+            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && info1 == info2 && compareTransputs(input1, input2)
           case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
             bodyType1 == bodyType2 && info1 == info2
           case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>

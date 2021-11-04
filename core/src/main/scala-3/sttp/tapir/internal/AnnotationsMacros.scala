@@ -319,13 +319,13 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     apikey
       .map(ak =>
         setSecuritySchemeName(
-          '{ EndpointInput.Auth.ApiKey($input, ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge, None) },
+          '{ EndpointInput.Auth($input, None, ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge, EndpointInput.AuthInfo.ApiKey()) },
           schemeName
         )
       )
       .getOrElse(input)
 
-  private def setSecuritySchemeName[f: Type](auth: Expr[EndpointInput.Auth[f]], schemeName: Option[Term]): Expr[EndpointInput.Single[f]] =
+  private def setSecuritySchemeName[f: Type](auth: Expr[EndpointInput.Auth[f, _]], schemeName: Option[Term]): Expr[EndpointInput.Single[f]] =
     schemeName
       .map(s => '{ $auth.securitySchemeName(${ s.asExprOf[EndpointIO.annotations.securitySchemeName] }.name) })
       .getOrElse(auth)

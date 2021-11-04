@@ -65,18 +65,18 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)           => left.traverseInputs(handle) ++ right.traverseInputs(handle)
         case EndpointInput.MappedPair(wrapped, _)         => wrapped.traverseInputs(handle)
         case EndpointIO.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
-        case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
+        case a: EndpointInput.Auth[_, _]                  => a.input.traverseInputs(handle)
         case _                                            => Vector.empty
       }
 
     def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] =
       traverseInputs {
-        case b: EndpointInput.Basic[_] => Vector(b)
-        case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
+        case b: EndpointInput.Basic[_]   => Vector(b)
+        case a: EndpointInput.Auth[_, _] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
       }
 
-    def auths: Vector[EndpointInput.Auth[_]] =
-      traverseInputs { case a: EndpointInput.Auth[_] =>
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+      traverseInputs { case a: EndpointInput.Auth[_, _] =>
         Vector(a)
       }
 
@@ -98,7 +98,7 @@ package object internal {
           case _: EndpointInput.Basic[_]                 => Vector.empty
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
-          case a: EndpointInput.Auth[_]                  => findIn(a, a.input)
+          case a: EndpointInput.Auth[_, _]               => findIn(a, a.input)
           case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
           case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
         }
