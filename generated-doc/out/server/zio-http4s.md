@@ -7,13 +7,13 @@ exposing the endpoints using the [http4s](https://http4s.org) server.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M14"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.19.0-M14"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -36,15 +36,15 @@ This brings into scope all of the [basic](../endpoint/basics.md) input/output de
 When defining the business logic for an endpoint, the following methods are available, which replace the 
 [standard ones](logic.md):
 
-* `def zServerLogic(logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C]`
-* `def zServerLogicPart(logicPart: T => ZIO[R, E, U])`
-* `def zServerLogicForCurrent(logicPart: I => ZIO[R, E, U])`
+* `def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, C]` for public endpoints
+* `def zServerSecurityLogic[R, U](f: A => ZIO[R, E, U]): ZPartialServerEndpoint[R, A, U, I, E, O, C]` for secure endpoints
 
-The first defines complete server logic, while the second and third allow defining server logic in parts.
+The first defines complete server logic, while the second allows defining first the security server logic, and then the 
+rest.
 
 ## Exposing endpoints using the http4s server
 
-To interpret a `ZServerEndpoint` as a http4s server, use the following interpreter:
+To interpret a `ZServerEndpoint` as an http4s server, use the following interpreter:
 
 ```scala
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
@@ -52,7 +52,6 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 
 To help with type-inference, you first need to call `ZHttp4sServerInterpreter().from()` providing:
 
-* an endpoint and logic: `def from[I, E, O, C](e: Endpoint[I, E, O, C])(logic: I => ZIO[R, E, O])`
 * a single server endpoint: `def from[I, E, O, C](se: ZServerEndpoint[R, I, E, O, C])`
 * multiple server endpoints: `def from[C](serverEndpoints: List[ZServerEndpoint[R, _, _, _, C]])`
 
@@ -77,8 +76,8 @@ trait Component2
 type Service1 = Has[Component1]
 type Service2 = Has[Component2]
 
-val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit, Any] = ???                                                            
-val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit, Any] = ???
+val serverEndpoint1: ZServerEndpoint[Service1, Any] = ???                                                            
+val serverEndpoint2: ZServerEndpoint[Service2, Any] = ???
 
 type Env = Service1 with Service2
 val routes: HttpRoutes[RIO[Env with Clock with Blocking, *]] = 
@@ -111,7 +110,7 @@ For example, to define an endpoint that returns event stream:
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEventsBody}
-import sttp.tapir.Endpoint
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
 import zio.{UIO, RIO}
@@ -119,7 +118,8 @@ import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.stream.Stream
 
-val sseEndpoint: Endpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = endpoint.get.out(serverSentEventsBody)
+val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = 
+  endpoint.get.out(serverSentEventsBody)
 
 val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
   .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
@@ -128,8 +128,4 @@ val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
 
 ## Examples
 
-Three examples of using the ZIO integration are available. The first two showcase basic functionality, while the third shows how to use partial server logic methods:
-
-* [ZIO basic example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
-* [ZIO environment example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioEnvExampleHttp4sServer.scala)
-* [ZIO partial server logic example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioPartialServerLogicHttp4s.scala)
+There's a couple of [examples](../examples.md) of using the ZIO integration available.\

@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.19.0-M14"
 ```
 
 and import the object:
@@ -13,15 +13,10 @@ and import the object:
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 ```
 
-This objects contains the `toRoutes` and `toRoutesRecoverErrors` methods. This first requires the 
-logic of the endpoint to be given as a function of type:
+The `toRoutes` and `toHttp` methods require a single, or a list of `ServerEndpoint`s, which can be created by adding
+[server logic](logic.md) to an endpoint.
 
-```scala
-I => F[Either[E, O]]
-```
-
-where `F[_]` is the chosen effect type. The second recovers errors from failed effects, and hence requires that `E` is 
-a subclass of `Throwable` (an exception); it expects a function of type `I => F[O]`. For example:
+The server logic should use a cats-effect-support `F[_]` effect type. For example:
 
 ```scala
 import sttp.tapir._
@@ -32,24 +27,10 @@ import org.http4s.HttpRoutes
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
+val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
-  Http4sServerInterpreter[IO]().toRoutes(countCharactersEndpoint)(countCharacters _)
-```
-
-Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
-functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
-
-```scala
-import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
-import cats.effect.IO
-import org.http4s.HttpRoutes
-
-def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val routes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(anEndpoint)((logic _).tupled)
+  Http4sServerInterpreter[IO]().toRoutes(countCharactersEndpoint.serverLogic(countCharacters _))
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
@@ -87,9 +68,9 @@ import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 
-val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint)(_ =>
-  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
-)
+val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint.serverLogicSuccess[IO](_ =>
+  IO(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))
+))
 ```
 
 ## Configuration
@@ -99,7 +80,3 @@ The interpreter can be configured by providing an `Http4sServerOptions` value, s
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
 
-## Defining an endpoint together with the server logic
-
-It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.md) for details.

@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.19.0-M14"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.19.0-M13" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.19.0-M14" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the object:
@@ -20,18 +20,10 @@ Now import the object:
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 ```
 
-The `AkkaHttpServerInterpreter` objects contains methods such as: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
+## Using `toRoute`
 
-## Using `toRoute` and `toRouteRecoverErrors`
-
-The `toRoute` method requires the logic of the endpoint to be given as a function of type:
-
-```scala
-I => Future[Either[E, O]]
-```
-
-The `toRouteRecoverErrors` method recovers errors from failed futures, and hence requires that `E` is a subclass of
-`Throwable` (an exception); it expects a function of type `I => Future[O]`.
+The `toRoute` method requires a single, or a list of `ServerEndpoint`s, which can be created by adding 
+[server logic](logic.md) to an endpoint.
 
 For example:
 
@@ -44,25 +36,11 @@ import akka.http.scaladsl.server.Route
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future.successful(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
+val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: Route = 
-  AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
-```
-
-Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
-functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
-
-```scala
-import sttp.tapir._
-import sttp.tapir.server.akkahttp._
-import scala.concurrent.Future
-import akka.http.scaladsl.server.Route
-
-def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val aRoute: Route = AkkaHttpServerInterpreter().toRoute(anEndpoint)((logic _).tupled)
+  AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint.serverLogic(countCharacters))
 ```
 
 ## Combining directives
@@ -81,17 +59,19 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server._
 
-case class User(email: String)
+import scala.concurrent.Future
+
+class Special
 def metricsDirective: Directive0 = ???
-def securityDirective: Directive1[User] = ???
-val tapirEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint.in(path[String]("input"))
+def specialDirective: Directive1[Special] = ???
+val tapirEndpoint: PublicEndpoint[String, Unit, Unit, Any] = endpoint.in(path[String]("input"))
 
 val myRoute: Route = metricsDirective {
-  securityDirective { user =>
-    AkkaHttpServerInterpreter().toRoute(tapirEndpoint) { input => 
+  specialDirective { special =>
+    AkkaHttpServerInterpreter().toRoute(tapirEndpoint.serverLogic[Future] { input => 
       ??? 
-      /* here we can use both `user` and `input` values */
-    }
+      /* here we can use both `special` and `input` values */
+    })
   }
 }
 ```
@@ -129,17 +109,12 @@ import scala.concurrent.Future
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody)
 
-val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint)(_ =>
-  Future.successful(Right(Source.single(ServerSentEvent(Some("data"), None, None, None))))
-)
+val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint.serverLogicSuccess[Future](_ =>
+  Future.successful(Source.single(ServerSentEvent(Some("data"), None, None, None)))
+))
 ```
 
 ## Configuration
 
 The interpreter can be configured by providing an `AkkaHttpServerOptions` value, see
 [server options](options.md) for details.
-
-## Defining an endpoint together with the server logic
-
-It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.md) for details.

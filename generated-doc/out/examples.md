@@ -1,39 +1,10 @@
 # Examples
 
-The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) sub-project contains a number of runnable tapir usage examples:
-
-* [Hello world server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldAkkaServer.scala)
-* [Hello world server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldHttp4sServer.scala)
-* [Hello world server, using ZIO http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldZioHttpServer.scala)
-* [Separate error & success outputs, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ErrorOutputsAkkaServer.scala)
-* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationAkkaServer.scala)
-* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationHttp4sServer.scala)
-* [Multiple endpoints, with the description coupled with server logic, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleServerEndpointsAkkaServer.scala)
-* [Reporting errors in a custom format when a query/path/.. parameter cannot be decoded](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/CustomErrorsOnDecodeFailureAkkaServer.scala)
-* [Using custom types in endpoint descriptions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/EndpointWithCustomTypes.scala)
-* [Multipart form upload, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipartFormUploadAkkaServer.scala)
-* [Basic Authentication, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BasicAuthenticationAkkaServer.scala)
-* [Partial server logic (authentication), using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/PartialServerLogicAkka.scala)
-* [Authorization using Github (OAuth2) with http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/OAuth2GithubHttp4sServer.scala)
-* [Books example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
-* [Books example with semiauto derivation](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExampleSemiauto.scala)
-* [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
-* [ZIO example with environment, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioEnvExampleHttp4sServer.scala)
-* [ZIO partial server logic example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioPartialServerLogicHttp4s.scala)
-* [ZIO example using ZIO http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleZioHttpServer.scala)
-* [Streaming body, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/StreamingAkkaServer.scala)
-* [Streaming body, using http4s + fs2](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/StreamingHttp4sFs2Server.scala)
-* [Web sockets server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketAkkaServer.scala)
-* [Web sockets client, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketAkkaClient.scala)
-* [Web sockets server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketHttp4sServer.scala)
-* [Client, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/Http4sClientExample.scala)
-* [mockserver integration](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MockServerExample.scala)
-* [OpenAPI extensions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/OpenapiExtensions.scala)
-* [Prometheus metrics](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/PrometheusMetricsExample.scala)
+The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) sub-project contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
 
 ## Other examples
 
-To see an example project using Tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
+To see an example project using tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
 using tapir and http4s.
 
 For a quick start using http4s and tapir you can use [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8).

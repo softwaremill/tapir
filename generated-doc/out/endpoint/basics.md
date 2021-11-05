@@ -1,13 +1,14 @@
 # Basics
 
-An endpoint is represented as a value of type `Endpoint[I, E, O, S]`, where:
+An endpoint is represented as a value of type `Endpoint[A, I, E, O, S]`, where:
 
-* `I` is the type of the input parameters
-* `E` is the type of the error-output parameters
-* `O` is the type of the output parameters
-* `S` is the type of streams that are used by the endpoint's inputs/outputs
+* `A` is the type of security input parameters
+* `I` is the type of input parameters
+* `E` is the type of error-output parameters
+* `O` is the type of output parameters
+* `R` are the capabilities that are required by this endpoint's inputs/outputs, such as support for websockets or a particular non-blocking streaming implementation. `Any`, if there are no such requirements.
 
-Input/output parameters (`I`, `E` and `O`) can be:
+Input/output parameters (`A`, `I`, `E` and `O`) can be:
 
 * of type `Unit`, when there's no input/ouput of the given type
 * a single type
@@ -19,27 +20,35 @@ derived has the type:
 ```scala
 import sttp.tapir._
 
-val endpoint: Endpoint[Unit, Unit, Unit, Any] = ???
+val endpoint: Endpoint[Unit, Unit, Unit, Unit, Any] = ???
 ```
 
-An endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
+For endpoints which have no security inputs, a type alias is provided which fixes `A` to `Unit`:
+
+```scala
+import sttp.tapir._
+
+type PublicEndpoint[I, E, O, -R] = Endpoint[Unit, I, E, O, R]
+```
+
+A public endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
 completion returns a `User`, would have the type:
 
  
 ```scala
 import sttp.tapir._
 
-val userEndpoint: Endpoint[(UUID, Int), String, User, Any] = ???
+val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 ```
 
-You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type 
+You can think of an endpoint as a function, which takes input parameters of type `A` & `I` and returns a result of type 
 `Either[E, O]`, where inputs or outputs can contain streaming bodies of type `S`.
 
 ### Infallible endpoints
 
 Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
-are still represented and allowed to occur. If you would prefer to use an endpoint description, where
-errors can not happen, use `infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
+are still represented and allowed to occur. If you preferred to use an endpoint description, where
+errors can not happen, use `infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
 interpreting endpoints [as a client](../client/sttp.md).
 
 ## Defining an endpoint
