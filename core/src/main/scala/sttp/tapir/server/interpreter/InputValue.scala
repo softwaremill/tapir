@@ -23,7 +23,7 @@ object InputValue {
       case EndpointIO.Pair(left, right, combine, _)    => handlePair(left, right, combine, remainingBasicValues)
       case EndpointInput.MappedPair(wrapped, codec)    => handleMappedPair(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedPair(wrapped, codec)       => handleMappedPair(wrapped, codec, remainingBasicValues)
-      case auth: EndpointInput.Auth[_]                 => apply(auth.input, remainingBasicValues)
+      case auth: EndpointInput.Auth[_, _]              => apply(auth.input, remainingBasicValues)
       case _: EndpointInput.Basic[_] =>
         remainingBasicValues.headAndTail match {
           case Some((v, valuesTail)) => InputValueResult.Value(ParamsAsAny(v), valuesTail)

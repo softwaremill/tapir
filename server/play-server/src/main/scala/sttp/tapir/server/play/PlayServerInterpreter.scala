@@ -1,6 +1,5 @@
 package sttp.tapir.server.play
 
-import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -11,14 +10,12 @@ import play.api.routing.Router.Routes
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Method, StatusCode}
 import sttp.monad.FutureMonad
-import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.reflect.ClassTag
 
 trait PlayServerInterpreter {
 
@@ -32,25 +29,12 @@ trait PlayServerInterpreter {
     Accumulator.source[ByteString].map(Right.apply)
   }
 
-  def toRoutes[I, E, O](e: Endpoint[I, E, O, AkkaStreams])(
-      logic: I => Future[Either[E, O]]
-  ): Routes = {
-    toRoutes(e.serverLogic(logic))
-  }
-
-  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, AkkaStreams])(logic: I => Future[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): Routes = {
-    toRoutes(e.serverLogicRecoverErrors(logic))
-  }
-
-  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, AkkaStreams, Future]): Routes = {
+  def toRoutes(e: ServerEndpoint[AkkaStreams, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes[I, E, O](
-      serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]]
+      serverEndpoints: List[ServerEndpoint[AkkaStreams, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 

@@ -26,7 +26,7 @@ object ContentNegotiation {
   implicit val htmlCodecForOrganizationISO88591: Codec[String, Organization, CodecFormat.TextHtml] =
     Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
 
-  val out_json_xml_text_common_schema: Endpoint[String, Unit, Organization, Any] =
+  val out_json_xml_text_common_schema: PublicEndpoint[String, Unit, Organization, Any] =
     endpoint.get
       .in("content-negotiation" / "organization")
       .in(header[String](HeaderNames.Accept))
@@ -39,7 +39,7 @@ object ContentNegotiation {
         )
       )
 
-  val out_json_xml_different_schema: Endpoint[String, Unit, Entity, Any] =
+  val out_json_xml_different_schema: PublicEndpoint[String, Unit, Entity, Any] =
     endpoint.get
       .in("content-negotiation" / "entity")
       .in(header[String]("Accept"))

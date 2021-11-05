@@ -11,7 +11,7 @@ import scala.collection.immutable.ListMap
 private[openapi] object EndpointToOpenAPIDocs {
   def toOpenAPI(
       api: Info,
-      es: Iterable[Endpoint[_, _, _, _]],
+      es: Iterable[AnyEndpoint],
       options: OpenAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {

@@ -2,10 +2,10 @@ package sttp.tapir.serverless.aws.terraform
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 private[terraform] object EndpointsToTerraformConfig {
-  def apply(eps: List[Endpoint[_, _, _, _]], options: AwsTerraformOptions): AwsTerraformApiGateway = {
+  def apply(eps: List[AnyEndpoint]): AwsTerraformApiGateway = {
 
     val routes: Seq[AwsApiGatewayRoute] = eps.map { endpoint =>
       val method = endpoint.httpMethod.getOrElse(Method("ANY"))

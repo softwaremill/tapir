@@ -32,7 +32,7 @@ object WebSocketHttp4sServer extends IOApp {
   // The web socket endpoint: GET /count.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // byte arrays, and responses will be returned as json.
-  val wsEndpoint: Endpoint[Unit, Unit, Pipe[IO, String, CountResponse], Fs2Streams[IO] with WebSockets] =
+  val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, CountResponse], Fs2Streams[IO] with WebSockets] =
     endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, CountResponse, CodecFormat.Json](Fs2Streams[IO]))
 
   // A pipe which counts the number of bytes received each second
@@ -62,7 +62,7 @@ object WebSocketHttp4sServer extends IOApp {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(wsEndpoint.serverLogicSuccess(_ => IO.pure(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

@@ -4,7 +4,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.tests.Authentication._
+import sttp.tapir.tests.Security._
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Files._
 import sttp.tapir.tests.Mapping._
@@ -73,13 +73,13 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_root_path,
     in_single_path,
     in_extract_request_out_string,
-    in_auth_apikey_header_out_string,
-    in_auth_apikey_query_out_string,
-    in_auth_basic_out_string
+    in_security_apikey_header_out_string,
+    in_security_apikey_query_out_string,
+    in_security_basic_out_string
   )
 
   val allTestEndpoints5 = List(
-    in_auth_bearer_out_string,
+    in_security_bearer_out_string,
     in_string_out_status_from_string,
     in_int_out_value_form_exact_match,
     in_string_out_status_from_type_erasure_using_partial_matcher,

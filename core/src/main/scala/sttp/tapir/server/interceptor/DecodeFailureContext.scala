@@ -1,11 +1,11 @@
 package sttp.tapir.server.interceptor
 
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, DecodeResult, EndpointInput}
 
 case class DecodeFailureContext(
     failingInput: EndpointInput[_],
     failure: DecodeResult.Failure,
-    endpoint: Endpoint[_, _, _, _],
+    endpoint: AnyEndpoint,
     request: ServerRequest
 )

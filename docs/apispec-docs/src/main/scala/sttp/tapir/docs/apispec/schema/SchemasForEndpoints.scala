@@ -8,13 +8,15 @@ import sttp.tapir.internal.IterableToListMap
 import scala.collection.immutable.ListMap
 
 class SchemasForEndpoints(
-    es: Iterable[Endpoint[_, _, _, _]],
+    es: Iterable[AnyEndpoint],
     schemaName: SName => String,
     toNamedSchemas: ToNamedSchemas
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
-    val sObjects = ToNamedSchemas.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
+    val sObjects = ToNamedSchemas.unique(
+      es.flatMap(e => forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+    )
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new NameToSchemaReference(infoToKey)
@@ -35,7 +37,7 @@ class SchemasForEndpoints(
       case EndpointInput.Query(_, codec, _)       => toNamedSchemas(codec)
       case EndpointInput.Cookie(_, codec, _)      => toNamedSchemas(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
-      case _: EndpointInput.Auth[_]               => List.empty
+      case _: EndpointInput.Auth[_, _]            => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)

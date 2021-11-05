@@ -236,7 +236,6 @@ import sttp.tapir.json.zio._
 
 Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
 
-
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the

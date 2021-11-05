@@ -1,6 +1,6 @@
 package sttp.tapir.client.sttp
 
-import sttp.tapir.{tests, _}
+import sttp.tapir._
 import sttp.client3._
 import sttp.tapir.generic.auto._
 import sttp.model.{Header, HeaderNames, MediaType, Part}

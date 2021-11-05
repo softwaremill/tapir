@@ -3,7 +3,6 @@ package sttp.tapir.server.ziohttp
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -15,13 +14,12 @@ import zio._
 import zio.interop.catz._
 
 import java.util.concurrent.atomic.AtomicInteger
-import scala.reflect.ClassTag
 
 class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
     extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]]] {
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, ZioStreams, Task],
+  override def route(
+      e: ServerEndpoint[ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
@@ -32,15 +30,10 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
     ZioHttpInterpreter(serverOptions).toHttp(e)
   }
 
-  override def route[I, E, O](
-      es: List[ServerEndpoint[I, E, O, ZioStreams, Task]]
+  override def route(
+      es: List[ServerEndpoint[ZioStreams, Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
     ZioHttpInterpreter().toHttp(es)
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
-      eClassTag: ClassTag[E]
-  ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
-    ZioHttpInterpreter().toHttp(e.serverLogicRecoverErrors(fn))
 
   private val portCounter = new AtomicInteger(0) // no way to dynamically allocate ports
 

@@ -2,10 +2,10 @@ package sttp.tapir.serverless.aws.sam
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
 
 private[sam] object EndpointsToSamTemplate {
-  def apply(es: List[Endpoint[_, _, _, _]], options: AwsSamOptions): SamTemplate = {
+  def apply(es: List[AnyEndpoint], options: AwsSamOptions): SamTemplate = {
     val functionName = options.namePrefix + "Function"
     val httpApiName = options.namePrefix + "HttpApi"
 
@@ -46,7 +46,7 @@ private[sam] object EndpointsToSamTemplate {
     )
   }
 
-  private def endpointNameMethodAndPath(e: Endpoint[_, _, _, _]): (String, Option[Method], String) = {
+  private def endpointNameMethodAndPath(e: AnyEndpoint): (String, Option[Method], String) = {
     val pathComponents = e.input
       .asVectorOfBasicInputs()
       .foldLeft((Vector.empty[Either[String, String]], 0)) { case ((acc, c), input) =>

@@ -1,17 +1,17 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.Endpoint
+import sttp.tapir.AnyEndpoint
 import sttp.tapir.Schema.SName
 import sttp.tapir.docs.apispec.defaultSchemaName
 
 case class AsyncAPIDocsOptions(
-    subscribeOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
-    publishOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
+    subscribeOperationId: (Vector[String], AnyEndpoint) => String,
+    publishOperationId: (Vector[String], AnyEndpoint) => String,
     schemaName: SName => String = defaultSchemaName
 )
 
 object AsyncAPIDocsOptions {
-  val defaultOperationIdGenerator: String => (Vector[String], Endpoint[_, _, _, _]) => String = { prefix => (pathComponents, _) =>
+  val defaultOperationIdGenerator: String => (Vector[String], AnyEndpoint) => String = { prefix => (pathComponents, _) =>
     val components = if (pathComponents.isEmpty) {
       Vector("root")
     } else {

@@ -77,7 +77,7 @@ object TestUtil {
   }
 
   case class PersonsApi(logic: String => Id[Either[String, String]] = PersonsApi.defaultLogic) {
-    def serverEp: ServerEndpoint[String, String, String, Any, Id] = endpoint
+    def serverEp: ServerEndpoint[Any, Id] = endpoint
       .in("person")
       .in(query[String]("name"))
       .out(stringBody)

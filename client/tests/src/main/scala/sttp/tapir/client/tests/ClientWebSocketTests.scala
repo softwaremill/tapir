@@ -21,6 +21,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         endpoint.get.in("ws" / "echo").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)),
         port,
         (),
+        (),
         "ws"
       )
         .flatMap { r =>
@@ -34,6 +35,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
       send(
         endpoint.get.in("ws" / "echo").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json].apply(streams)),
         port,
+        (),
         (),
         "ws"
       )
@@ -50,6 +52,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
           .in("ws" / "echo" / "fragmented")
           .out(webSocketBody[String, CodecFormat.TextPlain, WebSocketFrame, CodecFormat.TextPlain].apply(streams)),
         port,
+        (),
         (),
         "ws"
       )

@@ -42,9 +42,9 @@ AkkaHttpServerInterpreter().toRoute(
   endpoint
     .errorOut(plainBody[ErrorInfo])
     .out(plainBody[Int])
-    .in(query[String]("name"))) {
-  (logic _).andThen(handleErrors)
-}
+    .in(query[String]("name"))
+    .serverLogic((logic _).andThen(handleErrors))
+) 
 ```
 
 In the above example, errors are represented as `String`s (aliased to `ErrorInfo` for readability). When the

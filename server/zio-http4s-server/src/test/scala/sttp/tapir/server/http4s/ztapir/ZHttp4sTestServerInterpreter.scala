@@ -7,7 +7,6 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.{HttpRoutes, Request, Response}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.Endpoint
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -21,7 +20,6 @@ import zio.interop.catz._
 import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 class ZHttp4sTestServerInterpreter
     extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, HttpRoutes[
@@ -29,8 +27,8 @@ class ZHttp4sTestServerInterpreter
     ]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[I, E, O](
-      e: ZServerEndpoint[Clock with Blocking, I, E, O, ZioStreams with WebSockets],
+  override def route(
+      e: ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
@@ -43,19 +41,10 @@ class ZHttp4sTestServerInterpreter
     ZHttp4sServerInterpreter(serverOptions).from(e).toRoutes
   }
 
-  override def route[I, E, O](
-      es: List[ZServerEndpoint[Clock with Blocking, I, E, O, ZioStreams with WebSockets]]
+  override def route(
+      es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
     ZHttp4sServerInterpreter().from(es).toRoutes
-  }
-
-  override def routeRecoverErrors[I, E <: Throwable, O](
-      e: Endpoint[I, E, O, ZioStreams with WebSockets],
-      fn: I => RIO[Clock with Blocking, O]
-  )(implicit
-      eClassTag: ClassTag[E]
-  ): HttpRoutes[RIO[Clock with Blocking, *]] = {
-    ZHttp4sServerInterpreter().from(e.serverLogicRecoverErrors(fn)).toRoutes
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[RIO[Clock with Blocking, *]]]): Resource[IO, Port] = {

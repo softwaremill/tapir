@@ -11,7 +11,7 @@ import sttp.tapir.{Endpoint, oneOfMapping, stringBody}
 
 class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
 
-  private val fallibleEndpoint: Endpoint[Int, Unit, Unit, Any] = Validation.in_query
+  private val fallibleEndpoint: Endpoint[Unit, Int, Unit, Unit, Any] = Validation.in_query
 
   test("should include default 400 response if input decoding may fail") {
     val expectedYaml = load("decode_failure_output/expected_default_400_response.yml")

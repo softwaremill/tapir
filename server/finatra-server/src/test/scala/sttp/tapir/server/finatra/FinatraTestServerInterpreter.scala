@@ -5,19 +5,17 @@ import cats.effect.{IO, Resource}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
-import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.concurrent.duration.DurationInt
-import scala.reflect.ClassTag
 
 class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute] {
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): FinatraRoute = {
@@ -29,13 +27,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     FinatraServerInterpreter(serverOptions).toRoute(e)
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FinatraRoute = ???
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
-      eClassTag: ClassTag[E]
-  ): FinatraRoute = {
-    FinatraServerInterpreter().toRouteRecoverErrors(e)(fn)
-  }
+  override def route(es: List[ServerEndpoint[Any, Future]]): FinatraRoute = ???
 
   override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
 }

@@ -1,20 +1,18 @@
 package sttp.tapir
 
-import sttp.tapir.EndpointInput.{Auth, WWWAuthenticate}
-import sttp.tapir.model.UsernamePassword
+import sttp.model.HeaderNames
+import sttp.model.headers.WWWAuthenticateChallenge
+import sttp.tapir.EndpointInput.Auth
 
 import scala.collection.immutable.ListMap
 
 object TapirAuth {
-  private val BasicAuthType = "Basic"
-  private val BearerAuthType = "Bearer"
 
-  /** Reads authorization data from the given `input`.
-    */
+  /** Reads authorization data from the given `input`. */
   def apiKey[T](
       input: EndpointInput.Single[T],
-      challenge: WWWAuthenticate = WWWAuthenticate.apiKey()
-  ): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input, challenge, None)
+      challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge("ApiKey")
+  ): EndpointInput.Auth[T, EndpointInput.AuthInfo.ApiKey] = EndpointInput.Auth(input, None, challenge, EndpointInput.AuthInfo.ApiKey())
 
   /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a base64-encoded
     * username/password combination, use: `basic[UsernamePassword]`
@@ -22,14 +20,23 @@ object TapirAuth {
     *   UsernamePassword
     */
   def basic[T: Codec[List[String], *, CodecFormat.TextPlain]](
-      challenge: WWWAuthenticate = WWWAuthenticate.basic()
-  ): EndpointInput.Auth.Http[T] = httpAuth(BasicAuthType, challenge)
+      challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic
+  ): EndpointInput.Auth[T, EndpointInput.AuthInfo.Http] = http(WWWAuthenticateChallenge.BasicScheme, challenge)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix.
-    */
+  /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix. */
   def bearer[T: Codec[List[String], *, CodecFormat.TextPlain]](
-      challenge: WWWAuthenticate = WWWAuthenticate.bearer()
-  ): EndpointInput.Auth.Http[T] = httpAuth(BearerAuthType, challenge)
+      challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
+  ): EndpointInput.Auth[T, EndpointInput.AuthInfo.Http] = http(WWWAuthenticateChallenge.BearerScheme, challenge)
+
+  def http[T: Codec[List[String], *, CodecFormat.TextPlain]](
+      authScheme: String,
+      challenge: WWWAuthenticateChallenge
+  ): EndpointInput.Auth[T, EndpointInput.AuthInfo.Http] = {
+    val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
+    val authCodec =
+      Codec.list(Codec.string.map(stringPrefixWithSpace(authScheme))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
+    EndpointInput.Auth(header[T](HeaderNames.Authorization)(authCodec), None, challenge, EndpointInput.AuthInfo.Http(authScheme))
+  }
 
   object oauth2 {
     def authorizationCode(
@@ -37,26 +44,15 @@ object TapirAuth {
         scopes: ListMap[String, String] = ListMap(),
         tokenUrl: Option[String] = None,
         refreshUrl: Option[String] = None,
-        challenge: WWWAuthenticate = WWWAuthenticate.bearer()
-    ): Auth.Oauth2[String] =
-      EndpointInput.Auth.Oauth2(
-        authorizationUrl,
-        tokenUrl,
-        scopes,
-        refreshUrl,
-        header[String]("Authorization").map(stringPrefixWithSpace(BearerAuthType)),
+        challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
+    ): Auth[String, EndpointInput.AuthInfo.OAuth2] = {
+      EndpointInput.Auth(
+        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(WWWAuthenticateChallenge.BearerScheme)),
+        None,
         challenge,
-        None
+        EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl)
       )
-  }
-
-  private def httpAuth[T: Codec[List[String], *, CodecFormat.TextPlain]](
-      authType: String,
-      challenge: WWWAuthenticate
-  ): EndpointInput.Auth.Http[T] = {
-    val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
-    val authCodec = Codec.list(Codec.string.map(stringPrefixWithSpace(authType))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
-    EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec), challenge, None)
+    }
   }
 
   private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")

@@ -1,4 +1,4 @@
-# Creating your own Tapir
+# Creating your own tapir
 
 Tapir uses a number of packages which contain either the data classes for describing endpoints or interpreters
 of this data (turning endpoints into a server or a client). Importing these packages every time you want to use Tapir
@@ -27,5 +27,5 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.capabilities.WebSockets
 import sttp.tapir.Endpoint
 
-type MyEndpoint[I, E, O] = Endpoint[I, E, O, AkkaStreams with WebSockets]
+type MyEndpoint[A, I, E, O] = Endpoint[A, I, E, O, AkkaStreams with WebSockets]
 ```

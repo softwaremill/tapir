@@ -4,7 +4,6 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
-import sttp.tapir.Endpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
@@ -17,16 +16,10 @@ trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp[I, E, O](
-      e: Endpoint[I, E, O, ZioStreams]
-  )(logic: I => ZIO[R, E, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
-    toHttp(List(e.zServerLogic(input => logic(input))))
-  }
-
-  def toHttp[I, E, O](se: ZServerEndpoint[R, I, E, O, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp[A, U, I, E, O](se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, _, _, _, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]

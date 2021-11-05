@@ -54,8 +54,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get
             .in("sse")
             .out(serverSentEventsBody)
-            .serverLogic[Future](_ => {
-              Source(List(sse1, sse2)).asRight[Unit].unit(new FutureMonad())
+            .serverLogicSuccess[Future](_ => {
+              Future.successful(Source(List(sse1, sse2)))
             })
           val route = AkkaHttpServerInterpreter().toRoute(e)
           interpreter

@@ -16,7 +16,7 @@ import zio.{App, ExitCode, Task, URIO, ZIO}
 object RedocZioHttpServer extends App {
   case class Pet(species: String, url: String)
 
-  val petEndpoint: ZServerEndpoint[Any, Int, String, Pet, Any] =
+  val petEndpoint: ZServerEndpoint[Any, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet]).zServerLogic { petId =>
       if (petId == 35) ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
       else ZIO.fail("Unknown pet id")

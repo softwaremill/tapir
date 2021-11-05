@@ -6,7 +6,7 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import sttp.tapir.Endpoint
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
@@ -21,21 +21,21 @@ object ZioExampleHttp4sServer extends App {
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
-  val petEndpoint: Endpoint[Int, String, Pet, Any] =
+  val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
   val petRoutes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
-    .from(petEndpoint) { petId =>
+    .from(petEndpoint.zServerLogic { petId =>
       if (petId == 35) {
         UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
       } else {
         IO.fail("Unknown pet id")
       }
-    }
+    })
     .toRoutes
 
   // Same as above, but combining endpoint description with server logic:
-  val petServerEndpoint: ZServerEndpoint[Any, Int, String, Pet, Any] = petEndpoint.zServerLogic { petId =>
+  val petServerEndpoint: ZServerEndpoint[Any, Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {

@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.model.StatusCode
-import sttp.tapir.EndpointInput.WWWAuthenticate
+import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.tapir._
 import sttp.tapir.model._
 import sttp.tapir.server.akkahttp._
@@ -14,11 +14,15 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object BasicAuthenticationAkkaServer extends App {
-  val secret: Endpoint[UsernamePassword, Unit, String, Any] =
-    endpoint.get.in("secret").in(auth.basic[UsernamePassword](WWWAuthenticate.basic("example"))).out(stringBody)
+  val secret: Endpoint[UsernamePassword, Unit, Unit, String, Any] =
+    endpoint.get.securityIn("secret").securityIn(auth.basic[UsernamePassword](WWWAuthenticateChallenge.basic("example"))).out(stringBody)
 
   val secretRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(secret)(credentials => Future.successful(Right(s"Hello, ${credentials.username}!")))
+    AkkaHttpServerInterpreter().toRoute(
+      secret
+        .serverSecurityLogic(credentials => Future.successful(Right(credentials.username): Either[Unit, String]))
+        .serverLogic(username => _ => Future.successful(Right(s"Hello, $username!")))
+    )
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

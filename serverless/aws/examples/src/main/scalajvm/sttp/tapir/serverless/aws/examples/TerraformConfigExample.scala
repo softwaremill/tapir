@@ -26,7 +26,7 @@ object TerraformConfigExample extends App {
     memorySize = 1024
   )
 
-  val apiGateway: AwsTerraformApiGateway = AwsTerraformInterpreter(terraformOptions).toTerraformConfig(helloEndpoint)
+  val apiGateway: AwsTerraformApiGateway = AwsTerraformInterpreter().toTerraformConfig(helloEndpoint)
   val apiGatewayConfig = apiGateway.toJson(terraformOptions)
 
   Files.write(Paths.get("api_gateway.tf.json"), apiGatewayConfig.getBytes(UTF_8))

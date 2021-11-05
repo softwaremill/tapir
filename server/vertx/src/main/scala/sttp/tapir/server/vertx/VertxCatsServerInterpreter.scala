@@ -9,7 +9,6 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
@@ -22,7 +21,6 @@ import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
 
 import java.util.concurrent.atomic.AtomicReference
-import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
@@ -33,41 +31,18 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   def vertxCatsServerOptions: VertxCatsServerOptions[F]
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    * @param logic
-    *   the logic to associate with the endpoint
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]]): Router => Route =
-    route(e.serverLogic(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
-    * @param logic
-    *   the logic to associate with the endpoint
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
-      logic: I => F[O]
-  )(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): Router => Route =
-    route(e.serverLogicRecoverErrors(logic))
-
-  /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    * @return
-    *   A function, that given a router, will attach this endpoint to it
-    */
-  def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
+  def route(
+      e: ServerEndpoint[Fs2Streams[F], F]
   ): Router => Route = { router =>
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
-  private def endpointHandler[I, E, O, A, S <: Streams[S]](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F],
+  private def endpointHandler[S <: Streams[S]](
+      e: ServerEndpoint[Fs2Streams[F], F],
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]

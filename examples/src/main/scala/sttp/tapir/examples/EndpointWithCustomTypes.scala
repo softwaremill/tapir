@@ -17,7 +17,7 @@ object EndpointWithCustomTypes {
   // a custom implicit Codec
   implicit val myIdCodec: Codec[String, MyId, CodecFormat.TextPlain] =
     Codec.string.map[MyId](s => new MyIdImpl(s))(myId => myId.id)
-  val endpointWithMyId: Endpoint[MyId, Unit, Unit, Nothing] = endpoint.in("find" / path[MyId])
+  val endpointWithMyId: PublicEndpoint[MyId, Unit, Unit, Nothing] = endpoint.in("find" / path[MyId])
 
   // Custom type mapped to json: encoding and decoding is handled by circe. The Codec is automatically derived from a
   // circe Encoder and Decoder. We also need the schema (through the SchemaFor implicit) for documentation.
@@ -27,5 +27,5 @@ object EndpointWithCustomTypes {
   // custom circe encoders and decoders need to be in-scope as well
   implicit val myIdEncoder: Encoder[MyId] = Encoder.encodeString.contramap(_.id)
   implicit val myIdDecoder: Decoder[MyId] = Decoder.decodeString.map(s => new MyIdImpl(s))
-  val endpointWithPerson: Endpoint[Unit, Unit, Person, Nothing] = endpoint.out(jsonBody[Person])
+  val endpointWithPerson: PublicEndpoint[Unit, Unit, Person, Nothing] = endpoint.out(jsonBody[Person])
 }

@@ -8,7 +8,7 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 abstract class PlayClientTests[R] extends ClientTests[R] {
 
@@ -16,21 +16,29 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
 
   implicit val wsClient: StandaloneWSClient = StandaloneAhcWSClient()
 
-  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+  override def send[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
+      port: Port,
+      securityArgs: A,
+      args: I,
+      scheme: String = "http"
+  ): IO[Either[E, O]] = {
     def response: Future[Either[E, O]] = {
-      val (req, responseParser) = PlayClientInterpreter().toRequestUnsafe(e, s"http://localhost:$port").apply(args)
+      val (req, responseParser) =
+        PlayClientInterpreter().toSecureRequestUnsafe(e, s"http://localhost:$port").apply(securityArgs).apply(args)
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))
   }
 
-  override def safeSend[I, E, O](
-      e: Endpoint[I, E, O, R],
+  override def safeSend[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
       port: Port,
+      securityArgs: A,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     def response: Future[DecodeResult[Either[E, O]]] = {
-      val (req, responseParser) = PlayClientInterpreter().toRequest(e, s"http://localhost:$port").apply(args)
+      val (req, responseParser) = PlayClientInterpreter().toSecureRequest(e, s"http://localhost:$port").apply(securityArgs).apply(args)
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))

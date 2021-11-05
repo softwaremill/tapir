@@ -7,7 +7,6 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe._
 import sttp.tapir.tests.Basic.{delete_endpoint, in_query_query_out_string}
-import sttp.tapir.tests._
 
 class VerifyJsonTest extends AnyFunSuite with Matchers {
 

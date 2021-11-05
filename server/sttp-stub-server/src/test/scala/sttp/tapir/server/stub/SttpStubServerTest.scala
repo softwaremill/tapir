@@ -159,7 +159,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
   it should "stub server endpoint" in {
     // given
-    val endpoint: ServerEndpoint[Unit, Unit, String, Any, Identity] = sttp.tapir.endpoint
+    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
       .in("api" / "hello")
       .out(stringBody)
       .get
@@ -178,7 +178,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
   it should "stub server endpoint with interceptors" in {
     // given
-    val endpoint: ServerEndpoint[Unit, Unit, String, Any, Identity] = sttp.tapir.endpoint
+    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
       .in("api" / "hello")
       .out(stringBody)
       .get

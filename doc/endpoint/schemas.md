@@ -219,7 +219,7 @@ implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply
 implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
 implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
 
-val e: Endpoint[FruitAmount, Unit, Unit, Nothing] =
+val e: PublicEndpoint[FruitAmount, Unit, Unit, Nothing] =
   endpoint.in(jsonBody[FruitAmount])
 ```
 

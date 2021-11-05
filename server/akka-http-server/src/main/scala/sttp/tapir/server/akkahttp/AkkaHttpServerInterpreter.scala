@@ -15,9 +15,8 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.{HeaderNames, Method}
+import sttp.model.Method
 import sttp.monad.FutureMonad
-import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
@@ -25,23 +24,14 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.concurrent.Future
-import scala.reflect.ClassTag
 
 trait AkkaHttpServerInterpreter {
 
   def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
-  def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(logic: I => Future[Either[E, O]]): Route =
-    toRoute(e.serverLogic(logic))
+  def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRouteRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, AkkaStreams with WebSockets]
-  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route =
-    toRoute(e.serverLogicRecoverErrors(logic))
-
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
-
-  def toRoute(ses: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]]): Route = {
+  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     extractRequestContext { ctx =>
       extractExecutionContext { implicit ec =>
         extractMaterializer { implicit mat =>

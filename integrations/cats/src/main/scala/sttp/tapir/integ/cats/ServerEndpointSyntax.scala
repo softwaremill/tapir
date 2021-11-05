@@ -4,11 +4,14 @@ import cats.~>
 import sttp.tapir.server.ServerEndpoint
 
 trait ServerEndpointSyntax {
-  implicit class ServerEndpointImapK[I, E, O, S, F[_]](endpoint: ServerEndpoint[I, E, O, S, F]) {
-
+  implicit class ServerEndpointImapK[R, F[_]](endpoint: ServerEndpoint[R, F]) {
     import MonadErrorSyntax._
 
-    def imapK[G[_]](fk: F ~> G)(gK: G ~> F): ServerEndpoint[I, E, O, S, G] =
-      endpoint.copy(logic = monadError => i => fk(endpoint.logic(monadError.imapK(gK)(fk))(i)))
+    def imapK[G[_]](fk: F ~> G)(gk: G ~> F): ServerEndpoint[R, G] =
+      ServerEndpoint(
+        endpoint.endpoint,
+        securityLogic = monadError => (a: endpoint.A) => fk(endpoint.securityLogic(monadError.imapK(gk)(fk))(a)),
+        logic = monadError => (u: endpoint.U) => (i: endpoint.I) => fk(endpoint.logic(monadError.imapK(gk)(fk))(u)(i))
+      )
   }
 }

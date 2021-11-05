@@ -2,7 +2,6 @@ package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -10,8 +9,6 @@ import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerI
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest.catsMonadIO
 import sttp.tapir.tests.{Port, Test, TestSuite}
-
-import scala.reflect.ClassTag
 
 class AwsLambdaStubHttpTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = Resource.eval(
@@ -25,8 +22,8 @@ class AwsLambdaStubHttpTest extends TestSuite {
 
 object AwsLambdaStubHttpTest {
   private val testServerInterpreter = new TestServerInterpreter[IO, Any, Route[IO]] {
-    override def route[I, E, O](
-        e: ServerEndpoint[I, E, O, Any, IO],
+    override def route(
+        e: ServerEndpoint[Any, IO],
         decodeFailureHandler: Option[DecodeFailureHandler],
         metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
     ): Route[IO] = {
@@ -40,15 +37,9 @@ object AwsLambdaStubHttpTest {
       AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     }
 
-    override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, IO]]): Route[IO] =
+    override def route(es: List[ServerEndpoint[Any, IO]]): Route[IO] =
       AwsCatsEffectServerInterpreter[IO]().toRoute(es)
 
-    override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
-        eClassTag: ClassTag[E]
-    ): Route[IO] = {
-      val options: AwsServerOptions[IO] = AwsCatsEffectServerOptions.default[IO].copy(encodeResponseBody = false)
-      AwsCatsEffectServerInterpreter(options).toRouteRecoverErrors(e)(fn)
-    }
     override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???
   }
 }

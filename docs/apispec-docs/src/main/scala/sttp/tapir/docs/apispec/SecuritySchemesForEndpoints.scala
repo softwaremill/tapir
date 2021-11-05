@@ -2,13 +2,13 @@ package sttp.tapir.docs.apispec
 
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
-import sttp.tapir.{Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
 
 private[docs] object SecuritySchemesForEndpoints {
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): SecuritySchemes = {
-    val auths = es.flatMap(e => e.input.auths)
+  def apply(es: Iterable[AnyEndpoint]): SecuritySchemes = {
+    val auths = es.flatMap(e => e.securityInput.auths) ++ es.flatMap(e => e.input.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
     val takenNames = authSecuritySchemes.flatMap(_._1.securitySchemeName).toSet
@@ -34,14 +34,14 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme =
-    a match {
-      case EndpointInput.Auth.ApiKey(input, _, _) =>
-        val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
+  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]): SecurityScheme =
+    a.authInfo match {
+      case EndpointInput.AuthInfo.ApiKey() =>
+        val (name, in) = apiKeyInputNameAndIn(a.input.asVectorOfBasicInputs())
         SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
-      case EndpointInput.Auth.Http(scheme, _, _, _) =>
+      case EndpointInput.AuthInfo.Http(scheme) =>
         SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
-      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _) =>
+      case EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
         SecurityScheme(
           "oauth2",
           None,
@@ -52,7 +52,7 @@ private[docs] object SecuritySchemesForEndpoints {
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
           None
         )
-      case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _), _) =>
+      case EndpointInput.AuthInfo.ScopedOAuth2(EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
         SecurityScheme(
           "oauth2",
           None,
@@ -63,6 +63,7 @@ private[docs] object SecuritySchemesForEndpoints {
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
           None
         )
+      case _ => throw new RuntimeException("Impossible, but the compiler complains.")
     }
 
   private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =

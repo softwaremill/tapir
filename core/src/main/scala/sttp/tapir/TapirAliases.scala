@@ -15,7 +15,7 @@ trait TapirAliases {
   val Defaults = sttp.tapir.Defaults
 
   /** Endpoint.scala */
-  type Endpoint[I, E, O, -R] = sttp.tapir.Endpoint[I, E, O, R]
+  type Endpoint[A, I, E, O, -R] = sttp.tapir.Endpoint[A, I, E, O, R]
   val Endpoint = sttp.tapir.Endpoint
 
   type EndpointInfo = sttp.tapir.EndpointInfo

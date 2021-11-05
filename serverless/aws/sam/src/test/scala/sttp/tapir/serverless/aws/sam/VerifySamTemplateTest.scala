@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.serverless.aws.sam.VerifySamTemplateTest._
-import sttp.tapir.{Endpoint, endpoint, path, _}
+import sttp.tapir._
 
 import scala.io.Source
 
@@ -46,11 +46,11 @@ object VerifySamTemplateTest {
 
   case class Pet(name: String, species: String)
 
-  val getPetEndpoint: Endpoint[Int, Unit, Pet, Any] = endpoint.get
+  val getPetEndpoint: PublicEndpoint[Int, Unit, Pet, Any] = endpoint.get
     .in("api" / "pets" / path[Int]("id"))
     .out(jsonBody[Pet])
 
-  val addPetEndpoint: Endpoint[Pet, Unit, Unit, Any] = endpoint.post
+  val addPetEndpoint: PublicEndpoint[Pet, Unit, Unit, Any] = endpoint.post
     .in("api" / "pets")
     .in(jsonBody[Pet])
 

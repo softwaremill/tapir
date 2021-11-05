@@ -4,30 +4,30 @@ import cats.implicits._
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
 import sttp.model.Uri.QuerySegment
+import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{StatusCode, _}
 import sttp.monad.MonadError
-import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.tests.Authentication.{
-  in_auth_apikey_header_out_string,
-  in_auth_apikey_query_out_string,
-  in_auth_basic_out_string,
-  in_auth_bearer_out_string
+import sttp.tapir.tests.Security.{
+  in_security_apikey_header_in_amount_out_string,
+  in_security_apikey_header_out_string,
+  in_security_apikey_query_out_string,
+  in_security_basic_out_string,
+  in_security_bearer_out_string
 }
 import sttp.tapir.tests.Test
 
-class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE])(implicit m: MonadError[F])
-    extends Matchers {
+class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE])(implicit m: MonadError[F]) extends Matchers {
   import createServerTest._
   private val Realm = "realm"
 
-  private val base = endpoint.post.in("secret" / path[Long]("id")).in(query[String]("q"))
+  private val base = endpoint.post.securityIn("secret" / path[Long]("id")).in(query[String]("q"))
 
-  private val basic = base.in(auth.basic[UsernamePassword](WWWAuthenticate.basic(Realm)))
-  private val bearer = base.in(auth.bearer[String](WWWAuthenticate.bearer(Realm)))
-  private val apiKeyInQuery = base.in(auth.apiKey(query[String]("token"), WWWAuthenticate.apiKey(Realm)))
-  private val apiKeyInHeader = base.in(auth.apiKey(header[String]("x-api-key"), WWWAuthenticate.apiKey(Realm)))
+  private val basic = base.securityIn(auth.basic[UsernamePassword](WWWAuthenticateChallenge.basic(Realm)))
+  private val bearer = base.securityIn(auth.bearer[String](WWWAuthenticateChallenge.bearer(Realm)))
+  private val apiKeyInQuery = base.securityIn(auth.apiKey(query[String]("token"), WWWAuthenticateChallenge("ApiKey").realm(Realm)))
+  private val apiKeyInHeader = base.securityIn(auth.apiKey(header[String]("x-api-key"), WWWAuthenticateChallenge("ApiKey").realm(Realm)))
 
   private val result = m.unit(().asRight[Unit])
 
@@ -51,14 +51,32 @@ class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTe
   }
 
   def tests(): List[Test] = List(
-    // auth
-    testServer(in_auth_apikey_header_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+    testServerLogic(
+      in_security_apikey_header_out_string
+        .serverSecurityLogic((s: String) => pureResult(s.asRight[Unit]))
+        .serverLogic(s => _ => pureResult(s.asRight[Unit]))
+    ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth").header("X-Api-Key", "1234").send(backend).map(_.body shouldBe "1234")
     },
-    testServer(in_auth_apikey_query_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+    testServerLogic(
+      in_security_apikey_header_in_amount_out_string
+        .serverSecurityLogic((s: String) => pureResult(s.asRight[Unit]))
+        .serverLogic(s => a => pureResult(s"$s amount=$a".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth?amount=61").header("X-Api-Key", "1234").send(backend).map(_.body shouldBe "1234 amount=61")
+    },
+    testServerLogic(
+      in_security_apikey_query_out_string
+        .serverSecurityLogic((s: String) => pureResult(s.asRight[Unit]))
+        .serverLogic(s => _ => pureResult(s.asRight[Unit]))
+    ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth?api-key=1234").send(backend).map(_.body shouldBe "1234")
     },
-    testServer(in_auth_basic_out_string)((up: UsernamePassword) => pureResult(up.toString.asRight[Unit])) { (backend, baseUri) =>
+    testServerLogic(
+      in_security_basic_out_string
+        .serverSecurityLogic((up: UsernamePassword) => pureResult(up.toString.asRight[Unit]))
+        .serverLogic(s => _ => pureResult(s.asRight[Unit]))
+    ) { (backend, baseUri) =>
       basicStringRequest
         .get(uri"$baseUri/auth")
         .auth
@@ -66,13 +84,17 @@ class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTe
         .send(backend)
         .map(_.body shouldBe "UsernamePassword(teddy,Some(bear))")
     },
-    testServer(in_auth_bearer_out_string)((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+    testServerLogic(
+      in_security_bearer_out_string
+        .serverSecurityLogic((s: String) => pureResult(s.asRight[Unit]))
+        .serverLogic(s => _ => pureResult(s.asRight[Unit]))
+    ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map(_.body shouldBe "1234")
     }
   ) ++ missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
-    testServer(endpoint, s"missing $authType")(_ => result) { (backend, baseUri) =>
+    testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"missing $authType") { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.Unauthorized
         r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
@@ -87,7 +109,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTe
   }
 
   private def correctAuthTests = endpoints.map { case (authType, endpoint, auth) =>
-    testServer(endpoint, s"correct $authType")(_ => result) { (backend, baseUri) =>
+    testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"correct $authType") { (backend, baseUri) =>
       auth(validRequest(baseUri))
         .send(backend)
         .map(_.code shouldBe StatusCode.Ok)
@@ -95,8 +117,9 @@ class ServerAuthenticationTests[F[_], S, ROUTE](createServerTest: CreateServerTe
   }
 
   private def badRequestWithCorrectAuthTests = endpoints.map { case (authType, endpoint, auth) =>
-    testServer(endpoint, s"invalid request $authType")(_ => result) { (backend, baseUri) =>
-      auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.BadRequest)
+    testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"invalid request $authType") {
+      (backend, baseUri) =>
+        auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.BadRequest)
     }
   }
 }

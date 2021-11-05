@@ -182,7 +182,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
       type StringConstraint = MatchesRegex[W.`"[^\u0000-\u001f]{1,29}"`.T]
       type LimitedString = String Refined StringConstraint
 
-      val refinedEndpoint: Endpoint[(LimitedString, List[LimitedString]), Unit, List[Option[LimitedString]], Nothing] =
+      val refinedEndpoint: PublicEndpoint[(LimitedString, List[LimitedString]), Unit, List[Option[LimitedString]], Nothing] =
         tapir.endpoint.post
           .in(path[LimitedString]("ls") / jsonBody[List[LimitedString]])
           .out(jsonBody[List[Option[LimitedString]]])

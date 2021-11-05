@@ -17,7 +17,7 @@ import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.tests.{
   AllServerTests,
   DefaultCreateServerTest,
-  ServerAuthenticationTests,
+  ServerSecurityTests,
   ServerBasicTests,
   ServerMetricsTest,
   ServerMultipartTests,

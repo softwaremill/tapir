@@ -63,7 +63,7 @@ val paging: EndpointInput[(UUID, Option[Int])] =
   query[UUID]("start").and(query[Option[Int]]("limit"))
 
 // we can now use the value in multiple endpoints, e.g.:
-val listUsersEndpoint: Endpoint[(UUID, Option[Int]), Unit, List[User], Any] = 
+val listUsersEndpoint: PublicEndpoint[(UUID, Option[Int]), Unit, List[User], Any] = 
   endpoint.in("user" / "list").in(paging).out(jsonBody[List[User]])
 ```
 
@@ -80,7 +80,7 @@ import io.circe.generic.auto._
 
 case class ErrorInfo(message: String)
 
-val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Any] =  
+val baseEndpoint: PublicEndpoint[Unit, ErrorInfo, Unit, Any] =  
   endpoint.in("api" / "v1.0").errorOut(jsonBody[ErrorInfo])
 ```
 
@@ -89,7 +89,7 @@ Thanks to the fact that inputs/outputs accumulate, we can use the base endpoint 
 ```scala mdoc:silent
 case class Status(uptime: Long)
 
-val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Any] = 
+val statusEndpoint: PublicEndpoint[Unit, ErrorInfo, Status, Any] = 
   baseEndpoint.in("status").out(jsonBody[Status])
 ```
 
