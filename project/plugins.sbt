@@ -6,7 +6,7 @@ addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-browser-tes
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.0.1")
 addSbtPlugin("com.typesafe.sbt" % "sbt-twirl" % "1.5.1")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.2.24")
-addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.8.0")
+addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.9.0")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.7.1")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
