@@ -1,7 +1,7 @@
 package sttp.tapir.client.http4s
 
 import cats.effect.Async
-import org.http4s.{Request, Response}
+import org.http4s.{Request, Response, Uri}
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
 abstract class Http4sClientInterpreter[F[_]: Async] {
@@ -20,7 +20,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     */
   def toRequest[I, E, O, R](
       e: PublicEndpoint[I, E, O, R],
-      baseUri: Option[String]
+      baseUri: Option[Uri]
   ): I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequest[Unit, I, E, O, R, F](e, baseUri).apply(())
 
@@ -34,7 +34,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     */
   def toRequestUnsafe[I, E, O, R](
       e: PublicEndpoint[I, E, O, R],
-      baseUri: Option[String]
+      baseUri: Option[Uri]
   ): I => (Request[F], Response[F] => F[Either[E, O]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestUnsafe[Unit, I, E, O, R, F](e, baseUri).apply(())
 
@@ -50,7 +50,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     */
   def toSecureRequest[A, I, E, O, R](
       e: Endpoint[A, I, E, O, R],
-      baseUri: Option[String]
+      baseUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequest[A, I, E, O, R, F](e, baseUri)
 
@@ -64,7 +64,7 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     */
   def toSecureRequestUnsafe[A, I, E, O, R](
       e: Endpoint[A, I, E, O, R],
-      baseUri: Option[String]
+      baseUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[Either[E, O]]) =
     new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestUnsafe[A, I, E, O, R, F](e, baseUri)
 }

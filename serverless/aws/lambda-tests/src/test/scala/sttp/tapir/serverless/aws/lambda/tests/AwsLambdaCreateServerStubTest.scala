@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda
+package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.data.NonEmptyList
 import cats.effect.IO
@@ -16,7 +16,8 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.CreateServerTest
-import sttp.tapir.serverless.aws.lambda.AwsLambdaCreateServerStubTest._
+import sttp.tapir.serverless.aws.lambda._
+import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest._
 import sttp.tapir.tests.Test
 
 class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]] {
@@ -27,7 +28,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
   )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsServerOptions
+    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
       .customInterceptors[IO]
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
@@ -42,7 +43,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
   override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
+    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions.default[IO].copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())

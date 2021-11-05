@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda
+package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -6,7 +6,8 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
-import sttp.tapir.serverless.aws.lambda.AwsLambdaCreateServerStubTest.catsMonadIO
+import sttp.tapir.serverless.aws.lambda._
+import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest.catsMonadIO
 import sttp.tapir.tests.{Port, Test, TestSuite}
 
 class AwsLambdaStubHttpTest extends TestSuite {
@@ -26,7 +27,7 @@ object AwsLambdaStubHttpTest {
         decodeFailureHandler: Option[DecodeFailureHandler],
         metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
     ): Route[IO] = {
-      val serverOptions: AwsServerOptions[IO] = AwsServerOptions
+      val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
         .customInterceptors[IO]
         .metricsInterceptor(metricsInterceptor)
         .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))

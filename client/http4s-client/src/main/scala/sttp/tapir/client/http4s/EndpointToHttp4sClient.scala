@@ -36,9 +36,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
 
   def toHttp4sRequest[A, I, E, O, R, F[_]: Async](
       e: Endpoint[A, I, E, O, R],
-      baseUriStr: Option[String]
+      maybeUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) = { aParams => iParams =>
-    val baseUri = Uri.unsafeFromString(baseUriStr.getOrElse("/"))
+    val baseUri = maybeUri.getOrElse(Uri.unsafeFromString("/"))
     val baseRequest = Request[F](uri = baseUri)
     val request0 = setInputParams[A, F](e.securityInput, ParamsAsAny(aParams), baseRequest)
     val request1 = setInputParams[I, F](e.input, ParamsAsAny(iParams), request0)
@@ -52,9 +52,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
 
   def toHttp4sRequestUnsafe[A, I, E, O, R, F[_]: Async](
       e: Endpoint[A, I, E, O, R],
-      baseUriStr: Option[String]
+      maybeUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[Either[E, O]]) = { aParams => iParams =>
-    val (request, safeResponseParser) = toHttp4sRequest[A, I, E, O, R, F](e, baseUriStr).apply(aParams).apply(iParams)
+    val (request, safeResponseParser) = toHttp4sRequest[A, I, E, O, R, F](e, maybeUri).apply(aParams).apply(iParams)
 
     def unsafeResponseParser(response: Response[F]): F[Either[E, O]] =
       safeResponseParser(response).map {
