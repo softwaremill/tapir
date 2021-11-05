@@ -12,7 +12,6 @@ datatypes as well as additional syntax:
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
 - `import sttp.tapir.integ.cats.syntax._` - brings additional syntax for `tapir` types
 
-
 ## Refined integration
 
 If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` module will provide implicit codecs and
@@ -57,18 +56,18 @@ The example code below will generate [enums](https://swagger.io/docs/specificati
 import sttp.tapir._
 
 trait EnumHelper { e: Enumeration =>
-    import io.circe._
+  import io.circe._
 
-    implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
-    implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
+  implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
+  implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
 
-    // needs to be a def or lazy val so that the enumeration values are available!
-    implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
+  // needs to be a def or lazy val so that the enumeration values are available!
+  implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
 }
 object Color extends Enumeration with EnumHelper {
-    type Color = Value
-    val Blue = Value("blue")
-    val Red   = Value("red")
+  type Color = Value
+  val Blue = Value("blue")
+  val Red   = Value("red")
 }
 ``` 
 
@@ -94,6 +93,7 @@ To use, add the following dependency:
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:
+
 ```scala
 import derevo.derive
 import sttp.tapir.derevo.schema
@@ -105,9 +105,8 @@ case class Person(name: String, age: Int)
 
 @derive(schema("Type of currency in the country"))
 sealed trait Currency
-object Currency {
-    case object CommunisticCurrency extends Currency
-    case class USD(amount: Long) extends Currency
+  object Currency {case object CommunisticCurrency extends Currency
+  case class USD(amount: Long) extends Currency
 }
 ```
 
@@ -122,7 +121,6 @@ import sttp.tapir.derevo.schema
 import io.estatico.newtype.macros.newtype
 
 object types {
-  
   @derive(schema)
   @newtype
   case class Amount(i: Int)

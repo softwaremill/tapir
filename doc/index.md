@@ -1,8 +1,7 @@
 # tapir, or Typed API descRiptions
 
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
-input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
-interpreted as:
+input and output parameters. An endpoint specification can be interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
@@ -30,8 +29,8 @@ for a more detailed description of how tapir works!
 Tapir is available:
 
 * all modules - Scala 2.12 and 2.13 on the JVM
-* selected modules (core, http4s server, sttp client, openapi, some js and datatype integrations) - Scala 3 on the JVM  
-* selected modules (sttp client, some js and datatype integrations) - Scala 2.12 and 2.13 using Scala.JS.
+* selected modules (core; http4s, vertx, netty, aws servers; sttp and http4s clients; openapi; some js and datatype integrations) - Scala 3 on the JVM  
+* selected modules (aws server; sttp client; some js and datatype integrations) - Scala 2.12, 2.13 and 3 using Scala.JS.
 
 ## Code teaser
 
@@ -49,7 +48,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
@@ -79,7 +78,7 @@ def bookListingLogic(bfy: BooksFromYear,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 val booksListingRoute: Route = AkkaHttpServerInterpreter()
-  .toRoute(booksListing)((bookListingLogic _).tupled)
+  .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
 
 // Convert to sttp Request
@@ -132,7 +131,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/contenttype
    endpoint/json
    endpoint/forms
-   endpoint/auth
+   endpoint/security
    endpoint/streaming
    endpoint/websockets
    endpoint/integrations

@@ -24,7 +24,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
-  def route[A, U, I, E, O](e: ServerEndpoint[ZioStreams, RIO[R, *]])(implicit
+  def route(e: ServerEndpoint[ZioStreams, RIO[R, *]])(implicit
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))

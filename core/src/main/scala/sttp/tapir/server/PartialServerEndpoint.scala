@@ -57,14 +57,14 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
 
   def serverLogic(f: U => I => F[Either[E, O]]): ServerEndpoint.Full[A, U, I, E, O, R, F] = ServerEndpoint(endpoint, securityLogic, _ => f)
 
-  def serverLogicSuccess(f: I => F[O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
-    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Right(_)))
+  def serverLogicSuccess(f: U => I => F[O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => u => i => f(u)(i).map(Right(_)))
 
-  def serverLogicError(f: I => F[E]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
-    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).map(Left(_)))
+  def serverLogicError(f: U => I => F[E]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => u => i => f(u)(i).map(Left(_)))
 
-  def serverLogicPure(f: I => Either[E, O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
-    ServerEndpoint(endpoint, securityLogic, implicit m => _ => i => f(i).unit)
+  def serverLogicPure(f: U => I => Either[E, O]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
+    ServerEndpoint(endpoint, securityLogic, implicit m => u => i => f(u)(i).unit)
 
   def serverLogicRecoverErrors(
       f: U => I => F[O]
