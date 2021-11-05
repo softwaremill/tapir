@@ -188,7 +188,8 @@ class HttpServer(port: Port) {
   //
 
   def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO](ExecutionContext.global)
+    val (_, _stopServer) = BlazeServerBuilder[IO]
+      .withExecutionContext(ExecutionContext.global)
       .bindHttp(port)
       .withHttpApp(app)
       .resource

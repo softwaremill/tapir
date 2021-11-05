@@ -51,7 +51,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
         val routes = Http4sServerInterpreter[IO]().toRoutes(e)
 
-        BlazeServerBuilder[IO](ExecutionContext.global)
+        BlazeServerBuilder[IO]
+          .withExecutionContext(ExecutionContext.global)
           .bindHttp(0, "localhost")
           .withHttpApp(Router("/api" -> routes).orNotFound)
           .resource

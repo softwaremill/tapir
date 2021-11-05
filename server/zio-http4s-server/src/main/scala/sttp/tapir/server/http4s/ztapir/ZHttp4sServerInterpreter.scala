@@ -1,6 +1,7 @@
 package sttp.tapir.server.http4s.ztapir
 
 import org.http4s.HttpRoutes
+import org.http4s.server.websocket.WebSocketBuilder2
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
@@ -32,6 +33,12 @@ trait ZHttp4sServerInterpreter[R] {
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
+      )
+    }
+
+    def toRoutesWithWebSockets: WebSocketBuilder2[RIO[R with Clock with Blocking, *]] => HttpRoutes[RIO[R with Clock with Blocking, *]] = {
+      Http4sServerInterpreter(zHttp4sServerOptions).toRoutesWithWebSockets(
         serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
       )
     }

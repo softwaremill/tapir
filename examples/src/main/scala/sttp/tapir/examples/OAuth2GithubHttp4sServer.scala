@@ -111,7 +111,8 @@ object OAuth2GithubHttp4sServer extends IOApp {
     // starting the server
     httpClient
       .use(backend =>
-        BlazeServerBuilder[IO](ec)
+        BlazeServerBuilder[IO]
+          .withExecutionContext(ec)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
           .resource

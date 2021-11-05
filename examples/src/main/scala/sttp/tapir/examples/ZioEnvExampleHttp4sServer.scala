@@ -69,7 +69,8 @@ object ZioEnvExampleHttp4sServer extends App {
 
   // Starting the server
   val serve: ZIO[ZEnv with PetService, Throwable, Unit] = ZIO.runtime[ZEnv with PetService].flatMap { implicit runtime =>
-    BlazeServerBuilder[RIO[PetService with Clock with Blocking, *]](runtime.platform.executor.asEC)
+    BlazeServerBuilder[RIO[PetService with Clock with Blocking, *]]
+      .withExecutionContext(runtime.platform.executor.asEC)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
       .serve
