@@ -10,32 +10,17 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 
 trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] {
-  def toRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
+  def toRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] =
+    toRoutes(List(se))
 
-  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
+  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] =
     toHttp(serverEndpoints, webSocketBuilder = None)(fToG)(gToF)
-  }
 
-  def toRoutesWithWebSockets[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
-    logic: I => F[Either[E, O]]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = toRoutesWithWebSockets(
-    e.serverLogic(logic)
-  )
+  def toRoutesWithWebSockets(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): WebSocketBuilder2[F] => HttpRoutes[F] =
+    toRoutesWithWebSockets(List(se))
 
-  def toRouteWithWebSocketsRecoverErrors[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(logic: I => F[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = toRoutesWithWebSockets(e.serverLogicRecoverErrors(logic))
-
-  def toRoutesWithWebSockets[I, E, O](
-      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = toRoutesWithWebSockets(List(se))
-
-  def toRoutesWithWebSockets(
-      serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = { wsb =>
-    toHttp(serverEndpoints, Some(wsb))(fToG)(gToF)
-  }
+  def toRoutesWithWebSockets(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): WebSocketBuilder2[F] => HttpRoutes[F] =
+    wsb => toHttp(serverEndpoints, webSocketBuilder = Some(wsb))(fToG)(gToF)
 }
 
 object Http4sServerInterpreter {

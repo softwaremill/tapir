@@ -51,7 +51,7 @@ class ZHttp4sTestServerInterpreter
     ZHttp4sServerInterpreter().from(es).toRoutesWithWebSockets
   }
 
-  override def server(routes: NonEmptyList[HttpRoutes[RIO[Clock with Blocking, *]]]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
     val service: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpApp[RIO[Clock with Blocking, *]] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
