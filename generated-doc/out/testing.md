@@ -168,7 +168,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x, is shadowed by: GET /x /..., GET /x /y /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
 ```
 
 Example 2:

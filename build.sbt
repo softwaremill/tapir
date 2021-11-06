@@ -1210,6 +1210,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
       "JSON4S_VERSION" -> Versions.json4s
     ),
     mdocOut := file("generated-doc/out"),
+    mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
     libraryDependencies ++= Seq(

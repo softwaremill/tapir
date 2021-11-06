@@ -140,10 +140,11 @@ def auth(token: String): Future[Either[Int, User]] = Future {
   else Left(1001) // error code
 }
 
-val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = endpoint
-  .securityIn(header[String]("X-AUTH-TOKEN"))
-  .errorOut(plainBody[Int])
-  .serverSecurityLogic(auth)
+val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = 
+  endpoint
+    .securityIn(header[String]("X-AUTH-TOKEN"))
+    .errorOut(plainBody[Int])
+    .serverSecurityLogic(auth)
 ```
 
 The result is a value of type `PartialServerEndpoint`, which can be extended with further inputs and outputs, just
