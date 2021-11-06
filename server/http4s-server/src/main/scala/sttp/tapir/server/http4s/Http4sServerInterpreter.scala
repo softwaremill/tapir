@@ -19,7 +19,9 @@ trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] 
   def toRoutesWithWebSockets(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): WebSocketBuilder2[F] => HttpRoutes[F] =
     toRoutesWithWebSockets(List(se))
 
-  def toRoutesWithWebSockets(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): WebSocketBuilder2[F] => HttpRoutes[F] =
+  def toRoutesWithWebSockets(
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]
+  ): WebSocketBuilder2[F] => HttpRoutes[F] =
     wsb => toHttp(serverEndpoints, webSocketBuilder = Some(wsb))(fToG)(gToF)
 }
 
