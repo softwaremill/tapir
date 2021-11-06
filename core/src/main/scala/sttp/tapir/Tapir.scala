@@ -193,16 +193,15 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       .decodeCloseResponses(true)
       .autoPing(None)
 
-  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8.
-    */
+  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
   def anyFromUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
     anyFromStringBody[T, CF](codec, StandardCharsets.UTF_8)
 
-  /** A body in any format, read using the given `codec`, from a raw string read using `charset`.
-    */
+  /** A body in any format, read using the given `codec`, from a raw string read using `charset`. */
   def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
+  /** Inputs which describe authentication credentials with metadata. */
   def auth: TapirAuth.type = TapirAuth
 
   /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by documentation interpreters and
@@ -211,8 +210,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
     EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
 
+  /** An output which maps to the status code in the response. */
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)
+
+  /** An fixed status code output. */
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
@@ -331,8 +333,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     OneOfMapping(output, _ => true)
   }
 
-  /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
-    */
+  /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
@@ -341,15 +342,16 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
-    Endpoint[Unit, Nothing, Unit, Any](
+  val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
+    Endpoint[Unit, Unit, Nothing, Unit, Any](
+      emptyInput,
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
       EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
     )
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
+  val endpoint: PublicEndpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
 }
 
 trait TapirComputedInputs { this: Tapir =>

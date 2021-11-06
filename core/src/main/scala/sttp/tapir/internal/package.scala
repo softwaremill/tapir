@@ -1,9 +1,9 @@
 package sttp.tapir
 
-import sttp.model.{ContentTypeRange, MediaType, Method, StatusCode}
+import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
+import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat}
 
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
@@ -55,11 +55,6 @@ package object internal {
   def combine[T, U, TU](t: T, u: U)(concat: ParamConcat.Aux[T, U, TU]): TU =
     mkCombine(concat).apply(ParamsAsAny(t), ParamsAsAny(u)).asAny.asInstanceOf[TU]
 
-  def split[T, U, TU](tu: TU)(subtract: ParamSubtract.Aux[TU, T, U]): (T, U) = {
-    val (pt, pu) = mkSplit(subtract).apply(ParamsAsAny(tu))
-    (pt.asAny.asInstanceOf[T], pu.asAny.asInstanceOf[U])
-  }
-
   //
 
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
@@ -70,18 +65,18 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)           => left.traverseInputs(handle) ++ right.traverseInputs(handle)
         case EndpointInput.MappedPair(wrapped, _)         => wrapped.traverseInputs(handle)
         case EndpointIO.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
-        case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
+        case a: EndpointInput.Auth[_, _]                  => a.input.traverseInputs(handle)
         case _                                            => Vector.empty
       }
 
     def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] =
       traverseInputs {
-        case b: EndpointInput.Basic[_] => Vector(b)
-        case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
+        case b: EndpointInput.Basic[_]   => Vector(b)
+        case a: EndpointInput.Auth[_, _] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
       }
 
-    def auths: Vector[EndpointInput.Auth[_]] =
-      traverseInputs { case a: EndpointInput.Auth[_] =>
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+      traverseInputs { case a: EndpointInput.Auth[_, _] =>
         Vector(a)
       }
 
@@ -103,7 +98,7 @@ package object internal {
           case _: EndpointInput.Basic[_]                 => Vector.empty
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
-          case a: EndpointInput.Auth[_]                  => findIn(a, a.input)
+          case a: EndpointInput.Auth[_, _]               => findIn(a, a.input)
           case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
           case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
         }
@@ -235,21 +230,29 @@ package object internal {
     exactValues.contains(v)
   }
 
-  def recoverErrors[I, E, O, F[_]](
-      f: I => F[O]
-  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => I => F[Either[E, O]] = { implicit monad => i =>
-    import sttp.monad.syntax._
-    Try(f(i).map(Right(_): Either[E, O])) match {
-      case Success(value) =>
-        monad.handleError(value) {
-          case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
-        }
-      case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
-      case Failure(exception)                                                 => monad.error(exception)
-    }
+  def recoverErrors2[T, U, E, O, F[_]](
+      f: T => U => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => U => F[Either[E, O]] = {
+    implicit monad => t => u =>
+      import sttp.monad.syntax._
+      Try(f(t)(u).map(Right(_): Either[E, O])) match {
+        case Success(value) =>
+          monad.handleError(value) {
+            case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
+          }
+        case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
+        case Failure(exception)                                                 => monad.error(exception)
+      }
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  def recoverErrors1[T, E, O, F[_]](
+      f: T => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => F[Either[E, O]] = { m =>
+    val result = recoverErrors2((_: Unit) => f)
+    result(m)(())
+  }
+
+  def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
     e.output
       .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
         Vector(ws)

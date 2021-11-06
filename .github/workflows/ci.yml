@@ -42,6 +42,10 @@ jobs:
     - name: Test
       if: matrix.target-platform != 'JS'
       run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
+      # the finatra tests take a really long time; hence, running them separately
+    - name: Test finatra
+      if: matrix.target-platform != 'JS'
+      run: sbt -v mimaReportBinaryIssues testFinatra
       # Temporarily call JS tests for each subproject explicitly as a workaround until
       # https://github.com/scala-js/scala-js/issues/4317 has a solution
     - name: Test Scala.js

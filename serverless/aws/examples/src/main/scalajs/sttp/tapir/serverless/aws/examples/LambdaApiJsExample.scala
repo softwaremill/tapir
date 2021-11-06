@@ -13,7 +13,7 @@ object LambdaApiJsExample {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, Future] = endpoint.get
+  val helloEndpoint: ServerEndpoint[Any, Future] = endpoint.get
     .in("api" / "hello")
     .out(stringBody)
     .serverLogic { _ => Future(s"Hello!".asRight[Unit]) }

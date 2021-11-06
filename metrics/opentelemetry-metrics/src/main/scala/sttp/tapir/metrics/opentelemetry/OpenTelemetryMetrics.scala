@@ -2,7 +2,7 @@ package sttp.tapir.metrics.opentelemetry
 
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCounter, Meter}
-import sttp.tapir.Endpoint
+import sttp.tapir.AnyEndpoint
 import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics._
 import sttp.tapir.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
@@ -22,7 +22,7 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]] 
     copy(metrics = metrics :+ responsesDuration(meter, labels))
   def withCustom(m: Metric[F, _]): OpenTelemetryMetrics[F] = copy(metrics = metrics :+ m)
 
-  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F] =
+  def metricsInterceptor[B](ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
     new MetricsRequestInterceptor[F](metrics, ignoreEndpoints)
 }
 
@@ -124,7 +124,7 @@ object OpenTelemetryMetrics {
         }
     )
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, ep: Endpoint[_, _, _, _], req: ServerRequest): Attributes =
+  private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes =
     l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
 
   private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes =

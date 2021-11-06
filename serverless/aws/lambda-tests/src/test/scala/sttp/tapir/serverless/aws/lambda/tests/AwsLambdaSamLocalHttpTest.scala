@@ -65,7 +65,7 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
       .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("a" -> "1", "b" -> "2", "x" -> "3", "y" -> "4"))
   }
 
-  private def testServer(t: ServerEndpoint[_, _, _, Any, IO], suffix: String = "")(
+  private def testServer(t: ServerEndpoint[Any, IO], suffix: String = "")(
       f: SttpBackend[IO, Fs2Streams[IO] with WebSockets] => IO[Assertion]
   ): Unit = test(s"${t.endpoint.showDetail} $suffix")(backendResource.use(f(_)).unsafeRunSync())
 }

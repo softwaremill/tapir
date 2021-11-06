@@ -150,12 +150,13 @@ lazy val allAggregates = core.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs
 
-val testJVM = taskKey[Unit]("Test JVM projects")
+val testJVM = taskKey[Unit]("Test JVM projects, without Finatra")
 val testJS = taskKey[Unit]("Test JS projects")
 val testDocs = taskKey[Unit]("Test docs projects")
 val testServers = taskKey[Unit]("Test server projects")
 val testClients = taskKey[Unit]("Test client projects")
 val testOther = taskKey[Unit]("Test other projects")
+val testFinatra = taskKey[Unit]("Test Finatra projects")
 
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
@@ -189,7 +190,7 @@ lazy val rootProject = (project in file("."))
   .settings(
     publishArtifact := false,
     name := "tapir",
-    testJVM := (Test / test).all(filterProject(p => !p.contains("JS"))).value,
+    testJVM := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra"))).value,
     testJS := (Test / test).all(filterProject(_.contains("JS"))).value,
     testDocs := (Test / test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
     testServers := (Test / test).all(filterProject(p => p.contains("Server"))).value,
@@ -201,6 +202,7 @@ lazy val rootProject = (project in file("."))
         )
       )
       .value,
+    testFinatra := (Test / test).all(filterProject(p => p.contains("finatra"))).value,
     ideSkipProject := false,
     generateMimeByExtensionDB := GenerateMimeByExtensionDB()
   )

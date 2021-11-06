@@ -121,7 +121,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     // given
     val provider = SdkMeterProvider.builder().build()
     val meter = provider.get("tapir-instrumentation")
-    val waitServerEp: Int => ServerEndpoint[String, String, String, Any, Id] = millis => {
+    val waitServerEp: Int => ServerEndpoint[Any, Id] = millis => {
       PersonsApi { name =>
         Thread.sleep(millis)
         PersonsApi.defaultLogic(name)

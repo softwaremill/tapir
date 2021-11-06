@@ -8,7 +8,7 @@ import sttp.tapir.tests.data.{Entity, FruitErrorDetail, Organization, Person}
 import sttp.tapir._
 
 object OneOf {
-  val in_string_out_status_from_string: Endpoint[String, Unit, Either[Int, String], Any] =
+  val in_string_out_status_from_string: PublicEndpoint[String, Unit, Either[Int, String], Any] =
     endpoint
       .in(query[String]("fruit"))
       .out(
@@ -18,7 +18,7 @@ object OneOf {
         )
       )
 
-  val in_int_out_value_form_exact_match: Endpoint[Int, Unit, String, Any] =
+  val in_int_out_value_form_exact_match: PublicEndpoint[Int, Unit, String, Any] =
     endpoint
       .in("mapping")
       .in(query[Int]("num"))
@@ -29,7 +29,7 @@ object OneOf {
         )
       )
 
-  val in_string_out_status_from_type_erasure_using_partial_matcher: Endpoint[String, Unit, Option[Either[Int, String]], Any] = {
+  val in_string_out_status_from_type_erasure_using_partial_matcher: PublicEndpoint[String, Unit, Option[Either[Int, String]], Any] = {
     import sttp.tapir.typelevel.MatchType
 
     endpoint
@@ -46,7 +46,7 @@ object OneOf {
         )
       )
   }
-  val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Any] =
+  val in_string_out_status_from_string_one_empty: PublicEndpoint[String, Unit, Either[Unit, String], Any] =
     endpoint
       .in(query[String]("fruit"))
       .out(
@@ -56,7 +56,7 @@ object OneOf {
         )
       )
 
-  val out_json_or_default_json: Endpoint[String, Unit, Entity, Any] =
+  val out_json_or_default_json: PublicEndpoint[String, Unit, Entity, Any] =
     endpoint.get
       .in("entity" / path[String]("type"))
       .out(
@@ -66,7 +66,7 @@ object OneOf {
         )
       )
 
-  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] = {
+  val out_no_content_or_ok_empty_output: PublicEndpoint[Int, Unit, Unit, Any] = {
     val anyMatches: PartialFunction[Any, Boolean] = { case _ => true }
 
     endpoint
@@ -80,7 +80,7 @@ object OneOf {
       )
   }
 
-  val out_json_or_empty_output_no_content: Endpoint[Int, Unit, Either[Unit, Person], Any] =
+  val out_json_or_empty_output_no_content: PublicEndpoint[Int, Unit, Either[Unit, Person], Any] =
     endpoint
       .in("status")
       .in(query[Int]("statusOut"))
@@ -91,7 +91,7 @@ object OneOf {
         )
       )
 
-  val in_string_out_error_detail_nested: Endpoint[String, FruitErrorDetail, Unit, Any] =
+  val in_string_out_error_detail_nested: PublicEndpoint[String, FruitErrorDetail, Unit, Any] =
     endpoint
       .in(query[String]("fruit"))
       .errorOut(

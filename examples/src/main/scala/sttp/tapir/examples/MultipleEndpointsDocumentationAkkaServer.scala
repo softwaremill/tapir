@@ -21,12 +21,12 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
 
-  val booksListing: Endpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
+  val booksListing: PublicEndpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
     .in("books")
     .in("list" / "all")
     .out(jsonBody[Vector[Book]])
 
-  val addBook: Endpoint[Book, Unit, Unit, Any] = endpoint.post
+  val addBook: PublicEndpoint[Book, Unit, Unit, Any] = endpoint.post
     .in("books")
     .in("add")
     .in(
@@ -47,9 +47,11 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
     )
   )
 
-  val booksListingRoute = AkkaHttpServerInterpreter().toRoute(booksListing)(_ => Future.successful(Right(books.get())))
+  val booksListingRoute = AkkaHttpServerInterpreter().toRoute(booksListing.serverLogicSuccess(_ => Future.successful(books.get())))
   val addBookRoute =
-    AkkaHttpServerInterpreter().toRoute(addBook)(book => Future.successful(Right(books.getAndUpdate(books => books :+ book))))
+    AkkaHttpServerInterpreter().toRoute(
+      addBook.serverLogicSuccess(book => Future.successful { books.getAndUpdate(books => books :+ book); () })
+    )
 
   // generating the documentation in yml; extension methods come from imported packages
   val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")

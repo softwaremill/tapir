@@ -17,17 +17,17 @@ object ErrorOutputsAkkaServer extends App {
   // the endpoint description
   case class Result(result: Int)
 
-  val errorOrJson: Endpoint[Int, String, Result, Any] =
+  val errorOrJson: PublicEndpoint[Int, String, Result, Any] =
     endpoint.get
       .in(query[Int]("amount"))
       .out(jsonBody[Result])
       .errorOut(stringBody)
 
   // converting an endpoint to a route
-  val errorOrJsonRoute: Route = AkkaHttpServerInterpreter().toRoute(errorOrJson) {
+  val errorOrJsonRoute: Route = AkkaHttpServerInterpreter().toRoute(errorOrJson.serverLogic {
     case x if x < 0 => Future.successful(Left("Invalid parameter, smaller than 0!"))
     case x          => Future.successful(Right(Result(x * 2)))
-  }
+  })
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

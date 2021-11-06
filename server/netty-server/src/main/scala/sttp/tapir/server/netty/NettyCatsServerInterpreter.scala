@@ -11,7 +11,7 @@ trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
   def nettyServerOptions: NettyCatsServerOptions[F]
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, Any, F]]): Route[F] = {
+  def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
     NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
   }

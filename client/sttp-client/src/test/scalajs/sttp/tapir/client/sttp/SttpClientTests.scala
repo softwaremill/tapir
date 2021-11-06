@@ -11,21 +11,22 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
   val backend: SttpBackend[Future, R] = FetchBackend()
   def wsToPipe: WebSocketToPipe[R]
 
-  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+  override def send[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     val response: Future[Either[E, O]] =
-      SttpClientInterpreter().toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body)
+      SttpClientInterpreter().toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(securityArgs).apply(args).send(backend).map(_.body)
     IO.fromFuture(IO(response))
   }
 
-  override def safeSend[I, E, O](
-      e: Endpoint[I, E, O, R],
+  override def safeSend[A, I, E, O](
+      e: Endpoint[A, I, E, O, R],
       port: Port,
+      securityArgs: A,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     def response: Future[DecodeResult[Either[E, O]]] =
-      SttpClientInterpreter().toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)
+      SttpClientInterpreter().toSecureRequest(e, Some(uri"http://localhost:$port")).apply(securityArgs).apply(args).send(backend).map(_.body)
     IO.fromFuture(IO(response))
   }
 

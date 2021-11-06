@@ -20,10 +20,10 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
   type Port = Int
   var port: Port = 51823
 
-  def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
-  def safeSend[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
+  def send[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I, scheme: String = "http"): IO[Either[E, O]]
+  def safeSend[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I): IO[DecodeResult[Either[E, O]]]
 
-  def testClient[I, E, O](e: Endpoint[I, E, O, R], args: I, expectedResult: Either[E, O]): Unit = {
+  def testClient[A, I, E, O](e: Endpoint[A, I, E, O, R], securityArgs: A, args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Future[Either[Any, Any]] = {
@@ -39,7 +39,7 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
       }
 
       for {
-        result <- send(e, port, args).unsafeToFuture()
+        result <- send(e, port, securityArgs, args).unsafeToFuture()
         (adjustedResult, adjustedExpectedResult) <- adjust(result).zip(adjust(expectedResult))
       } yield adjustedResult shouldBe adjustedExpectedResult
     }

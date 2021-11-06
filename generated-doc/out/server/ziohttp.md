@@ -7,13 +7,13 @@ exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http)
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M14"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M14"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -37,19 +37,12 @@ This brings into scope all of the [basic](../endpoint/basics.md) input/output de
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 ```
 
-The `ZioHttpInterpreter` objects contains methods: `toHttp` and `toHttpRecoverErrors`.
-
-The `toHttp` method requires a `ZServerEndpoint` (see below), or that the logic of the endpoint is given as a function 
-of type:
+The `ZioHttpInterpreter` objects contains the `toHttp` method, which requires a `ZServerEndpoint` (see below). For 
+example:
 
 ```scala
-I => ZIO[R, E, O]
-```
-
-For example:
-
-```scala
-import sttp.tapir._
+import sttp.tapir.PublicEndpoint
+import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
@@ -57,26 +50,11 @@ import zio._
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =
   ZIO.succeed(s.length)
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
+val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersHttp: Http[Any, Throwable, Request, Response[Any, Throwable]]  =
-  ZioHttpInterpreter().toHttp(countCharactersEndpoint)(countCharacters)
-```
-
-Note that the second argument to `toHttp` is a function with one argument, a tuple of type `I`. This means that
-functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
-
-```scala
-import sttp.tapir._
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.{Http, Request, Response}
-import zio._
-
-def logic(s: String, i: Int): ZIO[Any, Nothing, String] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val anHttp: Http[Any, Throwable, Request, Response[Any, Throwable]] = 
-    ZioHttpInterpreter().toHttp(anEndpoint)((logic _).tupled)
+  ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 
 ## Server logic
@@ -84,9 +62,8 @@ val anHttp: Http[Any, Throwable, Request, Response[Any, Throwable]] =
 When defining the business logic for an endpoint, the following methods are available, which replace the
 [standard ones](logic.md):
 
-* `def zServerLogic(logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O, C]`
-* `def zServerLogicPart(logicPart: T => ZIO[R, E, U])`
-* `def zServerLogicForCurrent(logicPart: I => ZIO[R, E, U])`
+* `def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, C]` for public endpoints
+* `def zServerSecurityLogic[R, U](f: A => ZIO[R, E, U]): ZPartialServerEndpoint[R, A, U, I, E, O, C]` for secure endpoints
 
 The first defines complete server logic, while the second and third allow defining server logic in parts.
 
@@ -102,8 +79,3 @@ The capability can be added to the classpath independently of the interpreter th
 
 The interpreter can be configured by providing an `ZioHttpServerOptions` value, see
 [server options](options.md) for details.
-
-## Defining an endpoint together with the server logic
-
-It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.md) for details.

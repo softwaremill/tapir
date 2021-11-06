@@ -12,9 +12,9 @@ import scala.concurrent.{Await, Future}
 
 object MultipleServerEndpointsAkkaServer extends App {
   // endpoint descriptions, together with the server logic
-  val endpoint1 = endpoint.get.in("endpoint1").out(stringBody).serverLogic[Future] { _ => Future.successful(Right("ok1")) }
+  val endpoint1 = endpoint.get.in("endpoint1").out(stringBody).serverLogicSuccess { _ => Future.successful("ok1") }
   val endpoint2 =
-    endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogic[Future] { path => Future.successful(Right(s"ok2: $path")) }
+    endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogicSuccess { path => Future.successful(s"ok2: $path") }
 
   // converting the endpoints to a (single) route
   val route: Route = AkkaHttpServerInterpreter().toRoute(List(endpoint1, endpoint2))

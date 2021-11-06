@@ -1,6 +1,5 @@
 package sttp.tapir.integ.cats
 
-import cats.data._
 import org.scalatest.{Assertion, Inside}
 import sttp.tapir.SchemaType._
 import org.scalatest.flatspec.AnyFlatSpec

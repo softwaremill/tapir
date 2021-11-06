@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.19.0-M14"
 ```
 
 To make requests using an endpoint definition using the [play client](https://github.com/playframework/play-ws), import:
@@ -12,21 +12,21 @@ To make requests using an endpoint definition using the [play client](https://gi
 import sttp.tapir.client.play.PlayClientInterpreter
 ```
 
-This objects contains two methods:
- - `toRequestUnsafe(Endpoint, String)`: given the base URI returns a function,
+This objects contains four methods:
+ - `toRequestUnsafe(PublicEndpoint, String)` and `toSecureRequestUnsafe(Endpoint, String)`: given the base URI returns a function,
    which will generate a request and a response parser which might throw
    an exception when decoding of the result fails
    ```scala
    I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O])
    ```
- - `toRequest(Endpoint, String)`: given the base URI returns a function,
+ - `toRequest(PublicEndpoint, String)` and `toSecureRequest(Endpoint, String)`: given the base URI returns a function,
    which will generate a request and a response parser which represents
    decoding errors as the `DecodeResult` class
    ```scala
    I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]])
    ```
 
-Note that the returned functions have one-argument: the input values of end endpoint. This might be a 
+Note that the returned functions have one argument each: first the security inputs (if any), and regular input values of the endpoint. This might be a 
 single type, a tuple, or a case class, depending on the endpoint description. 
 
 After providing the input parameters, the two following are returned:
@@ -50,7 +50,7 @@ import scala.concurrent.Future
 import play.api.libs.ws.StandaloneWSClient
 
 def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
-  val e: Endpoint[I, E, O, R] = ???
+  val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
   
   val (req, responseParser) = PlayClientInterpreter()

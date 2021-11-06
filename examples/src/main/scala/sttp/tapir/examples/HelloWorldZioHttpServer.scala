@@ -1,6 +1,7 @@
 package sttp.tapir.examples
 
-import sttp.tapir._
+import sttp.tapir.PublicEndpoint
+import sttp.tapir.ztapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.zio._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -11,7 +12,7 @@ import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 object HelloWorldZioHttpServer extends App {
   // a simple string-only endpoint
-  val helloWorld: Endpoint[String, Unit, String, Any] =
+  val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get
       .in("hello")
       .in(path[String]("name"))
@@ -23,7 +24,7 @@ object HelloWorldZioHttpServer extends App {
     implicit val decoder: JsonDecoder[AddResult] = DeriveJsonDecoder.gen[AddResult]
     implicit val encoder: JsonEncoder[AddResult] = DeriveJsonEncoder.gen[AddResult]
   }
-  val add: Endpoint[(Int, Int), Unit, AddResult, Any] =
+  val add: PublicEndpoint[(Int, Int), Unit, AddResult, Any] =
     endpoint.get
       .in("add")
       .in(path[Int]("x"))
@@ -32,8 +33,8 @@ object HelloWorldZioHttpServer extends App {
 
   // converting the endpoint descriptions to the Http type
   val app: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter().toHttp(helloWorld)(name => ZIO.succeed(s"Hello, $name!")) <>
-      ZioHttpInterpreter().toHttp(add) { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) }
+    ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) <>
+      ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 
   // starting the server
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =

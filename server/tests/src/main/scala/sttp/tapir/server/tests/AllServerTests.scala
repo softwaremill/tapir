@@ -14,7 +14,7 @@ class AllServerTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],
     serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    authentication: Boolean = true,
+    security: Boolean = true,
     basic: Boolean = true,
     contentNegotiation: Boolean = true,
     file: Boolean = true,
@@ -29,7 +29,7 @@ class AllServerTests[F[_], ROUTE](
     m: MonadError[F]
 ) {
   def tests(): List[Test] =
-    (if (authentication) new ServerAuthenticationTests(createServerTest).tests() else Nil) ++
+    (if (security) new ServerSecurityTests(createServerTest).tests() else Nil) ++
       (if (basic) new ServerBasicTests(createServerTest, serverInterpreter).tests() else Nil) ++
       (if (contentNegotiation) new ServerContentNegotiationTests(createServerTest).tests() else Nil) ++
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++

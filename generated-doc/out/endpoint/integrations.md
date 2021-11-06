@@ -6,12 +6,11 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.19.0-M14"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
 - `import sttp.tapir.integ.cats.syntax._` - brings additional syntax for `tapir` types
-
 
 ## Refined integration
 
@@ -19,7 +18,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.19.0-M14"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -40,7 +39,7 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.19.0-M14"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -57,18 +56,18 @@ The example code below will generate [enums](https://swagger.io/docs/specificati
 import sttp.tapir._
 
 trait EnumHelper { e: Enumeration =>
-    import io.circe._
+  import io.circe._
 
-    implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
-    implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
+  implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
+  implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
 
-    // needs to be a def or lazy val so that the enumeration values are available!
-    implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
+  // needs to be a def or lazy val so that the enumeration values are available!
+  implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
 }
 object Color extends Enumeration with EnumHelper {
-    type Color = Value
-    val Blue = Value("blue")
-    val Red   = Value("red")
+  type Color = Value
+  val Blue = Value("blue")
+  val Red   = Value("red")
 }
 ``` 
 
@@ -78,7 +77,7 @@ If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapi
 schemas for a types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "0.19.0-M14"
 ```
 
 Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.enumeratum.TapirCodecNewType` trait to bring the implicit values into scope.
@@ -90,10 +89,11 @@ For details refer to [derevo documentation](https://github.com/tofu-tf/derevo#in
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "0.19.0-M14"
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:
+
 ```scala
 import derevo.derive
 import sttp.tapir.derevo.schema
@@ -105,9 +105,8 @@ case class Person(name: String, age: Int)
 
 @derive(schema("Type of currency in the country"))
 sealed trait Currency
-object Currency {
-    case object CommunisticCurrency extends Currency
-    case class USD(amount: Long) extends Currency
+  object Currency {case object CommunisticCurrency extends Currency
+  case class USD(amount: Long) extends Currency
 }
 ```
 
@@ -122,7 +121,6 @@ import sttp.tapir.derevo.schema
 import io.estatico.newtype.macros.newtype
 
 object types {
-  
   @derive(schema)
   @newtype
   case class Amount(i: Int)

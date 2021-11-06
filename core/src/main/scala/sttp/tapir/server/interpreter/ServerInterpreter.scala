@@ -3,11 +3,11 @@ package sttp.tapir.server.interpreter
 import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.internal.ParamsAsAny
+import sttp.tapir.internal.{Params, ParamsAsAny}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, TapirFile, StreamBodyIO}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
@@ -15,10 +15,10 @@ class ServerInterpreter[R, F[_], B, S](
     interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
+  def apply(request: ServerRequest, se: ServerEndpoint[R, F]): F[RequestResult[B]] =
     apply(request, List(se))
 
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[RequestResult[B]] =
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[R, F]]): F[RequestResult[B]] =
     monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
@@ -26,7 +26,7 @@ class ServerInterpreter[R, F[_], B, S](
       is: List[Interceptor[F]],
       eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B],
-      ses: List[ServerEndpoint[_, _, _, R, F]]
+      ses: List[ServerEndpoint[R, F]]
   ): RequestHandler[F, B] = {
     is match {
       case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
@@ -42,52 +42,80 @@ class ServerInterpreter[R, F[_], B, S](
   /** Try decoding subsequent server endpoints, until a non-None response is returned. */
   private def firstNotNone(
       request: ServerRequest,
-      ses: List[ServerEndpoint[_, _, _, R, F]],
+      ses: List[ServerEndpoint[R, F]],
       endpointInterceptors: List[EndpointInterceptor[F]],
       accumulatedFailureContexts: List[DecodeFailureContext]
   ): F[RequestResult[B]] =
     ses match {
       case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
-        tryServerEndpoint(request, se, endpointInterceptors).flatMap {
+        tryServerEndpoint[se.A, se.U, se.I, se.E, se.O](request, se, endpointInterceptors).flatMap {
           case RequestResult.Failure(failureContexts) =>
             firstNotNone(request, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
           case r => r.unit
         }
     }
 
-  private def tryServerEndpoint[I, E, O](
+  private def tryServerEndpoint[A, U, I, E, O](
       request: ServerRequest,
-      se: ServerEndpoint[I, E, O, R, F],
+      se: ServerEndpoint.Full[A, U, I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
-    val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
+    val defaultSecurityFailureResponse = ServerResponse[B](StatusCode.InternalServerError, Nil, None).unit
 
-    def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
-      case (interceptor, handler) => interceptor(responder(defaultStatusCode), handler)
+    def endpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
+      endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
+        interceptor(responder(defaultSuccessStatusCode), handler)
+      }
+
+    def resultOrValueFrom = new ResultOrValueFrom {
+      def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+        val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
+        endpointHandler(defaultSecurityFailureResponse)
+          .onDecodeFailure(decodeFailureContext)
+          .map {
+            case Some(response) => RequestResult.Response(response)
+            case None           => RequestResult.Failure(List(decodeFailureContext))
+          }
+      }
     }
 
-    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
-      val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
-      endpointHandler(defaultErrorStatusCode)
-        .onDecodeFailure(decodeFailureContext)
-        .map {
-          case Some(response) => RequestResult.Response(response)
-          case None           => RequestResult.Failure(List(decodeFailureContext))
+    (for {
+      // 1. decoding security inputs, computing the security input value, and decoding basic regular inputs
+      // that way we will short-circuit further processing if any basic input fails to decode
+      securityValues <- resultOrValueFrom(decodeBody(DecodeBasicInputs(se.endpoint.securityInput, request)))
+      securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
+      inputValues <- resultOrValueFrom(DecodeBasicInputs(se.endpoint.input, request))
+      a = securityParams.asAny.asInstanceOf[A]
+      // 2. running the security logic
+      securityLogicResult <- ResultOrValue(
+        se.securityLogic(monad)(a).map(Right(_): Either[RequestResult[B], Either[E, U]]).handleError { case t: Throwable =>
+          endpointHandler(monad.error(t))
+            .onSecurityFailure(SecurityFailureContext(se, a, request))
+            .map(r => Left(RequestResult.Response(r)): Either[RequestResult[B], Either[E, U]])
         }
-    }
+      )
+      response <- securityLogicResult match {
+        case Left(e) =>
+          resultOrValueFrom.value(
+            endpointHandler(responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(se.endpoint.errorOutput, e)))
+              .onSecurityFailure(SecurityFailureContext(se, a, request))
+              .map(RequestResult.Response(_): RequestResult[B])
+          )
 
-    decodeBody(decodedBasicInputs).flatMap {
-      case values: DecodeBasicInputsResult.Values =>
-        InputValue(se.endpoint.input, values) match {
-          case InputValueResult.Value(params, _) =>
-            endpointHandler(defaultSuccessStatusCode)
-              .onDecodeSuccess(interceptor.DecodeSuccessContext(se, params.asAny.asInstanceOf[I], request))
-              .map(RequestResult.Response(_))
-          case InputValueResult.Failure(input, failure) => onDecodeFailure(input, failure)
-        }
-      case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure)
-    }
+        case Right(u) =>
+          for {
+            // 3. decoding the body of regular inputs, computing the input value, and running the main logic
+            values <- resultOrValueFrom(decodeBody(inputValues))
+            params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
+            response <- resultOrValueFrom.value(
+              endpointHandler(defaultSecurityFailureResponse)
+                .onDecodeSuccess(interceptor.DecodeSuccessContext(se, u, params.asAny.asInstanceOf[I], request))
+                .map(RequestResult.Response(_): RequestResult[B])
+            )
+          } yield response
+      }
+    } yield response).fold
   }
 
   private def decodeBody(result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
@@ -116,25 +144,27 @@ class ServerInterpreter[R, F[_], B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private val defaultEndpointHandler: EndpointHandler[F, B] = new EndpointHandler[F, B] {
-    override def onDecodeSuccess[I](
-        ctx: DecodeSuccessContext[F, I]
-    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
-      runLogic(ctx.serverEndpoint, ctx.i, ctx.request)
+  private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
+    new EndpointHandler[F, B] {
+      override def onDecodeSuccess[U, I](
+          ctx: DecodeSuccessContext[F, U, I]
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
+        ctx.serverEndpoint
+          .logic(implicitly)(ctx.u)(ctx.i)
+          .flatMap {
+            case Right(result) => responder(defaultSuccessStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.output, result))
+            case Left(err)     => responder(defaultErrorStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.errorOutput, err))
+          }
 
-    private def runLogic[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, _, F], i: I, request: ServerRequest): F[ServerResponse[B]] =
-      serverEndpoint
-        .logic(implicitly)(i)
-        .flatMap {
-          case Right(result) => responder(defaultSuccessStatusCode)(request, ValuedEndpointOutput(serverEndpoint.output, result))
-          case Left(err)     => responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(serverEndpoint.errorOutput, err))
-        }
+      override def onSecurityFailure[A](
+          ctx: SecurityFailureContext[F, A]
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = securityFailureResponse
 
-    override def onDecodeFailure(
-        ctx: DecodeFailureContext
-    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
-      (None: Option[ServerResponse[B]]).unit(monad)
-  }
+      override def onDecodeFailure(
+          ctx: DecodeFailureContext
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
+        (None: Option[ServerResponse[B]]).unit(monad)
+    }
 
   private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
     override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
@@ -153,4 +183,42 @@ class ServerInterpreter[R, F[_], B, S](
 
   private val defaultSuccessStatusCode: StatusCode = StatusCode.Ok
   private val defaultErrorStatusCode: StatusCode = StatusCode.BadRequest
+
+  private case class ResultOrValue[T](v: F[Either[RequestResult[B], T]]) {
+    def flatMap[U](f: T => ResultOrValue[U]): ResultOrValue[U] = {
+      ResultOrValue(v.flatMap {
+        case Left(r)  => (Left(r): Either[RequestResult[B], U]).unit
+        case Right(v) => f(v).v
+      })
+    }
+    def map[U](f: T => U): ResultOrValue[U] = {
+      ResultOrValue(v.map {
+        case Left(r)  => Left(r): Either[RequestResult[B], U]
+        case Right(v) => Right(f(v))
+      })
+    }
+    def fold(implicit ev: T =:= RequestResult[B]): F[RequestResult[B]] = v.map {
+      case Left(r)  => r
+      case Right(r) => r
+    }
+  }
+
+  private abstract class ResultOrValueFrom {
+    def apply(v: F[DecodeBasicInputsResult]): ResultOrValue[DecodeBasicInputsResult.Values] = ResultOrValue(v.flatMap {
+      case v: DecodeBasicInputsResult.Values               => (Right(v): Either[RequestResult[B], DecodeBasicInputsResult.Values]).unit
+      case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure).map(Left(_))
+    })
+    def apply(v: InputValueResult): ResultOrValue[Params] = v match {
+      case InputValueResult.Value(params, _)        => ResultOrValue((Right(params): Either[RequestResult[B], Params]).unit)
+      case InputValueResult.Failure(input, failure) => ResultOrValue(onDecodeFailure(input, failure).map(Left(_)))
+    }
+    def apply(v: DecodeBasicInputsResult): ResultOrValue[DecodeBasicInputsResult.Values] = v match {
+      case v: DecodeBasicInputsResult.Values =>
+        ResultOrValue((Right(v): Either[RequestResult[B], DecodeBasicInputsResult.Values]).unit)
+      case DecodeBasicInputsResult.Failure(input, failure) => ResultOrValue(onDecodeFailure(input, failure).map(Left(_)))
+    }
+    def value[T](v: F[T]): ResultOrValue[T] = ResultOrValue(v.map(Right(_)))
+
+    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]]
+  }
 }

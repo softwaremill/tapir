@@ -1,7 +1,7 @@
 package sttp.tapir.metrics
 
 import sttp.monad.MonadError
-import sttp.tapir.Endpoint
+import sttp.tapir.AnyEndpoint
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 
 case class Metric[F[_], M](
@@ -12,22 +12,22 @@ case class Metric[F[_], M](
 
 case class EndpointMetric[F[_]](
     /** Called when an endpoint matches the request, before calling the server logic. */
-    onEndpointRequest: Option[Endpoint[_, _, _, _] => F[Unit]] = None,
-    onResponse: Option[(Endpoint[_, _, _, _], ServerResponse[_]) => F[Unit]] = None,
-    onException: Option[(Endpoint[_, _, _, _], Throwable) => F[Unit]] = None
+    onEndpointRequest: Option[AnyEndpoint => F[Unit]] = None,
+    onResponse: Option[(AnyEndpoint, ServerResponse[_]) => F[Unit]] = None,
+    onException: Option[(AnyEndpoint, Throwable) => F[Unit]] = None
 ) {
-  def onEndpointRequest(f: Endpoint[_, _, _, _] => F[Unit]): EndpointMetric[F] = this.copy(onEndpointRequest = Some(f))
-  def onResponse(f: (Endpoint[_, _, _, _], ServerResponse[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponse = Some(f))
-  def onException(f: (Endpoint[_, _, _, _], Throwable) => F[Unit]): EndpointMetric[F] = this.copy(onException = Some(f))
+  def onEndpointRequest(f: AnyEndpoint => F[Unit]): EndpointMetric[F] = this.copy(onEndpointRequest = Some(f))
+  def onResponse(f: (AnyEndpoint, ServerResponse[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponse = Some(f))
+  def onException(f: (AnyEndpoint, Throwable) => F[Unit]): EndpointMetric[F] = this.copy(onException = Some(f))
 }
 
 case class MetricLabels(
-    forRequest: Seq[(String, (Endpoint[_, _, _, _], ServerRequest) => String)],
+    forRequest: Seq[(String, (AnyEndpoint, ServerRequest) => String)],
     forResponse: Seq[(String, Either[Throwable, ServerResponse[_]] => String)]
 ) {
   def forRequestNames: Seq[String] = forRequest.map { case (name, _) => name }
   def forResponseNames: Seq[String] = forResponse.map { case (name, _) => name }
-  def forRequest(ep: Endpoint[_, _, _, _], req: ServerRequest): Seq[String] = forRequest.map { case (_, f) => f(ep, req) }
+  def forRequest(ep: AnyEndpoint, req: ServerRequest): Seq[String] = forRequest.map { case (_, f) => f(ep, req) }
   def forResponse(res: ServerResponse[_]): Seq[String] = forResponse.map { case (_, f) => f(Right(res)) }
   def forResponse(ex: Throwable): Seq[String] = forResponse.map { case (_, f) => f(Left(ex)) }
 }

@@ -32,12 +32,13 @@ import scala.collection.immutable.Seq
 
 private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
 
-  def toPlayRequest[I, E, O, R](
-      e: Endpoint[I, E, O, R],
+  def toPlayRequest[A, I, E, O, R](
+      e: Endpoint[A, I, E, O, R],
       baseUri: String
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) = { params =>
-    val req = setInputParams(e.input, ParamsAsAny(params), ws.url(baseUri))
-      .withMethod(e.input.method.getOrElse(Method.GET).method)
+  ): A => I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) = { aParams => iParams =>
+    val req0 = setInputParams(e.securityInput, ParamsAsAny(aParams), ws.url(baseUri))
+    val req = setInputParams(e.input, ParamsAsAny(iParams), req0)
+      .withMethod(e.httpMethod.getOrElse(Method.GET).method)
 
     def responseParser(response: StandaloneWSResponse): DecodeResult[Either[E, O]] = {
       parsePlayResponse(e)(response) match {
@@ -50,32 +51,33 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     (req, responseParser)
   }
 
-  def toPlayRequestUnsafe[I, E, O, R](
-      e: Endpoint[I, E, O, R],
+  def toPlayRequestUnsafe[A, I, E, O, R](
+      e: Endpoint[A, I, E, O, R],
       baseUri: String
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) = { params =>
-    val (req, responseParser) = toPlayRequest(e, baseUri)(params)
+  ): A => I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) = { aParams => iParams =>
+    val (req, responseParser) = toPlayRequest(e, baseUri)(aParams)(iParams)
     def unsafeResponseParser(response: StandaloneWSResponse): Either[E, O] = {
       getOrThrow(responseParser(response))
     }
     (req, unsafeResponseParser)
   }
 
-  private def parsePlayResponse[I, E, O, R](e: Endpoint[I, E, O, R]): StandaloneWSResponse => DecodeResult[Either[E, O]] = { response =>
-    val code = sttp.model.StatusCode(response.status)
+  private def parsePlayResponse[A, I, E, O, R](e: Endpoint[A, I, E, O, R]): StandaloneWSResponse => DecodeResult[Either[E, O]] = {
+    response =>
+      val code = sttp.model.StatusCode(response.status)
 
-    val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
-    val output = if (code.isSuccess) e.output else e.errorOutput
+      val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
+      val output = if (code.isSuccess) e.output else e.errorOutput
 
-    val headers = (cookiesAsHeaders(response.cookies.toVector) ++ response.headers).flatMap { case (name, values) =>
-      values.map { v => Header(name, v) }
-    }.toVector
+      val headers = (cookiesAsHeaders(response.cookies.toVector) ++ response.headers).flatMap { case (name, values) =>
+        values.map { v => Header(name, v) }
+      }.toVector
 
-    val meta = ResponseMetadata(code, response.statusText, headers)
+      val meta = ResponseMetadata(code, response.statusText, headers)
 
-    val params = clientOutputParams(output, parser(response), meta)
+      val params = clientOutputParams(output, parser(response), meta)
 
-    params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
+      params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
   }
 
   private def cookiesAsHeaders(cookies: Seq[WSCookie]): Map[String, Seq[String]] = {
@@ -130,7 +132,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         req
-      case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
+      case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
       case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)

@@ -20,7 +20,7 @@ import scala.concurrent.{Await, Future}
 object WebSocketAkkaClient extends App {
   case class TestMessage(text: String, counter: Int)
 
-  val jsonEchoWsEndpoint: Endpoint[Unit, Unit, Flow[TestMessage, TestMessage, Any], AkkaStreams with WebSockets] =
+  val jsonEchoWsEndpoint: PublicEndpoint[Unit, Unit, Flow[TestMessage, TestMessage, Any], AkkaStreams with WebSockets] =
     endpoint.get.out(webSocketBody[TestMessage, CodecFormat.Json, TestMessage, CodecFormat.Json](AkkaStreams))
 
   implicit val actorSystem: ActorSystem = ActorSystem()

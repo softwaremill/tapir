@@ -148,7 +148,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
         util.findAnnotation(field, apikeyType).fold(i) { a =>
           val challenge = authChallenge(a)
           setSecuritySchemeName(
-            q"_root_.sttp.tapir.EndpointInput.Auth.ApiKey($i, $challenge, None)",
+            q"_root_.sttp.tapir.EndpointInput.Auth($i, None, $challenge, _root_.sttp.tapir.EndpointInput.AuthInfo.ApiKey())",
             util.findAnnotation(field, securitySchemeNameType)
           )
         }

@@ -14,16 +14,18 @@ import zio.{RIO, Task}
 /** Converts server endpoints using ZioStreams to endpoints using Fs2Streams */
 object ConvertStreams {
 
-  def apply[R, I, E, O](
-      se: ZServerEndpoint[R, I, E, O, ZioStreams with WebSockets]
-  ): ServerEndpoint[I, E, O, Fs2Streams[RIO[R, *]] with WebSockets, RIO[R, *]] =
+  def apply[R](
+      se: ZServerEndpoint[R, ZioStreams with WebSockets]
+  ): ServerEndpoint[Fs2Streams[RIO[R, *]] with WebSockets, RIO[R, *]] =
     ServerEndpoint(
       Endpoint(
-        forInput(se.input).asInstanceOf[EndpointInput[I]],
-        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[E]],
-        forOutput(se.output).asInstanceOf[EndpointOutput[O]],
+        forInput(se.securityInput).asInstanceOf[EndpointInput[se.A]],
+        forInput(se.input).asInstanceOf[EndpointInput[se.I]],
+        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[se.E]],
+        forOutput(se.output).asInstanceOf[EndpointOutput[se.O]],
         se.info
       ),
+      se.securityLogic,
       se.logic
     )
 
@@ -40,22 +42,8 @@ object ConvertStreams {
         EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
         EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
-      case EndpointInput.Auth.ApiKey(wrapped, challenge, securitySchemeName) =>
-        EndpointInput.Auth.ApiKey(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, securitySchemeName)
-      case EndpointInput.Auth.Http(scheme, wrapped, challenge, securitySchemeName) =>
-        EndpointInput.Auth.Http(scheme, forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, securitySchemeName)
-      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, wrapped, challenge, securitySchemeName) =>
-        EndpointInput.Auth.Oauth2(
-          authorizationUrl,
-          tokenUrl,
-          scopes,
-          refreshUrl,
-          forInput(wrapped).asInstanceOf[EndpointInput.Single[_]],
-          challenge,
-          securitySchemeName
-        )
-      case EndpointInput.Auth.ScopedOauth2(oauth2, requiredScopes) =>
-        EndpointInput.Auth.ScopedOauth2(forInput(oauth2).asInstanceOf[EndpointInput.Auth.Oauth2[_]], requiredScopes)
+      case EndpointInput.Auth(wrapped, securitySchemeName, challenge, info) =>
+        EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], securitySchemeName, challenge, info)
       // all other cases - unchanged
       case _ => input
     }

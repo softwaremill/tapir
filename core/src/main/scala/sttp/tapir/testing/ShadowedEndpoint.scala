@@ -1,6 +1,6 @@
 package sttp.tapir.testing
 
-import sttp.tapir.Endpoint
+import sttp.tapir.AnyEndpoint
 
 /** Endpoint `e1` is shadowed by endpoint `e2` when all requests that match `e2` also match `e1`. Here, "request matches endpoint" takes
   * into account only the method & shape of the path. It does *not* take into account possible decoding failures: these might impact
@@ -18,6 +18,6 @@ import sttp.tapir.Endpoint
   * e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
   * }}}
   */
-case class ShadowedEndpoint(e: Endpoint[_, _, _, _], by: Endpoint[_, _, _, _]) {
+case class ShadowedEndpoint(e: AnyEndpoint, by: AnyEndpoint) {
   override def toString: String = e.input.show + ", is shadowed by: " + by.input.show
 }

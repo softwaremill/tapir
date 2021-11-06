@@ -41,7 +41,7 @@ class ServerBasicTests[F[_], ROUTE](
       pathMatchingTests() ++
       pathMatchingMultipleEndpoints() ++
       pathShapeMatchingTests() ++
-      partialServerLogicTests() ++
+      serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
       exceptionTests()
 
@@ -212,7 +212,9 @@ class ServerBasicTests[F[_], ROUTE](
       pureResult((q, "test").asRight[Unit])
     ) { (backend, baseUri) =>
       if (invulnerableToUnsanitizedHeaders) {
-        basicRequest.get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you").send(backend)
+        basicRequest
+          .get(uri"$baseUri?q=hax0r%0d%0aContent-Length:+13%0d%0a%0aI+hacked+you")
+          .send(backend)
           .map { r =>
             if (r.code == StatusCode.Ok) {
               r.body shouldBe Right("test")
@@ -495,78 +497,28 @@ class ServerBasicTests[F[_], ROUTE](
     }
   )
 
-  def partialServerLogicTests(): List[Test] = List(
+  def serverSecurityLogicTests(): List[Test] = List(
     testServerLogic(
       endpoint
-        .in(query[String]("x"))
-        .serverLogicForCurrent(v => pureResult(v.toInt.asRight[Unit]))
+        .securityIn(query[String]("x"))
+        .serverSecurityLogic(v => pureResult(v.toInt.asRight[Unit]))
         .in(query[String]("y"))
         .out(plainBody[Int])
-        .serverLogic { case (x, y) => pureResult((x * y.toInt).asRight[Unit]) },
-      "partial server logic - current, one part"
+        .serverLogic { x => y => pureResult((x * y.toInt).asRight[Unit]) },
+      "server security logic - one input"
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?x=2&y=3").send(backend).map(_.body shouldBe Right("6"))
     },
     testServerLogic(
       endpoint
-        .in(query[String]("x"))
-        .serverLogicForCurrent(v => pureResult(v.toInt.asRight[Unit]))
-        .in(query[String]("y"))
-        .serverLogicForCurrent(v => pureResult(v.toLong.asRight[Unit]))
-        .in(query[String]("z"))
-        .out(plainBody[Long])
-        .serverLogic { case ((x, y), z) => pureResult((x * y * z.toLong).asRight[Unit]) },
-      "partial server logic - current, two parts"
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?x=2&y=3&z=5").send(backend).map(_.body shouldBe Right("30"))
-    },
-    testServerLogic(
-      endpoint
-        .in(query[String]("x"))
-        .in(query[String]("y"))
-        .serverLogicForCurrent { case (x, y) => pureResult((x.toInt + y.toInt).asRight[Unit]) }
+        .securityIn(query[String]("x"))
+        .securityIn(query[String]("y"))
+        .serverSecurityLogic { case (x, y) => pureResult((x.toInt + y.toInt).asRight[Unit]) }
         .in(query[String]("z"))
         .in(query[String]("u"))
         .out(plainBody[Int])
-        .serverLogic { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
-      "partial server logic - current, one part, multiple values"
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?x=2&y=3&z=5&u=7").send(backend).map(_.body shouldBe Right("175"))
-    },
-    testServerLogic(
-      endpoint
-        .in(query[String]("x"))
-        .in(query[String]("y"))
-        .out(plainBody[Int])
-        .serverLogicPart((x: String) => pureResult(x.toInt.asRight[Unit]))
-        .andThen { case (x, y) => pureResult((x * y.toInt).asRight[Unit]) },
-      "partial server logic - parts, one part"
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?x=2&y=3").send(backend).map(_.body shouldBe Right("6"))
-    },
-    testServerLogic(
-      endpoint
-        .in(query[String]("x"))
-        .in(query[String]("y"))
-        .in(query[String]("z"))
-        .out(plainBody[Long])
-        .serverLogicPart((x: String) => pureResult(x.toInt.asRight[Unit]))
-        .andThenPart((y: String) => pureResult(y.toLong.asRight[Unit]))
-        .andThen { case ((x, y), z) => pureResult((x * y * z.toLong).asRight[Unit]) },
-      "partial server logic - parts, two parts"
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri?x=2&y=3&z=5").send(backend).map(_.body shouldBe Right("30"))
-    },
-    testServerLogic(
-      endpoint
-        .in(query[String]("x"))
-        .in(query[String]("y"))
-        .in(query[String]("z"))
-        .in(query[String]("u"))
-        .out(plainBody[Int])
-        .serverLogicPart { (t: (String, String)) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
-        .andThen { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
-      "partial server logic - parts, one part, multiple values"
+        .serverLogic { xy => { case (z, u) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) } },
+      "server security logic - multiple inputs"
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?x=2&y=3&z=5&u=7").send(backend).map(_.body shouldBe Right("175"))
     }
@@ -594,7 +546,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(
       "recover errors from exceptions",
       NonEmptyList.of(
-        routeRecoverErrors(endpoint.in(query[String]("name")).errorOut(jsonBody[FruitError]).out(stringBody), throwFruits)
+        route(endpoint.in(query[String]("name")).errorOut(jsonBody[FruitError]).out(stringBody).serverLogicRecoverErrors(throwFruits))
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?name=apple").send(backend).map(_.body shouldBe Right("ok")) >>

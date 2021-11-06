@@ -2,11 +2,11 @@ package sttp.tapir.docs
 
 import sttp.tapir.Schema.SName
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
-import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
+import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 package object apispec {
   private[docs] type SchemeName = String
-  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
+  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
 
   private[docs] val defaultSchemaName: SName => String = info => {
     val shortName = info.fullName.split('.').last
@@ -36,16 +36,16 @@ package object apispec {
     }
   }
 
-  private[docs] def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
-    val (input2, _) = new EndpointInputMapper[Int](
+  private[docs] def nameAllPathCapturesInEndpoint(e: AnyEndpoint): AnyEndpoint =
+    e.copy(securityInput = namePathCapturesInInput(e.securityInput), input = namePathCapturesInInput(e.input))
+
+  private def namePathCapturesInInput(i: EndpointInput[_]): EndpointInput[_] =
+    new EndpointInputMapper[Int](
       { case (EndpointInput.PathCapture(None, codec, info), i) =>
         (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
       },
       PartialFunction.empty
-    ).mapInput(e.input, 1)
-
-    e.copy(input = input2)
-  }
+    ).mapInput(i, 1)._1
 
   private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs

@@ -45,7 +45,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.capabilities.WebSockets
 import sttp.ws.WebSocketFrame
 
-endpoint.out(webSocketBodyRaw(AkkaStreams)): Endpoint[
+endpoint.out(webSocketBodyRaw(AkkaStreams)): PublicEndpoint[
   Unit, 
   Unit, 
   Flow[WebSocketFrame, WebSocketFrame, Any], 

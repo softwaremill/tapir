@@ -14,14 +14,11 @@ import org.log4s.{Logger, getLogger}
 import org.typelevel.ci.CIString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-
-import scala.reflect.ClassTag
 
 trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
@@ -33,28 +30,16 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   def http4sServerOptions: Http4sServerOptions[F, G] = Http4sServerOptions.default[F, G]
 
-  def toHttp[I, E, O](
-      e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  )(logic: I => G[Either[E, O]]): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic), webSocketBuilder)
-
-  def toHttpRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  )(logic: I => G[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): Http[OptionT[G, *], F] = toHttp(e.serverLogicRecoverErrors(logic), webSocketBuilder)
-
   //
 
-  def toHttp[I, E, O](
-      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G],
+  def toHttp(
+      se: ServerEndpoint[Fs2Streams[F] with WebSockets, G],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): Http[OptionT[G, *], F] = toHttp(List(se), webSocketBuilder)(fToG)(gToF)
+  ): Http[OptionT[G, *], F] =
+    toHttp(List(se), webSocketBuilder)(fToG)(gToF)
 
   def toHttp(
-      serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]],
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]

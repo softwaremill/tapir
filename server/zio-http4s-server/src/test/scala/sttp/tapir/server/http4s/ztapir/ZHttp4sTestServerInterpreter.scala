@@ -7,7 +7,6 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.Endpoint
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -23,7 +22,6 @@ import ZHttp4sTestServerInterpreter._
 import org.http4s.server.websocket.WebSocketBuilder2
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 object ZHttp4sTestServerInterpreter {
   type Routes = WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]]
@@ -33,8 +31,8 @@ class ZHttp4sTestServerInterpreter
     extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[I, E, O](
-      e: ZServerEndpoint[Clock with Blocking, I, E, O, ZioStreams with WebSockets],
+  override def route(
+      e: ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
   ): Routes = {
@@ -47,22 +45,13 @@ class ZHttp4sTestServerInterpreter
     ZHttp4sServerInterpreter(serverOptions).from(e).toRoutesWithWebSockets
   }
 
-  override def route[I, E, O](
-      es: List[ZServerEndpoint[Clock with Blocking, I, E, O, ZioStreams with WebSockets]]
+  override def route(
+      es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
   ): Routes = {
     ZHttp4sServerInterpreter().from(es).toRoutesWithWebSockets
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](
-      e: Endpoint[I, E, O, ZioStreams with WebSockets],
-      fn: I => RIO[Clock with Blocking, O]
-  )(implicit
-      eClassTag: ClassTag[E]
-  ): Routes = {
-    ZHttp4sServerInterpreter().from(e.serverLogicRecoverErrors(fn)).toRoutesWithWebSockets
-  }
-
-  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[HttpRoutes[RIO[Clock with Blocking, *]]]): Resource[IO, Port] = {
     val service: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpApp[RIO[Clock with Blocking, *]] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 

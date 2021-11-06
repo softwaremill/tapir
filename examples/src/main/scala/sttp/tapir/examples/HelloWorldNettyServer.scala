@@ -2,8 +2,8 @@ package sttp.tapir.examples
 
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
-import sttp.tapir.{Endpoint, endpoint, query, stringBody}
+import sttp.tapir.server.netty.NettyFutureServer
+import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -11,7 +11,7 @@ import scala.concurrent.{Await, Future}
 
 object HelloWorldNettyServer extends App {
   // One endpoint on GET /hello with query parameter `name`
-  val helloWorldEndpoint: Endpoint[String, Unit, String, Any] =
+  val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // Just returning passed name with `Hello, ` prepended

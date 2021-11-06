@@ -13,7 +13,7 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
   def toAsyncAPI(
       info: Info,
       servers: Iterable[(String, Server)],
-      es: Iterable[Endpoint[_, _, _, _]],
+      es: Iterable[AnyEndpoint],
       options: AsyncAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): AsyncAPI = {
@@ -43,17 +43,19 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     )
   }
 
-  private def securityRequirements(securitySchemes: SecuritySchemes, es: Iterable[Endpoint[_, _, _, _]]): List[SecurityRequirement] = {
+  private def securityRequirements(securitySchemes: SecuritySchemes, es: Iterable[AnyEndpoint]): List[SecurityRequirement] = {
     ListSet(es.toList.flatMap(securityRequirements(securitySchemes, _)): _*).toList
   }
 
-  private def securityRequirements(securitySchemes: SecuritySchemes, e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
-    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
-      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
-      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+  private def securityRequirements(securitySchemes: SecuritySchemes, e: AnyEndpoint): List[SecurityRequirement] = {
+    val auths = e.securityInput.auths ++ e.input.auths
+    val securityRequirement: SecurityRequirement = auths.flatMap {
+      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
+        securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
+      case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
 
     if (securityRequirement.isEmpty) List.empty
     else {

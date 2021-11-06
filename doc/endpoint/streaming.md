@@ -14,7 +14,7 @@ of server/client interpreters for more information.
   additional requirements on the interpreter.
 ```
 
-Adding a stream body input/output influences both the type of the input/output, as well as the 4th type parameter
+Adding a stream body input/output influences both the type of the input/output, as well as the 5th type parameter
 of `Endpoint`, which specifies the requirements regarding supported stream types for interpreters.
 
 When using a stream body, a schema must be provided for documentation. By default, when using `streamBinaryBody`,

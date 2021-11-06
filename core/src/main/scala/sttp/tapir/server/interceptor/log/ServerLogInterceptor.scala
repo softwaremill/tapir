@@ -15,7 +15,7 @@ import sttp.tapir.server.interpreter.BodyListener
 class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
-      override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit
+      override def onDecodeSuccess[U, I](ctx: DecodeSuccessContext[F, U, I])(implicit
           monad: MonadError[F],
           bodyListener: BodyListener[F, B]
       ): F[ServerResponse[B]] = {
@@ -23,6 +23,19 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
           .onDecodeSuccess(ctx)
           .flatMap { response =>
             toEffect(log.requestHandled(ctx.endpoint, response.code.code), ctx.request).map(_ => response)
+          }
+          .handleError { case e: Throwable =>
+            toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
+          }
+      }
+
+      override def onSecurityFailure[A](
+          ctx: SecurityFailureContext[F, A]
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
+        decodeHandler
+          .onSecurityFailure(ctx)
+          .flatMap { response =>
+            toEffect(log.securityFailureHandled(ctx.endpoint, response), ctx.request).map(_ => response)
           }
           .handleError { case e: Throwable =>
             toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))

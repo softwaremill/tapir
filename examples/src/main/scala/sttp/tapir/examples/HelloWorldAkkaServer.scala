@@ -13,11 +13,12 @@ import sttp.client3._
 object HelloWorldAkkaServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter
   // corresponds to: GET /hello?name=...
-  val helloWorld: Endpoint[String, Unit, String, Any] =
+  val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoute: Route = AkkaHttpServerInterpreter().toRoute(helloWorld)(name => Future.successful(Right(s"Hello, $name!")))
+  val helloWorldRoute: Route =
+    AkkaHttpServerInterpreter().toRoute(helloWorld.serverLogicSuccess(name => Future.successful(s"Hello, $name!")))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

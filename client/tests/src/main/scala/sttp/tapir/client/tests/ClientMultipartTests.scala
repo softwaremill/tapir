@@ -7,10 +7,10 @@ import sttp.tapir.tests.data.{FruitAmount, FruitAmountWrapper}
 trait ClientMultipartTests { this: ClientTests[Any] =>
 
   def multipartTests(): Unit = {
-    testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
+    testClient(in_simple_multipart_out_string, (), FruitAmount("melon", 10), Right("melon=10"))
 
     test(in_simple_multipart_out_raw_string.showDetail) {
-      send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
+      send(in_simple_multipart_out_raw_string, port, (), FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
         .unsafeToFuture()
         .map(_.toOption.get)
         .map { result =>

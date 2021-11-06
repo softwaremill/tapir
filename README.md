@@ -42,7 +42,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
@@ -71,8 +71,8 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = AkkaHttpServerInterpreter
-  .toRoute(booksListing)((bookListingLogic _).tupled)
+val booksListingRoute: Route = AkkaHttpServerInterpreter()
+  .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
 
 // Convert to sttp Request
@@ -95,7 +95,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.19.0-M14"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):

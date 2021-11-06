@@ -51,7 +51,7 @@ Each part is named the same as the case-class-field. The names can be transforme
 providing an implicit `sttp.tapir.generic.Configuraton`, or customised using the `@encodedName` annotation. 
  
 Additionally, the case class to which the multipart body is mapped can contain both normal fields, and fields of type 
-`Part[T]`. This is useful, if part metadata (e.g. the filename) is relevant. 
+`Part[T]`. This is useful, if part metadata (e.g. the filename) is relevant.
 
 For example:
 
@@ -67,6 +67,20 @@ case class User(email: String)
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
+The fields can also be wrapped into `Option[T]` or `Part[Option[T]]` (`Option[Part[T]]` is unsupported) if the part is not required.
+
+```scala
+import sttp.tapir._
+import sttp.model.Part
+import java.io.File
+import sttp.tapir.generic.auto._
+
+case class RegistrationForm(userData: Option[User], photo: Part[Option[File]], news: Option[Boolean])
+case class User(email: String)
+
+multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
+```
+
 ## Next
 
-Read on about [authentication](auth.md).
+Read on about [security](security.md).

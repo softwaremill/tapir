@@ -17,8 +17,8 @@ import scala.reflect.ClassTag
 class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO]) extends TestServerInterpreter[IO, Any, FinatraRoute] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, IO],
+  override def route(
+      e: ServerEndpoint[Any, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): FinatraRoute = {
@@ -30,11 +30,7 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO]) extends TestS
     FinatraCatsServerInterpreter[IO](serverOptions).toRoute(e)
   }
 
-  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, IO]]): FinatraRoute = ???
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
-      eClassTag: ClassTag[E]
-  ): FinatraRoute = FinatraCatsServerInterpreter[IO](dispatcher).toRouteRecoverErrors(e)(fn)
+  override def route(es: List[ServerEndpoint[Any, IO]]): FinatraRoute = ???
 
   override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
 }

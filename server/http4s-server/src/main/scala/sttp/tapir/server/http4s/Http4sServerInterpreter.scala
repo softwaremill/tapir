@@ -7,26 +7,12 @@ import org.http4s._
 import org.http4s.server.websocket.WebSocketBuilder2
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 
-import scala.reflect.ClassTag
-
 trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] {
-  def toRoutes[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
-      logic: I => F[Either[E, O]]
-  ): HttpRoutes[F] = toRoutes(
-    e.serverLogic(logic)
-  )
+  def toRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
 
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(logic: I => F[O])(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): HttpRoutes[F] = toRoutes(e.serverLogicRecoverErrors(logic))
-
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
-
-  def toRoutes(serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
+  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
     toHttp(serverEndpoints, webSocketBuilder = None)(fToG)(gToF)
   }
 

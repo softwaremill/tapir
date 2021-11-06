@@ -18,13 +18,13 @@ import cats.effect.unsafe.implicits.global
 
 trait CreateServerTest[F[_], +R, ROUTE] {
   def testServer[I, E, O](
-      e: Endpoint[I, E, O, R],
+      e: PublicEndpoint[I, E, O, R],
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
   )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 
-  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
+  def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "")(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
@@ -40,7 +40,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE](
     with StrictLogging {
 
   override def testServer[I, E, O](
-      e: Endpoint[I, E, O, R],
+      e: PublicEndpoint[I, E, O, R],
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
@@ -53,7 +53,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE](
     )(runTest)
   }
 
-  override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
+  override def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "")(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     testServer(

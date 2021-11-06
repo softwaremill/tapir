@@ -13,6 +13,9 @@ Then, use:
 * `NettyFutureServer().addEndpoints` to expose `Future`-based server endpoints.
 * `NettyCatsServer().addEndpoints` to expose `F`-based server endpoints, where `F` is any cats-effect supported effect.
 
+These methods require a single, or a list of `ServerEndpoint`s, which can be created by adding [server logic](logic.md) 
+to an endpoint.
+
 For example:
 
 ```scala mdoc:compile-only
@@ -40,7 +43,3 @@ details.
 Some options can be configured directly using a `NettyFutureServer` instance, such as the host and port. Others
 can be passed using the `NettyFutureServer(options)` methods. Options may also be overridden when adding endpoints.
 
-## Defining an endpoint together with the server logic
-
-It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.md) for details.

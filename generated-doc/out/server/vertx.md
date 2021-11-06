@@ -8,7 +8,7 @@ Vert.x interpreter can be used with different effect systems (cats-effect, ZIO) 
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M14"
 ```
 to use this interpreter with `Future`.
 
@@ -19,26 +19,8 @@ import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 
 This object contains the following methods:
 
-* `route(e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. Errors will be recovered automatically (but generically)
-* `routeRecoverErrors(e: Endpoint[I, E, O, Any])(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
-* `blockingRoute(e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an blocking handler. Errors will be recovered automatically (but generically)
-* `blockingRouteRecoverErrors(e: Endpoint[I, E, O, Any])(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as a blocking handler. You're providing your own way to deal with errors happening in the `logic` function.
-
-The methods recovering errors from failed effects, require `E` to be a subclass of `Throwable` (an exception); and expect a function of type `I => Future[O]`.
-
-Note that the second argument to `route` etc. is a function with one argument, a tuple of type `I`. This means that 
-functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
-
-```scala
-import sttp.tapir._
-import sttp.tapir.server.vertx.VertxFutureServerInterpreter
-import io.vertx.ext.web._
-import scala.concurrent.Future
-
-def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val aRoute: Router => Route = VertxFutureServerInterpreter().route(anEndpoint)((logic _).tupled)
-```
+* `route(e: ServerEndpoint[Any, Future])`: returns a function `Router => Route` that will create a route with a handler attached, matching the endpoint definition. Errors will be recovered automatically (but generically)
+* `blockingRoute(e: ServerEndpoint[Any, Future])`: returns a function `Router => Route` that will create a route with a blocking handler attached, matching the endpoint definition. Errors will be recovered automatically (but generically)
 
 In practice, routes will be mounted on a router, this router can then be used as a request handler for your http server. 
 An HTTP server can then be started as in the following example:
@@ -58,9 +40,9 @@ object Main {
     val vertx = Vertx.vertx()
     val server = vertx.createHttpServer()
     val router = Router.router(vertx)
-    val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? // your definition here
+    val anEndpoint: PublicEndpoint[(String, Int), Unit, String, Any] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here
-    val attach = VertxFutureServerInterpreter().route(anEndpoint)((logic _).tupled)
+    val attach = VertxFutureServerInterpreter().route(anEndpoint.serverLogic((logic _).tupled))
     attach(router) // your endpoint is now attached to the router, and the route has been created
     Await.result(server.requestHandler(router).listen(9000).asScala, Duration.Inf)
   }
@@ -81,7 +63,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M14"
 "com.softwaremill.sttp.shared" %% "fs2" % "LatestVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
@@ -91,12 +73,10 @@ Then import the object:
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
 ```
 
-This object contains the following methods:
-
-* `route[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])` returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your logic as an handler. Errors will be recovered automatically.
-* `routeRecoverErrors[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[O])` returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
+This object contains the `route[F[_]](e: ServerEndpoint[Fs2Streams[F], F])` method, which returns a function `Router => Route` that will create a route, with a handler attached, matching the endpoint definition. Errors will be recovered automatically.
 
 Here is simple example which starts HTTP server with one route:
+
 ```scala
 import cats.effect._
 import cats.effect.std.Dispatcher
@@ -107,7 +87,7 @@ import sttp.tapir.server.vertx.VertxCatsServerInterpreter
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
 
 object App extends IOApp {
-  val responseEndpoint: Endpoint[String, Unit, String, Any] =
+  val responseEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint
       .in("response")
       .in(query[String]("key"))
@@ -125,7 +105,7 @@ object App extends IOApp {
               val vertx = Vertx.vertx()
               val server = vertx.createHttpServer()
               val router = Router.router(vertx)
-              val attach = VertxCatsServerInterpreter[IO](dispatcher).route(responseEndpoint)(handler)
+              val attach = VertxCatsServerInterpreter[IO](dispatcher).route(responseEndpoint.serverLogic(handler))
               attach(router)
               server.requestHandler(router).listen(8080)
             }.flatMap(_.asF[IO])
@@ -139,6 +119,7 @@ object App extends IOApp {
 ```
 
 This interpreter also supports streaming using FS2 streams:
+
 ```scala
 import cats.effect._
 import cats.effect.std.Dispatcher
@@ -155,18 +136,20 @@ val streamedResponse =
     
 def dispatcher: Dispatcher[IO] = ???
 
-val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse) { key =>
-  IO.pure(Right(Stream.chunk(Chunk.array("Hello world!".getBytes)).repeatN(key)))
-}
+val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse.serverLogicSuccess[IO] { key =>
+  IO.pure(Stream.chunk(Chunk.array("Hello world!".getBytes)).repeatN(key))
+})
 ```
 
 ## ZIO
 
 Add the following dependency
+
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.19.0-M14"
 "com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
 ```
+
 to use this interpreter with ZIO.
 
 Then import the object:
@@ -174,13 +157,14 @@ Then import the object:
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 ```
 
-This object contains method `route[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(logic: I => ZIO[R, E, O])` which returns a function `Router => Route` that will create a route maching the endpoint definition, and attach your logic as an handler.
+This object contains method `def route(e: ServerEndpoint[ZioStreams, RIO[R, *]])` which returns a function `Router => Route` that will create a route matching the endpoint definition, and with the logic attached as a handler.
 
 Here is simple example which starts HTTP server with one route:
+
 ```scala
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
-import sttp.tapir._
+import sttp.tapir.ztapir._
 import sttp.tapir.server.vertx.VertxZioServerInterpreter
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 
@@ -195,7 +179,7 @@ object Short extends zio.App {
       .in(query[String]("key"))
       .out(plainBody[String])
 
-  val attach = VertxZioServerInterpreter().route(responseEndpoint) { key => UIO.succeed(key) }
+  val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZManaged.make(ZIO.effect {

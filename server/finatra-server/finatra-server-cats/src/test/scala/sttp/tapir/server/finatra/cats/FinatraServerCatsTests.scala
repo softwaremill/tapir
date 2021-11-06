@@ -5,7 +5,7 @@ import sttp.client3.impl.cats.CatsMonadAsyncError
 import sttp.tapir.server.tests.{
   AllServerTests,
   DefaultCreateServerTest,
-  ServerAuthenticationTests,
+  ServerSecurityTests,
   ServerBasicTests,
   ServerMultipartTests,
   ServerStaticContentTests,

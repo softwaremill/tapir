@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.19.0-M14"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -12,20 +12,30 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This objects contains two methods:
+This objects contains four methods:
 
- - `toRequestUnsafe(Endpoint, Uri)`: given the base URI returns a function, which might throw an exception if 
+ - `toRequestUnsafe(PublicEndpoint, Uri)`: given a public endpoint and the base URI returns a function, which might throw an exception if 
    decoding of the result fails
    ```scala
    I => Request[Either[E, O], Any]
    ```
- - `toRequest(Endpoint, Uri)`: given the base URI returns a function, which represents decoding errors as the `DecodeResult` 
+ - `toRequest(PublicEndpoint, Uri)`: given a public endpoint and the base URI returns a function, which represents decoding errors as the `DecodeResult` 
    class
    ```scala
    I => Request[DecodeResult[Either[E, O]], Any]
    ```
+ - `toSecureRequestUnsafe(Endpoint, Uri)`: given a secure endpoint and the base URI returns a function, which might throw an exception if
+   decoding of the result fails
+   ```scala
+   A => I => Request[Either[E, O], Any]
+   ```
+ - `toSecureRequest(Endpoint, Uri)`: given a secure endpoint and the base URI returns a function, which represents decoding errors as the `DecodeResult`
+   class
+   ```scala
+   A => I => Request[DecodeResult[Either[E, O]], Any]
+   ```
 
-Note that the returned functions have one-argument: the input values of end endpoint. This might be a
+Note that the returned functions have one argument each: first the security inputs (if any), and regular input values of the endpoint. This might be a
 single type, a tuple, or a case class, depending on the endpoint description.
 
 After providing the input parameters, a description of the request to be made is returned, with the input value
@@ -57,7 +67,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "0.19.0-M14"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 

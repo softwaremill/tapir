@@ -22,7 +22,7 @@ object MockServerExample extends App {
 
   case class SampleOut(greeting: String)
 
-  private def testEndpoint[I, E, O](e: Endpoint[I, E, O, Any])(in: I, out: O): Unit = {
+  private def testEndpoint[I, E, O](e: PublicEndpoint[I, E, O, Any])(in: I, out: O): Unit = {
     def sep(s: String): Unit = println(s * 20)
 
     sep("")
@@ -30,7 +30,7 @@ object MockServerExample extends App {
     sep("")
 
     val expectation = mockServerClient
-      .whenInputMatches(e)(in)
+      .whenInputMatches(e)((), in)
       .thenSuccess(out)
       .get
 
@@ -46,7 +46,7 @@ object MockServerExample extends App {
     println(s"Got result $result")
     sep("")
 
-    val verifyResult = mockServerClient.verifyRequest(e, times = VerificationTimes.atLeastOnce)(in).get
+    val verifyResult = mockServerClient.verifyRequest(e, times = VerificationTimes.atLeastOnce)((), in).get
 
     println(s"Got verification result: $verifyResult")
     sep("-")

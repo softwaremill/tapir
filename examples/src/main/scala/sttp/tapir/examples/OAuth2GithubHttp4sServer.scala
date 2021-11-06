@@ -43,23 +43,23 @@ object OAuth2GithubHttp4sServer extends IOApp {
   val authOAuth2 = auth.oauth2.authorizationCode(authorizationUrl, ListMap.empty, accessTokenUrl)
 
   // endpoint declarations
-  val login: Endpoint[Unit, Unit, String, Any] =
+  val login: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.get
       .in("login")
       .out(statusCode(StatusCode.PermanentRedirect))
       .out(header[String]("Location"))
 
-  val loginGithub: Endpoint[String, String, AccessDetails, Any] =
+  val loginGithub: PublicEndpoint[String, String, AccessDetails, Any] =
     endpoint.get
       .in("login" / "oauth2" / "github")
       .in(query[String]("code"))
       .out(jsonBody[AccessDetails])
       .errorOut(stringBody)
 
-  val secretPlace: Endpoint[String, String, String, Any] =
+  val secretPlace: Endpoint[String, Unit, String, String, Any] =
     endpoint.get
-      .in("secret-place")
-      .in(authOAuth2)
+      .securityIn("secret-place")
+      .securityIn(authOAuth2)
       .out(stringBody)
       .errorOut(stringBody)
 
@@ -67,23 +67,25 @@ object OAuth2GithubHttp4sServer extends IOApp {
 
   // simply redirect to github auth service
   val loginRoute: HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
+    Http4sServerInterpreter[IO]().toRoutes(login.serverLogic(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit])))
 
   // after successful authorization github redirects you here
   def loginGithubRoute(backend: SttpBackend[IO, Any]): HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutes(loginGithub)(code =>
-      basicRequest
-        .response(asStringAlways)
-        .post(uri"$accessTokenUrl?client_id=$clientId&client_secret=$clientSecret&code=$code")
-        .header("Accept", "application/json")
-        .send(backend)
-        .map(resp => {
-          // create jwt token, that client will use for authenticating to the app
-          val now = Instant.now
-          val claim =
-            JwtClaim(expiration = Some(now.plusSeconds(15 * 60).getEpochSecond), issuedAt = Some(now.getEpochSecond), content = resp.body)
-          AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo)).asRight[String]
-        })
+    Http4sServerInterpreter[IO]().toRoutes(
+      loginGithub.serverLogic(code =>
+        basicRequest
+          .response(asStringAlways)
+          .post(uri"$accessTokenUrl?client_id=$clientId&client_secret=$clientSecret&code=$code")
+          .header("Accept", "application/json")
+          .send(backend)
+          .map(resp => {
+            // create jwt token, that client will use for authenticating to the app
+            val now = Instant.now
+            val claim =
+              JwtClaim(expiration = Some(now.plusSeconds(15 * 60).getEpochSecond), issuedAt = Some(now.getEpochSecond), content = resp.body)
+            AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo)).asRight[String]
+          })
+      )
     )
 
   // try to decode the provided jwt
@@ -96,13 +98,10 @@ object OAuth2GithubHttp4sServer extends IOApp {
   }
 
   // get user details from decoded jwt
-  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(secretPlace)(token =>
-    IO(
-      for {
-        authDetails <- authenticate(token)
-        msg <- ("Your details: " + authDetails).asRight[String]
-      } yield msg
-    )
+  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(
+    secretPlace
+      .serverSecurityLogic(token => IO(authenticate(token)))
+      .serverLogic(authDetails => _ => IO(("Your details: " + authDetails).asRight[String]))
   )
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()

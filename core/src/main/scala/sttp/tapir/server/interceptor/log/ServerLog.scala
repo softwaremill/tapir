@@ -2,7 +2,7 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.{DecodeResult, Endpoint}
+import sttp.tapir.{AnyEndpoint, DecodeResult}
 
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
   * @tparam T
@@ -15,17 +15,19 @@ trait ServerLog[T] {
     */
   def decodeFailureNotHandled(ctx: DecodeFailureContext): T
 
-  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response.
-    */
+  /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response. */
   def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T
+
+  /** Invoked when the security logic fails and returns an error. */
+  def securityFailureHandled(e: AnyEndpoint, response: ServerResponse[_]): T
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(e: Endpoint[_, _, _, _], statusCode: Int): T
+  def requestHandled(e: AnyEndpoint, statusCode: Int): T
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
-  def exception(e: Endpoint[_, _, _, _], ex: Throwable): T
+  def exception(e: AnyEndpoint, ex: Throwable): T
 }
 
 case class DefaultServerLog[T](
@@ -54,12 +56,17 @@ case class DefaultServerLog[T](
       )
     else noLog
 
-  def requestHandled(e: Endpoint[_, _, _, _], statusCode: Int): T =
+  override def securityFailureHandled(e: AnyEndpoint, response: ServerResponse[_]): T =
+    if (logWhenHandled)
+      doLogWhenHandled(s"Request handled by: ${e.show}; security logic error response: $response", None)
+    else noLog
+
+  def requestHandled(e: AnyEndpoint, statusCode: Int): T =
     if (logWhenHandled)
       doLogWhenHandled(s"Request handled by: ${e.show}; responding with code: $statusCode", None)
     else noLog
 
-  def exception(e: Endpoint[_, _, _, _], ex: Throwable): T =
+  def exception(e: AnyEndpoint, ex: Throwable): T =
     if (logLogicExceptions)
       doLogExceptions(s"Exception when handling request by: ${e.show}", ex)
     else noLog

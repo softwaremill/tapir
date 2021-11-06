@@ -5,14 +5,14 @@
 If you are unit testing your application you should stub all external services.
 
 If you are using sttp client to send HTTP requests, and if the externals apis, 
-which yours application consumes, are described using tapir, you can create a stub of the service by converting 
+which your application consumes, are described using tapir, you can create a stub of the service by converting 
 endpoints to `SttpBackendStub` (see the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) for 
 details on how the stub works).
 
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.19.0-M14"
 ```
 
 And the following imports:
@@ -79,7 +79,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.19.0-M13"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.19.0-M14"
 ```
 
 Imports:
@@ -121,7 +121,7 @@ val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 
 val expectation = mockServerClient
-  .whenInputMatches(sampleJsonEndpoint)(in)
+  .whenInputMatches(sampleJsonEndpoint)((), in)
   .thenSuccess(out)
   .get
 ```
@@ -150,7 +150,7 @@ result == out
 It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such
 case when all matching requests will be handled by the first endpoint; the second endpoint will always be omitted. 
 To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
-type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
+type `List[AnyEndpoint]` an outputs `Set[ShadowedEndpoint]`.
 
 Example 1:
 
@@ -168,7 +168,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x, is shadowed by: GET /x /..., GET /x /y /x, is shadowed by: GET /x /...)"
 ```
 
 Example 2:

@@ -31,7 +31,7 @@ object StreamingHttp4sFs2Server extends IOApp {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint) { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint.serverLogicSuccess { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))
@@ -42,8 +42,8 @@ object StreamingHttp4sFs2Server extends IOApp {
       .covary[IO]
       .map(_.toByte)
       .pure[IO]
-      .map(s => Right((size, s)))
-  }
+      .map(s => (size, s))
+  })
 
   override def run(args: List[String]): IO[ExitCode] = {
     // starting the server
