@@ -206,6 +206,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint, "/"),
     (endpoint.in("p1"), "/p1"),
     (endpoint.in("p1" / "p2"), "/p1/p2"),
+    (endpoint.securityIn("p1").in("p2"), "/p1/p2"),
     (endpoint.in("p1" / path[String]), "/p1/{param1}"),
     (endpoint.in("p1" / path[String].name("par")), "/p1/{par}"),
     (endpoint.in("p1" / query[String]("par")), "/p1?par={par}"),

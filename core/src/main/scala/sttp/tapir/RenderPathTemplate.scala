@@ -17,7 +17,7 @@ object RenderPathTemplate {
   )(renderPathParam: RenderPathParam, renderQueryParam: Option[RenderQueryParam], includeAuth: Boolean): String = {
     import sttp.tapir.internal._
 
-    val inputs = e.input.asVectorOfBasicInputs(includeAuth)
+    val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs(includeAuth)
     val (pathComponents, pathParamCount) = renderedPathComponents(inputs, renderPathParam)
     val queryComponents = renderQueryParam
       .map(renderedQueryComponents(inputs, _, pathParamCount))

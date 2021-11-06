@@ -53,6 +53,16 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
     result shouldBe expectedResult
   }
 
+  it should "detect shadowed endpoint when security inputs and inputs overlap" in {
+    val e1 = endpoint.get.in("x")
+    val e2 = endpoint.get.securityIn("x")
+
+    val result = FindShadowedEndpoints(List(e1, e2))
+
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
+    result shouldBe expectedResult
+  }
+
   it should "should not detect shadowed endpoint when methods are not provided and paths are different" in {
     val e1 = endpoint.in("y")
     val e2 = endpoint.in("x")

@@ -45,11 +45,13 @@ object FindShadowedEndpoints {
   }
 
   private def extractPathSegments(endpoint: AnyEndpoint): Vector[PathComponent] = {
-    endpoint.input.traverseInputs({
-      case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
-      case EndpointInput.PathsCapture(_, _)   => Vector(WildcardPathSegment)
-      case EndpointInput.PathCapture(_, _, _) => Vector(PathVariableSegment)
-    })
+    endpoint.securityInput
+      .and(endpoint.input)
+      .traverseInputs({
+        case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
+        case EndpointInput.PathsCapture(_, _)   => Vector(WildcardPathSegment)
+        case EndpointInput.PathCapture(_, _, _) => Vector(PathVariableSegment)
+      })
   }
 }
 
