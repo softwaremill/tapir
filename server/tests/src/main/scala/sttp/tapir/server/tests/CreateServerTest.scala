@@ -16,6 +16,11 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
 import cats.effect.unsafe.implicits.global
 
+case class Testable[R](name: String,
+                    routes: () => NonEmptyList[R],
+                    test: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+                   )
+
 trait CreateServerTest[F[_], +R, ROUTE] {
   def testServer[I, E, O](
       e: PublicEndpoint[I, E, O, R],
@@ -31,6 +36,9 @@ trait CreateServerTest[F[_], +R, ROUTE] {
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
+
+  def testServer(testbale: Testable[ROUTE]): Test =
+    testServer(testbale.name, testbale.routes())(testbale.test)
 }
 
 class DefaultCreateServerTest[F[_], +R, ROUTE](

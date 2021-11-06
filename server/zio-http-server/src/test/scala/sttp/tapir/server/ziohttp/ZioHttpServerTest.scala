@@ -4,6 +4,7 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
+import sttp.tapir.server.ziohttp.ZioHttpCompositionTest.testable
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zhttp.service.server.ServerChannelFactory
@@ -23,7 +24,7 @@ class ZioHttpServerTest extends TestSuite {
 
         implicit val m: MonadError[Task] = zioMonadError
 
-        new ServerBasicTests(
+        createServerTest.testServer(testable) :: new ServerBasicTests(
           createServerTest,
           interpreter,
           multipleValueHeaderSupport = false,
