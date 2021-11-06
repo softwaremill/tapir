@@ -182,3 +182,11 @@ html_context = {
     'github_version': 'master', # Version
     'conf_py_path': '/doc/', # Path in the checkout to the docs root
 }
+
+# app setup hook
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+        'auto_toc_tree_section': 'Contents',
+        'enable_auto_doc_ref': False
+    }, True)
+    app.add_transform(AutoStructify)
