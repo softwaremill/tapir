@@ -39,6 +39,8 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
+from recommonmark.parser import CommonMarkParser
+from recommonmark.transform import AutoStructify
 
 source_suffix = {
     '.rst': 'restructuredtext',
