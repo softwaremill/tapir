@@ -113,7 +113,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
       } else {
         Temporal[IO].sleep(100.millis).as(((intAsBuffer(num), num + 1)).some)
       }
-    }) //.interruptAfter(2.seconds)
+    }) // .interruptAfter(2.seconds)
     val readStream = fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream)
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)

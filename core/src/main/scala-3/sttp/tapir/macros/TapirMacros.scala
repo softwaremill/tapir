@@ -60,7 +60,7 @@ object TapirMacros {
 
     // AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class <root>)),object scala),Array),List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class <root>)),object scala),Byte)))
 
-    //substitute for `t =:= t.erasure` - https://github.com/lampepfl/dotty-feature-requests/issues/209
+    // substitute for `t =:= t.erasure` - https://github.com/lampepfl/dotty-feature-requests/issues/209
     val isAllowed: TypeRepr => Boolean = {
       case AppliedType(t, _) if t.typeSymbol.name == "Array" => true
       case _: AppliedType | _: AndOrType                     => false

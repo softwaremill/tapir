@@ -4,12 +4,12 @@ import scala.annotation.compileTimeOnly
 
 trait ModifyMacroFunctorSupport {
   implicit class ModifyEach[F[_], T](t: F[T])(implicit f: ModifyFunctor[F, T]) {
-    //@compileTimeOnly(canOnlyBeUsedInsideModify("each")) TODO
+    // @compileTimeOnly(canOnlyBeUsedInsideModify("each")) TODO
     def each: T = sys.error("")
   }
 
   trait ModifyFunctor[F[_], A] {
-    //@compileTimeOnly(canOnlyBeUsedInsideModify("each")) TODO
+    // @compileTimeOnly(canOnlyBeUsedInsideModify("each")) TODO
     def each(fa: F[A])(f: A => A): F[A] = sys.error("")
   }
 

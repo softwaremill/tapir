@@ -15,7 +15,7 @@ class NettyServerRequestSpec extends AnyFreeSpec with Matchers {
   val headers = new DefaultHttpHeaders()
   headers.add(HttpHeaderNames.CONTENT_TYPE, "text/plain")
 
-  //https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
+  // https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
   val trailingHeaders = new DefaultHttpHeaders()
   trailingHeaders.add("header-generated-during-sending", "something")
 

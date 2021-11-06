@@ -21,7 +21,7 @@ object NettyBootstrap {
       .childHandler(new ChannelInitializer[Channel] {
         override def initChannel(ch: Channel): Unit = nettyOptions.initPipeline(ch.pipeline(), handler)
       })
-      .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) //https://github.com/netty/netty/issues/1692
+      .option[java.lang.Integer](ChannelOption.SO_BACKLOG, 128) // https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true) // https://github.com/netty/netty/issues/1692
 
     httpBootstrap.bind(host, port)

@@ -1,7 +1,7 @@
 package codegen.testutils
 
 class CompileCheckTestBaseSpec extends CompileCheckTestBase {
-  //Sure why not test the test :D
+  // Sure why not test the test :D
 
   it should "compile valid code" in {
     compile("object MyObj {}") shouldBe util.Success({})
