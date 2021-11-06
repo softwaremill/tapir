@@ -30,7 +30,7 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = ['myst_parser', 'sphinx_rtd_theme']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -39,14 +39,12 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-from recommonmark.parser import CommonMarkParser
-from recommonmark.transform import AutoStructify
 
-source_parsers = {
-    '.md': CommonMarkParser,
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.txt': 'markdown',
+    '.md': 'markdown',
 }
-
-source_suffix = ['.rst', '.md']
 
 # The master toctree document.
 master_doc = 'index'
@@ -184,11 +182,3 @@ html_context = {
     'github_version': 'master', # Version
     'conf_py_path': '/doc/', # Path in the checkout to the docs root
 }
-
-# app setup hook
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-        'auto_toc_tree_section': 'Contents',
-        'enable_auto_doc_ref': False
-    }, True)
-    app.add_transform(AutoStructify)

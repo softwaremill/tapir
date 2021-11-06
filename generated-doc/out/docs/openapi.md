@@ -26,8 +26,8 @@ val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Booksho
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
-The documentation is generated in a large part basing on [schemas](endpoint/codecs.md#schemas). Schemas can be
-[automatically derived and customised](endpoint/schemas.md).
+The documentation is generated in a large part basing on [schemas](../endpoint/codecs.md#schemas). Schemas can be
+[automatically derived and customised](../endpoint/schemas.md).
 
 Quite often, you'll need to define the servers, through which the API can be reached. To do this, you can modify the
 returned `OpenAPI` case class either directly or by using a helper method:
