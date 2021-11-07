@@ -92,6 +92,13 @@ class ApiRouter @Inject() () extends SimpleRouter {
 
 Find more details about how to bind a `Router` to your application in the [Play framework documentation](https://www.playframework.com/documentation/2.8.x/ScalaSirdRouter#Binding-sird-Router).
 
+## Web sockets
+
+The interpreter supports web sockets, with pipes of type `Flow[REQ, RESP, Any]`. See [web sockets](../endpoint/websockets.md)
+for more details.
+
+The interpreter does not expose control frames (`Ping`, `Pong` and `Close`), so any setting regarding them are discarded, however those that are emitted are sent to the client.
+
 ## Configuration
 
 The interpreter can be configured by providing a `PlayServerOptions` value, see
