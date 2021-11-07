@@ -6,7 +6,7 @@ import akka.util.ByteString
 import play.api.mvc.Request
 import play.core.parsers.Multipart
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.Part
+import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.internal._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
@@ -84,7 +84,12 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
             () => FileIO.fromPath(f.ref.path),
             Some(f.ref.toFile)
           ).map(body =>
-            Part(f.key, body.value, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Nil)
+            Part(
+              f.key,
+              body.value,
+              Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename),
+              f.contentType.flatMap(MediaType.parse(_).toOption).map(Header.contentType).toList
+            )
               .asInstanceOf[RawPart]
           )
         })
