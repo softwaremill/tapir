@@ -7,7 +7,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientWebSocketTests
 import sttp.tapir.client.sttp.ws.fs2._
 
-class SttpClientWebSocketFs2Tests extends SttpClientFs2Tests[WebSockets with Fs2Streams[IO]] with ClientWebSocketTests[Fs2Streams[IO]] {
+class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Streams[IO]] with ClientWebSocketTests[Fs2Streams[IO]] {
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
   override def wsToPipe: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = implicitly
 
