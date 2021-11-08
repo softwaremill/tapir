@@ -113,6 +113,7 @@ import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEven
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
+import org.http4s.server.websocket.WebSocketBuilder2
 import zio.{UIO, RIO}
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -121,9 +122,10 @@ import zio.stream.Stream
 val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = 
   endpoint.get.out(serverSentEventsBody)
 
-val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
-  .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
-  .toRoutes
+val routes: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]] =
+  ZHttp4sServerInterpreter()
+    .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .toWebSocketRoutes
 ```
 
 ## Examples

@@ -68,7 +68,7 @@ import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 
-val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint.serverLogicSuccess[IO](_ =>
+val routes = Http4sServerInterpreter[IO]().toWebSocketRoutes(sseEndpoint.serverLogicSuccess[IO](_ =>
   IO(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))
 ))
 ```
