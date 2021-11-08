@@ -20,6 +20,8 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
+class Http4sInvalidWebSocketUse(val message: String) extends Exception
+
 trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   implicit def fa: Async[F]
@@ -65,6 +67,8 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
       response: ServerResponse[Http4sResponseBody[F]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): F[Response[F]] = {
+    implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
+
     val statusCode = statusCodeToHttp4sStatus(response.code)
     val headers = Headers(response.headers.map(header => Header.Raw(CIString(header.name), header.value)).toList)
 
@@ -76,7 +80,12 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.offer(f)))
             webSocketBuilder match {
               case Some(wsb) => wsb.build(send, receive)
-              case None      => WebSocketBuilder[F].copy(headers = headers, filterPingPongs = false).build(send, receive)
+              case None =>
+                monad.error(
+                  new Http4sInvalidWebSocketUse(
+                    "Invalid usage of web socket endpoint without WebSocketBuilder2. Use with BlazeServerBuilder.withHttpWebSocketApp(..)."
+                  )
+                )
             }
           }
         }

@@ -34,11 +34,11 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
-    Http4sServerInterpreter(serverOptions).toRoutesWithWebSockets(e)
+    Http4sServerInterpreter(serverOptions).toWebSocketRoutes(e)
   }
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]]): Routes = {
-    Http4sServerInterpreter[IO]().toRoutesWithWebSockets(es)
+    Http4sServerInterpreter[IO]().toWebSocketRoutes(es)
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {

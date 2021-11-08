@@ -14,7 +14,22 @@ import zio.{RIO, Task}
 /** Converts server endpoints using ZioStreams to endpoints using Fs2Streams */
 object ConvertStreams {
 
-  def apply[R](
+  def fromZServerEndpoint[R](
+      se: ZServerEndpoint[R, Any]
+  ): ServerEndpoint[Any, RIO[R, *]] =
+    ServerEndpoint(
+      Endpoint(
+        forInput(se.securityInput).asInstanceOf[EndpointInput[se.A]],
+        forInput(se.input).asInstanceOf[EndpointInput[se.I]],
+        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[se.E]],
+        forOutput(se.output).asInstanceOf[EndpointOutput[se.O]],
+        se.info
+      ),
+      se.securityLogic,
+      se.logic
+    )
+
+  def fromWebSocketZServerEndpoint[R](
       se: ZServerEndpoint[R, ZioStreams with WebSockets]
   ): ServerEndpoint[Fs2Streams[RIO[R, *]] with WebSockets, RIO[R, *]] =
     ServerEndpoint(

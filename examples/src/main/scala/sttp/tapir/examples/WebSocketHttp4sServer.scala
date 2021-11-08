@@ -64,7 +64,7 @@ object WebSocketHttp4sServer extends IOApp {
 
   // Implementing the endpoint's logic, by providing the web socket pipe
   val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutesWithWebSockets(wsEndpoint.serverLogicSuccess(_ => IO.pure(countBytes)))
+    Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess(_ => IO.pure(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

@@ -27,8 +27,7 @@ object ZHttp4sTestServerInterpreter {
   type Routes = WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]]
 }
 
-class ZHttp4sTestServerInterpreter
-    extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, Routes] {
+class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(
@@ -42,13 +41,13 @@ class ZHttp4sTestServerInterpreter
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
 
-    ZHttp4sServerInterpreter(serverOptions).from(e).toRoutesWithWebSockets
+    ZHttp4sServerInterpreter(serverOptions).from(e).toWebSocketRoutes
   }
 
   override def route(
       es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
   ): Routes = {
-    ZHttp4sServerInterpreter().from(es).toRoutesWithWebSockets
+    ZHttp4sServerInterpreter().from(es).toWebSocketRoutes
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
