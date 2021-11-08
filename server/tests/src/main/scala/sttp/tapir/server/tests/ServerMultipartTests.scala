@@ -15,12 +15,13 @@ import scala.concurrent.duration.DurationInt
 
 class ServerMultipartTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],
-    multipartInlineHeaderSupport: Boolean = true
+    partContentTypeHeaderSupport: Boolean = true,
+    partOtherHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
-    basicTests() ++ (if (multipartInlineHeaderSupport) multipartInlineHeaderTests() else Nil)
+    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil)
 
   def basicTests(): List[Test] = {
     List(
@@ -53,7 +54,7 @@ class ServerMultipartTests[F[_], ROUTE](
           .send(backend)
           .map { r =>
             r.code shouldBe StatusCode.Ok
-            if (multipartInlineHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
+            if (partOtherHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
             r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
           }
       },
@@ -80,7 +81,7 @@ class ServerMultipartTests[F[_], ROUTE](
     )
   }
 
-  def multipartInlineHeaderTests(): List[Test] = List(
+  def contentTypeHeaderTests(): List[Test] = List(
     testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
       pureResult(
         data

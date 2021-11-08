@@ -26,9 +26,7 @@ class PlayServerTest extends TestSuite {
         inputStreamSupport = false,
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
-        new ServerMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
-        // play interpreter only supports the content-type header, which is tested in multipartInlineHeaderTests
-        new ServerMultipartTests(createServerTest, multipartInlineHeaderSupport = false).multipartInlineHeaderTests() ++
+        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new PlayServerWithContextTest(backend).tests()
