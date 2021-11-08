@@ -1,6 +1,5 @@
 package sttp.tapir.server.http4s.ztapir
 
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.CodecFormat.OctetStream
@@ -14,24 +13,9 @@ import zio.{RIO, Task}
 /** Converts server endpoints using ZioStreams to endpoints using Fs2Streams */
 object ConvertStreams {
 
-  def fromZServerEndpoint[R](
-      se: ZServerEndpoint[R, Any]
-  ): ServerEndpoint[Any, RIO[R, *]] =
-    ServerEndpoint(
-      Endpoint(
-        forInput(se.securityInput).asInstanceOf[EndpointInput[se.A]],
-        forInput(se.input).asInstanceOf[EndpointInput[se.I]],
-        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[se.E]],
-        forOutput(se.output).asInstanceOf[EndpointOutput[se.O]],
-        se.info
-      ),
-      se.securityLogic,
-      se.logic
-    )
-
-  def fromWebSocketZServerEndpoint[R](
-      se: ZServerEndpoint[R, ZioStreams with WebSockets]
-  ): ServerEndpoint[Fs2Streams[RIO[R, *]] with WebSockets, RIO[R, *]] =
+  def apply[R, C](
+      se: ZServerEndpoint[R, ZioStreams with C]
+  ): ServerEndpoint[Fs2Streams[RIO[R, *]] with C, RIO[R, *]] =
     ServerEndpoint(
       Endpoint(
         forInput(se.securityInput).asInstanceOf[EndpointInput[se.A]],

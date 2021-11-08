@@ -16,35 +16,35 @@ trait ZHttp4sServerInterpreter[R] {
   def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
     Http4sServerOptions.default
 
-  def from(se: ZServerEndpoint[R, Any]): ServerEndpointsToRoutes = from(List(se))
+  def from(se: ZServerEndpoint[R, ZioStreams]): ServerEndpointsToRoutes = from(List(se))
 
-  def from(se: ZServerEndpoint[R, ZioStreams with WebSockets]): ServerEndpointsToWebSocketRoutes = from(List(se))
-
-  def from(serverEndpoints: List[ZServerEndpoint[R, Any]]): ServerEndpointsToRoutes =
+  def from(serverEndpoints: List[ZServerEndpoint[R, ZioStreams]]): ServerEndpointsToRoutes =
     new ServerEndpointsToRoutes(serverEndpoints)
 
-  def from(serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]): ServerEndpointsToWebSocketRoutes =
-    new ServerEndpointsToWebSocketRoutes(serverEndpoints)
+  def fromWebSocket(se: ZServerEndpoint[R, ZioStreams with WebSockets]): WebSocketServerEndpointsToRoutes = fromWebSocket(List(se))
+
+  def fromWebSocket(serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]): WebSocketServerEndpointsToRoutes =
+    new WebSocketServerEndpointsToRoutes(serverEndpoints)
 
   // This is needed to avoid too eager type inference. Having ZHttp4sServerInterpreter.toRoutes would require users
   // to explicitly provide the env type (R) as a type argument - so that it's not automatically inferred to include
   // Clock
   class ServerEndpointsToRoutes(
-      serverEndpoints: List[ZServerEndpoint[R, Any]]
+      serverEndpoints: List[ZServerEndpoint[R, ZioStreams]]
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(
-        serverEndpoints.map(se => ConvertStreams.fromZServerEndpoint(se.widen[R with Clock with Blocking]))
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
       )
     }
   }
 
-  class ServerEndpointsToWebSocketRoutes(
+  class WebSocketServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]
   ) {
-    def toWebSocketRoutes: WebSocketBuilder2[RIO[R with Clock with Blocking, *]] => HttpRoutes[RIO[R with Clock with Blocking, *]] = {
+    def toRoutes: WebSocketBuilder2[RIO[R with Clock with Blocking, *]] => HttpRoutes[RIO[R with Clock with Blocking, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toWebSocketRoutes(
-        serverEndpoints.map(se => ConvertStreams.fromWebSocketZServerEndpoint(se.widen[R with Clock with Blocking]))
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
       )
     }
   }

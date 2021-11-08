@@ -6,7 +6,6 @@ import fs2._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.syntax.kleisli._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
@@ -23,7 +22,7 @@ object StreamingHttp4sFs2Server extends IOApp {
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` and the media type is `text/plain`.
-  val streamingEndpoint: Endpoint[Unit, Unit, Unit, (Long, Stream[IO, Byte]), Fs2Streams[IO]] =
+  val streamingEndpoint: PublicEndpoint[Unit, Unit, (Long, Stream[IO, Byte]), Fs2Streams[IO]] =
     endpoint.get
       .in("receive")
       .out(header[Long](HeaderNames.ContentLength))
@@ -33,8 +32,8 @@ object StreamingHttp4sFs2Server extends IOApp {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toWebSocketRoutes(streamingEndpoint.serverLogicSuccess { _ =>
+  val streamingRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint.serverLogicSuccess { _ =>
       val size = 100L
       Stream
         .emit(List[Char]('a', 'b', 'c', 'd'))
@@ -53,7 +52,7 @@ object StreamingHttp4sFs2Server extends IOApp {
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
       .bindHttp(8080, "localhost")
-      .withHttpWebSocketApp(wsb => Router("/" -> streamingRoutes(wsb)).orNotFound)
+      .withHttpApp(Router("/" -> streamingRoutes).orNotFound)
       .resource
       .use { _ =>
         IO {

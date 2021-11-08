@@ -41,13 +41,13 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with 
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
       .options
 
-    ZHttp4sServerInterpreter(serverOptions).from(e).toWebSocketRoutes
+    ZHttp4sServerInterpreter(serverOptions).fromWebSocket(e).toRoutes
   }
 
   override def route(
       es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
   ): Routes = {
-    ZHttp4sServerInterpreter().from(es).toWebSocketRoutes
+    ZHttp4sServerInterpreter().fromWebSocket(es).toRoutes
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {

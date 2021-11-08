@@ -34,13 +34,23 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   //
 
-  def toHttp(
-      se: ServerEndpoint[Fs2Streams[F] with WebSockets, G],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): Http[OptionT[G, *], F] =
-    toHttp(List(se), webSocketBuilder)(fToG)(gToF)
+  def toHttp(se: ServerEndpoint[Fs2Streams[F], G]): Http[OptionT[G, *], F] =
+    toHttp(List(se))
 
-  def toHttp(
+  def toHttp(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], G]]): Http[OptionT[G, *], F] =
+    toHttp(serverEndpoints, None)(fToG)(gToF)
+
+  def toWebSocketsHttp(
+      se: ServerEndpoint[Fs2Streams[F] with WebSockets, G],
+      webSocketBuilder: WebSocketBuilder2[F]
+  ): Http[OptionT[G, *], F] = toWebSocketsHttp(List(se), webSocketBuilder)
+
+  def toWebSocketsHttp(
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
+      webSocketBuilder: WebSocketBuilder2[F]
+  ): Http[OptionT[G, *], F] = toHttp(serverEndpoints, Some(webSocketBuilder))(fToG)(gToF)
+
+  private def toHttp(
       serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
@@ -83,7 +93,9 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
               case None =>
                 monad.error(
                   new Http4sInvalidWebSocketUse(
-                    "Invalid usage of web socket endpoint without WebSocketBuilder2. Use with BlazeServerBuilder.withHttpWebSocketApp(..)."
+                    "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
+                      "Use the toWebSocketRoutes/toWebSocketHttp interpreter methods, " +
+                      "and add the result using BlazeServerBuilder.withHttpWebSocketApp(..)."
                   )
                 )
             }
