@@ -72,7 +72,8 @@ object ZioPartialServerLogicHttp4s extends App {
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
       .flatMap { implicit runtime: Runtime[ZEnv & UserService & Console] =>
-        BlazeServerBuilder[RIO[UserService & Console & Clock & Blocking, *]](runtime.platform.executor.asEC)
+        BlazeServerBuilder[RIO[UserService & Console & Clock & Blocking, *]]
+          .withExecutionContext(runtime.platform.executor.asEC)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
           .resource

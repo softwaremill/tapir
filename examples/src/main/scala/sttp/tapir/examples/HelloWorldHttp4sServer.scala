@@ -26,7 +26,8 @@ object HelloWorldHttp4sServer extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
     // starting the server
-    BlazeServerBuilder[IO](ec)
+    BlazeServerBuilder[IO]
+      .withExecutionContext(ec)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
       .resource

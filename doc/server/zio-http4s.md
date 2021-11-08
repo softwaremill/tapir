@@ -100,6 +100,46 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `zio.stream.Stream[Throwable, REQ] => zio.stream.Stream[Throwable, RESP]`. 
 See [web sockets](../endpoint/websockets.md) for more details.
 
+However, endpoints which use web sockets need to be interpreted using the `ZHttp4sServerInterpreter.fromWebSocket`
+method. This can then be added to a server builder using `withHttpWebSocketApp`, for example:
+
+```scala mdoc:compile-only
+import sttp.capabilities.WebSockets
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.{CodecFormat, PublicEndpoint}
+import sttp.tapir.ztapir._
+import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
+import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
+import org.http4s.server.websocket.WebSocketBuilder2
+import scala.concurrent.ExecutionContext
+import zio.{RIO, ZEnv, ZIO}
+import zio.blocking.Blocking
+import zio.clock.Clock
+import zio.interop.catz._
+import zio.stream.Stream
+
+implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+
+val wsEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, String] => Stream[Throwable, String], ZioStreams with WebSockets] =
+  endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](ZioStreams))
+    
+val wsRoutes: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]] =
+  ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
+    
+val serve: ZIO[ZEnv, Throwable, Unit] =
+  ZIO.runtime[ZEnv].flatMap { implicit runtime => 
+    BlazeServerBuilder[RIO[Clock with Blocking, *]]
+      .withExecutionContext(runtime.platform.executor.asEC)
+      .bindHttp(8080, "localhost")
+      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+      .serve
+      .compile
+      .drain
+  }          
+```
+
 ## Server Sent Events
 
 The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
@@ -121,9 +161,10 @@ import zio.stream.Stream
 val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = 
   endpoint.get.out(serverSentEventsBody)
 
-val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
-  .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
-  .toRoutes
+val routes: HttpRoutes[RIO[Clock with Blocking, *]] =
+  ZHttp4sServerInterpreter()
+    .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .toRoutes
 ```
 
 ## Examples

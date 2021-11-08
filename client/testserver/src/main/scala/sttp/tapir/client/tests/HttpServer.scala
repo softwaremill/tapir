@@ -10,7 +10,7 @@ import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware._
-import org.http4s.server.websocket.WebSocketBuilder
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.syntax.kleisli._
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.{multipart, _}
@@ -44,7 +44,7 @@ class HttpServer(port: Port) {
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
   private object statusOutParam extends QueryParamDecoderMatcher[Int]("statusOut")
 
-  private val service = HttpRoutes.of[IO] {
+  private def service(wsb: WebSocketBuilder2[IO]) = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
       if (f == "papaya") {
         Accepted("29")
@@ -126,7 +126,7 @@ class HttpServer(port: Port) {
         .flatMap { q =>
           val d = Stream.repeatEval(q.take).through(echoReply)
           val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
-          WebSocketBuilder[IO].build(d, e)
+          wsb.build(d, e)
         }
 
     case GET -> Root / "ws" / "echo" / "fragmented" =>
@@ -146,7 +146,7 @@ class HttpServer(port: Port) {
         .flatMap { q =>
           val d = Stream.repeatEval(q.take).through(echoReply)
           val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
-          WebSocketBuilder[IO].build(d, e)
+          wsb.build(d, e)
         }
 
     case GET -> Root / "entity" / entityType =>
@@ -182,15 +182,18 @@ class HttpServer(port: Port) {
   private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
   private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
-  private val corsService = CORS(service)
-  private val app: HttpApp[IO] = Router("/" -> corsService).orNotFound
+  private def app(wsb: WebSocketBuilder2[IO]): HttpApp[IO] = {
+    val corsService = CORS(service(wsb))
+    Router("/" -> corsService).orNotFound
+  }
 
   //
 
   def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO](ExecutionContext.global)
+    val (_, _stopServer) = BlazeServerBuilder[IO]
+      .withExecutionContext(ExecutionContext.global)
       .bindHttp(port)
-      .withHttpApp(app)
+      .withHttpWebSocketApp(app)
       .resource
       .map(_.address.getPort)
       .allocated

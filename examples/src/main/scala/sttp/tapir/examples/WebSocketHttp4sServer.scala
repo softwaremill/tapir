@@ -4,8 +4,9 @@ import cats.effect.{ExitCode, IO, IOApp}
 import io.circe.generic.auto._
 import fs2._
 import org.http4s.HttpRoutes
-import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.syntax.kleisli._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -62,7 +63,8 @@ object WebSocketHttp4sServer extends IOApp {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(wsEndpoint.serverLogicSuccess(_ => IO.pure(countBytes)))
+  val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess(_ => IO.pure(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
@@ -70,9 +72,10 @@ object WebSocketHttp4sServer extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
     // Starting the server
-    BlazeServerBuilder[IO](ec)
+    BlazeServerBuilder[IO]
+      .withExecutionContext(ec)
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> wsRoutes).orNotFound)
+      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
       .resource
       .flatMap(_ => AsyncHttpClientFs2Backend.resource[IO]())
       .use { backend =>

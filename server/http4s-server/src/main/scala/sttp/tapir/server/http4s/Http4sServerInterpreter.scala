@@ -4,16 +4,24 @@ import cats.arrow.FunctionK
 import cats.effect.{Async, Sync}
 import cats.~>
 import org.http4s._
+import org.http4s.server.websocket.WebSocketBuilder2
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 
 trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] {
-  def toRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] = toRoutes(List(se))
+  def toRoutes(se: ServerEndpoint[Fs2Streams[F], F]): HttpRoutes[F] =
+    toRoutes(List(se))
 
-  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] = {
-    toHttp(serverEndpoints)(fToG)(gToF)
-  }
+  def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]]): HttpRoutes[F] =
+    toHttp(serverEndpoints)
+
+  def toWebSocketRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): WebSocketBuilder2[F] => HttpRoutes[F] =
+    toWebSocketRoutes(List(se))
+
+  def toWebSocketRoutes(
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]
+  ): WebSocketBuilder2[F] => HttpRoutes[F] = wsb => toWebSocketsHttp(serverEndpoints, wsb)
 }
 
 object Http4sServerInterpreter {

@@ -8,7 +8,7 @@ import cats.~>
 import fs2.{Pipe, Stream}
 import org.http4s._
 import org.http4s.headers.`Content-Length`
-import org.http4s.server.websocket.WebSocketBuilder
+import org.http4s.server.websocket.{WebSocketBuilder, WebSocketBuilder2}
 import org.http4s.websocket.WebSocketFrame
 import org.log4s.{Logger, getLogger}
 import org.typelevel.ci.CIString
@@ -19,6 +19,8 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+
+class Http4sInvalidWebSocketUse(val message: String) extends Exception
 
 trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
@@ -32,11 +34,25 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   //
 
-  def toHttp(se: ServerEndpoint[Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] =
-    toHttp(List(se))(fToG)(gToF)
+  def toHttp(se: ServerEndpoint[Fs2Streams[F], G]): Http[OptionT[G, *], F] =
+    toHttp(List(se))
 
-  def toHttp(
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]]
+  def toHttp(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], G]]): Http[OptionT[G, *], F] =
+    toHttp(serverEndpoints, None)(fToG)(gToF)
+
+  def toWebSocketsHttp(
+      se: ServerEndpoint[Fs2Streams[F] with WebSockets, G],
+      webSocketBuilder: WebSocketBuilder2[F]
+  ): Http[OptionT[G, *], F] = toWebSocketsHttp(List(se), webSocketBuilder)
+
+  def toWebSocketsHttp(
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
+      webSocketBuilder: WebSocketBuilder2[F]
+  ): Http[OptionT[G, *], F] = toHttp(serverEndpoints, Some(webSocketBuilder))(fToG)(gToF)
+
+  private def toHttp(
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
+      webSocketBuilder: Option[WebSocketBuilder2[F]]
   )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
@@ -52,14 +68,17 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
       OptionT(interpreter(serverRequest, serverEndpoints).flatMap {
         case _: RequestResult.Failure         => none.pure[G]
-        case RequestResult.Response(response) => fToG(serverResponseToHttp4s(response)).map(_.some)
+        case RequestResult.Response(response) => fToG(serverResponseToHttp4s(response, webSocketBuilder)).map(_.some)
       })
     }
   }
 
   private def serverResponseToHttp4s(
-      response: ServerResponse[Http4sResponseBody[F]]
+      response: ServerResponse[Http4sResponseBody[F]],
+      webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): F[Response[F]] = {
+    implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
+
     val statusCode = statusCodeToHttp4sStatus(response.code)
     val headers = Headers(response.headers.map(header => Header.Raw(CIString(header.name), header.value)).toList)
 
@@ -69,7 +88,17 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
           pipeF.flatMap { pipe =>
             val send: Stream[F, WebSocketFrame] = Stream.repeatEval(queue.take)
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.offer(f)))
-            WebSocketBuilder[F].copy(headers = headers, filterPingPongs = false).build(send, receive)
+            webSocketBuilder match {
+              case Some(wsb) => wsb.build(send, receive)
+              case None =>
+                monad.error(
+                  new Http4sInvalidWebSocketUse(
+                    "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
+                      "Use the toWebSocketRoutes/toWebSocketHttp interpreter methods, " +
+                      "and add the result using BlazeServerBuilder.withHttpWebSocketApp(..)."
+                  )
+                )
+            }
           }
         }
       case Some(Right((entity, contentLength))) =>
