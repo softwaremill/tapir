@@ -15,7 +15,14 @@ class AwsJsRequest(
 
 object AwsJsRequest {
   def toAwsRequest(r: AwsJsRequest): AwsRequest = {
-    AwsRequest(r.rawPath, r.rawQueryString, r.headers.toMap, AwsJsRequestContext.toAwsRequestContext(r.requestContext), r.body.toOption, r.isBase64Encoded)
+    AwsRequest(
+      r.rawPath,
+      r.rawQueryString,
+      r.headers.toMap,
+      AwsJsRequestContext.toAwsRequestContext(r.requestContext),
+      r.body.toOption,
+      r.isBase64Encoded
+    )
   }
 }
 

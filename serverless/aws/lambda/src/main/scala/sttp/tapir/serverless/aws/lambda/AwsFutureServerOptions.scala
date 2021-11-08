@@ -12,7 +12,8 @@ object AwsFutureServerOptions {
   def customInterceptors(implicit ec: ExecutionContext): CustomInterceptors[Future, Unit, AwsServerOptions[Future]] =
     CustomInterceptors(
       createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Monad[Future].unit),
-      createOptions = (ci: CustomInterceptors[Future, Unit, AwsServerOptions[Future]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
+      createOptions =
+        (ci: CustomInterceptors[Future, Unit, AwsServerOptions[Future]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )
 
   def default(implicit ec: ExecutionContext): AwsServerOptions[Future] = customInterceptors.options

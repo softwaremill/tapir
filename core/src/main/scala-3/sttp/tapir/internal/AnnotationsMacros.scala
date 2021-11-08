@@ -325,7 +325,10 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       )
       .getOrElse(input)
 
-  private def setSecuritySchemeName[f: Type](auth: Expr[EndpointInput.Auth[f, _]], schemeName: Option[Term]): Expr[EndpointInput.Single[f]] =
+  private def setSecuritySchemeName[f: Type](
+      auth: Expr[EndpointInput.Auth[f, _]],
+      schemeName: Option[Term]
+  ): Expr[EndpointInput.Single[f]] =
     schemeName
       .map(s => '{ $auth.securitySchemeName(${ s.asExprOf[EndpointIO.annotations.securitySchemeName] }.name) })
       .getOrElse(auth)

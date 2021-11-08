@@ -22,6 +22,6 @@ object LambdaApiJsExample {
 
   val route: Route[Future] = AwsFutureServerInterpreter(options).toRoute(helloEndpoint)
 
-  @JSExportTopLevel(name="handler")
+  @JSExportTopLevel(name = "handler")
   def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] = AwsJsRouteHandler.futureHandler(event, route)
 }
