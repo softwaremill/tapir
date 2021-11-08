@@ -17,8 +17,8 @@ class ZioHttpCompositionTest(
   def tests() = List(
     testServer(
       "zio http apps compose after creation", {
-        val ep1 = endpoint.get.in("p1").zServerLogic(_ => ZIO.unit)
-        val ep3 = endpoint.get.in("p3").zServerLogic(_ => ZIO.fail(new RuntimeException("boom")))
+        val ep1 = endpoint.get.in("p1").zServerLogic[Any](_ => ZIO.unit)
+        val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
         val route1: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
         val route2: RHttpApp[Any] = Http.collect { case Method.GET -> Root / "p2" =>
