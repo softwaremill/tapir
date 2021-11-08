@@ -6,7 +6,7 @@ import cats.implicits._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientStreamingTests
 
-class SttpClientStreamingTests extends SttpClientTests[Fs2Streams[IO]] with ClientStreamingTests[Fs2Streams[IO]] {
+class SttpClientStreamingFs2Tests extends SttpClientFs2Tests[Fs2Streams[IO]] with ClientStreamingTests[Fs2Streams[IO]] {
   override def wsToPipe: WebSocketToPipe[Fs2Streams[IO]] = implicitly
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
 
