@@ -225,7 +225,7 @@ class ServerBasicTests[F[_], ROUTE](
       } else {
         IO.pure(succeed)
       }
-    }, // Fails because of lack in Zio Http support for Set-Cookie header https://github.com/dream11/zio-http/issues/187
+    },
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
     ) { (backend, baseUri) =>
