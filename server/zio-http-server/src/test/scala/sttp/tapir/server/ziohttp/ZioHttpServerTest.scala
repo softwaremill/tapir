@@ -4,7 +4,6 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
-import sttp.tapir.server.ziohttp.ZioHttpCompositionTest.testable
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zhttp.service.server.ServerChannelFactory
@@ -24,7 +23,7 @@ class ZioHttpServerTest extends TestSuite {
 
         implicit val m: MonadError[Task] = zioMonadError
 
-        createServerTest.testServer(testable) :: new ServerBasicTests(
+        new ServerBasicTests(
           createServerTest,
           interpreter,
           multipleValueHeaderSupport = false,
@@ -37,7 +36,8 @@ class ZioHttpServerTest extends TestSuite {
           // Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [f2 content], parser state [STATUS_LINE]
           new AllServerTests(createServerTest, interpreter, backend, basic = false, staticContent = false, multipart = false, file = false)
             .tests() ++
-          new ServerStreamingTests(createServerTest, ZioStreams).tests()
+          new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ZioHttpCompositionTest(createServerTest).tests()
     }
   }
 }
