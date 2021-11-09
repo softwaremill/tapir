@@ -1,6 +1,7 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.Flow
 import cats.effect.{IO, Resource}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
@@ -29,7 +30,10 @@ class PlayServerTest extends TestSuite {
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
-        new PlayServerWithContextTest(backend).tests()
+        new PlayServerWithContextTest(backend).tests() ++
+        new ServerWebSocketTests(createServerTest, AkkaStreams) {
+          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
+        }.tests()
     }
   }
 }

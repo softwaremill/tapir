@@ -8,6 +8,7 @@ import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
+import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
@@ -17,11 +18,12 @@ import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 
-class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, AkkaStreams, Router.Routes] {
+class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
+  extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
   import actorSystem.dispatcher
 
   override def route(
-      e: ServerEndpoint[AkkaStreams, Future],
+      e: ServerEndpoint[AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Routes = {
@@ -33,7 +35,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def route(es: List[ServerEndpoint[AkkaStreams, Future]]): Routes =
+  override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Routes =
     PlayServerInterpreter().toRoutes(es)
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {

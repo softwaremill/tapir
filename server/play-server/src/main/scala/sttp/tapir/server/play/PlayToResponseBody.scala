@@ -17,12 +17,12 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.concurrent.Future
 
-class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
+class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
 
   override val streams: AkkaStreams = AkkaStreams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity = {
-    fromRawValue(v, headers, bodyType)
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): PlayResponseBody = {
+    Right(fromRawValue(v, headers, bodyType))
   }
 
   private def fromRawValue[R](v: R, headers: HasHeaders, bodyType: RawBodyType[R]): HttpEntity = {
@@ -96,14 +96,19 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
       .takeWhile(_._1 < bytesTotal, inclusive = true)
       .map(_._2)
 
-  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity = {
-    HttpEntity.Streamed(v, headers.contentLength, Option(formatToContentType(format, charset)))
+  override def fromStreamValue(
+      v: streams.BinaryStream,
+      headers: HasHeaders,
+      format: CodecFormat,
+      charset: Option[Charset]
+  ): PlayResponseBody = {
+    Right(HttpEntity.Streamed(v, headers.contentLength, Option(formatToContentType(format, charset))))
   }
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
-  ): HttpEntity = throw new UnsupportedOperationException
+  ): PlayResponseBody = Left(PlayWebSockets.pipeToBody(pipe, o))
 
   private def rawPartsToFilePart[T](
       m: RawBodyType.MultipartBody,
