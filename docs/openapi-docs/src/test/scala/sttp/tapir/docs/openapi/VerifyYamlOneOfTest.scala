@@ -18,8 +18,8 @@ import sttp.tapir.{
   emptyOutput,
   endpoint,
   header,
-  oneOfDefaultMapping,
-  oneOfMapping,
+  oneOfDefaultVariant,
+  oneOfVariant,
   plainBody,
   statusCode
 }
@@ -29,7 +29,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should support description for status code mappings with empty output") {
     val expectedYaml = load("oneOf/expected_status_codes_with_empty_output.yaml")
 
-    val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfMapping(StatusCode.Forbidden, emptyOutput.description("forbidden"))))
+    val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfVariant(StatusCode.Forbidden, emptyOutput.description("forbidden"))))
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("test", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -45,9 +45,9 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(
-        oneOfMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
-        oneOfMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-        oneOfDefaultMapping(jsonBody[Unknown].description("unknown"))
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+        oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
       )
     )
 
@@ -65,9 +65,9 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.out(
       sttp.tapir.oneOf(
-        oneOfMapping(StatusCode.Ok, jsonBody[NotFound].description("not found")),
-        oneOfMapping(StatusCode.Ok, plainBody[Unauthorized]),
-        oneOfMapping(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
+        oneOfVariant(StatusCode.Ok, jsonBody[NotFound].description("not found")),
+        oneOfVariant(StatusCode.Ok, plainBody[Unauthorized]),
+        oneOfVariant(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
       )
     )
 

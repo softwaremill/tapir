@@ -7,7 +7,7 @@ import sttp.tapir
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Validation
-import sttp.tapir.{Endpoint, oneOfMapping, stringBody}
+import sttp.tapir.{Endpoint, oneOfVariant, stringBody}
 
 class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
 
@@ -23,7 +23,7 @@ class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
   test("should include response defined in options if input decoding may fail") {
     val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(
       defaultDecodeFailureOutput =
-        _ => Some(tapir.oneOf(oneOfMapping(StatusCode.BadRequest, stringBody.description("Description defined in options."))))
+        _ => Some(tapir.oneOf(oneOfVariant(StatusCode.BadRequest, stringBody.description("Description defined in options."))))
     )
 
     val expectedYaml = load("decode_failure_output/expected_response_defined_in_options.yml")
@@ -44,7 +44,7 @@ class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
   test("should prefer endpoint's error output to default response") {
     val endpointWithDefined400 =
       fallibleEndpoint
-        .errorOut(tapir.oneOf(oneOfMapping(StatusCode.BadRequest, stringBody.description("User-defined description."))))
+        .errorOut(tapir.oneOf(oneOfVariant(StatusCode.BadRequest, stringBody.description("User-defined description."))))
 
     val expectedYaml = load("decode_failure_output/expected_user_defined_response.yml")
 

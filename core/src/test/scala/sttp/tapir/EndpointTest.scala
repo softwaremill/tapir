@@ -73,8 +73,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.NotFound, emptyOutput),
-          oneOfMapping(StatusCode.Unauthorized, emptyOutput)
+          oneOfVariant(StatusCode.NotFound, emptyOutput),
+          oneOfVariant(StatusCode.Unauthorized, emptyOutput)
         )
       )
   }
@@ -84,8 +84,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.get
       .out(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
-          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
         )
       )
   }
@@ -98,20 +98,20 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
-          oneOfMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
+          oneOfVariant(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
+          oneOfVariant(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
   }
 
-  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
+  "oneOfVariant" should "not compile when the type erasure of `T` is different from `T`" in {
     assertDoesNotCompile("""
       case class Wrapper[T](s: T)
 
       endpoint.post
         .errorOut(
           sttp.tapir.oneOf(
-            oneOfMapping(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
+            oneOfVariant(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
           )
         )
     """)
@@ -180,17 +180,17 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     ),
     (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}"),
     (
-      endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(byteArrayBody))),
+      endpoint.get.out(sttp.tapir.oneOf(oneOfVariant(stringBody), oneOfVariant(byteArrayBody))),
       "GET -> -/one of({body as text/plain (UTF-8)}|{body as application/octet-stream})"
     ),
     // same one-of mappings should be flattened to a single clause
-    (endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(stringBody))), "GET -> -/{body as text/plain (UTF-8)}"),
+    (endpoint.get.out(sttp.tapir.oneOf(oneOfVariant(stringBody), oneOfVariant(stringBody))), "GET -> -/{body as text/plain (UTF-8)}"),
     // nested same one-of mappings should also be flattened
     (
       endpoint.get.out(
         sttp.tapir.oneOf(
-          oneOfMapping(byteArrayBody),
-          oneOfMapping(sttp.tapir.oneOf(oneOfMapping(byteArrayBody), oneOfMapping(byteArrayBody)))
+          oneOfVariant(byteArrayBody),
+          oneOfVariant(sttp.tapir.oneOf(oneOfVariant(byteArrayBody), oneOfVariant(byteArrayBody)))
         )
       ),
       "GET -> -/{body as application/octet-stream}"

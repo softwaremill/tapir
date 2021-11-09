@@ -137,7 +137,7 @@ package object internal {
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsList
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
-        case s: EndpointOutput.OneOf[_, _]          => s.mappings.flatMap(_.output.asBasicOutputsList)
+        case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
@@ -154,7 +154,7 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)            => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
         case EndpointOutput.MappedPair(wrapped, _)         => wrapped.traverseOutputs(handle)
         case EndpointIO.MappedPair(wrapped, _)             => wrapped.traverseOutputs(handle)
-        case s: EndpointOutput.OneOf[_, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
+        case s: EndpointOutput.OneOf[_, _]                 => s.variants.toVector.flatMap(_.output.traverseOutputs(handle))
         case _                                             => Vector.empty
       }
 
