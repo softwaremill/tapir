@@ -1049,7 +1049,9 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     settings = commonJvmSettings ++ Seq(
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
