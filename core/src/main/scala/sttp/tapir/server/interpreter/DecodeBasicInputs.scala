@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model.headers.Cookie
-import sttp.model.{HeaderNames, Method, QueryParams}
+import sttp.model.{HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
@@ -227,10 +227,16 @@ object DecodeBasicInputs {
         if (m == ctx.method) (codec.decode(()), ctx)
         else (DecodeResult.Mismatch(m.method, ctx.method.method), ctx)
 
-      case EndpointIO.FixedHeader(sttp.model.Header(n, v), codec, _) =>
+      case EndpointIO.FixedHeader(h @ sttp.model.Header(n, v), codec, _) =>
         if (ctx.header(n) == Nil) (DecodeResult.Missing, ctx)
         else if (List(v) == ctx.header(n)) (codec.decode(()), ctx)
-        else (DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString), ctx)
+        else if (h.is(HeaderNames.ContentType)) {
+          // do not compare Content-Type 'boundary' directive
+          val inMedia = MediaType.parse(ctx.header(n).head).map(_.copy(otherParameters = Map.empty))
+          val reqMedia = MediaType.parse(v).map(_.copy(otherParameters = Map.empty))
+          if (inMedia == reqMedia) (codec.decode(()), ctx)
+          else (DecodeResult.Mismatch(reqMedia.toString, inMedia.toString), ctx)
+        } else (DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString), ctx)
 
       case EndpointInput.Query(name, codec, _) =>
         (codec.decode(ctx.queryParameter(name).toList), ctx)
