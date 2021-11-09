@@ -1,5 +1,7 @@
 package sttp.tapir.internal
 
+import sttp.model.internal.Rfc3986
+
 import java.net.{URLDecoder, URLEncoder}
 import java.nio.charset.Charset
 
@@ -24,5 +26,9 @@ private[tapir] object UrlencodedData {
 
   def encode(s: String): String = {
     URLEncoder.encode(s, "UTF-8")
+  }
+
+  def encodePathSegment(s: String): String = {
+    Rfc3986.encode(Rfc3986.PathSegment)(s)
   }
 }

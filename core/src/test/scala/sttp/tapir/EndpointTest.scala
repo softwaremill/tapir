@@ -3,6 +3,7 @@ package sttp.tapir
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.internal.Rfc3986
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.server.PartialServerEndpoint
@@ -202,6 +203,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     }
   }
 
+  private val pathAllowedCharacters = Rfc3986.PathSegment.mkString
+
   val renderTestData = List(
     (endpoint, "/"),
     (endpoint.in("p1"), "/p1"),
@@ -214,7 +217,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
     (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
-    (endpoint.in("p1/p2"), "/p1%2Fp2")
+    (endpoint.in("p1/p2"), "/p1%2Fp2"),
+    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters)
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
