@@ -323,6 +323,15 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_query_with_default_out_string)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
+    },
+    testServer(in_fixed_content_type_header_out_string, "fixed multipart/form-data header input should ignore boundary directive")(_ =>
+      pureResult("x".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri/api")
+        .headers(Header(HeaderNames.ContentType, "multipart/form-data; boundary=abc"))
+        .send(backend)
+        .map(_.body shouldBe Right("x"))
     }
   )
 

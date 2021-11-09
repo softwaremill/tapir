@@ -36,6 +36,9 @@ object Basic {
   val in_fixed_header_out_string: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.in("secret").in(header("location", "secret")).out(stringBody)
 
+  val in_fixed_content_type_header_out_string: PublicEndpoint[Unit, Unit, String, Any] =
+    endpoint.in("api").in(header(Header.contentType(MediaType.MultipartFormData))).out(stringBody)
+
   val in_header_before_path: PublicEndpoint[(String, Int), Unit, (Int, String), Any] = endpoint
     .in(header[String]("SomeHeader"))
     .in(path[Int])
