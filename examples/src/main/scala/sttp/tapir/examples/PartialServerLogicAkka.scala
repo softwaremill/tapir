@@ -42,7 +42,7 @@ object PartialServerLogicAkka extends App {
 
   // interpreting as routes
   val helloWorld1Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld1WithLogic)
-  //TODO val helloWorld2Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld2WithLogic)
+  // TODO val helloWorld2Route: Route = AkkaHttpServerInterpreter().toRoute(secureHelloWorld2WithLogic)
 
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { _ =>

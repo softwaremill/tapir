@@ -19,7 +19,7 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
-  extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
   import actorSystem.dispatcher
 
   override def route(
