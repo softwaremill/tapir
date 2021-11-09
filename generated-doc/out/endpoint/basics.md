@@ -1,6 +1,6 @@
 # Basics
 
-An endpoint is represented as a value of type `Endpoint[A, I, E, O, S]`, where:
+An endpoint is represented as a value of type `Endpoint[A, I, E, O, R]`, where:
 
 * `A` is the type of security input parameters
 * `I` is the type of input parameters
