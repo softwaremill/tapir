@@ -179,7 +179,7 @@ trait TapirStaticContentEndpoints {
     * path, but it can also contain other inputs. For example:
     *
     * {{{
-    * filesServerEndpoint("static" / "files")("/home/app/static")
+    * filesGetServerEndpoint("static" / "files")("/home/app/static")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
@@ -200,7 +200,7 @@ trait TapirStaticContentEndpoints {
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
     * {{{
-    * fileServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
+    * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
   def fileGetServerEndpoint[F[_]](path: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
@@ -210,7 +210,7 @@ trait TapirStaticContentEndpoints {
     * a path, but it can also contain other inputs. For example:
     *
     * {{{
-    * resourcesServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
+    * resourcesGetServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
@@ -224,7 +224,7 @@ trait TapirStaticContentEndpoints {
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
     *
     * {{{
-    * resourceServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
+    * resourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
     * }}}
     */
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
