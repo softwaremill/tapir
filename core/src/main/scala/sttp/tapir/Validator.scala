@@ -25,7 +25,7 @@ object Validator extends ValidatorMacros {
   private val _pass: Validator[Nothing] = all()
   private val _reject: Validator[Nothing] = any()
 
-  //-------------------------------------- SMART CONSTRUCTORS --------------------------------------
+  // -------------------------------------- SMART CONSTRUCTORS --------------------------------------
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
 
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
@@ -44,20 +44,20 @@ object Validator extends ValidatorMacros {
   def inRange[T: Numeric](min: T, max: T, minExclusive: Boolean = false, maxExclusive: Boolean = false): Validator[T] =
     Min(min, minExclusive).and(Max(max, maxExclusive))
 
-  //string
+  // string
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
   def minLength[T <: String](value: Int): Validator.Primitive[T] = MinLength(value)
   def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
   def fixedLength[T <: String](value: Int): Validator[T] = MinLength(value).and(MaxLength(value))
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
 
-  //iterable
+  // iterable
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
   def nonEmpty[T, C[_] <: Iterable[_]]: Validator.Primitive[C[T]] = MinSize(1)
   def fixedSize[T, C[_] <: Iterable[_]](value: Int): Validator[C[T]] = MinSize(value).and(MaxSize(value))
 
-  //enum
+  // enum
   /** Create an enumeration validator, with the given possible values.
     *
     * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be done: * by using the
@@ -86,7 +86,7 @@ object Validator extends ValidatorMacros {
   def custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None): Validator[T] =
     Custom(doValidate, showMessage)
 
-  //---------- PRIMITIVE ----------
+  // ---------- PRIMITIVE ----------
   sealed trait Primitive[T] extends Validator[T]
   case class Min[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
