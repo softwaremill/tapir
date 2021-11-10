@@ -14,8 +14,10 @@ import scala.reflect.ClassTag
   * The part of the server logic which is not provided, will have to transform both `U` and the rest of the input `I` either into an error,
   * or a value of type `O`.
   *
-  * Inputs/outputs can be added to partial endpoints as to regular endpoints, however the shape of the error outputs is fixed and cannot be
-  * changed. Hence, it's possible to create a base, secured input, and then specialise it with inputs, outputs and logic as needed.
+  * Inputs/outputs can be added to partial endpoints as to regular endpoints. The shape of the error outputs can be adjusted in a limited
+  * way, by adding new error output variants, similar as if they were defined using [[Tapir.oneOf]]; the variants and the existing error
+  * outputs should usually have a common supertype (other than `Any`). Hence, it's possible to create a base, secured input, and then
+  * specialise it with inputs, outputs and logic as needed.
   *
   * @tparam A
   *   "Auth": Security input parameter types, which the security logic accepts and returns a `U` or an error `E`.
@@ -37,6 +39,7 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
     securityLogic: MonadError[F] => A => F[Either[E, U]]
 ) extends EndpointInputsOps[A, I, E, O, R]
     with EndpointOutputsOps[A, I, E, O, R]
+    with EndpointErrorOutputVariantsOps[A, I, E, O, R]
     with EndpointInfoOps[R]
     with EndpointMetaOps { outer =>
   override type ThisType[-_R] = PartialServerEndpoint[A, U, I, E, O, _R, F]
@@ -51,6 +54,19 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
   override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): PartialServerEndpoint[A, U, I2, E, O, R with R2, F] =
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
+  override private[tapir] def withErrorOutputVariant[E2, R2](
+      errorOutput: EndpointOutput[E2],
+      embedE: E => E2
+  ): PartialServerEndpoint[A, U, I, E2, O, R with R2, F] =
+    this.copy(
+      endpoint = endpoint.copy(errorOutput = errorOutput),
+      securityLogic = implicit m =>
+        a =>
+          securityLogic(m)(a).map {
+            case Left(e)  => Left(embedE(e))
+            case Right(o) => Right(o)
+          }
+    )
   override private[tapir] def withInfo(info: EndpointInfo) = copy(endpoint = endpoint.copy(info = info))
 
   override protected def showType: String = "PartialServerEndpoint"

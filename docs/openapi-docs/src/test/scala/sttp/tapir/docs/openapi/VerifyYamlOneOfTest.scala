@@ -40,9 +40,6 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should support multiple status codes") {
     val expectedYaml = load("oneOf/expected_status_codes.yml")
 
-    // work-around for #10: unsupported sealed trait families
-    implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(Nil), Some(Schema.SName("ErrorInfo")))
-
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(
         oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
@@ -50,6 +47,20 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
         oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
       )
     )
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support multiple status codes when defined in multiple steps") {
+    val expectedYaml = load("oneOf/expected_status_codes.yml")
+
+    val e = endpoint
+      .errorOut(jsonBody[Unknown].description("unknown"))
+      .errorOutVariant(oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")))
+      .errorOutVariant(oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")))
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -118,4 +129,7 @@ object VerifyYamlOneOfTest {
   case class NotFound(what: String) extends ErrorInfo
   case class Unauthorized(realm: String) extends ErrorInfo
   case class Unknown(code: Int, msg: String) extends ErrorInfo
+
+  // work-around for #10: unsupported sealed trait families
+  implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(Nil), Some(Schema.SName("ErrorInfo")))
 }

@@ -5,6 +5,7 @@ import sttp.model.Method
 import sttp.monad.syntax._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
+import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
@@ -50,6 +51,7 @@ case class Endpoint[A, I, E, O, -R](
 ) extends EndpointSecurityInputsOps[A, I, E, O, R]
     with EndpointInputsOps[A, I, E, O, R]
     with EndpointErrorOutputsOps[A, I, E, O, R]
+    with EndpointErrorOutputVariantsOps[A, I, E, O, R]
     with EndpointOutputsOps[A, I, E, O, R]
     with EndpointInfoOps[R]
     with EndpointMetaOps
@@ -61,6 +63,11 @@ case class Endpoint[A, I, E, O, -R](
     this.copy(securityInput = securityInput)
   override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[A, I2, E, O, R with R2] = this.copy(input = input)
   override private[tapir] def withErrorOutput[E2, R2](errorOutput: EndpointOutput[E2]): Endpoint[A, I, E2, O, R with R2] =
+    this.copy(errorOutput = errorOutput)
+  override private[tapir] def withErrorOutputVariant[E2, R2](
+      errorOutput: EndpointOutput[E2],
+      embedE: E => E2
+  ): Endpoint[A, I, E2, O, R with R2] =
     this.copy(errorOutput = errorOutput)
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[A, I, E, O2, R with R2] = this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[A, I, E, O, R] = this.copy(info = info)
@@ -138,8 +145,8 @@ trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutput[E2, R2](input: EndpointOutput[E2]): EndpointType[A, I, E2, O, R with R2]
 
-  def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[A, I, EF, O, R] =
-    withErrorOutput(errorOutput.and(i))
+  def errorOut[F, EF](o: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[A, I, EF, O, R] =
+    withErrorOutput(errorOutput.and(o))
 
   def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): EndpointType[A, I, FE, O, R] =
     withErrorOutput(i.and(errorOutput))
@@ -152,6 +159,70 @@ trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros
 
   def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.mapDecode(f)(g))
+}
+
+trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
+  type EndpointType[_A, _I, _E, _O, -_R]
+  def errorOutput: EndpointOutput[E]
+  private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
+
+  /** Adds a new error output variant. The new variant will be checked first during encoding/decoding, before the endpoint's current output.
+    *
+    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the given `o`
+    *   - the second output variant is the current `errorOutput`, wrapped with [[Tapir.oneOfDefaultVariant]]
+    *
+    * @param o
+    *   The variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
+    * @tparam E2
+    *   A common supertype of the new variant and the current output `E`.
+    */
+  def errorOutVariant[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf(o, oneOfDefaultVariant(errorOutput)), identity)
+
+  /** Adds new error output variants. The new variants will be checked first during encoding/decoding, before the endpoint's current output.
+    *
+    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
+    *   - the initial output variants are the given `first` and `other`
+    *   - the last output variant is the current `errorOutput`, wrapped with [[Tapir.oneOfDefaultVariant]]
+    *
+    * @param first
+    *   The first variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
+    * @param other
+    *   Additional variants to add.
+    * @tparam E2
+    *   A common supertype of the new variant and the current output `E`.
+    */
+  def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf(first, other :+ oneOfDefaultVariant(errorOutput): _*), identity)
+
+  /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`. */
+  def errorOutEither[E2](o: EndpointOutput[E2]): EndpointType[A, I, Either[E, E2], O, R] =
+    withErrorOutputVariant(
+      oneOf(
+        oneOfVariantValueMatcher(o.map(Right(_))(_.value)) { case Right(_) =>
+          true
+        },
+        oneOfVariantValueMatcher(errorOutput.map(Left(_))(_.value)) { case Left(_) =>
+          true
+        }
+      ),
+      Left(_)
+    )
+
+  /** Adds a new error variant, where the current error output is mapped to conform to the common supertype `E2` using the `f` and `g`
+    * functions.
+    */
+  def errorOutVariantMap[E2](o: OneOfVariant[_ <: E2])(f: E => E2)(g: E2 => E): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf(o, oneOfDefaultVariant(errorOutput.map(f)(g))), f)
+
+  /** Adds new error variants, where the current error output is mapped to conform to the common supertype `E2` using the `f` and `g`
+    * functions.
+    */
+  def errorOutVariantsMap[E2](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(f: E => E2)(
+      g: E2 => E
+  ): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf(first, other :+ oneOfDefaultVariant(errorOutput.map(f)(g)): _*), f)
 }
 
 trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, O, R] {
@@ -298,9 +369,9 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
 
   /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
     *
-    * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then the main server logic can be provided,
-    * given a function which accepts as arguments the result of the security logic and the remaining input. The final result is then a
-    * [[ServerEndpoint]].
+    * Subsequently, the endpoint inputs and outputs can be extended (for error outputs, new variants can be added, but they cannot be
+    * arbitrarily extended). Then the main server logic can be provided, given a function which accepts as arguments the result of the
+    * security logic and the remaining input. The final result is then a [[ServerEndpoint]].
     *
     * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
     *
