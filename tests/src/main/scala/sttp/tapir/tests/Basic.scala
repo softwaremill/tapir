@@ -165,7 +165,7 @@ object Basic {
     endpoint.post.in("api" / "echo" / "coproduct").in(jsonBody[Option[Entity]]).out(jsonBody[Option[Entity]])
 
   val not_existing_endpoint: PublicEndpoint[Unit, String, Unit, Any] =
-    endpoint.in("api" / "not-existing").errorOut(oneOf(oneOfMapping(StatusCode.BadRequest, stringBody)))
+    endpoint.in("api" / "not-existing").errorOut(oneOf(oneOfVariant(StatusCode.BadRequest, stringBody)))
 
   val in_query_with_default_out_string: PublicEndpoint[String, Unit, String, Any] =
     endpoint

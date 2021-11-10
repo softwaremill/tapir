@@ -530,8 +530,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val ep = infallibleEndpoint.get.out(
       sttp.tapir.oneOf[Base](
-        oneOfMapping(StatusCode.Ok, emptyOutputAs(Success).description("success")),
-        oneOfMapping(StatusCode.Accepted, emptyOutputAs(AnotherSuccess).description("maybe success"))
+        oneOfVariant(StatusCode.Ok, emptyOutputAs(Success).description("success")),
+        oneOfVariant(StatusCode.Accepted, emptyOutputAs(AnotherSuccess).description("maybe success"))
       )
     )
 

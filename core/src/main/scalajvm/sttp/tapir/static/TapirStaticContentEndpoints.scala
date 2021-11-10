@@ -11,7 +11,7 @@ import java.time.Instant
 
 /** Static content endpoints, including files and resources. */
 trait TapirStaticContentEndpoints {
-  // we can't use oneOfMapping and mapTo since they are macros, defined in the same compilation unit
+  // we can't use oneOfVariant and mapTo since they are macros, defined in the same compilation unit
 
   private val pathsWithoutDots: EndpointInput[List[String]] =
     paths.mapDecode(ps =>
@@ -81,17 +81,17 @@ trait TapirStaticContentEndpoints {
       )
       .errorOut(
         oneOf[StaticErrorOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.NotFound,
             emptyOutputAs(StaticErrorOutput.NotFound),
             StaticErrorOutput.NotFound.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.RangeNotSatisfiable,
             emptyOutputAs(StaticErrorOutput.RangeNotSatisfiable),
             StaticErrorOutput.RangeNotSatisfiable.getClass
@@ -100,8 +100,8 @@ trait TapirStaticContentEndpoints {
       )
       .out(
         oneOf[StaticOutput[T]](
-          oneOfMappingClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
+          oneOfVariantClassMatcher(
             StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
@@ -116,7 +116,7 @@ trait TapirStaticContentEndpoints {
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
             classOf[StaticOutput.FoundPartial[T]]
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.Ok,
             body
               .and(lastModifiedHeader)
@@ -141,12 +141,12 @@ trait TapirStaticContentEndpoints {
       .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
       .errorOut(
         oneOf[StaticErrorOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.NotFound,
             emptyOutputAs(StaticErrorOutput.NotFound),
             StaticErrorOutput.NotFound.getClass
@@ -155,7 +155,7 @@ trait TapirStaticContentEndpoints {
       )
       .out(
         oneOf[HeadOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.Ok,
             header[Option[String]](HeaderNames.AcceptRanges)
               .and(header[Option[Long]](HeaderNames.ContentLength))

@@ -32,10 +32,10 @@ object ContentNegotiation {
       .in(header[String](HeaderNames.Accept))
       .out(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.Ok, jsonBody[Organization]),
-          oneOfMapping(StatusCode.Ok, xmlBody[Organization]),
-          oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
-          oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization]),
+          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
         )
       )
 
@@ -45,8 +45,8 @@ object ContentNegotiation {
       .in(header[String]("Accept"))
       .out(
         sttp.tapir.oneOf[Entity](
-          oneOfMapping(StatusCode.Ok, jsonBody[Person]),
-          oneOfMapping(StatusCode.Ok, xmlBody[Organization])
+          oneOfVariant(StatusCode.Ok, jsonBody[Person]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization])
         )
       )
 

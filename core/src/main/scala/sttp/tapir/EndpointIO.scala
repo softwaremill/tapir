@@ -300,15 +300,15 @@ object EndpointOutput extends EndpointOutputMacros {
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`. This check cannot be in general done by
     * checking the run-time class of the value, due to type erasure (if `O` has type parameters).
     */
-  case class OneOfMapping[O] private[tapir] (
+  case class OneOfVariant[O] private[tapir] (
       output: EndpointOutput[O],
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: List[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](variants: List[OneOfVariant[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
-    override def show: String = showOneOf(mappings.map(_.output.show))
+    override def show: String = showOneOf(variants.map(_.output.show))
   }
 
   //
