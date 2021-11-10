@@ -30,10 +30,10 @@ final case class VertxFutureServerOptions(
 object VertxFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, Unit, VertxFutureServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, VertxFutureServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, Unit, VertxFutureServerOptions]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createOptions = (ci: CustomInterceptors[Future, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
           Defaults.createTempFile().getParentFile.getAbsoluteFile,
           defaultDeleteFile,

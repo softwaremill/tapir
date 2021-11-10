@@ -20,10 +20,10 @@ case class ZioHttpServerOptions[R](
 object ZioHttpServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[R]: CustomInterceptors[RIO[R, *], Unit, ZioHttpServerOptions[R]] =
+  def customInterceptors[R]: CustomInterceptors[RIO[R, *], ZioHttpServerOptions[R]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, RIO[R, *]](sl, (_, _) => RIO.unit),
-      createOptions = (ci: CustomInterceptors[RIO[R, *], Unit, ZioHttpServerOptions[R]]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[RIO[R, *]](sl),
+      createOptions = (ci: CustomInterceptors[RIO[R, *], ZioHttpServerOptions[R]]) =>
         ZioHttpServerOptions(
           defaultCreateFile,
           defaultDeleteFile,

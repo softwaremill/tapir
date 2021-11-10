@@ -18,10 +18,10 @@ case class FinatraCatsServerOptions[F[_]](
 object FinatraCatsServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]](dispatcher: Dispatcher[F]): CustomInterceptors[Future, Unit, FinatraCatsServerOptions[F]] =
+  def customInterceptors[F[_]](dispatcher: Dispatcher[F]): CustomInterceptors[Future, FinatraCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_: Unit, _) => Future.Done),
-      createOptions = (ci: CustomInterceptors[Future, Unit, FinatraCatsServerOptions[F]]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createOptions = (ci: CustomInterceptors[Future, FinatraCatsServerOptions[F]]) =>
         FinatraCatsServerOptions[F](
           dispatcher,
           FinatraServerOptions.defaultCreateFile(FinatraServerOptions.futurePool),

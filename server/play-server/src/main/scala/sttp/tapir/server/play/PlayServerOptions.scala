@@ -4,6 +4,7 @@ import akka.stream.Materializer
 import play.api.Logger
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
@@ -29,10 +30,10 @@ object PlayServerOptions {
   def customInterceptors(implicit
       mat: Materializer,
       ec: ExecutionContext
-  ): CustomInterceptors[Future, Unit, PlayServerOptions] =
+  ): CustomInterceptors[Future, PlayServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, Unit, PlayServerOptions]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createOptions = (ci: CustomInterceptors[Future, PlayServerOptions]) =>
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile,
@@ -48,11 +49,10 @@ object PlayServerOptions {
     Future(Defaults.deleteFile()(file))
   }
 
-  lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
+  lazy val defaultServerLog: ServerLog = DefaultServerLog(
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => logger.error(msg, ex),
-    noLog = ()
+    doLogExceptions = (msg: String, ex: Throwable) => logger.error(msg, ex)
   )
 
   private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =

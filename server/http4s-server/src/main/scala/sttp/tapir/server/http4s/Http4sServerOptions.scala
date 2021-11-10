@@ -1,6 +1,5 @@
 package sttp.tapir.server.http4s
 
-import cats.Applicative
 import cats.effect.Sync
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
@@ -27,12 +26,12 @@ case class Http4sServerOptions[F[_], G[_]](
 object Http4sServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, G[Unit], Http4sServerOptions[F, G]] = {
+  def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, Http4sServerOptions[F, G]] = {
     CustomInterceptors(
-      createLogInterceptor = Log.serverLogInterceptor[F, G],
-      createOptions = (ci: CustomInterceptors[G, G[Unit], Http4sServerOptions[F, G]]) =>
+      createLogInterceptor = Log.serverLogInterceptor[G],
+      createOptions = (ci: CustomInterceptors[G, Http4sServerOptions[F, G]]) =>
         Http4sServerOptions[F, G](defaultCreateFile[G], defaultDeleteFile[G], 8192, ci.interceptors)
-    ).serverLog(Log.defaultServerLog[G])
+    ).serverLog(Log.defaultServerLog)
   }
 
   def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[TapirFile] = _ => sync.blocking(Defaults.createTempFile())
@@ -40,23 +39,22 @@ object Http4sServerOptions {
   def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
   object Log {
-    def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =
-      DefaultServerLog[F[Unit]](
-        doLogWhenHandled = debugLog[F],
-        doLogAllDecodeFailures = debugLog[F],
-        doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg)),
-        noLog = Applicative[F].unit
+    def defaultServerLog: DefaultServerLog =
+      DefaultServerLog(
+        doLogWhenHandled = debugLog,
+        doLogAllDecodeFailures = debugLog,
+        doLogExceptions = (msg: String, ex: Throwable) => Http4sServerToHttpInterpreter.log.error(ex)(msg)
       )
 
-    def serverLogInterceptor[F[_], G[_]](serverLog: ServerLog[G[Unit]]): ServerLogInterceptor[G[Unit], G] =
-      new ServerLogInterceptor[G[Unit], G](serverLog, (f, _) => f)
+    def serverLogInterceptor[G[_]](serverLog: ServerLog): ServerLogInterceptor[G] =
+      new ServerLogInterceptor[G](serverLog)
 
-    private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
+    private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
       exOpt match {
-        case None     => Sync[F].delay(Http4sServerToHttpInterpreter.log.debug(msg))
-        case Some(ex) => Sync[F].delay(Http4sServerToHttpInterpreter.log.debug(ex)(msg))
+        case None     => Http4sServerToHttpInterpreter.log.debug(msg)
+        case Some(ex) => Http4sServerToHttpInterpreter.log.debug(ex)(msg)
       }
   }
 
-  def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] = customInterceptors.options
+  def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] = customInterceptors[F, G].options
 }

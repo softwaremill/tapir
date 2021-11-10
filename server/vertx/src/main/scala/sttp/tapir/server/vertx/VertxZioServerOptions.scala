@@ -21,10 +21,10 @@ final case class VertxZioServerOptions[F[_]](
 object VertxZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[R]: CustomInterceptors[RIO[R, *], Unit, VertxZioServerOptions[RIO[R, *]]] =
+  def customInterceptors[R]: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, RIO[R, *]](sl, (_, _) => RIO.unit),
-      createOptions = (ci: CustomInterceptors[RIO[R, *], Unit, VertxZioServerOptions[RIO[R, *]]]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[RIO[R, *]](sl),
+      createOptions = (ci: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
           Defaults.createTempFile().getParentFile.getAbsoluteFile,
           file => Task[Unit](Defaults.deleteFile()(file)),

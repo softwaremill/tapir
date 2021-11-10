@@ -39,20 +39,25 @@ object NettyCatsServerOptions {
       NettyOptions.default
     )
 
-  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]] =
+  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, NettyCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Logger => F[Unit]]) => new ServerLogInterceptor[Logger => F[Unit], F](sl, (_, _) => Sync[F].unit),
-      createOptions = (ci: CustomInterceptors[F, Logger => F[Unit], NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[F](sl),
+      createOptions = (ci: CustomInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
-  def defaultServerLog[F[_]: Async]: ServerLog[Logger => F[Unit]] = DefaultServerLog(
+  def defaultServerLog[F[_]: Async]: ServerLog = DefaultServerLog(
     doLogWhenHandled = debugLog[F],
     doLogAllDecodeFailures = debugLog[F],
-    doLogExceptions = (msg: String, ex: Throwable) => log => Sync[F].delay(log.error(msg, ex)),
-    noLog = _ => Sync[F].unit
+    doLogExceptions = errorLog[F]
   )
 
-  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): Logger => F[Unit] = log =>
-    Sync[F].delay(NettyDefaults.debugLog(log, msg, exOpt))
+  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): Unit = {
+    val log = Logger[NettyCatsServerInterpreter[F]]
+    NettyDefaults.debugLog(log, msg, exOpt)
+  }
+
+  private def errorLog[F[_]: Async](msg: String, ex: Throwable): Unit = {
+    val log = Logger[NettyCatsServerInterpreter[F]]
+    log.error(msg, ex)
+  }
 }

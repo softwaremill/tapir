@@ -26,6 +26,7 @@ case class NettyFutureServerOptions(
 
 object NettyFutureServerOptions {
   val default: NettyFutureServerOptions = customInterceptors.options
+  val log = Logger[NettyFutureServerInterpreter]
 
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
     NettyDefaults.DefaultHost,
@@ -42,21 +43,19 @@ object NettyFutureServerOptions {
     NettyOptions.default
   )
 
-  def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions] = {
+  def customInterceptors: CustomInterceptors[Future, NettyFutureServerOptions] = {
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Logger => Future[Unit]]) => new ServerLogInterceptor[Logger => Future[Unit], Future](sl, (_, _) => Future.unit),
-      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions]) => default(ci.interceptors)
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createOptions = (ci: CustomInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
-  lazy val defaultServerLog: ServerLog[Logger => Future[Unit]] = DefaultServerLog(
+  lazy val defaultServerLog: ServerLog = DefaultServerLog(
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(msg, ex)),
-    noLog = _ => Future.unit
+    doLogExceptions = (msg: String, ex: Throwable) => log.error(msg, ex)
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Future[Unit] = log =>
-    Future.successful(NettyDefaults.debugLog(log, msg, exOpt))
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    NettyDefaults.debugLog(log, msg, exOpt)
 }

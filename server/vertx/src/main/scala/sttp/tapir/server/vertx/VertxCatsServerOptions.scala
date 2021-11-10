@@ -27,10 +27,10 @@ object VertxCatsServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
-  ): CustomInterceptors[F, Unit, VertxCatsServerOptions[F]] =
+  ): CustomInterceptors[F, VertxCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, F](sl, (_, _) => Applicative[F].unit),
-      createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
+      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[F](sl),
+      createOptions = (ci: CustomInterceptors[F, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
           Defaults.createTempFile().getParentFile.getAbsoluteFile,
