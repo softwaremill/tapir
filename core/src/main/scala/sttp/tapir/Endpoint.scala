@@ -143,13 +143,13 @@ trait EndpointInputsOps[A, I, E, O, -R] extends EndpointInputsMacros[A, I, E, O,
 trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros[A, I, E, O, R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def errorOutput: EndpointOutput[E]
-  private[tapir] def withErrorOutput[E2, R2](input: EndpointOutput[E2]): EndpointType[A, I, E2, O, R with R2]
+  private[tapir] def withErrorOutput[E2, R2](output: EndpointOutput[E2]): EndpointType[A, I, E2, O, R with R2]
 
   def errorOut[F, EF](o: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[A, I, EF, O, R] =
     withErrorOutput(errorOutput.and(o))
 
-  def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): EndpointType[A, I, FE, O, R] =
-    withErrorOutput(i.and(errorOutput))
+  def prependErrorOut[F, FE](o: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): EndpointType[A, I, FE, O, R] =
+    withErrorOutput(o.and(errorOutput))
 
   def mapErrorOut[EE](m: Mapping[E, EE]): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.map(m))
