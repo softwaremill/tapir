@@ -1,16 +1,16 @@
-# One-of mappings
+# One-of variants
 
 Outputs with multiple variants can be specified using the `oneOf` output. Each variant  is defined using a one-of 
-mapping. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the mappings 
+variant. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the variants 
 are implementing case classes.
 
-Each one-of mapping needs an `appliesTo` function to determine at run-time, if the variant should be used for a given 
-value. This function is inferred at compile time when using `oneOfMapping`, but can also be provided by hand, or if
-the compile-time inference fails, using one of the other factory methods (see below). A catch-all mapping can be defined
-using `oneOfDefaultMapping`, and should be placed as the last mapping in the list of possible variants.
+Each one-of variant needs an `appliesTo` function to determine at run-time, if the variant should be used for a given 
+value. This function is inferred at compile time when using `oneOfVariant`, but can also be provided by hand, or if
+the compile-time inference fails, using one of the other factory methods (see below). A catch-all variant can be defined
+using `oneOfDefaultVariant`, and should be placed as the last variant in the list of possible variants.
 
 When encoding such an output to a response, the first matching output is chosen, using the following rules:
-1. the mappings `appliesTo` method, applied to the output value (as returned by the server logic) must return `true`.
+1. the variants `appliesTo` method, applied to the output value (as returned by the server logic) must return `true`.
 2. when a fixed content type is specified by the output, it must match the request's `Accept` header (if present). 
    This implements content negotiation.
 
@@ -20,7 +20,7 @@ The outputs might vary in status codes, headers (e.g. different content types), 
 bodies, only replayable ones can be used, and they need to have the same raw representation (e.g. all byte-array-base, 
 or all file-based).
 
-Note that exhaustiveness of the mappings (that all subtypes of `T` are covered) is not checked.
+Note that exhaustiveness of the variants (that all subtypes of `T` are covered) is not checked.
 
 For example, below is a specification for an endpoint where the error output is a sealed trait `ErrorInfo`; 
 such a specification can then be refined and reused for other endpoints:
@@ -41,17 +41,17 @@ case object NoContent extends ErrorInfo
 // here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
-    oneOfMapping(statusCode(StatusCode.NotFound).and(jsonBody[NotFound].description("not found"))),
-    oneOfMapping(statusCode(StatusCode.Unauthorized.and(jsonBody[Unauthorized].description("unauthorized")))),
-    oneOfMapping(statusCode(StatusCode.NoContent.and(emptyOutputAs(NoContent)))),
-    oneOfDefaultMapping(jsonBody[Unknown].description("unknown"))
+    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound].description("not found"))),
+    oneOfVariant(statusCode(StatusCode.Unauthorized.and(jsonBody[Unauthorized].description("unauthorized")))), 
+    oneOfVariant(statusCode(StatusCode.NoContent.and(emptyOutputAs(NoContent)))),
+    oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
   )
 )
 ```
 
-## One-of-mapping and type erasure
+## One-of-variant and type erasure
 
-Type erasure may prevent a one-of-mapping from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
+Type erasure may prevent a one-of-variant from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
 
 ```scala
 import sttp.tapir._
@@ -68,19 +68,19 @@ case class NotFound(what: String) extends UserError
 
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
-    oneOfMapping(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
-    oneOfMapping(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
-    oneOfMapping(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
+    oneOfVariant(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+    oneOfVariant(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+    oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Constructing oneOfMapping of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead
-//     oneOfMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
+// error: Constructing oneOfVariant of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+//     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                             ^
-// error: Constructing oneOfMapping of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead
-//     oneOfMappingValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
+// error: Constructing oneOfVariant of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+//     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
 //                             ^
-// error: Constructing oneOfMapping of type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead
-//     oneOfMappingValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
+// error: Constructing oneOfVariant of type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+//     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
 //                             ^
 ```
 
@@ -90,20 +90,20 @@ The solution is therefore to handwrite a function checking that a value (of type
 ```scala
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
-    oneOfMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
+    oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
       case Right(NotFound(_)) => true
     },
-    oneOfMappingValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
+    oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
       case Right(BadRequest(_)) => true
     },
-    oneOfMappingValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
+    oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
       case Left(ServerError(_)) => true
     }
   )
 )
 ```
 
-Of course, you could use `oneOfMappingValueMatcher` to do runtime filtering for other purpose than solving type erasure.
+Of course, you could use `oneOfVariantValueMatcher` to do runtime filtering for other purpose than solving type erasure.
 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
 To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
@@ -113,12 +113,20 @@ import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
-    oneOfMappingFromMatchType(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
-    oneOfMappingFromMatchType(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
-    oneOfMappingFromMatchType(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized"))
+    oneOfVariantFromMatchType(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+    oneOfVariantFromMatchType(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+    oneOfVariantFromMatchType(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized"))
   )
 )
 ```
+
+## Error outputs
+
+Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
+[security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
+error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
+different from `Any`.. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
+the result in an additional `Either`.
 
 ## Next
 

@@ -27,20 +27,20 @@ val filesRoute: Route = AkkaHttpServerInterpreter().toRoute(
 Using the above endpoint, a request to `/site/static/css/styles.css` will try to read the 
 `/home/static/data/css/styles.css` file.
 
-A single file can be exposed using `fileServerEndpoint`.
+A single file can be exposed using `fileGetServerEndpoint`.
 
 ## Resources
 
-Similarly, the `resourcesServerEndpoint` can be used to expose the application's resources at the given prefix.
+Similarly, the `resourcesGetServerEndpoint` can be used to expose the application's resources at the given prefix.
 
-A single resource can be exposed using `resourceServerEndpoint`.
+A single resource can be exposed using `resourceGetServerEndpoint`.
 
 ## Endpoint description and server logic
 
 The descriptions of endpoints which should serve static data, and the server logic which implements the actual 
 file/resource reading are also available separately for further customisation.
 
-The `filesEndpoint` and `resourcesEndpoint` are descriptions which contain the metadata (including caching headers) 
+The `filesGetEndpoint` and `resourcesGetEndpoint` are descriptions which contain the metadata (including caching headers) 
 required to serve a file or resource, and possible error outcomes. This is captured using the `StaticInput`, 
 `StaticErrorOuput` and `StaticOutput[T]` classes.
 

@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M15"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M15"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M16"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -133,12 +133,12 @@ definitions, which given the documentation in yaml format, will expose it using 
 as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.19.0-M15"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.19.0-M16"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.19.0-M15"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.19.0-M16"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
