@@ -89,8 +89,8 @@ val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaC
 val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.6",
-  "ch.qos.logback" % "logback-core" % "1.2.6",
+  "ch.qos.logback" % "logback-classic" % "1.2.7",
+  "ch.qos.logback" % "logback-core" % "1.2.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
