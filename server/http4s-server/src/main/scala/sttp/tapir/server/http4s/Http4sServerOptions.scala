@@ -1,6 +1,8 @@
 package sttp.tapir.server.http4s
 
 import cats.effect.Sync
+import sttp.monad.MonadError
+import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
@@ -39,20 +41,23 @@ object Http4sServerOptions {
   def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
   object Log {
-    def defaultServerLog: DefaultServerLog =
-      DefaultServerLog(
-        doLogWhenHandled = debugLog,
-        doLogAllDecodeFailures = debugLog,
-        doLogExceptions = (msg: String, ex: Throwable) => Http4sServerToHttpInterpreter.log.error(ex)(msg)
-      )
+    def defaultServerLog[G[_]: Sync]: DefaultServerLog[G] = {
+      implicit val monadError: MonadError[G] = new CatsMonadError[G]
 
-    def serverLogInterceptor[G[_]](serverLog: ServerLog): ServerLogInterceptor[G] =
+      DefaultServerLog(
+        doLogWhenHandled = debugLog[G],
+        doLogAllDecodeFailures = debugLog[G],
+        doLogExceptions = (msg: String, ex: Throwable) => Sync[G].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg))
+      )
+    }
+
+    def serverLogInterceptor[G[_]: Sync](serverLog: ServerLog[G]): ServerLogInterceptor[G] =
       new ServerLogInterceptor[G](serverLog)
 
-    private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    private def debugLog[G[_]](msg: String, exOpt: Option[Throwable])(implicit sync: Sync[G]): G[Unit] =
       exOpt match {
-        case None     => Http4sServerToHttpInterpreter.log.debug(msg)
-        case Some(ex) => Http4sServerToHttpInterpreter.log.debug(ex)(msg)
+        case None     => Sync[G].delay(Http4sServerToHttpInterpreter.log.debug(msg))
+        case Some(ex) => Sync[G].delay(Http4sServerToHttpInterpreter.log.debug(ex)(msg))
       }
   }
 

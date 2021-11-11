@@ -22,7 +22,7 @@ object ZioHttpServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[R]: CustomInterceptors[RIO[R, *], ZioHttpServerOptions[R]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[RIO[R, *]](sl),
+      createLogInterceptor = (sl: ServerLog[RIO[R, *]]) => new ServerLogInterceptor[RIO[R, *]](sl),
       createOptions = (ci: CustomInterceptors[RIO[R, *], ZioHttpServerOptions[R]]) =>
         ZioHttpServerOptions(
           defaultCreateFile,

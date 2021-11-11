@@ -33,12 +33,12 @@ import sttp.tapir.{headers, statusCode}
   *   The decode failure handler, from which an interceptor will be created. Determines whether to respond when an input fails to decode.
   */
 case class CustomInterceptors[F[_], O](
-    createLogInterceptor: ServerLog => Interceptor[F],
+    createLogInterceptor: ServerLog[F] => Interceptor[F],
     createOptions: CustomInterceptors[F, O] => O,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     rejectInterceptor: Option[RejectInterceptor[F]] = Some(RejectInterceptor.default[F]),
     exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler.handler),
-    serverLog: Option[ServerLog] = None,
+    serverLog: Option[ServerLog[F]] = None,
     additionalInterceptors: List[Interceptor[F]] = Nil,
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
       new UnsupportedMediaTypeInterceptor[F]()
@@ -54,8 +54,8 @@ case class CustomInterceptors[F[_], O](
   def exceptionHandler(e: ExceptionHandler): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
   def exceptionHandler(e: Option[ExceptionHandler]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
 
-  def serverLog(log: ServerLog): CustomInterceptors[F, O] = copy(serverLog = Some(log))
-  def serverLog(log: Option[ServerLog]): CustomInterceptors[F, O] = copy(serverLog = log)
+  def serverLog(log: ServerLog[F]): CustomInterceptors[F, O] = copy(serverLog = Some(log))
+  def serverLog(log: Option[ServerLog[F]]): CustomInterceptors[F, O] = copy(serverLog = log)
 
   def addInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] =
     copy(additionalInterceptors = additionalInterceptors :+ i)

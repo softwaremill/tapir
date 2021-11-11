@@ -1,6 +1,7 @@
 package sttp.tapir.server.netty
 
 import com.typesafe.scalalogging.Logger
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -45,17 +46,23 @@ object NettyFutureServerOptions {
 
   def customInterceptors: CustomInterceptors[Future, NettyFutureServerOptions] = {
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions = (ci: CustomInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
-  lazy val defaultServerLog: ServerLog = DefaultServerLog(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => log.error(msg, ex)
-  )
+  lazy val defaultServerLog: ServerLog[Future] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val monadError: MonadError[Future] = new FutureMonad
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    DefaultServerLog(
+      doLogWhenHandled = debugLog,
+      doLogAllDecodeFailures = debugLog,
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) }
+    )
+  }
+
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
     NettyDefaults.debugLog(log, msg, exOpt)
+  }
 }

@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.lambda
 
-import cats.Monad
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 
@@ -11,7 +10,7 @@ object AwsFutureServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors(implicit ec: ExecutionContext): CustomInterceptors[Future, AwsServerOptions[Future]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[Future](sl),
+      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions =
         (ci: CustomInterceptors[Future, AwsServerOptions[Future]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )

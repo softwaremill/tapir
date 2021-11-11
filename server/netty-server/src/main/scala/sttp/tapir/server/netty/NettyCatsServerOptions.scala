@@ -3,9 +3,11 @@ package sttp.tapir.server.netty
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import com.typesafe.scalalogging.Logger
+import sttp.monad.MonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.netty.internal.CatsUtil.CatsMonadError
 import sttp.tapir.{Defaults, TapirFile}
 
 case class NettyCatsServerOptions[F[_]](
@@ -41,22 +43,26 @@ object NettyCatsServerOptions {
 
   def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, NettyCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog) => new ServerLogInterceptor[F](sl),
+      createLogInterceptor = (sl: ServerLog[F]) => new ServerLogInterceptor[F](sl),
       createOptions = (ci: CustomInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
-  def defaultServerLog[F[_]: Async]: ServerLog = DefaultServerLog(
-    doLogWhenHandled = debugLog[F],
-    doLogAllDecodeFailures = debugLog[F],
-    doLogExceptions = errorLog[F]
-  )
+  def defaultServerLog[F[_]: Async]: ServerLog[F] = {
+    implicit val monadError: MonadError[F] = new CatsMonadError[F]
 
-  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): Unit = {
+    DefaultServerLog(
+      doLogWhenHandled = debugLog[F],
+      doLogAllDecodeFailures = debugLog[F],
+      doLogExceptions = errorLog[F]
+    )
+  }
+
+  private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): F[Unit] = Sync[F].delay {
     val log = Logger[NettyCatsServerInterpreter[F]]
     NettyDefaults.debugLog(log, msg, exOpt)
   }
 
-  private def errorLog[F[_]: Async](msg: String, ex: Throwable): Unit = {
+  private def errorLog[F[_]: Async](msg: String, ex: Throwable): F[Unit] = Sync[F].delay {
     val log = Logger[NettyCatsServerInterpreter[F]]
     log.error(msg, ex)
   }
