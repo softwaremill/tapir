@@ -20,7 +20,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
     val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
-    val method = e.httpMethod.getOrElse(Method.GET)
+    val method = e.method.getOrElse(Method.GET)
 
     val defaultId = options.operationIdGenerator(pathComponents, method)
 

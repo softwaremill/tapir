@@ -8,7 +8,7 @@ private[terraform] object EndpointsToTerraformConfig {
   def apply(eps: List[AnyEndpoint]): AwsTerraformApiGateway = {
 
     val routes: Seq[AwsApiGatewayRoute] = eps.map { endpoint =>
-      val method = endpoint.httpMethod.getOrElse(Method("ANY"))
+      val method = endpoint.method.getOrElse(Method("ANY"))
 
       val basicInputs = endpoint.input.asVectorOfBasicInputs()
 

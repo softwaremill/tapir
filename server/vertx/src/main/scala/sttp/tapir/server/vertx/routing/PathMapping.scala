@@ -32,7 +32,7 @@ object PathMapping {
     *   the route definition matching the endpoint input definition
     */
   private[vertx] def extractRouteDefinition(endpoint: AnyEndpoint): RouteDefinition =
-    (MethodMapping.sttpToVertx(endpoint.httpMethod), extractVertxPath(endpoint))
+    (MethodMapping.sttpToVertx(endpoint.method), extractVertxPath(endpoint))
 
   private def extractVertxPath(endpoint: AnyEndpoint): String = {
     var idxUsed = 0

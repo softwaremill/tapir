@@ -58,7 +58,7 @@ private[sam] object EndpointsToSamTemplate {
       }
       ._1
 
-    val method = e.httpMethod
+    val method = e.method
 
     val nameComponents = if (pathComponents.isEmpty) Vector("root") else pathComponents.map(_.fold(identity, identity))
     val name = (method.map(_.method.toLowerCase).getOrElse("any").capitalize +: nameComponents.map(_.toLowerCase.capitalize)).mkString

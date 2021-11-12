@@ -22,7 +22,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
   ): (String, ChannelItem) = {
     val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
-    val method = e.httpMethod.getOrElse(Method.GET)
+    val method = e.method.getOrElse(Method.GET)
 
     val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, _) => name -> schemas(codec) }
     val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec) }
