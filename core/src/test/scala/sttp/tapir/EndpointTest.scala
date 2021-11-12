@@ -295,7 +295,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .serverSecurityLogic { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
     implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
-    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, 0.0d, ""))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.parsedString(_ => Result(null, 0.0d, ""))
 
     base
       .in(query[Double]("z"))

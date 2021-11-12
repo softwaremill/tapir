@@ -93,7 +93,7 @@ object FormCodecMacros {
     val decodeExpr = Block(List(decodeDef), Closure(Ref(decodeDefSymbol), None)).asExprOf[Seq[(String, String)] => DecodeResult[T]]
 
     '{
-      Codec.formSeqCodecUtf8
+      Codec.formSeqUtf8
         .mapDecode($decodeExpr)($encodeExpr)
         .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}].")) })
     }

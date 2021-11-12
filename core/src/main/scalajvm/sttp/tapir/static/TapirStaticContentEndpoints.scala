@@ -33,35 +33,12 @@ trait TapirStaticContentEndpoints {
     }(_.map(Header.toHttpDateString))
 
   private val ifModifiedSinceHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.IfModifiedSince)
-
   private val lastModifiedHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.LastModified)
-
-  private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[String]](HeaderNames.ContentType).mapDecode {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, MediaType.parse(v)).map(Some(_))
-  }(_.map(_.toString))
-
-  private val etagHeader: EndpointIO[Option[ETag]] = header[Option[String]](HeaderNames.Etag).mapDecode[Option[ETag]] {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, ETag.parse(v)).map(Some(_))
-  }(_.map(_.toString))
-
-  private val rangeHeader: EndpointIO[Option[Range]] = header[Option[String]](HeaderNames.Range).mapDecode[Option[Range]] {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, Range.parse(v).map(_.headOption))
-  }(_.map(_.toString))
-
-  private val acceptEncodingHeader: EndpointIO[Option[String]] =
-    header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[Option[String]] {
-      case None    => DecodeResult.Value(None)
-      case Some(v) => DecodeResult.fromEitherString(v, Right(v).map(h => Option(h)))
-    }(header => header)
-
-  private val contentEncodingHeader: EndpointIO[Option[String]] =
-    header[Option[String]](HeaderNames.ContentEncoding).mapDecode[Option[String]] {
-      case None    => DecodeResult.Value(None)
-      case Some(v) => DecodeResult.fromEitherString(v, Right(Some(v)))
-    }(header => header)
+  private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[MediaType]](HeaderNames.ContentType)
+  private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
+  private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
+  private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
+  private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
   private def staticGetEndpoint[T](
       prefix: EndpointInput[Unit],

@@ -131,7 +131,7 @@ object MultipartCodecMacro {
         }
         def encode(o: $t): _root_.scala.Seq[_root_.sttp.tapir.RawPart] = _root_.scala.List(..$encodeParams)
 
-        _root_.sttp.tapir.Codec.multipartCodec($partCodecs, _root_.scala.None)
+        _root_.sttp.tapir.Codec.multipart($partCodecs, _root_.scala.None)
           .map(decode _)(encode _)
           .schema(${util.schema})
       }
