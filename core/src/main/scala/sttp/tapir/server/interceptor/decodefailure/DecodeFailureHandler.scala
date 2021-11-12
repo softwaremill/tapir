@@ -190,8 +190,10 @@ object DefaultDecodeFailureHandler {
               s"expected size of $valueName to be greater than or equal to ${m.value}, but was ${ve.invalidValue.size}"
             case m: Validator.MaxSize[T, Iterable] =>
               s"expected size of $valueName to be less than or equal to ${m.value}, but was ${ve.invalidValue.size}"
-            case Validator.Enumeration(possibleValues, _, _) =>
-              s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+            case Validator.Enumeration(possibleValues, encode, _) =>
+              val encodedPossibleValues =
+                encode.fold(possibleValues.map(_.toString))(e => possibleValues.flatMap(e(_).toList).map(_.toString))
+              s"expected $valueName to be within $encodedPossibleValues, but was '${ve.invalidValue}'"
           }
         case c: ValidationError.Custom[T] =>
           s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"
