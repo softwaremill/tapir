@@ -222,7 +222,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, useGzippedIfAvailable)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
