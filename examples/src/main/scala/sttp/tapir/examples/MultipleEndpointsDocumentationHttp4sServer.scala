@@ -6,15 +6,11 @@ import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
-import org.http4s.syntax.kleisli._
 import sttp.tapir._
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.OpenAPI
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
-import sttp.tapir.swagger.SwaggerUI
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
@@ -59,11 +55,12 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
       addBook.serverLogicSuccess(book => IO((books.getAndUpdate(books => books :+ book): Unit)))
     )
 
-  // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
-  val openApiYml: String = openApiDocs.toYaml
+  // generating and exposing the documentation in yml
+  val swaggerUIRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(
+      SwaggerInterpreter().fromEndpoints[IO](List(booksListing, addBook), "The tapir library", "1.0.0")
+    )
 
-  val swaggerUIRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(SwaggerUI[IO](openApiYml))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes <+> swaggerUIRoutes
 
   override def run(args: List[String]): IO[ExitCode] = {

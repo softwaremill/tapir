@@ -5,12 +5,11 @@ import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.syntax.kleisli._
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import sttp.tapir.swagger.SwaggerUI
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zio.clock.Clock
 import zio.blocking.Blocking
@@ -46,14 +45,10 @@ object ZioExampleHttp4sServer extends App {
 
   //
 
-  val yaml: String = {
-    import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-    import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
-  }
-
   val swaggerRoutes: HttpRoutes[RIO[Clock with Blocking, *]] =
-    ZHttp4sServerInterpreter().from(SwaggerUI[RIO[Clock with Blocking, *]](yaml)).toRoutes
+    ZHttp4sServerInterpreter()
+      .from(SwaggerInterpreter().fromEndpoints[RIO[Clock with Blocking, *]](List(petEndpoint), "Our pets", "1.0"))
+      .toRoutes
 
   // Starting the server
   val serve: ZIO[ZEnv, Throwable, Unit] =

@@ -6,12 +6,9 @@ import akka.http.scaladsl.Http
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir._
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.OpenAPI
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import sttp.tapir.swagger.SwaggerUI
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -53,11 +50,11 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
       addBook.serverLogicSuccess(book => Future.successful { books.getAndUpdate(books => books :+ book); () })
     )
 
-  // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
-  val openApiYml: String = openApiDocs.toYaml
-
-  val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](openApiYml))
+  // generating and exposing the documentation in yml
+  val swaggerUIRoute =
+    AkkaHttpServerInterpreter().toRoute(
+      SwaggerInterpreter().fromEndpoints[Future](List(booksListing, addBook), "The tapir library", "1.0.0")
+    )
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
