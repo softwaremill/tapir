@@ -44,7 +44,7 @@ object PrometheusMetrics {
   implicit val schemaForCollectorRegistry: Schema[CollectorRegistry] = Schema.string[CollectorRegistry]
 
   implicit val collectorRegistryCodec: Codec[String, CollectorRegistry, CodecFormat.TextPlain] =
-    Codec.anyStringCodec(TextPlain())(_ => DecodeResult.Value(new CollectorRegistry()))(r => {
+    Codec.anyString(TextPlain())(_ => DecodeResult.Value(new CollectorRegistry()))(r => {
       val output = new StringWriter()
       TextFormat.write004(output, r.metricFamilySamples)
       output.close()
