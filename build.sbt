@@ -587,8 +587,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.7.1",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.7.1",
+      "io.opentelemetry" % "opentelemetry-api" % "1.9.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.9.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )
