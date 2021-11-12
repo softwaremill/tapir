@@ -22,7 +22,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val defaultId = options.operationIdGenerator(pathComponents, method)
+    val defaultId = options.operationIdGenerator(e, pathComponents, method)
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
