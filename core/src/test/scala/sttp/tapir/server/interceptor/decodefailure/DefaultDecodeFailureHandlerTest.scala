@@ -19,6 +19,19 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     ) shouldBe "expected address.number to be greater than or equal to 1, but was 0"
   }
 
+  it should "create a validation error message including encoded enumeration values" in {
+    // given
+    val numberSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.enumeration(List(1, 2, 3)).encode(_.toBinaryString))
+
+    // when
+    val validationErrors = numberSchema.applyValidation(4)
+
+    // then
+    DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
+      validationErrors
+    ) shouldBe "expected value to be within List(1, 10, 11), but was '4'"
+  }
+
   case class Person(name: String, address: Address)
   case class Address(street: String, number: Int)
 }
