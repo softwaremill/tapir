@@ -281,7 +281,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   for ((testEndpoint, expectedMethod) <- httpMethodTestData) {
     s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
-      testEndpoint.httpMethod shouldBe expectedMethod
+      testEndpoint.method shouldBe expectedMethod
     }
   }
 

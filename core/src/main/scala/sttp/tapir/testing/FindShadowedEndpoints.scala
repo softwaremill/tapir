@@ -25,7 +25,7 @@ object FindShadowedEndpoints {
     checkMethods(e1, e2) && checkPaths(e1, e2)
 
   private def checkMethods(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
-    e1.httpMethod.equals(e2.httpMethod) || e1.httpMethod.isEmpty
+    e1.method.equals(e2.method) || e1.method.isEmpty
 
   private def checkPaths(e1: AnyEndpoint, e2: AnyEndpoint): Boolean = {
     val e1Segments = extractPathSegments(e1)

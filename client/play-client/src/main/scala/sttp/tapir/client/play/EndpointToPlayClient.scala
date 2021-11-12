@@ -38,7 +38,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   ): A => I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) = { aParams => iParams =>
     val req0 = setInputParams(e.securityInput, ParamsAsAny(aParams), ws.url(baseUri))
     val req = setInputParams(e.input, ParamsAsAny(iParams), req0)
-      .withMethod(e.httpMethod.getOrElse(Method.GET).method)
+      .withMethod(e.method.getOrElse(Method.GET).method)
 
     def responseParser(response: StandaloneWSResponse): DecodeResult[Either[E, O]] = {
       parsePlayResponse(e)(response) match {

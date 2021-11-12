@@ -72,11 +72,6 @@ case class Endpoint[A, I, E, O, -R](
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[A, I, E, O2, R with R2] = this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[A, I, E, O, R] = this.copy(info = info)
   override protected def showType: String = "Endpoint"
-
-  def httpMethod: Option[Method] = {
-    import sttp.tapir.internal._
-    input.method.orElse(securityInput.method)
-  }
 }
 
 trait EndpointSecurityInputsOps[A, I, E, O, -R] extends EndpointSecurityInputsMacros[A, I, E, O, R] {
@@ -321,6 +316,17 @@ trait EndpointMetaOps {
       renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
       includeAuth: Boolean = true
   ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+
+  /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
+    * [[EndpointInputsOps.post]]).
+    */
+  def method: Option[Method] = {
+    import sttp.tapir.internal._
+    input.method.orElse(securityInput.method)
+  }
+
+  @deprecated("Use method", since = "0.19.0")
+  def httpMethod: Option[Method] = method
 }
 
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
