@@ -8,7 +8,7 @@ import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
 import sttp.model._
-import sttp.model.headers.{Cookie, CookieWithMeta}
+import sttp.model.headers.{CacheDirective, Cookie, CookieWithMeta, ETag, Range}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
@@ -17,7 +17,7 @@ import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, tailrec}
 import scala.concurrent.duration.{Duration => SDuration}
 
 /** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values are formatted as `CF`.
@@ -269,26 +269,6 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
   //
 
-  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] =
-    Cookie.parse(cookie) match {
-      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-      case Right(r) => DecodeResult.Value(r)
-    }
-
-  implicit val cookieCodec: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
-  implicit val cookiesCodec: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookieCodec).map(_.flatten)(List(_))
-
-  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
-    CookieWithMeta.parse(cookie) match {
-      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-      case Right(r) => DecodeResult.Value(r)
-    }
-
-  implicit val cookieWithMetaCodec: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
-  implicit val cookiesWithMetaCodec: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMetaCodec)
-
-  //
-
   implicit def usernamePasswordCodec: PlainCodec[UsernamePassword] = {
     def decode(s: String): DecodeResult[UsernamePassword] =
       try {
@@ -492,6 +472,52 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       _rawDecode(toDecode)
     })(t => if (isOptional && t == None) "" else _encode(t))
   }
+
+  // header values
+
+  implicit val mediaType: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, MediaType.parse(v))
+  }(_.toString)
+
+  implicit val etag: Codec[String, ETag, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, ETag.parse(v))
+  }(_.toString)
+
+  implicit val range: Codec[String, Range, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, Range.parse(v)).flatMap {
+      case Nil     => DecodeResult.Missing
+      case List(r) => DecodeResult.Value(r)
+      case rs      => DecodeResult.Multiple(rs)
+    }
+  }(_.toString)
+
+  implicit val cacheDirective: Codec[String, List[CacheDirective], CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    @tailrec
+    def toEitherOrList[T, U](l: List[Either[T, U]], acc: List[U]): Either[T, List[U]] = l match {
+      case Nil              => Right(acc.reverse)
+      case Left(t) :: _     => Left(t)
+      case Right(u) :: tail => toEitherOrList(tail, u :: acc)
+    }
+    DecodeResult.fromEitherString(v, toEitherOrList(CacheDirective.parse(v), Nil))
+  }(_.map(_.toString).mkString(", "))
+
+  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] =
+    Cookie.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
+
+  implicit val cookie: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
+  implicit val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookie).map(_.flatten)(List(_))
+
+  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
+    CookieWithMeta.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
+
+  implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
+  implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
 }
 
 /** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec `List[T] <-> Either[A, B]`, given
