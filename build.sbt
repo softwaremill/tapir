@@ -144,7 +144,6 @@ lazy val allAggregates = core.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
-  playground.projectRefs ++
   documentation.projectRefs ++
   openapiCodegen.projectRefs ++
   clientTestServer.projectRefs ++
@@ -1159,38 +1158,6 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     sttpMockServer,
     zioJson
-  )
-
-lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-playground",
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
-      "dev.zio" %% "zio" % Versions.zio,
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "io.swagger" % "swagger-annotations" % "1.6.3",
-      "io.circe" %% "circe-generic-extras" % "0.14.1",
-      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp
-    ),
-    libraryDependencies ++= loggerDependencies,
-    publishArtifact := false
-  )
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(
-    akkaHttpServer,
-    http4sServer,
-    sttpClient,
-    openapiCirceYaml,
-    asyncapiCirceYaml,
-    openapiDocs,
-    circeJson,
-    refined,
-    cats,
-    swaggerUi,
-    zioHttp4sServer,
-    zioHttpServer
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
