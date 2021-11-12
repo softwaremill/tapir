@@ -121,7 +121,9 @@ lazy val allAggregates = core.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
   swaggerUi.projectRefs ++
+  swaggerUiBundle.projectRefs ++
   redoc.projectRefs ++
+  redocBundle.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -714,11 +716,23 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
+lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-bundle"))
+  .settings(commonJvmSettings)
+  .settings(name := "tapir-swagger-ui-bundle")
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml)
+
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonJvmSettings)
   .settings(name := "tapir-redoc")
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
+
+lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"))
+  .settings(commonJvmSettings)
+  .settings(name := "tapir-redoc-bundle")
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(redoc, openapiDocs, openapiCirceYaml)
 
 // server
 
@@ -1149,8 +1163,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     asyncapiCirceYaml,
     asyncapiDocs,
     circeJson,
-    swaggerUi,
-    redoc,
+    swaggerUiBundle,
+    redocBundle,
     zioHttp4sServer,
     zioHttpServer,
     nettyServer,
@@ -1252,5 +1266,5 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     opentelemetryMetrics,
     sttpMockServer,
     nettyServer,
-    swaggerUi
+    swaggerUiBundle
   )

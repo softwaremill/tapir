@@ -5,7 +5,7 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.swagger.SwaggerUI
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
@@ -38,13 +38,9 @@ object ZioExampleZioHttpServer extends App {
 
   //
 
-  val yaml: String = {
-    import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-    import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
-  }
-
-  val swaggerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(SwaggerUI[Task](yaml))
+  val swaggerRoutes: HttpApp[Any, Throwable] =
+    ZioHttpInterpreter()
+      .toHttp(SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
   // Starting the server
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =

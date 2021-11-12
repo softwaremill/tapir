@@ -84,23 +84,11 @@ object BooksExample extends App with StrictLogging {
   //
 
   import Endpoints._
-  import akka.http.scaladsl.server.Route
+  import sttp.tapir.server.ServerEndpoint
+  import scala.concurrent.Future
 
-  def openapiYamlDocumentation: String = {
-    import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-    import sttp.tapir.openapi.circe.yaml._
-
-    // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
-    docs.toYaml
-  }
-
-  def booksRoutes: Route = {
-    import akka.http.scaladsl.server.Directives._
-    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-
+  def booksServerEndpoints: List[ServerEndpoint[Any, Future]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.Future
 
     def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] =
       Future {
@@ -126,26 +114,31 @@ object BooksExample extends App with StrictLogging {
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
-    concat(
-      AkkaHttpServerInterpreter().toRoute(addBook.serverLogic((bookAddLogic _).tupled)),
-      AkkaHttpServerInterpreter().toRoute(booksListing.serverLogic(bookListingLogic)),
-      AkkaHttpServerInterpreter().toRoute(booksListingByGenre.serverLogic(bookListingByGenreLogic))
+    List(
+      addBook.serverLogic((bookAddLogic _).tupled),
+      booksListing.serverLogic(bookListingLogic),
+      booksListingByGenre.serverLogic(bookListingByGenreLogic)
     )
   }
 
-  def startServer(route: Route, yaml: String): Unit = {
+  def swaggerUIServerEndpoints: List[ServerEndpoint[Any, Future]] = {
+    import sttp.tapir.swagger.bundle.SwaggerInterpreter
+
+    // interpreting the endpoint descriptions as yaml openapi documentation
+    // exposing the docs using SwaggerUI endpoints, interpreted as an akka-http route
+    SwaggerInterpreter().fromEndpoints(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
+  }
+
+  def startServer(serverEndpoints: List[ServerEndpoint[Any, Future]]): Unit = {
     import akka.actor.ActorSystem
     import akka.http.scaladsl.Http
-    import akka.http.scaladsl.server.Directives._
 
-    import sttp.tapir.server.akkahttp._
-    import sttp.tapir.swagger.SwaggerUI
-
-    import scala.concurrent.{Await, Future}
+    import scala.concurrent.Await
     import scala.concurrent.duration._
 
-    val swaggerRoutes = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](yaml))
-    val routes = route ~ swaggerRoutes
+    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+
+    val routes = AkkaHttpServerInterpreter().toRoute(serverEndpoints)
     implicit val actorSystem: ActorSystem = ActorSystem()
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
@@ -166,7 +159,7 @@ object BooksExample extends App with StrictLogging {
   logger.info("Welcome to the Tapir Library example!")
 
   logger.info("Starting the server ...")
-  startServer(booksRoutes, openapiYamlDocumentation)
+  startServer(booksServerEndpoints ++ swaggerUIServerEndpoints)
 
   logger.info("Making a request to the listing endpoint ...")
   makeClientRequest()
