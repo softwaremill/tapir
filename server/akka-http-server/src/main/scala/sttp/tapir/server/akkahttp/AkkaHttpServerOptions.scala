@@ -4,8 +4,8 @@ import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{CustomInterceptors, DecodeFailureContext, Interceptor}
 import sttp.tapir.{AnyEndpoint, Defaults, TapirFile}
 
 import scala.concurrent.{Future, blocking}
@@ -54,16 +54,14 @@ class AkkaHttpServerLog extends ServerLog[Future] {
   ): Future[Unit] = defaultServerLog(loggerFrom(ctx)).decodeFailureHandled(ctx, response)
 
   override def securityFailureHandled(
-      e: AnyEndpoint,
-      request: ServerRequest,
+      ctx: SecurityFailureContext[Future, _],
       response: ServerResponse[_]
-  ): Future[Unit] = defaultServerLog(loggerFrom(request)).securityFailureHandled(e, request, response)
+  ): Future[Unit] = defaultServerLog(loggerFrom(ctx.request)).securityFailureHandled(ctx, response)
 
   override def requestHandled(
-      e: AnyEndpoint,
-      request: ServerRequest,
+      ctx: DecodeSuccessContext[Future, _, _],
       response: ServerResponse[_]
-  ): Future[Unit] = defaultServerLog(loggerFrom(request)).requestHandled(e, request, response)
+  ): Future[Unit] = defaultServerLog(loggerFrom(ctx.request)).requestHandled(ctx, response)
 
   override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): Future[Unit] =
     defaultServerLog(loggerFrom(request)).exception(e, request, ex)

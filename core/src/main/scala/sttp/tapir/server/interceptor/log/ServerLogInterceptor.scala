@@ -19,7 +19,7 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
         decodeHandler
           .onDecodeSuccess(ctx)
           .flatMap { response =>
-            log.requestHandled(ctx.endpoint, ctx.request, response).map(_ => response)
+            log.requestHandled(ctx, response).map(_ => response)
           }
           .handleError { case e: Throwable =>
             log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))
@@ -32,7 +32,7 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
         decodeHandler
           .onSecurityFailure(ctx)
           .flatMap { response =>
-            log.securityFailureHandled(ctx.endpoint, ctx.request, response).map(_ => response)
+            log.securityFailureHandled(ctx, response).map(_ => response)
           }
           .handleError { case e: Throwable =>
             log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))

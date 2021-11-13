@@ -2,7 +2,7 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor.DecodeFailureContext
+import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext}
 import sttp.tapir.{AnyEndpoint, DecodeResult}
 
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
@@ -20,12 +20,12 @@ trait ServerLog[F[_]] {
   def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): F[Unit]
 
   /** Invoked when the security logic fails and returns an error. */
-  def securityFailureHandled(e: AnyEndpoint, request: ServerRequest, response: ServerResponse[_]): F[Unit]
+  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(e: AnyEndpoint, request: ServerRequest, response: ServerResponse[_]): F[Unit]
+  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit]
@@ -57,14 +57,14 @@ case class DefaultServerLog[F[_]](
       )
     else monadError.unit(())
 
-  override def securityFailureHandled(e: AnyEndpoint, request: ServerRequest, response: ServerResponse[_]): F[Unit] =
+  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request $request handled by: ${e.show}; security logic error response: $response", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; security logic error response: $response", None)
     else monadError.unit(())
 
-  override def requestHandled(e: AnyEndpoint, request: ServerRequest, response: ServerResponse[_]): F[Unit] =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request $request handled by: ${e.show}; responding with code: ${response.code.code}", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; responding with code: ${response.code.code}", None)
     else monadError.unit(())
 
   override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit] =
