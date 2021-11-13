@@ -3,7 +3,7 @@ package sttp.tapir.server.interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
-import sttp.tapir.server.interceptor.log.ServerLog
+import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.{headers, statusCode}
@@ -33,7 +33,6 @@ import sttp.tapir.{headers, statusCode}
   *   The decode failure handler, from which an interceptor will be created. Determines whether to respond when an input fails to decode.
   */
 case class CustomInterceptors[F[_], O](
-    createLogInterceptor: ServerLog[F] => Interceptor[F],
     createOptions: CustomInterceptors[F, O] => O,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     rejectInterceptor: Option[RejectInterceptor[F]] = Some(RejectInterceptor.default[F]),
@@ -83,7 +82,7 @@ case class CustomInterceptors[F[_], O](
   def interceptors: List[Interceptor[F]] = metricsInterceptor.toList ++
     rejectInterceptor.toList ++
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
-    serverLog.map(createLogInterceptor).toList ++
+    serverLog.map(new ServerLogInterceptor[F](_)).toList ++
     additionalInterceptors ++
     unsupportedMediaTypeInterceptor.toList ++
     List(new DecodeFailureInterceptor[F](decodeFailureHandler))
