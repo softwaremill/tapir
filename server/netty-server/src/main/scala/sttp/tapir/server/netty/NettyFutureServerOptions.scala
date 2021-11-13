@@ -46,7 +46,6 @@ object NettyFutureServerOptions {
 
   def customInterceptors: CustomInterceptors[Future, NettyFutureServerOptions] = {
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions = (ci: CustomInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }

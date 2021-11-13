@@ -43,7 +43,6 @@ object NettyCatsServerOptions {
 
   def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, NettyCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[F]) => new ServerLogInterceptor[F](sl),
       createOptions = (ci: CustomInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 

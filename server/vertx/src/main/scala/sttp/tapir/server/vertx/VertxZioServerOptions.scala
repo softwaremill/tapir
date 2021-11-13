@@ -24,7 +24,6 @@ object VertxZioServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[R]: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[RIO[R, *]]) => new ServerLogInterceptor[RIO[R, *]](sl),
       createOptions = (ci: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
           Defaults.createTempFile().getParentFile.getAbsoluteFile,

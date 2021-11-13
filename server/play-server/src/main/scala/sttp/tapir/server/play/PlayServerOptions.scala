@@ -32,7 +32,6 @@ object PlayServerOptions {
       ec: ExecutionContext
   ): CustomInterceptors[Future, PlayServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions = (ci: CustomInterceptors[Future, PlayServerOptions]) =>
         PlayServerOptions(
           SingletonTemporaryFileCreator,

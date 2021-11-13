@@ -10,7 +10,6 @@ object AwsFutureServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors(implicit ec: ExecutionContext): CustomInterceptors[Future, AwsServerOptions[Future]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions =
         (ci: CustomInterceptors[Future, AwsServerOptions[Future]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )

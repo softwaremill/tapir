@@ -20,7 +20,6 @@ object FinatraCatsServerOptions extends Logging {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]](dispatcher: Dispatcher[F]): CustomInterceptors[Future, FinatraCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions = (ci: CustomInterceptors[Future, FinatraCatsServerOptions[F]]) =>
         FinatraCatsServerOptions[F](
           dispatcher,

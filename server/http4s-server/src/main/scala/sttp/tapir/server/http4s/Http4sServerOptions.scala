@@ -30,7 +30,6 @@ object Http4sServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, Http4sServerOptions[F, G]] = {
     CustomInterceptors(
-      createLogInterceptor = Log.serverLogInterceptor[G],
       createOptions = (ci: CustomInterceptors[G, Http4sServerOptions[F, G]]) =>
         Http4sServerOptions[F, G](defaultCreateFile[G], defaultDeleteFile[G], 8192, ci.interceptors)
     ).serverLog(Log.defaultServerLog)

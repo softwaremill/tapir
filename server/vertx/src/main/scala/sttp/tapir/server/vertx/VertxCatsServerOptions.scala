@@ -29,7 +29,6 @@ object VertxCatsServerOptions {
       dispatcher: Dispatcher[F]
   ): CustomInterceptors[F, VertxCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[F]) => new ServerLogInterceptor[F](sl),
       createOptions = (ci: CustomInterceptors[F, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,

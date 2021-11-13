@@ -20,7 +20,6 @@ object FinatraServerOptions extends Logging {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors: CustomInterceptors[Future, FinatraServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Future]) => new ServerLogInterceptor[Future](sl),
       createOptions = (ci: CustomInterceptors[Future, FinatraServerOptions]) =>
         FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
     ).serverLog(defaultServerLog)

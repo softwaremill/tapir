@@ -74,7 +74,6 @@ object AkkaHttpServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors: CustomInterceptors[Future, AkkaHttpServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = Log.serverLogInterceptor,
       createOptions = (ci: CustomInterceptors[Future, AkkaHttpServerOptions]) =>
         AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
     ).serverLog(Log.defaultServerLog)

@@ -9,7 +9,6 @@ object AwsCatsEffectServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]: Monad]: CustomInterceptors[F, AwsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[F]) => new ServerLogInterceptor[F](sl),
       createOptions = (ci: CustomInterceptors[F, AwsServerOptions[F]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )
 
