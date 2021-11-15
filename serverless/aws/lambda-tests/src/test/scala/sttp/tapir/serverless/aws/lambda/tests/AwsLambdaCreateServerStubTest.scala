@@ -40,10 +40,18 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
-  override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String)(
+  override def testServerLogic(
+      e: ServerEndpoint[Any, IO],
+      testNameSuffix: String,
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
+  )(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions.default[IO].copy(encodeResponseBody = false)
+    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
+      .customInterceptors[IO]
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
+      .copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
