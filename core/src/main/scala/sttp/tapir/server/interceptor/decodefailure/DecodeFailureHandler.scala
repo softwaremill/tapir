@@ -3,7 +3,7 @@ package sttp.tapir.server.interceptor.decodefailure
 import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, InvalidValue}
-import sttp.tapir.internal.RichEndpointInput
+import sttp.tapir.internal.RichEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, _}
 
@@ -122,7 +122,7 @@ object DefaultDecodeFailureHandler {
       response: Option[(StatusCode, List[Header])]
   ): Option[(StatusCode, List[Header])] = response.map { r =>
     val e = ctx.endpoint
-    if (e.securityInput.auths.nonEmpty || e.input.auths.nonEmpty) {
+    if (e.auths.nonEmpty) {
       // all responses (both 400 and 401) are converted to a not-found
       onlyStatus(StatusCode.NotFound)
     } else r

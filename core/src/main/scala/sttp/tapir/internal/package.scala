@@ -57,6 +57,17 @@ package object internal {
 
   //
 
+  implicit class RichEndpoint[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R]) {
+    private def allInputs = endpoint.securityInput.and(endpoint.input)
+
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+      allInputs.traverseInputs { case a: EndpointInput.Auth[_, _] =>
+        Vector(a)
+      }
+
+    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = allInputs.asVectorOfBasicInputs(includeAuth)
+  }
+
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] =
       input match {
@@ -73,11 +84,6 @@ package object internal {
       traverseInputs {
         case b: EndpointInput.Basic[_]   => Vector(b)
         case a: EndpointInput.Auth[_, _] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
-      }
-
-    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
-      traverseInputs { case a: EndpointInput.Auth[_, _] =>
-        Vector(a)
       }
 
     def method: Option[Method] =
