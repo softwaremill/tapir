@@ -6,9 +6,7 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
-/** @tparam T
-  *   Interpreter-specific value representing the log effect.
-  */
+/** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
