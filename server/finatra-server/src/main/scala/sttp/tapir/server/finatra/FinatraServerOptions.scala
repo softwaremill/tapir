@@ -5,6 +5,7 @@ import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import FinatraServerInterpreter.FutureMonadError
 
 import java.io.FileOutputStream
 
@@ -17,10 +18,9 @@ case class FinatraServerOptions(
 object FinatraServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, Unit, FinatraServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, FinatraServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_: Unit, _) => Future.Done),
-      createOptions = (ci: CustomInterceptors[Future, Unit, FinatraServerOptions]) =>
+      createOptions = (ci: CustomInterceptors[Future, FinatraServerOptions]) =>
         FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
     ).serverLog(defaultServerLog)
 
@@ -41,16 +41,16 @@ object FinatraServerOptions extends Logging {
 
   private[finatra] lazy val futurePool = FuturePool.unboundedPool
 
-  lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
+  lazy val defaultServerLog: ServerLog[Future] = DefaultServerLog(
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => error(msg, ex),
-    noLog = ()
+    doLogExceptions = (msg: String, ex: Throwable) => futurePool { error(msg, ex) }
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = futurePool {
     exOpt match {
       case None     => debug(msg)
       case Some(ex) => debug(msg, ex)
     }
+  }
 }
