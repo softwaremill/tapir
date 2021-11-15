@@ -3,6 +3,7 @@ package sttp.tapir.server.interceptor.decodefailure
 import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, InvalidValue}
+import sttp.tapir.internal.RichEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, _}
 
@@ -47,6 +48,9 @@ object DefaultDecodeFailureHandler {
     * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if decoding a path capture
     * causes a validation error.
     *
+    * A 401 (unauthorized) is returned when an authentication input (created using [[Tapir.auth]]) cannot be decoded. The appropriate
+    * `WWW-Authenticate` headers are included.
+    *
     * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error), `None` is returned,
     * which is a signal to try the next endpoint.
     *
@@ -55,11 +59,20 @@ object DefaultDecodeFailureHandler {
     *
     * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server logic is invoked.
     */
-  def handler: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
+  val handler: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
     respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
     FailureMessages.failureMessage,
     failureResponse
   )
+
+  /** A [[handler]] which responds with a `404 Not Found`, instead of a `401 Unauthorized` or `400 Bad Request`, in case any input fails to
+    * decode, and the endpoint contains authentication inputs (created using [[Tapir.auth]]). No `WWW-Authenticate` headers are sent.
+    *
+    * Hence, the information if the endpoint exists, but needs authentication is hidden from the client. However, the existence of the
+    * endpoint might still be revealed using timing attacks.
+    */
+  val handlerHideUnauthorized: DefaultDecodeFailureHandler =
+    handler.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, handler.respond(ctx)))
 
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
     ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
@@ -76,8 +89,6 @@ object DefaultDecodeFailureHandler {
       badRequestOnPathErrorIfPathShapeMatches: Boolean,
       badRequestOnPathInvalidIfPathShapeMatches: Boolean
   ): Option[(StatusCode, List[Header])] = {
-    def onlyStatus(status: StatusCode): (StatusCode, List[Header]) = (status, Nil)
-
     failingInput(ctx) match {
       case _: EndpointInput.Query[_]       => Some(onlyStatus(StatusCode.BadRequest))
       case _: EndpointInput.QueryParams[_] => Some(onlyStatus(StatusCode.BadRequest))
@@ -106,6 +117,19 @@ object DefaultDecodeFailureHandler {
     }
   }
 
+  def respondNotFoundIfHasAuth(
+      ctx: DecodeFailureContext,
+      response: Option[(StatusCode, List[Header])]
+  ): Option[(StatusCode, List[Header])] = response.map { r =>
+    val e = ctx.endpoint
+    if (e.auths.nonEmpty) {
+      // all responses (both 400 and 401) are converted to a not-found
+      onlyStatus(StatusCode.NotFound)
+    } else r
+  }
+
+  private def onlyStatus(status: StatusCode): (StatusCode, List[Header]) = (status, Nil)
+
   private def failingInput(ctx: DecodeFailureContext) = {
     import sttp.tapir.internal.RichEndpointInput
     ctx.failure match {
@@ -118,12 +142,10 @@ object DefaultDecodeFailureHandler {
     }
   }
 
-  /** Default messages for [[DecodeResult.Failure]] s.
-    */
+  /** Default messages for [[DecodeResult.Failure]] s. */
   object FailureMessages {
 
-    /** Describes the source of the failure: in which part of the request did the failure occur.
-      */
+    /** Describes the source of the failure: in which part of the request did the failure occur. */
     @tailrec
     def failureSourceMessage(input: EndpointInput[_]): String =
       input match {
