@@ -43,7 +43,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customInterceptors
-  .decodeFailureHandler(DefaultDecodeFailureHandler.handlerHideWithAuth)
+  .decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
   .options
   
 AkkaHttpServerInterpreter(customServerOptions)
