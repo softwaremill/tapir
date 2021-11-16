@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import sttp.client3._
-import sttp.model.HeaderNames
+import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
@@ -41,7 +41,10 @@ object ServerSecurityLogicAkka extends App {
     .in("hello")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .errorOutVariant(oneOfVariant(stringBody.mapTo[HelloException]))
+    .errorOutVariants[Exception](
+      oneOfVariant(stringBody.mapTo[HelloException]),
+      oneOfDefaultVariant(statusCode(StatusCode.BadRequest).map(_ => new Exception())(_ => ()))
+    )
     .serverLogic { user => salutation => Future(Right(s"$salutation, ${user.name}!")) }
 
   // ---
@@ -72,4 +75,13 @@ object ServerSecurityLogicAkka extends App {
   }
 
   Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+}
+object X {
+  sealed trait Parent
+  case class Child1(v: String) extends Parent
+  case class Child2(v: String) extends Parent
+
+  val e: PublicEndpoint[Unit, Parent, Unit, Any] = endpoint
+    .errorOut(stringBody.mapTo[Child1])
+    .errorOutVariant[Parent](oneOfVariant(stringBody.mapTo[Child2]))
 }

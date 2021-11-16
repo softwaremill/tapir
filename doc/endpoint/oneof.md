@@ -129,7 +129,7 @@ val baseEndpoint = endpoint.errorOut(
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
 [security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
 error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
-different from `Any`.. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
+different from `Any`. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
 the result in an additional `Either`.
 
 ## Next

@@ -42,7 +42,7 @@ private[openapi] class EndpointToOperationResponse(
     val outputsByStatusCode: Map[Option[StatusCode], List[EndpointOutput.Basic[_]]] =
       statusCodeAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
 
-    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct
+    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct.sortBy(_.map(_.code).getOrElse(Integer.MAX_VALUE))
 
     val docsExtensions = outputs.flatMap(_.flatMap(_.info.docsExtensions))
     statusCodes.flatMap { sc =>

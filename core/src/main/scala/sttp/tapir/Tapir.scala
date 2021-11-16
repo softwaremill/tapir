@@ -6,10 +6,9 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{ModifyMacroSupport, _}
-import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.static.TapirStaticContentEndpoints
-import sttp.tapir.typelevel.MatchType
+import sttp.tapir.typelevel.{ErasureSameAsType, MatchType}
 import sttp.ws.WebSocketFrame
 
 import java.io.InputStream
@@ -18,7 +17,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticContentEndpoints with ModifyMacroSupport with TapirMacros {
+trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticContentEndpoints with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -237,6 +236,34 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def oneOf[T](firstVariant: OneOfVariant[_ <: T], otherVariants: OneOfVariant[_ <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
+
+  /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
+    * class of `T`.
+    *
+    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this situation would give
+    * invalid results. In such cases, use [[oneOfVariantClassMatcher]], [[oneOfVariantValueMatcher]] or [[oneOfVariantFromMatchType]]
+    * instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def oneOfVariant[T: ClassTag: ErasureSameAsType](output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariantClassMatcher(output, implicitly[ClassTag[T]].runtimeClass)
+
+  /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
+    * class of `T`. Adds a fixed status-code output with the given value.
+    *
+    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this situation would give
+    * invalid results. In such cases, use [[oneOfVariantClassMatcher]], [[oneOfVariantValueMatcher]] or [[oneOfVariantFromMatchType]]
+    * instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def oneOfVariant[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariant(statusCode(code).and(output))
+
+  @deprecated("Use oneOfVariant", since = "0.19.0")
+  def oneOfMapping[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariant(code, output)
 
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure.
