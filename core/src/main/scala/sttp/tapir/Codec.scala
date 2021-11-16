@@ -258,7 +258,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
         }
       }
       override def rawDecode(l: Seq[RawPart]): DecodeResult[Seq[AnyPart]] = {
-        val anyParts: List[DecodeResult[AnyPart]] = l.map { rawPart: RawPart =>
+        val anyParts: List[DecodeResult[AnyPart]] = l.map { rawPart =>
           val codec = partCodec(rawPart.name).get.codec
           codec
             .asInstanceOf[Codec[Any, Any, _]]
