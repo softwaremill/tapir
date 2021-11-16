@@ -9,18 +9,18 @@ paths:
       responses:
         '200':
           description: ''
-        '404':
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotFound'
         '401':
           description: unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Unauthorized'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
         default:
           description: unknown
           content:

@@ -42,8 +42,8 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(
-        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
         oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
         oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
       )
     )
@@ -59,8 +59,10 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint
       .errorOut(jsonBody[Unknown].description("unknown"))
-      .errorOutVariant(oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")))
-      .errorOutVariant(oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")))
+      .errorOutVariants[ErrorInfo](
+        oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found"))
+      )
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

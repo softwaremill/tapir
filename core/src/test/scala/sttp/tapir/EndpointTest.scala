@@ -104,6 +104,34 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
+  it should "compile with a single error variant" in {
+    sealed trait Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
+
+    val e = endpoint.post
+      .errorOut(statusCode(StatusCode.BadRequest).and(stringBody.map(BadRequest(_))(_.message)))
+      .errorOutVariant[Error](oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(NotFound))))
+
+    e: PublicEndpoint[Unit, Error, Unit, Any]
+  }
+
+  it should "compile with multiple error variants" in {
+    sealed trait Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
+    case object ReallyNotFound extends Error
+
+    val e = endpoint.post
+      .errorOut(statusCode(StatusCode.BadRequest).and(stringBody.map(BadRequest(_))(_.message)))
+      .errorOutVariants[Error](
+        oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(NotFound))),
+        oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(ReallyNotFound)))
+      )
+
+    e: PublicEndpoint[Unit, Error, Unit, Any]
+  }
+
   "oneOfVariant" should "not compile when the type erasure of `T` is different from `T`" in {
     assertDoesNotCompile("""
       case class Wrapper[T](s: T)
