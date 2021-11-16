@@ -79,7 +79,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler)),
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
       _ => ()
     )
 

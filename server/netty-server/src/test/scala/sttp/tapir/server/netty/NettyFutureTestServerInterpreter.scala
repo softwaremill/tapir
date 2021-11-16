@@ -21,7 +21,7 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
   ): FutureRoute = {
     val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
 
     NettyFutureServerInterpreter(serverOptions).toRoute(List(e))

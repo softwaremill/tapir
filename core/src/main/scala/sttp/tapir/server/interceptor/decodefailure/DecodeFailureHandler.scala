@@ -59,20 +59,21 @@ object DefaultDecodeFailureHandler {
     *
     * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server logic is invoked.
     */
-  val handler: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
+  val default: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
     respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
     FailureMessages.failureMessage,
     failureResponse
   )
 
-  /** A [[handler]] which responds with a `404 Not Found`, instead of a `401 Unauthorized` or `400 Bad Request`, in case any input fails to
-    * decode, and the endpoint contains authentication inputs (created using [[Tapir.auth]]). No `WWW-Authenticate` headers are sent.
+  /** A [[default]] handler which responds with a `404 Not Found`, instead of a `401 Unauthorized` or `400 Bad Request`, in case any input
+    * fails to decode, and the endpoint contains authentication inputs (created using [[Tapir.auth]]). No `WWW-Authenticate` headers are
+    * sent.
     *
     * Hence, the information if the endpoint exists, but needs authentication is hidden from the client. However, the existence of the
     * endpoint might still be revealed using timing attacks.
     */
-  val handlerHideWithAuth: DefaultDecodeFailureHandler =
-    handler.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, handler.respond(ctx)))
+  val hideEndpointsWithAuth: DefaultDecodeFailureHandler =
+    default.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, default.respond(ctx)))
 
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
     ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))

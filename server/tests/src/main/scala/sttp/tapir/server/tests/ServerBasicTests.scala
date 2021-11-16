@@ -571,7 +571,7 @@ class ServerBasicTests[F[_], ROUTE](
   )
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
-    DefaultDecodeFailureHandler.handler.copy(
+    DefaultDecodeFailureHandler.default.copy(
       respond = DefaultDecodeFailureHandler.respond(
         _,
         badRequestOnPathErrorIfPathShapeMatches = true,

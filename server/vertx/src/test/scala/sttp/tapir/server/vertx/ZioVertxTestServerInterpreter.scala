@@ -24,7 +24,7 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
     val options: VertxZioServerOptions[Task] =
       VertxZioServerOptions.customInterceptors
         .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     VertxZioServerInterpreter(options).route(e)
   }
