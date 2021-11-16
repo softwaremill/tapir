@@ -81,6 +81,39 @@ case class User(email: String)
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
+### Custom codec
+
+More complex multipart form data structures, like fields wrapping `Part` into containers, may require implementing custom codecs, for example:
+
+```scala
+case class Upload(files: List[Part[File]], title: Option[Part[String]])
+
+def decode(parts: Seq[RawPart]): Upload = {
+  val partsByName: Map[String, Seq[RawPart]] = parts.groupBy(_.name)
+  val files: List[RawPart] = partsByName.get("files").map(_.toList).getOrElse(List.empty)
+  val title: Option[RawPart] = partsByName.get("title").map(_.head)
+  Upload(files.asInstanceOf[List[Part[File]]], title.asInstanceOf[Option[Part[String]]])
+}
+def encode(o: Upload): Seq[RawPart] = {
+  o.files.map(e => e.copy(name = "files")) ++
+    o.title.map(e => e.copy(name = "title")).toList
+}
+
+val filesCodec: Codec[FileRange, File, _ <: CodecFormat] = implicitly[Codec[FileRange, File, _ <: CodecFormat]]
+val plainTexCodec: Codec[String, String, _ <: CodecFormat] = implicitly[Codec[String, String, CodecFormat.TextPlain]]
+val schema: Schema[Upload] = implicitly[Schema[Upload]]
+
+implicit val uploadCodec: MultipartCodec[Upload] = Codec
+  .multipartWithoutGrouping(
+    Map(
+      "files" -> SinglePartCodec(RawBodyType.FileBody, filesCodec),
+      "title" -> SinglePartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8), plainTexCodec)
+    ),
+    None
+  )
+  .map(decode _)(encode _)
+  .schema(schema)
+```
 ## Next
 
 Read on about [security](security.md).
