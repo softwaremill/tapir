@@ -36,7 +36,6 @@ If you would instead prefer to hide the fact that such an endpoint exists from t
 returned instead by using a different decode failure handler. For example, using akka-http:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
