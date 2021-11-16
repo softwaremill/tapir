@@ -71,7 +71,7 @@ object DefaultDecodeFailureHandler {
     * Hence, the information if the endpoint exists, but needs authentication is hidden from the client. However, the existence of the
     * endpoint might still be revealed using timing attacks.
     */
-  val handlerHideUnauthorized: DefaultDecodeFailureHandler =
+  val handlerHideWithAuth: DefaultDecodeFailureHandler =
     handler.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, handler.respond(ctx)))
 
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
