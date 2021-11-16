@@ -28,7 +28,8 @@ object SwaggerUI {
   def apply[F[_]](
       yaml: String,
       prefix: List[String] = List("docs"),
-      yamlName: String = "docs.yaml"
+      yamlName: String = "docs.yaml",
+      basePath: String = ""
   ): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
     val prefixAsPath = prefix.mkString("/")
@@ -45,8 +46,8 @@ object SwaggerUI {
       .in(queryParams)
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
-        val paramsWithUrl = params.param("url", s"/$prefixAsPath/$yamlName")
-        Right(s"/$prefixAsPath/index.html?${paramsWithUrl.toString}")
+        val paramsWithUrl = params.param("url", s"$basePath/$prefixAsPath/$yamlName")
+        Right(s"$basePath/$prefixAsPath/index.html?${paramsWithUrl.toString}")
       }
 
     val oauth2Endpoint = baseEndpoint
@@ -55,7 +56,7 @@ object SwaggerUI {
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"/$prefixAsPath/oauth2-redirect.html$queryString")
+        Right(s"$basePath/$prefixAsPath/oauth2-redirect.html$queryString")
       }
 
     val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(

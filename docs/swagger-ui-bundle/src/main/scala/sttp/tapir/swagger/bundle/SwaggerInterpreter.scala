@@ -12,13 +12,14 @@ trait SwaggerInterpreter {
   def docsOptions: OpenAPIDocsOptions
   def prefix: List[String]
   def yamlName: String
+  def basePath: String
 
   def fromEndpoints[F[_]](
       endpoints: List[AnyEndpoint],
       info: Info
   ): List[ServerEndpoint[Any, F]] = {
     val yaml = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(endpoints, info).toYaml
-    SwaggerUI(yaml, prefix, yamlName)
+    SwaggerUI(yaml, prefix, yamlName, basePath)
   }
 
   def fromEndpoints[F[_]](
@@ -62,17 +63,20 @@ object SwaggerInterpreter {
       docsExtensions: List[DocsExtension[_]] = Nil,
       docsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default,
       prefix: List[String] = List("docs"),
-      yamlName: String = "docs.yaml"
+      yamlName: String = "docs.yaml",
+      basePath: String = ""
   ): SwaggerInterpreter = {
     val exts = docsExtensions
     val opts = docsOptions
     val p = prefix
     val yn = yamlName
+    val bp = basePath
     new SwaggerInterpreter {
       override val docsExtensions: List[DocsExtension[_]] = exts
       override val docsOptions: OpenAPIDocsOptions = opts
       override val prefix: List[String] = p
       override val yamlName: String = yn
+      override val basePath: String = bp
     }
   }
 }
