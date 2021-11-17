@@ -9,7 +9,7 @@ import sttp.capabilities.WebSockets
 import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.{SName, string}
 import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
@@ -173,7 +173,22 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query nested descriptions", "1.0").toYaml
 
-    noIndentation(actualYaml) shouldBe loadYaml("expected_nested_description.yml")
+    noIndentation(actualYaml) shouldBe loadYaml("expected_nested_description_query.yml")
+  }
+
+  test("should add descriptions fields nested in header") {
+    val personEndpoint: Endpoint[Unit, String, Unit, Flow[String, Json, Any], AkkaStreams with WebSockets] =
+      endpoint
+        .get
+        .in(header[String]("Test").description("Test token"))
+        .out(
+          webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams)
+            .description("Endpoint description")
+        )
+
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header nested descriptions", "1.0").toYaml
+
+    noIndentation(yaml) shouldBe loadYaml("expected_nested_description_header.yml")
   }
 
   private def loadYaml(fileName: String): String = {
