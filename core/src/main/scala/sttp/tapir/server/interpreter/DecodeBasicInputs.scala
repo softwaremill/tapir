@@ -37,6 +37,13 @@ object DecodeBasicInputsResult {
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
   case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
+
+  def higherPriorityFailure(l: DecodeBasicInputsResult, r: DecodeBasicInputsResult): Option[Failure] = (l, r) match {
+    case (f1: Failure, _: Values)   => Some(f1)
+    case (_: Values, f2: Failure)   => Some(f2)
+    case (f1: Failure, f2: Failure) => Some(if (basicInputSortIndex(f2.input) < basicInputSortIndex(f1.input)) f2 else f1)
+    case _                          => None
+  }
 }
 
 private case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String]) {
