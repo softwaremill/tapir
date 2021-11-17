@@ -36,7 +36,7 @@ object ServerSecurityLogicAkka extends App {
     .errorOut(plainBody[Int].mapTo[AuthenticationError])
     .serverSecurityLogic(authenticate)
 
-  // the errors that might occur in the /hello endpoint - either w wrapped authentication error, or refusal to greet
+  // the errors that might occur in the /hello endpoint - either a wrapped authentication error, or refusal to greet
   sealed trait HelloError
   case class AuthenticationHelloError(wrapped: AuthenticationError) extends HelloError
   case class NoHelloError(why: String) extends HelloError
