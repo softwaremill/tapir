@@ -17,35 +17,45 @@ object ServerSecurityLogicAkka extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  // authentication logic
+  // authentication data structure & logic
   case class User(name: String)
   case class AuthenticationToken(value: String)
-  case class AuthenticationException(code: Int) extends Exception
+  case class AuthenticationError(code: Int)
 
-  def authenticate(token: AuthenticationToken): Future[Either[AuthenticationException, User]] =
+  def authenticate(token: AuthenticationToken): Future[Either[AuthenticationError, User]] =
     Future {
-      if (token.value == "secret") Right(User("Spock"))
-      else Left(AuthenticationException(1001))
+      if (token.value == "berries") Right(User("Papa Smurf"))
+      else if (token.value == "smurf") Right(User("Gargamel"))
+      else Left(AuthenticationError(1001))
     }
 
-  // define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: PartialServerEndpoint[AuthenticationToken, User, Unit, AuthenticationException, Unit, Any, Future] = endpoint
+  // defining a base endpoint, which has the authentication logic built-in
+  val secureEndpoint: PartialServerEndpoint[AuthenticationToken, User, Unit, AuthenticationError, Unit, Any, Future] = endpoint
     .securityIn(auth.bearer[String]().mapTo[AuthenticationToken])
-    .errorOut(plainBody[Int].mapTo[AuthenticationException])
+    // returning the authentication error code to the user
+    .errorOut(plainBody[Int].mapTo[AuthenticationError])
     .serverSecurityLogic(authenticate)
 
-  // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  case class HelloException(why: String) extends Exception
+  // the errors that might occur in the /hello endpoint - either a wrapped authentication error, or refusal to greet
+  sealed trait HelloError
+  case class AuthenticationHelloError(wrapped: AuthenticationError) extends HelloError
+  case class NoHelloError(why: String) extends HelloError
 
+  // extending the base endpoint with hello-endpoint-specific inputs
   val secureHelloWorldWithLogic: ServerEndpoint[Any, Future] = secureEndpoint.get
     .in("hello")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .errorOutVariants[Exception](
-      oneOfVariant(stringBody.mapTo[HelloException]),
-      oneOfDefaultVariant(statusCode(StatusCode.BadRequest).map(_ => new Exception())(_ => ()))
-    )
-    .serverLogic { user => salutation => Future(Right(s"$salutation, ${user.name}!")) }
+    .mapErrorOut(AuthenticationHelloError)(_.wrapped)
+    // returning a 400 with the "why" field from the exception
+    .errorOutVariant[HelloError](oneOfVariant(stringBody.mapTo[NoHelloError]))
+    // defining the remaining server logic (which uses the authenticated user)
+    .serverLogic { user => salutation =>
+      Future(
+        if (user.name == "Gargamel") Left(NoHelloError(s"Not saying hello to ${user.name}!"))
+        else Right(s"$salutation, ${user.name}!")
+      )
+    }
 
   // ---
 
@@ -69,19 +79,11 @@ object ServerSecurityLogicAkka extends App {
       result
     }
 
-    assert(testWith("hello", "Hello", "secret") == "Hello, Spock!")
-    assert(testWith("hello", "Cześć", "secret") == "Cześć, Spock!")
-    assert(testWith("hello", "Hello", "1234") == "1001")
+    assert(testWith("hello", "Hello", "berries") == "Hello, Papa Smurf!")
+    assert(testWith("hello", "Cześć", "berries") == "Cześć, Papa Smurf!")
+    assert(testWith("hello", "Hello", "apple") == "1001")
+    assert(testWith("hello", "Hello", "smurf") == "Not saying hello to Gargamel!")
   }
 
   Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
-}
-object X {
-  sealed trait Parent
-  case class Child1(v: String) extends Parent
-  case class Child2(v: String) extends Parent
-
-  val e: PublicEndpoint[Unit, Parent, Unit, Any] = endpoint
-    .errorOut(stringBody.mapTo[Child1])
-    .errorOutVariant[Parent](oneOfVariant(stringBody.mapTo[Child2]))
 }
