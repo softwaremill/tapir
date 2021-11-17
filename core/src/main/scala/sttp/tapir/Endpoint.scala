@@ -149,11 +149,10 @@ trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros
   def mapErrorOut[EE](m: Mapping[E, EE]): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.map(m))
 
-  def mapErrorOut[EE](f: E => EE)(g: EE => E): EndpointType[A, I, EE, O, R] =
-    withErrorOutput(errorOutput.map(f)(g))
-
   def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.mapDecode(f)(g))
+
+  // mapError(f)(g) is defined in EndpointErrorOutputVariantsOps
 }
 
 trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
@@ -234,6 +233,9 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
       ),
       Left(_)
     )
+
+  def mapErrorOut[EE](f: E => EE)(g: EE => E): EndpointType[A, I, EE, O, R] =
+    withErrorOutputVariant(errorOutput.map(f)(g), f)
 }
 
 trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, O, R] {
