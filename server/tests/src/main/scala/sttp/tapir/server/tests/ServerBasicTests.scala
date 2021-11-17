@@ -478,6 +478,35 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri/p1/abcde").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p1/ab").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
         basicRequest.get(uri"$baseUri/p2").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(
+      "endpoint with a security input and regular path input shouldn't shadow other endpoints",
+      NonEmptyList.of(
+        route(
+          endpoint.get
+            .in("p1")
+            .securityIn(auth.bearer[String]())
+            .out(stringBody)
+            .serverSecurityLogicSuccess(_ => pureResult(()))
+            .serverLogicSuccess(_ => _ => pureResult("ok1"))
+        ),
+        route(
+          endpoint.get
+            .in("p2")
+            .out(stringBody)
+            .serverLogicSuccess(_ => pureResult("ok2"))
+        )
+      )
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Unauthorized) >>
+        basicRequest.get(uri"$baseUri/p2").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body shouldBe Right("ok2")
+        } >>
+        basicRequest.get(uri"$baseUri/p1").header("Authorization", "Bearer 1234").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body shouldBe Right("ok1")
+        }
     }
   )
 
