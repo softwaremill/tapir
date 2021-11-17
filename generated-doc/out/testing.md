@@ -12,7 +12,7 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.19.0"
 ```
 
 And the following imports:
@@ -79,7 +79,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.19.0"
 ```
 
 Imports:
@@ -168,7 +168,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x, is shadowed by: GET /x /..., GET /x /y /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
 ```
 
 Example 2:

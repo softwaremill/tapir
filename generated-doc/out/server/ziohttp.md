@@ -7,13 +7,13 @@ exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http)
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.19.0"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "0.19.0"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
