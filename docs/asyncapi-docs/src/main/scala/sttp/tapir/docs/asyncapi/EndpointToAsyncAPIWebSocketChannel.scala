@@ -24,8 +24,12 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, _) => name -> schemas(codec) }
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec) }
+    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) =>
+      val describedSchema: ReferenceOr[ASchema] = schemas(codec).map(_.copy(description = info.description))
+      name -> describedSchema
+    }
+
+    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec)}
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
