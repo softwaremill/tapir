@@ -1,6 +1,6 @@
 asyncapi: 2.0.0
 info:
-  title: Query nested descriptions
+  title: Header nested descriptions
   version: '1.0'
 channels:
   /:

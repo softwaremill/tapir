@@ -152,7 +152,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
   }
 
-  test("should add descriptions fields nested in query") {
+  test("should contains descriptions of  query") {
     val pagingQuery: EndpointInput[(Option[Int], Option[Int])] =
       query[Option[Int]]("limit")
         .description("GET `limit` field description")
@@ -172,10 +172,10 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query nested descriptions", "1.0").toYaml
 
-    noIndentation(actualYaml) shouldBe loadYaml("expected_nested_description_query.yml")
+    noIndentation(actualYaml) shouldBe loadYaml("expected_description_query.yml")
   }
 
-  test("should add descriptions fields nested in header") {
+  test("should contains descriptions of header") {
     val personEndpoint: Endpoint[Unit, String, Unit, Flow[String, Json, Any], AkkaStreams with WebSockets] =
       endpoint
         .get
@@ -187,7 +187,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header nested descriptions", "1.0").toYaml
 
-    noIndentation(yaml) shouldBe loadYaml("expected_nested_description_header.yml")
+    noIndentation(yaml) shouldBe loadYaml("expected_description_header.yml")
   }
 
   private def loadYaml(fileName: String): String = {

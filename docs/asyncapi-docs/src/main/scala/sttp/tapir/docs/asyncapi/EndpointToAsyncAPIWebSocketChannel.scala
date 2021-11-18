@@ -25,11 +25,12 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val method = e.method.getOrElse(Method.GET)
 
     val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) =>
-      val describedSchema: ReferenceOr[ASchema] = schemas(codec).map(_.copy(description = info.description))
-      name -> describedSchema
+      addDescriptionIfNotProvided(name, schemas(codec), info.description)
     }
 
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec)}
+    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) =>
+      addDescriptionIfNotProvided(name, schemas(codec), info.description)
+    }
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
@@ -42,6 +43,14 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
   }
+
+  private def addDescriptionIfNotProvided(
+      name: String,
+      schema: ReferenceOr[ASchema],
+      description: Option[String]
+  ): (String, Either[Reference, ASchema]) =
+    if (schema.exists(_.description.nonEmpty)) name -> schema
+    else name -> schema.map(_.copy(description = description))
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
