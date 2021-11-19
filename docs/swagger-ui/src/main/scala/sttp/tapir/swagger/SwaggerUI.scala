@@ -20,19 +20,24 @@ object SwaggerUI {
     * @param yaml
     *   The yaml with the OpenAPI documentation.
     * @param prefix
-    *   The path prefix from which the documentation will be served, as a list of path segments. Defaults to `List(docs)`, so the address of
-    *   the docs will be `/docs`.
+    *   The path prefix for which the documentation endpoint will be created, as a list of path segments. Defaults to `List(docs)`, so the
+    *   address of the docs will be `/docs` (unless <code>basePrefix</code> is specified)
     * @param yamlName
     *   The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
+    * @param basePrefix
+    *   The base path prefix where the documentation routes are going to be attached. Unless the endpoint will served from `/`, the base
+    *   path prefix must be specified for redirect to work correctly. Defaults to `Nil`, so it is assumed that the endpoint base path is
+    *   `/`.
     */
   def apply[F[_]](
       yaml: String,
       prefix: List[String] = List("docs"),
       yamlName: String = "docs.yaml",
-      basePath: String = ""
+      basePrefix: List[String] = Nil
   ): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
     val prefixAsPath = prefix.mkString("/")
+    val basePrefixAsPath = "/" + basePrefix.mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -46,8 +51,8 @@ object SwaggerUI {
       .in(queryParams)
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
-        val paramsWithUrl = params.param("url", s"$basePath/$prefixAsPath/$yamlName")
-        Right(s"$basePath/$prefixAsPath/index.html?${paramsWithUrl.toString}")
+        val paramsWithUrl = params.param("url", s"$basePrefixAsPath/$prefixAsPath/$yamlName")
+        Right(s"$basePrefixAsPath/$prefixAsPath/index.html?${paramsWithUrl.toString}")
       }
 
     val oauth2Endpoint = baseEndpoint
@@ -56,7 +61,7 @@ object SwaggerUI {
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"$basePath/$prefixAsPath/oauth2-redirect.html$queryString")
+        Right(s"$basePrefixAsPath/$prefixAsPath/oauth2-redirect.html$queryString")
       }
 
     val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
