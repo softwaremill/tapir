@@ -213,7 +213,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
               if (!part.otherDispositionParams.contains("filename")) {
                 (part.body match {
-                  case fileRange: FileRange => Some(fileRange.file.getName)
+                  case fileRange: FileRange => Some(TapirExtensions.fileName(fileRange.file))
                   case _                    => None
                 }).map(fn => partWithContentType.fileName(fn)).getOrElse(partWithContentType)
               } else {
