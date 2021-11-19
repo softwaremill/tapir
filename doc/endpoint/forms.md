@@ -62,12 +62,13 @@ import java.io.File
 import sttp.tapir.generic.auto._
 
 case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
-case class User(email: String)
 
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
-The fields can also be wrapped into `Option[T]` or `Part[Option[T]]` (`Option[Part[T]]` is unsupported) if the part is not required.
+The fields can also be wrapped into `Option[T]` or `Option[Part[T]]` if the part is not required.
+If there can be none or multiple parts for the same name, the fields can be wrapped into `List[T]` or `List[Part[T]]`
+or any other container `C` for which exists a codec `List[T] => C[T]`
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -75,45 +76,11 @@ import sttp.model.Part
 import java.io.File
 import sttp.tapir.generic.auto._
 
-case class RegistrationForm(userData: Option[User], photo: Part[Option[File]], news: Option[Boolean])
-case class User(email: String)
+case class RegistrationForm(userData: Option[User], photos: List[Part[File]], news: Option[Part[Boolean]])
 
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
-### Custom codec
-
-More complex multipart form data structures, like fields wrapping `Part` into containers, may require implementing custom codecs, for example:
-
-```scala
-case class Upload(files: List[Part[File]], title: Option[Part[String]])
-
-def decode(parts: Seq[RawPart]): Upload = {
-  val partsByName: Map[String, Seq[RawPart]] = parts.groupBy(_.name)
-  val files: List[RawPart] = partsByName.get("files").map(_.toList).getOrElse(List.empty)
-  val title: Option[RawPart] = partsByName.get("title").map(_.head)
-  Upload(files.asInstanceOf[List[Part[File]]], title.asInstanceOf[Option[Part[String]]])
-}
-def encode(o: Upload): Seq[RawPart] = {
-  o.files.map(e => e.copy(name = "files")) ++
-    o.title.map(e => e.copy(name = "title")).toList
-}
-
-val filesCodec: Codec[FileRange, File, _ <: CodecFormat] = implicitly[Codec[FileRange, File, _ <: CodecFormat]]
-val plainTexCodec: Codec[String, String, _ <: CodecFormat] = implicitly[Codec[String, String, CodecFormat.TextPlain]]
-val schema: Schema[Upload] = implicitly[Schema[Upload]]
-
-implicit val uploadCodec: MultipartCodec[Upload] = Codec
-  .multipartWithoutGrouping(
-    Map(
-      "files" -> SinglePartCodec(RawBodyType.FileBody, filesCodec),
-      "title" -> SinglePartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8), plainTexCodec)
-    ),
-    None
-  )
-  .map(decode _)(encode _)
-  .schema(schema)
-```
 ## Next
 
 Read on about [security](security.md).
