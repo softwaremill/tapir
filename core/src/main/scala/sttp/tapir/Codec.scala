@@ -613,9 +613,16 @@ object MultipartCodec extends MultipartCodecMacros {
   private val codec = implicitly[Codec[List[Part[Array[Byte]]], Seq[Part[Array[Byte]]], OctetStream]]
 
   val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
-    Codec
-      .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, codec)))
-      .asInstanceOf[MultipartCodec[Seq[Part[Array[Byte]]]]] // we know that all parts will end up as byte arrays
+    MultipartCodec(
+      RawBodyType.MultipartBody(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, codec).rawBodyType)),
+      new Codec[Seq[RawPart], Seq[Part[Array[Byte]]], MultipartFormData] {
+        override def rawDecode(l: Seq[RawPart]): DecodeResult[Seq[Part[Array[Byte]]]] =
+          codec.decode(l.asInstanceOf[Seq[Part[Array[Byte]]]].toList)
+        override def encode(h: Seq[Part[Array[Byte]]]): Seq[RawPart] = codec.encode(h)
+        override def schema: Schema[Seq[Part[Array[Byte]]]] = implicitly[Schema[Seq[Part[Array[Byte]]]]]
+        override def format: MultipartFormData = MultipartFormData()
+      }
+    )
   }
 }
 
