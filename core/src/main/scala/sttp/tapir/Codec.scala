@@ -235,7 +235,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
         val anyParts: List[DecodeResult[(String, Any)]] = partNamesToDecode.map { name =>
           val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
-          codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts).map { body: Any =>
+          codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts).map { (body: Any) =>
             (name, body)
           }
         }.toList
