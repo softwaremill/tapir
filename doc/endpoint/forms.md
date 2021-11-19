@@ -62,6 +62,7 @@ import java.io.File
 import sttp.tapir.generic.auto._
 
 case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
+case class User(email: String)
 
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
@@ -77,6 +78,7 @@ import java.io.File
 import sttp.tapir.generic.auto._
 
 case class RegistrationForm(userData: Option[User], photos: List[Part[File]], news: Option[Part[Boolean]])
+case class User(email: String)
 
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
