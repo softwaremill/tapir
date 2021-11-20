@@ -1,21 +1,19 @@
 package sttp.tapir.docs.asyncapi
 
-import akka.stream.scaladsl.Flow
 import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.tapir.Schema.SName
+import sttp.tapir._
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
-import sttp.tapir._
 
 import scala.io.Source
 
@@ -152,47 +150,32 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
   }
 
-  test("should contains descriptions of  query") {
-    val pagingQuery: EndpointInput[(Option[Int], Option[Int])] =
-      query[Option[Int]]("limit")
-        .description("GET `limit` field description")
-        .and(
-          query[Option[Int]]("offset")
-            .description("GET `offset` field description")
-        )
+  test("should contains descriptions of query") {
+    val pagingQuery = query[Option[Int]]("limit")
+      .description("GET `limit` field description")
+      .and(query[Option[Int]]("offset").description("GET `offset` field description"))
 
-    val personEndpoint: Endpoint[Unit, (Option[Int], Option[Int]), Unit, Flow[String, Json, Any], AkkaStreams with WebSockets] =
-      endpoint
-        .get
-        .in("persons" / pagingQuery)
-        .out(
-          webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams)
-            .description("Endpoint description")
-        )
+    val personEndpoint = endpoint.get
+      .in("persons" / pagingQuery)
+      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
 
-    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query nested descriptions", "1.0").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query descriptions", "1.0").toYaml
 
     noIndentation(actualYaml) shouldBe loadYaml("expected_description_query.yml")
   }
 
   test("should contains descriptions of header") {
-    val personEndpoint: Endpoint[Unit, String, Unit, Flow[String, Json, Any], AkkaStreams with WebSockets] =
-      endpoint
-        .get
-        .in(header[String]("Test").description("Test token"))
-        .out(
-          webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams)
-            .description("Endpoint description")
-        )
+    val personEndpoint = endpoint.get
+      .in(header[String]("Test").description("Test token"))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
 
-    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header nested descriptions", "1.0").toYaml
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header descriptions", "1.0").toYaml
 
     noIndentation(yaml) shouldBe loadYaml("expected_description_header.yml")
   }
 
   test("should contains all flags for query") {
-    val pagingQuery =
-      query[Int]("limit")
+    val pagingQuery = query[Int]("limit")
       .required()
       .and(query[Int]("offset").deprecated())
 
