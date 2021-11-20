@@ -190,6 +190,31 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(yaml) shouldBe loadYaml("expected_description_header.yml")
   }
 
+  test("should contains all flags for query") {
+    val pagingQuery =
+      query[Int]("limit")
+      .required()
+      .and(query[Int]("offset").deprecated())
+
+    val personEndpoint = endpoint.get
+      .in("persons" / pagingQuery)
+      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams))
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query flags", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe loadYaml("expected_flags_query.yml")
+  }
+
+  test("should contains all flags for header") {
+    val personEndpoint = endpoint.get
+      .in(header[String]("Test").description("Test token").required().deprecated())
+      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams))
+
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header flags", "1.0").toYaml
+
+    noIndentation(yaml) shouldBe loadYaml("expected_flags_header.yml")
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }

@@ -1,0 +1,35 @@
+asyncapi: 2.0.0
+info:
+  title: Header flags
+  version: '1.0'
+channels:
+  /:
+    subscribe:
+      operationId: onRoot
+      message:
+        $ref: '#/components/messages/oneOf:'
+    publish:
+      operationId: sendRoot
+      message:
+        $ref: '#/components/messages/string'
+    bindings:
+      ws:
+        method: GET
+        headers:
+          type: object
+          properties:
+            Test:
+              required:
+                - Test
+              type: string
+              description: Test token
+              deprecated: true
+components:
+  messages:
+    string:
+      payload:
+        type: string
+      contentType: text/plain
+    'oneOf:':
+      payload: {}
+      contentType: application/json
