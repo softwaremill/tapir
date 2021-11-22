@@ -50,6 +50,26 @@ object ContentNegotiation {
         )
       )
 
+  val out_default_json_or_xml: PublicEndpoint[Unit, Unit, Organization, Any] =
+    endpoint.get
+      .in("content-negotiation" / "organization")
+      .out(
+        sttp.tapir.oneOf(
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization])
+        )
+      )
+
+  val out_default_xml_or_json: PublicEndpoint[Unit, Unit, Organization, Any] =
+    endpoint.get
+      .in("content-negotiation" / "organization")
+      .out(
+        sttp.tapir.oneOf(
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization]),
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization])
+        )
+      )
+
   val organizationJson = "{\"name\":\"sml\"}"
   val organizationXml = "<name>sml-xml</name>"
   val organizationHtmlUtf8 = "<p>sml-utf8</p>"
