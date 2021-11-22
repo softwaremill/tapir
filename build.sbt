@@ -719,7 +719,7 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .settings(commonJvmSettings)
   .settings(name := "tapir-swagger-ui-bundle")
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml)
+  .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, tests % Test, sttpClient % Test, http4sServer % Test)
 
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonJvmSettings)
