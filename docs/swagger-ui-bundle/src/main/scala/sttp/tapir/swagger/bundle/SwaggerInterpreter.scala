@@ -19,7 +19,7 @@ trait SwaggerInterpreter {
       info: Info
   ): List[ServerEndpoint[Any, F]] = {
     val yaml = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(endpoints, info).toYaml
-    SwaggerUI(yaml, prefix, yamlName, basePrefix)
+    swaggerUI[F](yaml)
   }
 
   def fromEndpoints[F[_]](
@@ -46,7 +46,7 @@ trait SwaggerInterpreter {
       info: Info
   ): List[ServerEndpoint[Any, F]] = {
     val yaml = OpenAPIDocsInterpreter(docsOptions).endpointsWithDocsMetadataToOpenAPI(endpoints, info).toYaml
-    SwaggerUI(yaml, prefix, yamlName)
+    swaggerUI[F](yaml)
   }
 
   def fromEndpointsWithDocsMetadata[F[_]](
@@ -54,6 +54,8 @@ trait SwaggerInterpreter {
       title: String,
       version: String
   ): List[ServerEndpoint[Any, F]] = fromEndpointsWithDocsMetadata(endpoints, Info(title, version))
+
+  private def swaggerUI[F[_]](yaml: String): List[ServerEndpoint[Any, F]] = SwaggerUI(yaml, prefix, yamlName, basePrefix)
 }
 
 object SwaggerInterpreter {
