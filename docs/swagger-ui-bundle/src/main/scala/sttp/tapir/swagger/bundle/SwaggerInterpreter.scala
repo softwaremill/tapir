@@ -12,13 +12,14 @@ trait SwaggerInterpreter {
   def docsOptions: OpenAPIDocsOptions
   def prefix: List[String]
   def yamlName: String
+  def basePrefix: List[String]
 
   def fromEndpoints[F[_]](
       endpoints: List[AnyEndpoint],
       info: Info
   ): List[ServerEndpoint[Any, F]] = {
     val yaml = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(endpoints, info).toYaml
-    SwaggerUI(yaml, prefix, yamlName)
+    SwaggerUI(yaml, prefix, yamlName, basePrefix)
   }
 
   def fromEndpoints[F[_]](
@@ -50,29 +51,34 @@ object SwaggerInterpreter {
     *
     * @param docsExtensions
     *   The top-level documentation extensions to be included in the generated OpenAPI docs.
-    * @param docsOptions
-    *   The options that will be passed to the [[OpenAPIDocsInterpreter]].
     * @param prefix
-    *   The path prefix from which the documentation will be served, as a list of path segments. Defaults to `List(docs)`, so the address of
-    *   the docs will be `/docs`.
+    *   The path prefix for which the documentation endpoint will be created, as a list of path segments. Defaults to `List(docs)`, so the
+    *   address of the docs will be `/docs` (unless <code>basePrefix</code> is specified)
     * @param yamlName
     *   The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
+    * @param basePrefix
+    *   The base path prefix where the documentation routes are going to be attached. Unless the endpoint will served from `/`, the base
+    *   path prefix must be specified for redirect to work correctly. Defaults to `Nil`, so it is assumed that the endpoint base path is
+    *   `/`.
     */
   def apply(
       docsExtensions: List[DocsExtension[_]] = Nil,
       docsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default,
       prefix: List[String] = List("docs"),
-      yamlName: String = "docs.yaml"
+      yamlName: String = "docs.yaml",
+      basePrefix: List[String] = Nil
   ): SwaggerInterpreter = {
     val exts = docsExtensions
     val opts = docsOptions
     val p = prefix
     val yn = yamlName
+    val bp = basePrefix
     new SwaggerInterpreter {
       override val docsExtensions: List[DocsExtension[_]] = exts
       override val docsOptions: OpenAPIDocsOptions = opts
       override val prefix: List[String] = p
       override val yamlName: String = yn
+      override val basePrefix: List[String] = bp
     }
   }
 }
