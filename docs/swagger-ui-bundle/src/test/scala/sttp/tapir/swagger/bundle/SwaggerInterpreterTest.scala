@@ -2,7 +2,6 @@ package sttp.tapir.swagger.bundle
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
@@ -10,36 +9,25 @@ import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
-import sttp.model.{StatusCode, Uri}
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
 
-  val booksListing: PublicEndpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
-    .in("books")
-    .in("list" / "all")
-    .out(jsonBody[Vector[Book]])
-
-  val addBook: PublicEndpoint[Book, Unit, Unit, Any] = endpoint.post
-    .in("books")
-    .in("add")
-    .in(
-      jsonBody[Book]
-        .description("The book to add")
-        .example(Book("Pride and Prejudice", 1813, Author("Jane Austen")))
-    )
+  val testEndpoint: PublicEndpoint[String, Unit, String, Any] = endpoint.get
+    .in("test")
+    .in(query[String]("q"))
+    .out(stringBody)
 
   def swaggerUITest(prefix: List[String], basePrefix: List[String]): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
         SwaggerInterpreter(prefix = prefix, basePrefix = basePrefix)
-          .fromEndpoints[IO](List(booksListing, addBook), "The tapir library", "1.0.0")
+          .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
     BlazeServerBuilder[IO]
@@ -50,11 +38,12 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
         IO {
           val port = server.address.getPort
           val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
-          val docsPath = (basePrefix ++ prefix).mkString("/")
           val resp: Response[String] = basicRequest
             .response(asStringAlways)
-            .get(Uri.unsafeParse(s"http://localhost:$port/$docsPath"))
+            .get(uri"http://localhost:$port/${basePrefix ++ prefix}")
             .send(backend)
+
+          val docsPath = (basePrefix ++ prefix).mkString("/")
 
           resp.code shouldBe StatusCode.Ok
           resp.history.head.code shouldBe StatusCode.PermanentRedirect

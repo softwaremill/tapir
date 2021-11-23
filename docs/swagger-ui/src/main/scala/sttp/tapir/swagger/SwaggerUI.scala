@@ -36,7 +36,7 @@ object SwaggerUI {
       basePrefix: List[String] = Nil
   ): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixAsPath = (basePrefix ++ prefix).mkString("/")
+    val prefixForRedirectAsPath = (basePrefix ++ prefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -50,8 +50,8 @@ object SwaggerUI {
       .in(queryParams)
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
-        val paramsWithUrl = params.param("url", s"/$prefixAsPath/$yamlName")
-        Right(s"/$prefixAsPath/index.html?${paramsWithUrl.toString}")
+        val paramsWithUrl = params.param("url", s"/$prefixForRedirectAsPath/$yamlName")
+        Right(s"/$prefixForRedirectAsPath/index.html?${paramsWithUrl.toString}")
       }
 
     val oauth2Endpoint = baseEndpoint
@@ -60,7 +60,7 @@ object SwaggerUI {
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"/$prefixAsPath/oauth2-redirect.html$queryString")
+        Right(s"/$prefixForRedirectAsPath/oauth2-redirect.html$queryString")
       }
 
     val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
