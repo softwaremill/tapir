@@ -11,14 +11,16 @@ import scala.collection.immutable.ListMap
 private[openapi] object EndpointToOpenAPIDocs {
   def toOpenAPI(
       api: Info,
-      es: Iterable[AnyEndpoint],
+      es: Iterable[EndpointWithDocsMetadata],
       options: OpenAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {
-    val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
+    val es2 = es
+      .filter(e => findWebSocket(e.endpoint).isEmpty)
+      .map(e => e.copy(endpoint = nameAllPathCapturesInEndpoint(e.endpoint)))
     val toNamedSchemas = new ToNamedSchemas
-    val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, toNamedSchemas).apply()
-    val securitySchemes = SecuritySchemesForEndpoints(es2)
+    val (keyToSchema, schemas) = new SchemasForEndpoints(es2.map(_.endpoint), options.schemaName, toNamedSchemas).apply()
+    val securitySchemes = SecuritySchemesForEndpoints(es2.map(_.endpoint))
     val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)
 

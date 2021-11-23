@@ -1,7 +1,7 @@
 package sttp.tapir.swagger.bundle
 
 import sttp.tapir.{AnyEndpoint, DocsExtension}
-import sttp.tapir.docs.openapi.{OpenAPIDocsInterpreter, OpenAPIDocsOptions}
+import sttp.tapir.docs.openapi.{EndpointWithDocsMetadata, OpenAPIDocsInterpreter, OpenAPIDocsOptions}
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.ServerEndpoint
@@ -39,6 +39,20 @@ trait SwaggerInterpreter {
       version: String
   ): List[ServerEndpoint[Any, F]] =
     fromEndpoints(endpoints.map(_.endpoint), Info(title, version))
+
+  def fromEndpointsWithDocsMetadata[F[_]](
+      endpoints: List[EndpointWithDocsMetadata],
+      info: Info
+  ): List[ServerEndpoint[Any, F]] = {
+    val yaml = OpenAPIDocsInterpreter(docsOptions).endpointsWithDocsMetadataToOpenAPI(endpoints, info).toYaml
+    SwaggerUI(yaml, prefix, yamlName)
+  }
+
+  def fromEndpointsWithDocsMetadata[F[_]](
+      endpoints: List[EndpointWithDocsMetadata],
+      title: String,
+      version: String
+  ): List[ServerEndpoint[Any, F]] = fromEndpointsWithDocsMetadata(endpoints, Info(title, version))
 }
 
 object SwaggerInterpreter {

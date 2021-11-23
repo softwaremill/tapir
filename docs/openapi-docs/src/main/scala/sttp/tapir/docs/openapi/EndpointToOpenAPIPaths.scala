@@ -15,16 +15,17 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private val codecToMediaType = new CodecToMediaType(schemas)
   private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
 
-  def pathItem(e: AnyEndpoint): (String, PathItem) = {
+  def pathItem(endpointWithDocsMetadata: EndpointWithDocsMetadata): (String, PathItem) = {
     import Method._
 
+    val e = endpointWithDocsMetadata.endpoint
     val inputs = e.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
     val defaultId = options.operationIdGenerator(e, pathComponents, method)
 
-    val operation = Some(endpointToOperation(defaultId, e, inputs))
+    val operation = Some(endpointToOperation(defaultId, endpointWithDocsMetadata, inputs))
     val pathItem = PathItem(
       get = if (method == GET) operation else None,
       put = if (method == PUT) operation else None,
@@ -39,7 +40,12 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
+  private def endpointToOperation(
+      defaultId: String,
+      endpointWithDocsMetadata: EndpointWithDocsMetadata,
+      inputs: Vector[EndpointInput.Basic[_]]
+  ): Operation = {
+    val e = endpointWithDocsMetadata.endpoint
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
@@ -54,6 +60,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       Responses(responses),
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
+      servers = endpointWithDocsMetadata.servers,
       extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
   }
