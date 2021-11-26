@@ -885,7 +885,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+    libraryDependencies ++= Seq("io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
