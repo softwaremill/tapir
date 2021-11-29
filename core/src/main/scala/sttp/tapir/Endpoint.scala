@@ -261,6 +261,8 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = ServerEndpoint(this, _ => f)
 
+  /** Same as [[serverLogic]], but accepts a function that can't fail, and converts to an `Either`.
+    */
   def serverLogicSuccess[F[_]](f: I => F[O]): ServerEndpoint[I, E, O, R, F] =
     ServerEndpoint(this, me => in => me.map(f(in))(Right[E, O]))
 
