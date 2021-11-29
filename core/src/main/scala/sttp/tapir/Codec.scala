@@ -247,7 +247,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
           }
         }
 
-        DecodeResult.sequence(anyParts).map(ListMap.from(_))
+        DecodeResult.sequence(anyParts).map(_.toListMap)
       }
 
       override def schema: Schema[ListMap[String, _]] = Schema.binary
