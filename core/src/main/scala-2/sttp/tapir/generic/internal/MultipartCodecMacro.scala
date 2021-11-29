@@ -98,11 +98,11 @@ object MultipartCodecMacro {
 
     val codecTree = q"""
       {
-        def decode(partsByName: _root_.scala.collection.immutable.Map[_root_.java.lang.String, Any]): $t = {
+        def decode(partsByName: _root_.scala.collection.immutable.ListMap[_root_.java.lang.String, Any]): $t = {
           val values = _root_.scala.List(..$decodeParams)
           ${util.instanceFromValues}
         }
-        def encode(o: $t): _root_.scala.collection.immutable.Map[_root_.java.lang.String, Any] = _root_.scala.collection.immutable.Map(..$encodeParams)
+        def encode(o: $t): _root_.scala.collection.immutable.ListMap[_root_.java.lang.String, Any] = _root_.scala.collection.immutable.ListMap(..$encodeParams)
 
         _root_.sttp.tapir.Codec.multipart($partCodecs, _root_.scala.None)
           .map(decode _)(encode _)

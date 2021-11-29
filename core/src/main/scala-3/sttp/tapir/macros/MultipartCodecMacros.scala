@@ -6,6 +6,7 @@ import sttp.tapir.internal.{CaseClass, CaseClassField}
 import sttp.model.Part
 
 import scala.annotation.tailrec
+import scala.collection.immutable.ListMap
 import scala.quoted.*
 import java.nio.charset.StandardCharsets
 
@@ -59,7 +60,7 @@ object MultipartCodecMacros {
       '{ ${ Expr(encodedName) }.getOrElse($conf.toEncodedName(${ Expr(field.name) })) }
     }
 
-    val partCodecs: Expr[Map[String, PartCodec[_, _]]] = {
+    val partCodecs: Expr[ListMap[String, PartCodec[_, _]]] = {
       val partCodecPairs = caseClass.fields.map { field =>
         val partCodec = field.tpe.asType match
           case '[f] => summonPartCodec[f](field)
@@ -67,7 +68,7 @@ object MultipartCodecMacros {
         '{ ${ fieldTransformedName(field) } -> $partCodec }
       }
 
-      '{ Map(${ Varargs(partCodecPairs) }: _*) }
+      '{ ListMap(${ Varargs(partCodecPairs) }: _*) }
     }
 
     def termMethodByNameUnsafe(term: Term, name: String): Symbol = term.tpe.typeSymbol.memberMethod(name).head
@@ -85,28 +86,28 @@ object MultipartCodecMacros {
         '{ ${ fieldTransformedName(field) } -> $fieldValue }
       }
 
-      '{ Map(${ Varargs(fieldsEncode) }: _*) }.asTerm
+      '{ ListMap(${ Varargs(fieldsEncode) }: _*) }.asTerm
     }
 
     val encodeDefSymbol =
-      Symbol.newMethod(Symbol.spliceOwner, "encode", MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[Map[String, Any]]))
+      Symbol.newMethod(Symbol.spliceOwner, "encode", MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[ListMap[String, Any]]))
     val encodeDef = DefDef(
       encodeDefSymbol,
       { case List(List(tTerm: Term)) =>
         Some(encodeDefBody(tTerm).changeOwner(encodeDefSymbol))
       }
     )
-    val encodeExpr = Block(List(encodeDef), Closure(Ref(encodeDefSymbol), None)).asExprOf[T => Map[String, Any]]
+    val encodeExpr = Block(List(encodeDef), Closure(Ref(encodeDefSymbol), None)).asExprOf[T => ListMap[String, Any]]
 
     //
 
     def decodeDefBody(partsTerm: Term): Term = {
-      def fieldsDecode(partsMap: Expr[Map[String, Any]]) = caseClass.fields.map { field =>
+      def fieldsDecode(partsMap: Expr[ListMap[String, Any]]) = caseClass.fields.map { field =>
         '{ $partsMap(${ fieldTransformedName(field) }) }
       }
 
       '{
-        val partsMap: Map[String, Any] = ${ partsTerm.asExprOf[Map[String, Any]] }
+        val partsMap: ListMap[String, Any] = ${ partsTerm.asExprOf[ListMap[String, Any]] }
         val values = List(${ Varargs(fieldsDecode('partsMap)) }: _*)
         ${ caseClass.instanceFromValues('{ values }) }
       }.asTerm
@@ -116,7 +117,7 @@ object MultipartCodecMacros {
       Symbol.newMethod(
         Symbol.spliceOwner,
         "decode",
-        MethodType(List("params"))(_ => List(TypeRepr.of[Map[String, Any]]), _ => TypeRepr.of[T])
+        MethodType(List("params"))(_ => List(TypeRepr.of[ListMap[String, Any]]), _ => TypeRepr.of[T])
       )
     val decodeDef = DefDef(
       decodeDefSymbol,
@@ -124,7 +125,7 @@ object MultipartCodecMacros {
         Some(decodeDefBody(paramsTerm).changeOwner(decodeDefSymbol))
       }
     )
-    val decodeExpr = Block(List(decodeDef), Closure(Ref(decodeDefSymbol), None)).asExprOf[Map[String, Any] => T]
+    val decodeExpr = Block(List(decodeDef), Closure(Ref(decodeDefSymbol), None)).asExprOf[ListMap[String, Any] => T]
 
     '{
       Codec
