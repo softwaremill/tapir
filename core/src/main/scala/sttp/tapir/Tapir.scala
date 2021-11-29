@@ -401,7 +401,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
-      EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false, AttributeMap.Empty, Vector.empty)
     )
 
   val endpoint: PublicEndpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)

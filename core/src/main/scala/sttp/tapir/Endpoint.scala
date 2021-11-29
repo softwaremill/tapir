@@ -284,6 +284,7 @@ trait EndpointInfoOps[-R] {
   def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
   def tag(t: String): ThisType[R] = withInfo(info.tag(t))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
+  def attribute[T](k: AttributeKey[T], v: T): ThisType[R] = withInfo(info.attribute(k, v))
   def docsExtension[D: JsonCodec](key: String, value: D): ThisType[R] = withInfo(info.docsExtension(key, value))
 
   def info(i: EndpointInfo): ThisType[R] = withInfo(i)
@@ -438,6 +439,7 @@ case class EndpointInfo(
     description: Option[String],
     tags: Vector[String],
     deprecated: Boolean,
+    attributes: AttributeMap,
     docsExtensions: Vector[DocsExtension[_]]
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
@@ -446,6 +448,8 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
+  def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  def attribute[T](k: AttributeKey[T], v: T): EndpointInfo = copy(attributes = attributes.put(k, v))
   def docsExtension[A: JsonCodec](key: String, value: A): EndpointInfo =
     copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 }

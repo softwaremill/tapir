@@ -25,7 +25,11 @@ import scala.concurrent.duration.FiniteDuration
   *
   * The hierarchy is as follows:
   *
-  * /---> `EndpointInput` >---\ `EndpointTransput` >--- ---> `EndpointIO` \---> `EndpointOutput` >---/
+  * {{{
+  *                         /---> `EndpointInput`  >---\
+  * `EndpointTransput` >---                            ---> `EndpointIO`
+  *                         \---> `EndpointOutput` >---/
+  * }}}
   */
 sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
@@ -65,6 +69,7 @@ object EndpointTransput {
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+    def attribute[A](k: AttributeKey[A], v: A): ThisType[T] = copyWith(codec, info.attribute(k, v))
     def docsExtension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.docsExtension(key, value))
   }
 
@@ -451,6 +456,7 @@ object EndpointIO {
       description: Option[String],
       examples: List[Example[T]],
       deprecated: Boolean,
+      attributes: AttributeMap,
       docsExtensions: Vector[DocsExtension[_]]
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
@@ -459,6 +465,8 @@ object EndpointIO {
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
+    def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): Info[T] = copy(attributes = attributes.put(k, v))
     def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
@@ -468,11 +476,12 @@ object EndpointIO {
           Example(ee, name, summary)
         },
         deprecated,
+        attributes,
         docsExtensions
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, attributes = AttributeMap.Empty, docsExtensions = Vector.empty)
   }
 
   /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint

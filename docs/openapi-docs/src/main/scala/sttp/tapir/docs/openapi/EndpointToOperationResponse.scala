@@ -62,7 +62,7 @@ private[openapi] class EndpointToOperationResponse(
 
     val statusCodeDescriptions = outputs.flatMap {
       case EndpointOutput.StatusCode(possibleCodes, _, _) => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
-      case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _)) => Vector(desc)
+      case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _, _)) => Vector(desc)
       case EndpointIO.Empty(_, i) => if (i.description.nonEmpty) Vector(i.description.get) else Vector()
       case _                      => Vector()
     }

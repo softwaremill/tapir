@@ -4,7 +4,7 @@ import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.{AttributeMap, Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -16,7 +16,7 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     case class X(v: String)
     val e = new RuntimeException()
     implicit val xCodec: Codec[String, X, TextPlain] = Codec.string.map(_ => throw e)(_.v)
-    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false, Vector.empty))
+    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false, AttributeMap.Empty, Vector.empty))
 
     // when & then
     DecodeBasicInputs(input, StubServerRequest) shouldBe DecodeBasicInputsResult.Failure(input, DecodeResult.Error("v", e))
