@@ -80,11 +80,9 @@ class ServerMultipartTests[F[_], ROUTE](
         basicStringRequest
           .post(uri"$baseUri/api/echo/multipart")
           .multipartBody(
-            Seq(
-              multipartFile("files", file1).fileName("fruit-data-1.txt").header("X-Auth", "12Aa"),
-              multipartFile("files", file2).fileName("fruit-data-2.txt").header("X-Auth", "12Ab"),
-              multipartFile("files", file3).fileName("fruit-data-3.txt").header("X-Auth", "12Ac")
-            )
+            multipartFile("files", file1).fileName("fruit-data-1.txt").header("X-Auth", "12Aa"),
+            multipartFile("files", file2).fileName("fruit-data-2.txt").header("X-Auth", "12Ab"),
+            multipartFile("files", file3).fileName("fruit-data-3.txt").header("X-Auth", "12Ac")
           )
           .send(backend)
           .map { r =>
