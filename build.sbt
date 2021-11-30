@@ -320,13 +320,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.6.1",
+      "org.typelevel" %%% "cats-core" % "2.7.0",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
+      "org.typelevel" %%% "cats-laws" % "2.7.0" % Test
     )
   )
   .jvmPlatform(
@@ -885,7 +885,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
