@@ -81,8 +81,13 @@ class ServerInterpreter[R, F[_], B, S](
     }
 
     // 1. decoding both security & regular basic inputs - note that this does *not* include decoding the body
-    val securityBasicInputs = DecodeBasicInputs(se.endpoint.securityInput, request)
-    val regularBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
+    val decodeBasicContext1 = DecodeInputsContext(request, request.pathSegments)
+    // the security input doesn't have to match the whole path, a prefix is fine
+    val (securityBasicInputs, decodeBasicContext2) =
+      DecodeBasicInputs(se.endpoint.securityInput, decodeBasicContext1, matchWholePath = false)
+    // the regular input is required to match the whole remaining path; otherwise a decode failure is reported
+    // to keep the progress in path matching, we are using the context returned by decoding the security input
+    val (regularBasicInputs, _) = DecodeBasicInputs(se.endpoint.input, decodeBasicContext2, matchWholePath = true)
     (for {
       // 2. if the decoding failed, short-circuiting further processing with the decode failure that has a lower sort
       // index (so that the correct one is passed to the decode failure handler)

@@ -175,4 +175,7 @@ object Basic {
 
   val out_fixed_content_type_header: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.out(stringBody.and(header("Content-Type", "text/csv")))
+
+  val in_path_security_and_regular: Endpoint[Unit, Unit, Unit, String, Any] =
+    endpoint.securityIn("auth").in("settings").out(stringBody)
 }
