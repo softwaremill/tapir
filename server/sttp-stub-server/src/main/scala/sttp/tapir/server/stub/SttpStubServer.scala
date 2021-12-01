@@ -57,16 +57,16 @@ trait SttpStubServer {
 
     private def _whenRequestMatches[E, O](endpoint: Endpoint[_, _, E, O, _]): stub.WhenRequest = {
       new stub.WhenRequest(req =>
-        DecodeBasicInputs(endpoint.input, new SttpRequest(req)) match {
-          case _: DecodeBasicInputsResult.Failure => false
-          case _: DecodeBasicInputsResult.Values  => true
+        DecodeBasicInputs(endpoint.input, DecodeInputsContext(new SttpRequest(req))) match {
+          case (_: DecodeBasicInputsResult.Failure, _) => false
+          case (_: DecodeBasicInputsResult.Values, _)  => true
         }
       )
     }
 
     private def _whenInputMatches[A, I, E, O](input: EndpointInput[I])(inputMatcher: I => Boolean): stub.WhenRequest = {
       new stub.WhenRequest(req =>
-        decodeBody(req, DecodeBasicInputs(input, new SttpRequest(req))) match {
+        decodeBody(req, DecodeBasicInputs(input, DecodeInputsContext(new SttpRequest(req)))._1) match {
           case _: DecodeBasicInputsResult.Failure => false
           case values: DecodeBasicInputsResult.Values =>
             InputValue(input, values) match {
@@ -139,7 +139,7 @@ trait SttpStubServer {
       new TypeAwareWhenRequest(
         endpoint,
         new stub.WhenRequest(req => {
-          val result = DecodeBasicInputs(endpoint.input, new SttpRequest(req))
+          val (result, _) = DecodeBasicInputs(endpoint.input, DecodeInputsContext(new SttpRequest(req)))
           result match {
             case DecodeBasicInputsResult.Failure(_, f) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
             case _                                                                      => false

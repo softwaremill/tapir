@@ -35,7 +35,7 @@ class DecodeBasicInputsResultTest extends AnyFlatSpec with Matchers {
     s"decoding endpoint with fixed content-type $endpointContentType and input content-type $inputContentType" should expectedStatus in {
       val testEp = endpoint.get.in(header(Header(HeaderNames.ContentType, endpointContentType)))
       val request = testRequest(Header(HeaderNames.ContentType, inputContentType))
-      val decodeResult = DecodeBasicInputs.apply(testEp.input, request)
+      val (decodeResult, _) = DecodeBasicInputs.apply(testEp.input, DecodeInputsContext(request))
 
       if (expectDecodeSuccess)
         decodeResult shouldBe a[DecodeBasicInputsResult.Values]
