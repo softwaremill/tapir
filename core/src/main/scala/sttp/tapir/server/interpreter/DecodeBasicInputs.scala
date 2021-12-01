@@ -58,6 +58,9 @@ case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String
   def queryParameter(name: String): Seq[String] = queryParameters.getMulti(name).getOrElse(Nil)
   val queryParameters: QueryParams = request.queryParameters
 }
+object DecodeInputsContext {
+  def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
+}
 
 object DecodeBasicInputs {
   case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
@@ -75,7 +78,11 @@ object DecodeBasicInputs {
     * @param matchWholePath
     *   Should the whole path be matched - that is, if the input doesn't exhaust the path, should a failure be reported
     */
-  def apply(input: EndpointInput[_], ctx: DecodeInputsContext, matchWholePath: Boolean): (DecodeBasicInputsResult, DecodeInputsContext) = {
+  def apply(
+      input: EndpointInput[_],
+      ctx: DecodeInputsContext,
+      matchWholePath: Boolean = true
+  ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     // The first decoding failure is returned.
     // We decode in the following order: path, method, query, headers (incl. cookies), request, status, body
     // An exact-path check is done after path & method matching
