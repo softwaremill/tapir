@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
-import sttp.tapir.docs.apispec.{SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
+import sttp.tapir.docs.apispec.{DocsExtension, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 import sttp.tapir.openapi._
 

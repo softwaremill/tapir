@@ -3,7 +3,6 @@ package sttp.tapir
 import sttp.capabilities.Streams
 import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.Method
-import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.RawBodyType.StringBody
@@ -69,8 +68,8 @@ object EndpointTransput {
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+    def attribute[A](k: AttributeKey[A]): Option[A] = info.attribute(k)
     def attribute[A](k: AttributeKey[A], v: A): ThisType[T] = copyWith(codec, info.attribute(k, v))
-    def docsExtension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.docsExtension(key, value))
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
@@ -456,8 +455,7 @@ object EndpointIO {
       description: Option[String],
       examples: List[Example[T]],
       deprecated: Boolean,
-      attributes: AttributeMap,
-      docsExtensions: Vector[DocsExtension[_]]
+      attributes: AttributeMap
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
@@ -467,7 +465,6 @@ object EndpointIO {
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
     def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): Info[T] = copy(attributes = attributes.put(k, v))
-    def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
@@ -476,12 +473,11 @@ object EndpointIO {
           Example(ee, name, summary)
         },
         deprecated,
-        attributes,
-        docsExtensions
+        attributes
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, attributes = AttributeMap.Empty, docsExtensions = Vector.empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, attributes = AttributeMap.Empty)
   }
 
   /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint
@@ -596,11 +592,6 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
   def responsesExamples(examples: List[RESP]): ThisType[T] =
     copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
-
-  def requestsDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
-    copy(requestsInfo = requestsInfo.docsExtension(key, value))
-  def responsesDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
-    copy(responsesInfo = responsesInfo.docsExtension(key, value))
 
   /** @param c
     *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always

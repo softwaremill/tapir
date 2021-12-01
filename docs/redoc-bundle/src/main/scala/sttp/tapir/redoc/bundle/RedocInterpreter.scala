@@ -5,7 +5,8 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.redoc.Redoc
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.{AnyEndpoint, DocsExtension}
+import sttp.tapir.AnyEndpoint
+import sttp.tapir.docs.apispec.DocsExtension
 
 trait RedocInterpreter {
   def docsExtensions: List[DocsExtension[_]]
