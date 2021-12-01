@@ -51,7 +51,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
-  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
+  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
@@ -60,16 +60,21 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   evictionErrorLevel := Level.Info
 )
 
-val versioningSchemeSettings = Seq(
+val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
+
+val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
-    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
-    if (minorUnchanged && !isRcOrMilestone)
+    val current = version.value
+    val isRcOrMilestone = current.contains("M") || current.contains("RC")
+    if (!isRcOrMilestone) {
+      val previous = previousStableVersion.value
+      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
       previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-    else
+    } else {
+      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
       Set.empty
-  },
-  versionScheme := Some("early-semver")
+    }
+  }
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
@@ -281,7 +286,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     }
   )
   .jvmPlatform(
-    scalaVersions = scala2And3Versions
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ enableMimaSettings
   )
   .jsPlatform(
     scalaVersions = scala2And3Versions,

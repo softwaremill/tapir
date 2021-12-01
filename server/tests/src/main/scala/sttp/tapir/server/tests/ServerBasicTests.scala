@@ -408,6 +408,13 @@ class ServerBasicTests[F[_], ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/api/echo/hello").send(backend).map(_.code shouldBe StatusCode.NotFound) >>
           basicRequest.get(uri"$baseUri/api/echo/").send(backend).map(_.code shouldBe StatusCode.NotFound)
+    },
+    testServerLogic(
+      in_path_security_and_regular
+        .serverSecurityLogic { _ => pureResult(().asRight[Unit]) }
+        .serverLogic(_ => _ => pureResult("ok".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth/settings").send(backend).map(_.body shouldBe "ok")
     }
   )
 
