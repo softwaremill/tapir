@@ -15,7 +15,8 @@ import sttp.tapir.tests.Security.{
   in_security_apikey_header_out_string,
   in_security_apikey_query_out_string,
   in_security_basic_out_string,
-  in_security_bearer_out_string
+  in_security_bearer_out_string,
+  in_security_params_with_non_security_params_out_string
 }
 import sttp.tapir.tests.Test
 
@@ -91,6 +92,15 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
         .serverLogic(s => _ => pureResult(s.asRight[Unit]))
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map(_.body shouldBe "1234")
+    },
+    testServerLogic(
+      in_security_params_with_non_security_params_out_string
+        .serverSecurityLogic { case (userId: String, token: String) =>
+          pureResult(s"$userId-$token".asRight[Unit])
+        }
+        .serverLogic((auth: String) => (someId: String) => pureResult(s"$auth-$someId".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth/abc/settings/xyz").auth.bearer("1234").send(backend).map(_.body shouldBe "abc-1234-xyz")
     }
   ) ++
     correctAuthTests ++

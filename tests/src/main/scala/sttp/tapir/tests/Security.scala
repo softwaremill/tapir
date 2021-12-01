@@ -18,4 +18,13 @@ object Security {
 
   val in_security_bearer_out_string: Endpoint[String, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").securityIn(auth.bearer[String]()).out(stringBody)
+
+  val in_security_params_with_non_security_params_out_string: Endpoint[(String, String), String, Unit, String, Any] =
+    endpoint
+      .securityIn("auth")
+      .securityIn(path[String]("userId"))
+      .securityIn(auth.bearer[String]())
+      .in("settings")
+      .in(path[String]("someId"))
+      .out(stringBody)
 }
