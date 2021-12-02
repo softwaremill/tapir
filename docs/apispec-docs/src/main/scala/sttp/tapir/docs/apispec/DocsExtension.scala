@@ -11,7 +11,7 @@ object DocsExtension {
 }
 
 object DocsExtensionAttribute {
-  val docsExtensionAttributeKey: AttributeKey[Vector[DocsExtension[_]]] = AttributeKey("Vector[sttp.tapir.docs.apispec.DocsExtension]")
+  val docsExtensionAttributeKey: AttributeKey[Vector[DocsExtension[_]]] = AttributeKey[Vector[DocsExtension[_]]]
 
   //
 

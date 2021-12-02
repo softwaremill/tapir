@@ -1,17 +1,22 @@
 package sttp.tapir
 
-import scala.reflect.ClassTag
+import sttp.tapir.macros.AttributeKeyMacros
 
-/** @param name
+/** @param typeName
   *   The fully qualified name of `T`.
   * @tparam T
   *   Type of the value of the attribute.
   */
-case class AttributeKey[T](name: String)
+class AttributeKey[T](val typeName: String) {
+  override def equals(other: Any): Boolean = other match {
+    case that: AttributeKey[_] => typeName == that.typeName
+    case _                     => false
+  }
 
-object AttributeKey {
-  def forClass[T: ClassTag]: AttributeKey[T] = AttributeKey[T](implicitly[ClassTag[T]].runtimeClass.getName)
+  override def hashCode(): Int = typeName.hashCode
 }
+
+object AttributeKey extends AttributeKeyMacros
 
 /** An attribute is arbitrary data that is attached to an endpoint or endpoint input/output. The data is not interpreted by tapir's core in
   * any way, but might be used by interpreters.
@@ -20,8 +25,8 @@ object AttributeKey {
   * defined by the interpreters which are using them, and made available for import.
   */
 case class AttributeMap private (private val storage: Map[String, Any]) {
-  def get[T](k: AttributeKey[T]): Option[T] = storage.get(k.name).asInstanceOf[Option[T]]
-  def put[T](k: AttributeKey[T], v: T): AttributeMap = copy(storage = storage + (k.name -> v))
+  def get[T](k: AttributeKey[T]): Option[T] = storage.get(k.typeName).asInstanceOf[Option[T]]
+  def put[T](k: AttributeKey[T], v: T): AttributeMap = copy(storage = storage + (k.typeName -> v))
 
   def isEmpty: Boolean = storage.isEmpty
   def nonEmpty: Boolean = storage.nonEmpty
