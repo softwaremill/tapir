@@ -21,7 +21,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     val serverOptions: NettyCatsServerOptions[IO] = NettyCatsServerOptions
       .customInterceptors[IO](dispatcher)
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
 
     NettyCatsServerInterpreter(serverOptions).toRoute(List(e))

@@ -76,13 +76,13 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
 
     input match {
       case EndpointInput.FixedMethod(m, _, _) => req.withMethod(Method.fromString(m.method).right.get)
-      case EndpointInput.FixedPath(p, _, _)   => req.withUri(req.uri.addPath(p))
+      case EndpointInput.FixedPath(p, _, _)   => req.withUri(req.uri.addSegment(p))
       case EndpointInput.PathCapture(_, codec, _) =>
         val path = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
-        req.withUri(req.uri.addPath(path))
+        req.withUri(req.uri.addSegment(path))
       case EndpointInput.PathsCapture(codec, _) =>
         val pathFragments = codec.encode(value)
-        val uri = pathFragments.foldLeft(req.uri)(_.addPath(_))
+        val uri = pathFragments.foldLeft(req.uri)(_.addSegment(_))
         req.withUri(uri)
       case EndpointInput.Query(name, codec, _) =>
         codec.encode(value) match {

@@ -18,7 +18,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
 
-    val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = e.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
@@ -59,7 +59,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   }
 
   private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
-    val auths = e.securityInput.auths ++ e.input.auths
+    val auths = e.auths
     val securityRequirement: SecurityRequirement = auths.flatMap {
       case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
         securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))

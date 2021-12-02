@@ -9,6 +9,7 @@ import sttp.model.{StatusCode, _}
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests.Security.{
   in_security_apikey_header_in_amount_out_string,
   in_security_apikey_header_out_string,
@@ -91,13 +92,31 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map(_.body shouldBe "1234")
     }
-  ) ++ missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
+  ) ++
+    correctAuthTests ++
+    missingAuthTests ++
+    missingAuthWithEndpointHidingTests ++
+    badRequestWithCorrectAuthTests ++
+    badRequestWithCorrectAuthAndEndpointHidingTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
     testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"missing $authType") { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.Unauthorized
         r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
+      }
+    }
+  }
+
+  private def missingAuthWithEndpointHidingTests = endpoints.map { case (authType, endpoint, _) =>
+    testServerLogic(
+      endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
+      s"missing $authType with endpoint hiding",
+      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
+    ) { (backend, baseUri) =>
+      validRequest(baseUri).send(backend).map { r =>
+        r.code shouldBe StatusCode.NotFound
+        r.header("WWW-Authenticate") shouldBe None
       }
     }
   }
@@ -120,6 +139,16 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"invalid request $authType") {
       (backend, baseUri) =>
         auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.BadRequest)
+    }
+  }
+
+  private def badRequestWithCorrectAuthAndEndpointHidingTests = endpoints.map { case (authType, endpoint, auth) =>
+    testServerLogic(
+      endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
+      s"invalid request $authType with endpoint hiding",
+      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
+    ) { (backend, baseUri) =>
+      auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   }
 }

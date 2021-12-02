@@ -42,8 +42,8 @@ case object NoContent extends ErrorInfo
 val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound].description("not found"))),
-    oneOfVariant(statusCode(StatusCode.Unauthorized.and(jsonBody[Unauthorized].description("unauthorized")))), 
-    oneOfVariant(statusCode(StatusCode.NoContent.and(emptyOutputAs(NoContent)))),
+    oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[Unauthorized].description("unauthorized"))), 
+    oneOfVariant(statusCode(StatusCode.NoContent).and(emptyOutputAs(NoContent))),
     oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
   )
 )
@@ -73,13 +73,13 @@ val baseEndpoint = endpoint.errorOut(
     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Constructing oneOfVariant of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                             ^
-// error: Constructing oneOfVariant of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
 //                             ^
-// error: Constructing oneOfVariant of type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use oneOfVariantClassMatcher, oneOfVariantValueMatcher or oneOfVariantFromMatchType instead
+// error: Type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
 //                             ^
 ```
@@ -125,7 +125,7 @@ val baseEndpoint = endpoint.errorOut(
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
 [security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
 error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
-different from `Any`.. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
+different from `Any`. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
 the result in an additional `Either`.
 
 ## Next

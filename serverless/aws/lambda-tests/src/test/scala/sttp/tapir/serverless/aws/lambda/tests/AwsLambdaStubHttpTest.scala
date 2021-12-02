@@ -30,7 +30,7 @@ object AwsLambdaStubHttpTest {
       val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
         .customInterceptors[IO]
         .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
         .copy(encodeResponseBody = false)
 

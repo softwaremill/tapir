@@ -1,7 +1,8 @@
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
-import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
+import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.UpdateVersionInDocs
+import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
@@ -51,7 +52,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
-  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
+  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
@@ -60,16 +61,27 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   evictionErrorLevel := Level.Info
 )
 
-val versioningSchemeSettings = Seq(
+val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
+
+val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
-    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
-    if (minorUnchanged && !isRcOrMilestone)
+    val current = version.value
+    val isRcOrMilestone = current.contains("M") || current.contains("RC")
+    if (!isRcOrMilestone) {
+      val previous = previousStableVersion.value
+      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
       previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-    else
+    } else {
+      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
       Set.empty
+    }
   },
-  versionScheme := Some("early-semver")
+  mimaBinaryIssueFilters ++= Seq(
+    ProblemFilters.exclude[Problem]("sttp.tapir.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.generic.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.server.interpreter.*") // for 0.19
+  )
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
@@ -281,7 +293,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     }
   )
   .jvmPlatform(
-    scalaVersions = scala2And3Versions
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ enableMimaSettings
   )
   .jsPlatform(
     scalaVersions = scala2And3Versions,
@@ -301,7 +314,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
-      "com.softwaremill.common" %%% "tagging" % "2.3.1",
+      "com.softwaremill.common" %%% "tagging" % "2.3.2",
       scalaTest.value,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ) ++ loggerDependencies
@@ -320,13 +333,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.6.1",
+      "org.typelevel" %%% "cats-core" % "2.7.0",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
+      "org.typelevel" %%% "cats-laws" % "2.7.0" % Test
     )
   )
   .jvmPlatform(
@@ -541,8 +554,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.11.1",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.11.1" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.12.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.12.0" % Test,
       scalaTest.value % Test
     )
   )
@@ -588,8 +601,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.9.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.9.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.9.1",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.9.1",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )
@@ -717,9 +730,12 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
 
 lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-bundle"))
   .settings(commonJvmSettings)
-  .settings(name := "tapir-swagger-ui-bundle")
+  .settings(
+    name := "tapir-swagger-ui-bundle",
+    libraryDependencies += scalaTest.value % Test
+  )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml)
+  .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
 
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonJvmSettings)
@@ -882,7 +898,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)

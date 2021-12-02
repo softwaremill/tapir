@@ -15,7 +15,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
-import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, ServerInterpreter}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -44,9 +44,9 @@ trait PlayServerInterpreter {
       override def isDefinedAt(request: RequestHeader): Boolean = {
         val serverRequest = new PlayServerRequest(request, request)
         serverEndpoints.exists { se =>
-          DecodeBasicInputs(se.input, serverRequest) match {
-            case DecodeBasicInputsResult.Values(_, _) => true
-            case DecodeBasicInputsResult.Failure(input, failure) =>
+          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest), matchWholePath = true) match {
+            case (DecodeBasicInputsResult.Values(_, _), _) => true
+            case (DecodeBasicInputsResult.Failure(input, failure), _) =>
               playServerOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
           }
         }

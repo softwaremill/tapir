@@ -80,14 +80,24 @@ class ServerInterpreter[R, F[_], B, S](
       }
     }
 
+    // 1. decoding both security & regular basic inputs - note that this does *not* include decoding the body
+    val decodeBasicContext1 = DecodeInputsContext(request)
+    // the security input doesn't have to match the whole path, a prefix is fine
+    val (securityBasicInputs, decodeBasicContext2) =
+      DecodeBasicInputs(se.endpoint.securityInput, decodeBasicContext1, matchWholePath = false)
+    // the regular input is required to match the whole remaining path; otherwise a decode failure is reported
+    // to keep the progress in path matching, we are using the context returned by decoding the security input
+    val (regularBasicInputs, _) = DecodeBasicInputs(se.endpoint.input, decodeBasicContext2)
     (for {
-      // 1. decoding security inputs, computing the security input value, and decoding basic regular inputs
-      // that way we will short-circuit further processing if any basic input fails to decode
-      securityValues <- resultOrValueFrom(decodeBody(DecodeBasicInputs(se.endpoint.securityInput, request)))
+      // 2. if the decoding failed, short-circuiting further processing with the decode failure that has a lower sort
+      // index (so that the correct one is passed to the decode failure handler)
+      _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
+      // 3. computing the security input value
+      securityValues <- resultOrValueFrom(decodeBody(securityBasicInputs))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
-      inputValues <- resultOrValueFrom(DecodeBasicInputs(se.endpoint.input, request))
+      inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
-      // 2. running the security logic
+      // 4. running the security logic
       securityLogicResult <- ResultOrValue(
         se.securityLogic(monad)(a).map(Right(_): Either[RequestResult[B], Either[E, U]]).handleError { case t: Throwable =>
           endpointHandler(monad.error(t))
@@ -105,7 +115,7 @@ class ServerInterpreter[R, F[_], B, S](
 
         case Right(u) =>
           for {
-            // 3. decoding the body of regular inputs, computing the input value, and running the main logic
+            // 5. decoding the body of regular inputs, computing the input value, and running the main logic
             values <- resultOrValueFrom(decodeBody(inputValues))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
@@ -216,6 +226,10 @@ class ServerInterpreter[R, F[_], B, S](
       case v: DecodeBasicInputsResult.Values =>
         ResultOrValue((Right(v): Either[RequestResult[B], DecodeBasicInputsResult.Values]).unit)
       case DecodeBasicInputsResult.Failure(input, failure) => ResultOrValue(onDecodeFailure(input, failure).map(Left(_)))
+    }
+    def apply(f: Option[DecodeBasicInputsResult.Failure]): ResultOrValue[Unit] = f match {
+      case None                                                  => ResultOrValue((Right(()): Either[RequestResult[B], Unit]).unit)
+      case Some(DecodeBasicInputsResult.Failure(input, failure)) => ResultOrValue(onDecodeFailure(input, failure).map(Left(_)))
     }
     def value[T](v: F[T]): ResultOrValue[T] = ResultOrValue(v.map(Right(_)))
 

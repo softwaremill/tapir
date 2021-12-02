@@ -25,7 +25,7 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO]) extends TestS
     val serverOptions: FinatraCatsServerOptions[IO] =
       FinatraCatsServerOptions
         .customInterceptors(dispatcher)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     FinatraCatsServerInterpreter[IO](serverOptions).toRoute(e)
   }

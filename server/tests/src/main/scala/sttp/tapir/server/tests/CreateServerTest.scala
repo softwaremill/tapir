@@ -24,7 +24,7 @@ trait CreateServerTest[F[_], +R, ROUTE] {
       metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
   )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 
-  def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "")(
+  def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "", decodeFailureHandler: Option[DecodeFailureHandler] = None)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
@@ -53,12 +53,16 @@ class DefaultCreateServerTest[F[_], +R, ROUTE](
     )(runTest)
   }
 
-  override def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "")(
+  override def testServerLogic(
+      e: ServerEndpoint[R, F],
+      testNameSuffix: String = "",
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
+  )(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e))
+      NonEmptyList.of(interpreter.route(e, decodeFailureHandler))
     )(runTest)
   }
 

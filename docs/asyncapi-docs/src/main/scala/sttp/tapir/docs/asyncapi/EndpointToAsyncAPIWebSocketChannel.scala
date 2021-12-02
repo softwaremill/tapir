@@ -6,7 +6,7 @@ import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, Schem
 import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.namedPathComponents
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.internal.{IterableToListMap, RichEndpointInput}
+import sttp.tapir.internal.{IterableToListMap, RichEndpoint}
 import sttp.tapir.{AnyEndpoint, Codec, CodecFormat, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
@@ -20,7 +20,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       e: AnyEndpoint,
       ws: WebSocketBodyWrapper[_, _]
   ): (String, ChannelItem) = {
-    val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = e.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 

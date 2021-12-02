@@ -18,7 +18,7 @@ private[openapi] class EndpointToOperationResponse(
   def apply(e: AnyEndpoint): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     // There always needs to be at least a 200 empty response
     outputToResponses(e.output, ResponsesCodeKey(200), Some(Response.Empty)) ++
-      inputToDefaultErrorResponses(e.input) ++
+      inputToDefaultErrorResponses(e.securityInput.and(e.input)) ++
       outputToResponses(e.errorOutput, ResponsesDefaultKey, None)
   }
 
@@ -42,7 +42,7 @@ private[openapi] class EndpointToOperationResponse(
     val outputsByStatusCode: Map[Option[StatusCode], List[EndpointOutput.Basic[_]]] =
       statusCodeAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
 
-    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct
+    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct.sortBy(_.map(_.code).getOrElse(Integer.MAX_VALUE))
 
     val docsExtensions = outputs.flatMap(_.flatMap(_.info.docsExtensions))
     statusCodes.flatMap { sc =>

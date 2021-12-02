@@ -22,7 +22,7 @@ package object handlers {
   }
 
   private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route): Route = {
-    e.input.asVectorOfBasicInputs() foreach {
+    e.asVectorOfBasicInputs() foreach {
       case body: EndpointIO.Body[_, _] =>
         body.bodyType match {
           case MultipartBody(_, _) =>

@@ -28,7 +28,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
       VertxCatsServerOptions
         .customInterceptors[IO](dispatcher)
         .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     VertxCatsServerInterpreter(options).route(e)
   }
