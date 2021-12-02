@@ -150,7 +150,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
   }
 
-  test("should contains descriptions of query") {
+  test("should contain descriptions of query") {
     val pagingQuery = query[Option[Int]]("limit")
       .description("GET `limit` field description")
       .and(query[Option[Int]]("offset").description("GET `offset` field description"))
@@ -164,7 +164,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe loadYaml("expected_description_query.yml")
   }
 
-  test("should contains descriptions of header") {
+  test("should contain descriptions of header") {
     val personEndpoint = endpoint.get
       .in(header[String]("Test").description("Test token"))
       .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams).description("Endpoint description"))

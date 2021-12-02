@@ -25,11 +25,11 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val method = e.method.getOrElse(Method.GET)
 
     val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) =>
-      addEntriesFromInfo(name, schemas(codec), info)
+      addMetaDataFromInfo(name, schemas(codec), info)
     }
 
     val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) =>
-      addEntriesFromInfo(name, schemas(codec), info)
+      addMetaDataFromInfo(name, schemas(codec), info)
     }
 
     val channelItem = ChannelItem(
@@ -44,7 +44,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
   }
 
-  private def addEntriesFromInfo(name: String, schemaRef: ReferenceOr[ASchema], info: EndpointIO.Info[_]): (String, Either[Reference, ASchema]) = {
+  private def addMetaDataFromInfo(name: String, schemaRef: ReferenceOr[ASchema], info: EndpointIO.Info[_]): (String, Either[Reference, ASchema]) = {
     schemaRef match {
       case Right(schema) =>
         val schemaWithDescription = if (schema.description.isEmpty) schemaRef.map(_.copy(description = info.description)) else schemaRef
