@@ -7,6 +7,6 @@ trait TapirExtensions {
   def pathBody: EndpointIO.Body[FileRange, Path] = binaryBody[FileRange, Path]
 }
 
-object TapirExtensions {
-  def fileName(f: TapirFile): String = f.getName
+object TapirFile {
+  def name(f: TapirFile): String = f.getName
 }
