@@ -406,12 +406,6 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Vector])
 
-  implicit def seq[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Seq[U], CF] =
-    Codec
-      .id[List[T], CF](c.format, Schema.binary)
-      .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toSeq))(us => us.map(c.encode).toList)
-      .schema(c.schema.asIterable[Seq])
-
   /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode failure is returned. The
     * given base codec `c` is used for decoding/encoding.
     *
@@ -617,15 +611,15 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
 
 object MultipartCodec extends MultipartCodecMacros {
 
-  private val codec = implicitly[Codec[List[Part[Array[Byte]]], Seq[Part[Array[Byte]]], OctetStream]]
+  private val codec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
 
   val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
     MultipartCodec(
       RawBodyType.MultipartBody(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, codec).rawBodyType)),
       new Codec[Seq[RawPart], Seq[Part[Array[Byte]]], MultipartFormData] {
         override def rawDecode(l: Seq[RawPart]): DecodeResult[Seq[Part[Array[Byte]]]] =
-          codec.decode(l.asInstanceOf[Seq[Part[Array[Byte]]]].toList)
-        override def encode(h: Seq[Part[Array[Byte]]]): Seq[RawPart] = codec.encode(h)
+          DecodeResult.Value(l.asInstanceOf[Seq[Part[Array[Byte]]]])
+        override def encode(h: Seq[Part[Array[Byte]]]): Seq[RawPart] = h
         override def schema: Schema[Seq[Part[Array[Byte]]]] = implicitly[Schema[Seq[Part[Array[Byte]]]]]
         override def format: MultipartFormData = MultipartFormData()
       }
