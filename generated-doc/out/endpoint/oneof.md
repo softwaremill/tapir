@@ -42,8 +42,8 @@ case object NoContent extends ErrorInfo
 val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound].description("not found"))),
-    oneOfVariant(statusCode(StatusCode.Unauthorized.and(jsonBody[Unauthorized].description("unauthorized")))), 
-    oneOfVariant(statusCode(StatusCode.NoContent.and(emptyOutputAs(NoContent)))),
+    oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[Unauthorized].description("unauthorized"))), 
+    oneOfVariant(statusCode(StatusCode.NoContent).and(emptyOutputAs(NoContent))),
     oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
   )
 )
