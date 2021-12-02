@@ -610,25 +610,16 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
 }
 
 object MultipartCodec extends MultipartCodecMacros {
+  private val arrayBytePartListCodec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
 
-  private val codec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
-
-  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
-    MultipartCodec(
-      RawBodyType.MultipartBody(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, codec).rawBodyType)),
-      new Codec[Seq[RawPart], Seq[Part[Array[Byte]]], MultipartFormData] {
-        override def rawDecode(l: Seq[RawPart]): DecodeResult[Seq[Part[Array[Byte]]]] =
-          DecodeResult.Value(l.asInstanceOf[Seq[Part[Array[Byte]]]])
-        override def encode(h: Seq[Part[Array[Byte]]]): Seq[RawPart] = h
-        override def schema: Schema[Seq[Part[Array[Byte]]]] = implicitly[Schema[Seq[Part[Array[Byte]]]]]
-        override def format: MultipartFormData = MultipartFormData()
-      }
-    )
-  }
+  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] =
+    Codec
+      .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, arrayBytePartListCodec)))
+      // we know that all parts will end up as byte arrays; also, removing the by-name grouping of parts
+      .map(_.values.toSeq.flatMap(_.asInstanceOf[List[Part[Array[Byte]]]]))(l => ListMap(l.map(p => p.name -> p): _*))
 }
 
-/** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding.
-  */
+/** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding. */
 sealed trait RawBodyType[R]
 object RawBodyType {
   case class StringBody(charset: Charset) extends RawBodyType[String]
