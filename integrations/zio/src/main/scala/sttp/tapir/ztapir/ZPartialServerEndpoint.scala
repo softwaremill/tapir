@@ -3,6 +3,7 @@ package sttp.tapir.ztapir
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.{
   Endpoint,
+  EndpointErrorOutputVariantsOps,
   EndpointInfo,
   EndpointInfoOps,
   EndpointInput,
@@ -39,6 +40,7 @@ import zio.ZIO
 case class ZPartialServerEndpoint[R, A, U, I, E, O, -C](endpoint: Endpoint[A, I, E, O, C], securityLogic: A => ZIO[R, E, U])
     extends EndpointInputsOps[A, I, E, O, C]
     with EndpointOutputsOps[A, I, E, O, C]
+    with EndpointErrorOutputVariantsOps[A, I, E, O, C]
     with EndpointInfoOps[C]
     with EndpointMetaOps { outer =>
 
@@ -55,6 +57,14 @@ case class ZPartialServerEndpoint[R, A, U, I, E, O, -C](endpoint: Endpoint[A, I,
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, C2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
   override private[tapir] def withInfo(info: EndpointInfo) = copy(endpoint = endpoint.copy(info = info))
+  override private[tapir] def withErrorOutputVariant[E2, C2](
+      errorOutput: EndpointOutput[E2],
+      embedE: E => E2
+  ): ZPartialServerEndpoint[R, A, U, I, E2, O, C with C2] =
+    this.copy(
+      endpoint = endpoint.copy(errorOutput = errorOutput),
+      securityLogic = a => securityLogic(a).mapError(embedE)
+    )
 
   override protected def showType: String = "PartialServerEndpoint"
 
