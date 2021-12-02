@@ -1,7 +1,8 @@
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
-import com.softwaremill.Publish.{updateDocs, ossPublishSettings}
+import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.UpdateVersionInDocs
+import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
@@ -74,7 +75,13 @@ val enableMimaSettings = Seq(
       println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
       Set.empty
     }
-  }
+  },
+  mimaBinaryIssueFilters ++= Seq(
+    ProblemFilters.exclude[Problem]("sttp.tapir.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.generic.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*"),
+    ProblemFilters.exclude[Problem]("sttp.tapir.server.interpreter.*") // for 0.19
+  )
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
