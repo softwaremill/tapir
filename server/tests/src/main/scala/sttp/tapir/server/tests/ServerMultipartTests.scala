@@ -87,15 +87,14 @@ class ServerMultipartTests[F[_], ROUTE](
           .send(backend)
           .map { r =>
             r.code shouldBe StatusCode.Ok
-            println(r.body)
             if (partOtherHeaderSupport) {
-              r.body should include regex "X-Auth: 12Aax"
-              r.body should include regex "X-Auth: 12Abx"
-              r.body should include regex "X-Auth: 12Acx"
+              r.body should include("X-Auth: 12Aax")
+              r.body should include("X-Auth: 12Abx")
+              r.body should include("X-Auth: 12Acx")
             }
-            r.body should include regex "peach mario 1 result"
-            r.body should include regex "peach mario 2 result"
-            r.body should include regex "peach mario 3 result"
+            r.body should include("peach mario 1 result")
+            r.body should include("peach mario 2 result")
+            r.body should include("peach mario 3 result")
           }
       },
       testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>
