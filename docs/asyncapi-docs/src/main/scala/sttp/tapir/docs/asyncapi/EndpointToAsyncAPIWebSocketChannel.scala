@@ -48,7 +48,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     schemaRef match {
       case Right(schema) =>
         val schemaWithDescription = if (schema.description.isEmpty) schemaRef.map(_.copy(description = info.description)) else schemaRef
-        val schemaWithDeprecation = if (schema.deprecated.isEmpty) schemaWithDescription.map(_.copy(deprecated = info.deprecated)) else schemaWithDescription
+        val schemaWithDeprecation = if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.map(_.copy(deprecated = Some(info.deprecated))) else schemaWithDescription
         val schemaWithRequired = if (schema.required.isEmpty && info.required) schemaWithDeprecation.map(_.copy(required = List(name))) else schemaWithDeprecation
         name -> schemaWithRequired
       case _ => name -> schemaRef

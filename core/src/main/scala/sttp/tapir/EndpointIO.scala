@@ -451,7 +451,7 @@ object EndpointIO {
   case class Info[T](
       description: Option[String],
       examples: List[Example[T]],
-      deprecated: Option[Boolean],
+      deprecated: Boolean,
       required: Boolean,
       docsExtensions: Vector[DocsExtension[_]]
   ) {
@@ -460,7 +460,7 @@ object EndpointIO {
     def example(t: T): Info[T] = example(Example.of(t))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
-    def deprecated(d: Boolean): Info[T] = copy(deprecated = Some(d))
+    def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
     def required(r: Boolean): Info[T] = copy(required = r)
     def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
@@ -476,7 +476,7 @@ object EndpointIO {
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = None, required = false, docsExtensions = Vector.empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, required = false, docsExtensions = Vector.empty)
   }
 
   /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint
