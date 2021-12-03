@@ -5,10 +5,15 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
-import sttp.tapir.tests.Multipart.{in_file_multipart_out_multipart, in_raw_multipart_out_string, in_simple_multipart_out_multipart}
+import sttp.tapir.tests.Multipart.{
+  in_file_list_multipart_out_multipart,
+  in_file_multipart_out_multipart,
+  in_raw_multipart_out_string,
+  in_simple_multipart_out_multipart
+}
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import sttp.tapir.tests.data.{FruitAmount, FruitData}
-import sttp.tapir.tests.{Test, data}
+import sttp.tapir.tests.{MultipleFileUpload, Test, data}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -56,6 +61,40 @@ class ServerMultipartTests[F[_], ROUTE](
             r.code shouldBe StatusCode.Ok
             if (partOtherHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
             r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
+          }
+      },
+      testServer(in_file_list_multipart_out_multipart) { (mfu: MultipleFileUpload) =>
+        val files = mfu.files.map { part =>
+          Part(
+            part.name,
+            writeToFile(Await.result(readFromFile(part.body), 3.seconds) + " result"),
+            part.otherDispositionParams,
+            Nil
+          ).header("X-Auth", part.headers.find(_.is("X-Auth")).map(_.value + "x").getOrElse(""))
+        }
+        pureResult(MultipleFileUpload(files).asRight[Unit])
+      } { (backend, baseUri) =>
+        val file1 = writeToFile("peach mario 1")
+        val file2 = writeToFile("peach mario 2")
+        val file3 = writeToFile("peach mario 3")
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .multipartBody(
+            multipartFile("files", file1).fileName("fruit-data-1.txt").header("X-Auth", "12Aa"),
+            multipartFile("files", file2).fileName("fruit-data-2.txt").header("X-Auth", "12Ab"),
+            multipartFile("files", file3).fileName("fruit-data-3.txt").header("X-Auth", "12Ac")
+          )
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.Ok
+            if (partOtherHeaderSupport) {
+              r.body should include("X-Auth: 12Aax")
+              r.body should include("X-Auth: 12Abx")
+              r.body should include("X-Auth: 12Acx")
+            }
+            r.body should include("peach mario 1 result")
+            r.body should include("peach mario 2 result")
+            r.body should include("peach mario 3 result")
           }
       },
       testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>

@@ -67,7 +67,9 @@ case class User(email: String)
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
-The fields can also be wrapped into `Option[T]` or `Part[Option[T]]` (`Option[Part[T]]` is unsupported) if the part is not required.
+The fields can also be wrapped into `Option[T]` or `Option[Part[T]]` if the part is not required.
+If there can be none or multiple parts for the same name, the fields can be wrapped into `List[T]` or `List[Part[T]]`
+or any other container `C` for which exists a codec `List[T] => C[T]`
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -75,7 +77,7 @@ import sttp.model.Part
 import java.io.File
 import sttp.tapir.generic.auto._
 
-case class RegistrationForm(userData: Option[User], photo: Part[Option[File]], news: Option[Boolean])
+case class RegistrationForm(userData: Option[User], photos: List[Part[File]], news: Option[Part[Boolean]])
 case class User(email: String)
 
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
