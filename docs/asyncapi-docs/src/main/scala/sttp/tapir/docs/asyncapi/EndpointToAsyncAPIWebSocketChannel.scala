@@ -4,6 +4,7 @@ import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.asyncapi._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.namedPathComponents
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal.{IterableToListMap, RichEndpoint}

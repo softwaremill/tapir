@@ -3,7 +3,6 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.syntax._
-import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
@@ -284,7 +283,8 @@ trait EndpointInfoOps[-R] {
   def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
   def tag(t: String): ThisType[R] = withInfo(info.tag(t))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
-  def docsExtension[D: JsonCodec](key: String, value: D): ThisType[R] = withInfo(info.docsExtension(key, value))
+  def attribute[T](k: AttributeKey[T]): Option[T] = info.attribute(k)
+  def attribute[T](k: AttributeKey[T], v: T): ThisType[R] = withInfo(info.attribute(k, v))
 
   def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
@@ -438,7 +438,7 @@ case class EndpointInfo(
     description: Option[String],
     tags: Vector[String],
     deprecated: Boolean,
-    docsExtensions: Vector[DocsExtension[_]]
+    attributes: AttributeMap
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
@@ -446,6 +446,6 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
-  def docsExtension[A: JsonCodec](key: String, value: A): EndpointInfo =
-    copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
+  def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  def attribute[T](k: AttributeKey[T], v: T): EndpointInfo = copy(attributes = attributes.put(k, v))
 }

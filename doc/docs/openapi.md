@@ -137,7 +137,9 @@ of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 ## OpenAPI Specification Extensions
 
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
-There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
+
+Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
+method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -147,6 +149,9 @@ import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe._
 import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
+
+import sttp.tapir.docs.apispec.DocsExtension
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 
 case class FruitAmount(fruit: String, amount: Int)
 

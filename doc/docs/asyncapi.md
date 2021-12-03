@@ -78,9 +78,22 @@ of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 ## AsyncAPI Specification Extensions
 
 AsyncAPI supports adding [extensions](https://www.asyncapi.com/docs/specifications/2.0.0#specificationExtensions)
-as well as OpenAPI. There is `docsExtension` method available on parameters and endpoints. There are
-`requestsDocsExtension` and `responsesDocsExtension` methods on `websocketBody`. Take a look at
-**OpenAPI Specification Extensions** section of [documentation](../docs/openapi.md) to get a feeling on how to use it.
+similarly as in OpenAPI. 
+
+Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
+method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
+
+```scala mdoc:silent
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
+endpoint
+  .post
+  .in(query[String]("hi").docsExtension("x-query", 33))
+  .docsExtension("x-endpoint-level-string", "world")
+```
+
+There are `requestsDocsExtension` and `responsesDocsExtension` methods to add extensions to a `websocketBody`. Take a 
+look at **OpenAPI Specification Extensions** section of [documentation](../docs/openapi.md) to get a feeling on how to use it.
 
 ## Exposing AsyncAPI documentation
 

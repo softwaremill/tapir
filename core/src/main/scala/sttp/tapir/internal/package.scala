@@ -150,7 +150,7 @@ package object internal {
     }
 
     private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
-      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
+      e.info.deprecated || e.info.description.nonEmpty || e.info.attributes.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =

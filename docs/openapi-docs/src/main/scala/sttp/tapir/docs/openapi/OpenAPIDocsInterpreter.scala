@@ -1,6 +1,7 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.{AnyEndpoint, DocsExtension, Endpoint}
+import sttp.tapir.docs.apispec.DocsExtension
+import sttp.tapir.{AnyEndpoint, Endpoint}
 import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.server.ServerEndpoint
 
