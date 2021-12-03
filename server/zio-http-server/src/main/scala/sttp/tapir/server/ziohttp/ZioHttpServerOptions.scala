@@ -1,7 +1,6 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task}

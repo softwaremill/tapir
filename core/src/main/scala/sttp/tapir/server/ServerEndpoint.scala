@@ -9,7 +9,7 @@ import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, Endpo
   * @tparam R
   *   Requirements: The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   * @tparam F
-  *   The effect type used in the provided server logic.
+  *   The effect type constructor used in the provided server logic.
   */
 abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with EndpointMetaOps {
 

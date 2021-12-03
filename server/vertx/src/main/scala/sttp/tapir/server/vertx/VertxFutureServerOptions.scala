@@ -58,7 +58,8 @@ object VertxFutureServerOptions {
       DefaultServerLog(
         doLogWhenHandled = debugLog(log),
         doLogAllDecodeFailures = infoLog(log),
-        doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) }
+        doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
+        noLog = Future.successful(())
       )
     }
 

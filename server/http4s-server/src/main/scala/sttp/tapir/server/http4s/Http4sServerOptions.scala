@@ -46,7 +46,8 @@ object Http4sServerOptions {
       DefaultServerLog(
         doLogWhenHandled = debugLog[G],
         doLogAllDecodeFailures = debugLog[G],
-        doLogExceptions = (msg: String, ex: Throwable) => Sync[G].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg))
+        doLogExceptions = (msg: String, ex: Throwable) => Sync[G].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg)),
+        noLog = Sync[G].pure(())
       )
     }
 

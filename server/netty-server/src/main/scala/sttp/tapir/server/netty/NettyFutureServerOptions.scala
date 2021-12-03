@@ -57,7 +57,8 @@ object NettyFutureServerOptions {
     DefaultServerLog(
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
-      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) }
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
+      noLog = Future.successful(())
     )
   }
 

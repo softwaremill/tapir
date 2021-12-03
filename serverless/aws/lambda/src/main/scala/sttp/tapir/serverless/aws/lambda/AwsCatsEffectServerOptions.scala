@@ -1,7 +1,6 @@
 package sttp.tapir.serverless.aws.lambda
 
 import cats.Monad
-import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.CustomInterceptors
 
 object AwsCatsEffectServerOptions {
