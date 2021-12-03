@@ -55,7 +55,8 @@ object PlayServerOptions {
     DefaultServerLog(
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
-      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { logger.error(msg, ex) }
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { logger.error(msg, ex) },
+      noLog = Future.successful(())
     )
   }
 

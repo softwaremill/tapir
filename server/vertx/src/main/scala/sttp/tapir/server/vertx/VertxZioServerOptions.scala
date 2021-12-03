@@ -40,7 +40,8 @@ object VertxZioServerOptions {
       DefaultServerLog(
         doLogWhenHandled = debugLog(log),
         doLogAllDecodeFailures = infoLog(log),
-        doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { log.error(msg, ex) }
+        doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { log.error(msg, ex) },
+        noLog = URIO.unit
       )
     }
 

@@ -1,7 +1,6 @@
 package sttp.tapir.serverless.aws.lambda
 
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 
 import scala.concurrent.{ExecutionContext, Future}
 

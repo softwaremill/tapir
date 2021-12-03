@@ -2,10 +2,9 @@ package sttp.tapir.server.finatra
 
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
-import sttp.tapir.{Defaults, TapirFile}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
-import FinatraServerInterpreter.FutureMonadError
+import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
 
@@ -44,7 +43,8 @@ object FinatraServerOptions extends Logging {
   lazy val defaultServerLog: ServerLog[Future] = DefaultServerLog(
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => futurePool { error(msg, ex) }
+    doLogExceptions = (msg: String, ex: Throwable) => futurePool { error(msg, ex) },
+    noLog = Future(())
   )
 
   private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = futurePool {

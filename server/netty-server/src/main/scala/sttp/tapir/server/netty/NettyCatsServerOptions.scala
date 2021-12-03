@@ -52,7 +52,8 @@ object NettyCatsServerOptions {
     DefaultServerLog(
       doLogWhenHandled = debugLog[F],
       doLogAllDecodeFailures = debugLog[F],
-      doLogExceptions = errorLog[F]
+      doLogExceptions = errorLog[F],
+      noLog = Async[F].pure(())
     )
   }
 
