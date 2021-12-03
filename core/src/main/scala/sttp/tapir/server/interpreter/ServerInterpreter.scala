@@ -160,7 +160,7 @@ class ServerInterpreter[R, F[_], B, S](
           ctx: DecodeSuccessContext[F, U, I]
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
         ctx.serverEndpoint
-          .logic(implicitly)(ctx.u)(ctx.i)
+          .logic(implicitly)(ctx.securityLogicResult)(ctx.decodedInput)
           .flatMap {
             case Right(result) => responder(defaultSuccessStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.output, result))
             case Left(err)     => responder(defaultErrorStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.errorOutput, err))

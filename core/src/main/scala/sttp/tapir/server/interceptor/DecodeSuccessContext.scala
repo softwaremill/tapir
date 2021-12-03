@@ -6,8 +6,8 @@ import sttp.tapir.server.ServerEndpoint
 
 case class DecodeSuccessContext[F[_], U, I](
     serverEndpoint: ServerEndpoint.Full[_, U, I, _, _, _, F],
-    u: U,
-    i: I,
+    securityLogicResult: U,
+    decodedInput: I,
     request: ServerRequest
 ) {
   def endpoint: Endpoint[_, I, _, _, _] = serverEndpoint.endpoint
