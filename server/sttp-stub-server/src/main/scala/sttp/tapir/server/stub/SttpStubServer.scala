@@ -3,6 +3,7 @@ package sttp.tapir.server.stub
 import sttp.client3.testing._
 import sttp.client3.{Identity, Request, Response}
 import sttp.model._
+import sttp.monad.MonadError
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
@@ -119,8 +120,15 @@ trait SttpStubServer {
         )
       }
 
+      implicit val me = stub.responseMonad
+
       val interpreter =
-        new ServerInterpreter[R, F, Any, NoStreams](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
+        new ServerInterpreter[R, F, Any, NoStreams](
+          requestBody[F](req.forceBodyAsByteArray),
+          toResponseBody,
+          interceptors,
+          _ => stub.responseMonad.unit(())
+        )(
           stub.responseMonad,
           new BodyListener[F, Any] {
             override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = stub.responseMonad.map(cb(Success(())))(_ => body)
@@ -199,9 +207,17 @@ object SttpStubServer {
     ): Any = pipe // impossible
   }
 
-  private def requestBody[F[_]](): RequestBody[F, NoStreams] = new RequestBody[F, NoStreams] {
+  private def requestBody[F[_]](bytes: Array[Byte])(implicit F: MonadError[F]): RequestBody[F, NoStreams] = new RequestBody[F, NoStreams] {
     override val streams: NoStreams = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = ???
+    override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] =
+      bodyType match {
+        case RawBodyType.StringBody(charset) => F.unit(RawValue(new String(bytes, charset)))
+        case RawBodyType.ByteArrayBody       => F.unit(RawValue(bytes))
+        case RawBodyType.ByteBufferBody      => F.unit(RawValue(ByteBuffer.wrap(bytes)))
+        case RawBodyType.InputStreamBody     => F.unit(RawValue(new ByteArrayInputStream(bytes)))
+        case RawBodyType.FileBody            => F.error(new UnsupportedOperationException)
+        case _: RawBodyType.MultipartBody    => F.error(new UnsupportedOperationException)
+      }
     override def toStream(): streams.BinaryStream = ???
   }
 }
