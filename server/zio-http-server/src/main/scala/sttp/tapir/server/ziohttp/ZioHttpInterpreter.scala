@@ -35,10 +35,10 @@ trait ZioHttpInterpreter[R] {
           interpreter.apply(new ZioHttpServerRequest(req), ses).map {
             case RequestResult.Response(resp) =>
               Http.succeed(
-                Response.HttpResponse(
-                  status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                Response(
+                  status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
                   headers = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList,
-                  content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
+                  data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
                 )
               )
             case RequestResult.Failure(_) => Http.empty
