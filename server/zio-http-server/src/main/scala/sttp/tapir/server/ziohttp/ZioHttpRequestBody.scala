@@ -8,7 +8,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.interpreter.RequestBody
 import zhttp.http.Request
-import zio.Chunk
 import zio.RIO
 import zio.Task
 import zio.stream.Stream
@@ -33,7 +32,7 @@ class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serv
     case RawBodyType.MultipartBody(_, _) => Task.never
   }
 
-  private def stream: Stream[Throwable, Byte] = ZStream.fromEffect(request.getBody).flatMap((e: Chunk[Byte]) => ZStream.fromChunk(e))
+  private def stream: Stream[Throwable, Byte] = ZStream.fromEffect(request.getBody).flattenChunks
 
   override def toStream(): streams.BinaryStream = stream.asInstanceOf[streams.BinaryStream]
 }
