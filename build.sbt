@@ -864,9 +864,11 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.68.Final",
+      "io.netty" % "netty-all" % "4.1.71.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
-    ) ++ loggerDependencies
+    ) ++ loggerDependencies,
+    // needed because of https://github.com/coursier/coursier/issues/2016
+    useCoursier := false
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
@@ -1214,7 +1216,9 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     name := "doc",
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-netty-server" % Versions.playServer
-    )
+    ),
+    // needed because of https://github.com/coursier/coursier/issues/2016
+    useCoursier := false
   )
   .jvmPlatform(scalaVersions = List(documentationScalaVersion))
   .dependsOn(
