@@ -90,7 +90,11 @@ object MultipartCodecMacros {
     }
 
     val encodeDefSymbol =
-      Symbol.newMethod(Symbol.spliceOwner, "encode", MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[ListMap[String, Any]]))
+      Symbol.newMethod(
+        Symbol.spliceOwner,
+        "encode",
+        MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[ListMap[String, Any]])
+      )
     val encodeDef = DefDef(
       encodeDefSymbol,
       { case List(List(tTerm: Term)) =>

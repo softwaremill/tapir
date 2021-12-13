@@ -13,6 +13,6 @@ object AttributeKeyMacros {
     import quotes.reflect.*
     val t = TypeRepr.of[T]
 
-    '{ new AttributeKey[T](${Expr(t.show)}) }
+    '{ new AttributeKey[T](${ Expr(t.show) }) }
   }
 }
