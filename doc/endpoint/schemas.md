@@ -4,7 +4,7 @@ Implicit schemas for basic types (`String`, `Int`, etc.), and their collections 
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
 For case classes, `Schema[_]` values can be derived automatically using
-[Magnolia](https://propensive.com/opensource/magnolia/), given that schemas are defined for all the case class's fields.
+[Magnolia](https://github.com/softwaremill/magnolia), given that schemas are defined for all the case class's fields.
 
 There are two policies of custom type derivation are available:
 
