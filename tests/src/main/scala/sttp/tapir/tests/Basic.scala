@@ -178,4 +178,7 @@ object Basic {
 
   val in_path_security_and_regular: Endpoint[Unit, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").in("settings").out(stringBody)
+
+  val in_path_security_no_regular: Endpoint[Unit, Unit, Unit, String, Any] =
+    endpoint.securityIn("auth").out(stringBody)
 }
