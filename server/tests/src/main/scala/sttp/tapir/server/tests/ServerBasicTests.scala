@@ -415,6 +415,14 @@ class ServerBasicTests[F[_], ROUTE](
         .serverLogic(_ => _ => pureResult("ok".asRight[Unit]))
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth/settings").send(backend).map(_.body shouldBe "ok")
+    },
+    testServerLogic(
+      in_path_security_no_regular
+        .serverSecurityLogic { _ => pureResult(().asRight[Unit]) }
+        .serverLogic(_ => _ => pureResult("ok".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth").send(backend).map(_.body shouldBe "ok") >>
+        basicStringRequest.get(uri"$baseUri/auth/extra").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 

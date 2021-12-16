@@ -46,12 +46,15 @@ object DecodeBasicInputsResult {
   }
 }
 
-case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String]) {
+/** @param previousLastPathInput
+  *   The last path input from decoding a previous segment of inputs (security inputs), if any.
+  */
+case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String], previousLastPathInput: Option[EndpointInput.Basic[_]]) {
   def method: Method = request.method
   def nextPathSegment: (Option[String], DecodeInputsContext) =
     pathSegments match {
       case Nil    => (None, this)
-      case h :: t => (Some(h), DecodeInputsContext(request, t))
+      case h :: t => (Some(h), DecodeInputsContext(request, t, previousLastPathInput))
     }
   def header(name: String): List[String] = request.headers(name).toList
   def headers: Seq[(String, String)] = request.headers.map(h => (h.name, h.value))
@@ -59,7 +62,7 @@ case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String
   val queryParameters: QueryParams = request.queryParameters
 }
 object DecodeInputsContext {
-  def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
+  def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments, None)
 }
 
 object DecodeBasicInputs {
@@ -115,19 +118,26 @@ object DecodeBasicInputs {
       ctx: DecodeInputsContext,
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
-    pathInputs.initAndLast match {
-      case None =>
+    def matchPathInnerUsingLast(last: EndpointInput.Basic[_]) = matchPathInner(
+      pathInputs = pathInputs,
+      ctx = ctx.copy(previousLastPathInput = Some(last)),
+      decodeValues = decodeValues,
+      decodedPathInputs = Vector.empty,
+      lastPathInput = last,
+      matchWholePath = matchWholePath
+    )
+
+    (pathInputs.initAndLast, ctx.previousLastPathInput) match {
+      case (None, None) =>
         // Match everything if no path input is specified
         (decodeValues, ctx)
-      case Some((_, last)) =>
-        matchPathInner(
-          pathInputs = pathInputs,
-          ctx = ctx,
-          decodeValues = decodeValues,
-          decodedPathInputs = Vector.empty,
-          lastPathInput = last,
-          matchWholePath = matchWholePath
-        )
+      case (Some((_, last)), _) =>
+        // There are more path inputs, match the path exactly and report errors against the last path input
+        matchPathInnerUsingLast(last.input)
+      case (_, Some(last)) =>
+        // There are no more path inputs, but some path has already been matched; match the path exactly and report
+        // possible errors against the last known path input
+        matchPathInnerUsingLast(last)
     }
   }
 
@@ -137,7 +147,7 @@ object DecodeBasicInputs {
       ctx: DecodeInputsContext,
       decodeValues: DecodeBasicInputsResult.Values,
       decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
-      lastPathInput: IndexedBasicInput,
+      lastPathInput: EndpointInput.Basic[_],
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     pathInputs.headAndTail match {
@@ -149,7 +159,7 @@ object DecodeBasicInputs {
               case Some(seg) =>
                 if (seg == expectedSegment) {
                   val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode(seg)))
-                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput, matchWholePath)
+                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
                 } else {
                   val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
                   (failure, newCtx)
@@ -158,7 +168,7 @@ object DecodeBasicInputs {
                 if (expectedSegment.isEmpty) {
                   // FixedPath("") matches an empty path
                   val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode("")))
-                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput, matchWholePath)
+                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
                 } else {
                   // shape path mismatch - input path too short
                   val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
@@ -170,7 +180,7 @@ object DecodeBasicInputs {
             nextSegment match {
               case Some(seg) =>
                 val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(seg)))
-                matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput, matchWholePath)
+                matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
               case None =>
                 val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
                 (failure, newCtx)
@@ -178,7 +188,7 @@ object DecodeBasicInputs {
           case i: EndpointInput.PathsCapture[_] =>
             val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
             val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(paths.toList)))
-            matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput, matchWholePath)
+            matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
           case _ =>
             throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
         }
@@ -189,7 +199,7 @@ object DecodeBasicInputs {
             // shape path mismatch - input path too long; there are more segments in the request path than expected by
             // that input. Reporting a failure on the last path input.
             val failure =
-              DecodeBasicInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
+              DecodeBasicInputsResult.Failure(lastPathInput, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
             (failure, newCtx)
           case _ =>
             (foldDecodedPathInputs(decodedPathInputs, decodeValues), ctx)
