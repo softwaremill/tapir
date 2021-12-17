@@ -57,7 +57,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
   scalacOptions += "-Ywarn-macros:after",
-  evictionErrorLevel := Level.Info
+  evictionErrorLevel := Level.Info,
+  // use new sonatype for publishing
+  sonatypeCredentialHost := "s01.oss.sonatype.org"
 )
 
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
