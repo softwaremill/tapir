@@ -60,7 +60,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalacOptions += "-Ywarn-macros:after",
   evictionErrorLevel := Level.Info,
   // use new sonatype for publishing
-  sonatypeCredentialHost := "http://s01.oss.sonatype.org"
+  sonatypeCredentialHost := "s01.oss.sonatype.org"
 )
 
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
