@@ -95,7 +95,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.0-M2"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
