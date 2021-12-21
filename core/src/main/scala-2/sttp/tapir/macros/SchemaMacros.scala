@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import magnolia.Magnolia
+import magnolia1.Magnolia
 import sttp.tapir.{Schema, SchemaType, Validator}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, SchemaMapMacro}

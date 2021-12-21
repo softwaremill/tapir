@@ -1,6 +1,6 @@
 package sttp.tapir.typelevel
 
-import magnolia.Magnolia
+import magnolia1.Magnolia
 import sttp.tapir.typelevel.internal.MatchTypeMagnoliaDerivation
 
 trait MatchTypeMacros extends MatchTypeMagnoliaDerivation {
