@@ -3,19 +3,19 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.19.0-M14"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.20.0-M2"
 ```
 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.7"
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.11"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.7"
+"com.typesafe.play" %% "play-netty-server" % "2.8.11"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.
@@ -91,6 +91,13 @@ class ApiRouter @Inject() () extends SimpleRouter {
 ```
 
 Find more details about how to bind a `Router` to your application in the [Play framework documentation](https://www.playframework.com/documentation/2.8.x/ScalaSirdRouter#Binding-sird-Router).
+
+## Web sockets
+
+The interpreter supports web sockets, with pipes of type `Flow[REQ, RESP, Any]`. See [web sockets](../endpoint/websockets.md)
+for more details.
+
+The interpreter does not expose control frames (`Ping`, `Pong` and `Close`), so any setting regarding them are discarded, however those that are emitted are sent to the client.
 
 ## Configuration
 

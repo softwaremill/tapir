@@ -9,6 +9,7 @@ import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.description
+import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
 import sttp.tapir.docs.openapi.dtos.Book
@@ -67,7 +68,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should use custom operationId generator") {
-    def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.method.toUpperCase
+    def customOperationIdGenerator(e: AnyEndpoint, pc: Vector[String], m: Method) =
+      pc.map(_.toUpperCase).mkString("", "+", "-") + m.method.toUpperCase
     val options = OpenAPIDocsOptions.default.copy(customOperationIdGenerator)
     val expectedYaml = load("expected_custom_operation_id.yml")
 
@@ -500,6 +502,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should apply openapi extensions in correct places") {
+    import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
     case class MyExtension(string: String, int: Int)
 
     val sampleEndpoint =
@@ -530,8 +534,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val ep = infallibleEndpoint.get.out(
       sttp.tapir.oneOf[Base](
-        oneOfMapping(StatusCode.Ok, emptyOutputAs(Success).description("success")),
-        oneOfMapping(StatusCode.Accepted, emptyOutputAs(AnotherSuccess).description("maybe success"))
+        oneOfVariant(StatusCode.Ok, emptyOutputAs(Success).description("success")),
+        oneOfVariant(StatusCode.Accepted, emptyOutputAs(AnotherSuccess).description("maybe success"))
       )
     )
 

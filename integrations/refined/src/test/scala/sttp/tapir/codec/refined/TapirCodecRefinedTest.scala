@@ -2,7 +2,7 @@ package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.boolean.Or
-import eu.timepit.refined.collection.NonEmpty
+import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual, Negative, NonNegative, NonPositive, Positive}
 import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
@@ -45,6 +45,28 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     val expectedValidator: Validator[String] = Validator.pattern("[a-zA-Z][-a-zA-Z0-9_]*")
     identifierCodec.decode("-bad") should matchPattern {
       case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, "-bad", _))) if validator == expectedValidator =>
+    }
+  }
+
+  "Generated codec for MaxSize on string" should "use tapir Validator.maxLength" in {
+    type VariableConstraint = MaxSize[W.`2`.T]
+    type VariableString = String Refined VariableConstraint
+    val identifierCodec = implicitly[PlainCodec[VariableString]]
+
+    val expectedValidator: Validator[String] = Validator.maxLength(2)
+    identifierCodec.decode("bad") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, "bad", _))) if validator == expectedValidator =>
+    }
+  }
+
+  "Generated codec for MinSize on string" should "use tapir Validator.minLength" in {
+    type VariableConstraint = MinSize[W.`42`.T]
+    type VariableString = String Refined VariableConstraint
+    val identifierCodec = implicitly[PlainCodec[VariableString]]
+
+    val expectedValidator: Validator[String] = Validator.minLength(42)
+    identifierCodec.decode("bad") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, "bad", _))) if validator == expectedValidator =>
     }
   }
 

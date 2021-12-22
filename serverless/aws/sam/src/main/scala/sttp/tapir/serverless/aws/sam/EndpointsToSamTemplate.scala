@@ -47,7 +47,7 @@ private[sam] object EndpointsToSamTemplate {
   }
 
   private def endpointNameMethodAndPath(e: AnyEndpoint): (String, Option[Method], String) = {
-    val pathComponents = e.input
+    val pathComponents = e
       .asVectorOfBasicInputs()
       .foldLeft((Vector.empty[Either[String, String]], 0)) { case ((acc, c), input) =>
         input match {
@@ -58,7 +58,7 @@ private[sam] object EndpointsToSamTemplate {
       }
       ._1
 
-    val method = e.httpMethod
+    val method = e.method
 
     val nameComponents = if (pathComponents.isEmpty) Vector("root") else pathComponents.map(_.fold(identity, identity))
     val name = (method.map(_.method.toLowerCase).getOrElse("any").capitalize +: nameComponents.map(_.toLowerCase.capitalize)).mkString

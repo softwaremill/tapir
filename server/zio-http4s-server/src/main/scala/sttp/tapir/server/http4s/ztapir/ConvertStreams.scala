@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s.ztapir
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.CodecFormat.OctetStream
-import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.ztapir.ZServerEndpoint
 import sttp.tapir.{Codec, Endpoint, EndpointIO, EndpointInput, EndpointOutput, Mapping, Schema, StreamBodyIO, WebSocketBodyOutput}
@@ -63,7 +63,7 @@ object ConvertStreams {
         EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointOutput.OneOf(mappings, mapping) =>
         EndpointOutput.OneOf[Any, Any](
-          mappings.map(m => OneOfMapping(forOutput(m.output), m.appliesTo)),
+          mappings.map(m => OneOfVariant(forOutput(m.output), m.appliesTo)),
           mapping.asInstanceOf[Mapping[Any, Any]]
         )
       // all other cases - unchanged

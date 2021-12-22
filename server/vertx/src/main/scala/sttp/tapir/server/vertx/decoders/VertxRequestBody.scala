@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.decoders
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
-import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.{FileRange, RawBodyType}
@@ -61,51 +61,62 @@ class VertxRequestBody[F[_], S <: Streams[S]](
         case None =>
           Future.failedFuture[RawValue[FileRange]]("No body")
       }
-    case RawBodyType.MultipartBody(partTypes, defaultType) =>
-      val defaultParts = defaultType
-        .fold(Map.empty[String, RawBodyType[_]]) { bodyType =>
-          val files = rc.fileUploads().asScala.map(_.name())
-          val form = rc.request().formAttributes().names().asScala
-
-          (files ++ form)
-            .diff(partTypes.keySet)
-            .map(_ -> bodyType)
-            .toMap
-        }
-      val allParts = defaultParts ++ partTypes
+    case mp: RawBodyType.MultipartBody =>
       Future.succeededFuture {
-        val parts = allParts.map { case (partName, rawBodyType) => Part(partName, extractPart(partName, rawBodyType)) }.toSeq
-        RawValue.fromParts(parts)
+        val formParts = rc
+          .request()
+          .formAttributes()
+          .entries()
+          .asScala
+          .map { e =>
+            mp.partType(e.getKey)
+              .flatMap(rawBodyType => extractStringPart(e.getValue, rawBodyType))
+              .map(body => Part(e.getKey, body))
+          }
+          .toList
+          .flatten
+
+        val fileParts = rc
+          .fileUploads()
+          .asScala
+          .map { fu =>
+            mp.partType(fu.name())
+              .flatMap(rawBodyType => extractFilePart(fu, rawBodyType))
+              .map(body => Part(fu.name(), body, fileName = Option(fu.fileName())))
+          }
+          .toList
+          .flatten
+
+        RawValue.fromParts(formParts ++ fileParts)
       }
   })
 
   override def toStream(): streams.BinaryStream =
     readStreamCompatible.fromReadStream(rc.request.asInstanceOf[ReadStream[Buffer]]).asInstanceOf[streams.BinaryStream]
 
-  private def extractPart[B](name: String, bodyType: RawBodyType[B]): B = {
+  private def extractStringPart[B](part: String, bodyType: RawBodyType[B]): Option[Any] = {
     bodyType match {
-      case RawBodyType.StringBody(charset) => new String(readBytes(name, rc, charset))
-      case RawBodyType.ByteArrayBody       => readBytes(name, rc, Charset.defaultCharset())
-      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(readBytes(name, rc, Charset.defaultCharset()))
+      case RawBodyType.StringBody(charset) => Some(new String(part.getBytes(Charset.defaultCharset()), charset))
+      case RawBodyType.ByteArrayBody       => Some(part.getBytes(Charset.defaultCharset()))
+      case RawBodyType.ByteBufferBody      => Some(ByteBuffer.wrap(part.getBytes(Charset.defaultCharset())))
       case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
-      case RawBodyType.FileBody =>
-        val f = rc.fileUploads.asScala.find(_.name == name).get
-        FileRange(new File(f.uploadedFileName()))
-      case RawBodyType.MultipartBody(partTypes, _) =>
-        partTypes.map { case (partName, rawBodyType) =>
-          Part(partName, extractPart(partName, rawBodyType))
-        }.toSeq
+      case RawBodyType.FileBody            => None
+      case RawBodyType.MultipartBody(_, _) => None
     }
   }
 
-  private def readBytes(name: String, rc: RoutingContext, charset: Charset) = {
-    val formAttributes = rc.request.formAttributes
-
-    val formBytes = Option(formAttributes.get(name)).map(_.getBytes(charset))
-    val fileBytes = rc.fileUploads().asScala.find(_.name() == name).map { upload =>
-      Files.readAllBytes(Paths.get(upload.uploadedFileName()))
+  private def extractFilePart[B](fu: FileUpload, bodyType: RawBodyType[B]): Option[Any] = {
+    bodyType match {
+      case RawBodyType.StringBody(charset) => Some(new String(readFileBytes(fu), charset))
+      case RawBodyType.ByteArrayBody       => Some(readFileBytes(fu))
+      case RawBodyType.ByteBufferBody      => Some(ByteBuffer.wrap(readFileBytes(fu)))
+      case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
+      case RawBodyType.FileBody            => Some(FileRange(new File(fu.uploadedFileName())))
+      case RawBodyType.MultipartBody(_, _) => None
     }
+  }
 
-    formBytes.orElse(fileBytes).get
+  private def readFileBytes(fu: FileUpload) = {
+    Files.readAllBytes(Paths.get(fu.uploadedFileName()))
   }
 }

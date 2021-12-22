@@ -14,7 +14,7 @@ paths:
               required: true
               schema:
                 type: string
-        '404':
-          description: entity not found
         '400':
           description: ''
+        '404':
+          description: entity not found

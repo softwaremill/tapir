@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 
 private[docs] object SecuritySchemesForEndpoints {
   def apply(es: Iterable[AnyEndpoint]): SecuritySchemes = {
-    val auths = es.flatMap(e => e.securityInput.auths) ++ es.flatMap(e => e.input.auths)
+    val auths = es.flatMap(e => e.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
     val takenNames = authSecuritySchemes.flatMap(_._1.securitySchemeName).toSet

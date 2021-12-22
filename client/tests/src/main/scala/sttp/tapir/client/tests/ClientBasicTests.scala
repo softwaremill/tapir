@@ -29,6 +29,12 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(in_query_query_out_string, (), ("apple", Some(10)), Right("fruit: apple 10"))
     testClient(in_header_out_string, (), "Admin", Right("Role: Admin"))
     testClient(in_path_path_out_string, (), ("apple", 10), Right("apple 10 None"))
+    testClient(
+      in_path_path_out_string.name("special characters in path"),
+      (),
+      ("orange/grapefruit", 10),
+      Right("orange/grapefruit 10 None")
+    )
     testClient(in_string_out_string, (), "delicious", Right("delicious"))
     testClient(in_json_out_json, (), FruitAmount("orange", 11), Right(FruitAmount("orange", 11)))
     testClient(in_byte_array_out_byte_array, (), "banana kiwi".getBytes(), Right("banana kiwi".getBytes()))

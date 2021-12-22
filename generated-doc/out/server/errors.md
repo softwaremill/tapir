@@ -75,12 +75,15 @@ conventions, that an endpoint is uniquely identified by the method and served pa
 * an "endpoint doesn't match" result is returned if the request method or path doesn't match. The http library should
   attempt to serve this request with the next endpoint. The path doesn't match if a path segment is missing, there's
   a constant value mismatch or a decoding error (e.g. parsing a segment to an `Int` fails)
+* if an [authentication input](../endpoint/security.md) fails to decode, a `401 Unauthorized` is returned together with
+  an appropriate `WWW-Authenticate` header. See [options](options.md) documentation on how to return a `404` instead,
+  to hide the endpoint
 * otherwise, we assume that this is the correct endpoint to serve the request, but the parameters are somehow 
   malformed. A `400 Bad Request` response is returned if a query parameter, header or body causes any decode failure, 
   or if the decoding a path capture causes a validation error.
 
-The behavior described in the latter two points can be customised by providing a custom
-`sttp.tapir.server.DecodeFailureHandler` when creating the server options. This handler, basing on  the request, 
+The behavior described in the latter three points can be customised by providing a custom
+`sttp.tapir.server.DecodeFailureHandler` when creating the server options. This handler, basing on the request, 
 failing input and failure description can decide, whether to return a "no match" or a specific response.
 
 Only the first failure encountered for a specific endpoint is passed to the `DecodeFailureHandler`. Inputs are decoded 

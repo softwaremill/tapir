@@ -8,7 +8,7 @@ import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
 import sttp.model._
-import sttp.model.headers.{Cookie, CookieWithMeta}
+import sttp.model.headers.{CacheDirective, Cookie, CookieWithMeta, ETag, Range}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
@@ -17,7 +17,8 @@ import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, tailrec}
+import scala.collection.immutable.ListMap
 import scala.concurrent.duration.{Duration => SDuration}
 
 /** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values are formatted as `CF`.
@@ -126,20 +127,20 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
   implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Schema.schemaForString)
 
-  implicit val byte: Codec[String, Byte, TextPlain] = stringCodec[Byte](_.toByte).schema(Schema.schemaForByte)
-  implicit val short: Codec[String, Short, TextPlain] = stringCodec[Short](_.toShort).schema(Schema.schemaForShort)
-  implicit val int: Codec[String, Int, TextPlain] = stringCodec[Int](_.toInt).schema(Schema.schemaForInt)
-  implicit val long: Codec[String, Long, TextPlain] = stringCodec[Long](_.toLong).schema(Schema.schemaForLong)
-  implicit val float: Codec[String, Float, TextPlain] = stringCodec[Float](_.toFloat).schema(Schema.schemaForFloat)
-  implicit val double: Codec[String, Double, TextPlain] = stringCodec[Double](_.toDouble).schema(Schema.schemaForDouble)
-  implicit val boolean: Codec[String, Boolean, TextPlain] = stringCodec[Boolean](_.toBoolean).schema(Schema.schemaForBoolean)
-  implicit val uuid: Codec[String, UUID, TextPlain] = stringCodec[UUID](UUID.fromString).schema(Schema.schemaForUUID)
-  implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = stringCodec[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
+  implicit val byte: Codec[String, Byte, TextPlain] = parsedString[Byte](_.toByte).schema(Schema.schemaForByte)
+  implicit val short: Codec[String, Short, TextPlain] = parsedString[Short](_.toShort).schema(Schema.schemaForShort)
+  implicit val int: Codec[String, Int, TextPlain] = parsedString[Int](_.toInt).schema(Schema.schemaForInt)
+  implicit val long: Codec[String, Long, TextPlain] = parsedString[Long](_.toLong).schema(Schema.schemaForLong)
+  implicit val float: Codec[String, Float, TextPlain] = parsedString[Float](_.toFloat).schema(Schema.schemaForFloat)
+  implicit val double: Codec[String, Double, TextPlain] = parsedString[Double](_.toDouble).schema(Schema.schemaForDouble)
+  implicit val boolean: Codec[String, Boolean, TextPlain] = parsedString[Boolean](_.toBoolean).schema(Schema.schemaForBoolean)
+  implicit val uuid: Codec[String, UUID, TextPlain] = parsedString[UUID](UUID.fromString).schema(Schema.schemaForUUID)
+  implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = parsedString[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
   implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] =
-    stringCodec[JBigDecimal](new JBigDecimal(_)).schema(Schema.schemaForJBigDecimal)
-  implicit val bigInt: Codec[String, BigInt, TextPlain] = stringCodec[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
+    parsedString[JBigDecimal](new JBigDecimal(_)).schema(Schema.schemaForJBigDecimal)
+  implicit val bigInt: Codec[String, BigInt, TextPlain] = parsedString[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
   implicit val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
-    stringCodec[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
+    parsedString[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
   implicit val localTime: Codec[String, LocalTime, TextPlain] =
     string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
   implicit val localDate: Codec[String, LocalDate, TextPlain] =
@@ -151,12 +152,12 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   implicit val instant: Codec[String, Instant, TextPlain] =
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
   implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
-  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = stringCodec[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
-  implicit val duration: Codec[String, Duration, TextPlain] = stringCodec[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
+  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
   implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
   implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
-    stringCodec[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
+    parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
   implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
     .mapDecode { l =>
       try {
@@ -175,7 +176,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       _.toString()
     )
 
-  def stringCodec[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
+  def parsedString[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
 
   implicit val byteArray: Codec[Array[Byte], Array[Byte], OctetStream] =
@@ -188,69 +189,85 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     id[FileRange, OctetStream](OctetStream(), Schema.schemaForFileRange)
   implicit val file: Codec[FileRange, TapirFile, OctetStream] = fileRange.map(_.file)(f => FileRange(f))
 
-  implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
-  implicit val formMapCodecUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMapCodec(StandardCharsets.UTF_8)
+  implicit val formSeqUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeq(StandardCharsets.UTF_8)
+  implicit val formMapUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMap(StandardCharsets.UTF_8)
 
-  def formSeqCodec(charset: Charset): Codec[String, Seq[(String, String)], XWwwFormUrlencoded] =
+  def formSeq(charset: Charset): Codec[String, Seq[(String, String)], XWwwFormUrlencoded] =
     string.format(XWwwFormUrlencoded()).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset))
-  def formMapCodec(charset: Charset): Codec[String, Map[String, String], XWwwFormUrlencoded] =
-    formSeqCodec(charset).map(_.toMap)(_.toSeq)
+  def formMap(charset: Charset): Codec[String, Map[String, String], XWwwFormUrlencoded] =
+    formSeq(charset).map(_.toMap)(_.toSeq)
 
-  def rawPartCodec(
+  def rawPart(
       partCodecs: Map[String, PartCodec[_, _]],
       defaultCodec: Option[PartCodec[_, _]]
-  ): Codec[Seq[RawPart], Seq[AnyPart], MultipartFormData] =
-    new Codec[Seq[RawPart], Seq[AnyPart], MultipartFormData] {
+  ): Codec[Seq[RawPart], ListMap[String, _], MultipartFormData] =
+    new Codec[Seq[RawPart], ListMap[String, _], MultipartFormData] {
+
       private def partCodec(name: String): Option[PartCodec[_, _]] = partCodecs.get(name).orElse(defaultCodec)
 
-      override def encode(t: Seq[AnyPart]): Seq[RawPart] = {
-        t.flatMap { part =>
-          partCodec(part.name).toList.flatMap { case PartCodec(rawBodyType, codec) =>
-            // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
-            val rawParts: Seq[RawPart] =
-              codec.asInstanceOf[Codec[List[_], Any, _]].encode(part.body).map { b =>
-                val p = part.copy(body = b)
-                // setting the content type basing on the format, if it's not yet defined
-                p.contentType match {
-                  case None =>
-                    (codec.format.mediaType, rawBodyType) match {
-                      // only text parts can have a charset
-                      case (s, StringBody(e)) if s.mainType.equalsIgnoreCase("text") => p.contentType(codec.format.mediaType.charset(e))
-                      case _                                                         => p.contentType(codec.format.mediaType)
-                    }
-                  case _ => p
-                }
+      override def encode(t: ListMap[String, _]): Seq[RawPart] = {
+        t.toList.flatMap { case (name, body) =>
+          partCodec(name).toList.flatMap { case PartCodec(rawBodyType, codec) =>
+            val partList: List[Part[Any]] = codec.asInstanceOf[Codec[List[Part[Any]], Any, _]].encode(body)
+            partList.map { part =>
+              val partWithContentType = withContentType(part.copy(name = name), rawBodyType, codec.format.mediaType)
+
+              if (!part.otherDispositionParams.contains("filename")) {
+                (part.body match {
+                  case fileRange: FileRange => Some(TapirFile.name(fileRange.file))
+                  case _                    => None
+                }).map(fn => partWithContentType.fileName(fn)).getOrElse(partWithContentType)
+              } else {
+                partWithContentType
               }
-            rawParts
+            }
           }
         }
       }
-      override def rawDecode(l: Seq[RawPart]): DecodeResult[Seq[AnyPart]] = {
+
+      override def rawDecode(l: Seq[RawPart]): DecodeResult[ListMap[String, _]] = {
         val rawPartsByName = l.groupBy(_.name)
 
         // we need to decode all parts for which there's a codec defined (even if that part is missing a value -
         // it might still decode to e.g. None), and if there's a default codec also the extra parts
-        val partNamesToDecode = partCodecs.keys.toSet ++ (if (defaultCodec.isDefined) rawPartsByName.keys.toSet else Set.empty)
+        val inputPartNamesToDecode =
+          if (defaultCodec.isDefined)
+            l.map(_.name)
+          else
+            l.map(_.name).filter(partCodecs.keys.toSet.contains(_))
+
+        val partNamesToDecode = (inputPartNamesToDecode ++ partCodecs.keys).toList.distinct
 
         // there might be multiple raw-parts for each name, yielding a single value-part
-        val anyParts: List[DecodeResult[AnyPart]] = partNamesToDecode.map { name =>
+        val anyParts: List[DecodeResult[(String, Any)]] = partNamesToDecode.map { name =>
           val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
-          codec.asInstanceOf[Codec[List[_], Any, _]].rawDecode(rawParts.map(_.body)).map { body =>
-            // we know there's at least one part. Using this part to create the value-part
-            rawParts.headOption match {
-              case Some(rawPart) => rawPart.copy(body = body)
-              case None          => Part(name, body)
-            }
+          codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts).map { (body: Any) =>
+            (name, body)
           }
-        }.toList
+        }
 
-        DecodeResult.sequence(anyParts)
+        DecodeResult.sequence(anyParts).map(_.toListMap)
       }
 
-      override def schema: Schema[Seq[RawPart]] = Schema.binary
+      override def schema: Schema[ListMap[String, _]] = Schema.binary
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
+
+  private def withContentType[R, T](p: Part[T], rawBodyType: RawBodyType[R], mediaType: MediaType): Part[T] = {
+    // setting the content type basing on the format, if it's not yet defined
+    p.contentType match {
+      case None =>
+        (mediaType, rawBodyType) match {
+          // only text parts can have a charset
+          case (s, StringBody(e)) if s.mainType.equalsIgnoreCase("text") =>
+            p.contentType(mediaType.charset(e))
+          case _ =>
+            p.contentType(mediaType)
+        }
+      case _ => p
+    }
+  }
 
   /** @param partCodecs
     *   For each supported part, a (raw body type, codec) pair which encodes the part value into a raw value of the given type. A single
@@ -258,38 +275,16 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     * @param defaultPartCodec
     *   Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts should be discarded.
     */
-  def multipartCodec(
+  def multipart(
       partCodecs: Map[String, PartCodec[_, _]],
       defaultPartCodec: Option[PartCodec[_, _]]
-  ): MultipartCodec[Seq[AnyPart]] =
+  ): MultipartCodec[ListMap[String, _]] =
     MultipartCodec(
       RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
-      rawPartCodec(partCodecs, defaultPartCodec)
+      rawPart(partCodecs, defaultPartCodec)
     )
 
-  //
-
-  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] =
-    Cookie.parse(cookie) match {
-      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-      case Right(r) => DecodeResult.Value(r)
-    }
-
-  implicit val cookieCodec: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
-  implicit val cookiesCodec: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookieCodec).map(_.flatten)(List(_))
-
-  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
-    CookieWithMeta.parse(cookie) match {
-      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-      case Right(r) => DecodeResult.Value(r)
-    }
-
-  implicit val cookieWithMetaCodec: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
-  implicit val cookiesWithMetaCodec: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMetaCodec)
-
-  //
-
-  implicit def usernamePasswordCodec: PlainCodec[UsernamePassword] = {
+  implicit def usernamePassword: PlainCodec[UsernamePassword] = {
     def decode(s: String): DecodeResult[UsernamePassword] =
       try {
         val s2 = new String(Base64.getDecoder.decode(s))
@@ -313,11 +308,11 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
   //
 
-  implicit val webSocketFrameCodec: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
+  implicit val webSocketFrame: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
 
   /** A codec which expects only text frames (all other frames cause a decoding error) and handles the text using the given `stringCodec`.
     */
-  implicit def textWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+  implicit def textWebSocketFrame[A, CF <: CodecFormat](implicit
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
@@ -331,7 +326,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   /** A codec which expects only text and close frames (all other frames cause a decoding error). Close frames correspond to `None`, while
     * text frames are handled using the given `stringCodec` and wrapped with `Some`.
     */
-  implicit def textOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+  implicit def textOrCloseWebSocketFrame[A, CF <: CodecFormat](implicit
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
@@ -349,7 +344,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   /** A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using the given
     * `byteArrayCodec`.
     */
-  implicit def binaryWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+  implicit def binaryWebSocketFrame[A, CF <: CodecFormat](implicit
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
@@ -363,7 +358,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   /** A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames correspond to `None`, while
     * text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
     */
-  implicit def binaryOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+  implicit def binaryOrCloseWebSocketFrame[A, CF <: CodecFormat](implicit
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
@@ -380,7 +375,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
   //
 
-  private[tapir] def listBinaryCodec[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+  private[tapir] def listBinary[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
@@ -389,7 +384,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     * The schema is copied from the base codec.
     */
   implicit def list[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    listBinaryCodec(c).schema(c.schema.asIterable[List])
+    listBinary(c).schema(c.schema.asIterable[List])
 
   /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given base codec `c`.
     *
@@ -417,7 +412,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     * The schema and validator are copied from the base codec.
     */
   implicit def listHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], U, CF] =
-    listBinaryCodec(c)
+    listBinary(c)
       .mapDecode({
         case Nil     => DecodeResult.Missing
         case List(e) => DecodeResult.Value(e)
@@ -431,7 +426,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     * The schema and validator are copied from the base codec.
     */
   implicit def listHeadOption[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Option[U], CF] =
-    listBinaryCodec(c)
+    listBinary(c)
       .mapDecode({
         case Nil     => DecodeResult.Value(None)
         case List(e) => DecodeResult.Value(Some(e))
@@ -476,14 +471,14 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     }
 
   def json[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
-    anyStringCodec(CodecFormat.Json())(_rawDecode)(_encode)
+    anyString(CodecFormat.Json())(_rawDecode)(_encode)
   }
 
   def xml[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
-    anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
+    anyString(CodecFormat.Xml())(_rawDecode)(_encode)
   }
 
-  def anyStringCodec[T: Schema, CF <: CodecFormat](
+  def anyString[T: Schema, CF <: CodecFormat](
       cf: CF
   )(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
     val isOptional = implicitly[Schema[T]].isOptional
@@ -491,6 +486,62 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       val toDecode = if (isOptional && s == "") "null" else s
       _rawDecode(toDecode)
     })(t => if (isOptional && t == None) "" else _encode(t))
+  }
+
+  // header values
+
+  implicit val mediaType: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, MediaType.parse(v))
+  }(_.toString)
+
+  implicit val etag: Codec[String, ETag, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, ETag.parse(v))
+  }(_.toString)
+
+  implicit val range: Codec[String, Range, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, Range.parse(v)).flatMap {
+      case Nil     => DecodeResult.Missing
+      case List(r) => DecodeResult.Value(r)
+      case rs      => DecodeResult.Multiple(rs)
+    }
+  }(_.toString)
+
+  implicit val cacheDirective: Codec[String, List[CacheDirective], CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    @tailrec
+    def toEitherOrList[T, U](l: List[Either[T, U]], acc: List[U]): Either[T, List[U]] = l match {
+      case Nil              => Right(acc.reverse)
+      case Left(t) :: _     => Left(t)
+      case Right(u) :: tail => toEitherOrList(tail, u :: acc)
+    }
+    DecodeResult.fromEitherString(v, toEitherOrList(CacheDirective.parse(v), Nil))
+  }(_.map(_.toString).mkString(", "))
+
+  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] =
+    Cookie.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
+
+  implicit val cookie: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
+  implicit val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookie).map(_.flatten)(List(_))
+
+  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
+    CookieWithMeta.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
+
+  implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
+  implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
+
+  implicit def part[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], Part[U], CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body).map(r => e.copy(body = r)))(e => e.copy(body = c.encode(e.body)))
+  }
+
+  implicit def unwrapPart[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], U, CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
   }
 }
 
@@ -547,7 +598,7 @@ trait LowPriorityCodec { this: Codec.type =>
 
 /** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec which further decodes it.
   */
-case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[R], T, _ <: CodecFormat])
+case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[Part[R]], T, _ <: CodecFormat])
 
 case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Codec[Seq[RawPart], T, CodecFormat.MultipartFormData]) {
   def map[U](mapping: Mapping[T, U]): MultipartCodec[U] = MultipartCodec(rawBodyType, codec.map(mapping))
@@ -559,15 +610,16 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
 }
 
 object MultipartCodec extends MultipartCodecMacros {
-  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
+  private val arrayBytePartListCodec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
+
+  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] =
     Codec
-      .multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.listHead(Codec.byteArray))))
-      .asInstanceOf[MultipartCodec[Seq[Part[Array[Byte]]]]] // we know that all parts will end up as byte arrays
-  }
+      .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, arrayBytePartListCodec)))
+      // we know that all parts will end up as byte arrays; also, removing the by-name grouping of parts
+      .map(_.values.toSeq.flatMap(_.asInstanceOf[List[Part[Array[Byte]]]]))(l => ListMap(l.map(p => p.name -> p): _*))
 }
 
-/** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding.
-  */
+/** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding. */
 sealed trait RawBodyType[R]
 object RawBodyType {
   case class StringBody(charset: Charset) extends RawBodyType[String]

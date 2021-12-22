@@ -1,5 +1,7 @@
 package sttp.tapir.internal
 
+import sttp.model.internal.Rfc3986
+
 import java.nio.charset.Charset
 import scala.scalajs.js.URIUtils
 
@@ -27,5 +29,9 @@ private[tapir] object UrlencodedData {
 
   def encode(s: String): String = {
     URIUtils.encodeURIComponent(s)
+  }
+
+  def encodePathSegment(s: String): String = {
+    Rfc3986.encode(Rfc3986.PathSegment)(s)
   }
 }

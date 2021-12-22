@@ -55,7 +55,7 @@ trait FinatraServerInterpreter extends Logging {
       }
     }
 
-    FinatraRoute(handler, httpMethod(se.endpoint), path(se.input))
+    FinatraRoute(handler, httpMethod(se.endpoint), path(se.securityInput.and(se.input)))
   }
 
   private[finatra] def path(input: EndpointInput[_]): String = {
@@ -71,14 +71,7 @@ trait FinatraServerInterpreter extends Logging {
     if (p.isEmpty) "/:*" else p
   }
 
-  private[finatra] def httpMethod(endpoint: AnyEndpoint): Method = {
-    endpoint.input
-      .asVectorOfBasicInputs()
-      .collectFirst { case FixedMethod(m, _, _) =>
-        Method(m.method)
-      }
-      .getOrElse(Method("ANY"))
-  }
+  private[finatra] def httpMethod(endpoint: AnyEndpoint): Method = endpoint.method.map(m => Method(m.method)).getOrElse(Method("ANY"))
 }
 
 object FinatraServerInterpreter {

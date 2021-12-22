@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
-import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
@@ -65,25 +65,25 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         val applicableMappings = mappings.filter(_.appliesTo(enc))
         require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
 
-        val chosenMapping = chooseOneOfMapping(applicableMappings)
-        apply(chosenMapping.output, ParamsAsAny(enc), ov)
+        val chosenVariant = chooseOneOfVariant(applicableMappings)
+        apply(chosenVariant.output, ParamsAsAny(enc), ov)
 
       case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
     }
   }
 
-  private def chooseOneOfMapping(mappings: Seq[OneOfMapping[_]]): OneOfMapping[_] = {
+  private def chooseOneOfVariant(mappings: Seq[OneOfVariant[_]]): OneOfVariant[_] = {
     // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
     // mapping. We need to take the first defined into account.
-    val bodyMappings: Seq[(MediaType, OneOfMapping[_])] = mappings
+    val bodyMappings: Seq[(MediaType, OneOfVariant[_])] = mappings
       .flatMap(om =>
         om.output.traverseOutputs {
           case EndpointIO.Body(bodyType, codec, _) =>
-            Vector[(MediaType, OneOfMapping[_])](
+            Vector[(MediaType, OneOfVariant[_])](
               codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> om
             )
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-            Vector[(MediaType, OneOfMapping[_])](
+            Vector[(MediaType, OneOfVariant[_])](
               codec.format.mediaType.copy(charset = charset.map(_.name())) -> om
             )
         }

@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.19.0-M14"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.20.0-M2"
 ```
 
 and import the object:
@@ -53,6 +53,37 @@ The capability can be added to the classpath independently of the interpreter th
 
 The interpreter supports web sockets, with pipes of type `Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
+
+However, endpoints which use web sockets need to be interpreted using the `Http4sServerInterpreter.toWebSocketRoutes`
+method, which returns a function `WebSocketBuilder2[F] => HttpRoutes[F]`. This can then be added to a server builder
+using `withHttpWebSocketApp`, for example:
+
+```scala
+import sttp.capabilities.WebSockets
+import sttp.capabilities.fs2.Fs2Streams
+import sttp.tapir._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import cats.effect.IO
+import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
+import org.http4s.server.websocket.WebSocketBuilder2
+import fs2._
+import scala.concurrent.ExecutionContext
+
+implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+
+val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, String], Fs2Streams[IO] with WebSockets] =
+  endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
+    
+val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
+  Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess[IO](_ => ???))
+    
+BlazeServerBuilder[IO]
+  .withExecutionContext(ec)
+  .bindHttp(8080, "localhost")
+  .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+```
 
 ## Server Sent Events
 

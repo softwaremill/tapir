@@ -11,7 +11,7 @@ import java.time.Instant
 
 /** Static content endpoints, including files and resources. */
 trait TapirStaticContentEndpoints {
-  // we can't use oneOfMapping and mapTo since they are macros, defined in the same compilation unit
+  // we can't use oneOfVariant and mapTo since they are macros, defined in the same compilation unit
 
   private val pathsWithoutDots: EndpointInput[List[String]] =
     paths.mapDecode(ps =>
@@ -33,35 +33,12 @@ trait TapirStaticContentEndpoints {
     }(_.map(Header.toHttpDateString))
 
   private val ifModifiedSinceHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.IfModifiedSince)
-
   private val lastModifiedHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.LastModified)
-
-  private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[String]](HeaderNames.ContentType).mapDecode {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, MediaType.parse(v)).map(Some(_))
-  }(_.map(_.toString))
-
-  private val etagHeader: EndpointIO[Option[ETag]] = header[Option[String]](HeaderNames.Etag).mapDecode[Option[ETag]] {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, ETag.parse(v)).map(Some(_))
-  }(_.map(_.toString))
-
-  private val rangeHeader: EndpointIO[Option[Range]] = header[Option[String]](HeaderNames.Range).mapDecode[Option[Range]] {
-    case None    => DecodeResult.Value(None)
-    case Some(v) => DecodeResult.fromEitherString(v, Range.parse(v).map(_.headOption))
-  }(_.map(_.toString))
-
-  private val acceptEncodingHeader: EndpointIO[Option[String]] =
-    header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[Option[String]] {
-      case None    => DecodeResult.Value(None)
-      case Some(v) => DecodeResult.fromEitherString(v, Right(v).map(h => Option(h)))
-    }(header => header)
-
-  private val contentEncodingHeader: EndpointIO[Option[String]] =
-    header[Option[String]](HeaderNames.ContentEncoding).mapDecode[Option[String]] {
-      case None    => DecodeResult.Value(None)
-      case Some(v) => DecodeResult.fromEitherString(v, Right(Some(v)))
-    }(header => header)
+  private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[MediaType]](HeaderNames.ContentType)
+  private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
+  private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
+  private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
+  private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
   private def staticGetEndpoint[T](
       prefix: EndpointInput[Unit],
@@ -81,17 +58,17 @@ trait TapirStaticContentEndpoints {
       )
       .errorOut(
         oneOf[StaticErrorOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.NotFound,
             emptyOutputAs(StaticErrorOutput.NotFound),
             StaticErrorOutput.NotFound.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.RangeNotSatisfiable,
             emptyOutputAs(StaticErrorOutput.RangeNotSatisfiable),
             StaticErrorOutput.RangeNotSatisfiable.getClass
@@ -100,8 +77,8 @@ trait TapirStaticContentEndpoints {
       )
       .out(
         oneOf[StaticOutput[T]](
-          oneOfMappingClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(StatusCode.NotModified, emptyOutputAs(StaticOutput.NotModified), StaticOutput.NotModified.getClass),
+          oneOfVariantClassMatcher(
             StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
@@ -116,7 +93,7 @@ trait TapirStaticContentEndpoints {
               )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
             classOf[StaticOutput.FoundPartial[T]]
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.Ok,
             body
               .and(lastModifiedHeader)
@@ -141,12 +118,12 @@ trait TapirStaticContentEndpoints {
       .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
       .errorOut(
         oneOf[StaticErrorOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.BadRequest,
             emptyOutputAs(StaticErrorOutput.BadRequest),
             StaticErrorOutput.BadRequest.getClass
           ),
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.NotFound,
             emptyOutputAs(StaticErrorOutput.NotFound),
             StaticErrorOutput.NotFound.getClass
@@ -155,7 +132,7 @@ trait TapirStaticContentEndpoints {
       )
       .out(
         oneOf[HeadOutput](
-          oneOfMappingClassMatcher(
+          oneOfVariantClassMatcher(
             StatusCode.Ok,
             header[Option[String]](HeaderNames.AcceptRanges)
               .and(header[Option[Long]](HeaderNames.ContentLength))
@@ -179,7 +156,7 @@ trait TapirStaticContentEndpoints {
     * path, but it can also contain other inputs. For example:
     *
     * {{{
-    * filesServerEndpoint("static" / "files")("/home/app/static")
+    * filesGetServerEndpoint("static" / "files")("/home/app/static")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
@@ -200,7 +177,7 @@ trait TapirStaticContentEndpoints {
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
     * {{{
-    * fileServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
+    * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
   def fileGetServerEndpoint[F[_]](path: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
@@ -210,21 +187,25 @@ trait TapirStaticContentEndpoints {
     * a path, but it can also contain other inputs. For example:
     *
     * {{{
-    * resourcesServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
+    * resourcesGetServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
-      resourcePrefix: String
+      resourcePrefix: String,
+      useGzippedIfAvailable: Boolean = false
   ): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(resourcesGetEndpoint(prefix), (m: MonadError[F]) => Resources(classLoader, resourcePrefix)(m))
+    ServerEndpoint.public(
+      resourcesGetEndpoint(prefix),
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+    )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
     *
     * {{{
-    * resourceServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
+    * resourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
     * }}}
     */
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(

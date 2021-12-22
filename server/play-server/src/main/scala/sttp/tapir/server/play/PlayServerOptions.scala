@@ -4,6 +4,7 @@ import akka.stream.Materializer
 import play.api.Logger
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
@@ -29,10 +30,9 @@ object PlayServerOptions {
   def customInterceptors(implicit
       mat: Materializer,
       ec: ExecutionContext
-  ): CustomInterceptors[Future, Unit, PlayServerOptions] =
+  ): CustomInterceptors[Future, PlayServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, Unit, PlayServerOptions]) =>
+      createOptions = (ci: CustomInterceptors[Future, PlayServerOptions]) =>
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile,
@@ -48,18 +48,24 @@ object PlayServerOptions {
     Future(Defaults.deleteFile()(file))
   }
 
-  lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => logger.error(msg, ex),
-    noLog = ()
-  )
+  lazy val defaultServerLog: ServerLog[Future] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val monadError: MonadError[Future] = new FutureMonad
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    DefaultServerLog(
+      doLogWhenHandled = debugLog,
+      doLogAllDecodeFailures = debugLog,
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { logger.error(msg, ex) },
+      noLog = Future.successful(())
+    )
+  }
+
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
     exOpt match {
       case None     => logger.debug(msg)
       case Some(ex) => logger.debug(s"$msg; exception: {}", ex)
     }
+  }
 
   def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customInterceptors.options
 

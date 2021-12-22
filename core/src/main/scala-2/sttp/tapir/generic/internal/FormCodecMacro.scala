@@ -53,7 +53,7 @@ object FormCodecMacro {
         }
         def encode(o: $t): _root_.scala.Seq[(_root_.java.lang.String, _root_.java.lang.String)] = _root_.scala.List(..$encodeParams).flatten
 
-        _root_.sttp.tapir.Codec.formSeqCodecUtf8
+        _root_.sttp.tapir.Codec.formSeqUtf8
           .mapDecode(decode _)(encode _)
           .schema(${util.schema})
       }

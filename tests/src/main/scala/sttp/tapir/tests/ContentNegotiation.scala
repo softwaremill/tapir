@@ -21,10 +21,10 @@ object ContentNegotiation {
     Codec.xml(xml => DecodeResult.Value(fromClosedTags(xml)))(o => s"<name>${o.name}-xml</name>")
 
   implicit val htmlCodecForOrganizationUTF8: Codec[String, Organization, CodecFormat.TextHtml] =
-    Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-utf8</p>")
+    Codec.anyString(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-utf8</p>")
 
   implicit val htmlCodecForOrganizationISO88591: Codec[String, Organization, CodecFormat.TextHtml] =
-    Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
+    Codec.anyString(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
 
   val out_json_xml_text_common_schema: PublicEndpoint[String, Unit, Organization, Any] =
     endpoint.get
@@ -32,10 +32,10 @@ object ContentNegotiation {
       .in(header[String](HeaderNames.Accept))
       .out(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.Ok, jsonBody[Organization]),
-          oneOfMapping(StatusCode.Ok, xmlBody[Organization]),
-          oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
-          oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization]),
+          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
         )
       )
 
@@ -45,8 +45,28 @@ object ContentNegotiation {
       .in(header[String]("Accept"))
       .out(
         sttp.tapir.oneOf[Entity](
-          oneOfMapping(StatusCode.Ok, jsonBody[Person]),
-          oneOfMapping(StatusCode.Ok, xmlBody[Organization])
+          oneOfVariant(StatusCode.Ok, jsonBody[Person]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization])
+        )
+      )
+
+  val out_default_json_or_xml: PublicEndpoint[Unit, Unit, Organization, Any] =
+    endpoint.get
+      .in("content-negotiation" / "organization")
+      .out(
+        sttp.tapir.oneOf(
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization]),
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization])
+        )
+      )
+
+  val out_default_xml_or_json: PublicEndpoint[Unit, Unit, Organization, Any] =
+    endpoint.get
+      .in("content-negotiation" / "organization")
+      .out(
+        sttp.tapir.oneOf(
+          oneOfVariant(StatusCode.Ok, xmlBody[Organization]),
+          oneOfVariant(StatusCode.Ok, jsonBody[Organization])
         )
       )
 

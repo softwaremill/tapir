@@ -148,7 +148,9 @@ val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Fu
 ```
 
 The result is a value of type `PartialServerEndpoint`, which can be extended with further inputs and outputs, just
-as a normal endpoint (except for error outputs, which are fixed). 
+as a normal endpoint. An exception are error outputs, for which new output variants can be provided using the family of 
+`.errorOutVariant` methods, but they cannot be arbitrarily extended; this is similar to defining the entire error 
+output as a [`oneOf`](../endpoint/oneof.md).
 
 Then, we can complete the endpoint to a `ServerEndpoint` by providing the main server logic using `.serverLogic` or
 any of the other variants:

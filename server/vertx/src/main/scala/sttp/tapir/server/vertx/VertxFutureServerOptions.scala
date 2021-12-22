@@ -1,10 +1,12 @@
 package sttp.tapir.server.vertx
 
+import io.vertx.core.logging.Logger
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.{Defaults, TapirFile}
-import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,17 +32,16 @@ final case class VertxFutureServerOptions(
 object VertxFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, Unit, VertxFutureServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, VertxFutureServerOptions] =
     CustomInterceptors(
-      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, Unit, VertxFutureServerOptions]) =>
+      createOptions = (ci: CustomInterceptors[Future, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
           Defaults.createTempFile().getParentFile.getAbsoluteFile,
           defaultDeleteFile,
           ci.interceptors,
           None
         )
-    ).serverLog(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
+    ).serverLog(Log.defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
   val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,6 +49,28 @@ object VertxFutureServerOptions {
   }
 
   val default: VertxFutureServerOptions = customInterceptors.options
+
+  object Log {
+    def defaultServerLog(log: Logger): ServerLog[Future] = {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val monadError: MonadError[Future] = new FutureMonad
+
+      DefaultServerLog(
+        doLogWhenHandled = debugLog(log),
+        doLogAllDecodeFailures = infoLog(log),
+        doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
+        noLog = Future.successful(())
+      )
+    }
+
+    private def debugLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
+      VertxServerOptions.debugLog(log)(msg, exOpt)
+    }
+
+    private def infoLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
+      VertxServerOptions.infoLog(log)(msg, exOpt)
+    }
+  }
 }
 
 class VertxExecutionContext(val vertx: Vertx, val ctx: Context) extends ExecutionContext {

@@ -25,7 +25,7 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
     val serverOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
     ZioHttpInterpreter(serverOptions).toHttp(e)
   }
@@ -41,11 +41,12 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
     implicit val r: Runtime[Any] = Runtime.default
     val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ +++ _)) ++ Server.maxRequestSize(10000000)
     val port = ZManaged.fromEffect(UIO.effectTotal(8090 + portCounter.getAndIncrement()))
-    port.tap(p =>
-      Server
-      .make(server ++ Server.port(p))
-      .provide(nettyDeps)
-    )
+    port
+      .tap(p =>
+        Server
+          .make(server ++ Server.port(p))
+          .provide(nettyDeps)
+      )
       .toResource[IO]
   }
 }

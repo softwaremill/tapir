@@ -89,7 +89,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
             val send: Stream[F, WebSocketFrame] = Stream.repeatEval(queue.take)
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.offer(f)))
             webSocketBuilder match {
-              case Some(wsb) => wsb.build(send, receive)
+              case Some(wsb) => wsb.withHeaders(headers).build(send, receive)
               case None =>
                 monad.error(
                   new Http4sInvalidWebSocketUse(

@@ -2,7 +2,7 @@ package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.{Refined, Validate}
 import eu.timepit.refined.boolean.{And, Or}
-import eu.timepit.refined.collection.NonEmpty
+import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
 import eu.timepit.refined.internal.WitnessAs
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
@@ -52,6 +52,16 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       ws: Witness.Aux[S]
   ): PrimitiveValidatorForPredicate[String, MatchesRegex[S]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.value))
+
+  implicit def validatorForMaxSizeOnString[T <: String, NM](implicit
+      ws: WitnessAs[NM, Int]
+  ): PrimitiveValidatorForPredicate[T, MaxSize[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.maxLength[T](ws.snd))
+
+  implicit def validatorForMinSizeOnString[T <: String, NM](implicit
+      ws: WitnessAs[NM, Int]
+  ): PrimitiveValidatorForPredicate[T, MinSize[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.minLength[T](ws.snd))
 
   implicit def validatorForLess[N: Numeric, NM](implicit ws: WitnessAs[NM, N]): PrimitiveValidatorForPredicate[N, Less[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.snd, exclusive = true))

@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.routing
 
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.web.{Route, Router}
-import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.internal._
 
@@ -32,11 +32,11 @@ object PathMapping {
     *   the route definition matching the endpoint input definition
     */
   private[vertx] def extractRouteDefinition(endpoint: AnyEndpoint): RouteDefinition =
-    (MethodMapping.sttpToVertx(endpoint.httpMethod), extractVertxPath(endpoint))
+    (MethodMapping.sttpToVertx(endpoint.method), extractVertxPath(endpoint))
 
   private def extractVertxPath(endpoint: AnyEndpoint): String = {
     var idxUsed = 0
-    val path = endpoint.input
+    val path = endpoint
       .asVectorOfBasicInputs()
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show

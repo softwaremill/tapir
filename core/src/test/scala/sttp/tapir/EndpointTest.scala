@@ -3,6 +3,7 @@ package sttp.tapir
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.internal.Rfc3986
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.server.PartialServerEndpoint
@@ -72,8 +73,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.NotFound, emptyOutput),
-          oneOfMapping(StatusCode.Unauthorized, emptyOutput)
+          oneOfVariant(StatusCode.NotFound, emptyOutput),
+          oneOfVariant(StatusCode.Unauthorized, emptyOutput)
         )
       )
   }
@@ -83,8 +84,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.get
       .out(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
-          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
         )
       )
   }
@@ -97,20 +98,48 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
-          oneOfMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
+          oneOfVariant(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
+          oneOfVariant(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
   }
 
-  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
+  it should "compile with a single error variant" in {
+    sealed trait Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
+
+    val e = endpoint.post
+      .errorOut(statusCode(StatusCode.BadRequest).and(stringBody.map(BadRequest(_))(_.message)))
+      .errorOutVariant[Error](oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(NotFound))))
+
+    e: PublicEndpoint[Unit, Error, Unit, Any]
+  }
+
+  it should "compile with multiple error variants" in {
+    sealed trait Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
+    case object ReallyNotFound extends Error
+
+    val e = endpoint.post
+      .errorOut(statusCode(StatusCode.BadRequest).and(stringBody.map(BadRequest(_))(_.message)))
+      .errorOutVariants[Error](
+        oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(NotFound))),
+        oneOfVariant(statusCode(StatusCode.NotFound).and(emptyOutputAs(ReallyNotFound)))
+      )
+
+    e: PublicEndpoint[Unit, Error, Unit, Any]
+  }
+
+  "oneOfVariant" should "not compile when the type erasure of `T` is different from `T`" in {
     assertDoesNotCompile("""
       case class Wrapper[T](s: T)
 
       endpoint.post
         .errorOut(
           sttp.tapir.oneOf(
-            oneOfMapping(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
+            oneOfVariant(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
           )
         )
     """)
@@ -179,17 +208,17 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     ),
     (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}"),
     (
-      endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(byteArrayBody))),
+      endpoint.get.out(sttp.tapir.oneOf(oneOfVariant(stringBody), oneOfVariant(byteArrayBody))),
       "GET -> -/one of({body as text/plain (UTF-8)}|{body as application/octet-stream})"
     ),
     // same one-of mappings should be flattened to a single clause
-    (endpoint.get.out(sttp.tapir.oneOf(oneOfMapping(stringBody), oneOfMapping(stringBody))), "GET -> -/{body as text/plain (UTF-8)}"),
+    (endpoint.get.out(sttp.tapir.oneOf(oneOfVariant(stringBody), oneOfVariant(stringBody))), "GET -> -/{body as text/plain (UTF-8)}"),
     // nested same one-of mappings should also be flattened
     (
       endpoint.get.out(
         sttp.tapir.oneOf(
-          oneOfMapping(byteArrayBody),
-          oneOfMapping(sttp.tapir.oneOf(oneOfMapping(byteArrayBody), oneOfMapping(byteArrayBody)))
+          oneOfVariant(byteArrayBody),
+          oneOfVariant(sttp.tapir.oneOf(oneOfVariant(byteArrayBody), oneOfVariant(byteArrayBody)))
         )
       ),
       "GET -> -/{body as application/octet-stream}"
@@ -201,6 +230,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       testShowEndpoint.show shouldBe expectedShowResult
     }
   }
+
+  private val pathAllowedCharacters = Rfc3986.PathSegment.mkString
 
   val renderTestData = List(
     (endpoint, "/"),
@@ -214,7 +245,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
     (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
-    (endpoint.in("p1/p2"), "/p1%2Fp2")
+    (endpoint.in("p1/p2"), "/p1%2Fp2"),
+    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters)
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
@@ -277,7 +309,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   for ((testEndpoint, expectedMethod) <- httpMethodTestData) {
     s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
-      testEndpoint.httpMethod shouldBe expectedMethod
+      testEndpoint.method shouldBe expectedMethod
     }
   }
 
@@ -291,7 +323,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .serverSecurityLogic { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
     implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
-    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, 0.0d, ""))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.parsedString(_ => Result(null, 0.0d, ""))
 
     base
       .in(query[Double]("z"))

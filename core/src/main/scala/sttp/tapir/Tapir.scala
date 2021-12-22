@@ -4,12 +4,11 @@ import sttp.capabilities.Streams
 import sttp.model._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{ModifyMacroSupport, _}
-import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.static.TapirStaticContentEndpoints
-import sttp.tapir.typelevel.MatchType
+import sttp.tapir.typelevel.{ErasureSameAsType, MatchType}
 import sttp.ws.WebSocketFrame
 
 import java.io.InputStream
@@ -18,7 +17,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticContentEndpoints with ModifyMacroSupport with TapirMacros {
+trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticContentEndpoints with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -220,11 +219,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   /** An output which contains a number of variant outputs.
     *
-    * All possible outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the mappings are implementing
+    * All possible outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the variants are implementing
     * case classes.
     *
     * When encoding to a response, the first matching output is chosen, using the following rules:
-    *   1. the mappings `appliesTo` method, applied to the output value (as returned by the server logic) must return `true`.
+    *   1. the variant's `appliesTo` method, applied to the output value (as returned by the server logic) must return `true`.
     *   1. when a fixed content type is specified by the output, it must match the request's `Accept` header (if present). This implements
     *      content negotiation.
     *
@@ -233,105 +232,159 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * The outputs might vary in status codes, headers (e.g. different content types), and body implementations. However, for bodies, only
     * replayable ones can be used, and they need to have the same raw representation (e.g. all byte-array-base, or all file-based).
     *
-    * Note that exhaustiveness of the mappings (that all subtypes of `T` are covered) is not checked.
+    * Note that exhaustiveness of the variants (that all subtypes of `T` are covered) is not checked.
     */
-  def oneOf[T](firstCase: OneOfMapping[_ <: T], otherCases: OneOfMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
+  def oneOf[T](firstVariant: OneOfVariant[_ <: T], otherVariants: OneOfVariant[_ <: T]*): EndpointOutput.OneOf[T, T] =
+    EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
 
-  /** Create a one-of-mapping which uses `output` if the class of the provided value (when interpreting as a server) matches the given
+  /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
+    * class of `T`.
+    *
+    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this situation would give
+    * invalid results. In such cases, use [[oneOfVariantClassMatcher]], [[oneOfVariantValueMatcher]] or [[oneOfVariantFromMatchType]]
+    * instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def oneOfVariant[T: ClassTag: ErasureSameAsType](output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariantClassMatcher(output, implicitly[ClassTag[T]].runtimeClass)
+
+  /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
+    * class of `T`. Adds a fixed status-code output with the given value.
+    *
+    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this situation would give
+    * invalid results. In such cases, use [[oneOfVariantClassMatcher]], [[oneOfVariantValueMatcher]] or [[oneOfVariantFromMatchType]]
+    * instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def oneOfVariant[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariant(statusCode(code).and(output))
+
+  @deprecated("Use oneOfVariant", since = "0.19.0")
+  def oneOfMapping[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariant(code, output)
+
+  /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMappingClassMatcher[T](
+  def oneOfVariantClassMatcher[T](
       output: EndpointOutput[T],
       runtimeClass: Class[_]
-  ): OneOfMapping[T] = OneOfMapping(output, { (a: Any) => runtimeClass.isInstance(a) })
+  ): OneOfVariant[T] = OneOfVariant(output, { (a: Any) => runtimeClass.isInstance(a) })
 
-  /** Create a one-of-mapping which uses `output` i the class of the provided value (when interpreting as a server) matches the given
+  /** Create a one-of-variant which uses `output` i the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure. Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfVariantClassMatcher[T](
+      code: StatusCode,
+      output: EndpointOutput[T],
+      runtimeClass: Class[_]
+  ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
+
+  @deprecated("Use oneOfVariantClassMatcher", since = "0.19.0")
   def oneOfMappingClassMatcher[T](
       code: StatusCode,
       output: EndpointOutput[T],
       runtimeClass: Class[_]
-  ): OneOfMapping[T] = oneOfMappingClassMatcher(statusCode(code).and(output), runtimeClass)
+  ): OneOfVariant[T] = oneOfVariantClassMatcher(code, output, runtimeClass)
 
-  /** Create a one-of-mapping which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMappingValueMatcher[T](output: EndpointOutput[T])(
+  def oneOfVariantValueMatcher[T](output: EndpointOutput[T])(
       matcher: PartialFunction[Any, Boolean]
-  ): OneOfMapping[T] =
-    OneOfMapping(output, matcher.lift.andThen(_.getOrElse(false)))
+  ): OneOfVariant[T] =
+    OneOfVariant(output, matcher.lift.andThen(_.getOrElse(false)))
 
-  /** Create a one-of-mapping which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate. Adds
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate. Adds
     * a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfVariantValueMatcher[T](code: StatusCode, output: EndpointOutput[T])(
+      matcher: PartialFunction[Any, Boolean]
+  ): OneOfVariant[T] =
+    OneOfVariant(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
+
+  @deprecated("Use oneOfVariantValueMatcher", since = "0.19.0")
   def oneOfMappingValueMatcher[T](code: StatusCode, output: EndpointOutput[T])(
       matcher: PartialFunction[Any, Boolean]
-  ): OneOfMapping[T] =
-    OneOfMapping(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
+  ): OneOfVariant[T] = oneOfVariantValueMatcher(code, output)(matcher)
 
-  /** Create a one-of-mapping which `output` if the provided value exactly matches one of the values provided in the second argument list.
+  /** Create a one-of-variant which `output` if the provided value exactly matches one of the values provided in the second argument list.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMappingExactMatcher[T: ClassTag](
+  def oneOfVariantExactMatcher[T: ClassTag](
       output: EndpointOutput[T]
   )(
       firstExactValue: T,
       rest: T*
-  ): OneOfMapping[T] =
-    oneOfMappingValueMatcher(output)(exactMatch(rest.toSet + firstExactValue))
+  ): OneOfVariant[T] =
+    oneOfVariantValueMatcher(output)(exactMatch(rest.toSet + firstExactValue))
 
-  /** Create a one-of-mapping which uses `output` if the provided value exactly matches one of the values provided in the second argument
+  /** Create a one-of-variant which uses `output` if the provided value exactly matches one of the values provided in the second argument
     * list. Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfVariantExactMatcher[T: ClassTag](
+      code: StatusCode,
+      output: EndpointOutput[T]
+  )(
+      firstExactValue: T,
+      rest: T*
+  ): OneOfVariant[T] =
+    oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
+
+  @deprecated("Use oneOfVariantExactMatcher", since = "0.19.0")
   def oneOfMappingExactMatcher[T: ClassTag](
       code: StatusCode,
       output: EndpointOutput[T]
   )(
       firstExactValue: T,
       rest: T*
-  ): OneOfMapping[T] =
-    oneOfMappingValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
+  ): OneOfVariant[T] = oneOfVariantExactMatcher(code, output)(firstExactValue, rest: _*)
 
   /** Experimental!
     *
-    * Create a one-of-mapping which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMappingFromMatchType[T: MatchType](output: EndpointOutput[T]): OneOfMapping[T] =
-    oneOfMappingValueMatcher(output)(implicitly[MatchType[T]].partial)
+  def oneOfVariantFromMatchType[T: MatchType](output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariantValueMatcher(output)(implicitly[MatchType[T]].partial)
 
   /** Experimental!
     *
-    * Create a one-of-mapping which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure. Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMappingFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    oneOfMappingValueMatcher(code, output)(implicitly[MatchType[T]].partial)
+  def oneOfVariantFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariantValueMatcher(code, output)(implicitly[MatchType[T]].partial)
 
-  /** Create a fallback mapping to be used in [[oneOf]] output descriptions. Multiple such mappings can be specified, with different body
+  @deprecated("Use oneOfVariantFromMatchType", since = "0.19.0")
+  def oneOfMappingFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
+    oneOfVariantFromMatchType(code, output)
+
+  /** Create a fallback variant to be used in [[oneOf]] output descriptions. Multiple such variants can be specified, with different body
     * content types.
     */
-  def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfMapping[T] = {
-    OneOfMapping(output, _ => true)
-  }
+  def oneOfDefaultVariant[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
+
+  @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
+  def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
@@ -348,7 +401,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
-      EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false, AttributeMap.Empty)
     )
 
   val endpoint: PublicEndpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
@@ -372,4 +425,11 @@ trait TapirComputedInputs { this: Tapir =>
         upgrade <- request.header(HeaderNames.Upgrade)
       } yield connection.equalsIgnoreCase("Upgrade") && upgrade.equalsIgnoreCase("websocket")).getOrElse(false)
     )
+
+  /** An input which matches if the request URI ends with a trailing slash, otherwise the result is a decode failure on the path. Has no
+    * effect when used by documentation or client interpreters.
+    */
+  val noTrailingSlash: EndpointInput[Unit] = extractFromRequest(_.uri.path).mapDecode(ps =>
+    if (ps.lastOption.contains("")) DecodeResult.Mismatch("", "/") else DecodeResult.Value(())
+  )(_ => Nil)
 }

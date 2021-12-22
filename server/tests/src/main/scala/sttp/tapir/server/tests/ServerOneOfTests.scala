@@ -2,9 +2,11 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.EitherValues._
 import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
+import sttp.tapir._
 import sttp.tapir.tests.OneOf.{
   in_int_out_value_form_exact_match,
   in_string_out_error_detail_nested,
@@ -15,6 +17,9 @@ import sttp.tapir.tests.OneOf.{
 }
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe.jsonBody
+import io.circe.generic.auto._
 
 class ServerOneOfTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE]
@@ -84,6 +89,34 @@ class ServerOneOfTests[F[_], ROUTE](
           .send(backend)
           .map(_.body should include("\"availableFruit\"")) >>
         basicRequest.get(uri"$baseUri?fruit=pear").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServerLogic(
+      endpoint
+        .securityIn(header[String]("token"))
+        .errorOut(jsonBody[FruitErrorDetail.Unknown])
+        .serverSecurityLogicSuccess(v => pureResult(v))
+        .errorOutVariants[FruitErrorDetail](
+          oneOfVariant(jsonBody[FruitErrorDetail.AlreadyPicked]),
+          oneOfVariant(jsonBody[FruitErrorDetail.NotYetGrown]),
+          oneOfVariant(jsonBody[FruitErrorDetail.NameTooShort])
+        )
+        .in(query[String]("y"))
+        .out(plainBody[String])
+        .serverLogic { token => y =>
+          // original errors should work
+          if (token != "secret") pureResult(FruitErrorDetail.Unknown(List("apple")).asLeft[String])
+          // as well as new error variants
+          else if (y == "1") pureResult(FruitErrorDetail.AlreadyPicked("1").asLeft[String])
+          // and the success case
+          else pureResult(s"ok $y".asRight[FruitErrorDetail])
+        },
+      "security error outputs extended with additional variants in main logic"
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?y=2").header("token", "secret").send(backend).map(_.body shouldBe Right("ok 2")) >>
+        basicRequest.get(uri"$baseUri?y=2").header("token", "hacker").send(backend).map { r =>
+          r.body.left.value should include("\"availableFruit\"")
+        } >>
+        basicRequest.get(uri"$baseUri?y=1").header("token", "secret").send(backend).map(_.body.left.value should include("\"name\""))
     }
   )
 }

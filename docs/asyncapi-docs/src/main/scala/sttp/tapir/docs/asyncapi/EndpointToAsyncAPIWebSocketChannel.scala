@@ -4,9 +4,10 @@ import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.asyncapi._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.namedPathComponents
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.internal.{IterableToListMap, RichEndpointInput}
+import sttp.tapir.internal.{IterableToListMap, RichEndpoint}
 import sttp.tapir.{AnyEndpoint, Codec, CodecFormat, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
@@ -20,9 +21,9 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       e: AnyEndpoint,
       ws: WebSocketBodyWrapper[_, _]
   ): (String, ChannelItem) = {
-    val inputs = e.securityInput.asVectorOfBasicInputs(includeAuth = false) ++ e.input.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = e.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
-    val method = e.httpMethod.getOrElse(Method.GET)
+    val method = e.method.getOrElse(Method.GET)
 
     val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, _) => name -> schemas(codec) }
     val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec) }

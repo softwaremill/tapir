@@ -36,6 +36,9 @@ object Basic {
   val in_fixed_header_out_string: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.in("secret").in(header("location", "secret")).out(stringBody)
 
+  val in_fixed_content_type_header_out_string: PublicEndpoint[Unit, Unit, String, Any] =
+    endpoint.in("api").in(header(Header.contentType(MediaType.MultipartFormData))).out(stringBody)
+
   val in_header_before_path: PublicEndpoint[(String, Int), Unit, (Int, String), Any] = endpoint
     .in(header[String]("SomeHeader"))
     .in(path[Int])
@@ -162,7 +165,7 @@ object Basic {
     endpoint.post.in("api" / "echo" / "coproduct").in(jsonBody[Option[Entity]]).out(jsonBody[Option[Entity]])
 
   val not_existing_endpoint: PublicEndpoint[Unit, String, Unit, Any] =
-    endpoint.in("api" / "not-existing").errorOut(oneOf(oneOfMapping(StatusCode.BadRequest, stringBody)))
+    endpoint.in("api" / "not-existing").errorOut(oneOf(oneOfVariant(StatusCode.BadRequest, stringBody)))
 
   val in_query_with_default_out_string: PublicEndpoint[String, Unit, String, Any] =
     endpoint
@@ -172,4 +175,10 @@ object Basic {
 
   val out_fixed_content_type_header: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.out(stringBody.and(header("Content-Type", "text/csv")))
+
+  val in_path_security_and_regular: Endpoint[Unit, Unit, Unit, String, Any] =
+    endpoint.securityIn("auth").in("settings").out(stringBody)
+
+  val in_path_security_no_regular: Endpoint[Unit, Unit, Unit, String, Any] =
+    endpoint.securityIn("auth").out(stringBody)
 }

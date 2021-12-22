@@ -13,8 +13,8 @@ object OneOf {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          oneOfMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
-          oneOfMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
+          oneOfVariantValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
+          oneOfVariantValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 
@@ -24,8 +24,8 @@ object OneOf {
       .in(query[Int]("num"))
       .out(
         oneOf(
-          oneOfMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
-          oneOfMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
+          oneOfVariantExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
+          oneOfVariantExactMatcher(StatusCode.Ok, plainBody[String])("B")
         )
       )
 
@@ -36,11 +36,11 @@ object OneOf {
       .in(query[String]("fruit"))
       .out(
         oneOf[Option[Either[Int, String]]](
-          oneOfMapping(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
-          oneOfMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
+          oneOfVariant(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
+          oneOfVariantValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
             implicitly[MatchType[Some[Left[Int, String]]]].partial
           ),
-          oneOfMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(
+          oneOfVariantValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(
             implicitly[MatchType[Some[Right[Int, String]]]].partial
           )
         )
@@ -51,8 +51,8 @@ object OneOf {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          oneOfMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
-          oneOfMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
+          oneOfVariantValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
+          oneOfVariantValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 
@@ -61,8 +61,8 @@ object OneOf {
       .in("entity" / path[String]("type"))
       .out(
         oneOf[Entity](
-          oneOfMapping[Person](StatusCode.Created, jsonBody[Person]),
-          oneOfDefaultMapping[Organization](jsonBody[Organization])
+          oneOfVariant[Person](StatusCode.Created, jsonBody[Person]),
+          oneOfDefaultVariant[Organization](jsonBody[Organization])
         )
       )
 
@@ -74,8 +74,8 @@ object OneOf {
       .in(query[Int]("statusOut"))
       .out(
         oneOf(
-          oneOfMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
-          oneOfMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
+          oneOfVariantValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
+          oneOfVariantValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
         )
       )
   }
@@ -86,8 +86,8 @@ object OneOf {
       .in(query[Int]("statusOut"))
       .out(
         oneOf[Either[Unit, Person]](
-          oneOfMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
-          oneOfMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+          oneOfVariantValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
+          oneOfVariantValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
         )
       )
 
@@ -96,14 +96,14 @@ object OneOf {
       .in(query[String]("fruit"))
       .errorOut(
         oneOf[FruitErrorDetail](
-          oneOfMapping(
+          oneOfVariant(
             oneOf[FruitErrorDetail.HarvestError](
-              oneOfMapping(jsonBody[FruitErrorDetail.AlreadyPicked]),
-              oneOfMapping(jsonBody[FruitErrorDetail.NotYetGrown])
+              oneOfVariant(jsonBody[FruitErrorDetail.AlreadyPicked]),
+              oneOfVariant(jsonBody[FruitErrorDetail.NotYetGrown])
             )
           ),
-          oneOfMapping(jsonBody[FruitErrorDetail.NameTooShort]),
-          oneOfMapping(jsonBody[FruitErrorDetail.Unknown])
+          oneOfVariant(jsonBody[FruitErrorDetail.NameTooShort]),
+          oneOfVariant(jsonBody[FruitErrorDetail.Unknown])
         )
       )
 }

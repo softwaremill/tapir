@@ -2,17 +2,12 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
-/** @param toEffect
-  *   Converts the interpreter-specific value representing the log effect, into an `F`-effect, which can be composed with the result of
-  *   processing a request.
-  * @tparam T
-  *   Interpreter-specific value representing the log effect.
-  */
-class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F] {
+/** @tparam F The effect in which log messages are returned. */
+class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[U, I](ctx: DecodeSuccessContext[F, U, I])(implicit
@@ -22,10 +17,10 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
         decodeHandler
           .onDecodeSuccess(ctx)
           .flatMap { response =>
-            toEffect(log.requestHandled(ctx.endpoint, response.code.code), ctx.request).map(_ => response)
+            log.requestHandled(ctx, response).map(_ => response)
           }
           .handleError { case e: Throwable =>
-            toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
+            log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))
           }
       }
 
@@ -35,10 +30,10 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
         decodeHandler
           .onSecurityFailure(ctx)
           .flatMap { response =>
-            toEffect(log.securityFailureHandled(ctx.endpoint, response), ctx.request).map(_ => response)
+            log.securityFailureHandled(ctx, response).map(_ => response)
           }
           .handleError { case e: Throwable =>
-            toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
+            log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))
           }
       }
 
@@ -49,13 +44,14 @@ class ServerLogInterceptor[T, F[_]](log: ServerLog[T], toEffect: (T, ServerReque
           .onDecodeFailure(ctx)
           .flatMap {
             case r @ None =>
-              toEffect(log.decodeFailureNotHandled(ctx), ctx.request).map(_ => r: Option[ServerResponse[B]])
+              log.decodeFailureNotHandled(ctx).map(_ => r: Option[ServerResponse[B]])
             case r @ Some(response) =>
-              toEffect(log.decodeFailureHandled(ctx, response), ctx.request)
+              monad
+                .unit(log.decodeFailureHandled(ctx, response))
                 .map(_ => r: Option[ServerResponse[B]])
           }
           .handleError { case e: Throwable =>
-            toEffect(log.exception(ctx.endpoint, e), ctx.request).flatMap(_ => monad.error(e))
+            log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))
           }
       }
     }

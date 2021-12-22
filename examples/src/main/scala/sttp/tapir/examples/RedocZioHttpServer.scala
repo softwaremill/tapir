@@ -1,11 +1,9 @@
 package sttp.tapir.examples
 
 import io.circe.generic.auto._
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.redoc.Redoc
+import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
@@ -24,8 +22,8 @@ object RedocZioHttpServer extends App {
 
   val petRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(petEndpoint)
 
-  val yaml: String = OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
-  val redocRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(Redoc[Task]("ZOO", yaml))
+  val redocRoutes: HttpApp[Any, Throwable] =
+    ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = {
     putStrLn("Go to: http://localhost:8080/docs") *>

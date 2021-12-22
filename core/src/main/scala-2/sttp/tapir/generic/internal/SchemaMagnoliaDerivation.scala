@@ -1,6 +1,6 @@
 package sttp.tapir.generic.internal
 
-import magnolia._
+import magnolia1._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
 import sttp.tapir.{FieldName, Schema, SchemaType}
@@ -13,7 +13,7 @@ trait SchemaMagnoliaDerivation {
 
   type Typeclass[T] = Schema[T]
 
-  def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+  def join[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
       val result =
         if (ctx.isValueClass) {
@@ -61,12 +61,12 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
-  def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+  def split[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
       val subtypesByName =
         ctx.subtypes.map(s => typeNameToSchemaName(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap
       val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
-        ctx.dispatch(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, v.annotations)) }
+        ctx.split(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, v.annotations)) }
       )
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))

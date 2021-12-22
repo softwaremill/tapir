@@ -323,6 +323,15 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_query_with_default_out_string)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
+    },
+    testServer(in_fixed_content_type_header_out_string, "fixed multipart/form-data header input should ignore boundary directive")(_ =>
+      pureResult("x".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri/api")
+        .headers(Header(HeaderNames.ContentType, "multipart/form-data; boundary=abc"))
+        .send(backend)
+        .map(_.body shouldBe Right("x"))
     }
   )
 
@@ -399,6 +408,21 @@ class ServerBasicTests[F[_], ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/api/echo/hello").send(backend).map(_.code shouldBe StatusCode.NotFound) >>
           basicRequest.get(uri"$baseUri/api/echo/").send(backend).map(_.code shouldBe StatusCode.NotFound)
+    },
+    testServerLogic(
+      in_path_security_and_regular
+        .serverSecurityLogic { _ => pureResult(().asRight[Unit]) }
+        .serverLogic(_ => _ => pureResult("ok".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth/settings").send(backend).map(_.body shouldBe "ok")
+    },
+    testServerLogic(
+      in_path_security_no_regular
+        .serverSecurityLogic { _ => pureResult(().asRight[Unit]) }
+        .serverLogic(_ => _ => pureResult("ok".asRight[Unit]))
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/auth").send(backend).map(_.body shouldBe "ok") >>
+        basicStringRequest.get(uri"$baseUri/auth/extra").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 
@@ -469,6 +493,35 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri/p1/abcde").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p1/ab").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
         basicRequest.get(uri"$baseUri/p2").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(
+      "endpoint with a security input and regular path input shouldn't shadow other endpoints",
+      NonEmptyList.of(
+        route(
+          endpoint.get
+            .in("p1")
+            .securityIn(auth.bearer[String]())
+            .out(stringBody)
+            .serverSecurityLogicSuccess(_ => pureResult(()))
+            .serverLogicSuccess(_ => _ => pureResult("ok1"))
+        ),
+        route(
+          endpoint.get
+            .in("p2")
+            .out(stringBody)
+            .serverLogicSuccess(_ => pureResult("ok2"))
+        )
+      )
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Unauthorized) >>
+        basicRequest.get(uri"$baseUri/p2").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body shouldBe Right("ok2")
+        } >>
+        basicRequest.get(uri"$baseUri/p1").header("Authorization", "Bearer 1234").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body shouldBe Right("ok1")
+        }
     }
   )
 
@@ -562,7 +615,7 @@ class ServerBasicTests[F[_], ROUTE](
   )
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
-    DefaultDecodeFailureHandler.handler.copy(
+    DefaultDecodeFailureHandler.default.copy(
       respond = DefaultDecodeFailureHandler.respond(
         _,
         badRequestOnPathErrorIfPathShapeMatches = true,

@@ -19,7 +19,7 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
-  extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
   import actorSystem.dispatcher
 
   override def route(
@@ -30,7 +30,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     val serverOptions: PlayServerOptions =
       PlayServerOptions.customInterceptors
         .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }

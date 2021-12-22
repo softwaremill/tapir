@@ -1,6 +1,6 @@
 # Basics
 
-An endpoint is represented as a value of type `Endpoint[A, I, E, O, S]`, where:
+An endpoint is represented as a value of type `Endpoint[A, I, E, O, R]`, where:
 
 * `A` is the type of security input parameters
 * `I` is the type of input parameters
@@ -58,7 +58,7 @@ The description of an endpoint is an immutable case class, which includes a numb
 * the `name`, `description`, etc. methods allow modifying the endpoint information, which will then be included in the 
   endpoint documentation
 * the `get`, `post` etc. methods specify the HTTP method which the endpoint should support
-* the `in`, `errorOut` and `out` methods allow adding a new input/output parameter
+* the `securityIn`, `in`, `errorOut` and `out` methods allow adding a new input/output parameter
 * `mapIn`, `mapInTo`, ... methods allow mapping the current input/output parameters to another value or to a case class
 
 An important note on mapping: in tapir, all mappings are bi-directional. That's because each mapping can be used to 

@@ -176,6 +176,23 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     sttp.client3.basicRequest.get(uri"http://abc.xyz/api/unknown").send(backend).code shouldBe StatusCode.InternalServerError
   }
 
+  it should "work with request bodies when interpreting endpoints" in {
+    // given
+    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
+      .in("mirror")
+      .in(stringBody)
+      .out(stringBody)
+      .post
+      .serverLogic { in => idMonad.unit(Right(in)) }
+
+    // when
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
+      .whenRequestMatchesEndpointThenLogic(endpoint)
+
+    // then
+    sttp.client3.basicRequest.post(uri"/mirror").body("hello").send(backend).body shouldBe Right("hello")
+  }
+
   it should "stub server endpoint with interceptors" in {
     // given
     val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint

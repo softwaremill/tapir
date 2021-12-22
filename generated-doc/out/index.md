@@ -151,6 +151,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/ziohttp
    server/aws
    server/options
+   server/interceptors
    server/logic
    server/observability
    server/errors

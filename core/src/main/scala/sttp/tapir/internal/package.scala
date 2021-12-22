@@ -57,6 +57,17 @@ package object internal {
 
   //
 
+  implicit class RichEndpoint[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R]) {
+    private def allInputs = endpoint.securityInput.and(endpoint.input)
+
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+      allInputs.traverseInputs { case a: EndpointInput.Auth[_, _] =>
+        Vector(a)
+      }
+
+    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = allInputs.asVectorOfBasicInputs(includeAuth)
+  }
+
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] =
       input match {
@@ -73,11 +84,6 @@ package object internal {
       traverseInputs {
         case b: EndpointInput.Basic[_]   => Vector(b)
         case a: EndpointInput.Auth[_, _] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
-      }
-
-    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
-      traverseInputs { case a: EndpointInput.Auth[_, _] =>
-        Vector(a)
       }
 
     def method: Option[Method] =
@@ -137,14 +143,14 @@ package object internal {
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsList
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
-        case s: EndpointOutput.OneOf[_, _]          => s.mappings.flatMap(_.output.asBasicOutputsList)
+        case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
     }
 
     private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
-      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
+      e.info.deprecated || e.info.description.nonEmpty || e.info.attributes.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
@@ -154,7 +160,7 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)            => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
         case EndpointOutput.MappedPair(wrapped, _)         => wrapped.traverseOutputs(handle)
         case EndpointIO.MappedPair(wrapped, _)             => wrapped.traverseOutputs(handle)
-        case s: EndpointOutput.OneOf[_, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
+        case s: EndpointOutput.OneOf[_, _]                 => s.variants.toVector.flatMap(_.output.traverseOutputs(handle))
         case _                                             => Vector.empty
       }
 

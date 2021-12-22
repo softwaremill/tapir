@@ -1,6 +1,7 @@
 package sttp.tapir.server.netty
 
 import com.typesafe.scalalogging.Logger
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -26,6 +27,7 @@ case class NettyFutureServerOptions(
 
 object NettyFutureServerOptions {
   val default: NettyFutureServerOptions = customInterceptors.options
+  val log = Logger[NettyFutureServerInterpreter]
 
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
     NettyDefaults.DefaultHost,
@@ -42,21 +44,25 @@ object NettyFutureServerOptions {
     NettyOptions.default
   )
 
-  def customInterceptors: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions] = {
+  def customInterceptors: CustomInterceptors[Future, NettyFutureServerOptions] = {
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Logger => Future[Unit]]) => new ServerLogInterceptor[Logger => Future[Unit], Future](sl, (_, _) => Future.unit),
-      createOptions = (ci: CustomInterceptors[Future, Logger => Future[Unit], NettyFutureServerOptions]) => default(ci.interceptors)
+      createOptions = (ci: CustomInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
-  lazy val defaultServerLog: ServerLog[Logger => Future[Unit]] = DefaultServerLog(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(msg, ex)),
-    noLog = _ => Future.unit
-  )
+  lazy val defaultServerLog: ServerLog[Future] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val monadError: MonadError[Future] = new FutureMonad
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Future[Unit] = log =>
-    Future.successful(NettyDefaults.debugLog(log, msg, exOpt))
+    DefaultServerLog(
+      doLogWhenHandled = debugLog,
+      doLogAllDecodeFailures = debugLog,
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
+      noLog = Future.successful(())
+    )
+  }
+
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
+    NettyDefaults.debugLog(log, msg, exOpt)
+  }
 }

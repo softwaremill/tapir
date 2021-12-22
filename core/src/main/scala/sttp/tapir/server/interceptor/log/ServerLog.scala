@@ -1,46 +1,46 @@
 package sttp.tapir.server.interceptor.log
 
-import sttp.tapir.model.ServerResponse
-import sttp.tapir.server.interceptor.DecodeFailureContext
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext}
 import sttp.tapir.{AnyEndpoint, DecodeResult}
 
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
-  * @tparam T
-  *   Interpreter-specific value representing the log effect.
+  * @tparam F[_]
+  *   Interpreter-specific effect type constructor.
   */
-trait ServerLog[T] {
+trait ServerLog[F[_]] {
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, haven't provided a
     * response.
     */
-  def decodeFailureNotHandled(ctx: DecodeFailureContext): T
+  def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit]
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response. */
-  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T
+  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): F[Unit]
 
   /** Invoked when the security logic fails and returns an error. */
-  def securityFailureHandled(e: AnyEndpoint, response: ServerResponse[_]): T
+  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(e: AnyEndpoint, statusCode: Int): T
+  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
-  def exception(e: AnyEndpoint, ex: Throwable): T
+  def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit]
 }
 
-case class DefaultServerLog[T](
-    doLogWhenHandled: (String, Option[Throwable]) => T,
-    doLogAllDecodeFailures: (String, Option[Throwable]) => T,
-    doLogExceptions: (String, Throwable) => T,
-    noLog: T,
+case class DefaultServerLog[F[_]](
+    doLogWhenHandled: (String, Option[Throwable]) => F[Unit],
+    doLogAllDecodeFailures: (String, Option[Throwable]) => F[Unit],
+    doLogExceptions: (String, Throwable) => F[Unit],
+    noLog: F[Unit],
     logWhenHandled: Boolean = true,
     logAllDecodeFailures: Boolean = false,
     logLogicExceptions: Boolean = true
-) extends ServerLog[T] {
+) extends ServerLog[F] {
 
-  def decodeFailureNotHandled(ctx: DecodeFailureContext): T =
+  override def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit] =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
         s"Request not handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
@@ -48,7 +48,7 @@ case class DefaultServerLog[T](
       )
     else noLog
 
-  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T =
+  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
@@ -56,19 +56,19 @@ case class DefaultServerLog[T](
       )
     else noLog
 
-  override def securityFailureHandled(e: AnyEndpoint, response: ServerResponse[_]): T =
+  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request handled by: ${e.show}; security logic error response: $response", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; security logic error response: $response", None)
     else noLog
 
-  def requestHandled(e: AnyEndpoint, statusCode: Int): T =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request handled by: ${e.show}; responding with code: $statusCode", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; responding with code: ${response.code.code}", None)
     else noLog
 
-  def exception(e: AnyEndpoint, ex: Throwable): T =
+  override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit] =
     if (logLogicExceptions)
-      doLogExceptions(s"Exception when handling request by: ${e.show}", ex)
+      doLogExceptions(s"Exception when handling request $request by: ${e.show}", ex)
     else noLog
 
   private def exception(ctx: DecodeFailureContext): Option[Throwable] =

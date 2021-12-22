@@ -1,7 +1,7 @@
 package sttp.tapir.client
 
 import sttp.model.{HeaderNames, MediaType, ResponseMetadata}
-import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, _}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
@@ -29,7 +29,7 @@ abstract class ClientOutputParams {
               .header(HeaderNames.ContentType)
               .map(MediaType.parse)
 
-            val mappingsFilteredByContentType: List[OneOfMapping[_]] = contentType match {
+            val mappingsFilteredByContentType: List[OneOfVariant[_]] = contentType match {
               case None | Some(Left(_)) => mappings
               case Some(Right(content)) =>
                 val mappingsForContentType = mappings.collect {
@@ -75,7 +75,7 @@ abstract class ClientOutputParams {
 
   @tailrec
   private def tryDecodeOneOf(
-      mappings: List[OneOfMapping[_]],
+      mappings: List[OneOfVariant[_]],
       body: Any,
       meta: ResponseMetadata,
       firstFailure: Option[DecodeResult.Failure]

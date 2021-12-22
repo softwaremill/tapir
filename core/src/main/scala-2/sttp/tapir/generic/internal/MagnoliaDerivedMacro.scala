@@ -1,6 +1,6 @@
 package sttp.tapir.generic.internal
 
-import magnolia.Magnolia
+import magnolia1.Magnolia
 import sttp.tapir.generic.Derived
 
 object MagnoliaDerivedMacro {
