@@ -41,7 +41,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         val maybeCharset = if (codec.format.mediaType.mainType.equalsIgnoreCase("text")) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
         ov.withBody(headers => rawToResponseBody.fromStreamValue(encodedC(codec), headers, codec.format, charset))
           .withDefaultContentType(codec.format, charset)
           .withHeaderTransformation(hs =>
@@ -82,7 +82,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
             Vector[(MediaType, OneOfVariant[_])](
               codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> om
             )
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
             Vector[(MediaType, OneOfVariant[_])](
               codec.format.mediaType.copy(charset = charset.map(_.name())) -> om
             )
