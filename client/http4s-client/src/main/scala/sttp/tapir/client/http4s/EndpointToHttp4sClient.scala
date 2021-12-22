@@ -98,7 +98,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         req.withUri(uri)
       case EndpointIO.Empty(_, _)              => req
       case EndpointIO.Body(bodyType, codec, _) => setBody(value, bodyType, codec, req)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
         val headers = codec.encode(value).map(value => Header.Raw(CIString(name), value): Header.ToRaw)
@@ -227,7 +227,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }

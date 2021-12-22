@@ -91,7 +91,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
       case EndpointIO.Header(name, codec, _) =>
@@ -205,7 +205,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }

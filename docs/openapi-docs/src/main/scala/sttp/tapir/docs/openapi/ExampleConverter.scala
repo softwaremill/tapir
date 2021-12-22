@@ -20,7 +20,7 @@ private[openapi] object ExampleConverter {
     convertExamples(examples)(exampleValue(o, _))
 
   def convertExamples(s: TSchema[_], examples: List[EndpointIO.Example[_]]): Examples =
-    convertExamples(examples)(exampleValue(s, _))
+    convertExamples[Any](examples)(exampleValue(s, _))
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {
     examples match {
