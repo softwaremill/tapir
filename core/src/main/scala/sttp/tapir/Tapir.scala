@@ -110,7 +110,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def streamBinaryBody[S](
       s: Streams[S]
   ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None)
+    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None, Nil)
 
   /** Creates a stream body with a text schema.
     * @param s
@@ -123,9 +123,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def streamTextBody[S](
       s: Streams[S]
   )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset)
+    StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset, Nil)
 
-  /** Creates a stream body with a text schema.
+  /** Creates a stream body with the given schema.
     * @param s
     *   A supported streams implementation.
     * @param schema
@@ -138,7 +138,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def streamBody[S, T](
       s: Streams[S]
   )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset)
+    StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset, Nil)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.

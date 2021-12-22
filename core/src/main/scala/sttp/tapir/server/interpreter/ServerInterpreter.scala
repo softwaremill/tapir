@@ -143,7 +143,7 @@ class ServerInterpreter[R, F[_], B, S](
               }
             }
 
-          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _))), _)) =>
+          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {
               case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
               case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult

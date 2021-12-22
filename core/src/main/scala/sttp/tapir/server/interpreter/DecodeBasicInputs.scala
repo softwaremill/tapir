@@ -239,7 +239,7 @@ object DecodeBasicInputs {
       case None => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
-      case Some((IndexedBasicInput(input @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, _, _)), index), inputsTail)) =>
+      case Some((IndexedBasicInput(input @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, _, _, _)), index), inputsTail)) =>
         matchOthers(inputsTail, values.addStreamingBodyInput(input, index), ctx)
       case Some((indexedInput, inputsTail)) =>
         val (result, ctx2) = matchOther(indexedInput.input, ctx)

@@ -537,14 +537,26 @@ factory method in `Tapir` which would directly create an instance of it.
 
 BS == streams.BinaryStream, but we can't express this using dependent types here.
  */
-case class StreamBodyIO[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
-    extends EndpointTransput.Basic[T] {
+case class StreamBodyIO[BS, T, S](
+    streams: Streams[S],
+    codec: Codec[BS, T, CodecFormat],
+    info: Info[T],
+    charset: Option[Charset],
+    encodedExamples: List[Example[Any]]
+) extends EndpointTransput.Basic[T] {
   override private[tapir] type ThisType[X] = StreamBodyIO[BS, X, S]
   override private[tapir] type L = BS
   override private[tapir] type CF = CodecFormat
   override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
   private[tapir] def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
+
+  /** Add an example of a "deserialized" stream value. This should be given in an encoded form, e.g. in case of json - as a [[String]], as
+    * the stream body doesn't have access to the codec that will be later used for deserialization.
+    */
+  def encodedExample(e: Any): ThisType[T] = copy(encodedExamples = encodedExamples ++ List(Example.of(e)))
+  def encodedExample(example: Example[Any]): ThisType[T] = copy(encodedExamples = encodedExamples ++ List(example))
+  def encodedExample(examples: List[Example[Any]]): ThisType[T] = copy(encodedExamples = encodedExamples ++ examples)
 
   override def show: String = "{body as stream}"
 }

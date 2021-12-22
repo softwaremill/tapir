@@ -86,9 +86,9 @@ private[openapi] class EndpointToOperationResponse(
   private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
     val forcedContentType = extractFixedContentType(outputs)
     outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
+      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, _)) =>
+        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
     })
   }
 
