@@ -23,6 +23,8 @@ final case class OpenAPI(
   def components(updated: Components): OpenAPI = copy(components = Some(updated))
 
   def servers(s: List[Server]): OpenAPI = copy(servers = s)
+  def addServer(server: Server): OpenAPI = copy(servers = servers ++ List(server))
+  def addServer(url: String): OpenAPI = copy(servers = servers ++ List(Server(url)))
 
   def tags(t: List[Tag]): OpenAPI = copy(tags = t)
 
