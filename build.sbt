@@ -788,15 +788,14 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
-      "com.twitter" %% "finatra-http" % Versions.finatra,
+      "com.twitter" %% "finatra-http-server" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.13",
       // Testing
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test,
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
       "com.twitter" %% "inject-core" % Versions.finatra % Test,
       "com.twitter" %% "inject-modules" % Versions.finatra % Test,
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "finatra-http-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
@@ -1051,7 +1050,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
