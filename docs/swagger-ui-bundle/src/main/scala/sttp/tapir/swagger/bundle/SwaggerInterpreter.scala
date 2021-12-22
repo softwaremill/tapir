@@ -3,7 +3,7 @@ package sttp.tapir.swagger.bundle
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.{OpenAPIDocsInterpreter, OpenAPIDocsOptions}
-import sttp.tapir.openapi.Info
+import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.swagger.SwaggerUI
@@ -14,12 +14,15 @@ trait SwaggerInterpreter {
   def prefix: List[String]
   def yamlName: String
   def basePrefix: List[String]
+  def customiseDocsModel: OpenAPI => OpenAPI
 
   def fromEndpoints[F[_]](
       endpoints: List[AnyEndpoint],
       info: Info
   ): List[ServerEndpoint[Any, F]] = {
-    val yaml = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(endpoints, info).toYaml
+    val openapi0 = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(endpoints, info)
+    val openapi = customiseDocsModel(openapi0)
+    val yaml = openapi.toYaml
     SwaggerUI(yaml, prefix, yamlName, basePrefix)
   }
 
@@ -61,25 +64,30 @@ object SwaggerInterpreter {
     *   The base path prefix where the documentation routes are going to be attached. Unless the endpoint will served from `/`, the base
     *   path prefix must be specified for redirect to work correctly. Defaults to `Nil`, so it is assumed that the endpoint base path is
     *   `/`.
+    * @param customiseDocsModel
+    *   A function which can customise the [[OpenAPI]] model generated for the given endpoints, allowing adding e.g. server information.
     */
   def apply(
       docsExtensions: List[DocsExtension[_]] = Nil,
       docsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default,
       prefix: List[String] = List("docs"),
       yamlName: String = "docs.yaml",
-      basePrefix: List[String] = Nil
+      basePrefix: List[String] = Nil,
+      customiseDocsModel: OpenAPI => OpenAPI = identity
   ): SwaggerInterpreter = {
     val exts = docsExtensions
     val opts = docsOptions
     val p = prefix
     val yn = yamlName
     val bp = basePrefix
+    val cdm = customiseDocsModel
     new SwaggerInterpreter {
       override val docsExtensions: List[DocsExtension[_]] = exts
       override val docsOptions: OpenAPIDocsOptions = opts
       override val prefix: List[String] = p
       override val yamlName: String = yn
       override val basePrefix: List[String] = bp
+      override val customiseDocsModel: OpenAPI => OpenAPI = cdm
     }
   }
 }
