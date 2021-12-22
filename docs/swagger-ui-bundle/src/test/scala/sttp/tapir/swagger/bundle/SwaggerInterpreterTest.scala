@@ -46,8 +46,10 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           val docsPath = (basePrefix ++ prefix).mkString("/")
 
           resp.code shouldBe StatusCode.Ok
+          resp.body should include(s"/$docsPath/docs.yaml")
+
           resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          resp.history.head.headers("Location").head shouldBe s"/$docsPath/index.html?url=/$docsPath/docs.yaml"
+          resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
         }
       }
   }
