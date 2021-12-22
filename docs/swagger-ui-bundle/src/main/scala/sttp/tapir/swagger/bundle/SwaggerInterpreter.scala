@@ -73,7 +73,7 @@ object SwaggerInterpreter {
       prefix: List[String] = List("docs"),
       yamlName: String = "docs.yaml",
       basePrefix: List[String] = Nil,
-      customiseDocsModel: OpenAPI => OpenAPI
+      customiseDocsModel: OpenAPI => OpenAPI = identity
   ): SwaggerInterpreter = {
     val exts = docsExtensions
     val opts = docsOptions
