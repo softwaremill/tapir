@@ -23,16 +23,16 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  def swaggerUITest(prefix: List[String], basePrefix: List[String]): IO[Assertion] = {
+  def swaggerUITest(prefix: List[String], context: List[String]): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        SwaggerInterpreter(prefix = prefix, basePrefix = basePrefix)
+        SwaggerInterpreter(pathPrefix = prefix, contextPath = context)
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
     BlazeServerBuilder[IO]
       .bindHttp(0, "localhost")
-      .withHttpApp(Router(s"/${basePrefix.mkString("/")}" -> swaggerUIRoutes).orNotFound)
+      .withHttpApp(Router(s"/${context.mkString("/")}" -> swaggerUIRoutes).orNotFound)
       .resource
       .use { server =>
         IO {
@@ -40,10 +40,10 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
           val resp: Response[String] = basicRequest
             .response(asStringAlways)
-            .get(uri"http://localhost:$port/${basePrefix ++ prefix}")
+            .get(uri"http://localhost:$port/${context ++ prefix}")
             .send(backend)
 
-          val docsPath = (basePrefix ++ prefix).mkString("/")
+          val docsPath = (context ++ prefix).mkString("/")
 
           resp.code shouldBe StatusCode.Ok
           resp.body should include(s"/$docsPath/docs.yaml")
