@@ -68,31 +68,40 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
       case Left(_) =>
         Future.failed(new IllegalArgumentException("Unable to parse multipart form data.")) // TODO
       case Right(value) =>
-        val dataParts = value.dataParts.map { case (key, value) =>
-          toRaw(
-            m.partType(key).get,
-            charset(m.partType(key).get),
-            () => Source.single(ByteString(value.flatMap(_.getBytes).toArray)),
-            None
-          ).map(body => Part(key, body.value))
+        val dataParts = value.dataParts.flatMap { case (key, value) =>
+          m.partType(key).map { partType =>
+            toRaw(
+              partType,
+              charset(partType),
+              () => Source.single(ByteString(value.flatMap(_.getBytes).toArray)),
+              None
+            ).map(body => Part(key, body.value))
+          }
         }.toSeq
 
-        val fileParts = value.files.map(f => {
-          toRaw(
-            m.partType(f.key).get,
-            charset(m.partType(f.key).get),
-            () => FileIO.fromPath(f.ref.path),
-            Some(f.ref.toFile)
-          ).map(body =>
-            Part(
-              f.key,
-              body.value,
-              Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename),
-              f.contentType.flatMap(MediaType.parse(_).toOption).map(Header.contentType).toList
-            )
-              .asInstanceOf[RawPart]
-          )
-        })
+        val fileParts = value.files.flatMap { f =>
+          m.partType(f.key)
+            .map { partType =>
+              toRaw(
+                partType,
+                charset(partType),
+                () => FileIO.fromPath(f.ref.path),
+                Some(f.ref.toFile)
+              ).map(body =>
+                Part(
+                  f.key,
+                  body.value,
+                  Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename),
+                  f.contentType.flatMap(MediaType.parse(_).toOption).map(Header.contentType).toList
+                )
+                  .asInstanceOf[RawPart]
+              )
+            }
+            .orElse {
+              serverOptions.deleteFile(f.ref.toFile)
+              None
+            }
+        }
         Future.sequence(dataParts ++ fileParts).map(RawValue.fromParts)
     }
   }
