@@ -589,7 +589,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.13.0",
+      "io.prometheus" % "simpleclient_common" % "0.14.1",
       scalaTest.value % Test
     )
   )
