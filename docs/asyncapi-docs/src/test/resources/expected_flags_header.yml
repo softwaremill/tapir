@@ -19,8 +19,6 @@ channels:
           type: object
           properties:
             Test:
-              required:
-                - Test
               type: string
               description: Test token
               deprecated: true

@@ -19,8 +19,6 @@ channels:
           type: object
           properties:
             limit:
-              required:
-                - limit
               type: integer
             offset:
               type: integer

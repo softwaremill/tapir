@@ -60,7 +60,6 @@ object EndpointTransput {
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
     def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
-    def required(): ThisType[T] = copyWith(codec, info.required(true))
     def default(d: T): ThisType[T] = copyWith(codec.schema(_.default(d, Some(codec.encode(d)))), info)
     def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
@@ -452,7 +451,6 @@ object EndpointIO {
       description: Option[String],
       examples: List[Example[T]],
       deprecated: Boolean,
-      required: Boolean,
       docsExtensions: Vector[DocsExtension[_]]
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
@@ -461,7 +459,6 @@ object EndpointIO {
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
-    def required(r: Boolean): Info[T] = copy(required = r)
     def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
@@ -471,12 +468,11 @@ object EndpointIO {
           Example(ee, name, summary)
         },
         deprecated,
-        required,
         docsExtensions
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, required = false, docsExtensions = Vector.empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 
   /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint
