@@ -3,6 +3,7 @@ package sttp.tapir.docs.openapi
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal._
@@ -42,7 +43,7 @@ private[openapi] class EndpointToOperationResponse(
     val outputsByStatusCode: Map[Option[StatusCode], List[EndpointOutput.Basic[_]]] =
       statusCodeAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
 
-    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct
+    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct.sortBy(_.map(_.code).getOrElse(Integer.MAX_VALUE))
 
     val docsExtensions = outputs.flatMap(_.flatMap(_.info.docsExtensions))
     statusCodes.flatMap { sc =>
@@ -85,9 +86,9 @@ private[openapi] class EndpointToOperationResponse(
   private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
     val forcedContentType = extractFixedContentType(outputs)
     outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
+      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, _)) =>
+        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
     })
   }
 

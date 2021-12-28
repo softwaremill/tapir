@@ -8,13 +8,8 @@ import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.tests.Basic.in_root_path
-import sttp.tapir.tests.ContentNegotiation.{
-  organizationHtmlIso,
-  organizationHtmlUtf8,
-  organizationJson,
-  organizationXml,
-  out_json_xml_text_common_schema
-}
+import sttp.tapir.tests.ContentNegotiation._
+
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
@@ -65,6 +60,16 @@ class ServerContentNegotiationTests[F[_], ROUTE](createServerTest: CreateServerT
             response.body shouldBe body
           }
       })
+    },
+    testServer(out_default_json_or_xml, testNameSuffix = "takes first content type when no accepts header")(_ =>
+      pureResult(Organization("sml").asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/content-negotiation/organization").send(backend).map(_.body shouldBe Right("{\"name\":\"sml\"}"))
+    },
+    testServer(out_default_xml_or_json, testNameSuffix = "takes first content type when no accepts header")(_ =>
+      pureResult(Organization("sml").asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/content-negotiation/organization").send(backend).map(_.body shouldBe Right("<name>sml-xml</name>"))
     },
     testServer(in_root_path, testNameSuffix = "accepts header without output body")(_ => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>

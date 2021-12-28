@@ -9,6 +9,7 @@ import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.description
+import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
 import sttp.tapir.docs.openapi.dtos.Book
@@ -501,6 +502,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should apply openapi extensions in correct places") {
+    import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
     case class MyExtension(string: String, int: Int)
 
     val sampleEndpoint =

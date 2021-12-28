@@ -26,7 +26,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
         // a value for this output
         case EndpointInput.Query(_, _, _) => Some(ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
         // in other cases, using the default behavior
-        case _ => DefaultDecodeFailureHandler.handler(ctx)
+        case _ => DefaultDecodeFailureHandler.default(ctx)
       }
     })
     .options

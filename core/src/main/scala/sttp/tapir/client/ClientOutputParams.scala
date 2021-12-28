@@ -12,12 +12,12 @@ abstract class ClientOutputParams {
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                               => decode(codec, body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => decode(codec, body)
-          case EndpointOutput.WebSocketBodyWrapper(o)                     => decodeWebSocketBody(o, body)
-          case EndpointIO.Header(name, codec, _)                          => codec.decode(meta.headers(name).toList)
-          case EndpointIO.Headers(codec, _)                               => codec.decode(meta.headers.toList)
-          case EndpointOutput.StatusCode(_, codec, _)                     => codec.decode(meta.code)
+          case EndpointIO.Body(_, codec, _)                                  => decode(codec, body)
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => decode(codec, body)
+          case EndpointOutput.WebSocketBodyWrapper(o)                        => decodeWebSocketBody(o, body)
+          case EndpointIO.Header(name, codec, _)                             => codec.decode(meta.headers(name).toList)
+          case EndpointIO.Headers(codec, _)                                  => codec.decode(meta.headers.toList)
+          case EndpointOutput.StatusCode(_, codec, _)                        => codec.decode(meta.code)
           case EndpointOutput.FixedStatusCode(sc, codec, _) =>
             if (meta.code == sc) codec.decode(()) else DecodeResult.Mismatch(sc.toString(), meta.code.toString())
           case EndpointIO.FixedHeader(h, codec, _) =>

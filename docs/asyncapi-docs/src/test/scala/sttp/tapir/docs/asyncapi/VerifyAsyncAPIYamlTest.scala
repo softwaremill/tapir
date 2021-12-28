@@ -13,6 +13,8 @@ import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir._
+import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
 
 import scala.io.Source
@@ -126,6 +128,8 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should apply asyncapi extensions in correct places") {
+    import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
     case class MyExtension(string: String, int: Int)
 
     val sampleEndpoint =

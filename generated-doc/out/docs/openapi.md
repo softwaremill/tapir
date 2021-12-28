@@ -1,10 +1,55 @@
 # Generating OpenAPI documentation
 
-To use, add the following dependencies:
+## Generating and exposing documentation in a single step
+
+### Using Swagger
+
+To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M16"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.0-M3"
+```
+
+Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
+The result - a list of file-serving endpoints - will be configured to use the yaml corresponding to the passed 
+endpoints. The swagger endpoints will need in turn to be interpreted using your server interpreter. For example:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+
+import scala.concurrent.Future
+
+val myEndpoints: List[AnyEndpoint] = ???
+
+// first interpret as swagger ui endpoints, backend by the appropriate yaml
+val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Future](myEndpoints, "My App", "1.0")
+
+// add to your akka routes
+val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
+```
+
+`SwaggerInterpreter` can be configured with the OpenAPI interpreter options, as well as the path and yaml name that
+will be used. See below for more details.
+
+### Using Redoc
+
+Similarly as above, you'll need the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.0-M3"
+```
+
+And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
+
+## Generating OpenAPI documentation
+
+To generate the docs in the OpenAPI yaml format, add the following dependencies:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.20.0-M3"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.20.0-M3"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -88,7 +133,9 @@ of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 ## OpenAPI Specification Extensions
 
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
-There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
+
+Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
+method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
 
 ```scala
 import sttp.tapir._
@@ -98,6 +145,9 @@ import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe._
 import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
+
+import sttp.tapir.docs.apispec.DocsExtension
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 
 case class FruitAmount(fruit: String, amount: Int)
 
@@ -125,20 +175,22 @@ val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
 object manually or using f.e. [Quicklens](https://github.com/softwaremill/quicklens)
 
-## Exposing OpenAPI documentation
+## Exposing generated OpenAPI documentation
 
 Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
-[Redoc](https://github.com/Redocly/redoc). The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint
-definitions, which given the documentation in yaml format, will expose it using the given context path. To use, add 
-as a dependency either 
+[Redoc](https://github.com/Redocly/redoc). You can either both interpret endpoints to OpenAPI's yaml and expose
+them in a single step (see above), or you can do that separately.
+
+The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definitions, which given the documentation in 
+yaml format, will expose it using the given context path. To use, add as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.20.0-M3"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.20.0-M3"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -159,12 +211,12 @@ val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App
 val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 
-### Using with sbt-assembly
+## Using SwaggerUI with sbt-assembly
 
-The `tapir-swagger-ui` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
-You need to take additional measures if you package your application with [sbt-assembly](https://github.com/sbt/sbt-assembly)
-because the default merge strategy of the `assembly` task discards most artifacts in that directory.
-To avoid a `NullPointerException`, you need to include the following file explicitly:
+The `tapir-swagger-ui` and `tapir-swagger-ui-bundle` modules rely on a file in the `META-INF` directory tree, to 
+determine the version of the Swagger UI.  You need to take additional measures if you package your application with 
+[sbt-assembly](https://github.com/sbt/sbt-assembly) because the default merge strategy of the `assembly` task discards 
+most artifacts in that directory. To avoid a `NullPointerException`, you need to include the following file explicitly:
 
 ```scala
 assemblyMergeStrategy in assembly := {

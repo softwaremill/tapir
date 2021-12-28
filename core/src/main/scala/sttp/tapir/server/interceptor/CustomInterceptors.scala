@@ -42,7 +42,7 @@ case class CustomInterceptors[F[_], O](
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
       new UnsupportedMediaTypeInterceptor[F]()
     ),
-    decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
+    decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default
 ) {
   def metricsInterceptor(m: MetricsRequestInterceptor[F]): CustomInterceptors[F, O] = copy(metricsInterceptor = Some(m))
   def metricsInterceptor(m: Option[MetricsRequestInterceptor[F]]): CustomInterceptors[F, O] = copy(metricsInterceptor = m)
@@ -72,7 +72,7 @@ case class CustomInterceptors[F[_], O](
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =
-        DefaultDecodeFailureHandler.handler.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h)))
+        DefaultDecodeFailureHandler.default.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h)))
     )
   }
 

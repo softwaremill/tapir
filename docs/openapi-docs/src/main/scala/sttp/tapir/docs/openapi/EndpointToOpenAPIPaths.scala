@@ -5,6 +5,7 @@ import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
@@ -84,16 +85,16 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
         Right(
           RequestBody(
             info.description,
-            codecToMediaType(codec, info.examples, None),
+            codecToMediaType(codec, info.examples, None, Nil),
             Some(!codec.schema.isOptional),
             DocsExtensions.fromIterable(info.docsExtensions)
           )
         )
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
         Right(
           RequestBody(
             info.description,
-            codecToMediaType(codec, info.examples, None),
+            codecToMediaType(codec, info.examples, None, encodedExamples),
             Some(true),
             DocsExtensions.fromIterable(info.docsExtensions)
           )

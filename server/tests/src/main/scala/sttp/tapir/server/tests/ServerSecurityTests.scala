@@ -112,7 +112,7 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     testServerLogic(
       endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
       s"missing $authType with endpoint hiding",
-      Some(DefaultDecodeFailureHandler.handlerHideWithAuth)
+      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
     ) { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.NotFound
@@ -146,7 +146,7 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     testServerLogic(
       endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
       s"invalid request $authType with endpoint hiding",
-      Some(DefaultDecodeFailureHandler.handlerHideWithAuth)
+      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
     ) { (backend, baseUri) =>
       auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.NotFound)
     }

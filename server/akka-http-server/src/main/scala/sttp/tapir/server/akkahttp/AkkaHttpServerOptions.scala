@@ -27,7 +27,8 @@ class AkkaHttpServerLog extends ServerLog[Future] {
     DefaultServerLog[Future](
       doLogWhenHandled = debugLog(log),
       doLogAllDecodeFailures = debugLog(log),
-      doLogExceptions = errorLog(log)
+      doLogExceptions = errorLog(log),
+      noLog = Future.successful(())
     )
   }
 

@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.DocsExtension
 import sttp.tapir.apispec.ExtensionValue
+import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap

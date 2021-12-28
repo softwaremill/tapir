@@ -3,19 +3,19 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.20.0-M3"
 ```
 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.7"
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.11"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.7"
+"com.typesafe.play" %% "play-netty-server" % "2.8.11"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.

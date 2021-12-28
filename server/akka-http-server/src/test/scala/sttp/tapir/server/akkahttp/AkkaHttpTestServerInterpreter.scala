@@ -25,7 +25,7 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
   ): Route = {
     val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
     AkkaHttpServerInterpreter(serverOptions).toRoute(e)
   }

@@ -31,7 +31,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
     val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
       .customInterceptors[IO]
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
       .copy(encodeResponseBody = false)
     val se: ServerEndpoint[Any, IO] = e.serverLogic(fn)
@@ -49,7 +49,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
   ): Test = {
     val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
       .customInterceptors[IO]
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
       .copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)

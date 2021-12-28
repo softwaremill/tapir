@@ -86,7 +86,8 @@ object ConvertStreams {
         .schema(s2.codec.schema)
         .format(s2.codec.format),
       s2.info,
-      s2.charset
+      s2.charset,
+      s2.encodedExamples
     )
   }
 

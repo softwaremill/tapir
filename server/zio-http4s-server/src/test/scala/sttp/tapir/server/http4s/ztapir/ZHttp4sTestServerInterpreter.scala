@@ -38,7 +38,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with 
     val serverOptions: Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]] = Http4sServerOptions
       .customInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
 
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(e).toRoutes

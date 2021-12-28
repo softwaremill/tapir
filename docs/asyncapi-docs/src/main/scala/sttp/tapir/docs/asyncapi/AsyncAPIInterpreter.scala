@@ -1,7 +1,8 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.{AnyEndpoint, DocsExtension, Endpoint}
+import sttp.tapir.{AnyEndpoint, Endpoint}
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
+import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.server.ServerEndpoint
 
 trait AsyncAPIInterpreter {

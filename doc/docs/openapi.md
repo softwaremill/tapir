@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.0-M3"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -38,7 +38,7 @@ will be used. See below for more details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.19.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.0-M3"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -137,7 +137,9 @@ of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 ## OpenAPI Specification Extensions
 
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
-There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
+
+Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
+method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -147,6 +149,9 @@ import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe._
 import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
+
+import sttp.tapir.docs.apispec.DocsExtension
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 
 case class FruitAmount(fruit: String, amount: Int)
 

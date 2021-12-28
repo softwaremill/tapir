@@ -32,7 +32,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors[IO, IO]
       .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(e)
   }

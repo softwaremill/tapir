@@ -60,14 +60,14 @@ class SchemasForEndpoints(
 
   private def forIO(io: EndpointIO[_]): List[NamedSchema] = {
     io match {
-      case EndpointIO.Pair(left, right, _, _)                         => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)                             => toNamedSchemas(codec)
-      case EndpointIO.Headers(_, _)                                   => List.empty
-      case EndpointIO.Body(_, codec, _)                               => toNamedSchemas(codec)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => toNamedSchemas(codec.schema)
-      case EndpointIO.MappedPair(wrapped, _)                          => forIO(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)                            => List.empty
-      case EndpointIO.Empty(_, _)                                     => List.empty
+      case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
+      case EndpointIO.Header(_, codec, _)                                => toNamedSchemas(codec)
+      case EndpointIO.Headers(_, _)                                      => List.empty
+      case EndpointIO.Body(_, codec, _)                                  => toNamedSchemas(codec)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => toNamedSchemas(codec.schema)
+      case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)                               => List.empty
+      case EndpointIO.Empty(_, _)                                        => List.empty
     }
   }
 }

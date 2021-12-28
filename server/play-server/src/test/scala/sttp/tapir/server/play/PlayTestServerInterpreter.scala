@@ -30,7 +30,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     val serverOptions: PlayServerOptions =
       PlayServerOptions.customInterceptors
         .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }

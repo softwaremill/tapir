@@ -3,14 +3,13 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.syntax._
-import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
-import sttp.tapir.typelevel.ParamConcat
+import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
 
@@ -149,11 +148,10 @@ trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros
   def mapErrorOut[EE](m: Mapping[E, EE]): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.map(m))
 
-  def mapErrorOut[EE](f: E => EE)(g: EE => E): EndpointType[A, I, EE, O, R] =
-    withErrorOutput(errorOutput.map(f)(g))
-
   def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): EndpointType[A, I, EE, O, R] =
     withErrorOutput(errorOutput.mapDecode(f)(g))
+
+  // mapError(f)(g) is defined in EndpointErrorOutputVariantsOps
 }
 
 trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
@@ -161,35 +159,65 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
 
-  /** Adds a new error output variant. The new variant will be checked first during encoding/decoding, before the endpoint's current output.
+  /** Appends a new error output variant.
+    *
+    * A variant for the current endpoint output will be created using the given [[Tapir.oneOfVariant]]. This is needed to capture the logic
+    * which allows deciding if a run-time value is applicable to a variant. If the erasure of the `E` type is different from `E`, there will
+    * be a compile-time failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a
+    * variant using one of the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
+    *
+    * During encoding/decoding, the new `o` variant will be checked after the current variant.
     *
     * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
-    *   - the first output variant is the given `o`
-    *   - the second output variant is the current `errorOutput`, wrapped with [[Tapir.oneOfDefaultVariant]]
+    *   - the first output variant is the current variant: `oneOfVariant(errorOutput)`
+    *   - the second output variant is the given `o`
+    *
+    * Usage example:
+    *
+    * {{{
+    *   sealed trait Parent
+    *   case class Child1(v: String) extends Parent
+    *   case class Child2(v: String) extends Parent
+    *
+    *   val e: PublicEndpoint[Unit, Parent, Unit, Any] = endpoint
+    *     .errorOut(stringBody.mapTo[Child1])
+    *     .errorOutVariant[Parent](oneOfVariant(stringBody.mapTo[Child2]))
+    * }}}
+    *
+    * Adding error output variants is useful when extending the error outputs in a [[PartialServerEndpoint]], created using
+    * [[EndpointServerLogicOps.serverSecurityLogic]].
     *
     * @param o
     *   The variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
     * @tparam E2
     *   A common supertype of the new variant and the current output `E`.
     */
-  def errorOutVariant[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf(o, oneOfDefaultVariant(errorOutput)), identity)
+  def errorOutVariant[E2 >: E](
+      o: OneOfVariant[_ <: E2]
+  )(implicit ct: ClassTag[E], eEqualToErasure: ErasureSameAsType[E]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), o), identity)
 
-  /** Adds new error output variants. The new variants will be checked first during encoding/decoding, before the endpoint's current output.
+  /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
+  def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
+      ct: ClassTag[E],
+      eEqualToErasure: ErasureSameAsType[E]
+  ): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), first +: other: _*), identity)
+
+  /** Replace the error output with a [[Tapir.oneOf]] output, using the variants returned by `variants`. The current output should be
+    * included in one of the returned variants.
     *
-    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
-    *   - the initial output variants are the given `first` and `other`
-    *   - the last output variant is the current `errorOutput`, wrapped with [[Tapir.oneOfDefaultVariant]]
+    * Allows creating the variant list in a custom order, placing the current variant in an arbitrary position, and using default variants
+    * if necessary.
     *
-    * @param first
-    *   The first variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
-    * @param other
-    *   Additional variants to add.
+    * Adding error output variants is useful when extending the error outputs in a [[PartialServerEndpoint]], created using
+    * [[EndpointServerLogicOps.serverSecurityLogic]].
+    *
     * @tparam E2
     *   A common supertype of the new variant and the current output `E`.
     */
-  def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf(first, other :+ oneOfDefaultVariant(errorOutput): _*), identity)
+  def errorOutVariantsFromCurrent[E2 >: E](variants: EndpointOutput[E] => List[OneOfVariant[_ <: E2]]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(EndpointOutput.OneOf[E2, E2](variants(errorOutput), Mapping.id), identity)
 
   /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`. */
   def errorOutEither[E2](o: EndpointOutput[E2]): EndpointType[A, I, Either[E, E2], O, R] =
@@ -205,19 +233,8 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
       Left(_)
     )
 
-  /** Adds a new error variant, where the current error output is mapped to conform to the common supertype `E2` using the `f` and `g`
-    * functions.
-    */
-  def errorOutVariantMap[E2](o: OneOfVariant[_ <: E2])(f: E => E2)(g: E2 => E): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf(o, oneOfDefaultVariant(errorOutput.map(f)(g))), f)
-
-  /** Adds new error variants, where the current error output is mapped to conform to the common supertype `E2` using the `f` and `g`
-    * functions.
-    */
-  def errorOutVariantsMap[E2](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(f: E => E2)(
-      g: E2 => E
-  ): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf(first, other :+ oneOfDefaultVariant(errorOutput.map(f)(g)): _*), f)
+  def mapErrorOut[EE](f: E => EE)(g: EE => E): EndpointType[A, I, EE, O, R] =
+    withErrorOutputVariant(errorOutput.map(f)(g), f)
 }
 
 trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, O, R] {
@@ -266,7 +283,8 @@ trait EndpointInfoOps[-R] {
   def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
   def tag(t: String): ThisType[R] = withInfo(info.tag(t))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
-  def docsExtension[D: JsonCodec](key: String, value: D): ThisType[R] = withInfo(info.docsExtension(key, value))
+  def attribute[T](k: AttributeKey[T]): Option[T] = info.attribute(k)
+  def attribute[T](k: AttributeKey[T], v: T): ThisType[R] = withInfo(info.attribute(k, v))
 
   def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
@@ -420,7 +438,7 @@ case class EndpointInfo(
     description: Option[String],
     tags: Vector[String],
     deprecated: Boolean,
-    docsExtensions: Vector[DocsExtension[_]]
+    attributes: AttributeMap
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
@@ -428,6 +446,6 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
-  def docsExtension[A: JsonCodec](key: String, value: A): EndpointInfo =
-    copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
+  def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  def attribute[T](k: AttributeKey[T], v: T): EndpointInfo = copy(attributes = attributes.put(k, v))
 }

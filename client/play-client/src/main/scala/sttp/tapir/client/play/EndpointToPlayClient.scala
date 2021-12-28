@@ -8,7 +8,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -25,6 +25,7 @@ import sttp.tapir.{
 }
 
 import java.io.{ByteArrayInputStream, InputStream}
+import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.util.function.Supplier
@@ -91,16 +92,17 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
     def value: I = params.asAny.asInstanceOf[I]
+    def encodePathSegment(p: String): String = URLEncoder.encode(p, "UTF-8")
     input match {
       case EndpointInput.FixedMethod(m, _, _) => req.withMethod(m.method)
       case EndpointInput.FixedPath(p, _, _) =>
-        req.withUrl(req.url + "/" + p)
+        req.withUrl(req.url + "/" + encodePathSegment(p))
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
-        req.withUrl(req.url + "/" + v)
+        req.withUrl(req.url + "/" + encodePathSegment(v))
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
-        req.withUrl(req.url + ps.mkString("/", "/", ""))
+        req.withUrl(req.url + ps.map(encodePathSegment).mkString("/", "/", ""))
       case EndpointInput.Query(name, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.addQueryStringParameters(name -> v) }
         req2
@@ -114,7 +116,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
         req2
       case EndpointIO.Header(name, codec, _) =>
@@ -228,7 +230,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }

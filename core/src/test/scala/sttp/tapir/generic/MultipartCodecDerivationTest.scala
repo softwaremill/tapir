@@ -161,29 +161,35 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
   it should "use the right schema for an optional file part with metadata 2" in {
     // given
-    case class Test1(f1: Part[Option[TapirFile]], f2: Int)
+    case class Test1(f1: Option[Part[TapirFile]], f2: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
     val f = createTempFile()
 
     // when
     try {
       // when
-      codec.encode(Test1(Part("?", Some(f), otherDispositionParams = Map("a1" -> "b1")), 12)) shouldBe List(
-        Part("f1", FileRange(f), otherDispositionParams = Map("a1" -> "b1"), contentType = Some(MediaType.ApplicationOctetStream)),
+      codec.encode(Test1(Some(Part("?", f, otherDispositionParams = Map("a1" -> "b1"))), 12)) shouldBe List(
+        Part(
+          "f1",
+          FileRange(f),
+          otherDispositionParams = Map("a1" -> "b1", "filename" -> f.getName),
+          contentType = Some(MediaType.ApplicationOctetStream)
+        ),
         Part("f2", "12", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
       )
       codec.decode(List(Part("f1", FileRange(f), fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
-        Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
+        Test1(Some(Part("f1", f, fileName = Some(f.getName))), 12)
       )
     } finally {
       f.delete()
     }
 
-    codec.encode(Test1(Part("f1", None), 12)) shouldBe List(
+    codec.encode(Test1(None, 12)) shouldBe List(
       Part("f2", "12", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
     )
-    codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
+    codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(None, 12))
   }
+
   it should "use the right schema for a two-arg case class" in {
     // given
     case class Test1(f1: Part[TapirFile], f2: Int)

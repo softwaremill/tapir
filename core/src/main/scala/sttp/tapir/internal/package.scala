@@ -150,7 +150,7 @@ package object internal {
     }
 
     private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
-      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
+      e.info.deprecated || e.info.description.nonEmpty || e.info.attributes.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
@@ -173,7 +173,7 @@ package object internal {
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
       case EndpointIO.Body(bodyType, codec, _) =>
         Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
         Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
     }
 
