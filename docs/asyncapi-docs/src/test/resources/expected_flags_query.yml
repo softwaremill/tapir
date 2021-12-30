@@ -7,7 +7,7 @@ channels:
     subscribe:
       operationId: onPersons
       message:
-        $ref: '#/components/messages/oneOf:'
+        $ref: '#/components/messages/integer'
     publish:
       operationId: sendPersons
       message:
@@ -29,6 +29,7 @@ components:
       payload:
         type: string
       contentType: text/plain
-    'oneOf:':
-      payload: {}
+    integer:
+      payload:
+        type: integer
       contentType: application/json

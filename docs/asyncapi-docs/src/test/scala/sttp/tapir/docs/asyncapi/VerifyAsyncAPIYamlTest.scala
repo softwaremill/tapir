@@ -171,7 +171,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should contain descriptions of header") {
     val personEndpoint = endpoint.get
       .in(header[String]("Test").description("Test token"))
-      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
 
     val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header descriptions", "1.0").toYaml
 
@@ -184,7 +184,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val personEndpoint = endpoint.get
       .in("persons" / pagingQuery)
-      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
 
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query flags", "1.0").toYaml
 
@@ -194,7 +194,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should contains all flags for header") {
     val personEndpoint = endpoint.get
       .in(header[String]("Test").description("Test token").deprecated())
-      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
 
     val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header flags", "1.0").toYaml
 
