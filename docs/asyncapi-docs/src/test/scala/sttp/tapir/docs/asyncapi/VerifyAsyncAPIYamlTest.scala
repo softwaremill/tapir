@@ -178,7 +178,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(yaml) shouldBe loadYaml("expected_description_header.yml")
   }
 
-  test("should contains all flags for query") {
+  test("should contain all flags for query") {
     val pagingQuery = query[Int]("limit")
       .and(query[Int]("offset").deprecated())
 
@@ -191,7 +191,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe loadYaml("expected_flags_query.yml")
   }
 
-  test("should contains all flags for header") {
+  test("should contain all flags for header") {
     val personEndpoint = endpoint.get
       .in(header[String]("Test").description("Test token").deprecated())
       .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
