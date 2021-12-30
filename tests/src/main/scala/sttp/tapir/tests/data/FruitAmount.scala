@@ -7,3 +7,5 @@ case class IntWrapper(v: Int) extends AnyVal
 case class StringWrapper(v: String) extends AnyVal
 
 case class ValidFruitAmount(fruit: StringWrapper, amount: IntWrapper)
+
+case class ClassWithOptionField(optionalIntField: Option[Int], requiredStringField: String)

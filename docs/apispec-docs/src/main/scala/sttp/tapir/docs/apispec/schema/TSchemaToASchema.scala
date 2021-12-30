@@ -8,16 +8,17 @@ import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve nested references. */
 private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaReference) {
-  def apply[T](schema: TSchema[T]): ReferenceOr[ASchema] = {
+  def apply[T](schema: TSchema[T], nullable: Option[Boolean] = None): ReferenceOr[ASchema] = {
     val result = schema.schemaType match {
-      case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer))
-      case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number))
-      case TSchemaType.SBoolean() => Right(ASchema(SchemaType.Boolean))
-      case TSchemaType.SString()  => Right(ASchema(SchemaType.String))
+      case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer, nullable))
+      case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number, nullable))
+      case TSchemaType.SBoolean() => Right(ASchema(SchemaType.Boolean, nullable))
+      case TSchemaType.SString()  => Right(ASchema(SchemaType.String, nullable))
       case p @ TSchemaType.SProduct(fields) =>
         Right(
-          ASchema(SchemaType.Object).copy(
+          ASchema(SchemaType.Object, nullable).copy(
             required = p.required.map(_.encodedName),
+            nullable = nullable,
             properties = fields.map { f =>
               f.schema match {
                 case TSchema(_, Some(name), _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
@@ -27,13 +28,13 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
           )
         )
       case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _)) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
-      case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
+        Right(ASchema(SchemaType.Array, nullable).copy(items = Some(Left(nameToSchemaReference.map(name)))))
+      case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array, nullable).copy(items = Some(apply(el))))
       case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
-      case TSchemaType.SOption(el)                                          => apply(el)
-      case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
-      case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
-      case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
+      case TSchemaType.SOption(el)                                          => apply(el, Some(true))
+      case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String, nullable).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate()        => Right(ASchema(SchemaType.String, nullable).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String, nullable).copy(format = SchemaFormat.DateTime))
       case TSchemaType.SRef(fullName) => Left(nameToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(schemas, d) =>
         Right(
@@ -48,11 +49,11 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
                 case Right(schema)        => schema.`type`.map(_.value).getOrElse("") + schema.toString
               },
             d.map(tDiscriminatorToADiscriminator)
-          )
+          )// TODO Does it make sense to set nullable here? `.copy(nullable = nullable)`
         )
       case TSchemaType.SOpenProduct(valueSchema) =>
         Right(
-          ASchema(SchemaType.Object).copy(
+          ASchema(SchemaType.Object, nullable).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema.name match {
               case Some(name) => Left(nameToSchemaReference.map(name))

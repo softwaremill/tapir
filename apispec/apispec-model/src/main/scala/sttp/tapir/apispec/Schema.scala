@@ -39,6 +39,8 @@ case class Discriminator(propertyName: String, mapping: Option[ListMap[String, S
 object Schema {
   def apply(`type`: SchemaType): Schema = new Schema(`type` = Some(`type`))
 
+  def apply(`type`: SchemaType, nullable: Option[Boolean]): Schema = new Schema(`type` = Some(`type`), nullable = nullable)
+
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
     new Schema(oneOf = references, discriminator = discriminator)
 }

@@ -15,8 +15,8 @@ class Schemas(
       case Some(name) => Left(nameToSchemaReference.map(name))
       case None =>
         schema.schemaType match {
-          case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _)) =>
-            Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
+          case TSchemaType.SArray(TSchema(_, Some(name), isOptional, _, _, _, _, _, _)) =>
+            Right(ASchema(SchemaType.Array, nullable = Option.when(isOptional)(true)).copy(items = Some(Left(nameToSchemaReference.map(name)))))
           case TSchemaType.SOption(ts) => apply(ts)
           case _                       => tschemaToASchema(schema)
         }
