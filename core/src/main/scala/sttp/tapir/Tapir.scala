@@ -82,16 +82,24 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   /** Requires an implicit [[Codec.XmlCodec]] in scope. Such a codec can be created using [[Codec.xml]]. */
   def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
 
-  def rawBinaryBody[R: RawBodyType.Binary](implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
-    EndpointIO.Body(implicitly[RawBodyType.Binary[R]], codec, EndpointIO.Info.empty)
-  def binaryBody[R: RawBodyType.Binary, T: Codec[R, *, OctetStream]]: EndpointIO.Body[R, T] =
-    EndpointIO.Body(implicitly[RawBodyType.Binary[R]], implicitly[Codec[R, T, OctetStream]], EndpointIO.Info.empty)
+  def rawBinaryBody[R](rbt: RawBodyType.Binary[R])(implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
+    EndpointIO.Body(rbt, codec, EndpointIO.Info.empty)
 
-  def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
-  def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
-  def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
-  def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody[FileRange]
-  def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody[FileRange].map(_.file)(d => FileRange(d))
+  /** Usage: {{{binaryBody(RawBodyType.FileBody)[MyType]}}}, given that a codec between a file and `MyType` is available in the implicit
+    * scope.
+    */
+  def binaryBody[R](rbt: RawBodyType.Binary[R]): BinaryBodyPartiallyApplied[R] = new BinaryBodyPartiallyApplied(rbt)
+
+  class BinaryBodyPartiallyApplied[R](rbt: RawBodyType.Binary[R]) {
+    def apply[T: Codec[R, *, OctetStream]]: EndpointIO.Body[R, T] =
+      EndpointIO.Body(rbt, implicitly[Codec[R, T, OctetStream]], EndpointIO.Info.empty)
+  }
+
+  def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody(RawBodyType.ByteArrayBody)
+  def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody(RawBodyType.ByteBufferBody)
+  def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody(RawBodyType.InputStreamBody)
+  def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody(RawBodyType.FileBody)
+  def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody(RawBodyType.FileBody).map(_.file)(d => FileRange(d))
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

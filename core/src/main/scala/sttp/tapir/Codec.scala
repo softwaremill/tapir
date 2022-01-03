@@ -645,10 +645,10 @@ object RawBodyType {
   case class StringBody(charset: Charset) extends RawBodyType[String]
 
   sealed trait Binary[R] extends RawBodyType[R]
-  implicit case object ByteArrayBody extends Binary[Array[Byte]]
-  implicit case object ByteBufferBody extends Binary[ByteBuffer]
-  implicit case object InputStreamBody extends Binary[InputStream]
-  implicit case object FileBody extends Binary[FileRange]
+  case object ByteArrayBody extends Binary[Array[Byte]]
+  case object ByteBufferBody extends Binary[ByteBuffer]
+  case object InputStreamBody extends Binary[InputStream]
+  case object FileBody extends Binary[FileRange]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)
