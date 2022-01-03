@@ -732,7 +732,10 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-swagger-ui-bundle",
-    libraryDependencies += scalaTest.value % Test
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      scalaTest.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
@@ -892,7 +895,10 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
-    libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
