@@ -68,18 +68,18 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
       case Left(_) =>
         Future.failed(new IllegalArgumentException("Unable to parse multipart form data.")) // TODO
       case Right(value) =>
-        val dataParts = value.dataParts.flatMap { case (key, value) =>
+        val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value) =>
           m.partType(key).map { partType =>
             toRaw(
               partType,
               charset(partType),
               () => Source.single(ByteString(value.flatMap(_.getBytes).toArray)),
               None
-            ).map(body => Part(key, body.value))
+            ).map(body => Some(Part(key, body.value)))
           }
         }.toSeq
 
-        val fileParts = value.files.flatMap { f =>
+        val fileParts: Seq[Future[Option[Part[Any]]]] = value.files.map { f =>
           m.partType(f.key)
             .map { partType =>
               toRaw(
@@ -88,21 +88,22 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
                 () => FileIO.fromPath(f.ref.path),
                 Some(f.ref.toFile)
               ).map(body =>
-                Part(
-                  f.key,
-                  body.value,
-                  Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename),
-                  f.contentType.flatMap(MediaType.parse(_).toOption).map(Header.contentType).toList
+                Some(
+                  Part(
+                    f.key,
+                    body.value,
+                    Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename),
+                    f.contentType.flatMap(MediaType.parse(_).toOption).map(Header.contentType).toList
+                  )
+                    .asInstanceOf[RawPart]
                 )
-                  .asInstanceOf[RawPart]
               )
             }
-            .orElse {
-              serverOptions.deleteFile(f.ref.toFile)
-              None
+            .getOrElse {
+              serverOptions.deleteFile(f.ref.toFile).map(_ => Option.empty)
             }
         }
-        Future.sequence(dataParts ++ fileParts).map(RawValue.fromParts)
+        Future.sequence(dataParts ++ fileParts).map(ps => ps.collect { case Some(p) => p }).map(RawValue.fromParts)
     }
   }
 }
