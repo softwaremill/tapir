@@ -1,23 +1,24 @@
 package sttp.tapir
 
-import java.math.{BigDecimal => JBigDecimal}
-import java.time._
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
-import java.util.{Date, UUID}
 import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.Assertion
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 import sttp.model.Uri
 import sttp.model.Uri._
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.DecodeResult.Value
 
+import java.math.{BigDecimal => JBigDecimal}
+import java.nio.charset.StandardCharsets
+import java.time._
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.{Date, UUID}
 import scala.concurrent.duration.{Duration => SDuration}
 import scala.reflect.ClassTag
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 
 class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
@@ -203,4 +204,10 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
         decodedAndReEncoded == a.toString
       })
     }
+
+  it should "create a part codec" in {
+    PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[String]
+    PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[Int]
+    PartCodec(RawBodyType.ByteArrayBody)[Array[Byte]]
+  }
 }
