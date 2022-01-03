@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.ztapir._
-import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader}
+import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
 import zio.stream.Stream
 
@@ -37,7 +37,7 @@ trait ZioHttpInterpreter[R] {
               Http.succeed(
                 Response(
                   status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                  headers = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList,
+                  headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
                   data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
                 )
               )
@@ -48,7 +48,7 @@ trait ZioHttpInterpreter[R] {
     }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
-    ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
+    (hl._1, hl._2.map(f => f.value).mkString(", "))
 
 }
 
