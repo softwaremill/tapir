@@ -781,8 +781,9 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1160,6 +1161,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
