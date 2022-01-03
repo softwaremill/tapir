@@ -9,7 +9,8 @@ import sttp.tapir.tests.Multipart.{
   in_file_list_multipart_out_multipart,
   in_file_multipart_out_multipart,
   in_raw_multipart_out_string,
-  in_simple_multipart_out_multipart
+  in_simple_multipart_out_multipart,
+  in_simple_multipart_out_string
 }
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import sttp.tapir.tests.data.{FruitAmount, FruitData}
@@ -41,6 +42,16 @@ class ServerMultipartTests[F[_], ROUTE](
             r.body should include regex "name=\"fruit\"[\\s\\S]*pineapple apple"
             r.body should include regex "name=\"amount\"[\\s\\S]*240"
           }
+      },
+      testServer(in_simple_multipart_out_string, "discard unknown parts")((fa: FruitAmount) => pureResult(fa.toString.asRight[Unit])) {
+        (backend, baseUri) =>
+          basicStringRequest
+            .post(uri"$baseUri/api/echo/multipart")
+            .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"), multipart("shape", "regular"))
+            .send(backend)
+            .map { r =>
+              r.body shouldBe "FruitAmount(pineapple,120)"
+            }
       },
       testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
         pureResult(
