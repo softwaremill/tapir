@@ -46,8 +46,8 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
             case r @ None =>
               log.decodeFailureNotHandled(ctx).map(_ => r: Option[ServerResponse[B]])
             case r @ Some(response) =>
-              monad
-                .unit(log.decodeFailureHandled(ctx, response))
+              log
+                .decodeFailureHandled(ctx, response)
                 .map(_ => r: Option[ServerResponse[B]])
           }
           .handleError { case e: Throwable =>
