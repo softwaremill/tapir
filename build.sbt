@@ -730,7 +730,10 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-swagger-ui-bundle",
-    libraryDependencies += scalaTest.value % Test
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      scalaTest.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
@@ -779,8 +782,9 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -889,7 +893,10 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
-    libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
@@ -1158,6 +1165,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
@@ -1213,7 +1221,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     publishArtifact := false,
     name := "doc",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-netty-server" % Versions.playServer
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     ),
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
