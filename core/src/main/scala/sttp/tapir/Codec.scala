@@ -10,6 +10,7 @@ import java.util.{Base64, Date, UUID}
 import sttp.model._
 import sttp.model.headers.{CacheDirective, Cookie, CookieWithMeta, ETag, Range}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
+import sttp.tapir.DecodeResult.Error.MultipartDecodeException
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
@@ -239,15 +240,22 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
         val partNamesToDecode = (inputPartNamesToDecode ++ partCodecs.keys).toList.distinct
 
         // there might be multiple raw-parts for each name, yielding a single value-part
-        val anyParts: List[DecodeResult[(String, Any)]] = partNamesToDecode.map { name =>
+        val anyParts: List[(String, DecodeResult[Any])] = partNamesToDecode.map { name =>
           val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
-          codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts).map { (body: Any) =>
-            (name, body)
-          }
+          name -> codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts)
         }
 
-        DecodeResult.sequence(anyParts).map(_.toListMap)
+        val partFailures = anyParts.collect { case (partName, partDecodeFailure: DecodeResult.Failure) =>
+          (partName, partDecodeFailure)
+        }
+
+        if (partFailures.nonEmpty) {
+          DecodeResult.Error("", MultipartDecodeException(partFailures))
+        } else
+          DecodeResult.Value(anyParts.collect { case (partName, DecodeResult.Value(v)) =>
+            partName -> v
+          }.toListMap)
       }
 
       override def schema: Schema[ListMap[String, _]] = Schema.binary

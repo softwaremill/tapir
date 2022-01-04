@@ -21,15 +21,14 @@ object DecodeResult {
   case class Error(original: String, error: Throwable) extends Failure
   object Error {
     case class JsonDecodeException(errors: List[JsonError], underlying: Throwable)
-        extends Exception(
-          if (errors.isEmpty) underlying.getMessage else errors.map(_.message).mkString(", "),
-          underlying
-        )
-    case class JsonError(msg: String, path: List[FieldName]) {
-      def message: String = {
-        val at = if (path.nonEmpty) s" at '${path.map(_.encodedName).mkString(".")}'" else ""
-        msg + at
-      }
+        extends Exception(underlying.getMessage, underlying, true, false)
+    case class JsonError(msg: String, path: List[FieldName])
+
+    case class MultipartDecodeException(partFailures: List[(String, DecodeResult.Failure)])
+        extends Exception(partFailures.toString, MultipartDecodeException.causeOrNull(partFailures), true, false)
+    object MultipartDecodeException {
+      def causeOrNull(partFailures: List[(String, DecodeResult.Failure)]): Throwable =
+        partFailures.collectFirst { case (_, DecodeResult.Error(_, error)) => error }.orNull
     }
   }
   case class Mismatch(expected: String, actual: String) extends Failure
