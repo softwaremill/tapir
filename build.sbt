@@ -1223,7 +1223,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     publishArtifact := false,
     name := "doc",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-netty-server" % Versions.playServer
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     ),
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
