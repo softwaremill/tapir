@@ -95,6 +95,16 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 The capability can be added to the classpath independently of the interpreter through the
 `"com.softwaremill.sttp.shared" %% "zio"` or `tapir-zio` dependency.
 
+## Http4s backends
+
+Http4s integrates with a couple of [server backends](https://http4s.org/v1.0/integrations/), the most popular being
+Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Blaze, but other backends can be used
+as well. This means adding another dependency, such as:
+
+```scala
+"org.http4s" %% "http4s-blaze-server" % Http4sVersion
+```
+
 ## Web sockets
 
 The interpreter supports web sockets, with pipes of type `zio.stream.Stream[Throwable, REQ] => zio.stream.Stream[Throwable, RESP]`. 
