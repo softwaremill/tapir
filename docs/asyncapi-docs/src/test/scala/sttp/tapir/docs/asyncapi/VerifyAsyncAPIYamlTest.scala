@@ -161,7 +161,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val personEndpoint = endpoint.get
       .in("persons" / pagingQuery)
-      .out(webSocketBody[String, CodecFormat.TextPlain, Json, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
 
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query descriptions", "1.0").toYaml
 
