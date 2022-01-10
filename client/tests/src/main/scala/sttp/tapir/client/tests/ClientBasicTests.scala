@@ -1,7 +1,7 @@
 package sttp.tapir.client.tests
 
 import cats.effect.unsafe.implicits.global
-import sttp.model.{QueryParams, StatusCode}
+import sttp.model.{Header, MediaType, QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.TestUtil.writeToFile
@@ -20,6 +20,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     mappingTest()
     oneOfTests()
     fileTests()
+    oneOfBodyTests()
   }
 
   def basicTests(): Unit = {
@@ -234,5 +235,34 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(in_string_out_error_detail_nested.in("one-of").name("orange"), (), "orange", Right(()))
     testClient(in_string_out_error_detail_nested.in("one-of").name("kiwi"), (), "kiwi", Left(FruitErrorDetail.Unknown(List("orange"))))
     testClient(in_string_out_error_detail_nested.in("one-of").name("apple"), (), "apple", Left(FruitErrorDetail.AlreadyPicked("apple")))
+  }
+
+  def oneOfBodyTests(): Unit = {
+    import sttp.tapir.tests.OneOfBody._
+    testClient(
+      in_one_of_json_xml_text_out_string.in(header(Header.contentType(MediaType.ApplicationJson))).in("api" / "echo"),
+      (),
+      Fruit("apple"),
+      Right("""{"f": "apple"}""")
+    )
+    testClient(
+      in_one_of_json_xml_text_out_string.in(header(Header.contentType(MediaType.ApplicationXml))).in("api" / "echo"),
+      (),
+      Fruit("orange"),
+      Right("<f>orange</f>")
+    )
+
+    testClient(
+      in_string_out_one_of_json_xml_text.in(header(Header.accept(MediaType.ApplicationJson))).in("content-negotiation" / "fruit"),
+      (),
+      "apple",
+      Right(Fruit("apple (json)"))
+    )
+    testClient(
+      in_string_out_one_of_json_xml_text.in(header(Header.accept(MediaType.ApplicationXml))).in("content-negotiation" / "fruit"),
+      (),
+      "apple",
+      Right(Fruit("apple (xml)"))
+    )
   }
 }
