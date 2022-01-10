@@ -394,6 +394,32 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
   def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
+  /** A body input or output, which can be one of the given variants. The variants should represent `T` instances using different content
+    * types. Hence, the content type is used as a discriminator to choose the appropriate variant.
+    *
+    * The server behavior is as follows:
+    *   - when encoding to a response, the first variant matching the request's `Accept` header is chosen (if present). Otherwise, the first
+    *     variant is used. This implements content negotiation.
+    *   - when decoding a request, the variant corresponding to the request's `Content-Type` header is chosen (if present). Otherwise, the
+    *     first variant is used.
+    *
+    * The client behavior is as follows:
+    *   - when encoding a request, the variant matching the `Content-Type` header is chosen, if it is explicitly set. Otherwise, the first
+    *     variant is used.
+    *   - when decoding a response, the variant corresponding to the response's `Content-Type` header is chosen (if present). Otherwise, the
+    *     first variant is used.
+    *
+    * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
+    *
+    * This type of input/output is significantly different from the [[oneOf]] family of outputs. [[oneOfBody]] is used to represent the
+    * content type variants using which a body can be represented. On the other hand, [[oneOf]] represents alternative outputs:
+    *   - allows the outputs to be subtypes of a common supertype `T`, and doesn't require
+    *   - can only be used as an output
+    *   - can match values and variants using an arbitrary function (e.g. checking the subtype), not only using the content type
+    */
+  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody(first +: others.toList, Mapping.id)
+
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
