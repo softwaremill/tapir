@@ -411,21 +411,22 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
     *
-    * This type of input/output is significantly different from the [[oneOf]] family of outputs. [[oneOfBody]] is used to represent the
-    * content type variants using which a body can be represented. On the other hand, [[oneOf]] represents alternative outputs:
-    *   - allows the outputs to be subtypes of a common supertype `T`, and doesn't require
+    * This type of input/output is significantly different from the [[oneOf]] family of outputs. [[oneOfBody]] is used when there are
+    * different content types using which a body can be represented. On the other hand, [[oneOf]] represents alternative outputs:
+    *   - allows the outputs to be subtypes of a common supertype `T`
     *   - can only be used as an output
     *   - can match values and variants using an arbitrary function (e.g. checking the subtype), not only using the content type
     */
-  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
-    EndpointIO.OneOfBody(first +: others.toList, Mapping.id)
+  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.Body[T, T] = ???
+  // : EndpointIO.OneOfBody[T, T] =
+  //  EndpointIO.OneOfBody(first +: others.toList, Mapping.id)
 
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
-  def emptyOutputAs[T](value: T): EndpointOutput.Basic[T] = emptyOutput.map(_ => value)(_ => ())
+  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 

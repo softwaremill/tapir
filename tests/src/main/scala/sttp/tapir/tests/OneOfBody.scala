@@ -19,7 +19,7 @@ object OneOfBody {
       oneOfBody(
         jsonBody[Fruit],
         xmlBody[Fruit],
-        stringBody.map(Fruit)(_.f)
+        stringBody.map(Fruit(_))(_.f)
       )
     )
     .out(stringBody)
@@ -30,7 +30,7 @@ object OneOfBody {
       oneOfBody(
         jsonBody[Fruit],
         xmlBody[Fruit],
-        stringBody.map(Fruit)(_.f)
+        stringBody.map(Fruit(_))(_.f)
       )
     )
 }
