@@ -175,8 +175,8 @@ class HttpServer(port: Port) {
     case r @ POST -> Root / "content-negotiation" / "fruit" =>
       r.as[String].flatMap { body =>
         fromAcceptHeader(r) {
-          case "application/json" => Ok(s"""{"f": "$body"}""", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
-          case "application/xml"  => Ok(s"<f>$body</f>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
+          case "application/json" => Ok(s"""{"f": "$body (json)"}""", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
+          case "application/xml"  => Ok(s"<f>$body (xml)</f>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
         }
       }
   }

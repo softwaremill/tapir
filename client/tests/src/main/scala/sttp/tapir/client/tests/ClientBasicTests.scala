@@ -240,16 +240,10 @@ trait ClientBasicTests { this: ClientTests[Any] =>
   def oneOfBodyTests(): Unit = {
     import sttp.tapir.tests.OneOfBody._
     testClient(
-      in_one_of_json_xml_text_out_string.in(header(Header.contentType(MediaType.ApplicationJson))).in("api" / "echo"),
+      in_one_of_json_xml_text_out_string.in("api" / "echo"),
       (),
       Fruit("apple"),
-      Right("""{"f": "apple"}""")
-    )
-    testClient(
-      in_one_of_json_xml_text_out_string.in(header(Header.contentType(MediaType.ApplicationXml))).in("api" / "echo"),
-      (),
-      Fruit("orange"),
-      Right("<f>orange</f>")
+      Right("""{"f":"apple"}""")
     )
 
     testClient(

@@ -166,8 +166,9 @@ package object internal {
       }
 
     def bodyType: Option[RawBodyType[_]] = {
-      traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
-        Vector(b.bodyType)
+      traverseOutputs[RawBodyType[_]] {
+        case b: EndpointIO.Body[_, _]          => Vector(b.bodyType)
+        case EndpointIO.OneOfBody(variants, _) => variants.map(_.bodyType).toVector
       }.headOption
     }
 

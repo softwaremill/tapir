@@ -404,10 +404,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *     first variant is used.
     *
     * The client behavior is as follows:
-    *   - when encoding a request, the variant matching the `Content-Type` header is chosen, if it is explicitly set. Otherwise, the first
-    *     variant is used.
+    *   - when encoding a request, the first variant is used.
     *   - when decoding a response, the variant corresponding to the response's `Content-Type` header is chosen (if present). Otherwise, the
-    *     first variant is used.
+    *     first variant is used. For client interpreters to work correctly, all body variants must have the same raw type (e.g. all are
+    *     string-based or all byte-array-based)
     *
     * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
     *
