@@ -76,7 +76,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
 
   private def chooseOneOfVariant(variants: List[Body[_, _]]): Body[_, _] = {
     val mediaTypeToBody = variants.map(b => b.mediaTypeWithCharset -> b)
-    chooseBestVariant(mediaTypeToBody).getOrElse(variants.head)
+    chooseBestVariant[Body[_, _]](mediaTypeToBody).getOrElse(variants.head)
   }
 
   private def chooseOneOfVariant(variants: Seq[OneOfVariant[_]]): OneOfVariant[_] = {

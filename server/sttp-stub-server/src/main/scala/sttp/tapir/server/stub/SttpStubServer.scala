@@ -4,13 +4,13 @@ import sttp.client3.testing._
 import sttp.client3.{Identity, Request, Response}
 import sttp.model._
 import sttp.monad.MonadError
-import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.internal.{NoStreams, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.server.stub.SttpStubServer.{requestBody, toResponseBody}
-import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -81,8 +81,9 @@ trait SttpStubServer {
     private def decodeBody(request: Request[_, _], result: DecodeBasicInputsResult): DecodeBasicInputsResult = result match {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
-          case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
-            codec.decode(rawBody(request, bodyInput)) match {
+          case Some((Left(oneOfBodyInput), _)) =>
+            val bodyInput = oneOfBodyInput.chooseBodyToDecode(request.contentType)
+            bodyInput.codec.asInstanceOf[Codec[Any, Any, CodecFormat]].decode(rawBody(request, bodyInput)) match {
               case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
               case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
             }
@@ -92,7 +93,7 @@ trait SttpStubServer {
       case failure: DecodeBasicInputsResult.Failure => failure
     }
 
-    private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): Identity[RAW] = {
+    private def rawBody(request: Request[_, _], body: EndpointIO.Body[_, _]): Any = {
       val asByteArray = request.forceBodyAsByteArray
       body.bodyType match {
         case RawBodyType.StringBody(charset) => new String(asByteArray, charset)

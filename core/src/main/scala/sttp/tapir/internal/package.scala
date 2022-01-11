@@ -145,6 +145,7 @@ package object internal {
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
         case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
+        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.asBasicOutputsList)
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
@@ -214,6 +215,18 @@ package object internal {
     def isMediaTypeIgnoreParams(mt: MediaType): Boolean = {
       val thisMt = body.codec.format.mediaType
       thisMt.mainType.equalsIgnoreCase(mt.mainType) && thisMt.subType.equalsIgnoreCase(mt.subType)
+    }
+  }
+
+  implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
+    def chooseBodyToDecode(contentType: Option[String]): EndpointIO.Body[_, _] = {
+      contentType.flatMap(MediaType.parse(_).toOption) match {
+        case Some(ct) =>
+          body.variants
+            .find(_.isMediaTypeIgnoreParams(ct))
+            .getOrElse(body.variants.head)
+        case None => body.variants.head
+      }
     }
   }
 

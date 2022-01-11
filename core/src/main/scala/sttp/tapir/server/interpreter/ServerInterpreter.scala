@@ -1,12 +1,12 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.{Headers, MediaType, StatusCode}
+import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.internal.{Params, ParamsAsAny, RichBody}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.{interceptor, _}
+import sttp.tapir.server._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
@@ -128,22 +128,12 @@ class ServerInterpreter[R, F[_], B, S](
     } yield response).fold
   }
 
-  private def chooseBodyToDecode(request: ServerRequest, body: EndpointIO.OneOfBody[_, _]): EndpointIO.Body[_, _] = {
-    request.contentType.flatMap(MediaType.parse(_).toOption) match {
-      case Some(ct) =>
-        body.variants
-          .find(_.isMediaTypeIgnoreParams(ct))
-          .getOrElse(body.variants.head)
-      case None => body.variants.head
-    }
-  }
-
   private def decodeBody(request: ServerRequest, result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
-            val bodyInput = chooseBodyToDecode(request, oneOfBodyInput)
+            val bodyInput = oneOfBodyInput.chooseBodyToDecode(request.contentType)
             requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
               bodyInput.codec.asInstanceOf[Codec[Any, Any, CodecFormat]].decode(v.value) match {
                 case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit

@@ -21,7 +21,7 @@ object DecodeBasicInputsResult {
     }
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)
-      copy(bodyInputWithIndex = Some((Left(EndpointIO.OneOfBody(List(input), Mapping.id[Any])), bodyIndex)))
+      copy(bodyInputWithIndex = Some((Left(EndpointIO.OneOfBody[Any, Any](List(input), Mapping.id[Any])), bodyIndex)))
     }
     def addOneOfBodyInput(input: EndpointIO.OneOfBody[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)

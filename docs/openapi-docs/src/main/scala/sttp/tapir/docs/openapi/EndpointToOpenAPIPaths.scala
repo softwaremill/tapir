@@ -67,8 +67,9 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall { case i: EndpointInput.Atom[_] =>
-      i.codec.schema.isOptional
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
+      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
+      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)
     }
 
     if (securityRequirement.isEmpty) List.empty
