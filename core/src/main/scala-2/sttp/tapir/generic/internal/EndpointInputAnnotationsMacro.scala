@@ -23,6 +23,18 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
     val util = new CaseClassUtil[c.type, A](c, "request endpoint")
     validateCaseClass(util)
 
+    if (util.fields.isEmpty) {
+      val path = util.classSymbol.annotations
+        .map(_.tree)
+        .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
+
+      if (path.isEmpty) {
+        c.abort(c.enclosingPosition, s"case class is empty and not annotated with @endpointInput")
+      } else if (path.exists(tree => tree.toString().contains('{') || tree.toString().contains('}'))) {
+        c.abort(c.enclosingPosition, s"case class is empty but has path arguments in @endpointInput ${path.get}")
+      }
+      return c.Expr[EndpointInput[A]](q"stringToPath(${path.get}).mapTo[${util.classSymbol}]")
+    }
     val segments = util.classSymbol.annotations
       .map(_.tree)
       .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }

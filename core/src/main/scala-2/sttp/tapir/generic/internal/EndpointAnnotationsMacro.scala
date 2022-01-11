@@ -31,9 +31,6 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   protected val securitySchemeNameType = c.weakTypeOf[securitySchemeName]
 
   protected def validateCaseClass[A](util: CaseClassUtil[c.type, A]): Unit = {
-    if (util.fields.isEmpty) {
-      c.abort(c.enclosingPosition, "Case class must have at least one field")
-    }
     if (1 < util.fields.flatMap(bodyAnnotation).size) {
       c.abort(c.enclosingPosition, "No more than one body annotation is allowed")
     }
@@ -113,8 +110,10 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
       }
 
       q"(t: $tupleType) => $className(..$ctorArgs)"
-    } else {
+    } else if (inputIdxToFieldIdx.size == 1) {
       q"(t: ${util.fields.head.info}) => $className(t)"
+    } else {
+      q"(t: ${}) => $className()"
     }
   }
 
