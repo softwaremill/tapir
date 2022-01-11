@@ -1,6 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
+import sttp.tapir.EndpointIO.Body
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
@@ -41,6 +42,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         val maybeCharset = if (codec.format.mediaType.mainType.equalsIgnoreCase("text")) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
+      case EndpointIO.OneOfBody(variants, mapping) => applySingle(chooseOneOfVariant(variants), ParamsAsAny(encodedM[Any](mapping)), ov)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
         ov.withBody(headers => rawToResponseBody.fromStreamValue(encodedC(codec), headers, codec.format, charset))
           .withDefaultContentType(codec.format, charset)
@@ -72,30 +74,32 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     }
   }
 
-  private def chooseOneOfVariant(mappings: Seq[OneOfVariant[_]]): OneOfVariant[_] = {
+  private def chooseOneOfVariant(variants: List[Body[_, _]]): Body[_, _] = {
+    val mediaTypeToBody = variants.map(b => b.mediaTypeWithCharset -> b)
+    chooseBestVariant(mediaTypeToBody).getOrElse(variants.head)
+  }
+
+  private def chooseOneOfVariant(variants: Seq[OneOfVariant[_]]): OneOfVariant[_] = {
     // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
     // mapping. We need to take the first defined into account.
-    val bodyMappings: Seq[(MediaType, OneOfVariant[_])] = mappings
+    val bodyVariants: Seq[(MediaType, OneOfVariant[_])] = variants
       .flatMap(om =>
         om.output.traverseOutputs {
-          case EndpointIO.Body(bodyType, codec, _) =>
-            Vector[(MediaType, OneOfVariant[_])](
-              codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> om
-            )
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
-            Vector[(MediaType, OneOfVariant[_])](
-              codec.format.mediaType.copy(charset = charset.map(_.name())) -> om
-            )
+          case b: EndpointIO.Body[_, _]              => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
+          case b: EndpointIO.StreamBodyWrapper[_, _] => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
         }
       )
 
-    if (bodyMappings.nonEmpty) {
-      val mediaTypes = bodyMappings.map(_._1)
+    chooseBestVariant(bodyVariants).getOrElse(variants.head)
+  }
+
+  private def chooseBestVariant[T](variants: Seq[(MediaType, T)]): Option[T] = {
+    if (variants.nonEmpty) {
+      val mediaTypes = variants.map(_._1)
       MediaType
         .bestMatch(mediaTypes, acceptsContentTypes)
-        .flatMap(mt => bodyMappings.find(_._1 == mt).map(_._2))
-        .getOrElse(mappings.head)
-    } else mappings.head
+        .flatMap(mt => variants.find(_._1 == mt).map(_._2))
+    } else None
   }
 }
 

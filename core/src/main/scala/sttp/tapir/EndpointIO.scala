@@ -406,6 +406,12 @@ object EndpointIO {
     override def show: String = wrapped.show
   }
 
+  case class OneOfBody[O, T](variants: List[Body[_, _ <: O]], mapping: Mapping[O, T]) extends Basic[T] {
+    override private[tapir] type ThisType[X] = OneOfBody[O, X]
+    override def show: String = showOneOf(variants.map(_.show))
+    override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy(mapping = mapping.map(m))
+  }
+
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = FixedHeader[X]
     override private[tapir] type L = Unit

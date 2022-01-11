@@ -1,13 +1,13 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.{Headers, StatusCode}
+import sttp.model.{Headers, MediaType, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.internal.{Params, ParamsAsAny}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichBody}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
@@ -93,7 +93,7 @@ class ServerInterpreter[R, F[_], B, S](
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
       // 3. computing the security input value
-      securityValues <- resultOrValueFrom(decodeBody(securityBasicInputs))
+      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
       inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
@@ -116,7 +116,7 @@ class ServerInterpreter[R, F[_], B, S](
         case Right(u) =>
           for {
             // 5. decoding the body of regular inputs, computing the input value, and running the main logic
-            values <- resultOrValueFrom(decodeBody(inputValues))
+            values <- resultOrValueFrom(decodeBody(request, inputValues))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse)
@@ -128,13 +128,24 @@ class ServerInterpreter[R, F[_], B, S](
     } yield response).fold
   }
 
-  private def decodeBody(result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
+  private def chooseBodyToDecode(request: ServerRequest, body: EndpointIO.OneOfBody[_, _]): EndpointIO.Body[_, _] = {
+    request.contentType.flatMap(MediaType.parse(_).toOption) match {
+      case Some(ct) =>
+        body.variants
+          .find(_.isMediaTypeIgnoreParams(ct))
+          .getOrElse(body.variants.head)
+      case None => body.variants.head
+    }
+  }
+
+  private def decodeBody(request: ServerRequest, result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
-          case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
+          case Some((Left(oneOfBodyInput), _)) =>
+            val bodyInput = chooseBodyToDecode(request, oneOfBodyInput)
             requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
-              codec.decode(v.value) match {
+              bodyInput.codec.asInstanceOf[Codec[Any, Any, CodecFormat]].decode(v.value) match {
                 case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
                 case failure: DecodeResult.Failure =>
                   v.createdFiles

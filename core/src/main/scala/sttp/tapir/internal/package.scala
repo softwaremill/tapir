@@ -126,6 +126,7 @@ package object internal {
       case _: EndpointInput.ExtractFromRequest[_] => 4
       case _: EndpointIO.Body[_, _]               => 6
       case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
+      case _: EndpointIO.OneOfBody[_, _]          => 6
       case _: EndpointIO.Empty[_]                 => 7
     }
 
@@ -171,10 +172,9 @@ package object internal {
     }
 
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
-      case EndpointIO.Body(bodyType, codec, _) =>
-        Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset, _)) =>
-        Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
+      case b: EndpointIO.Body[_, _]              => Vector(b.mediaTypeWithCharset)
+      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
+      case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
     }
 
     def hasBodyMatchingContent(content: MediaType): Boolean = {
@@ -202,8 +202,22 @@ package object internal {
         case _: EndpointIO.FixedHeader[_]                 => 1
         case _: EndpointIO.Body[_, _]                     => 2
         case _: EndpointIO.StreamBodyWrapper[_, _]        => 2
+        case _: EndpointIO.OneOfBody[_, _]                => 2
         case _: EndpointOutput.WebSocketBodyWrapper[_, _] => 2
       }
+  }
+
+  implicit class RichBody[R, T](body: EndpointIO.Body[R, T]) {
+    def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = charset(body.bodyType).map(_.name()))
+
+    def isMediaTypeIgnoreParams(mt: MediaType): Boolean = {
+      val thisMt = body.codec.format.mediaType
+      thisMt.mainType.equalsIgnoreCase(mt.mainType) && thisMt.subType.equalsIgnoreCase(mt.subType)
+    }
+  }
+
+  implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {
+    def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = body.wrapped.charset.map(_.name()))
   }
 
   def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {

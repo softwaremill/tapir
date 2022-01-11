@@ -4,7 +4,7 @@ import sttp.model.headers.Cookie
 import sttp.model.{HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping, StreamBodyIO}
 
 import scala.annotation.tailrec
 
@@ -14,12 +14,16 @@ object DecodeBasicInputsResult {
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(
       basicInputsValues: Vector[Any],
-      bodyInputWithIndex: Option[(Either[EndpointIO.Body[_, _], EndpointIO.StreamBodyWrapper[_, _]], Int)]
+      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[_, _], EndpointIO.StreamBodyWrapper[_, _]], Int)]
   ) extends DecodeBasicInputsResult {
     private def verifyNoBody(input: EndpointInput[_]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
+      verifyNoBody(input)
+      copy(bodyInputWithIndex = Some((Left(EndpointIO.OneOfBody(List(input), Mapping.id[Any])), bodyIndex)))
+    }
+    def addOneOfBodyInput(input: EndpointIO.OneOfBody[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Left(input), bodyIndex)))
     }
@@ -239,6 +243,8 @@ object DecodeBasicInputs {
       case None => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
+      case Some((IndexedBasicInput(input @ EndpointIO.OneOfBody(_, _), index), inputsTail)) =>
+        matchOthers(inputsTail, values.addOneOfBodyInput(input, index), ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, _, _, _)), index), inputsTail)) =>
         matchOthers(inputsTail, values.addStreamingBodyInput(input, index), ctx)
       case Some((indexedInput, inputsTail)) =>

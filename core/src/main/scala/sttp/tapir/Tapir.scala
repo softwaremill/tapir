@@ -417,9 +417,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *   - can only be used as an output
     *   - can match values and variants using an arbitrary function (e.g. checking the subtype), not only using the content type
     */
-  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.Body[T, T] = ???
-  // : EndpointIO.OneOfBody[T, T] =
-  //  EndpointIO.OneOfBody(first +: others.toList, Mapping.id)
+  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody(first +: others.toList, Mapping.id)
 
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
