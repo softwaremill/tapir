@@ -17,7 +17,7 @@ abstract class ClientOutputParams {
             val body2 = decode(mapping, body)
             val bodyIO = meta.contentType
               .flatMap(MediaType.parse(_).toOption)
-              .flatMap(ct => variants.find(b => b.isMediaTypeIgnoreParams(ct)))
+              .flatMap(ct => variants.find(b => b.codec.format.mediaType.equalsIgnoreParameters(ct)))
               .getOrElse(variants.head)
             body2.flatMap(decode(bodyIO.codec, _))
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => decode(codec, body)

@@ -182,8 +182,8 @@ package object internal {
     def hasBodyMatchingContent(content: MediaType): Boolean = {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
-        case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
-        case m                                 => m
+        case m @ MediaType(_, _, None, _) if m.isText => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m                                        => m
       }
 
       val contentTypeRange =
@@ -211,11 +211,6 @@ package object internal {
 
   implicit class RichBody[R, T](body: EndpointIO.Body[R, T]) {
     def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = charset(body.bodyType).map(_.name()))
-
-    def isMediaTypeIgnoreParams(mt: MediaType): Boolean = {
-      val thisMt = body.codec.format.mediaType
-      thisMt.mainType.equalsIgnoreCase(mt.mainType) && thisMt.subType.equalsIgnoreCase(mt.subType)
-    }
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
@@ -223,7 +218,7 @@ package object internal {
       contentType.flatMap(MediaType.parse(_).toOption) match {
         case Some(ct) =>
           body.variants
-            .find(_.isMediaTypeIgnoreParams(ct))
+            .find(_.codec.format.mediaType.equalsIgnoreParameters(ct))
             .getOrElse(body.variants.head)
         case None => body.variants.head
       }

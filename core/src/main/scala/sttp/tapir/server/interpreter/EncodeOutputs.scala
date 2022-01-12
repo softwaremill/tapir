@@ -39,7 +39,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
       case EndpointIO.Body(rawBodyType, codec, _) =>
-        val maybeCharset = if (codec.format.mediaType.mainType.equalsIgnoreCase("text")) charset(rawBodyType) else None
+        val maybeCharset = if (codec.format.mediaType.isText) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
       case EndpointIO.OneOfBody(variants, mapping) => applySingle(chooseOneOfVariant(variants), ParamsAsAny(encodedM[Any](mapping)), ov)
