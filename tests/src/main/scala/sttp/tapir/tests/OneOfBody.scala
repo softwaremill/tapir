@@ -13,6 +13,7 @@ object OneOfBody {
       .mapDecode { xml =>
         DecodeResult.fromOption("""<f>(.*?)</f>""".r.findFirstMatchIn(xml).map(_.group(1)).map(Fruit))
       }(fruit => s"<f>${fruit.f}</f>")
+      .schema(implicitly[Schema[Fruit]])
 
   val in_one_of_json_xml_text_out_string: PublicEndpoint[Fruit, Unit, String, Any] = endpoint.post
     .in(

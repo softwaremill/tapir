@@ -93,6 +93,15 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
             DocsExtensions.fromIterable(info.docsExtensions)
           )
         )
+      case EndpointIO.OneOfBody(variants, _) =>
+        Right(
+          RequestBody(
+            variants.collectFirst { case EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, _)) => d },
+            variants.flatMap(body => codecToMediaType(body.codec, body.info.examples, None, Nil)).toListMap,
+            Some(!variants.forall(_.codec.schema.isOptional)),
+            DocsExtensions.fromIterable(variants.flatMap(_.info.docsExtensions))
+          )
+        )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
         Right(
           RequestBody(
