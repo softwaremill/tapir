@@ -225,7 +225,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
-  /** An output which contains a number of variant outputs.
+  /** An output which contains a number of variant outputs. Each variant can contain different outputs and represent different content. To
+    * describe an output which represents same content, but with different content types, use [[oneOfBody]].
     *
     * All possible outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the variants are implementing
     * case classes.
@@ -394,8 +395,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
   def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
-  /** A body input or output, which can be one of the given variants. The variants should represent `T` instances using different content
+  /** A body input or output, which can be one of the given variants. All variants should represent `T` instances using different content
     * types. Hence, the content type is used as a discriminator to choose the appropriate variant.
+    *
+    * Should be used to describe an input or output which represents the same content, but using different content types. For an output
+    * which describes variants including possibly different outputs (representing different content), see [[oneOf]].
     *
     * The server behavior is as follows:
     *   - when encoding to a response, the first variant matching the request's `Accept` header is chosen (if present). Otherwise, the first
@@ -410,12 +414,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *     string-based or all byte-array-based)
     *
     * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
-    *
-    * This type of input/output is significantly different from the [[oneOf]] family of outputs. [[oneOfBody]] is used when there are
-    * different content types using which a body can be represented. On the other hand, [[oneOf]] represents alternative outputs:
-    *   - allows the outputs to be subtypes of a common supertype `T`
-    *   - can only be used as an output
-    *   - can match values and variants using an arbitrary function (e.g. checking the subtype), not only using the content type
     */
   def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](first +: others.toList, Mapping.id)
