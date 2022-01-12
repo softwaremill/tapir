@@ -4,7 +4,7 @@ import sttp.model.headers.Cookie
 import sttp.model.{HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping, StreamBodyIO}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, oneOfBody}
 
 import scala.annotation.tailrec
 
@@ -21,7 +21,7 @@ object DecodeBasicInputsResult {
     }
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)
-      copy(bodyInputWithIndex = Some((Left(EndpointIO.OneOfBody[Any, Any](List(input), Mapping.id[Any])), bodyIndex)))
+      copy(bodyInputWithIndex = Some((Left(oneOfBody(input)), bodyIndex)))
     }
     def addOneOfBodyInput(input: EndpointIO.OneOfBody[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)

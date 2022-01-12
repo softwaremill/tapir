@@ -82,18 +82,20 @@ trait SttpStubServer {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
-            val bodyInput = oneOfBodyInput.chooseBodyToDecode(request.contentType)
-            bodyInput.codec.asInstanceOf[Codec[Any, Any, CodecFormat]].decode(rawBody(request, bodyInput)) match {
-              case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-              case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+            def run[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): DecodeBasicInputsResult = {
+              bodyInput.codec.decode(rawBody(request, bodyInput)) match {
+                case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+              }
             }
+            run(oneOfBodyInput.chooseBodyToDecode(request.contentType))
           case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
           case None                => values
         }
       case failure: DecodeBasicInputsResult.Failure => failure
     }
 
-    private def rawBody(request: Request[_, _], body: EndpointIO.Body[_, _]): Any = {
+    private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): RAW = {
       val asByteArray = request.forceBodyAsByteArray
       body.bodyType match {
         case RawBodyType.StringBody(charset) => new String(asByteArray, charset)

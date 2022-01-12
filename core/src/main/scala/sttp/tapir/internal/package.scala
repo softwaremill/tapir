@@ -219,7 +219,7 @@ package object internal {
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
-    def chooseBodyToDecode(contentType: Option[String]): EndpointIO.Body[_, _] = {
+    def chooseBodyToDecode(contentType: Option[String]): EndpointIO.Body[_, O] = {
       contentType.flatMap(MediaType.parse(_).toOption) match {
         case Some(ct) =>
           body.variants

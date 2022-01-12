@@ -133,16 +133,19 @@ class ServerInterpreter[R, F[_], B, S](
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
-            val bodyInput = oneOfBodyInput.chooseBodyToDecode(request.contentType)
-            requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
-              bodyInput.codec.asInstanceOf[Codec[Any, Any, CodecFormat]].decode(v.value) match {
-                case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
-                case failure: DecodeResult.Failure =>
-                  v.createdFiles
-                    .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
-                    .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+            // this needs to be a method so that Scala 2.12 properly infers the RAW type parameter
+            def run[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): F[DecodeBasicInputsResult] = {
+              requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
+                bodyInput.codec.decode(v.value) match {
+                  case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+                  case failure: DecodeResult.Failure =>
+                    v.createdFiles
+                      .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
+                      .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+                }
               }
             }
+            run(oneOfBodyInput.chooseBodyToDecode(request.contentType))
 
           case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {
