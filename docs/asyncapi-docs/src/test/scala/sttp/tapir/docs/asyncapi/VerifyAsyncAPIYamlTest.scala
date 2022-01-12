@@ -1,16 +1,17 @@
 package sttp.tapir.docs.asyncapi
 
+import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.tapir.Schema.SName
-import sttp.tapir.asyncapi.{Info, Server}
+import sttp.tapir._
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
+import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
-import sttp.tapir.{CodecFormat, auth, endpoint, header, query, webSocketBody}
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtension
@@ -151,6 +152,53 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(sampleEndpoint, Info("title", "1.0"), Seq.empty, rootExtensions).toYaml
 
     noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
+  }
+
+  test("should contain descriptions of query") {
+    val pagingQuery = query[Option[Int]]("limit")
+      .description("GET `limit` field description")
+      .and(query[Option[Int]]("offset").description("GET `offset` field description"))
+
+    val personEndpoint = endpoint.get
+      .in("persons" / pagingQuery)
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query descriptions", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe loadYaml("expected_description_query.yml")
+  }
+
+  test("should contain descriptions of header") {
+    val personEndpoint = endpoint.get
+      .in(header[String]("Test").description("Test token"))
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams).description("Endpoint description"))
+
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header descriptions", "1.0").toYaml
+
+    noIndentation(yaml) shouldBe loadYaml("expected_description_header.yml")
+  }
+
+  test("should contain all flags for query") {
+    val pagingQuery = query[Int]("limit")
+      .and(query[Int]("offset").deprecated())
+
+    val personEndpoint = endpoint.get
+      .in("persons" / pagingQuery)
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Query flags", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe loadYaml("expected_flags_query.yml")
+  }
+
+  test("should contain all flags for header") {
+    val personEndpoint = endpoint.get
+      .in(header[String]("Test").description("Test token").deprecated())
+      .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
+
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header flags", "1.0").toYaml
+
+    noIndentation(yaml) shouldBe loadYaml("expected_flags_header.yml")
   }
 
   private def loadYaml(fileName: String): String = {

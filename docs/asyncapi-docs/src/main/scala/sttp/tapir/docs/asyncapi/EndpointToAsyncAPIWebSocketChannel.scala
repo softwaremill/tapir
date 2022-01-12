@@ -25,8 +25,13 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, _) => name -> schemas(codec) }
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, _) => name -> schemas(codec) }
+    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) =>
+      addMetaDataFromInfo(name, schemas(codec), info)
+    }
+
+    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) =>
+      addMetaDataFromInfo(name, schemas(codec), info)
+    }
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
@@ -38,6 +43,16 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     )
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
+  }
+
+  private def addMetaDataFromInfo(name: String, schemaRef: ReferenceOr[ASchema], info: EndpointIO.Info[_]): (String, Either[Reference, ASchema]) = {
+    schemaRef match {
+      case Right(schema) =>
+        val schemaWithDescription = if (schema.description.isEmpty) schemaRef.map(_.copy(description = info.description)) else schemaRef
+        val schemaWithDeprecation = if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.map(_.copy(deprecated = Some(info.deprecated))) else schemaWithDescription
+        name -> schemaWithDeprecation
+      case _ => name -> schemaRef
+    }
   }
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {

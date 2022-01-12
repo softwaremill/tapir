@@ -1,0 +1,35 @@
+asyncapi: 2.0.0
+info:
+  title: Query flags
+  version: '1.0'
+channels:
+  /persons:
+    subscribe:
+      operationId: onPersons
+      message:
+        $ref: '#/components/messages/integer'
+    publish:
+      operationId: sendPersons
+      message:
+        $ref: '#/components/messages/string'
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+              deprecated: true
+components:
+  messages:
+    string:
+      payload:
+        type: string
+      contentType: text/plain
+    integer:
+      payload:
+        type: integer
+      contentType: application/json
