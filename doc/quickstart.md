@@ -16,8 +16,9 @@ you import the main package entirely, i.e.:
 import sttp.tapir._
 ```
 
-If you don't have it already, you'll also need partial unification enabled in the compiler (alternatively, you'll need 
-to manually provide type arguments in some cases). In sbt, this is:
+Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, and don't 
+have it already, you'll want to to enable partial unification in the compiler (alternatively, you'll need to manually 
+provide type arguments in some cases). In sbt, this is:
 
 ```scala
 scalacOptions += "-Ypartial-unification"
