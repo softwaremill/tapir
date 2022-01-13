@@ -98,7 +98,9 @@ Add the following dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.0-M4"
 ```
 
-You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
+Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then 
+you'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type 
+arguments in some cases):
 
 ```sbt
 scalacOptions += "-Ypartial-unification"
