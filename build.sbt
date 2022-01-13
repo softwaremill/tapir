@@ -819,15 +819,14 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
-      "com.twitter" %% "finatra-http" % Versions.finatra,
+      "com.twitter" %% "finatra-http-server" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.13",
       // Testing
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test,
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
       "com.twitter" %% "inject-core" % Versions.finatra % Test,
       "com.twitter" %% "inject-modules" % Versions.finatra % Test,
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "finatra-http-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
