@@ -16,6 +16,9 @@ channels:
       ws:
         method: GET
         query:
+          required:
+          - limit
+          - offset
           type: object
           properties:
             limit:

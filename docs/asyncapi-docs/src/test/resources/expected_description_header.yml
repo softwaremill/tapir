@@ -17,6 +17,8 @@ channels:
       ws:
         method: GET
         headers:
+          required:
+          - Test
           type: object
           properties:
             Test:

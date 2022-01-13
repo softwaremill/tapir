@@ -42,9 +42,9 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
   private def addMetaDataFromInfo(
       name: String,
-      codec: Codec[_, _, _],
+      codec: Codec[_, _, _ <: CodecFormat],
       info: EndpointIO.Info[_]
-  ): ((String, Codec[_, _, _]), Either[Reference, ASchema]) = {
+  ): ((String, Codec[_, _, _ <: CodecFormat]), Either[Reference, ASchema]) = {
     val schemaRef = schemas(codec)
     schemaRef match {
       case Right(schema) =>
@@ -82,7 +82,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     )
   }
 
-  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _]), ReferenceOr[ASchema])]): Option[ASchema] = {
+  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _ <: CodecFormat]), ReferenceOr[ASchema])]): Option[ASchema] = {
     if (fields.isEmpty) None
     else
       Some {
