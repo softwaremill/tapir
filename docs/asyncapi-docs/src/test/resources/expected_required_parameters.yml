@@ -1,15 +1,15 @@
 asyncapi: 2.0.0
 info:
-  title: Query flags
-  version: '1.0'
+  title: The fruit basket
+  version: '0.1'
 channels:
-  /persons:
+  /fruit:
     subscribe:
-      operationId: onPersons
+      operationId: onFruit
       message:
-        $ref: '#/components/messages/integer'
+        $ref: '#/components/messages/string'
     publish:
-      operationId: sendPersons
+      operationId: sendFruit
       message:
         $ref: '#/components/messages/string'
     bindings:
@@ -17,22 +17,16 @@ channels:
         method: GET
         query:
           required:
-          - limit
-          - offset
+            - limit
           type: object
           properties:
             limit:
               type: integer
             offset:
               type: integer
-              deprecated: true
 components:
   messages:
     string:
       payload:
         type: string
       contentType: text/plain
-    integer:
-      payload:
-        type: integer
-      contentType: application/json

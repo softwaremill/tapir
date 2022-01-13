@@ -127,6 +127,20 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should include required indicator for non optional inputs") {
+    val e = endpoint
+      .in("fruit" / query[Int]("limit").and(query[Option[Int]]("offset")))
+      .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](AkkaStreams))
+
+    val expectedYaml = loadYaml("expected_required_parameters.yml")
+    val expectedYamlNoIndent = noIndentation(expectedYaml)
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYamlNoIndent
+  }
+
   test("should apply asyncapi extensions in correct places") {
     import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 
