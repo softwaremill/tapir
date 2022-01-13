@@ -16,10 +16,10 @@ trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response] =
     Http.route[Request] { case req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
