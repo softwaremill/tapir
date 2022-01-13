@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.testing._
-import sttp.client3.{Identity, Request, Response}
+import sttp.client3.{Request, Response}
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.internal.{NoStreams, ParamsAsAny, RichOneOfBody}
@@ -10,7 +10,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.server.stub.SttpStubServer.{requestBody, toResponseBody}
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -88,7 +88,17 @@ trait SttpStubServer {
                 case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
               }
             }
-            run(oneOfBodyInput.chooseBodyToDecode(request.contentType.flatMap(MediaType.parse(_).toOption)))
+
+            val requestContentType: Option[String] = request.contentType
+            oneOfBodyInput.chooseBodyToDecode(requestContentType.flatMap(MediaType.parse(_).toOption)) match {
+              case Some(body) => run(body)
+              case None =>
+                DecodeBasicInputsResult.Failure(
+                  oneOfBodyInput,
+                  DecodeResult.Mismatch(oneOfBodyInput.show, requestContentType.getOrElse(""))
+                ): DecodeBasicInputsResult
+            }
+
           case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
           case None                => values
         }

@@ -99,9 +99,11 @@ object DefaultDecodeFailureHandler {
       case _: EndpointIO.Header[_] => Some(onlyStatus(StatusCode.BadRequest))
       case fh: EndpointIO.FixedHeader[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && fh.h.name == HeaderNames.ContentType =>
         Some(onlyStatus(StatusCode.UnsupportedMediaType))
-      case _: EndpointIO.FixedHeader[_]          => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Headers[_]              => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Body[_, _]              => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.FixedHeader[_] => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.Headers[_]     => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.Body[_, _]     => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.OneOfBody[_, _] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] =>
+        Some(onlyStatus(StatusCode.UnsupportedMediaType))
       case _: EndpointIO.StreamBodyWrapper[_, _] => Some(onlyStatus(StatusCode.BadRequest))
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from

@@ -27,15 +27,15 @@ class ServerOneOfBodyTests[F[_], ROUTE](
       val post = basicRequest.post(uri"$baseUri").response(asStringAlways)
       post.body("""{"f":"apple"}""").contentType(ApplicationJson).send(backend).map(_.body shouldBe "apple") >>
         post.body("<f>orange</f>").contentType(ApplicationXml).send(backend).map(_.body shouldBe "orange") >>
-        post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") // >>
-    // post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+        post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") >>
+        post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
     },
     testServer(in_one_of_json_text_range_out_string)((fruit: Fruit) => pureResult(fruit.f.asRight[Unit])) { (backend, baseUri) =>
       val post = basicRequest.post(uri"$baseUri").response(asStringAlways)
       post.body("""{"f":"apple"}""").contentType(ApplicationJson).send(backend).map(_.body shouldBe "apple") >>
         post.body("<f>orange</f>").contentType(TextHtml).send(backend).map(_.body shouldBe "<f>orange</f>") >>
-        post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") // >>
-    // post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+        post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") >>
+        post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
     },
     testServer(in_string_out_one_of_json_xml_text)((fruit: String) => pureResult(Fruit(fruit).asRight[Unit])) { (backend, baseUri) =>
       val post = basicRequest.post(uri"$baseUri").response(asStringAlways)

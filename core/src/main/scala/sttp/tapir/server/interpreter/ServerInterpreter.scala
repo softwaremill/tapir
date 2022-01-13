@@ -133,19 +133,10 @@ class ServerInterpreter[R, F[_], B, S](
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
-            // this needs to be a method so that Scala 2.12 properly infers the RAW type parameter
-            def run[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): F[DecodeBasicInputsResult] = {
-              requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
-                bodyInput.codec.decode(v.value) match {
-                  case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
-                  case failure: DecodeResult.Failure =>
-                    v.createdFiles
-                      .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
-                      .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
-                }
-              }
+            oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
+              case Some(body) => decodeBody(values, body)
+              case None       => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
-            run(oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed))
 
           case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {
@@ -157,6 +148,28 @@ class ServerInterpreter[R, F[_], B, S](
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
+
+  private def decodeBody[RAW, T](values: DecodeBasicInputsResult.Values, bodyInput: EndpointIO.Body[RAW, T]): F[DecodeBasicInputsResult] = {
+    requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
+      bodyInput.codec.decode(v.value) match {
+        case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+        case failure: DecodeResult.Failure =>
+          v.createdFiles
+            .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
+            .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+      }
+    }
+  }
+
+  private def unsupportedInputMediaTypeResponse(
+      request: ServerRequest,
+      oneOfBodyInput: EndpointIO.OneOfBody[_, _]
+  ): F[DecodeBasicInputsResult] =
+    (DecodeBasicInputsResult.Failure(
+      oneOfBodyInput,
+      DecodeResult
+        .Mismatch(oneOfBodyInput.variants.map(_.range.toString()).mkString(", or: "), request.contentType.getOrElse(""))
+    ): DecodeBasicInputsResult).unit
 
   private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {

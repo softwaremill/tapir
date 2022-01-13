@@ -214,15 +214,12 @@ package object internal {
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
-    def chooseBodyToDecode(contentType: Option[MediaType]): EndpointIO.Body[_, O] = {
+    def chooseBodyToDecode(contentType: Option[MediaType]): Option[EndpointIO.Body[_, O]] = {
       contentType match {
-        case Some(ct) =>
-          body.variants
-            .find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
-            .getOrElse(body.variants.head)
-        case None => body.variants.head
+        case Some(ct) => body.variants.find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
+        case None     => Some(body.variants.head)
       }
-    }.body
+    }.map(_.body)
   }
 
   implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {

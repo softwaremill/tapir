@@ -404,8 +404,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * The server behavior is as follows:
     *   - when encoding to a response, the first variant matching the request's `Accept` header is chosen (if present). Otherwise, the first
     *     variant is used. This implements content negotiation.
-    *   - when decoding a request, the variant corresponding to the request's `Content-Type` header is chosen (if present). Otherwise, the
-    *     first variant is used.
+    *   - when decoding a request, the variant corresponding to the request's `Content-Type` header is chosen (if present). Otherwise, a
+    *     decode failure is returned, which by default results in an `415 Unsupported Media Type` response.
     *
     * The client behavior is as follows:
     *   - when encoding a request, the first variant is used.

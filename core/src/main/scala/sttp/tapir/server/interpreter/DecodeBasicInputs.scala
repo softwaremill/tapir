@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model.headers.Cookie
-import sttp.model.{HeaderNames, MediaType, Method, QueryParams}
+import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, oneOfBody}
@@ -19,9 +19,9 @@ object DecodeBasicInputsResult {
     private def verifyNoBody(input: EndpointInput[_]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
-    def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
+    def addBodyInput[O](input: EndpointIO.Body[_, O], bodyIndex: Int): Values = {
       verifyNoBody(input)
-      copy(bodyInputWithIndex = Some((Left(oneOfBody(input)), bodyIndex)))
+      copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
     }
     def addOneOfBodyInput(input: EndpointIO.OneOfBody[_, _], bodyIndex: Int): Values = {
       verifyNoBody(input)
