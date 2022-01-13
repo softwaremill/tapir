@@ -16,11 +16,15 @@ channels:
       ws:
         method: POST
         query:
+          required:
+            - multiplier
           type: object
           properties:
             multiplier:
               type: string
         headers:
+          required:
+            - Authorization
           type: object
           properties:
             Authorization:
