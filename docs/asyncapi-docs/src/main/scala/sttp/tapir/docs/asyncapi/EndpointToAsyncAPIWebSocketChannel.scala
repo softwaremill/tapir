@@ -25,13 +25,8 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) =>
-      addMetaDataFromInfo(name, schemas(codec), info)
-    }
-
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) =>
-      addMetaDataFromInfo(name, schemas(codec), info)
-    }
+    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) => addMetaDataFromInfo(name, codec, info) }
+    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) => addMetaDataFromInfo(name, codec, info) }
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
@@ -45,13 +40,20 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
   }
 
-  private def addMetaDataFromInfo(name: String, schemaRef: ReferenceOr[ASchema], info: EndpointIO.Info[_]): (String, Either[Reference, ASchema]) = {
+  private def addMetaDataFromInfo(
+      name: String,
+      codec: Codec[_, _, _],
+      info: EndpointIO.Info[_]
+  ): ((String, Codec[_, _, _]), Either[Reference, ASchema]) = {
+    val schemaRef = schemas(codec)
     schemaRef match {
       case Right(schema) =>
         val schemaWithDescription = if (schema.description.isEmpty) schemaRef.map(_.copy(description = info.description)) else schemaRef
-        val schemaWithDeprecation = if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.map(_.copy(deprecated = Some(info.deprecated))) else schemaWithDescription
-        name -> schemaWithDeprecation
-      case _ => name -> schemaRef
+        val schemaWithDeprecation =
+          if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.map(_.copy(deprecated = Some(info.deprecated)))
+          else schemaWithDescription
+        (name, codec) -> schemaWithDeprecation
+      case _ => (name, codec) -> schemaRef
     }
   }
 
@@ -80,11 +82,15 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     )
   }
 
-  private def objectSchemaFromFields(fields: Vector[(String, ReferenceOr[ASchema])]): Option[ASchema] = {
+  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _]), ReferenceOr[ASchema])]): Option[ASchema] = {
     if (fields.isEmpty) None
     else
       Some {
-        ASchema(`type` = Some(ASchemaType.Object), properties = fields.toListMap)
+        ASchema(
+          `type` = Some(ASchemaType.Object),
+          required = fields.collect { case ((name, codec), _) if !codec.schema.isOptional => name }.toList,
+          properties = fields.map { case ((name, _), schema) => name -> schema }.toListMap
+        )
       }
   }
 }
