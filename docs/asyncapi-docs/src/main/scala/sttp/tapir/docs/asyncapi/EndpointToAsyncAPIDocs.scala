@@ -57,7 +57,7 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
 
     val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
       case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)
+      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
     }
 
     if (securityRequirement.isEmpty) List.empty

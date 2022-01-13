@@ -1,6 +1,7 @@
 package sttp.tapir.tests
 
 import io.circe.generic.auto._
+import sttp.model.{ContentTypeRange, MediaType}
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -21,6 +22,15 @@ object OneOfBody {
         jsonBody[Fruit],
         xmlBody[Fruit],
         stringBody.map(Fruit(_))(_.f)
+      )
+    )
+    .out(stringBody)
+
+  val in_one_of_json_text_range_out_string: PublicEndpoint[Fruit, Unit, String, Any] = endpoint.post
+    .in(
+      oneOfBody(
+        ContentTypeRange.exact(MediaType.ApplicationJson) -> jsonBody[Fruit],
+        ContentTypeRange.AnyText -> stringBody.map(Fruit(_))(_.f)
       )
     )
     .out(stringBody)

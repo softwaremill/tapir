@@ -1,7 +1,7 @@
 package sttp.tapir.model
 
 import sttp.model.headers.Accepts
-import sttp.model.{ContentTypeRange, QueryParams, RequestMetadata}
+import sttp.model.{ContentTypeRange, MediaType, QueryParams, RequestMetadata}
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
@@ -16,6 +16,7 @@ trait ServerRequest extends RequestMetadata {
   def queryParameters: QueryParams
 
   lazy val acceptsContentTypes: Either[String, Seq[ContentTypeRange]] = Accepts.parse(headers)
+  lazy val contentTypeParsed: Option[MediaType] = contentType.flatMap(MediaType.parse(_).toOption)
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])

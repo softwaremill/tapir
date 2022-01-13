@@ -88,7 +88,7 @@ trait SttpStubServer {
                 case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
               }
             }
-            run(oneOfBodyInput.chooseBodyToDecode(request.contentType))
+            run(oneOfBodyInput.chooseBodyToDecode(request.contentType.flatMap(MediaType.parse(_).toOption)))
           case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
           case None                => values
         }

@@ -2,7 +2,7 @@ package sttp.tapir
 
 import sttp.capabilities.Streams
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.model.Method
+import sttp.model.{ContentTypeRange, Method}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.RawBodyType.StringBody
@@ -406,9 +406,14 @@ object EndpointIO {
     override def show: String = wrapped.show
   }
 
-  case class OneOfBody[O, T](variants: List[Body[_, O]], mapping: Mapping[O, T]) extends Basic[T] {
+  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Body[_, O])
+  case class OneOfBody[O, T](variants: List[OneOfBodyVariant[O]], mapping: Mapping[O, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = OneOfBody[O, X]
-    override def show: String = showOneOf(variants.map(_.show))
+    override def show: String = showOneOf(variants.map { variant =>
+      val prefix =
+        if ((ContentTypeRange.exactNoCharset(variant.body.codec.format.mediaType)) == variant.range) "" else s"${variant.range} -> "
+      prefix + variant.body.show
+    })
     override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))
   }
 

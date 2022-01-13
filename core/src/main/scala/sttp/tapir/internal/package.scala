@@ -145,7 +145,7 @@ package object internal {
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
         case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
-        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.asBasicOutputsList)
+        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.asBasicOutputsList)
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
@@ -169,13 +169,13 @@ package object internal {
     def bodyType: Option[RawBodyType[_]] = {
       traverseOutputs[RawBodyType[_]] {
         case b: EndpointIO.Body[_, _]          => Vector(b.bodyType)
-        case EndpointIO.OneOfBody(variants, _) => variants.map(_.bodyType).toVector
+        case EndpointIO.OneOfBody(variants, _) => variants.map(_.body.bodyType).toVector
       }.headOption
     }
 
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
       case b: EndpointIO.Body[_, _]              => Vector(b.mediaTypeWithCharset)
-      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
+      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.body.mediaTypeWithCharset).toVector
       case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
     }
 
@@ -214,15 +214,15 @@ package object internal {
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
-    def chooseBodyToDecode(contentType: Option[String]): EndpointIO.Body[_, O] = {
-      contentType.flatMap(MediaType.parse(_).toOption) match {
+    def chooseBodyToDecode(contentType: Option[MediaType]): EndpointIO.Body[_, O] = {
+      contentType match {
         case Some(ct) =>
           body.variants
-            .find(_.codec.format.mediaType.equalsIgnoreParameters(ct))
+            .find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
             .getOrElse(body.variants.head)
         case None => body.variants.head
       }
-    }
+    }.body
   }
 
   implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {

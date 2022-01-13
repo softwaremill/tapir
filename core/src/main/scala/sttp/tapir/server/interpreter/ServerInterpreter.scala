@@ -7,7 +7,7 @@ import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server._
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
@@ -145,7 +145,7 @@ class ServerInterpreter[R, F[_], B, S](
                 }
               }
             }
-            run(oneOfBodyInput.chooseBodyToDecode(request.contentType))
+            run(oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed))
 
           case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {

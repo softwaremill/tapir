@@ -416,7 +416,21 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
     */
   def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
-    EndpointIO.OneOfBody[T, T](first +: others.toList, Mapping.id)
+    EndpointIO.OneOfBody[T, T](
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), b)),
+      Mapping.id
+    )
+
+  /** See [[oneOfBody]].
+    *
+    * Allows explicitly specifying the content type range, for which each body will be used, instead of defaulting to the exact media type
+    * as specified by the body's codec. This is only used when choosing which body to decode.
+    */
+  def oneOfBody[T](
+      first: (ContentTypeRange, EndpointIO.Body[_, T]),
+      others: (ContentTypeRange, EndpointIO.Body[_, T])*
+  ): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, b) }, Mapping.id)
 
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)

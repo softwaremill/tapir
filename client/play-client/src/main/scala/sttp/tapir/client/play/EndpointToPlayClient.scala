@@ -116,7 +116,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case EndpointIO.OneOfBody(variants, _) => setInputParams(variants.head, params, req)
+      case EndpointIO.OneOfBody(variants, _) => setInputParams(variants.head.body, params, req)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
         req2
