@@ -45,14 +45,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
-        TestRequestBody,
+        List(endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(()))),
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),
         _ => ()
       )
 
     // when
-    interpreter.apply(testRequest, endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(())))
+    interpreter.apply(testRequest, TestRequestBody)
 
     // then
     callTrail.toList shouldBe List("2 request", "1 success", "2 success", "3 success")
@@ -70,22 +70,21 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
-        TestRequestBody,
+        List(
+          endpoint
+            .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
+            .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
+            .in(plainBody[StringWrapper](addToTrailCodec("z")))
+            .serverSecurityLogic[Unit, Id](_ => Left(()))
+            .serverLogic(_ => _ => Right(()))
+        ),
         UnitToResponseBody,
         List(new AddToTrailInterceptor(callTrail.append(_: String), "1")),
         _ => ()
       )
 
     // when
-    interpreter.apply(
-      testRequest,
-      endpoint
-        .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
-        .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
-        .in(plainBody[StringWrapper](addToTrailCodec("z")))
-        .serverSecurityLogic[Unit, Id](_ => Left(()))
-        .serverLogic(_ => _ => Right(()))
-    )
+    interpreter.apply(testRequest, TestRequestBody)
 
     // then
     callTrail.toList shouldBe List("x decode", "y decode", "1 security failure")

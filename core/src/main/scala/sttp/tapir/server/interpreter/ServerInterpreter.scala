@@ -10,38 +10,36 @@ import sttp.tapir.server._
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
-    requestBody: RequestBody[F, S],
+    serverEndpoints: List[ServerEndpoint[R, F]],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply(request: ServerRequest, se: ServerEndpoint[R, F]): F[RequestResult[B]] =
-    apply(request, List(se))
-
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[R, F]]): F[RequestResult[B]] =
-    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
+  def apply(request: ServerRequest, requestBody: RequestBody[F, S]): F[RequestResult[B]] =
+    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), requestBody).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
       is: List[Interceptor[F]],
       eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B],
-      ses: List[ServerEndpoint[R, F]]
+      requestBody: RequestBody[F, S]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
+      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, requestBody, serverEndpoints, eisAcc.reverse, Nil) }
       case (i: RequestInterceptor[F]) :: tail =>
         i(
           responder,
-          { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
+          { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, requestBody).apply(request) } }
         )
-      case (ei: EndpointInterceptor[F]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
+      case (ei: EndpointInterceptor[F]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, requestBody)
     }
   }
 
   /** Try decoding subsequent server endpoints, until a non-None response is returned. */
   private def firstNotNone(
       request: ServerRequest,
+      requestBody: RequestBody[F, S],
       ses: List[ServerEndpoint[R, F]],
       endpointInterceptors: List[EndpointInterceptor[F]],
       accumulatedFailureContexts: List[DecodeFailureContext]
@@ -49,15 +47,16 @@ class ServerInterpreter[R, F[_], B, S](
     ses match {
       case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
-        tryServerEndpoint[se.A, se.U, se.I, se.E, se.O](request, se, endpointInterceptors).flatMap {
+        tryServerEndpoint[se.A, se.U, se.I, se.E, se.O](request, requestBody, se, endpointInterceptors).flatMap {
           case RequestResult.Failure(failureContexts) =>
-            firstNotNone(request, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
+            firstNotNone(request, requestBody, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
           case r => r.unit
         }
     }
 
   private def tryServerEndpoint[A, U, I, E, O](
       request: ServerRequest,
+      requestBody: RequestBody[F, S],
       se: ServerEndpoint.Full[A, U, I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
@@ -93,7 +92,7 @@ class ServerInterpreter[R, F[_], B, S](
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
       // 3. computing the security input value
-      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs))
+      securityValues <- resultOrValueFrom(decodeBody(request, requestBody, securityBasicInputs))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
       inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
@@ -116,7 +115,7 @@ class ServerInterpreter[R, F[_], B, S](
         case Right(u) =>
           for {
             // 5. decoding the body of regular inputs, computing the input value, and running the main logic
-            values <- resultOrValueFrom(decodeBody(request, inputValues))
+            values <- resultOrValueFrom(decodeBody(request, requestBody, inputValues))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse)
@@ -128,13 +127,17 @@ class ServerInterpreter[R, F[_], B, S](
     } yield response).fold
   }
 
-  private def decodeBody(request: ServerRequest, result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
+  private def decodeBody(
+      request: ServerRequest,
+      requestBody: RequestBody[F, S],
+      result: DecodeBasicInputsResult
+  ): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(body) => decodeBody(values, body)
+              case Some(body) => decodeBody(requestBody, values, body)
               case None       => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
 
@@ -149,7 +152,11 @@ class ServerInterpreter[R, F[_], B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private def decodeBody[RAW, T](values: DecodeBasicInputsResult.Values, bodyInput: EndpointIO.Body[RAW, T]): F[DecodeBasicInputsResult] = {
+  private def decodeBody[RAW, T](
+      requestBody: RequestBody[F, S],
+      values: DecodeBasicInputsResult.Values,
+      bodyInput: EndpointIO.Body[RAW, T]
+  ): F[DecodeBasicInputsResult] = {
     requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
       bodyInput.codec.decode(v.value) match {
         case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit

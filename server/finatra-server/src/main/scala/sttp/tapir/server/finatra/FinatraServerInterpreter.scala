@@ -4,31 +4,30 @@ import com.twitter.finagle.http._
 import com.twitter.util.Future
 import com.twitter.util.logging.Logging
 import sttp.monad.MonadError
-import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
+import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
-
-import scala.reflect.ClassTag
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 trait FinatraServerInterpreter extends Logging {
 
   def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
 
   def toRoute(se: ServerEndpoint[Any, Future]): FinatraRoute = {
+    val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
+      List(se),
+      new FinatraToResponseBody,
+      finatraServerOptions.interceptors,
+      finatraServerOptions.deleteFile
+    )(FutureMonadError, new FinatraBodyListener[Future]())
+
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
-      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
-        new FinatraRequestBody(request, finatraServerOptions),
-        new FinatraToResponseBody,
-        finatraServerOptions.interceptors,
-        finatraServerOptions.deleteFile
-      )(FutureMonadError, new FinatraBodyListener[Future]())
 
-      serverInterpreter(serverRequest, se).map {
+      serverInterpreter(serverRequest, new FinatraRequestBody(request, finatraServerOptions)).map {
         case RequestResult.Failure(_) => Response(Status.NotFound)
         case RequestResult.Response(response) =>
           val status = Status(response.code.code)

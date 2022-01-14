@@ -44,48 +44,51 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   private def endpointHandler[S <: Streams[S]](
       e: ServerEndpoint[Fs2Streams[F], F],
       readStreamCompatible: ReadStreamCompatible[S]
-  ): Handler[RoutingContext] = { rc =>
+  ): Handler[RoutingContext] = {
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
-      new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
+      List(e),
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,
       vertxCatsServerOptions.deleteFile
     )
-    val serverRequest = new VertxServerRequest(rc)
 
-    val result = interpreter(serverRequest, e)
-      .flatMap {
-        case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
-        case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
-      }
-      .handleError { ex =>
-        logger.error("Error while processing the request", ex)
-        if (rc.response().bytesWritten() > 0) rc.response().end()
-        rc.fail(ex)
+    { rc =>
+      val serverRequest = new VertxServerRequest(rc)
+
+      val result = interpreter(serverRequest, new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible))
+        .flatMap {
+          case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
+          case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
+        }
+        .handleError { ex =>
+          logger.error("Error while processing the request", ex)
+          if (rc.response().bytesWritten() > 0) rc.response().end()
+          rc.fail(ex)
+        }
+
+      // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+      // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+      // if so, we need to use this fact to cancel the operation nonetheless
+      type CancelToken = () => scala.concurrent.Future[Unit]
+      val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken]]](None)
+
+      rc.response.exceptionHandler { (t: Throwable) =>
+        cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
+          t()
+        }
+        ()
       }
 
-    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
-    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
-    // if so, we need to use this fact to cancel the operation nonetheless
-    type CancelToken = () => scala.concurrent.Future[Unit]
-    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken]]](None)
-
-    rc.response.exceptionHandler { (t: Throwable) =>
-      cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
-        t()
+      val cancelToken = vertxCatsServerOptions.dispatcher.unsafeRunCancelable(result)
+      cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
+        cancelToken()
       }
+
       ()
     }
-
-    val cancelToken = vertxCatsServerOptions.dispatcher.unsafeRunCancelable(result)
-    cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
-      cancelToken()
-    }
-
-    ()
   }
 }
 
