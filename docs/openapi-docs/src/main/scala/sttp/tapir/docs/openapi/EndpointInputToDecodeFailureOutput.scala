@@ -18,7 +18,8 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     case EndpointInput.FixedPath(_, _, _)       => false
     case EndpointIO.Empty(_, _)                 => false
     case EndpointInput.PathCapture(_, codec, _) => decodingMayFail(codec)
-    case input                                  => decodingMayFail(input.codec) || !input.codec.schema.isOptional
+    case EndpointIO.OneOfBody(variants, _)      => variants.exists(variant => decodingMayFail(variant.body.codec))
+    case i: EndpointInput.Atom[_]               => decodingMayFail(i.codec) || !i.codec.schema.isOptional
   }
 
   private def decodingMayFail[CF <: CodecFormat](codec: Codec[_, _, CF]): Boolean =

@@ -225,7 +225,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
-  /** An output which contains a number of variant outputs.
+  /** An output which contains a number of variant outputs. Each variant can contain different outputs and represent different content. To
+    * describe an output which represents same content, but with different content types, use [[oneOfBody]].
     *
     * All possible outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the variants are implementing
     * case classes.
@@ -394,12 +395,49 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
   def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
+  /** A body input or output, which can be one of the given variants. All variants should represent `T` instances using different content
+    * types. Hence, the content type is used as a discriminator to choose the appropriate variant.
+    *
+    * Should be used to describe an input or output which represents the same content, but using different content types. For an output
+    * which describes variants including possibly different outputs (representing different content), see [[oneOf]].
+    *
+    * The server behavior is as follows:
+    *   - when encoding to a response, the first variant matching the request's `Accept` header is chosen (if present). Otherwise, the first
+    *     variant is used. This implements content negotiation.
+    *   - when decoding a request, the variant corresponding to the request's `Content-Type` header is chosen (if present). Otherwise, a
+    *     decode failure is returned, which by default results in an `415 Unsupported Media Type` response.
+    *
+    * The client behavior is as follows:
+    *   - when encoding a request, the first variant is used.
+    *   - when decoding a response, the variant corresponding to the response's `Content-Type` header is chosen (if present). Otherwise, the
+    *     first variant is used. For client interpreters to work correctly, all body variants must have the same raw type (e.g. all are
+    *     string-based or all byte-array-based)
+    *
+    * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
+    */
+  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T](
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), b)),
+      Mapping.id
+    )
+
+  /** See [[oneOfBody]].
+    *
+    * Allows explicitly specifying the content type range, for which each body will be used, instead of defaulting to the exact media type
+    * as specified by the body's codec. This is only used when choosing which body to decode.
+    */
+  def oneOfBody[T](
+      first: (ContentTypeRange, EndpointIO.Body[_, T]),
+      others: (ContentTypeRange, EndpointIO.Body[_, T])*
+  ): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, b) }, Mapping.id)
+
   /** An empty output. */
   val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
-  def emptyOutputAs[T](value: T): EndpointOutput.Basic[T] = emptyOutput.map(_ => value)(_ => ())
+  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 

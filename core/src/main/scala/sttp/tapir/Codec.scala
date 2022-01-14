@@ -268,10 +268,8 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       case None =>
         (mediaType, rawBodyType) match {
           // only text parts can have a charset
-          case (s, StringBody(e)) if s.mainType.equalsIgnoreCase("text") =>
-            p.contentType(mediaType.charset(e))
-          case _ =>
-            p.contentType(mediaType)
+          case (s, StringBody(e)) if s.isText => p.contentType(mediaType.charset(e))
+          case _                              => p.contentType(mediaType)
         }
       case _ => p
     }

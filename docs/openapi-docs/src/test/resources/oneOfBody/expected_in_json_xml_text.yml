@@ -1,0 +1,42 @@
+openapi: 3.0.3
+info:
+  title: test
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Fruit'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Fruit'
+          text/plain:
+            schema:
+              type: string
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Invalid value
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Fruit:
+      required:
+        - f
+      type: object
+      properties:
+        f:
+          type: string

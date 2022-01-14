@@ -168,8 +168,6 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    println(actualYaml)
-
     actualYamlNoIndent shouldBe expectedYaml
   }
 }

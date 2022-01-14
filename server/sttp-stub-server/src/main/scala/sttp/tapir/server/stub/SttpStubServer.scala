@@ -1,10 +1,10 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.testing._
-import sttp.client3.{Identity, Request, Response}
+import sttp.client3.{Request, Response}
 import sttp.model._
 import sttp.monad.MonadError
-import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.internal.{NoStreams, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
@@ -81,18 +81,31 @@ trait SttpStubServer {
     private def decodeBody(request: Request[_, _], result: DecodeBasicInputsResult): DecodeBasicInputsResult = result match {
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
-          case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
-            codec.decode(rawBody(request, bodyInput)) match {
-              case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-              case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+          case Some((Left(oneOfBodyInput), _)) =>
+            def run[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): DecodeBasicInputsResult = {
+              bodyInput.codec.decode(rawBody(request, bodyInput)) match {
+                case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+              }
             }
+
+            val requestContentType: Option[String] = request.contentType
+            oneOfBodyInput.chooseBodyToDecode(requestContentType.flatMap(MediaType.parse(_).toOption)) match {
+              case Some(body) => run(body)
+              case None =>
+                DecodeBasicInputsResult.Failure(
+                  oneOfBodyInput,
+                  DecodeResult.Mismatch(oneOfBodyInput.show, requestContentType.getOrElse(""))
+                ): DecodeBasicInputsResult
+            }
+
           case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
           case None                => values
         }
       case failure: DecodeBasicInputsResult.Failure => failure
     }
 
-    private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): Identity[RAW] = {
+    private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): RAW = {
       val asByteArray = request.forceBodyAsByteArray
       body.bodyType match {
         case RawBodyType.StringBody(charset) => new String(asByteArray, charset)
