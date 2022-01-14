@@ -50,21 +50,21 @@ class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends E
   private def makeSetCookieOutput(field: c.Symbol)(altName: Option[String]): Tree =
     if (field.info.resultType =:= typeOf[CookieValueWithMeta]) {
       val name = altName.getOrElse(field.name.toTermName.decodedName.toString)
-      q"setCookie($name)"
+      q"_root_.sttp.tapir.setCookie($name)"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @setCookie can be applied only for field with type ${typeOf[CookieValueWithMeta]}")
     }
 
   private def makeSetCookiesOutput(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[List[CookieWithMeta]]) {
-      q"setCookies"
+      q"_root_.sttp.tapir.setCookies"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @setCookies can be applied only for field with type ${typeOf[List[CookieWithMeta]]}")
     }
 
   private def makeStatusCodeOutput(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[StatusCode]) {
-      q"statusCode"
+      q"_root_.sttp.tapir.statusCode"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @statusCode can be applied only for field with type ${typeOf[StatusCode]}")
     }
