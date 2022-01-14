@@ -44,19 +44,19 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
 
   protected def makeHeaderIO(field: c.Symbol)(altName: Option[String]): Tree = {
     val name = altName.getOrElse(field.name.toTermName.decodedName.toString)
-    q"header[${field.asTerm.info}]($name)"
+    q"_root_.sttp.tapir.header[${field.asTerm.info}]($name)"
   }
 
   protected def makeHeadersIO(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[List[Header]]) {
-      q"headers"
+      q"_root_.sttp.tapir.headers"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @headers can be applied only for field with type ${typeOf[List[Header]]}")
     }
 
   protected def makeCookiesIO(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[List[Cookie]]) {
-      q"cookies"
+      q"_root_.sttp.tapir.cookies"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @cookies can be applied only for field with type ${typeOf[List[Cookie]]}")
     }
@@ -84,7 +84,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
     if (codec == EmptyTree) {
       c.abort(c.enclosingPosition, s"Unable to resolve implicit value of type ${codecTpe.dealias}")
     }
-    q"_root_.sttp.tapir.EndpointIO.Body(${c.untypecheck(ann.tree)}.bodyType, $codec, sttp.tapir.EndpointIO.Info.empty)"
+    q"_root_.sttp.tapir.EndpointIO.Body(${c.untypecheck(ann.tree)}.bodyType, $codec, _root_.sttp.tapir.EndpointIO.Info.empty)"
   }
 
   protected def mapToTargetFunc[A](inputIdxToFieldIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]): Tree = {

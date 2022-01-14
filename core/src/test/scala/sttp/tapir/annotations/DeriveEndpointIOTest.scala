@@ -394,6 +394,15 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     """)
   }
 
+  it should "not report ambiguous header import errors" in {
+    import sttp.tapir.EndpointIO.annotations._
+    import sttp.tapir._
+
+    case class LoginUserInput(@header name: String)
+
+    val endpointInput: EndpointInput[LoginUserInput] = EndpointInput.derived
+  }
+
   def compareTransputs(left: EndpointTransput[_], right: EndpointTransput[_]): Boolean =
     (left, right) match {
       case (EndpointInput.Pair(left1, right1, _, _), EndpointInput.Pair(left2, right2, _, _)) =>
