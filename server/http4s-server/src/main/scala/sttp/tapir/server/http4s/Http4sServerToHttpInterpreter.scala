@@ -8,7 +8,7 @@ import cats.~>
 import fs2.{Pipe, Stream}
 import org.http4s._
 import org.http4s.headers.`Content-Length`
-import org.http4s.server.websocket.{WebSocketBuilder, WebSocketBuilder2}
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
 import org.log4s.{Logger, getLogger}
 import org.typelevel.ci.CIString
@@ -57,16 +57,17 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
+    val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
+      serverEndpoints,
+      new Http4sToResponseBody[F, G](http4sServerOptions),
+      http4sServerOptions.interceptors,
+      http4sServerOptions.deleteFile
+    )
+
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)
-      val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
-        new Http4sRequestBody[F, G](req, serverRequest, http4sServerOptions, fToG),
-        new Http4sToResponseBody[F, G](http4sServerOptions),
-        http4sServerOptions.interceptors,
-        http4sServerOptions.deleteFile
-      )
 
-      OptionT(interpreter(serverRequest, serverEndpoints).flatMap {
+      OptionT(interpreter(serverRequest, new Http4sRequestBody[F, G](req, serverRequest, http4sServerOptions, fToG)).flatMap {
         case _: RequestResult.Failure         => none.pure[G]
         case RequestResult.Response(response) => fToG(serverResponseToHttp4s(response, webSocketBuilder)).map(_.some)
       })

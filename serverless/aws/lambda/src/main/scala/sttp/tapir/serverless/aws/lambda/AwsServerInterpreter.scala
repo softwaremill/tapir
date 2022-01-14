@@ -18,16 +18,17 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 
+    val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
+      ses,
+      new AwsToResponseBody(awsServerOptions),
+      awsServerOptions.interceptors,
+      deleteFile = _ => ().unit // no file support
+    )
+
     { (request: AwsRequest) =>
       val serverRequest = new AwsServerRequest(request)
-      val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
-        new AwsRequestBody[F](request),
-        new AwsToResponseBody(awsServerOptions),
-        awsServerOptions.interceptors,
-        deleteFile = _ => ().unit // no file support
-      )
 
-      interpreter.apply(serverRequest, ses).map {
+      interpreter.apply(serverRequest, new AwsRequestBody[F](request)).map {
         case RequestResult.Failure(_) =>
           AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
         case RequestResult.Response(res) =>

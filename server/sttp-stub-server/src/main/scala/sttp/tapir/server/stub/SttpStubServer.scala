@@ -137,7 +137,7 @@ trait SttpStubServer {
 
       val interpreter =
         new ServerInterpreter[R, F, Any, NoStreams](
-          requestBody[F](req.forceBodyAsByteArray),
+          List(endpoint),
           toResponseBody,
           interceptors,
           _ => stub.responseMonad.unit(())
@@ -148,7 +148,7 @@ trait SttpStubServer {
           }
         )
       val sRequest = new SttpRequest(req)
-      stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
+      stub.responseMonad.map(interpreter.apply(sRequest, requestBody[F](req.forceBodyAsByteArray))) {
         case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
         case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
       }

@@ -18,16 +18,16 @@ object NettyServerInterpreter {
       createFile: ServerRequest => F[TapirFile],
       deleteFile: TapirFile => F[Unit]
   ): Route[F] = {
-    val handler: Route[F] = { (request: NettyServerRequest) =>
-      implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener
-      val serverInterpreter = new ServerInterpreter[Any, F, ByteBuf, NoStreams](
-        new NettyRequestBody(request, request, createFile),
-        new NettyToResponseBody,
-        interceptors,
-        deleteFile
-      )
+    implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener
+    val serverInterpreter = new ServerInterpreter[Any, F, ByteBuf, NoStreams](
+      ses,
+      new NettyToResponseBody,
+      interceptors,
+      deleteFile
+    )
 
-      serverInterpreter(request, ses)
+    val handler: Route[F] = { (request: NettyServerRequest) =>
+      serverInterpreter(request, new NettyRequestBody(request, request, createFile))
         .map {
           case RequestResult.Response(response) => Some(response)
           case RequestResult.Failure(_)         => None
