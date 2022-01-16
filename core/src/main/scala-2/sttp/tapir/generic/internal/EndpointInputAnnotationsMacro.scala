@@ -24,17 +24,26 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
     validateCaseClass(util)
 
     if (util.fields.isEmpty) {
-      val path = util.classSymbol.annotations
-        .map(_.tree)
-        .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
-
-      if (path.isEmpty) {
-        c.abort(c.enclosingPosition, s"case class is empty and not annotated with @endpointInput")
-      } else if (path.exists(tree => tree.toString().contains('{') || tree.toString().contains('}'))) {
-        c.abort(c.enclosingPosition, s"case class is empty but has path arguments in @endpointInput ${path.get}")
-      }
-      return c.Expr[EndpointInput[A]](q"stringToPath(${path.get}).mapTo[${util.classSymbol}]")
+      forEmptyCaseClass(util)
+    } else {
+      forCaseClass(util)
     }
+  }
+
+  private def forEmptyCaseClass[A: c.WeakTypeTag](util: CaseClassUtil[c.type,A]) = {
+    val path = util.classSymbol.annotations
+      .map(_.tree)
+      .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
+
+    if (path.isEmpty) {
+      c.abort(c.enclosingPosition, s"case class is empty and not annotated with @endpointInput")
+    } else if (path.exists(tree => tree.toString().contains('{') || tree.toString().contains('}'))) {
+      c.abort(c.enclosingPosition, s"case class is empty but has path arguments in @endpointInput ${path.get}")
+    }
+    c.Expr[EndpointInput[A]](q"stringToPath(${path.get}).mapTo[${util.classSymbol}]")
+  }
+
+  private def forCaseClass[A: c.WeakTypeTag](util: CaseClassUtil[c.type,A]) = {
     val segments = util.classSymbol.annotations
       .map(_.tree)
       .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
