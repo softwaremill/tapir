@@ -10,10 +10,12 @@ object MappingMacros {
     checkFields[Out, In]
 
     val to: In => Out = {
-      case t: Tuple => mc.fromProduct(t)
-      case t        => mc.fromProduct(Tuple1(t))
+      case t: Tuple   => mc.fromProduct(t)
+      case EmptyTuple => mc.fromProduct(EmptyTuple)
+      case t          => mc.fromProduct(Tuple1(t))
     }
     def from(out: Out): In = Tuple.fromProduct(out) match {
+      case EmptyTuple    => EmptyTuple.asInstanceOf[In]
       case Tuple1(value) => value.asInstanceOf[In]
       case value         => value.asInstanceOf[In]
     }
@@ -22,8 +24,10 @@ object MappingMacros {
 
   inline def checkFields[A, B](using m: Mirror.ProductOf[A]): Unit =
     inline (erasedValue[m.MirroredElemTypes], erasedValue[B]) match {
+      case _: (EmptyTuple, B)      => ()
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B)               => ()
+      case _: EmptyTuple           => ()
       case e                       => ComplietimeErrors.reportIncorrectMapping[B, A]
     }
 }
