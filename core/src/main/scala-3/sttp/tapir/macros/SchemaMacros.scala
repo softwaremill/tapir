@@ -77,7 +77,7 @@ object SchemaMacros {
 
 trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${
-    SchemaCompanionMacros.generateSchemaForMap[String, V]('{ summon[Schema[String]] }, '{ summon[Schema[V]] }, 'identity)
+    SchemaCompanionMacros.generateSchemaForMap[String, V]('{ summon[Schema[V]] }, 'identity)
   }
 
   /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is, the schema type
@@ -92,8 +92,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     * implicit val schemaForMyMap = Schema.schemaForMap[MyKey, MyValue](_.value)
     * }}}
     */
-  inline def schemaForMap[K: Schema, V: Schema](keyToString: K => String): Schema[Map[K, V]] = ${
-    SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[K]] }, '{ summon[Schema[V]] }, 'keyToString)
+  inline def schemaForMap[K, V: Schema](keyToString: K => String): Schema[Map[K, V]] = ${
+    SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
@@ -128,7 +128,7 @@ object SchemaCompanionMacros {
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
 
-  def generateSchemaForMap[K: Type, V: Type](schemaForK: Expr[Schema[K]], schemaForV: Expr[Schema[V]], keyToString: Expr[K => String])(using
+  def generateSchemaForMap[K: Type, V: Type](schemaForV: Expr[Schema[V]], keyToString: Expr[K => String])(using
       q: Quotes
   ): Expr[Schema[Map[K, V]]] = {
 

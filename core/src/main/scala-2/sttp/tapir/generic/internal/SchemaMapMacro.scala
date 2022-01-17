@@ -9,16 +9,13 @@ object SchemaMapMacro {
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
     import c.universe._
-    generateSchemaForMap[String, V](c)(c.Expr[String => String](q"""identity"""))(
-      c.Expr[Schema[String]](q"""implicitly[Schema[String]]"""),
-      schemaForV
-    )
+    generateSchemaForMap[String, V](c)(c.Expr[String => String](q"""identity"""))(schemaForV)
   }
 
   /* Extract name and generic type parameters of map value type for object info creation */
   def generateSchemaForMap[K: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
-  )(keyToString: c.Expr[K => String])(schemaForK: c.Expr[Schema[K]], schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[K, V]]] = {
+  )(keyToString: c.Expr[K => String])(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[K, V]]] = {
     import c.universe._
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
