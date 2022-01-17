@@ -21,7 +21,7 @@ class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
       SProduct[ValueClasses.UserNameRequest](
         List(field(FieldName("name"), Schema(SString())))
       ),
-      Some(SName("sttp.tapir.SchemaMacroTestData.ValueClasses.UserNameRequest"))
+      Some(SName("sttp.tapir.SchemaMacroTestData2.ValueClasses.UserNameRequest"))
     )
 
     implicitly[Schema[ValueClasses.UserNameRequest]] shouldBe expected
@@ -32,7 +32,7 @@ class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
       SProduct[ValueClasses.UserListRequest](
         List(field(FieldName("list"), Schema(SArray[ValueClasses.UserList, String](Schema.schemaForString)(_.list.map(_.name)))))
       ),
-      Some(SName("sttp.tapir.SchemaMacroTestData.ValueClasses.UserListRequest"))
+      Some(SName("sttp.tapir.SchemaMacroTestData2.ValueClasses.UserListRequest"))
     )
 
     implicitly[Schema[ValueClasses.UserListRequest]] shouldBe expected2
