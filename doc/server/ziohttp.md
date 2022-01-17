@@ -13,7 +13,7 @@ You'll need the following dependency for the `ZServerEndpoint` type alias and he
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "@VERSION@"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
