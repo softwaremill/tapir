@@ -7,9 +7,14 @@ import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 import scala.annotation.tailrec
 
 private[docs] object SecuritySchemesForEndpoints {
-  def apply(es: Iterable[AnyEndpoint]): SecuritySchemes = {
+  /**
+   * @param apiKeyAuthTypeName specifies the type name of api key security schema for header, query or cookie input.
+   * For openAPI https://swagger.io/docs/specification/authentication/api-keys/ valid name is `authKey`.
+   * For asyncAPI https://www.asyncapi.com/docs/specifications/v2.2.0#securitySchemeObject valid name is `httpApiKey`.
+   */
+  def apply(es: Iterable[AnyEndpoint], apiKeyAuthTypeName: String): SecuritySchemes = {
     val auths = es.flatMap(e => e.auths)
-    val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
+    val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a, apiKeyAuthTypeName)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
     val takenNames = authSecuritySchemes.flatMap(_._1.securitySchemeName).toSet
     val namedSecuritySchemes = nameSecuritySchemes(securitySchemes.toVector, takenNames, Map())
@@ -34,11 +39,11 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]): SecurityScheme =
+  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo], apiKeyAuthTypeName: String): SecurityScheme =
     a.authInfo match {
       case EndpointInput.AuthInfo.ApiKey() =>
         val (name, in) = apiKeyInputNameAndIn(a.input.asVectorOfBasicInputs())
-        SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
+        SecurityScheme(apiKeyAuthTypeName, None, Some(name), Some(in), None, None, None, None)
       case EndpointInput.AuthInfo.Http(scheme) =>
         SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
       case EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>

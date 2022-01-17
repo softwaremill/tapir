@@ -24,7 +24,7 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toObjectSchema)(
       wsEndpointsWithWrapper.map(_._2)
     )
-    val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints)
+    val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints, apiKeyAuthTypeName = "httpApiKey")
     val channelCreator = new EndpointToAsyncAPIWebSocketChannel(schemas, codecToMessageKey, options)
     val componentsCreator = new EndpointToAsyncAPIComponents(keyToSchema, keyToMessage, securitySchemes)
     val allSecurityRequirements = securityRequirements(securitySchemes, es)
