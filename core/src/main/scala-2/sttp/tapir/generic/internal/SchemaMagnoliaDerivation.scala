@@ -3,9 +3,9 @@ package sttp.tapir.generic.internal
 import magnolia1._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType}
-import SchemaMagnoliaDerivation.deriveCache
+import sttp.tapir.generic.internal.SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.collection.mutable
 
@@ -17,7 +17,8 @@ trait SchemaMagnoliaDerivation {
     withCache(ctx.typeName, ctx.annotations) {
       val result =
         if (ctx.isValueClass) {
-          Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType.asInstanceOf[SchemaType[T]])
+          val valueSchema = ctx.parameters.head.typeclass
+          Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
         } else {
           Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
         }

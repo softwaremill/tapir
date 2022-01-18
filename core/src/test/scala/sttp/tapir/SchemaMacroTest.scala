@@ -255,6 +255,12 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
   }
 
+  it should "derive instance for value class" in {
+    val schema = Schema.derived[DoubleValue]
+
+    schema.show shouldBe Schema.schemaForDouble.show
+  }
+
   behavior of "apply default"
 
   it should "add default to product" in {
