@@ -6,7 +6,6 @@ object SchemaMacroTestData {
   case class DevTeam(p1: Person, p2: Person)
   case class Parent(child: Option[Person])
   case class Team(v: Map[String, Person])
-  case class DoubleValue(value: Double) extends AnyVal
 
   case class Wrapper(e: Entity, s: String)
   case class WrapperT[A, B, C](e: Entity, a: A, b: B, c: C)

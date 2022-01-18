@@ -1,14 +1,13 @@
 package sttp.tapir
 
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.{Configuration, D}
 import org.scalatest.flatspec.AnyFlatSpec
-import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.TestUtil.field
-
 import org.scalatest.prop.TableDrivenPropertyChecks
 import sttp.tapir.Schema.SName
+import sttp.tapir.SchemaType._
+import sttp.tapir.TestUtil.field
+import sttp.tapir.generic.auto._
+import sttp.tapir.generic.{Configuration, D}
 
 class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
   import SchemaMacroTestData._
@@ -253,12 +252,6 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     )
 
     schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
-  }
-
-  it should "derive instance for value class" in {
-    val schema = Schema.derived[DoubleValue]
-
-    schema.show shouldBe Schema.schemaForDouble.show
   }
 
   behavior of "apply default"
