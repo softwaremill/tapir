@@ -20,7 +20,7 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     val wsEndpointsWithWrapper = es.map(e => (e, findWebSocket(e))).collect { case (e, Some(ws)) => (e, ws) }
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
     val toObjectSchema = new ToNamedSchemas
-    val (keyToSchema, schemas) = new SchemasForEndpoints(wsEndpoints, options.schemaName, toObjectSchema).apply()
+    val (keyToSchema, schemas) = new SchemasForEndpoints(wsEndpoints, options.schemaName, toObjectSchema, markOptionsAsNullable = false).apply()
     val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toObjectSchema)(
       wsEndpointsWithWrapper.map(_._2)
     )

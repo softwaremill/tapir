@@ -9,7 +9,8 @@ import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointOutput, statusCode, strin
 case class OpenAPIDocsOptions(
     operationIdGenerator: (AnyEndpoint, Vector[String], Method) => String,
     schemaName: SName => String = defaultSchemaName,
-    defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput
+    defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput,
+    markOptionsAsNullable: Boolean = false
 )
 
 object OpenAPIDocsOptions {

@@ -575,12 +575,24 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should mark optional fields as nullable") {
+  test("should mark optional fields as nullable when configured to do so") {
     val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
     val expectedYaml = load("expected_nullable_option_field.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
+    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = false)
+
+    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should NOT mark optional fields as nullable without explicit configuration") {
+    val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
+
+    val options = OpenAPIDocsOptions.default
+    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
+
+    OpenAPIDocsOptions.default.markOptionsAsNullable shouldBe false
+    actualYaml should not include "nullable"
   }
 }
