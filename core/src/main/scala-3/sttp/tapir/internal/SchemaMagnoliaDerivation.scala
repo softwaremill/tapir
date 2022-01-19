@@ -20,7 +20,8 @@ trait SchemaMagnoliaDerivation {
         withCache(ctx.typeInfo, ctx.annotations) {
           val result =
             if (ctx.isValueClass) {
-              Schema[T](schemaType = ctx.params.head.typeclass.schemaType.asInstanceOf[SchemaType[T]])
+              val valueSchema = ctx.params.head.typeclass
+              Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
             } else {
               Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
