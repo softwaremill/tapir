@@ -579,7 +579,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
     val expectedYaml = load("expected_nullable_option_field.yml")
 
-    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = false)
+    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
 
     val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
