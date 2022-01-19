@@ -108,6 +108,8 @@ final case class TapirRequestTest8(
     field: Int
 )
 
+final case class TapirRequestTest9(@fileBody file: TapirFile)
+
 final case class TapirResponseTest1(
     @header
     header1: Int,
@@ -228,6 +230,14 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
 
     derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
     derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
+  }
+
+  it should "derive correct input for file body" in {
+    val derivedInput = EndpointInput.derived[TapirRequestTest9]
+
+    val expectedInput = fileBody.mapTo[TapirRequestTest9]
+
+    compareTransputs(derivedInput, expectedInput) shouldBe true
   }
 
   it should "not compile if there is field without annotation" in {

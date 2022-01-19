@@ -5,7 +5,7 @@ import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{ContentTypeRange, Method}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
-import sttp.tapir.RawBodyType.StringBody
+import sttp.tapir.RawBodyType.{FileBody, StringBody}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
@@ -528,6 +528,7 @@ object EndpointIO {
     class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
     class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
     class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
+    class fileBody extends body(FileBody, CodecFormat.OctetStream())
     class apikey(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge("ApiKey")) extends StaticAnnotation
     class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
     class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
