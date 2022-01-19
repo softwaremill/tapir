@@ -3,9 +3,8 @@ package sttp.tapir.annotations
 import java.nio.charset.StandardCharsets
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
+import sttp.model.{Part, StatusCode, Header => ModelHeader, QueryParams => ModelQueryParams}
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge, Cookie => ModelCookie}
-import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
@@ -109,6 +108,13 @@ final case class TapirRequestTest8(
 )
 
 final case class TapirRequestTest9(@fileBody file: TapirFile)
+
+case class Form(name: String, age: Int)
+object Form {
+  import sttp.tapir.generic.auto._
+  implicit val codec: MultipartCodec[Form] = MultipartCodec.multipartCaseClassCodec[Form]
+}
+final case class TapirRequestTest10(@multipartBody form: Form)
 
 final case class TapirResponseTest1(
     @header
@@ -236,6 +242,14 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     val derivedInput = EndpointInput.derived[TapirRequestTest9]
 
     val expectedInput = fileBody.mapTo[TapirRequestTest9]
+
+    compareTransputs(derivedInput, expectedInput) shouldBe true
+  }
+
+  it should "derive correct input for multipart body" in {
+    val expectedInput = multipartBody[Form].mapTo[TapirRequestTest10]
+
+    val derivedInput = EndpointInput.derived[TapirRequestTest10]
 
     compareTransputs(derivedInput, expectedInput) shouldBe true
   }
