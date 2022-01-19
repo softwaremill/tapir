@@ -32,7 +32,7 @@ class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serv
     case RawBodyType.MultipartBody(_, _) => Task.never
   }
 
-  private def stream: Stream[Throwable, Byte] = ZStream.fromEffect(request.getBody).flattenChunks
+  private def stream: Stream[Throwable, Byte] = ZStream.fromZIO(request.getBody).flattenChunks
 
   override def toStream(): streams.BinaryStream = stream.asInstanceOf[streams.BinaryStream]
 }

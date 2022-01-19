@@ -15,7 +15,7 @@ import zio.interop.catz._
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
+class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactory: ServerChannelFactory)
     extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response]] {
 
   override def route(
@@ -39,13 +39,14 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
+    val env = ZEnvironment(eventLoopGroup).add(channelFactory)
     val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _)) ++ Server.maxRequestSize(10000000)
-    val port = ZManaged.fromEffect(UIO.effectTotal(8090 + portCounter.getAndIncrement()))
+    val port = ZManaged.fromZIO(UIO.succeed(10090 + portCounter.getAndIncrement()))
     port
       .tap(p =>
         Server
           .make(server ++ Server.port(p))
-          .provide(nettyDeps)
+          .provideEnvironment(env)
       )
       .toResource[IO]
   }
