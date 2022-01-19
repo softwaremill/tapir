@@ -47,7 +47,7 @@ class SchemasForEndpoints(
   }
   private def forOutput(output: EndpointOutput[_]): List[NamedSchema] = {
     output match {
-      case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.OneOf(variants, _)       => variants.flatMap(variant => forOutput(variant.output)).toList
       case EndpointOutput.StatusCode(_, _, _)      => List.empty
       case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
@@ -65,6 +65,7 @@ class SchemasForEndpoints(
       case EndpointIO.Header(_, codec, _)                                => toNamedSchemas(codec)
       case EndpointIO.Headers(_, _)                                      => List.empty
       case EndpointIO.Body(_, codec, _)                                  => toNamedSchemas(codec)
+      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.body))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => toNamedSchemas(codec.schema)
       case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                               => List.empty

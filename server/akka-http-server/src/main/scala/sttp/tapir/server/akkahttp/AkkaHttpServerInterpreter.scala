@@ -32,20 +32,21 @@ trait AkkaHttpServerInterpreter {
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
   def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
-    extractRequestContext { ctx =>
-      extractExecutionContext { implicit ec =>
-        extractMaterializer { implicit mat =>
-          implicit val monad: FutureMonad = new FutureMonad()
-          implicit val bodyListener: BodyListener[Future, AkkaResponseBody] = new AkkaBodyListener
-          val serverRequest = new AkkaServerRequest(ctx)
-          val interpreter = new ServerInterpreter(
-            new AkkaRequestBody(ctx, serverRequest, akkaHttpServerOptions),
-            new AkkaToResponseBody,
-            akkaHttpServerOptions.interceptors,
-            akkaHttpServerOptions.deleteFile
-          )
+    extractExecutionContext { implicit ec =>
+      extractMaterializer { implicit mat =>
+        implicit val monad: FutureMonad = new FutureMonad()
+        implicit val bodyListener: BodyListener[Future, AkkaResponseBody] = new AkkaBodyListener
 
-          onSuccess(interpreter(serverRequest, ses)) {
+        val interpreter = new ServerInterpreter(
+          ses,
+          new AkkaToResponseBody,
+          akkaHttpServerOptions.interceptors,
+          akkaHttpServerOptions.deleteFile
+        )
+
+        extractRequestContext { ctx =>
+          val serverRequest = new AkkaServerRequest(ctx)
+          onSuccess(interpreter(serverRequest, new AkkaRequestBody(ctx, serverRequest, akkaHttpServerOptions))) {
             case RequestResult.Failure(_)         => reject
             case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)
           }

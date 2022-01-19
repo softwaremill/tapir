@@ -12,7 +12,14 @@ abstract class ClientOutputParams {
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                                  => decode(codec, body)
+          case EndpointIO.Body(_, codec, _) => decode(codec, body)
+          case EndpointIO.OneOfBody(variants, mapping) =>
+            val body2 = decode(mapping, body)
+            val bodyVariant = meta.contentType
+              .flatMap(MediaType.parse(_).toOption)
+              .flatMap(ct => variants.find(v => ct.matches(v.range)))
+              .getOrElse(variants.head)
+            body2.flatMap(decode(bodyVariant.body.codec, _))
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => decode(codec, body)
           case EndpointOutput.WebSocketBodyWrapper(o)                        => decodeWebSocketBody(o, body)
           case EndpointIO.Header(name, codec, _)                             => codec.decode(meta.headers(name).toList)

@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 trait TapirExtensions {
   type TapirFile = java.io.File
-  def pathBody: EndpointIO.Body[FileRange, Path] = binaryBody[FileRange, Path]
+  def pathBody: EndpointIO.Body[FileRange, Path] = binaryBody(RawBodyType.FileBody)[Path]
 }
 
 object TapirFile {

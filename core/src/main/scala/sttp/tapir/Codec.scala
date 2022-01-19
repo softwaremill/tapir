@@ -10,6 +10,7 @@ import java.util.{Base64, Date, UUID}
 import sttp.model._
 import sttp.model.headers.{CacheDirective, Cookie, CookieWithMeta, ETag, Range}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
+import sttp.tapir.DecodeResult.Error.MultipartDecodeException
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
@@ -239,15 +240,22 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
         val partNamesToDecode = (inputPartNamesToDecode ++ partCodecs.keys).toList.distinct
 
         // there might be multiple raw-parts for each name, yielding a single value-part
-        val anyParts: List[DecodeResult[(String, Any)]] = partNamesToDecode.map { name =>
+        val anyParts: List[(String, DecodeResult[Any])] = partNamesToDecode.map { name =>
           val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
-          codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts).map { (body: Any) =>
-            (name, body)
-          }
+          name -> codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts)
         }
 
-        DecodeResult.sequence(anyParts).map(_.toListMap)
+        val partFailures = anyParts.collect { case (partName, partDecodeFailure: DecodeResult.Failure) =>
+          (partName, partDecodeFailure)
+        }
+
+        if (partFailures.nonEmpty) {
+          DecodeResult.Error("", MultipartDecodeException(partFailures))
+        } else
+          DecodeResult.Value(anyParts.collect { case (partName, DecodeResult.Value(v)) =>
+            partName -> v
+          }.toListMap)
       }
 
       override def schema: Schema[ListMap[String, _]] = Schema.binary
@@ -260,10 +268,8 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       case None =>
         (mediaType, rawBodyType) match {
           // only text parts can have a charset
-          case (s, StringBody(e)) if s.mainType.equalsIgnoreCase("text") =>
-            p.contentType(mediaType.charset(e))
-          case _ =>
-            p.contentType(mediaType)
+          case (s, StringBody(e)) if s.isText => p.contentType(mediaType.charset(e))
+          case _                              => p.contentType(mediaType)
         }
       case _ => p
     }
@@ -596,10 +602,30 @@ trait LowPriorityCodec { this: Codec.type =>
   }
 }
 
-/** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec which further decodes it.
-  */
+/** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec which further decodes it. */
 case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[Part[R]], T, _ <: CodecFormat])
+object PartCodec {
 
+  /** Create a part codec which reads the raw part as `R` and later decodes to type `T`. Usage examples:
+    * {{{
+    * PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[String]
+    * PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[Int]
+    * PartCodec(RawBodyType.ByteArrayBody)[Array[Byte]]
+    * }}}
+    *
+    * A codec between the a [[Part]] containing the raw data and the target type `T` must be available in the implicit scope.
+    */
+  def apply[R](rbt: RawBodyType[R]): PartCodecPartiallyApplied[R] = new PartCodecPartiallyApplied(rbt)
+
+  class PartCodecPartiallyApplied[R](rbt: RawBodyType[R]) {
+    def apply[T](implicit c: Codec[List[Part[R]], T, _ <: CodecFormat]): PartCodec[R, T] = PartCodec(rbt, c)
+  }
+}
+
+/** Information needed to handle a multipart body. Individual parts are decoded as described by [[rawBodyType]], which contains codecs for
+  * each part, as well as an optional default codec. The sequence of decoded parts can be further decoded into a high-level `T` type using
+  * [[codec]].
+  */
 case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Codec[Seq[RawPart], T, CodecFormat.MultipartFormData]) {
   def map[U](mapping: Mapping[T, U]): MultipartCodec[U] = MultipartCodec(rawBodyType, codec.map(mapping))
   def map[U](f: T => U)(g: U => T): MultipartCodec[U] = map(Mapping.from(f)(g))
@@ -625,10 +651,10 @@ object RawBodyType {
   case class StringBody(charset: Charset) extends RawBodyType[String]
 
   sealed trait Binary[R] extends RawBodyType[R]
-  implicit case object ByteArrayBody extends Binary[Array[Byte]]
-  implicit case object ByteBufferBody extends Binary[ByteBuffer]
-  implicit case object InputStreamBody extends Binary[InputStream]
-  implicit case object FileBody extends Binary[FileRange]
+  case object ByteArrayBody extends Binary[Array[Byte]]
+  case object ByteBufferBody extends Binary[ByteBuffer]
+  case object InputStreamBody extends Binary[InputStream]
+  case object FileBody extends Binary[FileRange]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)

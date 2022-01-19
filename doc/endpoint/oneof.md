@@ -1,6 +1,13 @@
 # One-of variants
 
-Outputs with multiple variants can be specified using the `oneOf` output. Each variant  is defined using a one-of 
+There are two kind of one-of inputs/outputs:
+
+* `oneOf` outputs where the arbitrary-output variants can represent different content using different outputs, and
+* `oneOfBody` input/output where the body-only variants represent the same content, but with different content types
+
+## `oneOf` outputs
+
+Outputs with multiple variants can be specified using the `oneOf` output. Each variant is defined using a one-of 
 variant. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the variants 
 are implementing case classes.
 
@@ -49,7 +56,7 @@ val baseEndpoint = endpoint.errorOut(
 )
 ```
 
-## One-of-variant and type erasure
+### One-of-variant and type erasure
 
 Type erasure may prevent a one-of-variant from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
 
@@ -124,13 +131,43 @@ val baseEndpoint = endpoint.errorOut(
 )
 ```
 
-## Error outputs
+### Error outputs
 
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
 [security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
 error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
 different from `Any`. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
 the result in an additional `Either`.
+
+## `oneOfBody` inputs/outputs
+
+Input/output bodies which can be represented using different content types can be specified using `oneOfBody` inputs/outputs.
+Each body variant should represent the same content, and hence have the same high-level (decoded) type.
+
+To describe a body, which can be given as json, xml or plain text, create the following input/output description:
+
+```scala mdoc:compile-only
+import io.circe.generic.auto._
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+
+case class User(name: String)
+
+implicit val userXmlCodec: Codec[String, User, CodecFormat.Xml] =
+  Codec
+    .id(CodecFormat.Xml(), Schema.string[String])
+    .mapDecode { xml =>
+      DecodeResult.fromOption("""<name>(.*?)</name>""".r.findFirstMatchIn(xml).map(_.group(1)).map(User))
+    }(user => s"<name>${user.name}</name>")
+    .schema(implicitly[Schema[User]])     
+
+oneOfBody(
+  jsonBody[User],
+  xmlBody[User],
+  stringBody.map(User(_))(_.name)
+)
+```
 
 ## Next
 

@@ -11,7 +11,7 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
 val scala2_12 = "2.12.15"
-val scala2_13 = "2.13.7"
+val scala2_13 = "2.13.8"
 val scala3 = "3.1.0"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -101,8 +101,8 @@ val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaC
 val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.9",
-  "ch.qos.logback" % "logback-core" % "1.2.9",
+  "ch.qos.logback" % "logback-classic" % "1.2.10",
+  "ch.qos.logback" % "logback-core" % "1.2.10",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
@@ -270,19 +270,17 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "com.softwaremill.sttp.shared" %%% "ws" % Versions.sttpShared,
       scalaTest.value % Test,
       scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test
+      scalaTestPlusScalaCheck.value % Test,
+      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq(
-            "com.softwaremill.magnolia1_3" %%% "magnolia" % "1.0.0-M7"
-          )
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.0.0-M7")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.0.0",
-            "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
-            "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
+            "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
     },
@@ -300,7 +298,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % "2.0.0",
+        "org.scala-js" %%% "scalajs-dom" % "2.1.0",
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
         "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.jsScalaJavaTime % Test
       )
@@ -554,8 +552,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.12.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.12.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.12.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.12.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -732,7 +730,10 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-swagger-ui-bundle",
-    libraryDependencies += scalaTest.value % Test
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      scalaTest.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
@@ -781,8 +782,9 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -817,15 +819,14 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
-      "com.twitter" %% "finatra-http" % Versions.finatra,
+      "com.twitter" %% "finatra-http-server" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.13",
       // Testing
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test,
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
       "com.twitter" %% "inject-core" % Versions.finatra % Test,
       "com.twitter" %% "inject-modules" % Versions.finatra % Test,
-      "com.twitter" %% "finatra-http" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "finatra-http-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-server" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
@@ -864,7 +865,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.72.Final",
+      "io.netty" % "netty-all" % "4.1.73.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -891,7 +892,10 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
-    libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
@@ -900,7 +904,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC21")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
@@ -995,7 +999,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.3.0"
+      "org.typelevel" %% "jawn-parser" % "1.3.2"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1160,6 +1164,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
@@ -1215,7 +1220,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     publishArtifact := false,
     name := "doc",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-netty-server" % Versions.playServer
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     ),
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false

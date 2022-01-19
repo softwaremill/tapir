@@ -117,9 +117,8 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case CodecFormat.Zip()         => MediaTypes.`application/zip`
       case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case f                                =>
-        // TODO: add to MediaType - setting optional charset if text
-        val mt = if (f.mediaType.mainType.equalsIgnoreCase("text")) charset.fold(f.mediaType)(f.mediaType.charset(_)) else f.mediaType
+      case f =>
+        val mt = if (f.mediaType.isText) charset.fold(f.mediaType)(f.mediaType.charset(_)) else f.mediaType
         parseContentType(mt.toString())
     }
   }

@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.20.0-M3"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.20.0-M5"
 ```
 
 and import the object:
@@ -48,6 +48,16 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "http4s"` dependency.
+
+## Http4s backends
+
+Http4s integrates with a couple of [server backends](https://http4s.org/v1.0/integrations/), the most popular being 
+Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Blaze, but other backends can be used
+as well. This means adding another dependency, such as:
+
+```scala
+"org.http4s" %% "http4s-blaze-server" % Http4sVersion
+```
 
 ## Web sockets
 

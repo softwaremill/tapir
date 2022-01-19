@@ -39,7 +39,7 @@ object DocsExtensionAttribute {
     def docsExtensions: Vector[DocsExtension[_]] = e.attribute(docsExtensionAttributeKey).getOrElse(Vector.empty)
   }
 
-  implicit class RichBasicEndpointTransput[E <: EndpointTransput.Basic[_]](e: E) {
+  implicit class RichBasicEndpointTransput[E <: EndpointTransput.Atom[_]](e: E) {
     def docsExtension[D: JsonCodec](key: String, value: D): E =
       e.attribute(docsExtensionAttributeKey, docsExtensions :+ DocsExtension.of(key, value)).asInstanceOf[E]
 

@@ -5,7 +5,7 @@ import sttp.tapir.{EndpointErrorOutputsOps, EndpointInputsOps, EndpointOutputsOp
 
 trait EndpointSecurityInputsMacros[A, I, E, O, -R] { this: EndpointSecurityInputsOps[A, I, E, O, R] =>
   def mapSecurityInTo[CASE_CLASS]: EndpointType[CASE_CLASS, I, E, O, R] =
-    macro MapToMacro.generateMapSecurityInTo[EndpointType[CASE_CLASS, I, E, O, R], I, CASE_CLASS]
+    macro MapToMacro.generateMapSecurityInTo[EndpointType[CASE_CLASS, I, E, O, R], A, CASE_CLASS]
 }
 
 trait EndpointInputsMacros[A, I, E, O, -R] { this: EndpointInputsOps[A, I, E, O, R] =>

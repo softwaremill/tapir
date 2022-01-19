@@ -33,6 +33,11 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.securityIn(stringBody).securityIn(path[Int]): Endpoint[(String, Int), Unit, Unit, Unit, Any]
   }
 
+  it should "compile map security into case class" in {
+    case class Foo(a: String, b: String)
+    endpoint.securityIn(auth.bearer[String]()).securityIn(path[String]("foo")).mapSecurityInTo[Foo]
+  }
+
   trait TestStreams extends Streams[TestStreams] {
     override type BinaryStream = Vector[Byte]
     override type Pipe[X, Y] = Nothing
@@ -287,8 +292,10 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   it should "map input and output" in {
     case class Wrapper(s: String)
+    case class Wrapper2(s1: String, s2: String)
 
     endpoint.in(query[String]("q1")).mapInTo[Wrapper]: PublicEndpoint[Wrapper, Unit, Unit, Any]
+    endpoint.in(query[String]("q1")).in(query[String]("q2")).mapInTo[Wrapper2]: PublicEndpoint[Wrapper2, Unit, Unit, Any]
     endpoint.out(stringBody).mapOutTo[Wrapper]: PublicEndpoint[Unit, Unit, Wrapper, Any]
     endpoint.errorOut(stringBody).mapErrorOutTo[Wrapper]: PublicEndpoint[Unit, Wrapper, Unit, Any]
   }

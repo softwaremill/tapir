@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.ztapir._
-import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader}
+import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
 import zio.stream.Stream
 
@@ -19,36 +19,39 @@ trait ZioHttpInterpreter[R] {
   def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] =
-    Http.route[Request] { case req =>
-      implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
-      implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
-      val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
-        new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions),
-        new ZioHttpToResponseBody,
-        zioHttpServerOptions.interceptors,
-        zioHttpServerOptions.deleteFile
-      )
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
+    implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
+    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
+      ses,
+      new ZioHttpToResponseBody,
+      zioHttpServerOptions.interceptors,
+      zioHttpServerOptions.deleteFile
+    )
 
+    Http.route[Request] { case req =>
       Http
         .fromEffect(
-          interpreter.apply(new ZioHttpServerRequest(req), ses).map {
-            case RequestResult.Response(resp) =>
-              Http.succeed(
-                Response.HttpResponse(
-                  status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                  headers = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList,
-                  content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
+          interpreter
+            .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
+            .map {
+              case RequestResult.Response(resp) =>
+                Http.succeed(
+                  Response(
+                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                    headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
+                    data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
+                  )
                 )
-              )
-            case RequestResult.Failure(_) => Http.empty
-          }
+              case RequestResult.Failure(_) => Http.empty
+            }
         )
         .flatten
     }
+  }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
-    ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
+    (hl._1, hl._2.map(f => f.value).mkString(", "))
 
 }
 

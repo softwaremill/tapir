@@ -67,7 +67,10 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
+      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
+      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
+    }
 
     if (securityRequirement.isEmpty) List.empty
     else {
@@ -88,6 +91,17 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
             codecToMediaType(codec, info.examples, None, Nil),
             Some(!codec.schema.isOptional),
             DocsExtensions.fromIterable(info.docsExtensions)
+          )
+        )
+      case EndpointIO.OneOfBody(variants, _) =>
+        Right(
+          RequestBody(
+            variants.collectFirst { case EndpointIO.OneOfBodyVariant(_, EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, _))) => d },
+            variants
+              .flatMap(variant => codecToMediaType(variant.body.codec, variant.body.info.examples, Some(variant.range.toString), Nil))
+              .toListMap,
+            Some(!variants.forall(_.body.codec.schema.isOptional)),
+            DocsExtensions.fromIterable(variants.flatMap(_.body.info.docsExtensions))
           )
         )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
