@@ -4,6 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaMacroTestData2.ValueClasses
+import sttp.tapir.SchemaMacroTestData2.ValueClasses.DoubleValue
 import sttp.tapir.SchemaType.{SArray, SProduct, SString}
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
@@ -14,6 +15,12 @@ class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
   // value classes are not supported by Magnolia for Scala3: https://github.com/softwaremill/magnolia/issues/296
   it should "derive schema for a simple value classes" in {
     implicitly[Schema[ValueClasses.UserName]] shouldBe Schema.string[ValueClasses.UserName]
+  }
+
+  it should "derive schema for numeric value class with format" in {
+    val schema = Schema.derived[DoubleValue]
+
+    schema.show shouldBe Schema.schemaForDouble.show
   }
 
   it should "derive schema for a class containing a value class" in {
