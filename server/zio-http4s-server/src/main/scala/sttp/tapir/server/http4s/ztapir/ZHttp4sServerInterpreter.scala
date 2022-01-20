@@ -7,13 +7,12 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.ztapir._
 import zio.RIO
-import zio.blocking.Blocking
-import zio.clock.Clock
+import zio.Clock
 import zio.interop.catz._
 
 trait ZHttp4sServerInterpreter[R] {
 
-  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]] =
     Http4sServerOptions.default
 
   def from(se: ZServerEndpoint[R, ZioStreams]): ServerEndpointsToRoutes = from(List(se))
@@ -32,9 +31,9 @@ trait ZHttp4sServerInterpreter[R] {
   class ServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, ZioStreams]]
   ) {
-    def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
+    def toRoutes: HttpRoutes[RIO[R with Clock, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(
-        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock]))
       )
     }
   }
@@ -42,9 +41,9 @@ trait ZHttp4sServerInterpreter[R] {
   class WebSocketServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]
   ) {
-    def toRoutes: WebSocketBuilder2[RIO[R with Clock with Blocking, *]] => HttpRoutes[RIO[R with Clock with Blocking, *]] = {
+    def toRoutes: WebSocketBuilder2[RIO[R with Clock, *]] => HttpRoutes[RIO[R with Clock, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions).toWebSocketRoutes(
-        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock]))
       )
     }
   }
@@ -56,10 +55,10 @@ object ZHttp4sServerInterpreter {
   }
 
   def apply[R](
-      serverOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]]
+      serverOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]]
   ): ZHttp4sServerInterpreter[R] = {
     new ZHttp4sServerInterpreter[R] {
-      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]] =
         serverOptions
     }
   }
