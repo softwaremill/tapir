@@ -7,11 +7,12 @@ import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 import scala.annotation.tailrec
 
 private[docs] object SecuritySchemesForEndpoints {
-  /**
-   * @param apiKeyAuthTypeName specifies the type name of api key security schema for header, query or cookie input.
-   * For openAPI https://swagger.io/docs/specification/authentication/api-keys/ valid name is `apiKey`.
-   * For asyncAPI https://www.asyncapi.com/docs/specifications/v2.2.0#securitySchemeObject valid name is `httpApiKey`.
-   */
+
+  /** @param apiKeyAuthTypeName
+    *   specifies the type name of api key security schema for header, query or cookie input. For openAPI
+    *   https://swagger.io/docs/specification/authentication/api-keys/ valid name is `apiKey`. For asyncAPI
+    *   https://www.asyncapi.com/docs/specifications/v2.2.0#securitySchemeObject valid name is `httpApiKey`.
+    */
   def apply(es: Iterable[AnyEndpoint], apiKeyAuthTypeName: String): SecuritySchemes = {
     val auths = es.flatMap(e => e.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a, apiKeyAuthTypeName)))
