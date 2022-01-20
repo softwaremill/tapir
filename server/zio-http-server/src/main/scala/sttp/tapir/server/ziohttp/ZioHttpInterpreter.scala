@@ -30,23 +30,21 @@ trait ZioHttpInterpreter[R] {
     )
 
     Http.route[Request] { case req =>
-      Http
-        .fromEffect(
-          interpreter
-            .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
-            .map {
-              case RequestResult.Response(resp) =>
-                Http.succeed(
-                  Response(
-                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                    headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
-                    data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
-                  )
+      Http.fromZIO {
+        interpreter
+          .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
+          .map {
+            case RequestResult.Response(resp) =>
+              Http.succeed(
+                Response(
+                  status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                  headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
+                  data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
                 )
-              case RequestResult.Failure(_) => Http.empty
-            }
-        )
-        .flatten
+              )
+            case RequestResult.Failure(_) => Http.empty
+          }
+      }.flatten
     }
   }
 
