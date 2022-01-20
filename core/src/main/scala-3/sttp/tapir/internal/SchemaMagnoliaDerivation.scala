@@ -20,6 +20,7 @@ trait SchemaMagnoliaDerivation {
         withCache(ctx.typeInfo, ctx.annotations) {
           val result =
             if (ctx.isValueClass) {
+              require(ctx.params.nonEmpty, s"Cannot derive schema for generic value class: ${ctx.typeInfo.owner}")
               val valueSchema = ctx.params.head.typeclass
               Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
             } else {
