@@ -164,15 +164,14 @@ Here is simple example which starts HTTP server with one route:
 ```scala mdoc:reset
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
+import sttp.tapir.{plainBody, query}
 import sttp.tapir.ztapir._
 import sttp.tapir.server.vertx.VertxZioServerInterpreter
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
-
 import zio._
 
-object Short extends zio.App {
-  implicit val runtime = Runtime.default
-
+object Short extends zio.ZIOAppDefault {
+  override implicit val runtime = zio.Runtime.default
   val responseEndpoint =
     endpoint
       .in("response")
@@ -181,16 +180,19 @@ object Short extends zio.App {
 
   val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
 
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    ZManaged.make(ZIO.effect {
-      val vertx = Vertx.vertx()
-      val server = vertx.createHttpServer()
-      val router = Router.router(vertx)
-      attach(router)
-      server.requestHandler(router).listen(8080)
-    } >>= (_.asRIO))({ server =>
-      ZIO.effect(server.close()).flatMap(_.asRIO).orDie
-    }).useForever.as(ExitCode.success).orDie
+  override def run =
+    ZManaged
+      .acquireReleaseWith(ZIO.attempt {
+        val vertx = Vertx.vertx()
+        val server = vertx.createHttpServer()
+        val router = Router.router(vertx)
+        attach(router)
+        server.requestHandler(router).listen(8080)
+      } flatMap (_.asRIO))({ server =>
+        ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
+      })
+      .useForever
+      .exitCode
 }
 ```
 
