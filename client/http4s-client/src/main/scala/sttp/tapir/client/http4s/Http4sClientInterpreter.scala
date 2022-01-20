@@ -32,11 +32,11 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     *   - an `org.http4s.Request[F]`, which can be sent using an http4s client, or run against `org.http4s.HttpRoutes[F]`;
     *   - a response parser that extracts the expected entity from the received `org.http4s.Response[F]`.
     */
-  def toRequestUnsafe[I, E, O, R](
+  def toRequestThrowDecodeFailures[I, E, O, R](
       e: PublicEndpoint[I, E, O, R],
       baseUri: Option[Uri]
   ): I => (Request[F], Response[F] => F[Either[E, O]]) =
-    new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestUnsafe[Unit, I, E, O, R, F](e, baseUri).apply(())
+    new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestThrowDecodeFailures[Unit, I, E, O, R, F](e, baseUri).apply(())
 
   // secure
 
@@ -62,11 +62,11 @@ abstract class Http4sClientInterpreter[F[_]: Async] {
     *   - an `org.http4s.Request[F]`, which can be sent using an http4s client, or run against `org.http4s.HttpRoutes[F]`;
     *   - a response parser that extracts the expected entity from the received `org.http4s.Response[F]`.
     */
-  def toSecureRequestUnsafe[A, I, E, O, R](
+  def toSecureRequestThrowDecodeFailures[A, I, E, O, R](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[Either[E, O]]) =
-    new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestUnsafe[A, I, E, O, R, F](e, baseUri)
+    new EndpointToHttp4sClient(http4sClientOptions).toHttp4sRequestThrowDecodeFailures[A, I, E, O, R, F](e, baseUri)
 }
 
 object Http4sClientInterpreter {

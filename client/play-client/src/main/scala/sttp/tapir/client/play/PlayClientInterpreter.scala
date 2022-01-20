@@ -31,10 +31,10 @@ trait PlayClientInterpreter {
     * @throws IllegalArgumentException
     *   when response parsing fails
     */
-  def toRequestUnsafe[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: String)(implicit
+  def toRequestThrowDecodeFailures[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: String)(implicit
       ws: StandaloneWSClient
   ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
-    new EndpointToPlayClient(playClientOptions, ws).toPlayRequestUnsafe(e, baseUri).apply(())
+    new EndpointToPlayClient(playClientOptions, ws).toPlayRequestThrowDecodeFailures(e, baseUri).apply(())
 
   // secure
 
@@ -62,10 +62,10 @@ trait PlayClientInterpreter {
     * @throws IllegalArgumentException
     *   when response parsing fails
     */
-  def toSecureRequestUnsafe[A, I, E, O, R](e: Endpoint[A, I, E, O, R], baseUri: String)(implicit
+  def toSecureRequestThrowDecodeFailures[A, I, E, O, R](e: Endpoint[A, I, E, O, R], baseUri: String)(implicit
       ws: StandaloneWSClient
   ): A => I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
-    new EndpointToPlayClient(playClientOptions, ws).toPlayRequestUnsafe(e, baseUri)
+    new EndpointToPlayClient(playClientOptions, ws).toPlayRequestThrowDecodeFailures(e, baseUri)
 }
 
 object PlayClientInterpreter {

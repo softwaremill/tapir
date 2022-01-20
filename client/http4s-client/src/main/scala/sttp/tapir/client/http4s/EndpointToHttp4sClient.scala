@@ -50,7 +50,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
     (request1, responseParser)
   }
 
-  def toHttp4sRequestUnsafe[A, I, E, O, R, F[_]: Async](
+  def toHttp4sRequestThrowDecodeFailures[A, I, E, O, R, F[_]: Async](
       e: Endpoint[A, I, E, O, R],
       maybeUri: Option[Uri]
   ): A => I => (Request[F], Response[F] => F[Either[E, O]]) = { aParams => iParams =>
