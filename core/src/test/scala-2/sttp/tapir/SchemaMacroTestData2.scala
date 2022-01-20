@@ -9,4 +9,10 @@ object SchemaMacroTestData2 {
     case class UserList(list: List[UserName]) extends AnyVal
     case class UserListRequest(list: UserList)
   }
+
+  sealed trait Type
+  object Type {
+    final case class Num[N <: AnyVal: Numeric](n: N) extends Type
+    final case class MapType(obj: Map[String, Type]) extends Type
+  }
 }
