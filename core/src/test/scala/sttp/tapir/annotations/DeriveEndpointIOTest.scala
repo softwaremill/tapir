@@ -1,17 +1,27 @@
 package sttp.tapir.annotations
 
-import java.nio.charset.StandardCharsets
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge, Cookie => ModelCookie}
+import sttp.model.Part
 import sttp.model.StatusCode
-import sttp.tapir._
-import sttp.tapir.model.UsernamePassword
+import sttp.model.headers.CookieValueWithMeta
+import sttp.model.headers.CookieWithMeta
+import sttp.model.headers.WWWAuthenticateChallenge
+import sttp.model.headers.{Cookie => ModelCookie}
+import sttp.model.{Header => ModelHeader}
+import sttp.model.{QueryParams => ModelQueryParams}
 import sttp.tapir.EndpointIO._
 import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
 import sttp.tapir.RawBodyType.StringBody
+import sttp.tapir._
+import sttp.tapir.model.UsernamePassword
+
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import org.scalatest.prop.TableDrivenPropertyChecks
+import sttp.tapir.generic.auto._
 
 object JsonCodecs {
   implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]
@@ -108,6 +118,20 @@ final case class TapirRequestTest8(
     field: Int
 )
 
+final case class TapirRequestTest9(@byteArrayBody bytes: Array[Byte])
+
+final case class TapirRequestTest10(@byteBufferBody bytes: ByteBuffer)
+
+final case class TapirRequestTest11(@inputStreamBody inputStream: InputStream)
+
+case class Form(name: String, age: Int)
+
+final case class TapirRequestTest12(@formBody form: Form)
+
+final case class TapirRequestTest13(@fileBody file: TapirFile)
+
+final case class TapirRequestTest14(@multipartBody form: Form)
+
 final case class TapirResponseTest1(
     @header
     header1: Int,
@@ -130,7 +154,7 @@ final case class TapirResponseTest2(
     setCookies: List[CookieWithMeta]
 )
 
-class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
+class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
     import JsonCodecs._
@@ -228,6 +252,23 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
 
     derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
     derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
+  }
+
+  val bodyInputDerivations =
+    Table(
+      ("body", "expected", "derived"),
+      ("byte array", byteArrayBody.mapTo[TapirRequestTest9], EndpointInput.derived[TapirRequestTest9]),
+      ("byte buffer", byteBufferBody.mapTo[TapirRequestTest10], EndpointInput.derived[TapirRequestTest10]),
+      ("input stream", inputStreamBody.mapTo[TapirRequestTest11], EndpointInput.derived[TapirRequestTest11]),
+      ("form", formBody[Form].mapTo[TapirRequestTest12], EndpointInput.derived[TapirRequestTest12]),
+      ("file", fileBody.mapTo[TapirRequestTest13], EndpointInput.derived[TapirRequestTest13]),
+      ("multipart", multipartBody[Form].mapTo[TapirRequestTest14], EndpointInput.derived[TapirRequestTest14])
+    )
+
+  forAll (bodyInputDerivations) { (body: String, expected: EndpointIO.Body[_, _], derived: EndpointInput[_]) => 
+    it should s"derive correct input for $body body" in {
+      compareTransputs(derived, expected) shouldBe true
+    }  
   }
 
   it should "not compile if there is field without annotation" in {

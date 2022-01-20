@@ -194,6 +194,13 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       )
     }
 
+  private def summonMultipartCodec[H: Type](field: CaseClassField[q.type, T]): Expr[MultipartCodec[H]] =
+    Expr.summon[MultipartCodec[H]].getOrElse {
+      report.throwError(
+        s"Cannot summon multipart codec for type: ${Type.show[H]}, for field: ${field.name}."
+      )
+    }
+
   // inputs & outputs
   private def makeQueryInput[f: Type](field: CaseClassField[q.type, T])(altName: Option[String]): Expr[EndpointInput.Basic[f]] = {
     val name = Expr(altName.getOrElse(field.name))
@@ -214,6 +221,15 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val annExp = ann.asExprOf[EndpointIO.annotations.body[_, _]]
 
     ann.tpe.asType match {
+      case '[EndpointIO.annotations.multipartBody] =>
+        val codec = summonMultipartCodec[f](field)
+        '{
+          EndpointIO.Body[Seq[RawPart], f](
+            $codec.rawBodyType,
+            $codec.codec,
+            EndpointIO.Info.empty
+          )
+        }
       case '[EndpointIO.annotations.body[bt, cf]] =>
         '{
           EndpointIO.Body[bt, f](
