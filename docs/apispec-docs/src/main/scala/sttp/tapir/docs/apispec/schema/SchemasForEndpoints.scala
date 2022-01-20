@@ -22,7 +22,7 @@ class SchemasForEndpoints(
 
     val objectToSchemaReference = new NameToSchemaReference(infoToKey)
     val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, markOptionsAsNullable)
-    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
+    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference, markOptionsAsNullable)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }

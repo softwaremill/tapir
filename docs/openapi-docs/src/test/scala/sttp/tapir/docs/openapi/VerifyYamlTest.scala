@@ -22,7 +22,7 @@ import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Multipart
-import sttp.tapir.tests.data.{FruitAmount, ClassWithOptionField, Person}
+import sttp.tapir.tests.data.{FruitAmount, Person}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
@@ -576,6 +576,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should mark optional fields as nullable when configured to do so") {
+    case class ClassWithOptionField(optionalIntField: Option[Int], requiredStringField: String)
+
     val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
     val expectedYaml = load("expected_nullable_option_field.yml")
 
@@ -584,15 +586,5 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should NOT mark optional fields as nullable without explicit configuration") {
-    val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
-
-    val options = OpenAPIDocsOptions.default
-    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
-
-    OpenAPIDocsOptions.default.markOptionsAsNullable shouldBe false
-    actualYaml should not include "nullable"
   }
 }

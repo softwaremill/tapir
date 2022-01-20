@@ -6,7 +6,8 @@ import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 /** Converts a tapir schema to an OpenAPI/AsyncAPI reference (if the schema is named), or to the appropriate schema. */
 class Schemas(
     tschemaToASchema: TSchemaToASchema,
-    nameToSchemaReference: NameToSchemaReference
+    nameToSchemaReference: NameToSchemaReference,
+    markOptionsAsNullable: Boolean
 ) {
   def apply[T](codec: Codec[T, _, _]): ReferenceOr[ASchema] = apply(codec.schema)
 
@@ -16,7 +17,8 @@ class Schemas(
       case None =>
         schema.schemaType match {
           case TSchemaType.SArray(TSchema(_, Some(name), isOptional, _, _, _, _, _, _)) =>
-            Right(ASchema(SchemaType.Array, nullable = Option(isOptional).filter(identity)).copy(items = Some(Left(nameToSchemaReference.map(name)))))
+            Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
+              .map(s => if (isOptional && markOptionsAsNullable) s.copy(nullable = Some(true)) else s)
           case TSchemaType.SOption(ts) => apply(ts)
           case _                       => tschemaToASchema(schema)
         }
