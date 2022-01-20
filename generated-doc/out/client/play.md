@@ -52,14 +52,14 @@ import play.api.libs.ws.StandaloneWSClient
 def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
   val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
-  
+
   val (req, responseParser) = PlayClientInterpreter()
-      .toRequestUnsafe(e, s"http://localhost:9000")
-      .apply(inputArgs)
-  
+    .toRequestThrowDecodeFailures(e, s"http://localhost:9000")
+    .apply(inputArgs)
+
   val result: Future[Either[E, O]] = req
-      .execute()
-      .map(responseParser)
+    .execute()
+    .map(responseParser)
 }
 ```
 

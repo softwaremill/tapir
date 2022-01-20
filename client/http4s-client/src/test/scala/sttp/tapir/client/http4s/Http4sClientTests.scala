@@ -17,7 +17,7 @@ abstract class Http4sClientTests[R] extends ClientTests[R] {
   ): IO[Either[E, O]] = {
     val (request, parseResponse) =
       Http4sClientInterpreter[IO]()
-        .toSecureRequestUnsafe(e, Some(Uri.unsafeFromString(s"http://localhost:$port")))
+        .toSecureRequestThrowDecodeFailures(e, Some(Uri.unsafeFromString(s"http://localhost:$port")))
         .apply(securityArgs)
         .apply(args)
 
