@@ -10,7 +10,8 @@ import scala.collection.immutable.ListMap
 class SchemasForEndpoints(
     es: Iterable[AnyEndpoint],
     schemaName: SName => String,
-    toNamedSchemas: ToNamedSchemas
+    toNamedSchemas: ToNamedSchemas,
+    markOptionsAsNullable: Boolean
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
@@ -20,8 +21,8 @@ class SchemasForEndpoints(
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new NameToSchemaReference(infoToKey)
-    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference)
-    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, markOptionsAsNullable)
+    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference, markOptionsAsNullable)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
