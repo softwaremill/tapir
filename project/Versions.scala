@@ -31,5 +31,5 @@ object Versions {
   val jwtScala = "5.0.0"
   val derevo = "0.13.0"
   val newtype = "0.4.4"
-  val awsLambdaInterface = "2.0.0"
+  val awsLambdaInterface = "2.1.0"
 }
