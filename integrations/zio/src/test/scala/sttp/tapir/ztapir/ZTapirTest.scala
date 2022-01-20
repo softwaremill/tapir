@@ -12,7 +12,6 @@ import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec
 import zio.test._
 import zio.test.Assertion._
-import zio.test.environment._
 
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
@@ -98,7 +97,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       }
   }
 
-  private val testZServerSecurityLogicErrorHandling = testM("zServerLogicForCurrent error handling") {
+  private val testZServerSecurityLogicErrorHandling = test("zServerLogicForCurrent error handling") {
     val securedEndpoint: ZPartialServerEndpoint[Any, String, User, Unit, TestError, Unit, Any] =
       endpoint.securityIn(header[String]("X-User-Name")).errorOut(plainBody[TestError]).zServerSecurityLogic[Any, User](failedAutLogic)
 

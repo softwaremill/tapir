@@ -32,7 +32,7 @@ object zio {
         .unsafeRunSync(for {
           promise <- Promise.make[Nothing, Unit]
           state <- ZRef.make(StreamState.empty(promise))
-          _ <- stream.foreachChunk { chunk =>
+          _ <- stream.runForeachChunk { chunk =>
             val buffer = Buffer.buffer(chunk.toArray)
             state.get.flatMap {
               case StreamState(None, handler, _, _) =>
@@ -155,19 +155,19 @@ object zio {
         } yield {
           readStream.endHandler { _ =>
             runtime
-              .unsafeRunSync(stateRef.modify(_.halt(None).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.halt(None).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
           readStream.exceptionHandler { cause =>
             runtime
-              .unsafeRunSync(stateRef.modify(_.halt(Some(cause)).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.halt(Some(cause)).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
           readStream.handler { buffer =>
             val chunk = Chunk.fromArray(buffer.getBytes)
             val maxSize = opts.maxQueueSizeForReadStream
             runtime
-              .unsafeRunSync(stateRef.modify(_.enqueue(chunk, maxSize).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.enqueue(chunk, maxSize).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
 
