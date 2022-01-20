@@ -20,6 +20,8 @@ import sttp.tapir.model.UsernamePassword
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import sttp.tapir.generic.internal.FormCodecMacro
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 object JsonCodecs {
   implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]
@@ -157,7 +159,7 @@ final case class TapirResponseTest2(
     setCookies: List[CookieWithMeta]
 )
 
-class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
+class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
     import JsonCodecs._
@@ -257,52 +259,21 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
   }
 
-  it should "derive correct input for byte array body" in {
-    val expected = byteArrayBody.mapTo[TapirRequestTest9]
+  val bodyInputDerivations =
+    Table(
+      ("body", "expected", "derived"),
+      ("byte array", byteArrayBody.mapTo[TapirRequestTest9], EndpointInput.derived[TapirRequestTest9]),
+      ("byte buffer", byteBufferBody.mapTo[TapirRequestTest10], EndpointInput.derived[TapirRequestTest10]),
+      ("input stream", inputStreamBody.mapTo[TapirRequestTest11], EndpointInput.derived[TapirRequestTest11]),
+      ("form", formBody[Form].mapTo[TapirRequestTest12], EndpointInput.derived[TapirRequestTest12]),
+      ("file", fileBody.mapTo[TapirRequestTest13], EndpointInput.derived[TapirRequestTest13]),
+      ("multipart", multipartBody[Form].mapTo[TapirRequestTest14], EndpointInput.derived[TapirRequestTest14])
+    )
 
-    val derived = EndpointInput.derived[TapirRequestTest9]
-
-    compareTransputs(derived, expected) shouldBe true
-  }
-
-  it should "derive correct input for input stream body" in {
-    val expected = inputStreamBody.mapTo[TapirRequestTest11]
-
-    val derived = EndpointInput.derived[TapirRequestTest11]
-
-    compareTransputs(derived, expected) shouldBe true
-  }
-
-  it should "derive correct input for byte buffer body" in {
-    val expected = byteBufferBody.mapTo[TapirRequestTest10]
-
-    val derived = EndpointInput.derived[TapirRequestTest10]
-
-    compareTransputs(derived, expected) shouldBe true
-  }
-
-  it should "derive correct input for form body utf8" in {
-    val expected = formBody[Form].mapTo[TapirRequestTest12]
-
-    val derived = EndpointInput.derived[TapirRequestTest12]
-
-    compareTransputs(derived, expected) shouldBe true
-  }
-
-  it should "derive correct input for file body" in {
-    val expected = fileBody.mapTo[TapirRequestTest13]
-
-    val derived = EndpointInput.derived[TapirRequestTest13]
-
-    compareTransputs(derived, expected) shouldBe true
-  }
-
-  it should "derive correct input for multipart body" in {
-    val expected = multipartBody[Form].mapTo[TapirRequestTest14]
-
-    val derived = EndpointInput.derived[TapirRequestTest14]
-
-    compareTransputs(derived, expected) shouldBe true
+  forAll (bodyInputDerivations) { (body: String, expected: EndpointIO.Body[_, _], derived: EndpointInput[_]) => 
+    it should s"derive correct input for $body body" in {
+      compareTransputs(derived, expected) shouldBe true
+    }  
   }
 
   it should "not compile if there is field without annotation" in {
