@@ -21,6 +21,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import org.scalatest.prop.TableDrivenPropertyChecks
+import sttp.tapir.generic.auto._
 
 object JsonCodecs {
   implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]
@@ -124,11 +125,6 @@ final case class TapirRequestTest10(@byteBufferBody bytes: ByteBuffer)
 final case class TapirRequestTest11(@inputStreamBody inputStream: InputStream)
 
 case class Form(name: String, age: Int)
-object Form {
-  import sttp.tapir.generic.auto._
-  implicit val mpCodec: MultipartCodec[Form] = MultipartCodec.multipartCaseClassCodec[Form]
-  implicit val formCodec: Codec[String, Form, CodecFormat.XWwwFormUrlencoded] = Codec.formCaseClassCodec[Form]
-}
 
 final case class TapirRequestTest12(@formBody form: Form)
 
