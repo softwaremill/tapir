@@ -20,7 +20,6 @@ import sttp.tapir.model.UsernamePassword
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import sttp.tapir.generic.internal.FormCodecMacro
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 object JsonCodecs {
