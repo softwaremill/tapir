@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.20.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.20.0-M6"
 ```
 
 To make requests using an endpoint definition using the [play client](https://github.com/playframework/play-ws), import:
@@ -13,8 +13,8 @@ import sttp.tapir.client.play.PlayClientInterpreter
 ```
 
 This objects contains four methods:
- - `toRequestUnsafe(PublicEndpoint, String)` and `toSecureRequestUnsafe(Endpoint, String)`: given the base URI returns a function,
-   which will generate a request and a response parser which might throw
+ - `toRequestThrowDecodeFailures(PublicEndpoint, String)` and `toSecureRequestThrowDecodeErrors(Endpoint, String)`: given  
+   the base URI returns a function, which will generate a request and a response parser which might throw
    an exception when decoding of the result fails
    ```scala
    I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O])
@@ -52,14 +52,14 @@ import play.api.libs.ws.StandaloneWSClient
 def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
   val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
-
+  
   val (req, responseParser) = PlayClientInterpreter()
-    .toRequestThrowDecodeFailures(e, s"http://localhost:9000")
-    .apply(inputArgs)
-
+      .toRequestThrowDecodeFailures(e, s"http://localhost:9000")
+      .apply(inputArgs)
+  
   val result: Future[Either[E, O]] = req
-    .execute()
-    .map(responseParser)
+      .execute()
+      .map(responseParser)
 }
 ```
 

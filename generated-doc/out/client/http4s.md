@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "0.20.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "0.20.0-M6"
 ```
 
 To interpret an endpoint definition as an `org.http4s.Request[F]`, import:
@@ -13,8 +13,8 @@ import sttp.tapir.client.http4s.Http4sClientInterpreter
 ```
 
 This objects contains four methods:
-- `toRequestUnsafe(PublicEndpoint, Option[Uri])` and `toSecureRequestUnsafe(Endpoint, Option[Uri])`: given the optional base URI, returns a function
-  which generates a request and a response parser from endpoint inputs. Response parser throws
+- `toRequestThrowDecodeFailures(PublicEndpoint, Option[Uri])` and `toSecureRequestThrowDecodeFailures(Endpoint, Option[Uri])`: 
+  given the optional base URI, returns a function which generates a request and a response parser from endpoint inputs. Response parser throws
   an exception if decoding of the result fails.
   ```scala
   I => (org.http4s.Request[F], org.http4s.Response[F] => F[Either[E, O]])
