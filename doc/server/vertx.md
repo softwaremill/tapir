@@ -192,7 +192,6 @@ object Short extends zio.ZIOAppDefault {
         ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
       })
       .useForever
-      .exitCode
 }
 ```
 
