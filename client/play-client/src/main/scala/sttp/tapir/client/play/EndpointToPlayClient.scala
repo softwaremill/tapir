@@ -52,15 +52,15 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     (req, responseParser)
   }
 
-  def toPlayRequestUnsafe[A, I, E, O, R](
+  def toPlayRequestThrowDecodeFailures[A, I, E, O, R](
       e: Endpoint[A, I, E, O, R],
       baseUri: String
   ): A => I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) = { aParams => iParams =>
     val (req, responseParser) = toPlayRequest(e, baseUri)(aParams)(iParams)
-    def unsafeResponseParser(response: StandaloneWSResponse): Either[E, O] = {
+    def throwingResponseParser(response: StandaloneWSResponse): Either[E, O] = {
       getOrThrow(responseParser(response))
     }
-    (req, unsafeResponseParser)
+    (req, throwingResponseParser)
   }
 
   private def parsePlayResponse[A, I, E, O, R](e: Endpoint[A, I, E, O, R]): StandaloneWSResponse => DecodeResult[Either[E, O]] = {
@@ -116,7 +116,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.OneOfBody(variants, _) => setInputParams(variants.head.body, params, req)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
         req2
       case EndpointIO.Header(name, codec, _) =>
@@ -230,7 +231,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }

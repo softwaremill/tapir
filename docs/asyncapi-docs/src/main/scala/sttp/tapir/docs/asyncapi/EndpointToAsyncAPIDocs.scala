@@ -20,11 +20,11 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     val wsEndpointsWithWrapper = es.map(e => (e, findWebSocket(e))).collect { case (e, Some(ws)) => (e, ws) }
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
     val toObjectSchema = new ToNamedSchemas
-    val (keyToSchema, schemas) = new SchemasForEndpoints(wsEndpoints, options.schemaName, toObjectSchema).apply()
+    val (keyToSchema, schemas) = new SchemasForEndpoints(wsEndpoints, options.schemaName, toObjectSchema, markOptionsAsNullable = false).apply()
     val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toObjectSchema)(
       wsEndpointsWithWrapper.map(_._2)
     )
-    val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints)
+    val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints, apiKeyAuthTypeName = "httpApiKey")
     val channelCreator = new EndpointToAsyncAPIWebSocketChannel(schemas, codecToMessageKey, options)
     val componentsCreator = new EndpointToAsyncAPIComponents(keyToSchema, keyToMessage, securitySchemes)
     val allSecurityRequirements = securityRequirements(securitySchemes, es)
@@ -55,7 +55,10 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
+    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
+      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
+      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
+    }
 
     if (securityRequirement.isEmpty) List.empty
     else {

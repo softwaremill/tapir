@@ -10,7 +10,8 @@ import scala.collection.immutable.ListMap
 class SchemasForEndpoints(
     es: Iterable[AnyEndpoint],
     schemaName: SName => String,
-    toNamedSchemas: ToNamedSchemas
+    toNamedSchemas: ToNamedSchemas,
+    markOptionsAsNullable: Boolean
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
@@ -20,8 +21,8 @@ class SchemasForEndpoints(
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new NameToSchemaReference(infoToKey)
-    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference)
-    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, markOptionsAsNullable)
+    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference, markOptionsAsNullable)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
@@ -46,7 +47,7 @@ class SchemasForEndpoints(
   }
   private def forOutput(output: EndpointOutput[_]): List[NamedSchema] = {
     output match {
-      case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.OneOf(variants, _)       => variants.flatMap(variant => forOutput(variant.output)).toList
       case EndpointOutput.StatusCode(_, _, _)      => List.empty
       case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
@@ -60,14 +61,15 @@ class SchemasForEndpoints(
 
   private def forIO(io: EndpointIO[_]): List[NamedSchema] = {
     io match {
-      case EndpointIO.Pair(left, right, _, _)                         => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)                             => toNamedSchemas(codec)
-      case EndpointIO.Headers(_, _)                                   => List.empty
-      case EndpointIO.Body(_, codec, _)                               => toNamedSchemas(codec)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => toNamedSchemas(codec.schema)
-      case EndpointIO.MappedPair(wrapped, _)                          => forIO(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)                            => List.empty
-      case EndpointIO.Empty(_, _)                                     => List.empty
+      case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
+      case EndpointIO.Header(_, codec, _)                                => toNamedSchemas(codec)
+      case EndpointIO.Headers(_, _)                                      => List.empty
+      case EndpointIO.Body(_, codec, _)                                  => toNamedSchemas(codec)
+      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.body))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => toNamedSchemas(codec.schema)
+      case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)                               => List.empty
+      case EndpointIO.Empty(_, _)                                        => List.empty
     }
   }
 }

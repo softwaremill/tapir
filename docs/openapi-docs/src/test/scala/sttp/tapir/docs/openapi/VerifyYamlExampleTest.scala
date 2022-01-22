@@ -3,6 +3,7 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.capabilities.Streams
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.generic.Derived
@@ -150,4 +151,23 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support encoded examples for streaming bodies") {
+    val expectedYaml = load("example/expected_stream_example.yml")
+
+    trait TestStreams extends Streams[TestStreams] {
+      override type BinaryStream = Vector[Byte]
+      override type Pipe[X, Y] = Nothing
+    }
+    object TestStreams extends TestStreams
+
+    val e = endpoint.post.in(
+      streamBody(TestStreams)(implicitly[Schema[Person]], CodecFormat.Json())
+        .encodedExample(implicitly[Codec[String, Person, CodecFormat.Json]].encode(Person("michal", 40)))
+    )
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }

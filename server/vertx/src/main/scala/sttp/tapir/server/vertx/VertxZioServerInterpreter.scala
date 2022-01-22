@@ -33,56 +33,60 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
   private def endpointHandler(
       e: ServerEndpoint[ZioStreams, RIO[R, *]]
-  )(implicit runtime: Runtime[R]): Handler[RoutingContext] = { rc =>
+  )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
-      new VertxRequestBody[RIO[R, *], ZioStreams](rc, vertxZioServerOptions, fromVFuture)(zioReadStream),
+      List(e),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
     )
-    val serverRequest = new VertxServerRequest(rc)
 
-    val result: ZIO[R, Throwable, Any] = interpreter(serverRequest, e)
-      .flatMap {
-        case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
-        case RequestResult.Response(response) =>
-          Task.effectAsync((k: Task[Unit] => Unit) => {
-            VertxOutputEncoders(response)
-              .apply(rc)
-              .onComplete(d => {
-                if (d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
+    { rc =>
+      val serverRequest = new VertxServerRequest(rc)
+
+      val result: ZIO[R, Throwable, Any] =
+        interpreter(serverRequest, new VertxRequestBody[RIO[R, *], ZioStreams](rc, vertxZioServerOptions, fromVFuture)(zioReadStream))
+          .flatMap {
+            case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
+            case RequestResult.Response(response) =>
+              Task.effectAsync((k: Task[Unit] => Unit) => {
+                VertxOutputEncoders(response)
+                  .apply(rc)
+                  .onComplete(d => {
+                    if (d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
+                  })
               })
-          })
-      }
-      .catchAll { ex =>
-        RIO.effect({
-          logger.error("Error while processing the request", ex)
-          if (rc.response().bytesWritten() > 0) rc.response().end()
-          rc.fail(ex)
-        })
+          }
+          .catchAll { ex =>
+            RIO.effect({
+              logger.error("Error while processing the request", ex)
+              if (rc.response().bytesWritten() > 0) rc.response().end()
+              rc.fail(ex)
+            })
+          }
+
+      // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+      // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+      // if so, we need to use this fact to cancel the operation nonetheless
+      val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
+
+      rc.response.exceptionHandler { (t: Throwable) =>
+        cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+          c(Fiber.Id.None)
+        }
+        ()
       }
 
-    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
-    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
-    // if so, we need to use this fact to cancel the operation nonetheless
-    val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
-
-    rc.response.exceptionHandler { (t: Throwable) =>
-      cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
-        c(Fiber.Id.None)
+      val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
+      cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
+        canceler(Fiber.Id.None)
       }
+
       ()
     }
-
-    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
-    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-      canceler(Fiber.Id.None)
-    }
-
-    ()
   }
 }
 

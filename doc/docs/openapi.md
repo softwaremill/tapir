@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.19.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.0-M6"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -30,15 +30,20 @@ val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Future](myEndpoints, "
 val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
-`SwaggerInterpreter` can be configured with the OpenAPI interpreter options, as well as the path and yaml name that
-will be used. See below for more details.
+By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
+changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the swagger endpoints are deployed 
+within a context, this information needs to be passed to the interpreter, to create proper redirects. 
+
+Moreover, model generation can be configured - see below for more details on `OpenAPIDocsOptions` and the method
+parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
+`SwaggerInterpreter`.
 
 ### Using Redoc
 
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.19.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.0-M6"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.

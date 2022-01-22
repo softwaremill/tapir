@@ -8,15 +8,16 @@ object MimeByExtensionDB {
   private val mimeTypes: Map[String, MediaType] = {
     val s = Source.fromURL(getClass.getResource("/mimeByExtensions.txt"))
     val pairs =
-      try s
-        .getLines()
-        .toList
-        .flatMap(line =>
-          line.split(" ", 2) match {
-            case Array(ext, mimeType) => MediaType.parse(mimeType).map(ext -> _).toOption.toList
-            case _                    => Nil
-          }
-        )
+      try
+        s
+          .getLines()
+          .toList
+          .flatMap(line =>
+            line.split(" ", 2) match {
+              case Array(ext, mimeType) => MediaType.parse(mimeType).map(ext -> _).toOption.toList
+              case _                    => Nil
+            }
+          )
       finally s.close()
 
     Map(pairs: _*)

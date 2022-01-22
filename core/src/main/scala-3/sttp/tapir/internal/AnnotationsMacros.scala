@@ -194,6 +194,13 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       )
     }
 
+  private def summonMultipartCodec[H: Type](field: CaseClassField[q.type, T]): Expr[MultipartCodec[H]] =
+    Expr.summon[MultipartCodec[H]].getOrElse {
+      report.throwError(
+        s"Cannot summon multipart codec for type: ${Type.show[H]}, for field: ${field.name}."
+      )
+    }
+
   // inputs & outputs
   private def makeQueryInput[f: Type](field: CaseClassField[q.type, T])(altName: Option[String]): Expr[EndpointInput.Basic[f]] = {
     val name = Expr(altName.getOrElse(field.name))
@@ -214,6 +221,15 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val annExp = ann.asExprOf[EndpointIO.annotations.body[_, _]]
 
     ann.tpe.asType match {
+      case '[EndpointIO.annotations.multipartBody] =>
+        val codec = summonMultipartCodec[f](field)
+        '{
+          EndpointIO.Body[Seq[RawPart], f](
+            $codec.rawBodyType,
+            $codec.codec,
+            EndpointIO.Info.empty
+          )
+        }
       case '[EndpointIO.annotations.body[bt, cf]] =>
         '{
           EndpointIO.Body[bt, f](
@@ -341,55 +357,55 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       t =>
         field
           .extractStringArgFromAnnotation(descriptionAnnotationSymbol)
-          .map(d => addMetadataToBasic(field, t, '{ i => i.description(${ Expr(d) }) }))
+          .map(d => addMetadataToAtom(field, t, '{ i => i.description(${ Expr(d) }) }))
           .getOrElse(t),
       t =>
         field
           .extractTreeFromAnnotation(exampleAnnotationSymbol)
-          .map(e => addMetadataToBasic(field, t, '{ i => i.example(${ e.asExprOf[f] }) }))
+          .map(e => addMetadataToAtom(field, t, '{ i => i.example(${ e.asExprOf[f] }) }))
           .getOrElse(t),
       t =>
         field
           .extractStringArgFromAnnotation(schemaDescriptionAnnotationSymbol)
-          .map(d => addMetadataToBasic(field, t, '{ i => i.schema(_.description(${ Expr(d) })) }))
+          .map(d => addMetadataToAtom(field, t, '{ i => i.schema(_.description(${ Expr(d) })) }))
           .getOrElse(t),
       t =>
         field
           .extractTreeFromAnnotation(schemaEncodedExampleAnnotationSymbol)
-          .map(e => addMetadataToBasic(field, t, '{ i => i.schema(_.encodedExample(${ e.asExprOf[Any] })) }))
+          .map(e => addMetadataToAtom(field, t, '{ i => i.schema(_.encodedExample(${ e.asExprOf[Any] })) }))
           .getOrElse(t),
       t =>
         field
           .extractTreeFromAnnotation(schemaDefaultAnnotationSymbol)
-          .map(d => addMetadataToBasic(field, t, '{ i => i.default(${ d.asExprOf[f] }) }))
+          .map(d => addMetadataToAtom(field, t, '{ i => i.default(${ d.asExprOf[f] }) }))
           .getOrElse(t),
       t =>
         field
           .extractStringArgFromAnnotation(schemaFormatAnnotationSymbol)
-          .map(format => addMetadataToBasic(field, t, '{ i => i.schema(_.format(${ Expr(format) })) }))
+          .map(format => addMetadataToAtom(field, t, '{ i => i.schema(_.format(${ Expr(format) })) }))
           .getOrElse(t),
       t =>
-        if (field.annotated(schemaDeprecatedAnnotationSymbol)) then addMetadataToBasic(field, t, '{ i => i.deprecated() })
+        if (field.annotated(schemaDeprecatedAnnotationSymbol)) then addMetadataToAtom(field, t, '{ i => i.deprecated() })
         else t,
       t =>
         field
           .extractTreeFromAnnotation(schemaValidateAnnotationSymbol)
-          .map(v => addMetadataToBasic(field, t, '{ i => i.validate(${ v.asExprOf[Validator[f]] }) }))
+          .map(v => addMetadataToAtom(field, t, '{ i => i.validate(${ v.asExprOf[Validator[f]] }) }))
           .getOrElse(t)
     )
 
     transformations.foldLeft(transput)((t, f) => f(t))
   }
 
-  private def addMetadataToBasic[f: Type](
+  private def addMetadataToAtom[f: Type](
       field: CaseClassField[q.type, T],
       transput: Expr[EndpointTransput[f]],
-      f: Expr[EndpointTransput.Basic[f] => Any]
+      f: Expr[EndpointTransput.Atom[f] => Any]
   ): Expr[EndpointTransput[f]] = {
     transput.asTerm.tpe.asType match {
       // TODO: also handle Auth inputs, by adding the description to the nested input
-      case '[EndpointTransput.Basic[`f`]] =>
-        '{ $f($transput.asInstanceOf[EndpointTransput.Basic[f]]).asInstanceOf[EndpointTransput.Basic[f]] }
+      case '[EndpointTransput.Atom[`f`]] =>
+        '{ $f($transput.asInstanceOf[EndpointTransput.Atom[f]]).asInstanceOf[EndpointTransput.Atom[f]] }
       case t =>
         report.throwError(
           s"Schema metadata can only be added to basic inputs/outputs, but got: ${Type.show(using t)}, on field: ${field.name}"

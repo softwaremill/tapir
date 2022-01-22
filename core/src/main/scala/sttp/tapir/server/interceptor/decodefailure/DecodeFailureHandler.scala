@@ -1,8 +1,8 @@
 package sttp.tapir.server.interceptor.decodefailure
 
 import sttp.model.{Header, HeaderNames, StatusCode}
-import sttp.tapir.DecodeResult.Error.JsonDecodeException
-import sttp.tapir.DecodeResult.{Error, InvalidValue}
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, MultipartDecodeException}
+import sttp.tapir.DecodeResult.{Error, InvalidValue, Mismatch, Missing, Multiple}
 import sttp.tapir.internal.RichEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, _}
@@ -99,9 +99,11 @@ object DefaultDecodeFailureHandler {
       case _: EndpointIO.Header[_] => Some(onlyStatus(StatusCode.BadRequest))
       case fh: EndpointIO.FixedHeader[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && fh.h.name == HeaderNames.ContentType =>
         Some(onlyStatus(StatusCode.UnsupportedMediaType))
-      case _: EndpointIO.FixedHeader[_]          => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Headers[_]              => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Body[_, _]              => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.FixedHeader[_] => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.Headers[_]     => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.Body[_, _]     => Some(onlyStatus(StatusCode.BadRequest))
+      case _: EndpointIO.OneOfBody[_, _] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] =>
+        Some(onlyStatus(StatusCode.UnsupportedMediaType))
       case _: EndpointIO.StreamBodyWrapper[_, _] => Some(onlyStatus(StatusCode.BadRequest))
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
@@ -168,22 +170,41 @@ object DefaultDecodeFailureHandler {
         case _                                       => "Invalid value"
       }
 
+    def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
+      case InvalidValue(errors) if errors.nonEmpty => Some(ValidationMessages.validationErrorsMessage(errors))
+      case Error(_, JsonDecodeException(errors, _)) if errors.nonEmpty =>
+        Some(
+          errors
+            .map { error =>
+              val at = if (error.path.nonEmpty) s" at '${error.path.map(_.encodedName).mkString(".")}'" else ""
+              error.msg + at
+            }
+            .mkString(", ")
+        )
+      case Error(_, MultipartDecodeException(partFailures)) =>
+        Some(
+          partFailures
+            .map { case (partName, partDecodeFailure) =>
+              combineSourceAndDetail(s"part: $partName", failureDetailMessage(partDecodeFailure))
+            }
+            .mkString(", ")
+        )
+      case Missing        => Some("missing")
+      case Multiple(_)    => Some("multiple values")
+      case Mismatch(_, _) => Some(s"value mismatch")
+      case _              => None
+    }
+
     def combineSourceAndDetail(source: String, detail: Option[String]): String =
       detail match {
         case None    => source
         case Some(d) => s"$source ($d)"
       }
 
-    /** Default message describing the source of a decode failure, alongside with optional validation details. */
+    /** Default message describing the source of a decode failure, alongside with optional validation/decode failure details. */
     def failureMessage(ctx: DecodeFailureContext): String = {
       val base = failureSourceMessage(ctx.failingInput)
-
-      val detail = ctx.failure match {
-        case InvalidValue(errors) if errors.nonEmpty => Some(ValidationMessages.validationErrorsMessage(errors))
-        case Error(_, error: JsonDecodeException)    => Some(error.getMessage)
-        case _                                       => None
-      }
-
+      val detail = failureDetailMessage(ctx.failure)
       combineSourceAndDetail(base, detail)
     }
   }

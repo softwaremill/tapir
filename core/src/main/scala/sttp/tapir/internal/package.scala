@@ -126,6 +126,7 @@ package object internal {
       case _: EndpointInput.ExtractFromRequest[_] => 4
       case _: EndpointIO.Body[_, _]               => 6
       case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
+      case _: EndpointIO.OneOfBody[_, _]          => 6
       case _: EndpointIO.Empty[_]                 => 7
     }
 
@@ -144,6 +145,7 @@ package object internal {
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
         case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
+        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.asBasicOutputsList)
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
@@ -165,23 +167,23 @@ package object internal {
       }
 
     def bodyType: Option[RawBodyType[_]] = {
-      traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
-        Vector(b.bodyType)
+      traverseOutputs[RawBodyType[_]] {
+        case b: EndpointIO.Body[_, _]          => Vector(b.bodyType)
+        case EndpointIO.OneOfBody(variants, _) => variants.map(_.body.bodyType).toVector
       }.headOption
     }
 
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
-      case EndpointIO.Body(bodyType, codec, _) =>
-        Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-        Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
+      case b: EndpointIO.Body[_, _]              => Vector(b.mediaTypeWithCharset)
+      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.body.mediaTypeWithCharset).toVector
+      case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
     }
 
     def hasBodyMatchingContent(content: MediaType): Boolean = {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
-        case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
-        case m                                 => m
+        case m @ MediaType(_, _, None, _) if m.isText => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m                                        => m
       }
 
       val contentTypeRange =
@@ -202,8 +204,26 @@ package object internal {
         case _: EndpointIO.FixedHeader[_]                 => 1
         case _: EndpointIO.Body[_, _]                     => 2
         case _: EndpointIO.StreamBodyWrapper[_, _]        => 2
+        case _: EndpointIO.OneOfBody[_, _]                => 2
         case _: EndpointOutput.WebSocketBodyWrapper[_, _] => 2
       }
+  }
+
+  implicit class RichBody[R, T](body: EndpointIO.Body[R, T]) {
+    def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = charset(body.bodyType).map(_.name()))
+  }
+
+  implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
+    def chooseBodyToDecode(contentType: Option[MediaType]): Option[EndpointIO.Body[_, O]] = {
+      contentType match {
+        case Some(ct) => body.variants.find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
+        case None     => Some(body.variants.head)
+      }
+    }.map(_.body)
+  }
+
+  implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {
+    def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = body.wrapped.charset.map(_.name()))
   }
 
   def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {

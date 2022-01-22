@@ -12,36 +12,48 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This objects contains four methods:
+This objects contains a number of variants for creating a client call, where the first parameter is the endpoint description.
+The second is an optional URI - if this is `None`, the request will be relative.
 
- - `toRequestUnsafe(PublicEndpoint, Uri)`: given a public endpoint and the base URI returns a function, which might throw an exception if 
-   decoding of the result fails
-   ```scala
-   I => Request[Either[E, O], Any]
-   ```
- - `toRequest(PublicEndpoint, Uri)`: given a public endpoint and the base URI returns a function, which represents decoding errors as the `DecodeResult` 
-   class
-   ```scala
-   I => Request[DecodeResult[Either[E, O]], Any]
-   ```
- - `toSecureRequestUnsafe(Endpoint, Uri)`: given a secure endpoint and the base URI returns a function, which might throw an exception if
-   decoding of the result fails
-   ```scala
-   A => I => Request[Either[E, O], Any]
-   ```
- - `toSecureRequest(Endpoint, Uri)`: given a secure endpoint and the base URI returns a function, which represents decoding errors as the `DecodeResult`
-   class
-   ```scala
-   A => I => Request[DecodeResult[Either[E, O]], Any]
-   ```
+Here's a summary of the available method variants; `R` are the requirements of the endpoint, such as streaming or websockets:
 
-Note that the returned functions have one argument each: first the security inputs (if any), and regular input values of the endpoint. This might be a
-single type, a tuple, or a case class, depending on the endpoint description.
+- `toRequest(PublicEndpoint, Option[Uri])`: returns a function, which represents decoding errors as the `DecodeResult`
+  class.
+  ```scala
+  I => Request[DecodeResult[Either[E, O]], R]
+  ```
+  After providing the input parameters, a description of the request to be made is returned, with the input value
+  encoded as appropriate request parameters: path, query, headers and body. This can be further
+  customised and sent using any sttp backend. The response will then contain the decoded error or success values
+  (note that this can be the body enriched with data from headers/status code).
+- `toRequestThrowDecodeFailures(PublicEndpoint, Option[Uri])`: returns a function, which will throw an exception or 
+  return a failed effect if decoding of the result fails
+  ```scala
+  I => Request[Either[E, O], R]
+  ```
+- `toRequestThrowErrors(PublicEndpoint, Option[Uri])`: returns a function, which will throw an exception or
+  return a failed effect if decoding of the result fails, or if the result is an error (as described by the endpoint) 
+  ```scala
+  I => Request[O, R]
+  ```
 
-After providing the input parameters, a description of the request to be made is returned, with the input value
-encoded as appropriate request parameters: path, query, headers and body. This can be further 
-customised and sent using any sttp backend. The response will then contain the decoded error or success values
-(note that this can be the body enriched with data from headers/status code).
+Next, there are `toClient(PublicEndpoint, Option[Uri], SttpBackend[F, R])` methods (in the above variants), which
+send the request using the given backend. Hence in this case, the signature of the result is:
+
+```scala
+I => F[DecodeResult[Either[E, O]]]
+```
+
+Finally, for secure endpoints, there are `toSecureClient` and `toSecureRequest` families of methods. They return
+functions which first accept the security inputs, and then the regular inputs. For example:
+
+```scala
+// toSecureRequest(Endpoint, Option[Uri]) returns: 
+A => I => Request[DecodeResult[Either[E, O]], R]
+
+// toSecureClient(Endpoint, Option[Uri], SttpBackend) returns:
+A => I => F[DecodeResult[Either[E, O]]]
+```
 
 See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
 for example usage.

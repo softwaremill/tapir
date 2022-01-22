@@ -32,12 +32,12 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Mike"), serverEp)
-    interpreter.apply(PersonsApi.request("Janusz"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Mike"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Janusz"), TestRequestBody)
 
     // then
     collectorRegistryCodec
@@ -53,10 +53,10 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     }.serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    val response = Future { interpreter.apply(PersonsApi.request("Jacob"), serverEp) }
+    val response = Future { interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody) }
 
     Thread.sleep(100)
 
@@ -77,17 +77,17 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
-      TestRequestBody,
+      List(serverEp),
       UnitToResponseBody,
       List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
       _ => ()
     )
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Mike"), serverEp)
-    interpreter.apply(PersonsApi.request(""), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Mike"), TestRequestBody)
+    interpreter.apply(PersonsApi.request(""), TestRequestBody)
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
@@ -106,13 +106,19 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     }
 
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration(clock = clock)
-    val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+    def interpret(sleep: Long) =
+      new ServerInterpreter[Any, Id, String, NoStreams](
+        List(waitServerEp(sleep)),
+        StringToResponseBody,
+        List(metrics.metricsInterceptor()),
+        _ => ()
+      )
+        .apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(101))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(201))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(301))
+    interpret(101)
+    interpret(201)
+    interpret(301)
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
@@ -136,10 +142,10 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
     collectorRegistryCodec.encode(metrics.registry).contains("tapir_responses_total{key=\"value\",} 1.0") shouldBe true
@@ -150,12 +156,16 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
-    val ses = List(metrics.metricsEndpoint, serverEp)
+      new ServerInterpreter[Any, Id, String, NoStreams](
+        List(metrics.metricsEndpoint, serverEp),
+        StringToResponseBody,
+        List(metrics.metricsInterceptor()),
+        _ => ()
+      )
 
     // when
-    interpreter.apply(getMetricsRequest, ses)
-    interpreter.apply(getMetricsRequest, ses)
+    interpreter.apply(getMetricsRequest, TestRequestBody)
+    interpreter.apply(getMetricsRequest, TestRequestBody)
 
     // then
     collectorRegistryCodec.encode(metrics.registry) shouldBe
@@ -168,10 +178,15 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     // given
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](
+        List(metrics.metricsEndpoint),
+        StringToResponseBody,
+        List(metrics.metricsInterceptor()),
+        _ => ()
+      )
 
     // when
-    interpreter.apply(getMetricsRequest, metrics.metricsEndpoint) match {
+    interpreter.apply(getMetricsRequest, TestRequestBody) match {
       case RequestResult.Response(response) =>
         response.body.map { b =>
           b shouldBe """# HELP tapir_responses_total Total HTTP responses
@@ -187,14 +202,14 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
-      TestRequestBody,
+      List(serverEp),
       StringToResponseBody,
       List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler.handler)),
       _ => ()
     )
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
     collectorRegistryCodec

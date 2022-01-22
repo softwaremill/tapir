@@ -7,7 +7,7 @@ servers:
     url: example.org
     protocol: ws
     security:
-      - apiKeyAuth: []
+      - httpApiKeyAuth: []
 channels:
   /fruit:
     subscribe:
@@ -36,7 +36,7 @@ components:
         $ref: '#/components/schemas/Fruit'
       contentType: application/json
   securitySchemes:
-    apiKeyAuth:
-      type: apiKey
+    httpApiKeyAuth:
+      type: httpApiKey
       name: Authorization
       in: header

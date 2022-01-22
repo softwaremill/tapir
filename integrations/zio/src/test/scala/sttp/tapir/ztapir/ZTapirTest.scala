@@ -5,7 +5,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
-import sttp.tapir.{CodecFormat, Endpoint, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
@@ -75,13 +75,6 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private def failedAutLogic(userName: String): UIO[User] = ZIO(10 / 0).orDie.as(User(userName))
 
-  val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
-    exampleRequestBody,
-    exampleToResponse,
-    List.empty,
-    _ => ZIO.unit
-  )
-
   private val testZServerLogicErrorHandling = testM("zServerLogic error handling") {
     val testEndpoint: PublicEndpoint[Unit, TestError, String, Any] =
       endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
@@ -89,7 +82,14 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
     val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
-    interpreter(testRequest, serverEndpoint)
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+      List(serverEndpoint),
+      exampleToResponse,
+      List.empty,
+      _ => ZIO.unit
+    )
+
+    interpreter(testRequest, exampleRequestBody)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
@@ -110,7 +110,14 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     val serverEndpoint: ZServerEndpoint[Any, Any] =
       testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
-    interpreter(testRequest, serverEndpoint)
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+      List(serverEndpoint),
+      exampleToResponse,
+      List.empty,
+      _ => ZIO.unit
+    )
+
+    interpreter(testRequest, exampleRequestBody)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(

@@ -25,7 +25,7 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
   ): IO[Either[E, O]] = {
     def response: Future[Either[E, O]] = {
       val (req, responseParser) =
-        PlayClientInterpreter().toSecureRequestUnsafe(e, s"http://localhost:$port").apply(securityArgs).apply(args)
+        PlayClientInterpreter().toSecureRequestThrowDecodeFailures(e, s"http://localhost:$port").apply(securityArgs).apply(args)
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))

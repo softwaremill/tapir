@@ -95,25 +95,25 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
 
   private def makeQueryInput(field: c.Symbol)(altName: Option[String]): Tree = {
     val name = altName.getOrElse(field.name.toTermName.decodedName.toString)
-    q"query[${field.asTerm.info}]($name)"
+    q"_root_.sttp.tapir.query[${field.asTerm.info}]($name)"
   }
 
   private def makeCookieInput(field: c.Symbol)(altName: Option[String]): Tree = {
     val name = altName.getOrElse(field.name.toTermName.decodedName.toString)
-    q"cookie[${field.asTerm.info}]($name)"
+    q"_root_.sttp.tapir.cookie[${field.asTerm.info}]($name)"
   }
 
   private def makePathInput(field: c.Symbol): Tree = {
     val name = field.name.toTermName.decodedName.toString
-    q"path[${field.asTerm.info}]($name)"
+    q"_root_.sttp.tapir.path[${field.asTerm.info}]($name)"
   }
 
   private def makeFixedPath(segment: String): Tree =
-    q"stringToPath($segment)"
+    q"_root_.sttp.tapir.stringToPath($segment)"
 
   private def makeQueryParamsInput(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[QueryParams]) {
-      q"queryParams"
+      q"_root_.sttp.tapir.queryParams"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @params can be applied only for field with type ${typeOf[QueryParams]}")
     }

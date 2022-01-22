@@ -29,12 +29,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Mike"), serverEp)
-    interpreter.apply(PersonsApi.request("Janusz"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Mike"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Janusz"), TestRequestBody)
 
     // then
     val point = longSumData(provider).head
@@ -52,10 +52,10 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     }.serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    val response = Future { interpreter.apply(PersonsApi.request("Jacob"), serverEp) }
+    val response = Future { interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody) }
 
     Thread.sleep(100)
 
@@ -78,17 +78,17 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
-      TestRequestBody,
+      List(serverEp),
       UnitToResponseBody,
       List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
       _ => ()
     )
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
-    interpreter.apply(PersonsApi.request("Mike"), serverEp)
-    interpreter.apply(PersonsApi.request(""), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
+    interpreter.apply(PersonsApi.request("Mike"), TestRequestBody)
+    interpreter.apply(PersonsApi.request(""), TestRequestBody)
 
     // then
     longSumData(provider)
@@ -129,13 +129,19 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     }
 
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesDuration()
-    val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+    def interpret(sleep: Int) =
+      new ServerInterpreter[Any, Id, String, NoStreams](
+        List(waitServerEp(sleep)),
+        StringToResponseBody,
+        List(metrics.metricsInterceptor()),
+        _ => ()
+      )
+        .apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(100))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(200))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(300))
+    interpret(100)
+    interpret(200)
+    interpret(300)
 
     val point = provider.collectAllMetrics().asScala.head.getDoubleSummaryData.getPoints.asScala.head
     point.getAttributes shouldBe Attributes.of(
@@ -157,10 +163,10 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val meter = provider.get("tapir-instrumentation")
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](List(serverEp), StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
     val point = longSumData(provider).head
@@ -173,14 +179,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val meter = provider.get("tapir-instrumentation")
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
-      TestRequestBody,
+      List(serverEp),
       StringToResponseBody,
       List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler.handler)),
       _ => ()
     )
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), serverEp)
+    interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
     val point = longSumData(provider).head

@@ -10,9 +10,9 @@ import sttp.tapir.server.mockserver._
 
 /** @note
   *   - run the following docker command to setup mock-server locally
-  * {{{
+  *     {{{
   *   docker run -d --name tapir-mock-server --rm -p 1080:1080 mockserver/mockserver
-  * }}}
+  *     }}}
   */
 object MockServerExample extends App {
   val backend = TryHttpURLConnectionBackend()

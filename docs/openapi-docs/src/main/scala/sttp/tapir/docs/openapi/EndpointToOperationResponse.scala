@@ -45,7 +45,10 @@ private[openapi] class EndpointToOperationResponse(
 
     val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct.sortBy(_.map(_.code).getOrElse(Integer.MAX_VALUE))
 
-    val docsExtensions = outputs.flatMap(_.flatMap(_.info.docsExtensions))
+    val docsExtensions = outputs.flatMap(_.flatMap {
+      case o: EndpointOutput.Atom[_]         => o.info.docsExtensions
+      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.info.docsExtensions)
+    })
     statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
       outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response =>
@@ -86,9 +89,9 @@ private[openapi] class EndpointToOperationResponse(
   private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
     val forcedContentType = extractFixedContentType(outputs)
     outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
+      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, _)) =>
+        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
     })
   }
 

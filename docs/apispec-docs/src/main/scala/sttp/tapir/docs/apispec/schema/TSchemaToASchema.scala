@@ -7,8 +7,9 @@ import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve nested references. */
-private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaReference) {
-  def apply[T](schema: TSchema[T]): ReferenceOr[ASchema] = {
+private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaReference, markOptionsAsNullable: Boolean) {
+  def apply[T](schema: TSchema[T], isOptionElement: Boolean = false): ReferenceOr[ASchema] = {
+    val nullable = markOptionsAsNullable && isOptionElement
     val result = schema.schemaType match {
       case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer))
       case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number))
@@ -30,25 +31,26 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
       case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
-      case TSchemaType.SOption(el)                                          => apply(el)
+      case TSchemaType.SOption(el)                                          => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
       case TSchemaType.SRef(fullName) => Left(nameToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(schemas, d) =>
         Right(
-          ASchema.apply(
-            schemas
-              .map {
-                case TSchema(_, Some(name), _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
-                case t                                           => apply(t)
-              }
-              .sortBy {
-                case Left(Reference(ref)) => ref
-                case Right(schema)        => schema.`type`.map(_.value).getOrElse("") + schema.toString
-              },
-            d.map(tDiscriminatorToADiscriminator)
-          )
+          ASchema
+            .apply(
+              schemas
+                .map {
+                  case TSchema(_, Some(name), _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
+                  case t                                           => apply(t)
+                }
+                .sortBy {
+                  case Left(Reference(ref)) => ref
+                  case Right(schema)        => schema.`type`.map(_.value).getOrElse("") + schema.toString
+                },
+              d.map(tDiscriminatorToADiscriminator)
+            )
         )
       case TSchemaType.SOpenProduct(valueSchema) =>
         Right(
@@ -69,6 +71,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
     }
 
     result
+      .map(s => if (nullable) s.copy(nullable = Some(true)) else s)
       .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }

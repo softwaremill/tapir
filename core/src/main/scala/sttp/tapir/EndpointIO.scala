@@ -2,10 +2,10 @@ package sttp.tapir
 
 import sttp.capabilities.Streams
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.model.Method
+import sttp.model.{ContentTypeRange, Method}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
-import sttp.tapir.RawBodyType.StringBody
+import sttp.tapir.RawBodyType._
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
@@ -20,7 +20,7 @@ import scala.concurrent.duration.FiniteDuration
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output). The
   * transput traits contain common functionality, shared by all inputs and outputs.
   *
-  * Note that implementations of `EndpointIO` can be used BOTH as inputs and outputs.
+  * Note that implementations of `EndpointIO` can be used *both* as inputs and outputs.
   *
   * The hierarchy is as follows:
   *
@@ -29,6 +29,20 @@ import scala.concurrent.duration.FiniteDuration
   * `EndpointTransput` >---                            ---> `EndpointIO`
   *                         \---> `EndpointOutput` >---/
   * }}}
+  *
+  * Inputs and outputs additionally form another hierarchy:
+  *
+  * {{{
+  *                                       /--> `Single` >--> `Basic` >--> `Atom`
+  * `EndpointInput` / `EndpointOutput` >--
+  *                                       \--> `Pair`
+  * }}}
+  *
+  * where the intuition behind the traits is:
+  *   - `single`: represents a single value, as opposed to a pair (tuple); a pair, but transformed using `.map` is also a single value
+  *   - `basic`: corresponds to an input/output which is encoded/decoded in one step; always `single`
+  *   - `atom`: corresponds to a single component of a request or response. Such inputs/outputs contain a [[Codec]] and [[Info]] meta-data,
+  *     and are always `basic`
   */
 sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
@@ -43,7 +57,9 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
 }
 
 object EndpointTransput {
-  sealed trait Basic[T] extends EndpointTransput[T] {
+  sealed trait Basic[T] extends EndpointTransput[T]
+
+  sealed trait Atom[T] extends Basic[T] {
     private[tapir] type L
     private[tapir] type CF <: CodecFormat
 
@@ -102,10 +118,10 @@ object EndpointInput extends EndpointInputMacros {
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
-
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
+  sealed trait Atom[T] extends Basic[T] with EndpointTransput.Atom[T]
 
-  case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = FixedMethod[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
@@ -113,7 +129,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = m.method
   }
 
-  case class FixedPath[T](s: String, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class FixedPath[T](s: String, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = FixedPath[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
@@ -121,7 +137,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = s"/${UrlencodedData.encode(s)}"
   }
 
-  case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = PathCapture[X]
     override private[tapir] type L = String
     override private[tapir] type CF = TextPlain
@@ -131,7 +147,7 @@ object EndpointInput extends EndpointInputMacros {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
   }
 
-  case class PathsCapture[T](codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class PathsCapture[T](codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = PathsCapture[X]
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
@@ -139,7 +155,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show = s"/..."
   }
 
-  case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Query[X]
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
@@ -147,7 +163,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = addValidatorShow(s"?$name", codec.schema)
   }
 
-  case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = QueryParams[X]
     override private[tapir] type L = sttp.model.QueryParams
     override private[tapir] type CF = TextPlain
@@ -156,7 +172,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = s"?..."
   }
 
-  case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Cookie[X]
     override private[tapir] type L = Option[String]
     override private[tapir] type CF = TextPlain
@@ -164,7 +180,7 @@ object EndpointInput extends EndpointInputMacros {
     override def show: String = addValidatorShow(s"{cookie $name}", codec.schema)
   }
 
-  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = ExtractFromRequest[X]
     override private[tapir] type L = ServerRequest
     override private[tapir] type CF = TextPlain
@@ -177,11 +193,11 @@ object EndpointInput extends EndpointInputMacros {
 
   /** An input with authentication credentials metadata, used when generating documentation. */
   case class Auth[T, INFO <: AuthInfo](
-      input: EndpointInput.Single[T],
+      input: Single[T],
       securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
       authInfo: INFO
-  ) extends EndpointInput.Single[T] {
+  ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, INFO]
     override def show: String = authInfo match {
       case AuthInfo.Http(scheme)       => s"auth($scheme http, via ${input.show})"
@@ -219,7 +235,7 @@ object EndpointInput extends EndpointInputMacros {
 
   //
 
-  case class MappedPair[T, U, TU, V](input: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointInput.Single[V] {
+  case class MappedPair[T, U, TU, V](input: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = input.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](input, mapping.map(m))
@@ -247,6 +263,7 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
 object EndpointOutput extends EndpointOutputMacros {
   sealed trait Single[T] extends EndpointOutput[T]
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
+  sealed trait Atom[T] extends Basic[T] with EndpointTransput.Atom[T]
 
   //
 
@@ -254,7 +271,7 @@ object EndpointOutput extends EndpointOutputMacros {
       documentedCodes: Map[sttp.model.StatusCode, Info[Unit]],
       codec: Codec[sttp.model.StatusCode, T, TextPlain],
       info: Info[T]
-  ) extends Basic[T] {
+  ) extends Atom[T] {
     override private[tapir] type ThisType[X] = StatusCode[X]
     override private[tapir] type L = sttp.model.StatusCode
     override private[tapir] type CF = TextPlain
@@ -270,7 +287,7 @@ object EndpointOutput extends EndpointOutputMacros {
 
   //
 
-  case class FixedStatusCode[T](statusCode: sttp.model.StatusCode, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class FixedStatusCode[T](statusCode: sttp.model.StatusCode, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = FixedStatusCode[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
@@ -278,7 +295,7 @@ object EndpointOutput extends EndpointOutputMacros {
     override def show: String = s"status code ($statusCode)"
   }
 
-  case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, T, _]) extends Basic[T] {
+  case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, T, _]) extends Atom[T] {
     override private[tapir] type ThisType[X] = WebSocketBodyWrapper[PIPE_REQ_RESP, X]
     override private[tapir] type L = PIPE_REQ_RESP
     override private[tapir] type CF = CodecFormat
@@ -328,7 +345,7 @@ object EndpointOutput extends EndpointOutputMacros {
 
   //
 
-  case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V] {
+  case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = output.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
@@ -357,10 +374,10 @@ object EndpointIO {
   sealed trait Single[I] extends EndpointIO[I] with EndpointInput.Single[I] with EndpointOutput.Single[I] {
     private[tapir] type ThisType[X] <: EndpointIO.Single[X]
   }
-
   sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I]
+  sealed trait Atom[I] extends Basic[I] with EndpointInput.Atom[I] with EndpointOutput.Atom[I]
 
-  case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, CodecFormat], info: Info[T]) extends Basic[T] {
+  case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, CodecFormat], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Body[R, X]
     override private[tapir] type L = R
     override private[tapir] type CF = CodecFormat
@@ -375,7 +392,7 @@ object EndpointIO {
     }
   }
 
-  case class StreamBodyWrapper[BS, T](wrapped: StreamBodyIO[BS, T, _]) extends Basic[T] {
+  case class StreamBodyWrapper[BS, T](wrapped: StreamBodyIO[BS, T, _]) extends Atom[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[BS, X]
     override private[tapir] type L = BS
     override private[tapir] type CF = CodecFormat
@@ -389,7 +406,18 @@ object EndpointIO {
     override def show: String = wrapped.show
   }
 
-  case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Body[_, O])
+  case class OneOfBody[O, T](variants: List[OneOfBodyVariant[O]], mapping: Mapping[O, T]) extends Basic[T] {
+    override private[tapir] type ThisType[X] = OneOfBody[O, X]
+    override def show: String = showOneOf(variants.map { variant =>
+      val prefix =
+        if ((ContentTypeRange.exactNoCharset(variant.body.codec.format.mediaType)) == variant.range) "" else s"${variant.range} -> "
+      prefix + variant.body.show
+    })
+    override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))
+  }
+
+  case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = FixedHeader[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
@@ -397,7 +425,7 @@ object EndpointIO {
     override def show = s"{header ${h.name}: ${h.value}}"
   }
 
-  case class Header[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class Header[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Header[X]
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
@@ -405,7 +433,7 @@ object EndpointIO {
     override def show: String = addValidatorShow(s"{header $name}", codec.schema)
   }
 
-  case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Headers[X]
     override private[tapir] type L = List[sttp.model.Header]
     override private[tapir] type CF = TextPlain
@@ -414,7 +442,7 @@ object EndpointIO {
     override def show = "{multiple headers}"
   }
 
-  case class Empty[T](codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class Empty[T](codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Empty[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
@@ -424,7 +452,7 @@ object EndpointIO {
 
   //
 
-  case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointIO.Single[V] {
+  case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = io.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
@@ -500,6 +528,12 @@ object EndpointIO {
     class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
     class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
     class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
+    class byteArrayBody extends body(ByteArrayBody, CodecFormat.OctetStream())
+    class byteBufferBody extends body(ByteBufferBody, CodecFormat.OctetStream())
+    class inputStreamBody extends body(InputStreamBody, CodecFormat.OctetStream())
+    class formBody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.XWwwFormUrlencoded())
+    class fileBody extends body(FileBody, CodecFormat.OctetStream())
+    class multipartBody extends body(MultipartCodec.Default.rawBodyType, CodecFormat.MultipartFormData())
     class apikey(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge("ApiKey")) extends StaticAnnotation
     class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
     class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
@@ -537,14 +571,26 @@ factory method in `Tapir` which would directly create an instance of it.
 
 BS == streams.BinaryStream, but we can't express this using dependent types here.
  */
-case class StreamBodyIO[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
-    extends EndpointTransput.Basic[T] {
+case class StreamBodyIO[BS, T, S](
+    streams: Streams[S],
+    codec: Codec[BS, T, CodecFormat],
+    info: Info[T],
+    charset: Option[Charset],
+    encodedExamples: List[Example[Any]]
+) extends EndpointTransput.Atom[T] {
   override private[tapir] type ThisType[X] = StreamBodyIO[BS, X, S]
   override private[tapir] type L = BS
   override private[tapir] type CF = CodecFormat
   override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
   private[tapir] def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
+
+  /** Add an example of a "deserialized" stream value. This should be given in an encoded form, e.g. in case of json - as a [[String]], as
+    * the stream body doesn't have access to the codec that will be later used for deserialization.
+    */
+  def encodedExample(e: Any): ThisType[T] = copy(encodedExamples = encodedExamples ++ List(Example.of(e)))
+  def encodedExample(example: Example[Any]): ThisType[T] = copy(encodedExamples = encodedExamples ++ List(example))
+  def encodedExample(examples: List[Example[Any]]): ThisType[T] = copy(encodedExamples = encodedExamples ++ examples)
 
   override def show: String = "{body as stream}"
 }
@@ -568,7 +614,7 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     decodeCloseRequests: Boolean,
     decodeCloseResponses: Boolean,
     autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]
-) extends EndpointTransput.Basic[T] {
+) extends EndpointTransput.Atom[T] {
   override private[tapir] type ThisType[X] = WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, X, S]
   override private[tapir] type L = PIPE_REQ_RESP
   override private[tapir] type CF = CodecFormat

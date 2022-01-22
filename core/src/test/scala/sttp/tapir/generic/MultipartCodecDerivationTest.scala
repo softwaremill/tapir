@@ -33,7 +33,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     toPartData(codec.encode(Test2("John Smith Ą", 10))) shouldBe List(("f1", "John Smith Ą"), ("f2", "10"))
 
     codec.decode(createStringParts(List(("f1", "v1"), ("f2", "10")))) shouldBe DecodeResult.Value(Test2("v1", 10))
-    codec.decode(createStringParts(List(("f1", "v1")))) shouldBe DecodeResult.Missing
+    codec.decode(createStringParts(List(("f1", "v1")))) should matchPattern {
+      case DecodeResult.Error("", DecodeResult.Error.MultipartDecodeException(List(("f2", DecodeResult.Missing)))) =>
+    }
   }
 
   it should "generate a codec for a case class with optional parameters" in {

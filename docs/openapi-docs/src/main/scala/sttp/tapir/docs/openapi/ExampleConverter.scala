@@ -4,16 +4,23 @@ import sttp.tapir.apispec._
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.openapi.Example
-import sttp.tapir.{Codec, EndpointIO}
+import sttp.tapir.{Codec, EndpointIO, Schema => TSchema}
 
 import scala.collection.immutable.ListMap
 
 private[openapi] object ExampleConverter {
-  case class Examples(singleExample: Option[ExampleValue], multipleExamples: ListMap[String, ReferenceOr[Example]])
-
-  def convertExamples[T](o: Codec[_, T, _], examples: List[EndpointIO.Example[T]]): Examples = {
-    convertExamples(examples)(exampleValue(o, _))
+  case class Examples(singleExample: Option[ExampleValue], multipleExamples: ListMap[String, ReferenceOr[Example]]) {
+    def +(other: Examples): Examples = Examples(
+      singleExample.orElse(other.singleExample),
+      multipleExamples ++ other.multipleExamples
+    )
   }
+
+  def convertExamples[T](o: Codec[_, T, _], examples: List[EndpointIO.Example[T]]): Examples =
+    convertExamples(examples)(exampleValue(o, _))
+
+  def convertExamples(s: TSchema[_], examples: List[EndpointIO.Example[_]]): Examples =
+    convertExamples[Any](examples)(exampleValue(s, _))
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {
     examples match {

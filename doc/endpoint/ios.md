@@ -34,6 +34,7 @@ For both inputs/outputs:
   captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 
   used with such an endpoint
+* `oneOfBody` captures multiple variants of bodies representing the same content, but using different content types
 
 For outputs:
 
