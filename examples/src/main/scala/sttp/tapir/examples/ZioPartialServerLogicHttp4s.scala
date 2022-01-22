@@ -10,16 +10,13 @@ import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.console._
 import zio.interop.catz._
 
-object ZioPartialServerLogicHttp4s extends App {
+object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 
   def greet(user: User, salutation: String): ZIO[Console, Nothing, String] = {
     val greeting = s"$salutation, ${user.name}!"
-    putStrLn(greeting).as(greeting).orDie
+    Console.printLine(greeting).as(greeting).orDie
   }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
@@ -38,7 +35,7 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock with Blocking, *]] =
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
     ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic)).toRoutes
 
   // testing
@@ -69,11 +66,11 @@ object ZioPartialServerLogicHttp4s extends App {
 
   //
 
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] =
+  override def run: ZIO[ZEnv with ZIOAppArgs, Any, Any] =
     ZIO.runtime
       .flatMap { implicit runtime: Runtime[ZEnv & UserService & Console] =>
-        BlazeServerBuilder[RIO[UserService & Console & Clock & Blocking, *]]
-          .withExecutionContext(runtime.platform.executor.asEC)
+        BlazeServerBuilder[RIO[UserService & Console & Clock, *]]
+          .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
           .resource
@@ -87,24 +84,22 @@ object ZioPartialServerLogicHttp4s extends App {
 }
 
 object UserAuthenticationLayer {
-  type UserService = Has[UserService.Service]
-
   case class User(name: String)
   val AuthenticationErrorCode = 1001
 
-  object UserService {
-    trait Service {
-      def auth(token: String): IO[Int, User]
-    }
+  trait UserService {
+    def auth(token: String): IO[Int, User]
+  }
 
-    val live: ZLayer[Any, Nothing, Has[Service]] = ZLayer.succeed(new Service {
+  object UserService {
+    val live: ZLayer[Any, Nothing, UserService] = ZLayer.succeed(new UserService {
       def auth(token: String): IO[Int, User] = {
         if (token == "secret") IO.succeed(User("Spock"))
         else IO.fail(AuthenticationErrorCode)
       }
     })
 
-    def auth(token: String): ZIO[UserService, Int, User] = ZIO.accessM(_.get.auth(token))
+    def auth(token: String): ZIO[UserService, Int, User] = ZIO.serviceWithZIO(_.auth(token))
   }
 
 }

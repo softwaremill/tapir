@@ -10,7 +10,7 @@ import zhttp.service.Server
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-object HelloWorldZioHttpServer extends App {
+object HelloWorldZioHttpServer extends ZIOAppDefault {
   // a simple string-only endpoint
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get
@@ -37,6 +37,6 @@ object HelloWorldZioHttpServer extends App {
       ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 
   // starting the server
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
+  override def run: ZIO[ZEnv with ZIOAppArgs, Any, Any] =
     Server.start(8090, app).exitCode
 }

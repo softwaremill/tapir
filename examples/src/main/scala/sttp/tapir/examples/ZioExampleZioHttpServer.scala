@@ -9,9 +9,9 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.{App, ExitCode, IO, Task, UIO, URIO, ZIO}
+import zio.{IO, Task, UIO, ZEnv, ZIO, ZIOAppArgs, ZIOAppDefault}
 
-object ZioExampleZioHttpServer extends App {
+object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -43,6 +43,6 @@ object ZioExampleZioHttpServer extends App {
       .toHttp(SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
   // Starting the server
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
+  override def run: ZIO[ZEnv with ZIOAppArgs, Any, Any] =
     Server.start(8080, petRoutes <> swaggerRoutes).exitCode
 }

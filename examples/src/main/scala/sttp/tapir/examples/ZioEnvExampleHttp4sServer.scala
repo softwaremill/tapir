@@ -11,35 +11,36 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.console.Console
 import zio.interop.catz._
-import zio.{App, ExitCode, Has, IO, RIO, UIO, URIO, ZEnv, ZIO, ZLayer}
+import zio._
 
-object ZioEnvExampleHttp4sServer extends App {
+object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
   // Domain classes, services, layers
   case class Pet(species: String, url: String)
 
   object PetLayer {
-    type PetService = Has[PetService.Service]
+    trait PetService {
+      def find(id: Int): ZIO[Any, String, Pet]
+    }
 
     object PetService {
-      trait Service {
-        def find(id: Int): ZIO[Any, String, Pet]
-      }
-
-      val live: ZLayer[Console, String, PetService] = ZLayer.fromFunction { console: Console => petId: Int =>
-        console.get.putStrLn(s"Got request for pet: $petId").mapError(_.getMessage) *> {
-          if (petId == 35) {
-            UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
-          } else {
-            IO.fail("Unknown pet id")
+      val live: ZLayer[Console, String, PetService] =
+        ZIO
+          .serviceWith[Console] { console =>
+            new PetService {
+              def find(petId: Int): ZIO[Any, String, Pet] =
+                console.printLine(s"Got request for pet: $petId").mapError(_.getMessage) *> {
+                  if (petId == 35) {
+                    UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+                  } else {
+                    IO.fail("Unknown pet id")
+                  }
+                }
+            }
           }
-        }
-      }
+          .toLayer
 
-      def find(id: Int): ZIO[PetService, String, Pet] = ZIO.accessM(_.get.find(id))
+      def find(id: Int): ZIO[PetService, String, Pet] = ZIO.serviceWithZIO(_.find(id))
     }
   }
   import PetLayer.PetService
@@ -48,25 +49,25 @@ object ZioEnvExampleHttp4sServer extends App {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
+  val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
     ZHttp4sServerInterpreter().from(petEndpoint.zServerLogic(petId => PetService.find(petId))).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[PetService, Any] =
     petEndpoint.zServerLogic(petId => PetService.find(petId))
-  val petServerRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
+  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
     ZHttp4sServerInterpreter().from(List(petServerEndpoint)).toRoutes
 
   // Documentation
-  val swaggerRoutes: HttpRoutes[RIO[PetService with Clock with Blocking, *]] =
+  val swaggerRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
     ZHttp4sServerInterpreter()
-      .from(SwaggerInterpreter().fromEndpoints[RIO[PetService with Clock with Blocking, *]](List(petEndpoint), "Our pets", "1.0"))
+      .from(SwaggerInterpreter().fromEndpoints[RIO[PetService with Clock, *]](List(petEndpoint), "Our pets", "1.0"))
       .toRoutes
 
   // Starting the server
   val serve: ZIO[ZEnv with PetService, Throwable, Unit] = ZIO.runtime[ZEnv with PetService].flatMap { implicit runtime =>
-    BlazeServerBuilder[RIO[PetService with Clock with Blocking, *]]
-      .withExecutionContext(runtime.platform.executor.asEC)
+    BlazeServerBuilder[RIO[PetService with Clock, *]]
+      .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
       .serve
@@ -74,7 +75,6 @@ object ZioEnvExampleHttp4sServer extends App {
       .drain
   }
 
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = {
+  override def run: ZIO[ZEnv with ZIOAppArgs, Any, Any] =
     serve.provideCustomLayer(PetService.live).exitCode
-  }
 }
