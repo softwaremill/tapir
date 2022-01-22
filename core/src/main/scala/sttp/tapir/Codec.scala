@@ -642,7 +642,7 @@ object MultipartCodec extends MultipartCodecMacros {
     Codec
       .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, arrayBytePartListCodec)))
       // we know that all parts will end up as byte arrays; also, removing the by-name grouping of parts
-      .map(_.values.toSeq.flatMap(_.asInstanceOf[List[Part[Array[Byte]]]]))(l => ListMap(l.map(p => p.name -> p): _*))
+      .map(_.values.toSeq.flatMap(_.asInstanceOf[List[Part[Array[Byte]]]]))(l => ListMap.empty.updated("0", l))
 }
 
 /** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding. */
