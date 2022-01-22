@@ -12,7 +12,6 @@ import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec
 import zio.test._
 import zio.test.Assertion._
-import zio.test.environment._
 
 import java.nio.charset.Charset
 import scala.util.{Success, Try}

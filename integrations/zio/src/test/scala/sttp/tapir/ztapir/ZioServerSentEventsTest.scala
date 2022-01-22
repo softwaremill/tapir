@@ -3,7 +3,6 @@ package sttp.tapir.ztapir
 import sttp.model.sse.ServerSentEvent
 import zio.Chunk
 import zio.test.{DefaultRunnableSpec, ZSpec}
-import zio.test.environment.TestEnvironment
 import zio.test._
 import zio.test.Assertion._
 import zio.stream._

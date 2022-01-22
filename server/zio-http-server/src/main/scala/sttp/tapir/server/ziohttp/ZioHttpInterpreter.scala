@@ -16,10 +16,10 @@ trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response] = {
     implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
     implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
@@ -31,7 +31,7 @@ trait ZioHttpInterpreter[R] {
 
     Http.route[Request] { case req =>
       Http
-        .fromEffect(
+        .fromZIO(
           interpreter
             .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
             .map {
@@ -68,8 +68,8 @@ object ZioHttpInterpreter {
     override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
     override def error[T](t: Throwable): RIO[R, T] = RIO.fail(t)
     override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
-    override def eval[T](t: => T): RIO[R, T] = RIO.effect(t)
-    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.effectSuspend(t)
+    override def eval[T](t: => T): RIO[R, T] = RIO.attempt(t)
+    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.suspend(t)
     override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
     override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
   }

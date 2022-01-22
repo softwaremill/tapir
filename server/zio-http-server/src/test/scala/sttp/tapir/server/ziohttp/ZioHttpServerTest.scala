@@ -9,7 +9,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, ServerChannelFactory}
 import zio.interop.catz._
-import zio.{Runtime, Task}
+import zio.{Runtime, Task, ZEnvironment}
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -17,7 +17,7 @@ class ZioHttpServerTest extends TestSuite {
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     (EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build.toResource[IO].map {
-      (nettyDeps: EventLoopGroup with ServerChannelFactory) =>
+      (nettyDeps: ZEnvironment[EventLoopGroup with ServerChannelFactory]) =>
         val interpreter = new ZioHttpTestServerInterpreter(nettyDeps)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
