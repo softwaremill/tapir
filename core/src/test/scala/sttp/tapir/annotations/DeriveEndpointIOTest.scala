@@ -265,10 +265,10 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
       ("multipart", multipartBody[Form].mapTo[TapirRequestTest14], EndpointInput.derived[TapirRequestTest14])
     )
 
-  forAll (bodyInputDerivations) { (body: String, expected: EndpointIO.Body[_, _], derived: EndpointInput[_]) => 
+  forAll(bodyInputDerivations) { (body: String, expected: EndpointIO.Body[_, _], derived: EndpointInput[_]) =>
     it should s"derive correct input for $body body" in {
       compareTransputs(derived, expected) shouldBe true
-    }  
+    }
   }
 
   it should "not compile if there is field without annotation" in {
