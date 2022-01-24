@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: Unique parameters
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: correlation-id
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: header correlation-id'
+          content:
+            text/plain:
+              schema:
+                type: string

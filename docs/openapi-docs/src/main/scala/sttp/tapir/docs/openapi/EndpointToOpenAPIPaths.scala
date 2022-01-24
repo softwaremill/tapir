@@ -41,7 +41,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
-    val parameters = operationParameters(inputs)
+    val parameters = operationParameters(inputs).distinct.toList
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
@@ -50,7 +50,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       e.info.summary,
       e.info.description,
       e.info.name.orElse(Some(defaultId)),
-      parameters.toList.map(Right(_)),
+      parameters.map(Right(_)),
       body.headOption,
       Responses(responses),
       if (e.info.deprecated) Some(true) else None,
