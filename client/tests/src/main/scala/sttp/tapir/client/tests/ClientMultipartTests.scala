@@ -37,12 +37,10 @@ trait ClientMultipartTests { this: ClientTests[Any] =>
       in_raw_multipart_out_string,
       (),
       Seq(
-        Part("operations", "{}".getBytes, contentType = Some(MediaType.ApplicationJson)),
-        Part("map", """{ "0": ["variables.files.0"], "1":  ["variables.files.1"]}""".getBytes),
-        Part("0", """image""".getBytes, contentType = Some(MediaType.ImagePng)).fileName("a.png"),
-        Part("1", """text""".getBytes, contentType = Some(MediaType.TextPlain)).fileName("a.txt")
+        Part("fruit", "apple".getBytes, contentType = Some(MediaType.TextPlain)),
+        Part("amount", "20".getBytes, contentType = Some(MediaType.TextPlain))
       ),
-      Right("=")
+      Right("apple=20")
     )
 
   }
