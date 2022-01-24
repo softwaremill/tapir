@@ -1,7 +1,8 @@
 package sttp.tapir.client.tests
 
 import cats.effect.unsafe.implicits.global
-import sttp.tapir.tests.Multipart.{in_simple_multipart_out_raw_string, in_simple_multipart_out_string}
+import sttp.model.{MediaType, Part}
+import sttp.tapir.tests.Multipart.{in_raw_multipart_out_string, in_simple_multipart_out_raw_string, in_simple_multipart_out_string}
 import sttp.tapir.tests.data.{FruitAmount, FruitAmountWrapper}
 
 trait ClientMultipartTests { this: ClientTests[Any] =>
@@ -31,6 +32,17 @@ trait ClientMultipartTests { this: ClientTests[Any] =>
           afterJson should not include ("Content-Type: application/json")
         }
     }
+
+    testClient(
+      in_raw_multipart_out_string,
+      (),
+      Seq(
+        Part("fruit", "apple".getBytes, contentType = Some(MediaType.TextPlain)),
+        Part("amount", "20".getBytes, contentType = Some(MediaType.TextPlain))
+      ),
+      Right("apple=20")
+    )
+
   }
 
 }
