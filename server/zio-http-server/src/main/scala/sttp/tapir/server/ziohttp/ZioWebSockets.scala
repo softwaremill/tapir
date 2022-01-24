@@ -33,9 +33,9 @@ private[ziohttp] object ZioWebSockets {
 
   private def zFrameToFrame(f: ZioWebSocketFrame): WebSocketFrame =
     f match {
-      case t @ ZioWebSocketFrame.Text(text)           => WebSocketFrame.Text(text, t.isFinal, rsv = None)
-      case b @ ZioWebSocketFrame.Binary(buffer)       => WebSocketFrame.Binary(buffer.array(), b.isFinal, rsv = None)
-      case c @ ZioWebSocketFrame.Continuation(buffer) => WebSocketFrame.Binary(buffer.array(), c.isFinal, rsv = None)
+      case ZioWebSocketFrame.Text(text)           => WebSocketFrame.Text(text, f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Binary(buffer)       => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Continuation(buffer) => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
       case ZioWebSocketFrame.Ping                     => WebSocketFrame.ping
       case ZioWebSocketFrame.Pong                     => WebSocketFrame.pong
       case ZioWebSocketFrame.Close(status, reason)    => WebSocketFrame.Close(status, reason.getOrElse("normal closure"))
