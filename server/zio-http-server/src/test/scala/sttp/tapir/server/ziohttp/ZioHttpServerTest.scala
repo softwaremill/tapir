@@ -9,6 +9,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, ServerChannelFactory}
 import zio.interop.catz._
+import zio.stream.Stream
 import zio.{Runtime, Task}
 
 class ZioHttpServerTest extends TestSuite {
@@ -37,6 +38,9 @@ class ZioHttpServerTest extends TestSuite {
           new AllServerTests(createServerTest, interpreter, backend, basic = false, staticContent = false, multipart = false, file = false)
             .tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ServerWebSocketTests(createServerTest, ZioStreams) {
+            override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+          }.tests() ++
           new ZioHttpCompositionTest(createServerTest).tests()
     }
   }

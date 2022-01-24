@@ -1,6 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
+import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
@@ -9,20 +10,20 @@ import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.ztapir._
 import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
+import zhttp.socket._
 import zio._
-import zio.stream.Stream
 
 trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(se: ZServerEndpoint[R, ZioStreams with WebSockets]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams with WebSockets]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
     implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R, *], ZioResponseBody, ZioStreams](
       ses,
       new ZioHttpToResponseBody,
       zioHttpServerOptions.interceptors,
@@ -36,12 +37,14 @@ trait ZioHttpInterpreter[R] {
             .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
             .map {
               case RequestResult.Response(resp) =>
+                val status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code))
+                val headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList)
                 Http.succeed(
-                  Response(
-                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                    headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
-                    data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
-                  )
+                  resp.body match {
+                    case None => Response(status, headers, HttpData.empty)
+                    case Some(Left(socket)) => asResponse(SocketApp.message(socket))
+                    case Some(Right(stream)) => Response(status, headers, HttpData.fromStream(stream))
+                  }
                 )
               case RequestResult.Failure(_) => Http.empty
             }
