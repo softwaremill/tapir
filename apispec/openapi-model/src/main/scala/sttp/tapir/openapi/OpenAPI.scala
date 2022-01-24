@@ -178,7 +178,7 @@ final case class PathItem(
     patch: Option[Operation] = None,
     trace: Option[Operation] = None,
     servers: List[Server] = List.empty,
-    parameters: List[ReferenceOr[Parameter]] = List.empty,
+    parameters: Set[ReferenceOr[Parameter]] = Set.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def mergeWith(other: PathItem): PathItem = {
@@ -194,7 +194,7 @@ final case class PathItem(
       patch = patch.orElse(other.patch),
       trace = trace.orElse(other.trace),
       servers = List.empty,
-      parameters = List.empty
+      parameters = Set.empty
     )
   }
 
@@ -212,8 +212,8 @@ final case class PathItem(
   def trace(updated: Operation): PathItem = copy(trace = Some(updated))
   def addServer(server: Server): PathItem = copy(servers = servers ++ List(server))
   def servers(updated: List[Server]): PathItem = copy(servers = updated)
-  def parameters(updated: List[ReferenceOr[Parameter]]): PathItem = copy(parameters = updated)
-  def addParameter(param: Parameter): PathItem = copy(parameters = parameters ++ List(Right(param)))
+  def parameters(updated: Set[ReferenceOr[Parameter]]): PathItem = copy(parameters = updated)
+  def addParameter(param: Parameter): PathItem = copy(parameters = parameters ++ Set(Right(param)))
   def extensions(updated: ListMap[String, ExtensionValue]): PathItem = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): PathItem = copy(extensions = extensions.updated(key, value))
 }
