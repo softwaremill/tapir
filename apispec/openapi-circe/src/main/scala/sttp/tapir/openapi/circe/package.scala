@@ -107,7 +107,6 @@ trait TapirOpenAPICirceEncoders {
     case Nil        => Json.Null
     case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)
   }
-  implicit def encodeSet[T: Encoder]: Encoder[Set[T]] = s => encodeList[T].apply(s.toList)
   implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = true)
 
   private def doEncodeListMap[V: Encoder](nullWhenEmpty: Boolean): Encoder[ListMap[String, V]] = {

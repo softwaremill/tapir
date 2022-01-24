@@ -178,7 +178,7 @@ final case class PathItem(
     patch: Option[Operation] = None,
     trace: Option[Operation] = None,
     servers: List[Server] = List.empty,
-    parameters: Set[ReferenceOr[Parameter]] = Set.empty,
+    parameters: List[ReferenceOr[Parameter]] = List.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def mergeWith(other: PathItem): PathItem = {
@@ -194,7 +194,7 @@ final case class PathItem(
       patch = patch.orElse(other.patch),
       trace = trace.orElse(other.trace),
       servers = List.empty,
-      parameters = Set.empty
+      parameters = List.empty
     )
   }
 
@@ -212,8 +212,8 @@ final case class PathItem(
   def trace(updated: Operation): PathItem = copy(trace = Some(updated))
   def addServer(server: Server): PathItem = copy(servers = servers ++ List(server))
   def servers(updated: List[Server]): PathItem = copy(servers = updated)
-  def parameters(updated: Set[ReferenceOr[Parameter]]): PathItem = copy(parameters = updated)
-  def addParameter(param: Parameter): PathItem = copy(parameters = parameters ++ Set(Right(param)))
+  def parameters(updated: List[ReferenceOr[Parameter]]): PathItem = copy(parameters = updated)
+  def addParameter(param: Parameter): PathItem = copy(parameters = parameters ++ List(Right(param)))
   def extensions(updated: ListMap[String, ExtensionValue]): PathItem = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): PathItem = copy(extensions = extensions.updated(key, value))
 }
@@ -224,7 +224,7 @@ final case class Operation(
     summary: Option[String] = None,
     description: Option[String] = None,
     operationId: Option[String] = None,
-    parameters: Set[ReferenceOr[Parameter]] = Set.empty,
+    parameters: List[ReferenceOr[Parameter]] = List.empty,
     requestBody: Option[ReferenceOr[RequestBody]] = None,
     responses: Responses = Responses.Empty,
     deprecated: Option[Boolean] = None,
@@ -238,7 +238,7 @@ final case class Operation(
   def description(updated: String): Operation = copy(description = Some(updated))
   def operationId(updated: String): Operation = copy(operationId = Some(updated))
   def requestBody(updated: RequestBody): Operation = copy(requestBody = Some(Right(updated)))
-  def addParameter(param: Parameter): Operation = copy(parameters = parameters ++ Set(Right(param)))
+  def addParameter(param: Parameter): Operation = copy(parameters = parameters ++ List(Right(param)))
   def addResponse(status: Int, updated: Response): Operation = copy(responses = responses.addResponse(status, updated))
   def addDefaultResponse(updated: Response): Operation = copy(responses = responses.addDefault(updated))
   def deprecated(updated: Boolean): Operation = copy(deprecated = Some(updated))
