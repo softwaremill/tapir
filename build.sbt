@@ -559,7 +559,7 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
