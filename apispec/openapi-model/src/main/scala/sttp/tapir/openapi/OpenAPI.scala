@@ -224,7 +224,7 @@ final case class Operation(
     summary: Option[String] = None,
     description: Option[String] = None,
     operationId: Option[String] = None,
-    parameters: List[ReferenceOr[Parameter]] = List.empty,
+    parameters: Set[ReferenceOr[Parameter]] = Set.empty,
     requestBody: Option[ReferenceOr[RequestBody]] = None,
     responses: Responses = Responses.Empty,
     deprecated: Option[Boolean] = None,
@@ -238,7 +238,7 @@ final case class Operation(
   def description(updated: String): Operation = copy(description = Some(updated))
   def operationId(updated: String): Operation = copy(operationId = Some(updated))
   def requestBody(updated: RequestBody): Operation = copy(requestBody = Some(Right(updated)))
-  def addParameter(param: Parameter): Operation = copy(parameters = parameters ++ List(Right(param)))
+  def addParameter(param: Parameter): Operation = copy(parameters = parameters ++ Set(Right(param)))
   def addResponse(status: Int, updated: Response): Operation = copy(responses = responses.addResponse(status, updated))
   def addDefaultResponse(updated: Response): Operation = copy(responses = responses.addDefault(updated))
   def deprecated(updated: Boolean): Operation = copy(deprecated = Some(updated))

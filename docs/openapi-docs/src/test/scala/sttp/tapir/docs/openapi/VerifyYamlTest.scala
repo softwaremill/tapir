@@ -587,4 +587,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("should not duplicate open api path parameters") {
+    val correlationHeader = header[String]("correlation-id")
+
+    val ep = endpoint.securityIn(correlationHeader).in(correlationHeader)
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(ep, Info("Unique parameters", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("expected_unique_open_api_parameters.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
