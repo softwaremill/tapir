@@ -38,8 +38,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
-            _ <- ws.sendText("test2")
             m1 <- ws.receiveText()
+            _ <- ws.sendText("test2")
             m2 <- ws.receiveText()
           } yield List(m1, m2)
         })
@@ -78,8 +78,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("""{"f":"apple"}""")
-            _ <- ws.sendText("""{"f":"orange"}""")
             m1 <- ws.receiveText()
+            _ <- ws.sendText("""{"f":"orange"}""")
             m2 <- ws.receiveText()
           } yield List(m1, m2)
         })
@@ -100,10 +100,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
-            _ <- ws.sendText("test2")
-            _ <- ws.sendText("end")
             m1 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("test2")
             m2 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("end")
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
@@ -127,6 +127,21 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         .get(baseUri.scheme("http"))
         .send(backend)
         .map(_.body shouldBe Left("Not a WS!"))
+    },
+    testServer(
+      endpoint.out(stringWs),
+      "pong on ping"
+    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.send(WebSocketFrame.ping)
+            pong <- ws.receive()
+          } yield pong
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map(_.body.map(_.isInstanceOf[WebSocketFrame.Pong]) shouldBe Right(true))
     }
   )
 

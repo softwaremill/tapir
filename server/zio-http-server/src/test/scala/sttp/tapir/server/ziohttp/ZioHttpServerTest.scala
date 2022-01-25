@@ -9,7 +9,6 @@ import sttp.tapir.tests.{Test, TestSuite}
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, ServerChannelFactory}
 import zio.interop.catz._
-import zio.stream.Stream
 import zio.{Runtime, Task}
 
 class ZioHttpServerTest extends TestSuite {

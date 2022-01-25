@@ -33,13 +33,13 @@ private[ziohttp] object ZioWebSockets {
 
   private def zFrameToFrame(f: ZioWebSocketFrame): WebSocketFrame =
     f match {
-      case ZioWebSocketFrame.Text(text)           => WebSocketFrame.Text(text, f.isFinal, rsv = None)
-      case ZioWebSocketFrame.Binary(buffer)       => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
-      case ZioWebSocketFrame.Continuation(buffer) => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
-      case ZioWebSocketFrame.Ping                     => WebSocketFrame.ping
-      case ZioWebSocketFrame.Pong                     => WebSocketFrame.pong
-      case ZioWebSocketFrame.Close(status, reason)    => WebSocketFrame.Close(status, reason.getOrElse("normal closure"))
-      case _                                          => WebSocketFrame.Binary(Array.empty[Byte], f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Text(text)            => WebSocketFrame.Text(text, f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Binary(buffer)        => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Continuation(buffer)  => WebSocketFrame.Binary(buffer.array(), f.isFinal, rsv = None)
+      case ZioWebSocketFrame.Ping                  => WebSocketFrame.ping
+      case ZioWebSocketFrame.Pong                  => WebSocketFrame.pong
+      case ZioWebSocketFrame.Close(status, reason) => WebSocketFrame.Close(status, reason.getOrElse(""))
+      case _                                       => WebSocketFrame.Binary(Array.empty[Byte], f.isFinal, rsv = None)
     }
 
   private def frameToZFrame(f: WebSocketFrame): ZioWebSocketFrame =
