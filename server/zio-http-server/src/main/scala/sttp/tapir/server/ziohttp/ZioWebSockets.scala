@@ -3,19 +3,24 @@ package sttp.tapir.server.ziohttp
 import io.netty.buffer.Unpooled
 import sttp.capabilities.zio.ZioStreams
 import sttp.capabilities.zio.ZioStreams.Pipe
+import sttp.tapir.internal.WebSocketFramesAccumulator
+import sttp.tapir.internal.WebSocketFramesAccumulator._
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.WebSocketFrame
 import zhttp.socket.{Socket, WebSocketFrame => ZioWebSocketFrame}
 import zio.stream.Stream
 
 private[ziohttp] object ZioWebSockets {
-  def pipeToBody[F[_], REQ, RESP](
+  def pipeToBody[REQ, RESP](
       pipe: Pipe[REQ, RESP],
       o: WebSocketBodyOutput[Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
   ): Socket[Any, Throwable, ZioWebSocketFrame, ZioWebSocketFrame] = {
     Socket.fromFunction[ZioWebSocketFrame] { zFrame: ZioWebSocketFrame =>
-      Stream
-        .succeed(zFrameToFrame(zFrame))
+      val sttpFrames = Stream.succeed(zFrameToFrame(zFrame))
+      val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
+      val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
+
+      ignorePongs
         .map {
           case _: WebSocketFrame.Close if !o.decodeCloseRequests => None
           case f =>
@@ -41,6 +46,21 @@ private[ziohttp] object ZioWebSockets {
       case ZioWebSocketFrame.Close(status, reason) => WebSocketFrame.Close(status, reason.getOrElse(""))
       case _                                       => WebSocketFrame.Binary(Array.empty[Byte], f.isFinal, rsv = None)
     }
+
+  private def optionallyConcatenateFrames(s: Stream[Nothing, WebSocketFrame], doConcatenate: Boolean): Stream[Nothing, WebSocketFrame] = {
+    if (doConcatenate) {
+      s.mapAccum(None: Accumulator)(WebSocketFramesAccumulator.acc).collect { case Some(f) => f }
+    } else s
+  }
+
+  private def optionallyIgnorePong(s: Stream[Nothing, WebSocketFrame], doIgnore: Boolean): Stream[Nothing, WebSocketFrame] = {
+    if (doIgnore) {
+      s.filter {
+        case WebSocketFrame.Pong(_) => false
+        case _                      => true
+      }
+    } else s
+  }
 
   private def frameToZFrame(f: WebSocketFrame): ZioWebSocketFrame =
     f match {
