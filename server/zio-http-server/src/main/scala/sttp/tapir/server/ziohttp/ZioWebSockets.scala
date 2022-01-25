@@ -15,7 +15,7 @@ private[ziohttp] object ZioWebSockets {
       pipe: Pipe[REQ, RESP],
       o: WebSocketBodyOutput[Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
   ): Socket[Any, Throwable, ZioWebSocketFrame, ZioWebSocketFrame] = {
-    Socket.fromFunction[ZioWebSocketFrame] { zFrame: ZioWebSocketFrame =>
+    Socket.fromFunction[ZioWebSocketFrame] { (zFrame: ZioWebSocketFrame) =>
       val sttpFrames = Stream.succeed(zFrameToFrame(zFrame))
       val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
       val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
