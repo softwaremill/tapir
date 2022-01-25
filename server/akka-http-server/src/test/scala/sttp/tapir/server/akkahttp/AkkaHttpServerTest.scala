@@ -81,7 +81,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
-        new ServerWebSocketTests(createServerTest, AkkaStreams) {
+        new ServerWebSocketTests(createServerTest, AkkaStreams, concatenateFragmentedFrames = false) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
         additionalTests()

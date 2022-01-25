@@ -2,21 +2,21 @@ package sttp.tapir.server.http4s.ztapir
 
 import cats.effect._
 import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers._
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.server.http4s.Http4sServerSentEvents
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
-import zio.{RIO, UIO}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
-import org.scalatest.matchers.should.Matchers._
-import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.server.http4s.Http4sServerSentEvents
+import zio.{RIO, UIO}
 
 import java.util.UUID
 import scala.util.Random

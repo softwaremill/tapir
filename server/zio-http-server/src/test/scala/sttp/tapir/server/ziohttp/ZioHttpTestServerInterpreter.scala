@@ -2,6 +2,7 @@ package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
@@ -16,10 +17,10 @@ import zio.interop.catz._
 import java.util.concurrent.atomic.AtomicInteger
 
 class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
-    extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]]] {
+    extends TestServerInterpreter[Task, ZioStreams with WebSockets, Http[Any, Throwable, Request, Response[Any, Throwable]]] {
 
   override def route(
-      e: ServerEndpoint[ZioStreams, Task],
+      e: ServerEndpoint[ZioStreams with WebSockets, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
@@ -31,7 +32,7 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
   }
 
   override def route(
-      es: List[ServerEndpoint[ZioStreams, Task]]
+      es: List[ServerEndpoint[ZioStreams with WebSockets, Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
     ZioHttpInterpreter().toHttp(es)
 

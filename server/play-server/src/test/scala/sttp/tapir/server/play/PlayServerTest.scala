@@ -31,7 +31,7 @@ class PlayServerTest extends TestSuite {
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new PlayServerWithContextTest(backend).tests() ++
-        new ServerWebSocketTests(createServerTest, AkkaStreams) {
+        new ServerWebSocketTests(createServerTest, AkkaStreams, concatenateFragmentedFrames = false) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests()
     }
