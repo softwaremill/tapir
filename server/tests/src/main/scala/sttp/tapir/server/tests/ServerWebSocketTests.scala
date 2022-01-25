@@ -19,7 +19,7 @@ import sttp.ws.{WebSocket, WebSocketFrame}
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
     val streams: S,
-    val concatenateFragmentedFrames: Boolean = false
+    val concatenateFragmentedFrames: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {

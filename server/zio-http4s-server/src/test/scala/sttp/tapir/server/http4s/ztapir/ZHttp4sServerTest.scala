@@ -54,7 +54,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
 
     new AllServerTests(createServerTest, interpreter, backend).tests() ++
       new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
-      new ServerWebSocketTests(createServerTest, ZioStreams, concatenateFragmentedFrames = true) {
+      new ServerWebSocketTests(createServerTest, ZioStreams) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
       additionalTests()

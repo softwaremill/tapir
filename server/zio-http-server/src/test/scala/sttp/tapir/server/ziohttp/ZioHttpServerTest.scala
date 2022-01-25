@@ -37,7 +37,7 @@ class ZioHttpServerTest extends TestSuite {
           new AllServerTests(createServerTest, interpreter, backend, basic = false, staticContent = false, multipart = false, file = false)
             .tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
-          new ServerWebSocketTests(createServerTest, ZioStreams) {
+          new ServerWebSocketTests(createServerTest, ZioStreams, concatenateFragmentedFrames = false) {
             override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           }.tests() ++
           new ZioHttpCompositionTest(createServerTest).tests()
