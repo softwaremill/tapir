@@ -8,8 +8,6 @@ import fs2._
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
 import scodec.bits.ByteVector
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.internal.WebSocketFramesAccumulator
-import sttp.tapir.internal.WebSocketFramesAccumulator.Accumulator
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.WebSocketFrame
 
@@ -67,8 +65,22 @@ private[http4s] object Http4sWebSockets {
 
   private def optionallyConcatenateFrames[F[_]](s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] = {
     if (doConcatenate) {
-      s.mapAccumulate(None: Accumulator)(WebSocketFramesAccumulator.acc).collect { case (_, Some(f)) => f }
-    } else s
+      type Accumulator = Option[Either[Array[Byte], String]]
+
+      s.mapAccumulate(None: Accumulator) {
+        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
+        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
+        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
+      }.collect { case (_, Some(f)) => f }
+    } else {
+      s
+    }
   }
 
   private def optionallyIgnorePong[F[_]](s: Stream[F, WebSocketFrame], doIgnore: Boolean): Stream[F, WebSocketFrame] = {

@@ -3,8 +3,6 @@ package sttp.tapir.server.ziohttp
 import io.netty.buffer.Unpooled
 import sttp.capabilities.zio.ZioStreams
 import sttp.capabilities.zio.ZioStreams.Pipe
-import sttp.tapir.internal.WebSocketFramesAccumulator
-import sttp.tapir.internal.WebSocketFramesAccumulator._
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.WebSocketFrame
 import zhttp.socket.{Socket, WebSocketFrame => ZioWebSocketFrame}
@@ -17,8 +15,7 @@ private[ziohttp] object ZioWebSockets {
   ): Socket[Any, Throwable, ZioWebSocketFrame, ZioWebSocketFrame] = {
     Socket.fromFunction[ZioWebSocketFrame] { (zFrame: ZioWebSocketFrame) =>
       val sttpFrames = Stream.succeed(zFrameToFrame(zFrame))
-      val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
-      val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
+      val ignorePongs = optionallyIgnorePong(sttpFrames, o.ignorePong)
 
       ignorePongs
         .map {
@@ -46,12 +43,6 @@ private[ziohttp] object ZioWebSockets {
       case ZioWebSocketFrame.Close(status, reason) => WebSocketFrame.Close(status, reason.getOrElse(""))
       case _                                       => WebSocketFrame.Binary(Array.empty[Byte], f.isFinal, rsv = None)
     }
-
-  private def optionallyConcatenateFrames(s: Stream[Nothing, WebSocketFrame], doConcatenate: Boolean): Stream[Nothing, WebSocketFrame] = {
-    if (doConcatenate) {
-      s.mapAccum(None: Accumulator)(WebSocketFramesAccumulator.acc).collect { case Some(f) => f }
-    } else s
-  }
 
   private def optionallyIgnorePong(s: Stream[Nothing, WebSocketFrame], doIgnore: Boolean): Stream[Nothing, WebSocketFrame] = {
     if (doIgnore) {
