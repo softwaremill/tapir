@@ -10,7 +10,7 @@ import zio.{Task, ZIO}
 import org.scalatest.matchers.should.Matchers._
 
 class ZioHttpCompositionTest(
-    createServerTest: CreateServerTest[Task, Any, Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response[Any, Throwable]]]
+    createServerTest: CreateServerTest[Task, Any, Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
 ) {
   import createServerTest._
 
