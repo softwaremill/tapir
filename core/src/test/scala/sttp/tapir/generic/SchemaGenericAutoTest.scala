@@ -1,14 +1,15 @@
 package sttp.tapir.generic
 
-import java.math.{BigDecimal => JBigDecimal}
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
-import sttp.tapir.Schema.annotations._
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations._
+import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
+import sttp.tapir.generic.auto._
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+
+import java.math.{BigDecimal => JBigDecimal}
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -247,6 +248,33 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
+  it should "find schema for subtypes containing parent metadata from annotations" in {
+    val schemaType = implicitly[Schema[Pet]].schemaType
+
+    val expectedCatSchema = Schema(
+      SProduct[Cat](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
+        )
+      ),
+      Some(SName("sttp.tapir.generic.Cat"))
+    )
+
+    val expectedDogSchema = Schema(
+      SProduct[Dog](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
+        )
+      ),
+      Some(SName("sttp.tapir.generic.Dog"))
+    )
+
+    val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
+
+    subtypes should contain theSameElementsAs List(expectedCatSchema, expectedDogSchema)
+  }
 }
 
 object SchemaGenericAutoTest {
@@ -323,6 +351,14 @@ case class L(
     firstField: Int,
     secondField: Int
 )
+
+sealed abstract class Pet {
+  @description("name")
+  def name: String
+}
+
+case class Cat(name: String, @description("cat food") catFood: String) extends Pet
+case class Dog(name: String, @description("dog food") dogFood: String) extends Pet
 
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node
