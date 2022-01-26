@@ -16,10 +16,10 @@ trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response] = {
     implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
     implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
@@ -31,7 +31,7 @@ trait ZioHttpInterpreter[R] {
 
     Http.route[Request] { case req =>
       Http
-        .fromEffect(
+        .fromZIO(
           interpreter
             .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
             .map {
