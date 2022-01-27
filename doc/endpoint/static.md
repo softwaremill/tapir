@@ -46,3 +46,17 @@ required to serve a file or resource, and possible error outcomes. This is captu
 
 The `sttp.tapir.static.Files` and `sttp.tapir.static.Resources` objects contain the logic implementing server-side
 reading of files or resources, with etag/last modification support.
+
+## WebJars
+
+The content of [WebJars](https://www.webjars.org) that are available on the classpath can be exposed using the 
+following routes (here using the `/resources` context path):
+
+```scala mdoc:compile-only
+import sttp.tapir._
+
+import scala.concurrent.Future
+
+val webJarRoutes = resourcesGetServerEndpoint[Future]("resources")(
+  this.getClass.getClassLoader, "META-INF/resources/webjars")
+```
