@@ -104,7 +104,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       Test("Should create head and get endpoints") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f2").toFile
-          val headAndGetEndpoint = fileServerEndpoints[F]("test")(testDir.getAbsolutePath)
+          val headAndGetEndpoint = filesServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serveRoute(headAndGetEndpoint.head)
             .use { port =>
               basicRequest

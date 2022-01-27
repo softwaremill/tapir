@@ -19,7 +19,7 @@ object StaticContentAkkaServer extends App {
   private val exampleFile = parent.resolve("f1").toFile
   private val exampleFilePath = exampleFile.getAbsolutePath
 
-  private val fileEndpoints = fileServerEndpoints[Future]("range-example")(exampleFilePath)
+  private val fileEndpoints = filesServerEndpoints[Future]("range-example")(exampleFilePath)
   private val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoints)
 
   // starting the server

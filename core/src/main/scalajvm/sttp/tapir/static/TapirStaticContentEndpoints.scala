@@ -170,8 +170,16 @@ trait TapirStaticContentEndpoints {
   def filesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
     ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
 
-  /** Create pair of endpoints (head, get) for particular file */
-  def fileServerEndpoints[F[_]](prefix: EndpointInput[Unit])(systemPath: String): List[ServerEndpoint[Any, F]] =
+  /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
+    * Typically, the prefix is a path, but it can also contain other inputs. For example:
+    *
+    * {{{
+    * filesServerEndpoints("static" / "files")("/home/app/static")
+    * }}}
+    *
+    * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
+    */
+  def filesServerEndpoints[F[_]](prefix: EndpointInput[Unit])(systemPath: String): List[ServerEndpoint[Any, F]] =
     List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
