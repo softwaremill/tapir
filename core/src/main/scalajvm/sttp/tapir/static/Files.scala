@@ -14,45 +14,61 @@ object Files {
 
   // inspired by org.http4s.server.staticcontent.FileService
   def head[F[_]: MonadError](
-      systemPath: String
+      systemPath: String,
+      fileFilter: String => Boolean = _ => true
   ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { input =>
     MonadError[F]
       .blocking {
         val resolved = input.path.foldLeft(Paths.get(systemPath).toRealPath())(_.resolve(_))
-        if (java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+        if (fileFilter(resolved.toString) && java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
           val file = resolved.toFile
           Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
         } else Left(StaticErrorOutput.NotFound)
       }
   }
 
-  def get[F[_]: MonadError](systemPath: String): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    get(systemPath, defaultEtag[F])
+  def get[F[_]: MonadError](
+      systemPath: String
+  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
+    get(systemPath, defaultEtag[F], _ => true)
 
   def get[F[_]: MonadError](
       systemPath: String,
       calculateETag: File => F[Option[ETag]]
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    filesInput => MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, calculateETag)(filesInput))
+    get(systemPath, calculateETag, _ => true)
+
+  /** @param calculateETag
+    *   Use [[defaultETag]] or provide custom logic.
+    */
+  def get[F[_]: MonadError](
+      systemPath: String,
+      calculateETag: File => F[Option[ETag]],
+      fileFilter: String => Boolean
+  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
+    filesInput =>
+      MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, calculateETag, fileFilter)(filesInput))
 
   def defaultEtag[F[_]: MonadError](file: File): F[Option[ETag]] = MonadError[F].blocking {
     if (file.isFile) Some(defaultETag(file.lastModified(), file.length()))
     else None
   }
 
-  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]])(filesInput: StaticInput)(implicit
+  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]], fileFilter: String => Boolean)(
+      filesInput: StaticInput
+  )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
     val resolved = filesInput.path.foldLeft(realSystemPath)(_.resolve(_))
     m.flatten(m.blocking {
-      if (!java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS))
+      if (!fileFilter(filesInput.path.mkString("/")) || !java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS))
         (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
       else {
         val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
         if (!realRequestedPath.startsWith(realSystemPath))
           (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
         else if (realRequestedPath.toFile.isDirectory) {
-          files(realSystemPath, calculateETag)(filesInput.copy(path = filesInput.path :+ "index.html"))
+          files(realSystemPath, calculateETag, fileFilter)(filesInput.copy(path = filesInput.path :+ "index.html"))
         } else {
           filesInput.range match {
             case Some(range) =>

@@ -70,6 +70,23 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("serve files from the given system path with filter") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath, fileFilter = _.contains("2")))
+            .use { port =>
+              def get(path: List[String]) = basicRequest
+                .get(uri"http://localhost:$port/$path")
+                .response(asStringAlways)
+                .send(backend)
+
+              get("f1" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+                get("f2" :: Nil).map(_.body shouldBe "f2 content") >>
+                get("d1" :: "f3" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+                get("d1" :: "d2" :: "f4" :: Nil).map(_.body shouldBe "f4 content")
+            }
+            .unsafeToFuture()
+        }
+      },
       Test("Should return acceptRanges for head request") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f1").toFile
@@ -104,7 +121,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       Test("Should create head and get endpoints") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f2").toFile
-          val headAndGetEndpoint = fileServerEndpoints[F]("test")(testDir.getAbsolutePath)
+          val headAndGetEndpoint = filesServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serveRoute(headAndGetEndpoint.head)
             .use { port =>
               basicRequest
@@ -419,6 +436,27 @@ class ServerStaticContentTests[F[_], ROUTE](
             get("r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
               get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
               get("d1/r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
+              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+          }
+          .unsafeToFuture()
+      },
+      Test("serve resources with filter") {
+        serveRoute(
+          resourcesGetServerEndpoint[F](emptyInput)(
+            classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader,
+            "test",
+            resourceFilter = _.contains("2")
+          )
+        )
+          .use { port =>
+            def get(path: List[String]) = basicRequest
+              .get(uri"http://localhost:$port/$path")
+              .response(asStringAlways)
+              .send(backend)
+
+            get("r1.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+              get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
+              get("d1/r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
               get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
           }
           .unsafeToFuture()
