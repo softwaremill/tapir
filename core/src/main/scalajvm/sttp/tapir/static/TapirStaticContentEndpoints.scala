@@ -6,7 +6,7 @@ import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.{FileRange, _}
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.time.Instant
 
 /** Static content endpoints, including files and resources. */
@@ -160,15 +160,28 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
+    *
+    * @param fileFilter
+    *   file will exposed only if this function returns `true`.
     */
-  def filesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(filesGetEndpoint(prefix), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def filesGetServerEndpoint[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, fileFilter: String => Boolean = _ => true): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(
+      filesGetEndpoint(prefix),
+      (m: MonadError[F]) => Files.get(systemPath, Files.defaultEtag[F](_: File)(m), fileFilter)(m)
+    )
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
+    *
+    * @param fileFilter
+    *   file will exposed only if this function returns `true`.
     */
-  def filesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
+  def filesHeadServerEndpoint[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, fileFilter: String => Boolean = _ => true): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath, fileFilter)(m))
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
@@ -178,9 +191,14 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
+    *
+    * @param fileFilter
+    *   file will exposed only if this function returns `true`.
     */
-  def filesServerEndpoints[F[_]](prefix: EndpointInput[Unit])(systemPath: String): List[ServerEndpoint[Any, F]] =
-    List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
+  def filesServerEndpoints[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, fileFilter: String => Boolean = _ => true): List[ServerEndpoint[Any, F]] =
+    List(filesHeadServerEndpoint(prefix)(systemPath, fileFilter), filesGetServerEndpoint(prefix)(systemPath, fileFilter))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *

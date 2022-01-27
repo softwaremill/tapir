@@ -70,6 +70,23 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("serve files from the given system path with filter") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath, fileFilter = _.contains("2")))
+            .use { port =>
+              def get(path: List[String]) = basicRequest
+                .get(uri"http://localhost:$port/$path")
+                .response(asStringAlways)
+                .send(backend)
+
+              get("f1" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+                get("f2" :: Nil).map(_.body shouldBe "f2 content") >>
+                get("d1" :: "f3" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+                get("d1" :: "d2" :: "f4" :: Nil).map(_.body shouldBe "f4 content")
+            }
+            .unsafeToFuture()
+        }
+      },
       Test("Should return acceptRanges for head request") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f1").toFile
