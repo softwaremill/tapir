@@ -423,6 +423,27 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       },
+      Test("serve resources with filter") {
+        serveRoute(
+          resourcesGetServerEndpoint[F](emptyInput)(
+            classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader,
+            "test",
+            resourceFilter = _.contains("2")
+          )
+        )
+          .use { port =>
+            def get(path: List[String]) = basicRequest
+              .get(uri"http://localhost:$port/$path")
+              .response(asStringAlways)
+              .send(backend)
+
+            get("r1.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+              get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
+              get("d1/r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+          }
+          .unsafeToFuture()
+      },
       Test("not return a file outside of the system path") {
         withTestFilesDirectory { testDir =>
           serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath + "/d1"))

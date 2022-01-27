@@ -191,15 +191,20 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
+    *
+    * @param resourceFilter
+    *   resource will exposed only if this function returns `true`.
     */
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
-      useGzippedIfAvailable: Boolean = false
+      useGzippedIfAvailable: Boolean = false,
+      resourceFilter: String => Boolean = _ => true
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+      (m: MonadError[F]) =>
+        Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable, resourceFilter = resourceFilter)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
