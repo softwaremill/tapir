@@ -41,11 +41,9 @@ trait TapirStaticContentEndpoints {
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
   private def staticGetEndpoint[T](
-      prefix: EndpointInput[Unit],
       body: EndpointOutput[T]
   ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
     endpoint.get
-      .in(prefix)
       .in(
         pathsWithoutDots
           .and(ifNoneMatchHeader)
@@ -110,11 +108,8 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  private def staticHeadEndpoint(
-      prefix: EndpointInput[Unit]
-  ): PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
+  private lazy val staticHeadEndpoint: PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
     endpoint.head
-      .in(prefix)
       .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
       .errorOut(
         oneOf[StaticErrorOutput](
@@ -146,11 +141,13 @@ trait TapirStaticContentEndpoints {
       )
   }
 
+  lazy val filesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(fileRangeBody)
+  lazy val resourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
+    staticGetEndpoint(inputStreamBody)
   def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
-    staticGetEndpoint(prefix, fileRangeBody)
-
+    filesGetEndpoint.prependIn(prefix)
   def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
-    staticGetEndpoint(prefix, inputStreamBody)
+    resourcesGetEndpoint.prependIn(prefix)
 
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
     * path, but it can also contain other inputs. For example:
@@ -181,7 +178,7 @@ trait TapirStaticContentEndpoints {
   def filesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath, fileFilter)(m))
+    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), (m: MonadError[F]) => Files.head(systemPath, fileFilter)(m))
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:

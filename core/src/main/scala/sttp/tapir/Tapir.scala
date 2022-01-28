@@ -439,7 +439,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
 
-  private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Unit, Nothing, Unit, Any](
