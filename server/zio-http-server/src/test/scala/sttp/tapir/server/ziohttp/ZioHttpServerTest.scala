@@ -4,8 +4,8 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
+import sttp.tapir.ztapir.RIOMonadError
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, ServerChannelFactory}
 import zio.interop.catz._
@@ -21,7 +21,7 @@ class ZioHttpServerTest extends TestSuite {
         val interpreter = new ZioHttpTestServerInterpreter(nettyDeps)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-        implicit val m: MonadError[Task] = zioMonadError
+        implicit val m: MonadError[Task] = new RIOMonadError[Any]
 
         new ServerBasicTests(
           createServerTest,
