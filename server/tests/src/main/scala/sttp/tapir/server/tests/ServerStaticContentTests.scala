@@ -445,7 +445,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           resourcesGetServerEndpoint[F](emptyInput)(
             classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader,
             "test",
-            resourceFilter = _.contains("2")
+            resourceFilter = _.exists(_.contains("2"))
           )
         )
           .use { port =>

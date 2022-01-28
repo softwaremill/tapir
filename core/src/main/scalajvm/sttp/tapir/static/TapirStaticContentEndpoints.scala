@@ -225,7 +225,7 @@ trait TapirStaticContentEndpoints {
       classLoader: ClassLoader,
       resourcePrefix: String,
       useGzippedIfAvailable: Boolean = false,
-      resourceFilter: String => Boolean = _ => true
+      resourceFilter: List[String] => Boolean = _ => true
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),

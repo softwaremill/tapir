@@ -14,7 +14,7 @@ object Resources {
       resourcePrefix: String,
       useETags: Boolean = true,
       useGzippedIfAvailable: Boolean = false,
-      resourceFilter: String => Boolean = _ => true
+      resourceFilter: List[String] => Boolean = _ => true
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = (resourcesInput: StaticInput) =>
     resources(classLoader, resourcePrefix.split("/").toList, useETags, useGzippedIfAvailable, resourceFilter)(resourcesInput)
 
@@ -23,18 +23,19 @@ object Resources {
       resourcePrefix: List[String],
       useETags: Boolean,
       useGzippedIfAvailable: Boolean,
-      resourceFilter: String => Boolean
+      resourceFilter: List[String] => Boolean
   )(
       resourcesInput: StaticInput
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = {
     val gzippedResource = useGzippedIfAvailable && resourcesInput.acceptEncoding.exists(_.equals("gzip"))
-    val name = (resourcePrefix ++ resourcesInput.path).mkString("/")
+    val nameComponents = resourcePrefix ++ resourcesInput.path
+    val name = nameComponents.mkString("/")
 
     def notFound = (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[InputStream]]).unit
 
-    if (resourceFilter(name)) {
+    if (resourceFilter(nameComponents)) {
       val gzipUrl: F[Option[URL]] =
         if (gzippedResource) m.blocking(Option(classLoader.getResource(name.concat(".gz"))))
         else m.unit(Option.empty)
