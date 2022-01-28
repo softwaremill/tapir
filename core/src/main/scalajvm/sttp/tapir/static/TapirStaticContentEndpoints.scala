@@ -206,8 +206,8 @@ trait TapirStaticContentEndpoints {
     * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
-  def fileGetServerEndpoint[F[_]](path: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(filesGetEndpoint(path)), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
