@@ -191,7 +191,7 @@ object DefaultDecodeFailureHandler {
         )
       case Missing        => Some("missing")
       case Multiple(_)    => Some("multiple values")
-      case Mismatch(_, _) => Some(s"value mismatch")
+      case Mismatch(_, _) => Some("value mismatch")
       case _              => None
     }
 
