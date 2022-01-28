@@ -72,7 +72,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       },
       Test("serve files from the given system path with filter") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath, fileFilter = _.contains("2")))
+          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath, fileFilter = _.exists(_.contains("2"))))
             .use { port =>
               def get(path: List[String]) = basicRequest
                 .get(uri"http://localhost:$port/$path")

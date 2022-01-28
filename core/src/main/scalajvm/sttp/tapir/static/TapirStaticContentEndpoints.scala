@@ -166,7 +166,7 @@ trait TapirStaticContentEndpoints {
     */
   def filesGetServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: String => Boolean = _ => true): ServerEndpoint[Any, F] =
+  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       filesGetEndpoint(prefix),
       (m: MonadError[F]) => Files.get(systemPath, Files.defaultEtag[F](_: File)(m), fileFilter)(m)
@@ -180,7 +180,7 @@ trait TapirStaticContentEndpoints {
     */
   def filesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: String => Boolean = _ => true): ServerEndpoint[Any, F] =
+  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): ServerEndpoint[Any, F] =
     ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath, fileFilter)(m))
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
@@ -197,7 +197,7 @@ trait TapirStaticContentEndpoints {
     */
   def filesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: String => Boolean = _ => true): List[ServerEndpoint[Any, F]] =
+  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): List[ServerEndpoint[Any, F]] =
     List(filesHeadServerEndpoint(prefix)(systemPath, fileFilter), filesGetServerEndpoint(prefix)(systemPath, fileFilter))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.

@@ -15,12 +15,12 @@ object Files {
   // inspired by org.http4s.server.staticcontent.FileService
   def head[F[_]: MonadError](
       systemPath: String,
-      fileFilter: String => Boolean = _ => true
+      fileFilter: List[String] => Boolean = _ => true
   ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { input =>
     MonadError[F]
       .blocking {
         val resolved = input.path.foldLeft(Paths.get(systemPath).toRealPath())(_.resolve(_))
-        if (fileFilter(resolved.toString) && java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+        if (fileFilter(input.path) && java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
           val file = resolved.toFile
           Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
         } else Left(StaticErrorOutput.NotFound)
@@ -44,7 +44,7 @@ object Files {
   def get[F[_]: MonadError](
       systemPath: String,
       calculateETag: File => F[Option[ETag]],
-      fileFilter: String => Boolean
+      fileFilter: List[String] => Boolean
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
     filesInput =>
       MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, calculateETag, fileFilter)(filesInput))
@@ -54,14 +54,14 @@ object Files {
     else None
   }
 
-  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]], fileFilter: String => Boolean)(
+  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]], fileFilter: List[String] => Boolean)(
       filesInput: StaticInput
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
     val resolved = filesInput.path.foldLeft(realSystemPath)(_.resolve(_))
     m.flatten(m.blocking {
-      if (!fileFilter(filesInput.path.mkString("/")) || !java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS))
+      if (!fileFilter(filesInput.path) || !java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS))
         (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
       else {
         val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)

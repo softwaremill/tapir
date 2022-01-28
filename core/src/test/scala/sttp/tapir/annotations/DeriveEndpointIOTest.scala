@@ -2,7 +2,6 @@ package sttp.tapir.annotations
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.model.Part
 import sttp.model.StatusCode
 import sttp.model.headers.CookieValueWithMeta
 import sttp.model.headers.CookieWithMeta
