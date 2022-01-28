@@ -19,7 +19,7 @@ object StaticContentSecureAkkaServer extends App {
   val exampleDirectory: Path = Files.createTempDirectory("akka-static-secure-example")
   Files.write(exampleDirectory.resolve("f1"), "f1 content".getBytes, StandardOpenOption.CREATE_NEW)
 
-  private implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
   // defining the endpoint
@@ -29,9 +29,9 @@ object StaticContentSecureAkkaServer extends App {
     .serverLogic(_ => sttp.tapir.static.Files.get[Future](exampleDirectory.toFile.getAbsolutePath)(new FutureMonad))
 
   // starting the server
-  private val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoint)
+  val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoint)
 
-  private val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
+  val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val response1 = basicRequest

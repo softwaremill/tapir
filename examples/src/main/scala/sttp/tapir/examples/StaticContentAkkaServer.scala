@@ -13,34 +13,32 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
 object StaticContentAkkaServer extends App {
-  private val parent: Path = Files.createTempDirectory("akka-static-example")
-  Files.write(parent.resolve("f1"), "f1 content".getBytes, StandardOpenOption.CREATE_NEW)
+  val content = "f1 content"
+  val exampleDirectory: Path = Files.createTempDirectory("akka-static-example")
+  Files.write(exampleDirectory.resolve("f1"), content.getBytes, StandardOpenOption.CREATE_NEW)
 
-  private val exampleFile = parent.resolve("f1").toFile
-  private val exampleFilePath = exampleFile.getAbsolutePath
-
-  private val fileEndpoints = filesServerEndpoints[Future]("range-example")(exampleFilePath)
-  private val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoints)
+  val fileEndpoints = filesServerEndpoints[Future]("range-example")(exampleDirectory.toFile.getAbsolutePath)
+  val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoints)
 
   // starting the server
-  private implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  private val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
+  val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val headResponse = basicRequest
-      .head(uri"http://localhost:8080/range-example")
+      .head(uri"http://localhost:8080/range-example/f1")
       .response(asStringAlways)
       .send(backend)
 
     assert(headResponse.code == StatusCode.Ok)
     assert(headResponse.headers.contains(Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes)))
-    assert(headResponse.headers.contains(Header(HeaderNames.ContentLength, exampleFile.length.toString)))
+    assert(headResponse.headers.contains(Header(HeaderNames.ContentLength, content.length.toString)))
 
     val getResponse = basicRequest
       .headers(Header(HeaderNames.Range, "bytes=3-6"))
-      .get(uri"http://localhost:8080/range-example")
+      .get(uri"http://localhost:8080/range-example/f1")
       .response(asStringAlways)
       .send(backend)
 
