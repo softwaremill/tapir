@@ -125,7 +125,7 @@ object zio {
                   UIO.succeed(buffer)
               }
               result <- wrappedBuffer match {
-                case Right(buffer)     => UIO.some(buffer, ())
+                case Right(buffer)     => UIO.some((buffer, ()))
                 case Left(None)        => UIO.none
                 case Left(Some(cause)) => IO.fail(cause)
               }

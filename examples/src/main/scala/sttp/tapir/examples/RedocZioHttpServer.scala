@@ -8,8 +8,8 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.Console.{getStrLn, printLine, readLine}
-import zio.{App, ExitCode, Task, URIO, ZIO, ZIOAppDefault}
+import zio.Console.{printLine, readLine}
+import zio.{Task, ZIO, ZIOAppDefault}
 
 object RedocZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
