@@ -21,6 +21,7 @@ class ZioHttpServerTest extends TestSuite {
         val eventLoopGroup = nettyDeps.get[EventLoopGroup]
         val channelFactory = nettyDeps.get[ServerChannelFactory]
         val interpreter = new ZioHttpTestServerInterpreter(eventLoopGroup, channelFactory)
+        val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
         implicit val m: MonadError[Task] = new RIOMonadError[Any]
 
