@@ -3,7 +3,6 @@ package sttp.tapir.ztapir
 import sttp.model.sse.ServerSentEvent
 import zio.Chunk
 import zio.test.{DefaultRunnableSpec, ZSpec}
-import zio.test.environment.TestEnvironment
 import zio.test._
 import zio.test.Assertion._
 import zio.stream._
@@ -13,7 +12,7 @@ import java.nio.charset.Charset
 object ZioServerSentEventsTest extends DefaultRunnableSpec {
   def spec: ZSpec[TestEnvironment, Any] =
     suite("ZioServerSentEvents tests")(
-      testM("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
+      test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
         val sse: Stream[Nothing, ServerSentEvent] = Stream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
         val serialised = ZioServerSentEvents.serialiseSSEToBytes(sse)
         serialised.runCollect.map { sseEvents =>
@@ -25,7 +24,7 @@ object ZioServerSentEventsTest extends DefaultRunnableSpec {
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
         }
       },
-      testM("serialiseSSEToBytes should omit fields that are not set") {
+      test("serialiseSSEToBytes should omit fields that are not set") {
         val sse = Stream(ServerSentEvent(Some("data"), None, Some("id1"), None))
         val serialised = ZioServerSentEvents.serialiseSSEToBytes(sse)
         serialised.runCollect.map { sseEvents =>
@@ -35,7 +34,7 @@ object ZioServerSentEventsTest extends DefaultRunnableSpec {
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
         }
       },
-      testM("serialiseSSEToBytes should successfully serialise multiline data event") {
+      test("serialiseSSEToBytes should successfully serialise multiline data event") {
         val sse = Stream(
           ServerSentEvent(
             Some("""some data info 1
@@ -55,7 +54,7 @@ object ZioServerSentEventsTest extends DefaultRunnableSpec {
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
         }
       },
-      testM("parseBytesToSSE should successfully parse SSE bytes to SSE structure") {
+      test("parseBytesToSSE should successfully parse SSE bytes to SSE structure") {
         val sseBytes = Stream.fromChunk(
           Chunk.fromArray(
             """data: event1 data
