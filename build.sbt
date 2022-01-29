@@ -168,7 +168,9 @@ lazy val allAggregates = core.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
   documentation.projectRefs ++
-  openapiCodegen.projectRefs ++
+  openapiCodegenCore.projectRefs ++
+  openapiCodegenSbt.projectRefs ++
+  cli.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs
 
@@ -1285,19 +1287,11 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
 
 import scala.collection.JavaConverters._
 
-lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
-  .enablePlugins(SbtPlugin)
+lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions)
   .settings(
-    name := "sbt-openapi-codegen",
-    organization := "com.softwaremill.sttp.tapir",
-    sbtPlugin := true,
-    scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
-    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
-      .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
-    scriptedBufferLog := false,
-    sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    name := "tapir-openapi-codegen-core",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
@@ -1306,12 +1300,48 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.6.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+      scalaOrganization.value % "scala-reflect" % scalaVersion.value,
+      scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
     )
   )
   .dependsOn(core % Test, circeJson % Test)
 
+lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
+  .enablePlugins(SbtPlugin)
+  .settings(commonSettings)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
+  .settings(
+    name := "sbt-openapi-codegen",
+    sbtPlugin := true,
+    scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
+    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
+      .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
+    scriptedBufferLog := false,
+    sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.6.0" % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+    )
+  )
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+
 // other
+
+lazy val cli: ProjectMatrix = (projectMatrix in file("cli"))
+  .settings(commonSettings)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
+  .settings(
+    name := "tapir-cli",
+    libraryDependencies ++= Seq(
+      "com.monovore" %% "decline" % Versions.decline,
+      "com.monovore" %% "decline-effect" % Versions.decline
+    ),
+  )
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
