@@ -1,6 +1,6 @@
-package codegen
+package sttp.tapir.codegen
 
-import codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class BasicGeneratorSpec extends CompileCheckTestBase {
 

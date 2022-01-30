@@ -1,4 +1,4 @@
-package codegen.testutils
+package sttp.tapir.codegen.testutils
 
 import org.scalactic.source
 import org.scalatest.exceptions.{StackDepthException, TestFailedException}

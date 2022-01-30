@@ -1,6 +1,6 @@
-package codegen
+package sttp.tapir.codegen
 
-import codegen.openapi.models.OpenapiModels.{
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiParameter,
   OpenapiPath,
@@ -8,8 +8,8 @@ import codegen.openapi.models.OpenapiModels.{
   OpenapiResponse,
   OpenapiResponseContent
 }
-import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
-import codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
+import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class EndpointGeneratorSpec extends CompileCheckTestBase {
 

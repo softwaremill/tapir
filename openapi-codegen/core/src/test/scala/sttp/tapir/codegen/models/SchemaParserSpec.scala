@@ -1,7 +1,7 @@
-package codegen.openapi.models
+package sttp.tapir.codegen.openapi.models
 
-import codegen.openapi.models.OpenapiModels.OpenapiResponseContent
-import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaInt, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaInt, OpenapiSchemaObject, OpenapiSchemaString}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers

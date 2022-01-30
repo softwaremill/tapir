@@ -1,7 +1,7 @@
-package codegen
+package sttp.tapir.codegen
 
-import codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
-import codegen.openapi.models.OpenapiModels.{
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiInfo,
   OpenapiParameter,
@@ -12,7 +12,7 @@ import codegen.openapi.models.OpenapiModels.{
   OpenapiResponse,
   OpenapiResponseContent
 }
-import codegen.openapi.models.OpenapiSchemaType.{
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaDouble,
   OpenapiSchemaInt,

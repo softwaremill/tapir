@@ -1,9 +1,9 @@
-package codegen
+package sttp.tapir.codegen
 
-import codegen.openapi.models.OpenapiComponent
-import codegen.openapi.models.OpenapiModels.OpenapiDocument
-import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaObject, OpenapiSchemaString}
-import codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.openapi.models.OpenapiComponent
+import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 

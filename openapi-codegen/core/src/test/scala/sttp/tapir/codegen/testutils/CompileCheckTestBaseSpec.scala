@@ -1,4 +1,4 @@
-package codegen.testutils
+package sttp.tapir.codegen.testutils
 
 class CompileCheckTestBaseSpec extends CompileCheckTestBase {
   // Sure why not test the test :D

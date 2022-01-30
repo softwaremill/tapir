@@ -1331,14 +1331,17 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
 // other
 
 lazy val cli: ProjectMatrix = (projectMatrix in file("cli"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions)
   .settings(
     name := "tapir-cli",
+    buildInfoPackage := "sttp.tapir.cli",
     libraryDependencies ++= Seq(
       "com.monovore" %% "decline" % Versions.decline,
-      "com.monovore" %% "decline-effect" % Versions.decline
-    ),
+      "com.monovore" %% "decline-effect" % Versions.decline,
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0"
+    )
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
