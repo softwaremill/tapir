@@ -1,0 +1,8 @@
+{
+  "repositories": [
+    "central"
+  ],
+  "dependencies": [
+    "com.softwaremill::tapir-cli:latest.release"
+  ]
+}
