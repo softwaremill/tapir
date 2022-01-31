@@ -24,8 +24,13 @@ private[openapi] object ExampleConverter {
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {
     examples match {
-      case (example @ EndpointIO.Example(_, None, _)) :: Nil =>
+      case (example @ EndpointIO.Example(_, None, None)) :: Nil =>
         Examples(exampleValue(example.value), ListMap.empty)
+      case (example @ EndpointIO.Example(_, _, _)) :: Nil if example.name.isDefined || example.summary.isDefined =>
+        Examples(
+          None,
+          ListMap(example.name.getOrElse("Example") -> Right(Example(summary = example.summary, value = exampleValue(example.value))))
+        )
       case examples =>
         val exampleValues = examples.zipWithIndex.map { case (example, i) =>
           example.name.getOrElse(s"Example$i") ->
