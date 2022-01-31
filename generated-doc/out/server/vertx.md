@@ -8,7 +8,7 @@ Vert.x interpreter can be used with different effect systems (cats-effect, ZIO) 
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M8"
 ```
 to use this interpreter with `Future`.
 
@@ -63,7 +63,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M8"
 "com.softwaremill.sttp.shared" %% "fs2" % "LatestVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
@@ -146,7 +146,7 @@ val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse.serve
 Add the following dependency
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.20.0-M8"
 "com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
 ```
 
@@ -164,14 +164,14 @@ Here is simple example which starts HTTP server with one route:
 ```scala
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
+import sttp.tapir.{plainBody, query}
 import sttp.tapir.ztapir._
 import sttp.tapir.server.vertx.VertxZioServerInterpreter
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
-
 import zio._
 
-object Short extends zio.App {
-  implicit val runtime = Runtime.default
+object Short extends zio.ZIOAppDefault {
+  override implicit val runtime = zio.Runtime.default
 
   val responseEndpoint =
     endpoint
@@ -181,16 +181,18 @@ object Short extends zio.App {
 
   val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
 
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    ZManaged.make(ZIO.effect {
-      val vertx = Vertx.vertx()
-      val server = vertx.createHttpServer()
-      val router = Router.router(vertx)
-      attach(router)
-      server.requestHandler(router).listen(8080)
-    } >>= (_.asRIO))({ server =>
-      ZIO.effect(server.close()).flatMap(_.asRIO).orDie
-    }).useForever.as(ExitCode.success).orDie
+  override def run =
+    ZManaged
+      .acquireReleaseWith(ZIO.attempt {
+        val vertx = Vertx.vertx()
+        val server = vertx.createHttpServer()
+        val router = Router.router(vertx)
+        attach(router)
+        server.requestHandler(router).listen(8080)
+      } flatMap (_.asRIO))({ server =>
+        ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
+      })
+      .useForever
 }
 ```
 

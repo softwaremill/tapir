@@ -7,13 +7,13 @@ exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http)
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.20.0-M8"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.20.0-M8"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -53,7 +53,7 @@ def countCharacters(s: String): ZIO[Any, Nothing, Int] =
 val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersHttp: Http[Any, Throwable, Request, Response]  =
+val countCharactersHttp: Http[Any, Throwable, Request, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 
