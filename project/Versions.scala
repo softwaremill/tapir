@@ -8,7 +8,7 @@ object Versions {
   val sttpShared = "1.3.1"
   val akkaHttp = "10.2.7"
   val akkaStreams = "2.6.18"
-  val swaggerUi = "4.2.1"
+  val swaggerUi = "4.4.1"
   val upickle = "1.5.0"
   val playJson = "2.9.2"
   val finatra = "22.1.0"
