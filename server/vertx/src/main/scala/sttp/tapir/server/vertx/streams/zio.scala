@@ -32,11 +32,11 @@ object zio {
         .unsafeRunSync(for {
           promise <- Promise.make[Nothing, Unit]
           state <- ZRef.make(StreamState.empty(promise))
-          _ <- stream.foreachChunk { chunk =>
+          _ <- stream.runForeachChunk { chunk =>
             val buffer = Buffer.buffer(chunk.toArray)
             state.get.flatMap {
               case StreamState(None, handler, _, _) =>
-                ZIO.effect(handler.handle(buffer))
+                ZIO.attempt(handler.handle(buffer))
               case StreamState(Some(promise), _, _, _) =>
                 for {
                   _ <- promise.get
@@ -49,14 +49,14 @@ object zio {
             case Exit.Success(()) =>
               state.get.flatMap { state =>
                 ZIO
-                  .effect(state.endHandler.handle(null))
-                  .catchAll(cause2 => ZIO.effect(state.errorHandler.handle(cause2)).either)
+                  .attempt(state.endHandler.handle(null))
+                  .catchAll(cause2 => ZIO.attempt(state.errorHandler.handle(cause2)).either)
               }
             case Exit.Failure(cause) =>
               state.get.flatMap { state =>
                 ZIO
-                  .effect(state.errorHandler.handle(cause.squash))
-                  .catchAll(cause2 => ZIO.effect(state.errorHandler.handle(cause2)).either)
+                  .attempt(state.errorHandler.handle(cause.squash))
+                  .catchAll(cause2 => ZIO.attempt(state.errorHandler.handle(cause2)).either)
               }
           } forkDaemon
         } yield new ReadStream[Buffer] { self =>
@@ -112,12 +112,12 @@ object zio {
       runtime
         .unsafeRunSync(for {
           stateRef <- ZRef.make(ReadStreamState[UIO, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))
-          stream = ZStream.unfoldChunkM(()) { _ =>
+          stream = ZStream.unfoldChunkZIO(()) { _ =>
             for {
               dfd <- Promise.make[Nothing, WrappedBuffer[Chunk[Byte]]]
               tuple <- stateRef.modify(_.dequeueBuffer(dfd).swap)
               (mbBuffer, mbAction) = tuple
-              _ <- ZIO.foreach(mbAction)(identity)
+              _ <- ZIO.foreachDiscard(mbAction)(identity)
               wrappedBuffer <- mbBuffer match {
                 case Left(deferred) =>
                   deferred.get
@@ -125,14 +125,14 @@ object zio {
                   UIO.succeed(buffer)
               }
               result <- wrappedBuffer match {
-                case Right(buffer)     => UIO.succeed(Some((buffer, ())))
-                case Left(None)        => UIO.succeed(None)
+                case Right(buffer)     => UIO.some((buffer, ()))
+                case Left(None)        => UIO.none
                 case Left(Some(cause)) => IO.fail(cause)
               }
             } yield result
           }
           _ <- ZStream
-            .unfoldM(())({ _ =>
+            .unfoldZIO(())({ _ =>
               for {
                 dfd <- Promise.make[Nothing, WrappedEvent]
                 mbEvent <- stateRef.modify(_.dequeueActivationEvent(dfd).swap)
@@ -144,30 +144,30 @@ object zio {
                 }
               } yield result.map((_, ()))
             })
-            .mapM({
+            .mapZIO({
               case Pause =>
-                IO.effect(readStream.pause())
+                IO.attempt(readStream.pause())
               case Resume =>
-                IO.effect(readStream.resume())
+                IO.attempt(readStream.resume())
             })
             .runDrain
             .forkDaemon
         } yield {
           readStream.endHandler { _ =>
             runtime
-              .unsafeRunSync(stateRef.modify(_.halt(None).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.halt(None).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
           readStream.exceptionHandler { cause =>
             runtime
-              .unsafeRunSync(stateRef.modify(_.halt(Some(cause)).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.halt(Some(cause)).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
           readStream.handler { buffer =>
             val chunk = Chunk.fromArray(buffer.getBytes)
             val maxSize = opts.maxQueueSizeForReadStream
             runtime
-              .unsafeRunSync(stateRef.modify(_.enqueue(chunk, maxSize).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.enqueue(chunk, maxSize).swap).flatMap(ZIO.foreachDiscard(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
 

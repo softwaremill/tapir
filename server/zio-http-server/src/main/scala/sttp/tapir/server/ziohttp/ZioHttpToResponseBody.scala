@@ -5,7 +5,6 @@ import sttp.model.HasHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import zio.Chunk
-import zio.blocking.Blocking
 import zio.stream.{Stream, ZStream}
 
 import java.nio.charset.Charset
@@ -34,14 +33,23 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
       case RawBodyType.StringBody(charset) => ZStream.fromIterable(r.toString.getBytes(charset))
       case RawBodyType.ByteArrayBody       => Stream.fromChunk(Chunk.fromArray(r))
       case RawBodyType.ByteBufferBody      => Stream.fromChunk(Chunk.fromByteBuffer(r))
-      case RawBodyType.InputStreamBody     => ZStream.fromInputStream(r).provideLayer(Blocking.live)
+      case RawBodyType.InputStreamBody     => ZStream.fromInputStream(r)
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range
-          .flatMap(r =>
-            r.startAndEnd.map(s => ZStream.fromFile(tapirFile.file.toPath).drop(s._1).take(r.contentLength).provideLayer(Blocking.live))
-          )
-          .getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
+          .flatMap { r =>
+            r.startAndEnd.map { s =>
+              var count = 0L
+              ZStream
+                .fromPath(tapirFile.file.toPath)
+                .dropWhile(_ =>
+                  if (count < s._1) { count += 1; true }
+                  else false
+                )
+                .take(r.contentLength)
+            }
+          }
+          .getOrElse(ZStream.fromPath(tapirFile.file.toPath))
       case RawBodyType.MultipartBody(_, _) => Stream.empty
     }
   }
