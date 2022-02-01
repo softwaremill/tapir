@@ -46,7 +46,9 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
 
   override protected def showType: String = "ServerEndpoint"
 
-  /** Prepends additional security logic to this endpoint. This is useful when adding security to file/resource-serving endpoints.
+  /** Prepends additional security logic to this endpoint. This is useful when adding security to file/resource-serving endpoints. The
+    * additional security logic should return a `Right(())` to indicate success, or a `Left(E2)` to indicate failure; in this case, the
+    * given error output will be used to create the response.
     *
     * The security inputs will become a tuple, containing first `additionalSecurityInput` combined with the current
     * `endpoint.securityInput`.
