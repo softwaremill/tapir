@@ -38,6 +38,9 @@ Moreover, model generation can be configured - see below for more details on `Op
 parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
 `SwaggerInterpreter`.
 
+The swagger server endpoints can be secured using `ServerLogic.prependSecurity`, see [server logic](../server/logic.md)
+for details.
+
 ### Using Redoc
 
 Similarly as above, you'll need the following dependency:

@@ -29,6 +29,9 @@ Using the above endpoint, a request to `/site/static/css/styles.css` will try to
 
 A single file can be exposed using `fileGetServerEndpoint`.
 
+The file server endpoints can be secured using `ServerLogic.prependSecurity`, see [server logic](../server/logic.md)
+for details.
+
 ## Resources
 
 Similarly, the `resourcesGetServerEndpoint` can be used to expose the application's resources at the given prefix.
