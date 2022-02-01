@@ -2,8 +2,9 @@ package sttp.tapir.generic
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.{SName, schemaForBoolean}
 import sttp.tapir.Schema.annotations._
+import sttp.tapir.Schema.{SName, schemaForBoolean}
+import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
@@ -254,11 +255,11 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedCatSchema = Schema(
       SProduct[Cat](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
           field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
         )
       ),
-      Some(SName("sttp.tapir.generic.Cat"))
+      Some(SName("sttp.tapir.SchemaMacroTestData.Cat"))
     )
 
     val expectedDogSchema = Schema(
@@ -268,7 +269,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
         )
       ),
-      Some(SName("sttp.tapir.generic.Dog"))
+      Some(SName("sttp.tapir.SchemaMacroTestData.Dog"))
     )
 
     val expectedHamsterSchema = Schema(
@@ -278,7 +279,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
         )
       ),
-      Some(SName("sttp.tapir.generic.Hamster"))
+      Some(SName("sttp.tapir.SchemaMacroTestData.Hamster"))
     )
 
     val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
@@ -362,21 +363,6 @@ case class L(
     firstField: Int,
     secondField: Int
 )
-
-sealed abstract class Pet {
-  @description("name")
-  def name: String
-}
-
-case class Cat(name: String, @description("cat food") catFood: String) extends Pet
-case class Dog(name: String, @description("dog food") dogFood: String) extends Pet
-
-sealed trait Rodent extends Pet {
-  @description("likes nuts?")
-  def likesNuts: Boolean
-}
-
-case class Hamster(name: String, likesNuts: Boolean) extends Rodent
 
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node
