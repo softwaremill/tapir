@@ -96,7 +96,7 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
       override def endpoint: Endpoint[A, I, E, O, R] =
         outer.endpoint
           .prependSecurityIn(additionalSecurityInput)
-          .errorOutVariantsFromCurrent(current => List(oneOfVariant[E2](securityErrorOutput), oneOfDefaultVariant(current)))
+          .errorOutVariantsFromCurrent[Any](current => List(oneOfVariant[E2](securityErrorOutput), oneOfDefaultVariant(current)))
 
       override def securityLogic: MonadError[F] => A => F[Either[E, U]] = implicit m =>
         a =>
