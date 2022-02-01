@@ -5,12 +5,13 @@ import enumeratum.values._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.{SName, SchemaAnnotations}
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   import TapirCodecEnumeratumTest._
+  import Schema.SchemaAnnotations._
 
   it should "find schema for enumeratum enum entries" in {
     implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString()
@@ -76,14 +77,14 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     testValueEnumPlainCodec[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[PlainCodec[TestByteEnumEntry]])
   }
 
-  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit enum: Enum[E]) = {
+  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit annotations: SchemaAnnotations[E], enum: Enum[E]) = {
     enum.values.foreach { v =>
       codec.encode(v) shouldBe v.entryName
       codec.decode(v.entryName) shouldBe DecodeResult.Value(v)
     }
   }
 
-  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit enum: E) = {
+  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit annotations: SchemaAnnotations[E], enum: E) = {
     enum.values.foreach { v =>
       codec.encode(v) shouldBe v.value.toString
       codec.decode(v.value.toString) shouldBe DecodeResult.Value(v)

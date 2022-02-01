@@ -4,7 +4,7 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
+import sttp.tapir.internal.{SchemaAnnotationsMacro, ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
@@ -285,6 +285,23 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class deprecated extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
+  }
+
+  final case class SchemaAnnotations[T](items: Array[Any]) {
+    def enrich(s: Schema[T]): Schema[T] =
+      items.foldLeft(s) {
+        case (schema, ann: Schema.annotations.description)    => schema.description(ann.text)
+        case (schema, ann: Schema.annotations.encodedExample) => schema.encodedExample(ann.example)
+        case (schema, ann: Schema.annotations.default[T])     => schema.default(ann.default)
+        case (schema, ann: Schema.annotations.validate[T])    => schema.validate(ann.v)
+        case (schema, ann: Schema.annotations.format)         => schema.format(ann.format)
+        case (schema, _: Schema.annotations.deprecated)       => schema.deprecated(true)
+        case (schema, _)                                      => schema
+      }
+  }
+
+  object SchemaAnnotations {
+    implicit def schemaAnnotations[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacro.derived[T]
   }
 }
 
