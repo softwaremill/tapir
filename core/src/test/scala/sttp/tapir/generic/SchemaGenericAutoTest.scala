@@ -1,5 +1,6 @@
 package sttp.tapir.generic
 
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.annotations._
@@ -250,7 +251,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "find schema for subtypes containing parent metadata from annotations" in {
-    val schemaType = Schema.derived[Pet].schemaType
+    val schemaType = implicitly[Schema[Pet]].schemaType
 
     val expectedCatSchema = Schema(
       SProduct[Cat](
@@ -284,7 +285,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
     val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
 
-    subtypes should contain theSameElementsAs List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
+    List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
+      .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
   }
 }
 
