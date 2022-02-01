@@ -14,24 +14,26 @@ trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
 
   def join[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    withCache(ctx.typeName, ctx.annotations) {
+    val annotations = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
+    withCache(ctx.typeName, annotations) {
       val result =
         if (ctx.isValueClass) {
           require(ctx.parameters.nonEmpty, s"Cannot derive schema for generic value class: ${ctx.typeName.owner}")
           val valueSchema = ctx.parameters.head.typeclass
           Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
         } else {
-          Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
+          Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeName, annotations)))
         }
-      enrichSchema(result, ctx.annotations)
+      enrichSchema(result, annotations)
     }
   }
 
   private def productSchemaType[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct[T] =
     SProduct(
       ctx.parameters.map { p =>
-        val pSchema = enrichSchema(p.typeclass, p.annotations)
-        val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
+        val annotations = (p.annotations ++ p.inheritedAnnotations).distinct
+        val pSchema = enrichSchema(p.typeclass, annotations)
+        val encodedName = getEncodedName(annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
 
         SProductField[T, p.PType](FieldName(p.label, encodedName), pSchema, t => Some(p.dereference(t)))
       }.toList
@@ -64,17 +66,18 @@ trait SchemaMagnoliaDerivation {
   }
 
   def split[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    withCache(ctx.typeName, ctx.annotations) {
+    val annotations = (ctx.annotations ++ ctx.inheritedAnnotations).distinct
+    withCache(ctx.typeName, annotations) {
       val subtypesByName =
-        ctx.subtypes.map(s => typeNameToSchemaName(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap
+        ctx.subtypes.map(s => typeNameToSchemaName(s.typeName, (s.annotations ++ s.inheritedAnnotations).distinct) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap
       val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
-        ctx.split(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, v.annotations)) }
+        ctx.split(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, (v.annotations ++ v.inheritedAnnotations).distinct)) }
       )
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
         case None    => baseCoproduct
       }
-      Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
+      Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeName, annotations)))
     }
   }
 
