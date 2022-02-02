@@ -163,6 +163,7 @@ lazy val allAggregates = core.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
+  examples3.projectRefs ++
   documentation.projectRefs ++
   openapiCodegen.projectRefs ++
   clientTestServer.projectRefs ++
@@ -1266,6 +1267,24 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     sttpMockServer,
     zioJson
+  )
+
+lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-examples3",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .dependsOn(
+    http4sServer,
+    swaggerUiBundle,
+    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
