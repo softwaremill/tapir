@@ -2,8 +2,9 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
-import sttp.tapir.Schema.{SName, SchemaAnnotations}
+import sttp.tapir.Schema.SName
 import sttp.tapir._
+import sttp.tapir.internal.SchemaAnnotations
 
 trait TapirCodecEnumeratum {
   // Regular enums

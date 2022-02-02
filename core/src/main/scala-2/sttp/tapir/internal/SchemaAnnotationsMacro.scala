@@ -1,7 +1,5 @@
 package sttp.tapir.internal
 
-import sttp.tapir.Schema.SchemaAnnotations
-
 import scala.reflect.macros.blackbox
 
 object SchemaAnnotationsMacro {
@@ -29,7 +27,7 @@ object SchemaAnnotationsMacro {
     val validator = annotations.collectFirst { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
 
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.Schema.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $encodedName, $validator)"""
+      q"""_root_.sttp.tapir.internal.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $encodedName, $validator)"""
     )
   }
 }

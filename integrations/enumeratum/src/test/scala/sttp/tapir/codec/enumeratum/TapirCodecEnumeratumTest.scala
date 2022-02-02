@@ -5,8 +5,8 @@ import enumeratum.values._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.description
-import sttp.tapir.Schema.{SName, SchemaAnnotations}
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 

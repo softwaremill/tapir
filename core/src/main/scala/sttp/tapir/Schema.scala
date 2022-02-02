@@ -4,7 +4,7 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.{SchemaAnnotationsMacro, ValidatorSyntax, isBasicValue}
+import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
@@ -285,36 +285,6 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class deprecated extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
-  }
-
-  final case class SchemaAnnotations[T](
-      description: Option[String],
-      encodedExample: Option[Any],
-      default: Option[T],
-      format: Option[String],
-      deprecated: Option[Boolean],
-      encodedName: Option[String],
-      validate: Option[Validator[T]]
-  ) {
-    private case class SchemaEnrich(current: Schema[T]) {
-      def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
-    }
-
-    def enrich(s: Schema[T]): Schema[T] = {
-      SchemaEnrich(s)
-        .optionally(s => description.map(s.description(_)))
-        .optionally(s => encodedExample.map(s.encodedExample(_)))
-        .optionally(s => default.map(s.default(_)))
-        .optionally(s => format.map(s.format(_)))
-        .optionally(s => deprecated.map(s.deprecated(_)))
-        .optionally(s => encodedName.map(en => s.name(SName(en))))
-        .optionally(s => validate.map(s.validate))
-        .current
-    }
-  }
-
-  object SchemaAnnotations {
-    implicit def schemaAnnotations[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacro.derived[T]
   }
 }
 

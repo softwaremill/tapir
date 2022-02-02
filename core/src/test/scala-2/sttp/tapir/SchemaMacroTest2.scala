@@ -2,12 +2,13 @@ package sttp.tapir
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.{SName, SchemaAnnotations}
+import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaMacroTestData2.ValueClasses.DoubleValue
 import sttp.tapir.SchemaMacroTestData2.{MyString, Type, ValueClasses}
 import sttp.tapir.SchemaType.{SArray, SProduct, SString}
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
+import sttp.tapir.internal.SchemaAnnotations
 
 // tests which pass only on Scala2
 class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
@@ -55,7 +56,8 @@ class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
 
     val enriched = implicitly[SchemaAnnotations[MyString]].enrich(baseSchema)
 
-    enriched shouldBe Schema.string[MyString]
+    enriched shouldBe Schema
+      .string[MyString]
       .description("my-string")
       .encodedExample("encoded-example")
       .default(MyString("default"))
