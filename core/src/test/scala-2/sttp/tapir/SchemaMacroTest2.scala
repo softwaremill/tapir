@@ -2,9 +2,9 @@ package sttp.tapir
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.{SName, SchemaAnnotations}
 import sttp.tapir.SchemaMacroTestData2.ValueClasses.DoubleValue
-import sttp.tapir.SchemaMacroTestData2.{Type, ValueClasses}
+import sttp.tapir.SchemaMacroTestData2.{MyString, Type, ValueClasses}
 import sttp.tapir.SchemaType.{SArray, SProduct, SString}
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
@@ -48,5 +48,20 @@ class SchemaMacroTest2 extends AnyFlatSpec with Matchers {
   it should "fail to derive schema for nested generic value class with meaningful msg" in {
     val ex = the[IllegalArgumentException] thrownBy schemaForCaseClass[Type.MapType]
     ex.getMessage.contains("requirement failed: Cannot derive schema for generic value class") shouldBe true
+  }
+
+  it should "derive schema annotations and enrich schema" in {
+    val baseSchema = Schema.string[MyString]
+
+    val enriched = implicitly[SchemaAnnotations[MyString]].enrich(baseSchema)
+
+    enriched shouldBe Schema.string[MyString]
+      .description("my-string")
+      .encodedExample("encoded-example")
+      .default(MyString("default"))
+      .format("utf8")
+      .deprecated(true)
+      .name(SName("encoded-name"))
+      .validate(Validator.pass[MyString])
   }
 }

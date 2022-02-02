@@ -287,17 +287,30 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class validate[T](val v: Validator[T]) extends StaticAnnotation
   }
 
-  final case class SchemaAnnotations[T](items: Array[Any]) {
-    def enrich(s: Schema[T]): Schema[T] =
-      items.foldLeft(s) {
-        case (schema, ann: Schema.annotations.description)    => schema.description(ann.text)
-        case (schema, ann: Schema.annotations.encodedExample) => schema.encodedExample(ann.example)
-        case (schema, ann: Schema.annotations.default[T])     => schema.default(ann.default)
-        case (schema, ann: Schema.annotations.validate[T])    => schema.validate(ann.v)
-        case (schema, ann: Schema.annotations.format)         => schema.format(ann.format)
-        case (schema, _: Schema.annotations.deprecated)       => schema.deprecated(true)
-        case (schema, _)                                      => schema
-      }
+  final case class SchemaAnnotations[T](
+      description: Option[String],
+      encodedExample: Option[Any],
+      default: Option[T],
+      format: Option[String],
+      deprecated: Option[Boolean],
+      encodedName: Option[String],
+      validate: Option[Validator[T]]
+  ) {
+    private case class SchemaEnrich(current: Schema[T]) {
+      def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
+    }
+
+    def enrich(s: Schema[T]): Schema[T] = {
+      SchemaEnrich(s)
+        .optionally(s => description.map(s.description(_)))
+        .optionally(s => encodedExample.map(s.encodedExample(_)))
+        .optionally(s => default.map(s.default(_)))
+        .optionally(s => format.map(s.format(_)))
+        .optionally(s => deprecated.map(s.deprecated(_)))
+        .optionally(s => encodedName.map(en => s.name(SName(en))))
+        .optionally(s => validate.map(s.validate))
+        .current
+    }
   }
 
   object SchemaAnnotations {

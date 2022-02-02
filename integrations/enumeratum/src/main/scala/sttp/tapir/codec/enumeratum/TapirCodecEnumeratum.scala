@@ -68,19 +68,19 @@ trait TapirCodecEnumeratum {
       }(_.value)
       .schema(schema)
 
-  implicit def plainCodecIntEnumEntry[E <: IntEnumEntry](implicit annotations: SchemaAnnotations[E], enum: IntEnum[E]): Codec.PlainCodec[E] =
+  implicit def plainCodecIntEnumEntry[E <: IntEnumEntry](implicit enum: IntEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Int, E]
 
-  implicit def plainCodecLongEnumEntry[E <: LongEnumEntry](implicit annotations: SchemaAnnotations[E], enum: LongEnum[E]): Codec.PlainCodec[E] =
+  implicit def plainCodecLongEnumEntry[E <: LongEnumEntry](implicit enum: LongEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Long, E]
 
-  implicit def plainCodecShortEnumEntry[E <: ShortEnumEntry](implicit annotations: SchemaAnnotations[E], enum: ShortEnum[E]): Codec.PlainCodec[E] =
+  implicit def plainCodecShortEnumEntry[E <: ShortEnumEntry](implicit enum: ShortEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Short, E]
 
-  implicit def plainCodecStringEnumEntry[E <: StringEnumEntry](implicit annotations: SchemaAnnotations[E], enum: StringEnum[E]): Codec.PlainCodec[E] =
+  implicit def plainCodecStringEnumEntry[E <: StringEnumEntry](implicit enum: StringEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[String, E]
 
-  implicit def plainCodecByteEnumEntry[E <: ByteEnumEntry](implicit annotations: SchemaAnnotations[E], enum: ByteEnum[E]): Codec.PlainCodec[E] =
+  implicit def plainCodecByteEnumEntry[E <: ByteEnumEntry](implicit enum: ByteEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Byte, E]
 
   private def fullName[T](t: T) = t.getClass.getName.replace("$", ".")
