@@ -6,7 +6,6 @@ import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.syntax.kleisli.*
 import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.tapir.*
