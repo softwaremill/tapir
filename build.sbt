@@ -159,6 +159,7 @@ lazy val allAggregates = core.projectRefs ++
   awsExamples.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
+  sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
@@ -1140,7 +1141,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
@@ -1164,6 +1165,22 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .dependsOn(core, clientTests % Test)
+
+lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-client-ws-zio1"))
+  .settings(clientTestServerSettings)
+  .settings(
+    name := "tapir-sttp-client-ws-zio1"
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio1" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      )
+    )
+  )
+  .dependsOn(sttpClient, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
   .settings(clientTestServerSettings)
