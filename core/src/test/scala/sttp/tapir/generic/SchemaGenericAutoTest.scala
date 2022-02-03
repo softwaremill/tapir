@@ -247,6 +247,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
+  it should "derive schema for enumeration" in {
+    implicitly[Schema[Countries.Country]] shouldBe Schema(SString())
+  }
+
 }
 
 object SchemaGenericAutoTest {
@@ -337,3 +341,9 @@ case class JList(data: List[IList])
 sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
+
+object Countries extends Enumeration {
+  @description("country")
+  type Country = Value
+  val PL, NL, RUS = Value
+}

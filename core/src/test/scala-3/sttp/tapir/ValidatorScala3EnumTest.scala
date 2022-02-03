@@ -16,11 +16,6 @@ class ValidatorScala3EnumTest extends AnyFlatSpec with Matchers {
     """)
   }
 
-  it should "derive schema for enum" in {
-    import sttp.tapir.generic.auto._
-    implicitly[Schema[ColorEnum]] shouldBe Schema(SString())
-  }
-
 }
 
 enum ColorEnum {

@@ -255,6 +255,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
+  implicit def schemaForEnumeration[T <: scala.Enumeration#Value]: Schema[T] = Schema(SString())
 
   implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] =
     Schema[Either[A, B]](

@@ -26,9 +26,4 @@ object SchemaMacroTestData2 {
   @encodedName("encoded-name")
   @validate[MyString](Validator.pass[MyString])
   case class MyString(value: String)
-
-  object Countries extends Enumeration {
-    type Country = Value
-    val PL, NL, RUS = Value
-  }
 }
