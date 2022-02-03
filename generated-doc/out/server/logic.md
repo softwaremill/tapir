@@ -135,7 +135,7 @@ import scala.concurrent.Future
 implicit val ec = scala.concurrent.ExecutionContext.global
 
 case class User(name: String)
-def auth(token: String): Future[Either[Int, User]] = Future {
+def authLogic(token: String): Future[Either[Int, User]] = Future {
   if (token == "secret") Right(User("Spock"))
   else Left(1001) // error code
 }
@@ -144,7 +144,7 @@ val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Fu
   endpoint
     .securityIn(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
-    .serverSecurityLogic(auth)
+    .serverSecurityLogic(authLogic)
 ```
 
 The result is a value of type `PartialServerEndpoint`, which can be extended with further inputs and outputs, just
@@ -169,3 +169,25 @@ val secureHelloWorld1WithLogic: ServerEndpoint[Any, Future] = secureEndpoint.get
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
 this can be customised by using a [status code output](../endpoint/ios.md).
+
+## Additional security logic
+
+In some cases, e.g. when using some pre-defined public server endpoints, such as ones for [serving static content](../endpoint/static.md)
+or to expose the [Swagger UI](../docs/openapi.md), it might be necessary to add a security check. One way to achieve
+this is extending the pre-defined endpoint description with security inputs, and then re-using the appropriate server
+logic, with custom security logic, but this requires non-trivial amount of code.
+
+For such situations, a `ServerLogic.prependSecurity` method is provided. It accepts a security input description, along
+with an error output (for security errors) and the security logic to add. This additional security logic is run
+before the security logic defined in the endpoint so far (if any). For example:
+
+```scala
+import sttp.tapir._
+import scala.concurrent.Future
+import sttp.model.StatusCode
+
+val secureFileEndpoints = filesServerEndpoints[Future]("secure")("/home/data")
+  .map(_.prependSecurity(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
+    Future.successful(if (token.startsWith("secret")) Right(()) else Left(()))
+  })
+```
