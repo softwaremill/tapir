@@ -1,10 +1,13 @@
 package sttp.tapir.macros
 
 import magnolia1.Magnolia
-import sttp.tapir.{Schema, SchemaType, Validator}
+import sttp.tapir.SchemaType.SString
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, SchemaMapMacro}
-import sttp.tapir.internal.{ModifySchemaMacro, SchemaEnumerationMacro}
+import sttp.tapir.internal.{ModifySchemaMacro, SchemaAnnotations, SchemaEnumerationMacro}
+import sttp.tapir.{Schema, SchemaType, Validator}
+
+import scala.reflect.runtime.universe._
 
 trait SchemaMacros[T] {
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.generateModify[T, U]
@@ -39,6 +42,25 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     * [[CreateDerivedEnumerationSchema]].
     */
   def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] = macro SchemaEnumerationMacro.derivedEnumeration[T]
+
+  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
+  implicit def schemaForEnumeration[T <: scala.Enumeration#Value](implicit
+      tag: TypeTag[T],
+      annotations: SchemaAnnotations[T]
+  ): Schema[T] = {
+    val typeRef = tag.tpe match {
+      case t @ TypeRef(_, _, _) => t
+      case _                    => throw new RuntimeException(s"Cannot extract TypeRef from type ${tag.tpe.typeSymbol.fullName}")
+    }
+
+    val enumObject = tag.mirror.classLoader.loadClass(typeRef.pre.typeSymbol.fullName + "$").getField("MODULE$").get(null)
+    val valuesMethod = enumObject.getClass.getMethod("values")
+    val values = valuesMethod.invoke(enumObject).asInstanceOf[Iterable[T]].toList
+
+    val validator = Validator.enumeration[T](values)
+
+    annotations.enrich(Schema[T](SString()).validate(validator))
+  }
 }
 
 class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {

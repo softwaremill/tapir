@@ -6,7 +6,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
 
 import scala.concurrent.Future
 
@@ -120,6 +120,15 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
     removeValidators(implicitly[Schema[IList]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JList]]) shouldBe expectedJSchema
+  }
+
+  it should "derive schema for enumeration and enrich schema" in {
+    val expected = Schema[Countries.Country](SString())
+      .validate(Validator.enumeration[Countries.Country](Countries.values.toList))
+      .description("country")
+      .default(Countries.PL)
+      .name(SName("country-encoded-name"))
+    implicitly[Schema[Countries.Country]] shouldBe expected
   }
 
 }

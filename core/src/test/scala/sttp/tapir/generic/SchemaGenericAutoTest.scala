@@ -1,14 +1,15 @@
 package sttp.tapir.generic
 
-import java.math.{BigDecimal => JBigDecimal}
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
-import sttp.tapir.Schema.annotations._
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations._
+import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
+import sttp.tapir.generic.auto._
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+
+import java.math.{BigDecimal => JBigDecimal}
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -247,10 +248,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
-  it should "derive schema for enumeration" in {
-    implicitly[Schema[Countries.Country]] shouldBe Schema(SString())
-  }
-
 }
 
 object SchemaGenericAutoTest {
@@ -342,8 +339,10 @@ sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
+@description("country")
+@default(Countries.PL)
+@encodedName("country-encoded-name")
 object Countries extends Enumeration {
-  @description("country")
   type Country = Value
   val PL, NL, RUS = Value
 }
