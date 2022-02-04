@@ -17,7 +17,7 @@ object SchemaAnnotationsMacro {
 
     val weakType = weakTypeOf[T]
 
-    // if derivation is for Enumeration.Value then we lookup annotations on object that extend Enumeration
+    // if derivation is for Enumeration.Value then we lookup annotations on parent object that extend Enumeration
     val annotations = if (weakType <:< EnumerationValue) {
       weakTypeTag[T].tpe match {
         case t @ TypeRef(_, _, _) => t.pre.typeSymbol.annotations
