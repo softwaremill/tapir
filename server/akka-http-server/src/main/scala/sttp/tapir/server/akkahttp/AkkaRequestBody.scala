@@ -33,9 +33,7 @@ private[akkahttp] class AkkaRequestBody(ctx: RequestContext, request: ServerRequ
       case RawBodyType.FileBody =>
         serverOptions
           .createFile(request)
-          .flatMap(file =>
-            body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map((f: FileRange) => RawValue(f, Seq(f)))
-          )
+          .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map(f => RawValue(f, Seq(f))))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts

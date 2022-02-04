@@ -40,8 +40,6 @@ class ArmeriaZioTestServerInterpreter extends TestServerInterpreter[Task, ZioStr
         val serverBuilder = Server
           .builder()
           .maxRequestLength(0)
-          .accessLogWriter(AccessLogWriter.combined(), true)
-          .decorator(LoggingService.builder().requestLogLevel(LogLevel.INFO).newDecorator())
         routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
         val server = serverBuilder.build()
         server.start().thenApply(_ => server)
