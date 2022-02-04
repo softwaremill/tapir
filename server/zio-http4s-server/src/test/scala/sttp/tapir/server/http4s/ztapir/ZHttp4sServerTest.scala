@@ -11,8 +11,7 @@ import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.{RIO, UIO}
-import zio.blocking.Blocking
-import zio.clock.Clock
+import zio.Clock
 import zio.interop.catz._
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
@@ -24,7 +23,7 @@ import scala.util.Random
 class ZHttp4sServerTest extends TestSuite with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
-    implicit val m: MonadError[RIO[Clock with Blocking, *]] = new CatsMonadError[RIO[Clock with Blocking, *]]
+    implicit val m: MonadError[RIO[Clock, *]] = new CatsMonadError[RIO[Clock, *]]
 
     val interpreter = new ZHttp4sTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
@@ -37,7 +36,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       createServerTest.testServer(
         endpoint.out(serverSentEventsBody),
         "Send and receive SSE"
-      )((_: Unit) => UIO(Right(zio.stream.Stream(sse1, sse2)))) { (backend, baseUri) =>
+      )((_: Unit) => UIO.right(zio.stream.Stream(sse1, sse2))) { (backend, baseUri) =>
         basicRequest
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
@@ -48,7 +47,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
           })
           .get(baseUri)
           .send(backend)
-          .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
+          .map(_.body.toOption.value shouldBe List(sse1, sse2))
       }
     )
 

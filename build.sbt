@@ -11,7 +11,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.15"
 val scala2_13 = "2.13.8"
-val scala3 = "3.1.0"
+val scala3 = "3.1.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -109,6 +109,7 @@ lazy val allAggregates = core.projectRefs ++
   cats.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
+  zio1.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
   circeJson.projectRefs ++
@@ -120,6 +121,7 @@ lazy val allAggregates = core.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
+  zio1Json.projectRefs ++
   zioJson.projectRefs ++
   apispecModel.projectRefs ++
   openapiModel.projectRefs ++
@@ -145,7 +147,9 @@ lazy val allAggregates = core.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
   nettyServer.projectRefs ++
+  zio1Http4sServer.projectRefs ++
   zioHttp4sServer.projectRefs ++
+  zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
@@ -154,9 +158,11 @@ lazy val allAggregates = core.projectRefs ++
   awsExamples.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
+  sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
+  examples3.projectRefs ++
   documentation.projectRefs ++
   openapiCodegen.projectRefs ++
   clientTestServer.projectRefs ++
@@ -275,10 +281,10 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.0.0-M7")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.0")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.0.0",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.0",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -400,6 +406,22 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   )
   .dependsOn(core, circeJson % Test)
 
+lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio1",
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % Versions.zio1,
+      "dev.zio" %% "zio-streams" % Versions.zio1,
+      "dev.zio" %% "zio-test" % Versions.zio1 % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio1 % Test,
+      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
   .settings(
@@ -410,7 +432,7 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
       "dev.zio" %% "zio-streams" % Versions.zio,
       "dev.zio" %% "zio-test" % Versions.zio % Test,
       "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -559,6 +581,22 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+lazy val zio1Json: ProjectMatrix = (projectMatrix in file("json/zio1"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-zio1",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-json" % Versions.zio1Json,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
@@ -808,7 +846,7 @@ lazy val armeriaServerZio: ProjectMatrix =
     .settings(
       name := "tapir-armeria-server-zio",
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zio1InteropReactiveStreams
       )
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -915,12 +953,24 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
+
+lazy val zio1Http4sServer: ProjectMatrix = (projectMatrix in file("server/zio1-http4s-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-zio1-http4s-server",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(zio1, http4sServer, serverTests % Test)
 
 lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
   .settings(commonJvmSettings)
@@ -934,11 +984,20 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
+lazy val zio1HttpServer: ProjectMatrix = (projectMatrix in file("server/zio1-http-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-zio1-http-server",
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC23")
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(zio1, serverTests % Test)
+
 lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC23")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC2")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
@@ -1120,7 +1179,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
@@ -1144,6 +1203,22 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .dependsOn(core, clientTests % Test)
+
+lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-client-ws-zio1"))
+  .settings(clientTestServerSettings)
+  .settings(
+    name := "tapir-sttp-client-ws-zio1"
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio1" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      )
+    )
+  )
+  .dependsOn(sttpClient, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
   .settings(clientTestServerSettings)
@@ -1230,6 +1305,24 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     sttpMockServer,
     zioJson
+  )
+
+lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-examples3",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .dependsOn(
+    http4sServer,
+    swaggerUiBundle,
+    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355

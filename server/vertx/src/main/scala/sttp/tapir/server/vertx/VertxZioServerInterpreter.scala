@@ -35,8 +35,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       e: ServerEndpoint[ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
-    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] =
-      new VertxBodyListener[RIO[R, *]]
+    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
       List(e),
@@ -53,7 +52,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
           .flatMap {
             case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
             case RequestResult.Response(response) =>
-              Task.effectAsync((k: Task[Unit] => Unit) => {
+              Task.async((k: Task[Unit] => Unit) => {
                 VertxOutputEncoders(response)
                   .apply(rc)
                   .onComplete(d => {
@@ -62,7 +61,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
               })
           }
           .catchAll { ex =>
-            RIO.effect({
+            RIO.attempt({
               logger.error("Error while processing the request", ex)
               if (rc.response().bytesWritten() > 0) rc.response().end()
               rc.fail(ex)
@@ -72,18 +71,18 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
       // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
       // if so, we need to use this fact to cancel the operation nonetheless
-      val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
+      val cancelRef = new AtomicReference[Option[Either[Throwable, FiberId => Exit[Throwable, Any]]]](None)
 
       rc.response.exceptionHandler { (t: Throwable) =>
         cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
-          c(Fiber.Id.None)
+          c(FiberId.None)
         }
         ()
       }
 
       val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
       cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-        canceler(Fiber.Id.None)
+        canceler(FiberId.None)
       }
 
       ()
@@ -104,10 +103,10 @@ object VertxZioServerInterpreter {
     override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
     override def error[T](t: Throwable): RIO[R, T] = Task.fail(t)
     override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
-    override def eval[T](t: => T): RIO[R, T] = Task.effect(t)
-    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.effectSuspend(t)
+    override def eval[T](t: => T): RIO[R, T] = Task.attempt(t)
+    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.suspend(t)
     override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
-    override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.catchAll(_ => Task.unit))
+    override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
   }
 
   private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {
@@ -116,7 +115,7 @@ object VertxZioServerInterpreter {
 
   implicit class VertxFutureToRIO[A](f: => Future[A]) {
     def asRIO[R]: RIO[R, A] = {
-      RIO.effectAsync { cb =>
+      RIO.async { cb =>
         f.onComplete { handler =>
           if (handler.succeeded()) {
             cb(Task.succeed(handler.result()))

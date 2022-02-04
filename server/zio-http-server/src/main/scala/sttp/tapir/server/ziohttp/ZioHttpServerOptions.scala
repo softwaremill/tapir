@@ -29,9 +29,9 @@ object ZioHttpServerOptions {
         )
     )
 
-  def defaultCreateFile: ServerRequest => Task[TapirFile] = _ => Task.effect(Defaults.createTempFile())
+  def defaultCreateFile: ServerRequest => Task[TapirFile] = _ => Task.attempt(Defaults.createTempFile())
 
-  def defaultDeleteFile[R]: TapirFile => Task[Unit] = file => Task.effect(Defaults.deleteFile()(file))
+  def defaultDeleteFile[R]: TapirFile => Task[Unit] = file => Task.attempt(Defaults.deleteFile()(file))
 
   def default[R]: ZioHttpServerOptions[R] = customInterceptors.options
 }

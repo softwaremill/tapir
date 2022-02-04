@@ -14,8 +14,7 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.RIO
-import zio.blocking.Blocking
-import zio.clock.Clock
+import zio.Clock
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 import ZHttp4sTestServerInterpreter._
@@ -24,19 +23,19 @@ import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
 
 object ZHttp4sTestServerInterpreter {
-  type Routes = WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]]
+  type Routes = WebSocketBuilder2[RIO[Clock, *]] => HttpRoutes[RIO[Clock, *]]
 }
 
-class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, Routes] {
+class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock, *], ZioStreams with WebSockets, Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(
-      e: ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets],
+      e: ZServerEndpoint[Clock, ZioStreams with WebSockets],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock, *]]] = None
   ): Routes = {
-    val serverOptions: Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]] = Http4sServerOptions
-      .customInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+    val serverOptions: Http4sServerOptions[RIO[Clock, *], RIO[Clock, *]] = Http4sServerOptions
+      .customInterceptors[RIO[Clock, *], RIO[Clock, *]]
       .metricsInterceptor(metricsInterceptor)
       .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
       .options
@@ -45,16 +44,16 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with 
   }
 
   override def route(
-      es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]]
+      es: List[ZServerEndpoint[Clock, ZioStreams with WebSockets]]
   ): Routes = {
     ZHttp4sServerInterpreter().fromWebSocket(es).toRoutes
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
-    val service: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpApp[RIO[Clock with Blocking, *]] =
+    val service: WebSocketBuilder2[RIO[Clock, *]] => HttpApp[RIO[Clock, *]] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    val serverResource = BlazeServerBuilder[RIO[Clock with Blocking, *]]
+    val serverResource = BlazeServerBuilder[RIO[Clock, *]]
       .withExecutionContext(ExecutionContext.global)
       .bindHttp(0, "localhost")
       .withHttpWebSocketApp(service)
@@ -62,7 +61,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock with 
       .map(_.address.getPort)
 
     // Converting a zio.RIO-resource to an cats.IO-resource
-    val runtime = implicitly[zio.Runtime[Clock with Blocking]]
+    val runtime = implicitly[zio.Runtime[Clock]]
     Resource
       .eval(IO.fromFuture(IO(runtime.unsafeRunToFuture(serverResource.allocated))))
       .flatMap { case (port, release) =>

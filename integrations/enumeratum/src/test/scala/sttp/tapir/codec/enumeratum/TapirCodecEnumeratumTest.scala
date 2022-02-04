@@ -6,27 +6,36 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations.description
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
+
   import TapirCodecEnumeratumTest._
 
-  it should "find schema for enumeratum enum entries" in {
+  it should "find schema for enumeratum enum entries and enrich with metadata from annotations" in {
     implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestEnumEntry]].description shouldBe Some("test enum entry")
     implicitly[Schema[TestIntEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestIntEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestIntEnumEntry]].description shouldBe Some("test int enum entry")
     implicitly[Schema[TestLongEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestLongEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestLongEnumEntry]].description shouldBe Some("test long enum entry")
     implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestShortEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestShortEnumEntry]].description shouldBe Some("test short enum entry")
     implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestStringEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestStringEnumEntry]].description shouldBe Some("test string enum entry")
     implicitly[Schema[TestByteEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestByteEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestByteEnumEntry]].description shouldBe Some("test byte enum entry")
     implicitly[Schema[TestCharEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestCharEnumEntry]].isOptional shouldBe false
+    implicitly[Schema[TestCharEnumEntry]].description shouldBe Some("test char enum entry")
   }
 
   it should "find proper validator for enumeratum enum entries" in {
@@ -95,6 +104,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 object TapirCodecEnumeratumTest {
   private val className = this.getClass.getName
 
+  @description("test enum entry")
   sealed trait TestEnumEntry extends EnumEntry
 
   object TestEnumEntry extends Enum[TestEnumEntry] {
@@ -102,9 +112,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestEnumEntry
     case object Value3 extends TestEnumEntry
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntry] = findValues
   }
 
+  @description("test int enum entry")
   sealed abstract class TestIntEnumEntry(val value: Int) extends IntEnumEntry
 
   object TestIntEnumEntry extends IntEnum[TestIntEnumEntry] {
@@ -112,9 +123,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestIntEnumEntry(2)
     case object Value3 extends TestIntEnumEntry(3)
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestIntEnumEntry] = findValues
   }
 
+  @description("test long enum entry")
   sealed abstract class TestLongEnumEntry(val value: Long) extends LongEnumEntry
 
   object TestLongEnumEntry extends LongEnum[TestLongEnumEntry] {
@@ -122,9 +134,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestLongEnumEntry(2L)
     case object Value3 extends TestLongEnumEntry(3L)
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestLongEnumEntry] = findValues
   }
 
+  @description("test short enum entry")
   sealed abstract class TestShortEnumEntry(val value: Short) extends ShortEnumEntry
 
   object TestShortEnumEntry extends ShortEnum[TestShortEnumEntry] {
@@ -132,9 +145,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestShortEnumEntry(2)
     case object Value3 extends TestShortEnumEntry(3)
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestShortEnumEntry] = findValues
   }
 
+  @description("test string enum entry")
   sealed abstract class TestStringEnumEntry(val value: String) extends StringEnumEntry
 
   object TestStringEnumEntry extends StringEnum[TestStringEnumEntry] {
@@ -142,9 +156,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestStringEnumEntry("value-2")
     case object Value3 extends TestStringEnumEntry("value-3")
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestStringEnumEntry] = findValues
   }
 
+  @description("test byte enum entry")
   sealed abstract class TestByteEnumEntry(val value: Byte) extends ByteEnumEntry
 
   object TestByteEnumEntry extends ByteEnum[TestByteEnumEntry] {
@@ -152,9 +167,10 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestByteEnumEntry(2)
     case object Value3 extends TestByteEnumEntry(3)
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestByteEnumEntry] = findValues
   }
 
+  @description("test char enum entry")
   sealed abstract class TestCharEnumEntry(val value: Char) extends CharEnumEntry
 
   object TestCharEnumEntry extends CharEnum[TestCharEnumEntry] {
@@ -162,6 +178,6 @@ object TapirCodecEnumeratumTest {
     case object Value2 extends TestCharEnumEntry('2')
     case object Value3 extends TestCharEnumEntry('3')
 
-    override def values = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestCharEnumEntry] = findValues
   }
 }

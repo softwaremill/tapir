@@ -9,7 +9,7 @@ import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
-import zio.json.{DeriveJsonCodec, JsonEncoder}
+import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonEncoder}
 import zio.json.ast.Json
 
 class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
@@ -18,9 +18,12 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
   case class Item(serialNumber: Long, price: Int)
   case class Order(items: Seq[Item], customer: Customer)
 
-  implicit val customerZioCodec: zio.json.JsonCodec[Customer] = DeriveJsonCodec.gen[Customer]
-  implicit val itemZioCodec: zio.json.JsonCodec[Item] = DeriveJsonCodec.gen[Item]
-  implicit val orderZioCodec: zio.json.JsonCodec[Order] = DeriveJsonCodec.gen[Order]
+  implicit val customerZioEncoder: zio.json.JsonEncoder[Customer] = DeriveJsonEncoder.gen[Customer]
+  implicit val customerZioDecoder: zio.json.JsonDecoder[Customer] = DeriveJsonDecoder.gen[Customer]
+  implicit val itemZioEncoder: zio.json.JsonEncoder[Item] = DeriveJsonEncoder.gen[Item]
+  implicit val itemZioDecoder: zio.json.JsonDecoder[Item] = DeriveJsonDecoder.gen[Item]
+  implicit val orderZioEncoder: zio.json.JsonEncoder[Order] = DeriveJsonEncoder.gen[Order]
+  implicit val orderZioDecoder: zio.json.JsonDecoder[Order] = DeriveJsonDecoder.gen[Order]
 
   val customerCodec: JsonCodec[Customer] = zioCodec[Customer]
 

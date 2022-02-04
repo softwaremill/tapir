@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.20.0-M9"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -66,13 +66,15 @@ convert sttp's `WebSocket` instance into a pipe. This logic is looked up via the
 The required imports are as follows:
 
 ```scala
-import sttp.tapir.client.sttp.ws.akkahttp._ // for akka-streams // for akka-streams
-import sttp.tapir.client.sttp.ws.fs2._      // for fs2      // for fs2
-import sttp.tapir.client.sttp.ws.zio._      // for zio
+import sttp.tapir.client.sttp.ws.akkahttp._ // for akka-streams
+import sttp.tapir.client.sttp.ws.fs2._      // for fs2
+import sttp.tapir.client.sttp.ws.zio._      // for zio 2.x
+import sttp.tapir.client.sttp.ws.zio1._     // for zio 1.x
 ```
 
-No additional dependencies are needed, as both of the above implementations are included in the main interpreter,
-with dependencies on akka-streams, fs2 and zio being marked as optional (hence these are not transitive).
+No additional dependencies are needed (except for zio1, which needs the `tapir-sttp-client-ws-zio1` dependency), as 
+both of the above implementations are included in the main interpreter, with dependencies on akka-streams, fs2 and zio 
+being marked as optional (hence these are not transitive).
 
 ## Scala.JS
 
@@ -80,7 +82,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "0.20.0-M7"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "0.20.0-M9"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 

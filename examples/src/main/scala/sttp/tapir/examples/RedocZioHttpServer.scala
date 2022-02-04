@@ -8,10 +8,10 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.console.{getStrLn, putStrLn}
-import zio.{App, ExitCode, Task, URIO, ZIO}
+import zio.Console.{printLine, readLine}
+import zio.{Task, ZIO, ZIOAppDefault}
 
-object RedocZioHttpServer extends App {
+object RedocZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
 
   val petEndpoint: ZServerEndpoint[Any, Any] =
@@ -25,11 +25,11 @@ object RedocZioHttpServer extends App {
   val redocRoutes: HttpApp[Any, Throwable] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = {
-    putStrLn("Go to: http://localhost:8080/docs") *>
-      putStrLn("Press any key to exit ...") *>
+  override def run = {
+    printLine("Go to: http://localhost:8080/docs") *>
+      printLine("Press any key to exit ...") *>
       Server.start(8080, petRoutes <> redocRoutes).fork.flatMap { fiber =>
-        getStrLn *> fiber.interrupt
+        readLine *> fiber.interrupt
       }
   }.exitCode
 }
