@@ -1,11 +1,12 @@
-import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
+import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
-import java.net.URL
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+
+import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
@@ -139,6 +140,9 @@ lazy val allAggregates = core.projectRefs ++
   redocBundle.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
+  armeriaServer.projectRefs ++
+  armeriaServerCats.projectRefs ++
+  armeriaServerZio.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
   sttpMockServer.projectRefs ++
