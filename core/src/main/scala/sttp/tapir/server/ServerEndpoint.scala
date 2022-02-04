@@ -2,7 +2,10 @@ package sttp.tapir.server
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
+import sttp.tapir.typelevel.ErasureSameAsType
+import sttp.tapir._
+
+import scala.reflect.ClassTag
 
 /** An [[Endpoint]] together with functions implementing the endpoint's security and main logic.
   *
@@ -11,7 +14,7 @@ import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, Endpo
   * @tparam F
   *   The effect type constructor used in the provided server logic.
   */
-abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with EndpointMetaOps {
+abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with EndpointMetaOps { outer =>
 
   /** "Auth": Security input parameter types. */
   type A
@@ -42,6 +45,70 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
     ServerEndpoint(endpoint.info(info), securityLogic, logic)
 
   override protected def showType: String = "ServerEndpoint"
+
+  /** Prepends additional security logic to this endpoint. This is useful when adding security to file/resource-serving endpoints. The
+    * additional security logic should return a `Right(())` to indicate success, or a `Left(E2)` to indicate failure; in this case, the
+    * given error output will be used to create the response.
+    *
+    * The security inputs will become a tuple, containing first `additionalSecurityInput` combined with the current
+    * `endpoint.securityInput`.
+    *
+    * The error output will consist of two variants: either the `securityErrorOutput` (the [[ClassTag]] requirement for `E2` is used to
+    * create the [[oneOfVariant]]). In the absence of sum types, the resulting errors are types as `Any`.
+    *
+    * The security logic is modified so that first `additionalSecurityLogic` is run, followed by the security logic defined so far.
+    *
+    * The type of the value returned by the combined security logic, or the regular logic remains unchanged.
+    *
+    * @tparam A2
+    *   Type of the additional security input.
+    * @tparam E2
+    *   Type of the error output for the security logic.
+    */
+  def prependSecurity[A2, E2: ClassTag: ErasureSameAsType](
+      additionalSecurityInput: EndpointInput[A2],
+      securityErrorOutput: EndpointOutput[E2]
+  )(
+      additionalSecurityLogic: A2 => F[Either[E2, Unit]]
+  ): ServerEndpoint[R, F] = prependSecurity_(additionalSecurityInput, securityErrorOutput)(_ => additionalSecurityLogic)
+
+  /** See [[prependSecurity]]. */
+  def prependSecurityPure[A2, E2: ClassTag: ErasureSameAsType](
+      additionalSecurityInput: EndpointInput[A2],
+      securityErrorOutput: EndpointOutput[E2]
+  )(
+      additionalSecurityLogic: A2 => Either[E2, Unit]
+  ): ServerEndpoint[R, F] = prependSecurity_(additionalSecurityInput, securityErrorOutput)(implicit m => additionalSecurityLogic(_).unit)
+
+  private def prependSecurity_[A2, E2: ClassTag: ErasureSameAsType](
+      additionalSecurityInput: EndpointInput[A2],
+      securityErrorOutput: EndpointOutput[E2]
+  )(
+      additionalSecurityLogic: MonadError[F] => A2 => F[Either[E2, Unit]]
+  ): ServerEndpoint[R, F] =
+    new ServerEndpoint[R, F] {
+      override type A = (A2, outer.A)
+      override type U = outer.U
+      override type I = outer.I
+      override type E = Any
+      override type O = outer.O
+
+      override def endpoint: Endpoint[A, I, E, O, R] =
+        outer.endpoint
+          .prependSecurityIn(additionalSecurityInput)
+          .errorOutVariantsFromCurrent[Any](current => List(oneOfVariant[E2](securityErrorOutput), oneOfDefaultVariant(current)))
+
+      override def securityLogic: MonadError[F] => A => F[Either[E, U]] = implicit m =>
+        a =>
+          additionalSecurityLogic(m)(a._1).flatMap {
+            case Left(e2)  => (Left(e2): Either[E, U]).unit
+            case Right(()) => outer.securityLogic(m)(a._2).asInstanceOf[F[Either[E, U]]] // avoiding .map(identity)
+          }
+
+      // we're widening the `E` type, the logic still will always return `outer.E`, so this cast is safe
+      // instead, we could have written: `implicit m => u => i => outer.logic(m)(u)(i).map(identity)`
+      override def logic: MonadError[F] => U => I => F[Either[E, O]] = outer.logic.asInstanceOf[MonadError[F] => U => I => F[Either[E, O]]]
+    }
 }
 
 object ServerEndpoint {

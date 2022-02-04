@@ -4,6 +4,8 @@ The `tapir-zio` module defines type aliases and extension methods which make it 
 [ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http4s-server` contains an interpreter useful when
 exposing the endpoints using the [http4s](https://http4s.org) server.
 
+The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the `*-zio1` suffix.
+
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala

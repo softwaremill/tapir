@@ -12,7 +12,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.15"
 val scala2_13 = "2.13.8"
-val scala3 = "3.1.0"
+val scala3 = "3.1.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -159,9 +159,11 @@ lazy val allAggregates = core.projectRefs ++
   awsExamples.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
+  sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
+  examples3.projectRefs ++
   documentation.projectRefs ++
   openapiCodegen.projectRefs ++
   clientTestServer.projectRefs ++
@@ -280,10 +282,10 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.0.0-M7")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.0")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.0.0",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.0",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -1140,7 +1142,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
@@ -1164,6 +1166,22 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .dependsOn(core, clientTests % Test)
+
+lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-client-ws-zio1"))
+  .settings(clientTestServerSettings)
+  .settings(
+    name := "tapir-sttp-client-ws-zio1"
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio1" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      )
+    )
+  )
+  .dependsOn(sttpClient, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
   .settings(clientTestServerSettings)
@@ -1249,6 +1267,24 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     sttpMockServer,
     zioJson
+  )
+
+lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-examples3",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .dependsOn(
+    http4sServer,
+    swaggerUiBundle,
+    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355

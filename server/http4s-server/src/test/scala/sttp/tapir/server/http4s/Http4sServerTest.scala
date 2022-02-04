@@ -5,7 +5,6 @@ import cats.syntax.all._
 import cats.effect.unsafe.implicits.global
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.syntax.kleisli._
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.OptionValues
 import sttp.capabilities.WebSockets

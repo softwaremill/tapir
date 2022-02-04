@@ -476,7 +476,7 @@ object EndpointIO {
   }
 
   object Example {
-    def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
+    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
   }
 
   case class Info[T](
@@ -487,7 +487,7 @@ object EndpointIO {
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
-    def example(t: T): Info[T] = example(Example.of(t))
+    def example(value: T): Info[T] = example(Example.of(value))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)

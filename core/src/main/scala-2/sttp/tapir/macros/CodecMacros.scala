@@ -15,7 +15,7 @@ trait CodecMacros {
     *   The type of the enum.
     *
     * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
-    * [[CreateDerivedEnumerationSchema]].
+    * [[CreateDerivedEnumerationCodec]].
     */
   def derivedEnumeration[L, T]: CreateDerivedEnumerationCodec[L, T] = macro CodecEnumerationMacro.derivedEnumeration[L, T]
 }

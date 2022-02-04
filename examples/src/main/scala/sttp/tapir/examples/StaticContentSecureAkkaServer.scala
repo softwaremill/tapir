@@ -5,10 +5,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.model.StatusCode
-import sttp.monad.FutureMonad
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import sttp.tapir.static.StaticErrorOutput
 
 import java.nio.file.{Files, Path, StandardOpenOption}
 import scala.concurrent.duration.DurationInt
@@ -22,14 +20,15 @@ object StaticContentSecureAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  // defining the endpoint
-  val fileEndpoint = filesGetEndpoint
-    .securityIn("secure".and(auth.bearer[String]()))
-    .serverSecurityLogicPure(token => if (token.startsWith("secret")) Right(token) else Left(StaticErrorOutput.NotFound))
-    .serverLogic(_ => sttp.tapir.static.Files.get[Future](exampleDirectory.toFile.getAbsolutePath)(new FutureMonad))
+  // defining the endpoints
+  val secureFileEndpoints = filesServerEndpoints[Future]("secure")(exampleDirectory.toFile.getAbsolutePath)
+    .map(_.prependSecurityPure(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
+      // Right means success, Left - an error, here mapped to a constant status code
+      if (token.startsWith("secret")) Right(()) else Left(())
+    })
 
   // starting the server
-  val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoint)
+  val route: Route = AkkaHttpServerInterpreter().toRoute(secureFileEndpoints)
 
   val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
     // testing
@@ -41,7 +40,7 @@ object StaticContentSecureAkkaServer extends App {
       .response(asStringAlways)
       .send(backend)
 
-    assert(response1.code == StatusCode.NotFound)
+    assert(response1.code == StatusCode.Forbidden)
 
     val response2 = basicRequest
       .get(uri"http://localhost:8080/secure/f1")
