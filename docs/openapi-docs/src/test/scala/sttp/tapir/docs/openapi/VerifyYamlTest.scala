@@ -22,7 +22,7 @@ import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Multipart
-import sttp.tapir.tests.data.{FruitAmount, Person}
+import sttp.tapir.tests.data.{FruitAmount, Person, Problem}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
@@ -39,6 +39,22 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml =
       OpenAPIDocsInterpreter().toOpenAPI(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when there are external references") {
+    val external_reference: PublicEndpoint[Unit, Problem, Unit, Any] =
+      endpoint.errorOut(jsonBody[Problem])
+
+    val expectedYaml = load("expected_external.yml")
+
+    val actualYaml =
+      OpenAPIDocsInterpreter().toOpenAPI(List(external_reference), Info("Fruits", "1.0")).toYaml
+
+    println(actualYaml)
+
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

@@ -5,6 +5,6 @@ import sttp.tapir.{Schema => TSchema}
 
 private[schema] class NameToSchemaReference(nameToKey: Map[TSchema.SName, ObjectKey]) {
   def map(name: TSchema.SName): Reference = {
-    Reference.to("#/components/schemas/", nameToKey(name))
+    nameToKey.get(name).fold(Reference.to(name.fullName, ""))(key => Reference.to("#/components/schemas/", key))
   }
 }
