@@ -170,7 +170,7 @@ lazy val allAggregates = core.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
   openapiCodegenSbt.projectRefs ++
-  cli.projectRefs ++
+  openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs
 
@@ -1328,9 +1328,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
-// other
-
-lazy val cli: ProjectMatrix = (projectMatrix in file("cli"))
+lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions)
@@ -1345,6 +1343,7 @@ lazy val cli: ProjectMatrix = (projectMatrix in file("cli"))
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
+  // other
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
