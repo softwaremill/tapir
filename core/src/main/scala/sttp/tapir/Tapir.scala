@@ -274,6 +274,18 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfMapping[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariant(code, output)
 
+  private val primitiveToBoxedClasses = Map[Class[_], Class[_]](
+    classOf[Byte] -> classOf[java.lang.Byte],
+    classOf[Short] -> classOf[java.lang.Short],
+    classOf[Char] -> classOf[java.lang.Character],
+    classOf[Int] -> classOf[java.lang.Integer],
+    classOf[Long] -> classOf[java.lang.Long],
+    classOf[Float] -> classOf[java.lang.Float],
+    classOf[Double] -> classOf[java.lang.Double],
+    classOf[Boolean] -> classOf[java.lang.Boolean],
+    java.lang.Void.TYPE -> classOf[scala.runtime.BoxedUnit]
+  )
+
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure.
     *
@@ -282,7 +294,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantClassMatcher[T](
       output: EndpointOutput[T],
       runtimeClass: Class[_]
-  ): OneOfVariant[T] = OneOfVariant(output, { (a: Any) => runtimeClass.isInstance(a) })
+  ): OneOfVariant[T] = {
+    // when used with a primitive type or Unit, the class tag will correspond to the primitive type, but at runtime
+    // we'll get boxed values
+    val rc = primitiveToBoxedClasses.getOrElse(runtimeClass, runtimeClass)
+    OneOfVariant(output, { (a: Any) => rc.isInstance(a) })
+  }
 
   /** Create a one-of-variant which uses `output` i the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure. Adds a fixed status-code output with the given value.

@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.0-M9"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -38,12 +38,15 @@ Moreover, model generation can be configured - see below for more details on `Op
 parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
 `SwaggerInterpreter`.
 
+The swagger server endpoints can be secured using `ServerLogic.prependSecurity`, see [server logic](../server/logic.md)
+for details.
+
 ### Using Redoc
 
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.0-M9"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.

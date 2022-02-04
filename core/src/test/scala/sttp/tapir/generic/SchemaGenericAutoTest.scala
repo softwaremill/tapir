@@ -1,9 +1,11 @@
 package sttp.tapir.generic
 
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations._
+import sttp.tapir.Schema.{SName, schemaForBoolean}
+import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
@@ -248,12 +250,51 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
+  it should "find schema for subtypes containing parent metadata from annotations" in {
+    val schemaType = implicitly[Schema[Pet]].schemaType
+
+    val expectedCatSchema = Schema(
+      SProduct[Cat](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
+          field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Cat"))
+    )
+
+    val expectedDogSchema = Schema(
+      SProduct[Dog](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Dog"))
+    )
+
+    val expectedHamsterSchema = Schema(
+      SProduct[Hamster](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Hamster"))
+    )
+
+    val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
+
+    List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
+      .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
+  }
 }
 
 object SchemaGenericAutoTest {
   private[generic] val stringSchema = implicitly[Schema[String]]
   private[generic] val intSchema = implicitly[Schema[Int]]
   private[generic] val longSchema = implicitly[Schema[Long]]
+  private[generic] val booleanSchema = implicitly[Schema[Boolean]]
 
   val expectedDSchema: SProduct[D] =
     SProduct[D](List(field(FieldName("someFieldName"), stringSchema)))
