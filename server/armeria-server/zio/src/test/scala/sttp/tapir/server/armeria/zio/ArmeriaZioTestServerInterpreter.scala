@@ -3,9 +3,7 @@ package sttp.tapir.server.armeria.zio
 import _root_.zio.{Runtime, Task}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import com.linecorp.armeria.common.logging.LogLevel
 import com.linecorp.armeria.server.Server
-import com.linecorp.armeria.server.logging.{AccessLogWriter, LoggingService}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria.TapirService
@@ -42,7 +40,7 @@ class ArmeriaZioTestServerInterpreter extends TestServerInterpreter[Task, ZioStr
           .maxRequestLength(0)
         routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
         val server = serverBuilder.build()
-        server.start().thenApply(_ => server)
+        server.start().thenApply[Server](_ => server)
       }
     )
     Resource.make(bind)(binding => IO.fromCompletableFuture(IO(binding.stop())).void).map(_.activeLocalPort())

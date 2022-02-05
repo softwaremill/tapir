@@ -3,8 +3,6 @@ package sttp.tapir.server.armeria.cats
 import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
-import com.linecorp.armeria.common.logging.LogLevel
-import com.linecorp.armeria.server.logging.{AccessLogWriter, LoggingService}
 import com.linecorp.armeria.server.{HttpServiceWithRoutes, Server}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
@@ -43,7 +41,7 @@ class ArmeriaCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
           .maxRequestLength(0)
         routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
         val server = serverBuilder.build()
-        server.start().thenApply(_ => server)
+        server.start().thenApply[Server](_ => server)
       }
     )
     Resource.make(bind)(binding => IO.fromCompletableFuture(IO(binding.stop())).void).map(_.activeLocalPort())

@@ -2,8 +2,6 @@ package sttp.tapir.server.armeria
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import com.linecorp.armeria.common.logging.LogLevel
-import com.linecorp.armeria.server.logging.{AccessLogWriter, LoggingService}
 import com.linecorp.armeria.server.{HttpServiceWithRoutes, Server}
 import scala.concurrent.Future
 import sttp.capabilities.armeria.ArmeriaStreams
@@ -38,7 +36,7 @@ class ArmeriaTestServerInterpreter() extends TestServerInterpreter[Future, Armer
           .maxRequestLength(0)
         routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
         val server = serverBuilder.build()
-        server.start().thenApply(_ => server)
+        server.start().thenApply[Server](_ => server)
       }
     )
     Resource.make(bind)(binding => IO.fromCompletableFuture(IO(binding.stop())).void).map(_.activeLocalPort())
