@@ -1,7 +1,8 @@
 package sttp.tapir.server.armeria
 
-import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, RequestHeaders, ResponseHeaders, MediaType => ArmeriaMediaType}
+import com.linecorp.armeria.common.{HttpHeaders, ResponseHeaders, MediaType => ArmeriaMediaType}
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import sttp.model.{Header, MediaType, StatusCode}
 
 private[armeria] object HeaderMapping {

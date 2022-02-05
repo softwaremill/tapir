@@ -825,6 +825,7 @@ lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-s
     name := "tapir-armeria-server",
     libraryDependencies ++= Seq(
       "com.linecorp.armeria" % "armeria" % Versions.armeria,
+      "org.scala-lang.modules" %% "scala-java8-compat" % Versions.scalaJava8Compat,
       "com.softwaremill.sttp.shared" %% "armeria" % Versions.sttpShared
     )
   )

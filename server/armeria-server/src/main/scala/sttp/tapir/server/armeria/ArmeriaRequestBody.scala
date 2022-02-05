@@ -6,8 +6,8 @@ import com.linecorp.armeria.common.{HttpData, HttpRequest}
 import com.linecorp.armeria.server.ServiceRequestContext
 import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
+import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.FutureConverters.CompletionStageOps
 import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -33,28 +33,28 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
 
   override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = fromFuture(bodyType match {
     case RawBodyType.StringBody(_) =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).asScala
+      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
     case RawBodyType.ByteArrayBody =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).asScala
+      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
     case RawBodyType.ByteBufferBody =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().byteBuf().nioBuffer())).asScala
+      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().byteBuf().nioBuffer())).toScala
     case RawBodyType.InputStreamBody =>
       request
         .aggregate()
         .thenApply[RawValue[R]](agg => RawValue(new ByteArrayInputStream(agg.content().array())))
-        .asScala
+        .toScala
     case RawBodyType.FileBody =>
       val bodyStream = request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]]
       for {
         file <- serverOptions.createFile(ctx)
-        _ <- StreamMessages.writeTo(bodyStream, file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).asScala
+        _ <- StreamMessages.writeTo(bodyStream, file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
         fileRange = FileRange(file)
       } yield RawValue(fileRange, Seq(fileRange))
     case m: RawBodyType.MultipartBody =>
       Multipart
         .from(request)
         .aggregate()
-        .asScala
+        .toScala
         .flatMap(multipart => {
           val rawParts = multipart
             .bodyParts()
@@ -78,7 +78,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.FileBody =>
         for {
           file <- serverOptions.createFile(ctx)
-          _ <- StreamMessages.writeTo(StreamMessage.of(body), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).asScala
+          _ <- StreamMessages.writeTo(StreamMessage.of(Array(body): _*), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
           fileRange = FileRange(file)
         } yield RawValue(fileRange, Seq(fileRange))
       case RawBodyType.MultipartBody(_, _) =>

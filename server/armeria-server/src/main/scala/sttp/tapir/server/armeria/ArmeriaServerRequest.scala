@@ -3,9 +3,10 @@ package sttp.tapir.server.armeria
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.server.ServiceRequestContext
 import java.net.InetSocketAddress
-import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.collection.JavaConverters._
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import scala.collection.immutable.Seq
 
 private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) extends ServerRequest {
   private lazy val request: HttpRequest = ctx.request
@@ -55,8 +56,8 @@ private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) ex
     params
       .names()
       .forEach(key => {
-        val list = params.getAll(key).asScala.toSeq
-        builder.addOne((key, list))
+        val list = params.getAll(key).asScala.toList
+        builder += ((key, list))
       })
 
     QueryParams(builder.result())

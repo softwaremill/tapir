@@ -1,13 +1,7 @@
 package sttp.tapir.server.armeria
 
 import com.linecorp.armeria.common.HttpData
-import com.linecorp.armeria.common.stream.{
-  AbortedStreamException,
-  CancelledSubscriptionException,
-  NoopSubscriber,
-  StreamMessage,
-  SubscriptionOption
-}
+import com.linecorp.armeria.common.stream._
 import com.linecorp.armeria.common.util.Exceptions
 import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.{containsNotifyCancellation, containsWithPooledObjects}
 import com.linecorp.armeria.internal.common.stream.NoopSubscription
@@ -95,7 +89,7 @@ private final class PathStreamMessage(
       if (fileChannel.size == 0) {
         subscriber.onSubscribe(NoopSubscription.get)
         if (completionFuture.isCompletedExceptionally)
-          completionFuture.handle((_: Void, cause: Throwable) => {
+          completionFuture.handle[Unit]((_: Void, cause: Throwable) => {
             subscriber.onError(Exceptions.peel(cause))
           })
         else {
@@ -117,7 +111,7 @@ private final class PathStreamMessage(
           fileChannel.close()
         } catch {
           case e: IOException =>
-            logger.warn("Unexpected exception while closing {}.", fileChannel, e)
+            logger.warn("Unexpected exception while closing {}.", Array(fileChannel, e): _*)
         }
       }
     }
@@ -267,7 +261,7 @@ private final class PathStreamMessage(
           fileChannel.close()
         } catch {
           case cause: IOException =>
-            logger.warn("Unexpected exception while closing {}.", fileChannel, cause)
+            logger.warn("Unexpected exception while closing {}.", Array(fileChannel, cause): _*)
         }
       }
     }
