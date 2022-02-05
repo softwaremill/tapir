@@ -63,9 +63,9 @@ object ModifySchemaMacro {
     }
 
     c.Expr[List[String]](q"${pathEls.collect {
-      case TermPathElement(c) => c.decodedName.toString
-      case FunctorPathElement(functor, method, _ @_*) =>
-        method.decodedName.toString
-    }}")
+        case TermPathElement(c) => c.decodedName.toString
+        case FunctorPathElement(functor, method, _ @_*) =>
+          method.decodedName.toString
+      }}")
   }
 }

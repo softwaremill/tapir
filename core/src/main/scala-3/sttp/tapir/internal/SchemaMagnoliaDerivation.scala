@@ -73,10 +73,15 @@ trait SchemaMagnoliaDerivation {
         withCache(ctx.typeInfo, annotations) {
           val subtypesByName =
             ctx.subtypes.toList
-              .map(s => typeNameToSchemaName(s.typeInfo, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass.asInstanceOf[Typeclass[T]])
+              .map(s =>
+                typeNameToSchemaName(s.typeInfo, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass
+                  .asInstanceOf[Typeclass[T]]
+              )
               .toListMap
           val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
-            ctx.choose(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeInfo, mergeAnnotations(v.annotations, v.inheritedAnnotations))) }
+            ctx.choose(t) { v =>
+              subtypesByName.get(typeNameToSchemaName(v.typeInfo, mergeAnnotations(v.annotations, v.inheritedAnnotations)))
+            }
           )
           val coproduct = genericDerivationConfig.discriminator match {
             case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
@@ -86,7 +91,6 @@ trait SchemaMagnoliaDerivation {
           Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, annotations)))
         }
       }
-
 
       private def mergeAnnotations[T](primary: Seq[Any], inherited: Seq[Any]): Seq[Any] =
         primary ++ inherited.distinct.filter {
