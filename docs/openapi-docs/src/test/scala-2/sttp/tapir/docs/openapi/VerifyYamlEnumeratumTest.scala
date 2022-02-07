@@ -53,6 +53,25 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  // #1800
+  test("ignore enum other default") {
+    import sttp.tapir.codec.enumeratum._
+    import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
+
+    val expectedYaml = load("enum/expected_enumeratum_enum_ignore_other_default.yml")
+    val ep1 = endpoint
+      .in("fruit-by-type1").in(query[Enumeratum.FruitType]("type1").default(PEAR))
+      .out(jsonBody[Enumeratum.FruitWithEnum])
+    val ep2 = endpoint
+      .in("fruit-by-type2").in(query[Enumeratum.FruitType]("type2").default(APPLE))
+      .out(jsonBody[Enumeratum.FruitWithEnum])
+
+    val actualYaml =
+      OpenAPIDocsInterpreter().toOpenAPI(List(ep1, ep2), Info("Fruits", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlEnumeratumTest {
