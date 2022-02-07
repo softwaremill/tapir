@@ -3,7 +3,7 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.annotations.description
+import sttp.tapir.Schema.annotations.{default, description}
 import sttp.tapir._
 import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum
 import sttp.tapir.generic.auto._
@@ -72,6 +72,22 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  // #1800
+  test("add enum default in request body") {
+    import sttp.tapir.codec.enumeratum._
+    import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
+
+    val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body.yml")
+    val ep = endpoint
+      .post.in(jsonBody[Enumeratum.FruitQuery])
+      .out(jsonBody[Enumeratum.FruitWithEnum])
+
+    val actualYaml =
+      OpenAPIDocsInterpreter().toOpenAPI(ep, Info("Fruits", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlEnumeratumTest {
@@ -88,6 +104,8 @@ object VerifyYamlEnumeratumTest {
       case object PEAR extends FruitType
       override def values: scala.collection.immutable.IndexedSeq[FruitType] = findValues
     }
+
+    case class FruitQuery(@default(FruitType.PEAR) fruitType: FruitType)
 
     @description("* 1 - One\n* 2 - Two\n* 3 - Three")
     sealed abstract class MyNumber(val value: Int) extends IntEnumEntry
