@@ -79,8 +79,16 @@ trait SchemaMagnoliaDerivation {
         ctx.split(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, mergeAnnotations(v.annotations, v.inheritedAnnotations))) }
       )
       val coproduct = genericDerivationConfig.discriminator match {
-        case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-        case None    => baseCoproduct
+        case Some(d) =>
+          val discriminatorMapping: Map[String, SRef[_]] =
+            ctx.subtypes.map { s =>
+              genericDerivationConfig.toEncodedSubtypeName(s.typeName) -> SRef(typeNameToSchemaName(s.typeName, s.annotations))
+            }.toMap
+          baseCoproduct.addDiscriminatorField(
+            FieldName(d),
+            discriminatorMapping = discriminatorMapping
+          )
+        case None => baseCoproduct
       }
       Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeName, annotations)))
     }

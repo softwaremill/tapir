@@ -247,7 +247,15 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       )
     )
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
+    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "Organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "Person" -> SRef(SName("sttp.tapir.generic.Person"))
+        )
+      )
+    )
   }
 
   it should "find schema for subtypes containing parent metadata from annotations" in {
