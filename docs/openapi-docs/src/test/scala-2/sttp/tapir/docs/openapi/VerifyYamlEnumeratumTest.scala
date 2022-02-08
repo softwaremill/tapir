@@ -76,11 +76,25 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   // #1800
   test("add enum default in request body") {
     import sttp.tapir.codec.enumeratum._
-    import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
 
     val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body.yml")
     val ep = endpoint
       .post.in(jsonBody[Enumeratum.FruitQuery])
+      .out(jsonBody[Enumeratum.FruitWithEnum])
+
+    val actualYaml =
+      OpenAPIDocsInterpreter().toOpenAPI(ep, Info("Fruits", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  // #1800
+  test("add enum default in request body with given encoded") {
+    import sttp.tapir.codec.enumeratum._
+
+    val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body_with_given_encoded.yml")
+    val ep = endpoint
+      .post.in(jsonBody[Enumeratum.FruitQueryWithEncoded])
       .out(jsonBody[Enumeratum.FruitWithEnum])
 
     val actualYaml =
@@ -106,6 +120,7 @@ object VerifyYamlEnumeratumTest {
     }
 
     case class FruitQuery(@default(FruitType.PEAR) fruitType: FruitType)
+    case class FruitQueryWithEncoded(@default(FruitType.PEAR, encoded=Some(FruitType.PEAR)) fruitType: FruitType)
 
     @description("* 1 - One\n* 2 - Two\n* 3 - Three")
     sealed abstract class MyNumber(val value: Int) extends IntEnumEntry
