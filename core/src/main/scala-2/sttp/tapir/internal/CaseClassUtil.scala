@@ -7,7 +7,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
 
   val t: Type = weakTypeOf[T]
   if (!t.typeSymbol.isClass || !t.typeSymbol.asClass.isCaseClass) {
-    c.error(c.enclosingPosition, s"${name.capitalize} can only be generated for a case class, but got: $t.")
+    c.error(c.enclosingPosition, s"${name.capitalize} can only be generated for a case class, but got: ${t.typeSymbol.fullName}.")
   }
 
   lazy val fields: List[Symbol] = t.decls
@@ -18,7 +18,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     .paramLists
     .head
 
-  private lazy val companion: Ident = Ident(TermName(t.typeSymbol.name.decodedName.toString))
+  lazy val companion: Ident = Ident(TermName(t.typeSymbol.name.decodedName.toString))
 
   lazy val instanceFromValues: Tree = if (fields.size == 1) {
     q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
@@ -30,6 +30,24 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
 
   lazy val classSymbol: ClassSymbol = t.typeSymbol.asClass
   lazy val className: TermName = classSymbol.asType.name.toTermName
+
+  lazy val isValueClass: Boolean = {
+    import definitions._
+
+    val primitives = Set(
+      DoubleTpe,
+      FloatTpe,
+      ShortTpe,
+      ByteTpe,
+      IntTpe,
+      LongTpe,
+      CharTpe,
+      BooleanTpe,
+      UnitTpe
+    )
+
+    t <:< AnyValTpe && !primitives.exists(_ =:= t)
+  }
 
   def annotated(field: Symbol, annotationType: c.Type): Boolean =
     findAnnotation(field, annotationType).isDefined
