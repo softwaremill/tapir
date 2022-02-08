@@ -55,11 +55,11 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("ignore enum other default") {
+  test("use enum default one in many") {
     import sttp.tapir.codec.enumeratum._
     import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
 
-    val expectedYaml = load("enum/expected_enumeratum_enum_ignore_other_default.yml")
+    val expectedYaml = load("enum/expected_enumeratum_enum_default_one_in_many.yml")
     val ep1 = endpoint
       .in("fruit-by-type1").in(query[Enumeratum.FruitType]("type1").default(PEAR))
       .out(jsonBody[Enumeratum.FruitWithEnum])
