@@ -1,11 +1,11 @@
-openapi: 3.0.3
+openapi: '3.0.3'
 info:
-  title: Fruits
+  title: 'Fruits'
   version: '1.0'
 paths:
   /:
     get:
-      operationId: getRoot
+      operationId: 'getRoot'
       responses:
         '200':
           description: ''
@@ -14,4 +14,4 @@ paths:
           content:
             application/json:
               schema:
-                $ref: https://example.com/models/model.yaml#/Problem
+                $ref: 'https://example.com/models/model.yaml#/Problem'

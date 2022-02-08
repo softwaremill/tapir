@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi
 
 import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.yaml.Printer.StringStyle
 import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -52,7 +53,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("expected_external.yml")
 
     val actualYaml =
-      OpenAPIDocsInterpreter().toOpenAPI(List(external_reference), Info("Fruits", "1.0")).toYaml
+      OpenAPIDocsInterpreter().toOpenAPI(List(external_reference), Info("Fruits", "1.0")).toYaml(StringStyle.SingleQuoted)
 
     val actualYamlNoIndent = noIndentation(actualYaml)
 
