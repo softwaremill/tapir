@@ -8,7 +8,8 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   val tpe = TypeRepr.of[T]
   val symbol = tpe.typeSymbol
 
-  if !symbol.flags.is(Flags.Case) then report.throwError(s"Form codec can only be derived for case classes, but got: ${summon[Type[T]]}")
+  if !symbol.flags.is(Flags.Case) then
+    report.throwError(s"CaseClass can be instantiated only for case classes, but got: ${summon[Type[T]]}")
 
   def name = symbol.name
 

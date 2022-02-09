@@ -12,8 +12,26 @@ object CodecValueClassMacro {
 
     val util = new CaseClassUtil[c.type, T](c, "value class codec")
 
-    if (!util.isValueClass) {
-      c.abort(c.enclosingPosition, s"Can only derive codec for value class.")
+    val isValueClass: Boolean = {
+      import definitions._
+
+      val primitives = Set(
+        DoubleTpe,
+        FloatTpe,
+        ShortTpe,
+        ByteTpe,
+        IntTpe,
+        LongTpe,
+        CharTpe,
+        BooleanTpe,
+        UnitTpe
+      )
+
+      util.t <:< AnyValTpe && !primitives.exists(_ =:= util.t)
+    }
+
+    if (!isValueClass) {
+      c.abort(c.enclosingPosition, "Can only derive codec for value class.")
     } else {
       val field = util.fields.head
       val baseCodec = c.typecheck(
