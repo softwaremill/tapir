@@ -12,6 +12,12 @@ class ValueClassCodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "derive codec for value classes" in {
     compare(
+      derived = implicitly[Codec[String, DoubleV, TextPlain]],
+      toEnc = new DoubleV(1d),
+      toDec = "1",
+      expected = Codec.double.map(v => new DoubleV(v))(_.v)
+    )
+    compare(
       derived = implicitly[Codec[String, StringV, TextPlain]],
       toEnc = StringV("text"),
       toDec = "text",
@@ -50,6 +56,7 @@ class ValueClassCodecDerivationTest extends AnyFlatSpec with Matchers {
 
 }
 
+class DoubleV(val v: Double) extends AnyVal
 case class StringV(v: String) extends AnyVal
 case class ByteV(v: Byte) extends AnyVal
 case class IntV(v: Int) extends AnyVal

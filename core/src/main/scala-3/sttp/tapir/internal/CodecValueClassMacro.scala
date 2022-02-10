@@ -19,7 +19,7 @@ object CodecValueClassMacro {
       report.errorAndAbort(s"Can only derive codec for value class.")
     }
 
-    val field = tpe.typeSymbol.caseFields.head
+    val field = tpe.typeSymbol.declaredFields.head
     val fieldTpe = tpe.memberType(field)
 
     val baseCodec = fieldTpe.asType match
