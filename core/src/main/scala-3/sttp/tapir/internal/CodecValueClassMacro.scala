@@ -22,14 +22,6 @@ object CodecValueClassMacro {
     val field = tpe.typeSymbol.declaredFields.head
     val fieldTpe = tpe.memberType(field)
 
-    val baseCodec = fieldTpe.asType match
-      case '[f] =>
-        Expr.summon[Codec[String, f, TextPlain]].getOrElse {
-          report.errorAndAbort(
-            s"Cannot summon codec for value class ${tpe.show} wrapping ${fieldTpe.show}."
-          )
-        }
-
     def decodeBody(term: Term): Expr[T] = Apply(Select.unique(New(Inferred(tpe)), "<init>"), List(term)).asExprOf[T]
 
     def decode[F: Type]: Expr[F => T] = '{ (f: F) => ${ decodeBody('{ f }.asTerm) } }
@@ -40,6 +32,13 @@ object CodecValueClassMacro {
 
     fieldTpe.asType match
       case '[f] =>
+
+        val baseCodec = Expr.summon[Codec[String, f, TextPlain]].getOrElse {
+          report.errorAndAbort(
+            s"Cannot summon codec for value class ${tpe.show} wrapping ${fieldTpe.show}."
+          )
+        }
+
         val dec = decode[f]
         val enc = encode[f]
 

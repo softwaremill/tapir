@@ -17,13 +17,12 @@ object CodecValueClassMacro {
       tpe.typeSymbol.isClass && tpe <:< AnyValTpe && !ScalaPrimitiveValueClasses.contains(tpe.typeSymbol.asClass)
     }
 
-    val constructor = tpe.decls.collectFirst { case m: MethodSymbol if m.isPrimaryConstructor => m }
-
-    val fields = constructor.get.paramLists.head
-
     if (!isValueClass) {
       c.abort(c.enclosingPosition, "Can only derive codec for value class.")
     } else {
+      val constructor = tpe.decls.collectFirst { case m: MethodSymbol if m.isPrimaryConstructor => m }
+      val fields = constructor.get.paramLists.head
+
       val field = fields.head
       val baseCodec = c.typecheck(
         q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[String, ${field.typeSignature}, _root_.sttp.tapir.CodecFormat.TextPlain]]"
