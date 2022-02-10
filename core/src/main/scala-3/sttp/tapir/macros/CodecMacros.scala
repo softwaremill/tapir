@@ -39,5 +39,5 @@ trait CodecMacros {
   }
 
   /** Creates a codec for value class based on codecs defined in `Codec` companion */
-  inline def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = CodecValueClassMacro.derivedValueClass[T]
+  implicit inline def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = CodecValueClassMacro.derivedValueClass[T]
 }

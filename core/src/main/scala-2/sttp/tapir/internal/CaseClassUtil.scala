@@ -31,24 +31,6 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
   lazy val classSymbol: ClassSymbol = t.typeSymbol.asClass
   lazy val className: TermName = classSymbol.asType.name.toTermName
 
-  lazy val isValueClass: Boolean = {
-    import definitions._
-
-    val primitives = Set(
-      DoubleTpe,
-      FloatTpe,
-      ShortTpe,
-      ByteTpe,
-      IntTpe,
-      LongTpe,
-      CharTpe,
-      BooleanTpe,
-      UnitTpe
-    )
-
-    t <:< AnyValTpe && !primitives.exists(_ =:= t)
-  }
-
   def annotated(field: Symbol, annotationType: c.Type): Boolean =
     findAnnotation(field, annotationType).isDefined
 

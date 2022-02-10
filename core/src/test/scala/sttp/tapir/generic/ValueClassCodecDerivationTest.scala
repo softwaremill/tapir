@@ -12,15 +12,25 @@ class ValueClassCodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "derive codec for value classes" in {
     compare(
-      derived = Codec.derivedValueClass[StringV],
+      derived = implicitly[Codec[String, StringV, TextPlain]],
       toEnc = StringV("text"),
       toDec = "text",
       expected = Codec.string.map(StringV.apply(_))(_.v)
     )
-    compare(derived = Codec.derivedValueClass[ByteV], toEnc = ByteV(1), toDec = "1", expected = Codec.byte.map(ByteV.apply(_))(_.v))
-    compare(derived = Codec.derivedValueClass[IntV], toEnc = IntV(1), toDec = "1", expected = Codec.int.map(IntV.apply(_))(_.v))
     compare(
-      derived = Codec.derivedValueClass[BooleanV],
+      derived = implicitly[Codec[String, ByteV, TextPlain]],
+      toEnc = ByteV(1),
+      toDec = "1",
+      expected = Codec.byte.map(ByteV.apply(_))(_.v)
+    )
+    compare(
+      derived = implicitly[Codec[String, IntV, TextPlain]],
+      toEnc = IntV(1),
+      toDec = "1",
+      expected = Codec.int.map(IntV.apply(_))(_.v)
+    )
+    compare(
+      derived = implicitly[Codec[String, BooleanV, TextPlain]],
       toEnc = BooleanV(true),
       toDec = "true",
       expected = Codec.boolean.map(BooleanV.apply(_))(_.v)

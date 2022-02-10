@@ -16,7 +16,7 @@ object CodecValueClassMacro {
     val isValueClass = tpe.baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
 
     if (!isValueClass) {
-      report.errorAndAbort(s"Can only derive codec for value class / opaque types.")
+      report.errorAndAbort(s"Can only derive codec for value class.")
     }
 
     val field = tpe.typeSymbol.caseFields.head

@@ -21,7 +21,7 @@ trait CodecMacros {
   def derivedEnumeration[L, T]: CreateDerivedEnumerationCodec[L, T] = macro CodecEnumerationMacro.derivedEnumeration[L, T]
 
   /** Creates a codec for value class based on codecs defined in `Codec` companion */
-  def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = macro CodecValueClassMacro.derivedValueClass[T]
+  implicit def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = macro CodecValueClassMacro.derivedValueClass[T]
 }
 
 class CreateDerivedEnumerationCodec[L, T](validator: Validator.Enumeration[T]) {
