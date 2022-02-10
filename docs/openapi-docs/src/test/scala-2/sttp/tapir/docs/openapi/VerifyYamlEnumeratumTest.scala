@@ -74,7 +74,7 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("add enum default in request body") {
+  test("ignore enum default in request body") {
     import sttp.tapir.codec.enumeratum._
 
     val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body.yml")
