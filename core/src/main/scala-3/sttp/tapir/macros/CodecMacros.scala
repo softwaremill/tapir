@@ -1,7 +1,9 @@
 package sttp.tapir.macros
 
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.{DecodeResult, Schema}
+import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.{DecodeResult, Schema, Codec}
+import sttp.tapir.internal.CodecValueClassMacro
 
 trait CodecMacros {
 
@@ -35,4 +37,7 @@ trait CodecMacros {
       )(encode)
       .schema(s)
   }
+
+  /** Creates a codec for value class based on codecs defined in `Codec` companion */
+  implicit inline def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = CodecValueClassMacro.derivedValueClass[T]
 }
