@@ -26,7 +26,7 @@ object VertxZioServerOptions {
     CustomInterceptors(
       createOptions = (ci: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
-          Defaults.createTempFile().getParentFile.getAbsoluteFile,
+          VertxServerOptions.uploadDirectory(),
           file => Task[Unit](Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

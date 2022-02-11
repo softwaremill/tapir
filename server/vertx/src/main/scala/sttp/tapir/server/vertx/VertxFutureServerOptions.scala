@@ -36,7 +36,7 @@ object VertxFutureServerOptions {
     CustomInterceptors(
       createOptions = (ci: CustomInterceptors[Future, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
-          Defaults.createTempFile().getParentFile.getAbsoluteFile,
+          VertxServerOptions.uploadDirectory(),
           defaultDeleteFile,
           ci.interceptors,
           None
