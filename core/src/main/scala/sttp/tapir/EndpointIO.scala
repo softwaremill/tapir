@@ -79,7 +79,10 @@ object EndpointTransput {
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
     def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
-    def default(d: T): ThisType[T] = copyWith(codec.schema(_.default(d, Some(codec.encode(d)))), info)
+    def default(d: T, encoded: Option[Any] = None): ThisType[T] = {
+      val e = Some(encoded.getOrElse(codec.encode(d)))
+      copyWith(codec.schema(_.default(d, e)), info)
+    }
     def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
