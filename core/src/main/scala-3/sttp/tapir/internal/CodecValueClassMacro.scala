@@ -32,7 +32,6 @@ object CodecValueClassMacro {
 
     fieldTpe.asType match
       case '[f] =>
-
         val baseCodec = Expr.summon[Codec[String, f, TextPlain]].getOrElse {
           report.errorAndAbort(
             s"Cannot summon codec for value class ${tpe.show} wrapping ${fieldTpe.show}."
