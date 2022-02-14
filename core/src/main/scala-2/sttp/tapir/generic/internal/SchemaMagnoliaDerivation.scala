@@ -82,7 +82,8 @@ trait SchemaMagnoliaDerivation {
         case Some(d) =>
           val discriminatorMapping: Map[String, SRef[_]] =
             ctx.subtypes.map { s =>
-              genericDerivationConfig.toEncodedSubtypeName(s.typeName) -> SRef(typeNameToSchemaName(s.typeName, s.annotations))
+              val schemaName = typeNameToSchemaName(s.typeName, s.annotations)
+              genericDerivationConfig.toEncodedSubtypeName(schemaName) -> SRef(schemaName)
             }.toMap
           baseCoproduct.addDiscriminatorField(
             FieldName(d),
