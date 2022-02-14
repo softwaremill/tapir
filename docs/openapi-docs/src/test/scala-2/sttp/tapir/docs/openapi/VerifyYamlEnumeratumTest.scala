@@ -12,7 +12,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 
 class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
-  test("use enumeratum validator for array elements") {
+  test("should use enumeratum validator for array elements") {
     import sttp.tapir.codec.enumeratum._
 
     val expectedYaml = load("validator/expected_valid_enumeratum.yml")
@@ -26,7 +26,7 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("add metadata from annotations on enumeratum") {
+  test("should add metadata from annotations on enumeratum") {
     import sttp.tapir.codec.enumeratum._
     val expectedYaml = load("validator/expected_valid_enumeratum_with_metadata.yml")
 
@@ -39,7 +39,7 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("add enum default") {
+  test("should add enum default") {
     import sttp.tapir.codec.enumeratum._
     import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
 
@@ -55,11 +55,11 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("use enum default if more than one") {
+  test("should use first specified default value") {
     import sttp.tapir.codec.enumeratum._
     import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum.FruitType._
 
-    val expectedYaml = load("enum/expected_enumeratum_enum_default_if_more_than_one.yml")
+    val expectedYaml = load("enum/expected_enumeratum_enum_using_first_specified_default_value.yml")
     val ep1 = endpoint
       .in("fruit-by-type1").in(query[Enumeratum.FruitType]("type1").default(PEAR))
       .out(jsonBody[Enumeratum.FruitWithEnum])
@@ -74,10 +74,10 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("ignore enum default in request body") {
+  test("should not add default when no encoded value specified") {
     import sttp.tapir.codec.enumeratum._
 
-    val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body.yml")
+    val expectedYaml = load("enum/expected_enumeratum_enum_not_adding_default_when_no_encoded_value_specified.yml")
     val ep = endpoint
       .post.in(jsonBody[Enumeratum.FruitQuery])
       .out(jsonBody[Enumeratum.FruitWithEnum])
@@ -89,10 +89,10 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
   }
 
   // #1800
-  test("add enum default in request body with given encoded") {
+  test("should add default when encoded value specified") {
     import sttp.tapir.codec.enumeratum._
 
-    val expectedYaml = load("enum/expected_enumeratum_enum_default_in_request_body_with_given_encoded.yml")
+    val expectedYaml = load("enum/expected_enumeratum_enum_adding_default_when_encoded_value_specified.yml")
     val ep = endpoint
       .post.in(jsonBody[Enumeratum.FruitQueryWithEncoded])
       .out(jsonBody[Enumeratum.FruitWithEnum])
