@@ -16,7 +16,7 @@ import sttp.tapir.{FileRange, RawBodyType}
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     ctx: ServiceRequestContext,
     serverOptions: ArmeriaServerOptions[F],
-    fromFuture: FromFuture[F],
+    futureConversion: FutureConversion[F],
     streamCompatible: StreamCompatible[S]
 )(implicit ec: ExecutionContext)
     extends RequestBody[F, S] {
@@ -31,7 +31,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
-  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = fromFuture(bodyType match {
+  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = futureConversion.from(bodyType match {
     case RawBodyType.StringBody(_) =>
       request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
     case RawBodyType.ByteArrayBody =>
@@ -46,7 +46,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     case RawBodyType.FileBody =>
       val bodyStream = request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]]
       for {
-        file <- serverOptions.createFile(ctx)
+        file <- futureConversion.to(serverOptions.createFile())
         _ <- StreamMessages.writeTo(bodyStream, file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
         fileRange = FileRange(file)
       } yield RawValue(fileRange, Seq(fileRange))
@@ -77,7 +77,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.InputStreamBody => Future.successful(RawValue(new ByteArrayInputStream(body.array())))
       case RawBodyType.FileBody =>
         for {
-          file <- serverOptions.createFile(ctx)
+          file <- futureConversion.to(serverOptions.createFile())
           _ <- StreamMessages.writeTo(StreamMessage.of(Array(body): _*), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
           fileRange = FileRange(file)
         } yield RawValue(fileRange, Seq(fileRange))

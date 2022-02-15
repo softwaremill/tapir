@@ -9,10 +9,10 @@ trait ArmeriaZioServerInterpreter[R] {
 
   def armeriaServerOptions: ArmeriaZioServerOptions[RIO[R, *]]
 
-  def toRoute(serverEndpoints: ZServerEndpoint[R, ZioStreams])(implicit runtime: Runtime[R]): TapirService[ZioStreams, RIO[R, *]] =
-    toRoute(List(serverEndpoints))
+  def toService(serverEndpoints: ZServerEndpoint[R, ZioStreams])(implicit runtime: Runtime[R]): TapirService[ZioStreams, RIO[R, *]] =
+    toService(List(serverEndpoints))
 
-  def toRoute(serverEndpoints: List[ZServerEndpoint[R, ZioStreams]])(implicit runtime: Runtime[R]): TapirService[ZioStreams, RIO[R, *]] =
+  def toService(serverEndpoints: List[ZServerEndpoint[R, ZioStreams]])(implicit runtime: Runtime[R]): TapirService[ZioStreams, RIO[R, *]] =
     TapirZioService(serverEndpoints, armeriaServerOptions)
 }
 

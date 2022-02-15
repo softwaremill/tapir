@@ -25,11 +25,11 @@ class ArmeriaZioTestServerInterpreter extends TestServerInterpreter[Task, ZioStr
         .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     }
-    ArmeriaZioServerInterpreter(options).toRoute(e)
+    ArmeriaZioServerInterpreter(options).toService(e)
   }
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]]): TapirService[ZioStreams, Task] = {
-    ArmeriaZioServerInterpreter[Any]().toRoute(es)
+    ArmeriaZioServerInterpreter[Any]().toService(es)
   }
 
   override def server(routes: NonEmptyList[TapirService[ZioStreams, Task]]): Resource[IO, Port] = {

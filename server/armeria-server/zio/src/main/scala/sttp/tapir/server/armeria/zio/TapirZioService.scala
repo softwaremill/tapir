@@ -23,23 +23,25 @@ private[zio] final case class TapirZioService[R](
 
   private[this] implicit val monad: RIOMonadError[R] = new RIOMonadError()
   private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
+
   private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
+  private[this] val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
+    new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
+      serverEndpoints,
+      new ArmeriaToResponseBody(zioStreamCompatible),
+      armeriaServerOptions.interceptors,
+      armeriaServerOptions.deleteFile
+    )
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
 
-    val rioFromFuture = new RioFromFuture[R]
+    val rioFutureConversion = new RioFutureConversion[R]
     val serverRequest = new ArmeriaServerRequest(ctx)
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
-      serverEndpoints,
-      new ArmeriaToResponseBody(zioStreamCompatible),
-      armeriaServerOptions.interceptors,
-      file => rioFromFuture(armeriaServerOptions.deleteFile(ctx, file))
-    )
-
-    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, rioFromFuture, zioStreamCompatible)
+    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, rioFutureConversion, zioStreamCompatible)
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest, requestBody).map(ResultMapping.toArmeria)
+
     val cancellable = runtime.unsafeRunToFuture(result)
     cancellable.future.onComplete {
       case Failure(exception) =>
@@ -74,8 +76,8 @@ private object ZioStreamCompatible {
   }
 }
 
-private class RioFromFuture[R](implicit ec: ExecutionContext) extends FromFuture[RIO[R, *]] {
-  def apply[T](f: => Future[T]): RIO[R, T] = {
+private class RioFutureConversion[R](implicit ec: ExecutionContext, runtime: Runtime[R]) extends FutureConversion[RIO[R, *]] {
+  def from[T](f: => Future[T]): RIO[R, T] = {
     RIO.effectAsync { cb =>
       f.onComplete {
         case Failure(exception) => cb(Task.fail(exception))
@@ -83,4 +85,6 @@ private class RioFromFuture[R](implicit ec: ExecutionContext) extends FromFuture
       }
     }
   }
+
+  override def to[A](f: => RIO[R, A]): Future[A] = runtime.unsafeRunToFuture(f)
 }

@@ -1,5 +1,6 @@
 package sttp.tapir.server.armeria
 
+import com.linecorp.armeria.common.CommonPools
 import com.linecorp.armeria.server.ServiceRequestContext
 import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.{Future, Promise}
@@ -9,8 +10,8 @@ import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 
 trait ArmeriaServerOptions[F[_]] {
-  def createFile: ServiceRequestContext => Future[TapirFile]
-  def deleteFile: (ServiceRequestContext, TapirFile) => Future[Unit]
+  def createFile: () => F[TapirFile]
+  def deleteFile: TapirFile => F[Unit]
   def interceptors: List[Interceptor[F]]
 }
 
@@ -18,10 +19,9 @@ object ArmeriaServerOptions {
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 
-  val defaultCreateFile: ServiceRequestContext => Future[TapirFile] = ctx => blocking(ctx)(Defaults.createTempFile())
+  def defaultCreateFile(): Future[TapirFile] = blocking(Defaults.createTempFile())
 
-  val defaultDeleteFile: (ServiceRequestContext, TapirFile) => Future[Unit] =
-    (ctx, file) => blocking(ctx)(Defaults.deleteFile()(file))
+  def defaultDeleteFile(file: TapirFile): Future[Unit] = blocking(Defaults.deleteFile()(file))
 
   val defaultServerLog: ServerLog[Future] = DefaultServerLog[Future](
     doLogWhenHandled = debugLog,
@@ -36,9 +36,9 @@ object ArmeriaServerOptions {
       case Some(ex) => logger.debug(msg, ex)
     })
 
-  private def blocking[T](ctx: ServiceRequestContext)(body: => T): Future[T] = {
+  private def blocking[T](body: => T): Future[T] = {
     val promise = Promise[T]()
-    ctx
+    CommonPools
       .blockingTaskExecutor()
       .execute(() => {
         try {

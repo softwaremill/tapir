@@ -12,10 +12,10 @@ trait ArmeriaCatsServerInterpreter[F[_]] {
 
   def armeriaServerOptions: ArmeriaCatsServerOptions[F]
 
-  def toRoute(serverEndpoint: ServerEndpoint[Fs2Streams[F], F]): TapirService[Fs2Streams[F], F] =
-    toRoute(List(serverEndpoint))
+  def toService(serverEndpoint: ServerEndpoint[Fs2Streams[F], F]): TapirService[Fs2Streams[F], F] =
+    toService(List(serverEndpoint))
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]]): TapirService[Fs2Streams[F], F] =
+  def toService(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]]): TapirService[Fs2Streams[F], F] =
     TapirCatsService(serverEndpoints, armeriaServerOptions)
 }
 

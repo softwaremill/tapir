@@ -26,11 +26,11 @@ class ArmeriaCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
         .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
         .options
     }
-    ArmeriaCatsServerInterpreter(options).toRoute(e)
+    ArmeriaCatsServerInterpreter(options).toService(e)
   }
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]]): HttpServiceWithRoutes = {
-    ArmeriaCatsServerInterpreter(dispatcher).toRoute(es)
+    ArmeriaCatsServerInterpreter(dispatcher).toService(es)
   }
 
   override def server(routes: NonEmptyList[HttpServiceWithRoutes]): Resource[IO, Port] = {

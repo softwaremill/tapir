@@ -7,6 +7,7 @@ import sttp.capabilities.Streams
 import sttp.tapir.server.ServerEndpoint
 
 trait TapirService[S <: Streams[S], F[_]] extends HttpServiceWithRoutes {
+
   def serverEndpoints: List[ServerEndpoint[S, F]]
 
   def armeriaServerOptions: ArmeriaServerOptions[F]

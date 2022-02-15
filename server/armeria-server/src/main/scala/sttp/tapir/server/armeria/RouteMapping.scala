@@ -13,9 +13,6 @@ private[armeria] object RouteMapping {
 
   def toRoute(e: AnyEndpoint): List[(Route, ExchangeType.Value)] = {
     val inputs: Seq[EndpointInput.Basic[_]] = e.asVectorOfBasicInputs()
-    val methods = inputs.collect { case FixedMethod(m, _, _) =>
-      HttpMethod.valueOf(m.method)
-    }
 
     val outputsList = e.output.asBasicOutputsList
     val requestStreaming = inputs.exists(isStreaming)
@@ -28,14 +25,12 @@ private[armeria] object RouteMapping {
     }
 
     toPathPatterns(inputs).map { path =>
+      // Allows all HTTP method to handle invalid requests by RejectInterceptor
       val routeBuilder =
         Route
           .builder()
           .path(path)
 
-      if (methods.nonEmpty) {
-        routeBuilder.methods(methods.asJava)
-      }
       (routeBuilder.build(), exchangeType)
     }
   }

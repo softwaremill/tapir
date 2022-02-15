@@ -22,17 +22,16 @@ private[armeria] final case class TapirFutureService(
     implicit val bodyListener: BodyListener[Future, ArmeriaResponseType] = new ArmeriaBodyListener
 
     val serverRequest = new ArmeriaServerRequest(ctx)
-    val interpreter = new ServerInterpreter(
+    val requestBody: ArmeriaRequestBody[Future, ArmeriaStreams] =
+      new ArmeriaRequestBody(ctx, armeriaServerOptions, FutureConversion.identity, ArmeriaStreamCompatible)
+    val future = new CompletableFuture[HttpResponse]()
+    val interpreter: ServerInterpreter[ArmeriaStreams, Future, ArmeriaResponseType, ArmeriaStreams] = new ServerInterpreter(
       serverEndpoints,
       new ArmeriaToResponseBody(ArmeriaStreamCompatible),
       armeriaServerOptions.interceptors,
-      file => armeriaServerOptions.deleteFile(ctx, file)
+      armeriaServerOptions.deleteFile
     )
 
-    val requestBody: ArmeriaRequestBody[Future, ArmeriaStreams] =
-      new ArmeriaRequestBody(ctx, armeriaServerOptions, FromFuture.identity, ArmeriaStreamCompatible)
-
-    val future = new CompletableFuture[HttpResponse]()
     interpreter(serverRequest, requestBody)
       .map(ResultMapping.toArmeria)
       .onComplete {

@@ -23,27 +23,28 @@ private[cats] final case class TapirCatsService[F[_]: Async](
     armeriaServerOptions: ArmeriaCatsServerOptions[F]
 ) extends TapirService[Fs2Streams[F], F] {
 
-  private[this] val dispatcher: Dispatcher[F] = armeriaServerOptions.dispatcher
-  private[this] val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
-
   private[this] implicit val monad: MonadError[F] = new CatsMonadError()
   private[this] implicit val bodyListener: BodyListener[F, ArmeriaResponseType] = new ArmeriaBodyListener
+
+  private[this] val dispatcher: Dispatcher[F] = armeriaServerOptions.dispatcher
+  private[this] val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
+  private[this] val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
+    new ServerInterpreter(
+      serverEndpoints,
+      new ArmeriaToResponseBody(fs2StreamCompatible),
+      armeriaServerOptions.interceptors,
+      armeriaServerOptions.deleteFile
+    )
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
 
-    val catsFFromFuture = new CatsFromFuture
+    val catsFutureConversion = new CatsFutureConversion(dispatcher)
     val serverRequest = new ArmeriaServerRequest(ctx)
-    val interpreter = new ServerInterpreter(
-      serverEndpoints,
-      new ArmeriaToResponseBody(fs2StreamCompatible),
-      armeriaServerOptions.interceptors,
-      file => catsFFromFuture(armeriaServerOptions.deleteFile(ctx, file))
-    )
-
-    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, catsFFromFuture, fs2StreamCompatible)
+    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, catsFutureConversion, fs2StreamCompatible)
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest, requestBody).map(ResultMapping.toArmeria)
+
     val (response, cancelRef) = dispatcher.unsafeToFutureCancelable(result)
     response.onComplete {
       case Failure(exception) =>
@@ -85,8 +86,8 @@ private object Fs2StreamCompatible {
   }
 }
 
-private class CatsFromFuture[F[_]: Async](implicit ec: ExecutionContext) extends FromFuture[F] {
-  override def apply[A](f: => Future[A]): F[A] = {
+private class CatsFutureConversion[F[_]: Async](dispatcher: Dispatcher[F])(implicit ec: ExecutionContext) extends FutureConversion[F] {
+  override def from[A](f: => Future[A]): F[A] = {
     Async[F].async_ { cb =>
       f.onComplete {
         case Failure(exception) => cb(Left(exception))
@@ -95,4 +96,6 @@ private class CatsFromFuture[F[_]: Async](implicit ec: ExecutionContext) extends
       ()
     }
   }
+
+  override def to[A](f: => F[A]): Future[A] = dispatcher.unsafeToFuture(f)
 }

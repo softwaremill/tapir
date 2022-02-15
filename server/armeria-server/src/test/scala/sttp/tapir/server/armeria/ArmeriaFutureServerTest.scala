@@ -6,7 +6,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
-class ArmeriaServerTest extends TestSuite {
+class ArmeriaFutureServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: FutureMonad = new FutureMonad()
@@ -14,9 +14,8 @@ class ArmeriaServerTest extends TestSuite {
     val interpreter = new ArmeriaTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false, reject = false).tests() ++
+    new AllServerTests(createServerTest, interpreter, backend, basic = false).tests() ++
       new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerRejectTests(createServerTest, interpreter, useMethodNotAllowedForUnsupportedMethod = true).tests() ++
       new ServerStreamingTests(createServerTest, ArmeriaStreams).tests()
   }
 }

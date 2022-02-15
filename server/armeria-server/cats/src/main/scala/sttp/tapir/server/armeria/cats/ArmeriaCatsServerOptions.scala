@@ -12,8 +12,8 @@ import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 final case class ArmeriaCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
-    createFile: ServiceRequestContext => Future[TapirFile],
-    deleteFile: (ServiceRequestContext, TapirFile) => Future[Unit],
+    createFile: () => F[TapirFile],
+    deleteFile: TapirFile => F[Unit],
     interceptors: List[Interceptor[F]]
 ) extends ArmeriaServerOptions[F] {
   def prependInterceptor(i: Interceptor[F]): ArmeriaCatsServerOptions[F] =
@@ -26,16 +26,18 @@ final case class ArmeriaCatsServerOptions[F[_]](
 object ArmeriaCatsServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, ArmeriaCatsServerOptions[F]] =
+  def customInterceptors[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): CustomInterceptors[F, ArmeriaCatsServerOptions[F]] = {
     CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, ArmeriaCatsServerOptions[F]]) =>
+      createOptions = (ci: CustomInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
         ArmeriaCatsServerOptions(
           dispatcher,
-          ArmeriaServerOptions.defaultCreateFile,
-          ArmeriaServerOptions.defaultDeleteFile,
+          () => F.fromFuture(F.pure(ArmeriaServerOptions.defaultCreateFile())),
+          file => F.fromFuture(F.pure(ArmeriaServerOptions.defaultDeleteFile(file))),
           ci.interceptors
         )
+      }
     ).serverLog(defaultServerLog)
+  }
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 

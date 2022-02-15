@@ -8,10 +8,10 @@ trait ArmeriaFutureServerInterpreter {
 
   def armeriaServerOptions: ArmeriaFutureServerOptions = ArmeriaFutureServerOptions.default
 
-  def toRoute(serverEndpoint: ServerEndpoint[ArmeriaStreams, Future]): TapirService[ArmeriaStreams, Future] =
-    toRoute(List(serverEndpoint))
+  def toService(serverEndpoint: ServerEndpoint[ArmeriaStreams, Future]): TapirService[ArmeriaStreams, Future] =
+    toService(List(serverEndpoint))
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[ArmeriaStreams, Future]]): TapirService[ArmeriaStreams, Future] =
+  def toService(serverEndpoints: List[ServerEndpoint[ArmeriaStreams, Future]]): TapirService[ArmeriaStreams, Future] =
     TapirFutureService(serverEndpoints, armeriaServerOptions)
 }
 

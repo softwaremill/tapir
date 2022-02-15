@@ -18,7 +18,7 @@ import sttp.tapir.server.armeria.ArmeriaFutureServerInterpreter
 ```
 to use this interpreter with `Future`.
 
-The `toRoute` method require a single, or a list of `ServerEndpoint`s, which can be created by adding
+The `toService` method require a single, or a list of `ServerEndpoint`s, which can be created by adding
 [server logic](logic.md) to an endpoint.
 
 ```scala mdoc:compile-only
@@ -32,7 +32,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     val tapirEndpoint: PublicEndpoint[(String, Int), Unit, String, Any] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here
-    val tapirService = ArmeriaFutureServerInterpreter().toRoute(tapirEndpoint.serverLogic((logic _).tupled))
+    val tapirService = ArmeriaFutureServerInterpreter().toService(tapirEndpoint.serverLogic((logic _).tupled))
     val server = Server
       .builder()
       .service(tapirService) // your endpoint is bound to the server
@@ -64,7 +64,7 @@ def streamLogic(foo: Int): Future[Publisher[HttpData]] = {
   Future.successful(StreamMessage.of(HttpData.ofUtf8("hello"), HttpData.ofUtf8("world")))
 }
 
-val tapirService = ArmeriaFutureServerInterpreter().toRoute(streamingResponse.serverLogicSuccess(streamLogic))
+val tapirService = ArmeriaFutureServerInterpreter().toService(streamingResponse.serverLogicSuccess(streamLogic))
 ```
 
 ## Configuration
@@ -85,7 +85,7 @@ Then import the object:
 import sttp.tapir.server.armeria.cats.ArmeriaCatsServerInterpreter
 ```
 
-This object contains the `toRoute(e: ServerEndpoint[Fs2Streams[F], F])` method which returns a `TapirSerive[Fs2Streams[F], F]`.
+This object contains the `toService(e: ServerEndpoint[Fs2Streams[F], F])` method which returns a `TapirService[Fs2Streams[F], F]`.
 An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
@@ -105,7 +105,7 @@ object Main extends IOApp {
         Resource
           .make(
             IO.async_[Server] { cb =>
-              val tapirService = ArmeriaCatsServerInterpreter[IO](dispatcher).toRoute(tapirEndpoint.serverLogic(logic))
+              val tapirService = ArmeriaCatsServerInterpreter[IO](dispatcher).toService(tapirEndpoint.serverLogic(logic))
 
               val server = Server
                 .builder()
@@ -147,7 +147,7 @@ def streamLogic(times: Int): IO[Stream[IO, Byte]] = {
 
 def dispatcher: Dispatcher[IO] = ???
 
-val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toRoute(streamingResponse.serverLogicSuccess(streamLogic))
+val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toService(streamingResponse.serverLogicSuccess(streamLogic))
 ```
 
 ## ZIO
@@ -165,7 +165,7 @@ Then import the object:
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 ```
 
-This object contains `toRoute(e: ServerEndpoint[ZioStreams, RIO[R, *]])` method which returns a `TapirSerive[ZioStreams, RIO[R, *]]`.
+This object contains `toService(e: ServerEndpoint[ZioStreams, RIO[R, *]])` method which returns a `TapirService[ZioStreams, RIO[R, *]]`.
 An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
@@ -184,7 +184,7 @@ object Main extends zio.App {
      
     ZManaged
       .make(ZIO.fromCompletableFuture {
-        val tapirService = ArmeriaZioServerInterpreter().toRoute(tapirEndpoint.zServerLogic(logic))
+        val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
 
         val server = Server
           .builder()

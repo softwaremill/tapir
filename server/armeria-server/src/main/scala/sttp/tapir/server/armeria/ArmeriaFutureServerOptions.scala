@@ -1,13 +1,12 @@
 package sttp.tapir.server.armeria
 
-import com.linecorp.armeria.server.ServiceRequestContext
 import scala.concurrent.Future
 import sttp.tapir.TapirFile
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 final case class ArmeriaFutureServerOptions(
-    createFile: ServiceRequestContext => Future[TapirFile],
-    deleteFile: (ServiceRequestContext, TapirFile) => Future[Unit],
+    createFile: () => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future]]
 ) extends ArmeriaServerOptions[Future] {
   def prependInterceptor(i: Interceptor[Future]): ArmeriaFutureServerOptions = copy(interceptors = i :: interceptors)
