@@ -447,8 +447,8 @@ class ServerStaticContentTests[F[_], ROUTE](
 
             get("r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
               get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
-              get("d1/r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
-              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+              get("d1" :: "r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
+              get("d1" :: "d2" :: "r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
           }
           .unsafeToFuture()
       },
@@ -468,8 +468,8 @@ class ServerStaticContentTests[F[_], ROUTE](
 
             get("r1.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
               get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
-              get("d1/r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
-              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+              get("d1" :: "r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+              get("d1" :: "d2" :: "r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
           }
           .unsafeToFuture()
       },
