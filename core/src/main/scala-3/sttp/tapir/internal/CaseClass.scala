@@ -86,6 +86,12 @@ class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
     case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
   }
 
+  def extractTreeAndOptFromAnnotation(annSymbol: Symbol): Option[(Tree, Option[String])] = constructorField.getAnnotation(annSymbol).map {
+    case Apply(_, List(t, TypeApply(Select(_, "$lessinit$greater$default$2"), _))) => (t, None)
+    case Apply(_, List(t, Literal(c: Constant))) if c.value.isInstanceOf[String] => (t, Some(c.value.asInstanceOf[String]))
+    case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+  }
+
   def annotated(annSymbol: Symbol): Boolean = annotation(annSymbol).isDefined
   def annotation(annSymbol: Symbol): Option[Term] = constructorField.getAnnotation(annSymbol)
 }
