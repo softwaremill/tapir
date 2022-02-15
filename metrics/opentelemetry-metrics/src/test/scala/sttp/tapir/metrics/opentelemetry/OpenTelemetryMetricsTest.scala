@@ -3,6 +3,7 @@ package sttp.tapir.metrics.opentelemetry
 import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.data.LongPointData
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
@@ -24,7 +25,8 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
   "default metrics" should "collect requests total" in {
     // given
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withRequestsTotal()
@@ -37,14 +39,15 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Janusz"), TestRequestBody)
 
     // then
-    val point = longSumData(provider).head
+    val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 3
   }
 
   "default metrics" should "collect requests active" in {
     // given
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi { name =>
       Thread.sleep(900)
@@ -60,12 +63,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     Thread.sleep(100)
 
     // then
-    val point = longSumData(provider).head
+    val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 1
 
     ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
-      val point = longSumData(provider).head
+      val point = longSumData(reader).head
       point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
       point.getValue shouldBe 0
     }
@@ -73,7 +76,8 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
   "default metrics" should "collect responses total" in {
     // given
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
@@ -91,7 +95,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request(""), TestRequestBody)
 
     // then
-    longSumData(provider)
+    longSumData(reader)
       .count {
         case dp
             if dp.getAttributes == Attributes.of(
@@ -119,7 +123,8 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
   "default metrics" should "collect responses duration" in {
     // given
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val waitServerEp: Int => ServerEndpoint[Any, Id] = millis => {
       PersonsApi { name =>
@@ -143,7 +148,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpret(200)
     interpret(300)
 
-    val point = provider.collectAllMetrics().asScala.head.getDoubleSummaryData.getPoints.asScala.head
+    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala.head
     point.getAttributes shouldBe Attributes.of(
       AttributeKey.stringKey("method"),
       "GET",
@@ -152,14 +157,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       AttributeKey.stringKey("status"),
       "2xx"
     )
-    point.getPercentileValues.size() shouldBe 2
   }
 
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
     val labels = MetricLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal(labels)
     val interpreter =
@@ -169,13 +174,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
-    val point = longSumData(provider).head
+    val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("key"), "value")
   }
 
   "metrics" should "be collected on exception when response from exception handler" in {
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
-    val provider = SdkMeterProvider.builder().build()
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
@@ -189,7 +195,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Jacob"), TestRequestBody)
 
     // then
-    val point = longSumData(provider).head
+    val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(
       AttributeKey.stringKey("method"),
       "GET",
@@ -201,6 +207,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     point.getValue shouldBe 1
   }
 
-  private def longSumData(provider: SdkMeterProvider): List[LongPointData] =
-    provider.collectAllMetrics().asScala.head.getLongSumData.getPoints.asScala.toList
+  private def longSumData(reader: InMemoryMetricReader): List[LongPointData] =
+    reader.collectAllMetrics().asScala.head.getLongSumData.getPoints.asScala.toList
 }
