@@ -17,14 +17,18 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
 
-private[stub] object StubServerInterpreter {
-  def apply[F[_]: MonadError, R](req: Request[_, _], endpoint: ServerEndpoint[R, F], interceptors: List[Interceptor[F]]): F[Response[_]] = {
+private[stub] object TestServerInterpreter {
+  def apply[F[_]: MonadError, R](
+      req: Request[_, _],
+      endpoints: List[ServerEndpoint[R, F]],
+      interceptors: List[Interceptor[F]]
+  ): F[Response[_]] = {
 
     implicit val bodyListener: BodyListener[F, Any] = new BodyListener[F, Any] {
       override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = cb(Success(())).map(_ => body)
     }
 
-    val interpreter = new ServerInterpreter[R, F, Any, NoStreams](List(endpoint), toResponseBody, interceptors, _ => ().unit)
+    val interpreter = new ServerInterpreter[R, F, Any, NoStreams](endpoints, toResponseBody, interceptors, _ => ().unit)
 
     val sRequest = new SttpRequest(req)
 
@@ -36,7 +40,7 @@ private[stub] object StubServerInterpreter {
 
   private val toResponse: (ServerRequest, ServerResponse[Any]) => Response[Any] = (sRequest, sResponse) => {
     val metadata = RequestMetadata(sRequest.method, sRequest.uri, sRequest.headers)
-    Response(sResponse.body.getOrElse(()), sResponse.code, "", sResponse.headers, Nil, metadata)
+    sttp.client3.Response(sResponse.body.getOrElse(()), sResponse.code, "", sResponse.headers, Nil, metadata)
   }
 
   private val toResponseBody: ToResponseBody[Any, NoStreams] = new ToResponseBody[Any, NoStreams] {

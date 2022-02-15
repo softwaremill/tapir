@@ -1,20 +1,16 @@
 package sttp.tapir.server.stub
 
-import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
+import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir._
-import sttp.client3._
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.ServerEndpoint.Full
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.exception.ExceptionContext
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -30,50 +26,123 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
   val options: CustomInterceptors[Identity, ServerOptions] = ServerOptions.customInterceptors
 
-  val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](sttpBackendStub, options)
-    .stubEndpoint(getProduct)
-    .whenInputMatches(_ => true)
-    .thenSuccess(Product("T-shirt"))
-    .stubServerEndpoint(createProduct)
-    .whenRequestMatches()
-    .thenLogic() // simplify + List[ServerEndpoint]
-    .stubServerEndpointFull(updateProduct)
-    .whenInputMatches(_ => true)
-    .thenError(Error("Failed to update"), StatusCode.PreconditionFailed)
-    .backend()
+  behavior of "TapirStubInterpreter"
 
-  it should "test" in {
-    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(updateProduct.endpoint, Some(uri"http://test.com"))
-      .apply(("computer", Product("computer-2")))
-      .send(server)
+  it should "stub endpoint logic with success response" in {
+    // given
+    val server = TapirStubInterpreter(options, sttpBackendStub)
+      .forEndpoint(getProduct)
+      .returnSuccess("computer")
+      .backend()
 
-    println(response)
+    // when
+    val response = sttp.client3.basicRequest.get(uri"http://test.com/api/products").send(server)
+
+    // then
+    response.body shouldBe Right("computer")
+  }
+
+  it should "stub endpoint logic with error response" in {
+    // given
+    val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, sttpBackendStub)
+      .forEndpoint(getProduct)
+      .returnError("failed")
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest.get(uri"http://test.com/api/products").send(server)
+
+    // then
+    response.body shouldBe Left("failed")
+  }
+
+  it should "run defined endpoint server and auth logic" in {
+    // given
+    val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, sttpBackendStub)
+      .forServerEndpointRunLogic(
+        createProduct
+          .serverSecurityLogic { _ => IdMonad.unit(Right("user1"): Either[String, String]) }
+          .serverLogic { user => _ => IdMonad.unit(Right(s"created by $user")) }
+      )
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest.post(uri"http://test.com/api/products").send(server)
+
+    // then
+    response.body shouldBe Right("created by user1")
+  }
+
+  it should "stub endpoint server logic with success response, skip auth" in {
+    // given
+    val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, sttpBackendStub)
+      .forServerEndpoint(
+        createProduct
+          .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
+          .serverLogic { user => _ => IdMonad.unit(Right(s"Created by $user")) }
+      )
+      .returnSuccess("created", runAuthLogic = false)
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest.post(uri"http://test.com/api/products").send(server)
+
+    // then
+    response.body shouldBe Right("created")
+  }
+
+  it should "stub server endpoint logic with error response, skip auth" in {
+    // given
+    val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, sttpBackendStub)
+      .forServerEndpoint(
+        createProduct
+          .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
+          .serverLogic { user => _ => IdMonad.unit(Right(s"created by $user")) }
+      )
+      .returnError("failed", runAuthLogic = false)
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest.post(uri"http://test.com/api/products").send(server)
+
+    // then
+    response.body shouldBe Left("failed")
+  }
+
+  it should "use interceptors from server options" in {
+    // given
+    val opts = options
+      .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
+      .exceptionHandler((_: ExceptionContext) => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
+      .rejectInterceptor(new RejectInterceptor[Identity](_ => Some(StatusCode.NotAcceptable)))
+
+    val server = TapirStubInterpreter(opts, sttpBackendStub)
+      .forEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
+      .returnSuccess("computer")
+      .forEndpoint(createProduct)
+      .throwException(new RuntimeException)
+      .backend()
+
+    // when fails to decode then uses decode handler
+    sttp.client3.basicRequest.get(uri"http://test.com/api/products?id=5").send(server).body shouldBe Left("failed to decode")
+
+    // when throws exception then uses exception handler
+    sttp.client3.basicRequest.post(uri"http://test.com/api/products").send(server).body shouldBe Right("failed due to exception")
+
+    // when no matching endpoint then uses reject handler
+    sttp.client3.basicRequest.get(uri"http://test.com/iamlost").send(server).code shouldBe StatusCode.NotAcceptable
   }
 }
 
 object ProductsApi {
 
-  case class Product(name: String)
-
-  case class Error(msg: String)
-
-  val getProduct: Endpoint[Unit, String, Error, Product, Any] = endpoint.get
-    .in("api" / "products" / path[String]("name"))
-    .out(jsonBody[Product])
-    .errorOut(jsonBody[Error])
-
-  val createProduct: ServerEndpoint[Nothing, Identity] = endpoint.post
+  val getProduct: Endpoint[Unit, Unit, String, String, Any] = endpoint.get
     .in("api" / "products")
-    .in(jsonBody[Product])
-    .out(jsonBody[Product])
-    .errorOut(jsonBody[Error])
-    .serverLogic(product => IdMonad.unit(Right(product)))
+    .out(stringBody)
+    .errorOut(stringBody)
 
-  val updateProduct: Full[Unit, Unit, (String, Product), Error, Product, Any, Identity] = endpoint.put
-    .in("api" / "products" / path[String]("name"))
-    .in(jsonBody[Product])
-    .out(jsonBody[Product])
-    .errorOut(jsonBody[Error])
-    .serverLogic { case (_, product) => IdMonad.unit(Right(product)) }
-
+  val createProduct: Endpoint[Unit, Unit, String, String, Any] = endpoint.post
+    .in("api" / "products")
+    .out(stringBody)
+    .errorOut(stringBody)
 }

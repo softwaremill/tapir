@@ -12,8 +12,6 @@ import sttp.tapir._
 import sttp.tapir.client.sttp._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, Responder}
 
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
@@ -155,75 +153,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(-1).send(backend)
 
     response shouldBe Response(Left(()), StatusCode.BadRequest)
-  }
-
-  it should "stub server endpoint" in {
-    // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("api" / "hello")
-      .out(stringBody)
-      .get
-      .serverLogic { _ => idMonad.unit(Right("hello")) }
-
-    // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint)
-      .whenAnyRequest
-      .thenRespondServerError()
-
-    // then
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/unknown").send(backend).code shouldBe StatusCode.InternalServerError
-  }
-
-  it should "work with request bodies when interpreting endpoints" in {
-    // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("mirror")
-      .in(stringBody)
-      .out(stringBody)
-      .post
-      .serverLogic { in => idMonad.unit(Right(in)) }
-
-    // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint)
-
-    // then
-    sttp.client3.basicRequest.post(uri"/mirror").body("hello").send(backend).body shouldBe Right("hello")
-  }
-
-  it should "stub server endpoint with interceptors" in {
-    // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("api" / "hello")
-      .out(stringBody)
-      .get
-      .serverLogic { _ => idMonad.unit(Right("hello")) }
-
-    var x = 0
-
-    val interceptor: RequestInterceptor[Identity] = {
-      new RequestInterceptor[Identity] {
-        override def apply[B](
-            responder: Responder[Identity, B],
-            requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, B]
-        ): RequestHandler[Identity, B] = RequestHandler.from { (request, _: MonadError[Identity]) =>
-          x = 10
-          requestHandler(EndpointInterceptor.noop).apply(request)
-        }
-      }
-    }
-
-    // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint, List(interceptor))
-      .whenAnyRequest
-      .thenRespondServerError()
-
-    // then
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
-    x shouldBe 10
   }
 }
 
