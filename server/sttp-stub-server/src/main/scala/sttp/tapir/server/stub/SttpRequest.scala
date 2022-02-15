@@ -1,8 +1,15 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.Request
-import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.client3.testing._
+import sttp.model._
+import sttp.tapir.internal.RichOneOfBody
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, RawBodyType}
+
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 import scala.collection.immutable.Seq
 
 class SttpRequest(r: Request[_, _]) extends ServerRequest {

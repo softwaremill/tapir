@@ -36,7 +36,7 @@ trait SttpStubServer {
         endpoint: ServerEndpoint[R, F],
         interceptors: List[Interceptor[F]] = Nil
     ): SttpBackendStub[F, R] =
-      _whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+      _whenRequestMatches(endpoint.endpoint).thenRespondF(req => StubServerInterpreter(req, endpoint, interceptors)(stub.responseMonad))
 
     def whenSecurityInputMatchesThenLogic[A](
         endpoint: ServerEndpoint.Full[A, _, _, _, _, R, F],
@@ -45,7 +45,7 @@ trait SttpStubServer {
         securityInputMatcher: A => Boolean
     ): SttpBackendStub[F, R] =
       _whenInputMatches(endpoint.endpoint.securityInput)(securityInputMatcher).thenRespondF(req =>
-        interpretRequest(req, endpoint, interceptors)
+        StubServerInterpreter(req, endpoint, interceptors)(stub.responseMonad)
       )
 
     def whenInputMatchesThenLogic[I](
@@ -54,9 +54,9 @@ trait SttpStubServer {
     )(
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
-      _whenInputMatches(endpoint.endpoint.input)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+      _whenInputMatches(endpoint.endpoint.input)(inputMatcher).thenRespondF(req => StubServerInterpreter(req, endpoint, interceptors)(stub.responseMonad))
 
-    private def _whenRequestMatches[E, O](endpoint: Endpoint[_, _, E, O, _]): stub.WhenRequest = {
+    def _whenRequestMatches[E, O](endpoint: Endpoint[_, _, E, O, _]): stub.WhenRequest = {
       new stub.WhenRequest(req =>
         DecodeBasicInputs(endpoint.input, DecodeInputsContext(new SttpRequest(req))) match {
           case (_: DecodeBasicInputsResult.Failure, _) => false
@@ -65,9 +65,9 @@ trait SttpStubServer {
       )
     }
 
-    private def _whenInputMatches[A, I, E, O](input: EndpointInput[I])(inputMatcher: I => Boolean): stub.WhenRequest = {
+    def _whenInputMatches[A, I, E, O](input: EndpointInput[I])(inputMatcher: I => Boolean): stub.WhenRequest = {
       new stub.WhenRequest(req =>
-        decodeBody(req, DecodeBasicInputs(input, DecodeInputsContext(new SttpRequest(req)))._1) match {
+        SttpRequestDecoder(req, input) match {
           case _: DecodeBasicInputsResult.Failure => false
           case values: DecodeBasicInputsResult.Values =>
             InputValue(input, values) match {
@@ -76,82 +76,6 @@ trait SttpStubServer {
             }
         }
       )
-    }
-
-    private def decodeBody(request: Request[_, _], result: DecodeBasicInputsResult): DecodeBasicInputsResult = result match {
-      case values: DecodeBasicInputsResult.Values =>
-        values.bodyInputWithIndex match {
-          case Some((Left(oneOfBodyInput), _)) =>
-            def run[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): DecodeBasicInputsResult = {
-              bodyInput.codec.decode(rawBody(request, bodyInput)) match {
-                case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
-              }
-            }
-
-            val requestContentType: Option[String] = request.contentType
-            oneOfBodyInput.chooseBodyToDecode(requestContentType.flatMap(MediaType.parse(_).toOption)) match {
-              case Some(body) => run(body)
-              case None =>
-                DecodeBasicInputsResult.Failure(
-                  oneOfBodyInput,
-                  DecodeResult.Mismatch(oneOfBodyInput.show, requestContentType.getOrElse(""))
-                ): DecodeBasicInputsResult
-            }
-
-          case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
-          case None                => values
-        }
-      case failure: DecodeBasicInputsResult.Failure => failure
-    }
-
-    private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): RAW = {
-      val asByteArray = request.forceBodyAsByteArray
-      body.bodyType match {
-        case RawBodyType.StringBody(charset) => new String(asByteArray, charset)
-        case RawBodyType.ByteArrayBody       => asByteArray
-        case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(asByteArray)
-        case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
-        case RawBodyType.FileBody            => throw new UnsupportedOperationException
-        case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
-      }
-    }
-
-    private def interpretRequest(
-        req: Request[_, _],
-        endpoint: ServerEndpoint[R, F],
-        interceptors: List[Interceptor[F]]
-    ): F[Response[_]] = {
-      def toResponse(sRequest: ServerRequest, sResponse: ServerResponse[Any]): Response[Any] = {
-        sttp.client3.Response(
-          sResponse.body.getOrElse(()),
-          sResponse.code,
-          "",
-          sResponse.headers,
-          Nil,
-          RequestMetadata(sRequest.method, sRequest.uri, sRequest.headers)
-        )
-      }
-
-      implicit val me = stub.responseMonad
-
-      val interpreter =
-        new ServerInterpreter[R, F, Any, NoStreams](
-          List(endpoint),
-          toResponseBody,
-          interceptors,
-          _ => stub.responseMonad.unit(())
-        )(
-          stub.responseMonad,
-          new BodyListener[F, Any] {
-            override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = stub.responseMonad.map(cb(Success(())))(_ => body)
-          }
-        )
-      val sRequest = new SttpRequest(req)
-      stub.responseMonad.map(interpreter.apply(sRequest, requestBody[F](req.forceBodyAsByteArray))) {
-        case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
-        case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
-      }
     }
 
     def whenDecodingInputFailureMatches[E, O](
@@ -218,19 +142,5 @@ object SttpStubServer {
         pipe: streams.Pipe[REQ, RESP],
         o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
     ): Any = pipe // impossible
-  }
-
-  private def requestBody[F[_]](bytes: Array[Byte])(implicit F: MonadError[F]): RequestBody[F, NoStreams] = new RequestBody[F, NoStreams] {
-    override val streams: NoStreams = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] =
-      bodyType match {
-        case RawBodyType.StringBody(charset) => F.unit(RawValue(new String(bytes, charset)))
-        case RawBodyType.ByteArrayBody       => F.unit(RawValue(bytes))
-        case RawBodyType.ByteBufferBody      => F.unit(RawValue(ByteBuffer.wrap(bytes)))
-        case RawBodyType.InputStreamBody     => F.unit(RawValue(new ByteArrayInputStream(bytes)))
-        case RawBodyType.FileBody            => F.error(new UnsupportedOperationException)
-        case _: RawBodyType.MultipartBody    => F.error(new UnsupportedOperationException)
-      }
-    override def toStream(): streams.BinaryStream = ???
   }
 }
