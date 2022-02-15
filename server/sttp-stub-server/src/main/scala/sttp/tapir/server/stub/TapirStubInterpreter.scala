@@ -19,11 +19,10 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     serverEndpoint
   )
 
-  def forServerEndpointRunLogic(serverEndpoint: ServerEndpoint[R, F]): TapirStubInterpreter[F, R, OPTIONS] =
-    new TapirStubInterpreter(endpoints :+ serverEndpoint, interceptors, stub)
+  def forServerEndpointRunLogic(serverEndpoint: ServerEndpoint[R, F]): TapirStubInterpreter[F, R, OPTIONS] = append(serverEndpoint)
 
   def forServerEndpointsRunLogic(serverEndpoints: List[ServerEndpoint[R, F]]): TapirStubInterpreter[F, R, OPTIONS] =
-    new TapirStubInterpreter(endpoints ++ serverEndpoints, interceptors, stub)
+    serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
   /** Returns `SttpBackendStub` which runs `ServerInterpreter` on each request */
   def backend(): SttpBackendStub[F, R] =
