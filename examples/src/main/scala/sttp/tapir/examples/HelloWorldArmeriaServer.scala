@@ -16,7 +16,7 @@ object HelloWorldArmeriaServer extends App {
 
   // converting an endpoint to a TapirService (providing server-side logic); extension method comes from imported packages
   val helloWorldService: TapirService[ArmeriaStreams, Future] =
-    ArmeriaFutureServerInterpreter().toRoute(helloWorld.serverLogicSuccess(name => Future.successful(s"Hello, $name!")))
+    ArmeriaFutureServerInterpreter().toService(helloWorld.serverLogicSuccess(name => Future.successful(s"Hello, $name!")))
 
   // starting the server
   val server: Server = Server
