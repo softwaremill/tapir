@@ -9,7 +9,7 @@ import java.util.regex.Pattern
   *   class.
   * @param discriminator
   *   Encoded field name, whose value should be used to choose the appropriate subtype of a [[sttp.tapir.SchemaType.SCoproduct]].
-  * @param toEncodedSubtypeName
+  * @param toDiscriminatorValue
   *   A function which, given the name of a subtype, returns the value of the discriminator field corresponding to that subtype. Used when
   *   creating [[sttp.tapir.SchemaType.SCoproduct]] schemas.
   */

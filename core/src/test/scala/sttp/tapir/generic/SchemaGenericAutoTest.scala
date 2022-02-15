@@ -269,37 +269,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
-      Schema(
-        SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        ),
-        Some(SName("sttp.tapir.generic.Organization"))
-      ),
-      Schema(
-        SProduct[Person](
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.Person"))
-      ),
-      Schema(
-        SProduct[UnknownEntity.type](
-          List(
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.UnknownEntity"))
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
@@ -313,37 +283,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
-      Schema(
-        SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        ),
-        Some(SName("sttp.tapir.generic.Organization"))
-      ),
-      Schema(
-        SProduct[Person](
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.Person"))
-      ),
-      Schema(
-        SProduct[UnknownEntity.type](
-          List(
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.UnknownEntity"))
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
@@ -357,37 +297,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator (full subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
-      Schema(
-        SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        ),
-        Some(SName("sttp.tapir.generic.Organization"))
-      ),
-      Schema(
-        SProduct[Person](
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.Person"))
-      ),
-      Schema(
-        SProduct[UnknownEntity.type](
-          List(
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.UnknownEntity"))
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
@@ -401,37 +311,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
-      Schema(
-        SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        ),
-        Some(SName("sttp.tapir.generic.Organization"))
-      ),
-      Schema(
-        SProduct[Person](
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.Person"))
-      ),
-      Schema(
-        SProduct[UnknownEntity.type](
-          List(
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.UnknownEntity"))
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
@@ -445,37 +325,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
-      Schema(
-        SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        ),
-        Some(SName("sttp.tapir.generic.Organization"))
-      ),
-      Schema(
-        SProduct[Person](
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.Person"))
-      ),
-      Schema(
-        SProduct[UnknownEntity.type](
-          List(
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        ),
-        Some(SName("sttp.tapir.generic.UnknownEntity"))
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
