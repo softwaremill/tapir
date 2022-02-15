@@ -268,7 +268,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseSubtypeNames
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
@@ -312,7 +312,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseSubtypeNames
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
@@ -356,7 +356,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSubtypeNames
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
@@ -400,7 +400,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseSubtypeNames
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
@@ -444,7 +444,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseSubtypeNames
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 

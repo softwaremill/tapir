@@ -13,15 +13,15 @@ import java.util.regex.Pattern
   *   A function which, given the name of a subtype, returns the value of the discriminator field corresponding to that subtype. Used when
   *   creating [[sttp.tapir.SchemaType.SCoproduct]] schemas.
   */
-final case class Configuration(toEncodedName: String => String, discriminator: Option[String], toEncodedSubtypeName: SName => String) {
+final case class Configuration(toEncodedName: String => String, discriminator: Option[String], toDiscriminatorValue: SName => String) {
   def withSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.snakeCaseTransformation)
   def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
   def withDiscriminator(d: String): Configuration = copy(discriminator = Some(d))
-  def withSnakeCaseSubtypeNames: Configuration = copy(toEncodedSubtypeName = Configuration.shortSnakeCaseSubtypeTransformation)
-  def withKebabCaseSubtypeNames: Configuration = copy(toEncodedSubtypeName = Configuration.shortKebabCaseSubtypeTransformation)
-  def withFullSubtypeNames: Configuration = copy(toEncodedSubtypeName = Configuration.fullIdentitySubtypeTransformation)
-  def withFullSnakeCaseSubtypeNames: Configuration = copy(toEncodedSubtypeName = Configuration.fullSnakeCaseSubtypeTransformation)
-  def withFullKebabCaseSubtypeNames: Configuration = copy(toEncodedSubtypeName = Configuration.fullKebabCaseSubtypeTransformation)
+  def withSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortSnakeCaseSubtypeTransformation)
+  def withKebabCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortKebabCaseSubtypeTransformation)
+  def withFullDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullIdentitySubtypeTransformation)
+  def withFullSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullSnakeCaseSubtypeTransformation)
+  def withFullKebabCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullKebabCaseSubtypeTransformation)
 }
 
 object Configuration {
