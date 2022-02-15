@@ -29,12 +29,9 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
 
     val e1 = endpoint.securityIn(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
     val e2 = endpoint.securityIn(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
-    val e3 = endpoint.securityIn(auth.apiKey(header[Option[String]]("apikey").description("LALALA"))).in("api3" / path[String]).out(stringBody)
+    val e3 = endpoint.securityIn(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
-
-    println(actualYaml)
-
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
