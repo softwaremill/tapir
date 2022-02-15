@@ -377,7 +377,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       t =>
         field
           .extractTreeAndOptFromAnnotation(schemaDefaultAnnotationSymbol)
-          .map(d => addMetadataToAtom(field, t, '{ i => i.default(${ d._1.asExprOf[f] }, encoded=${ Expr(d._2) }) }))
+          .map(d => addMetadataToAtom(field, t, '{ i => i.schema(_.default(${ d._1.asExprOf[f] }, encoded=${ Expr(d._2) })) }))
           .getOrElse(t),
       t =>
         field

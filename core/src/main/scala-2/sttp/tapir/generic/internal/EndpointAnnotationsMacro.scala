@@ -143,7 +143,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
       i =>
         util
           .extractTreeAndOptFromAnnotation(field, schemaDefaultType)
-          .fold(i)(default => q"$i.default(${default._1}, encoded=${default._2})"),
+          .fold(i)(default => q"$i.schema(_.default(${default._1}, encoded=${default._2}))"),
       i =>
         util
           .extractStringArgFromAnnotation(field, schemaFormatType)
