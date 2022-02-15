@@ -535,7 +535,7 @@ lazy val sprayJson: ProjectMatrix = (projectMatrix in file("json/sprayjson"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
@@ -577,8 +577,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.12.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.12.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.4" % Test,
       scalaTest.value % Test
     )
   )
@@ -628,7 +628,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.14.1",
+      "io.prometheus" % "simpleclient_common" % "0.15.0",
       scalaTest.value % Test
     )
   )
@@ -640,8 +640,9 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.9.1",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.9.1",
+      "io.opentelemetry" % "opentelemetry-api" % "1.11.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.11.0",
+      "io.opentelemetry" % "opentelemetry-sdk-metrics-testing" % "1.11.0-alpha" % Test,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
       scalaTest.value % Test
     )

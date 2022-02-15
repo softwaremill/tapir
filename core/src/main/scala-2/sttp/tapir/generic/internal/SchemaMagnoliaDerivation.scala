@@ -50,6 +50,9 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
+  private def subtypeNameToSchemaName(subtype: Subtype[Typeclass, _]): Schema.SName =
+    typeNameToSchemaName(subtype.typeName, mergeAnnotations(subtype.annotations, subtype.inheritedAnnotations))
+
   private def getEncodedName(annotations: Seq[Any]): Option[String] =
     annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
 
@@ -70,17 +73,22 @@ trait SchemaMagnoliaDerivation {
     withCache(ctx.typeName, annotations) {
       val subtypesByName =
         ctx.subtypes
-          .map(s =>
-            typeNameToSchemaName(s.typeName, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass
-              .asInstanceOf[Typeclass[T]]
-          )
+          .map(s => subtypeNameToSchemaName(s) -> s.typeclass.asInstanceOf[Typeclass[T]])
           .toListMap
-      val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
-        ctx.split(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, mergeAnnotations(v.annotations, v.inheritedAnnotations))) }
-      )
+      val baseCoproduct =
+        SCoproduct(subtypesByName.values.toList, None)((t: T) => ctx.split(t) { v => subtypesByName.get(subtypeNameToSchemaName(v)) })
       val coproduct = genericDerivationConfig.discriminator match {
-        case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-        case None    => baseCoproduct
+        case Some(d) =>
+          val discriminatorMapping: Map[String, SRef[_]] =
+            ctx.subtypes.map { s =>
+              val schemaName = subtypeNameToSchemaName(s)
+              genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName)
+            }.toMap
+          baseCoproduct.addDiscriminatorField(
+            FieldName(d),
+            discriminatorMapping = discriminatorMapping
+          )
+        case None => baseCoproduct
       }
       Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeName, annotations)))
     }
