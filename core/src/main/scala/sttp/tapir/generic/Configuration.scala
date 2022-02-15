@@ -4,6 +4,15 @@ import sttp.tapir.Schema.SName
 
 import java.util.regex.Pattern
 
+/** @param toEncodedName
+  *   A function which, given a field name of a case class, returns the encoded field name, as in the encoded representation of the case
+  *   class.
+  * @param discriminator
+  *   Encoded field name, whose value should be used to choose the appropriate subtype of a [[sttp.tapir.SchemaType.SCoproduct]].
+  * @param toEncodedSubtypeName
+  *   A function which, given the name of a subtype, returns the value of the discriminator field corresponding to that subtype. Used when
+  *   creating [[sttp.tapir.SchemaType.SCoproduct]] schemas.
+  */
 final case class Configuration(toEncodedName: String => String, discriminator: Option[String], toEncodedSubtypeName: SName => String) {
   def withSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.snakeCaseTransformation)
   def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
