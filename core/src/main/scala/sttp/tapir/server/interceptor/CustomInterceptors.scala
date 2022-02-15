@@ -5,7 +5,7 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectHandler, RejectInterceptor}
 import sttp.tapir.{headers, statusCode}
 
 /** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via `addInterceptor`, sitting
@@ -35,7 +35,7 @@ import sttp.tapir.{headers, statusCode}
 case class CustomInterceptors[F[_], O](
     createOptions: CustomInterceptors[F, O] => O,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
-    rejectInterceptor: Option[RejectInterceptor[F]] = Some(RejectInterceptor.default[F]),
+    rejectHandler: Option[RejectHandler] = Some(DefaultRejectHandler.handler),
     exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler.handler),
     serverLog: Option[ServerLog[F]] = None,
     additionalInterceptors: List[Interceptor[F]] = Nil,
@@ -47,8 +47,8 @@ case class CustomInterceptors[F[_], O](
   def metricsInterceptor(m: MetricsRequestInterceptor[F]): CustomInterceptors[F, O] = copy(metricsInterceptor = Some(m))
   def metricsInterceptor(m: Option[MetricsRequestInterceptor[F]]): CustomInterceptors[F, O] = copy(metricsInterceptor = m)
 
-  def rejectInterceptor(r: RejectInterceptor[F]): CustomInterceptors[F, O] = copy(rejectInterceptor = Some(r))
-  def rejectInterceptor(r: Option[RejectInterceptor[F]]): CustomInterceptors[F, O] = copy(rejectInterceptor = r)
+  def rejectHandler(r: RejectHandler): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
+  def rejectHandler(r: Option[RejectHandler]): CustomInterceptors[F, O] = copy(rejectHandler = r)
 
   def exceptionHandler(e: ExceptionHandler): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
   def exceptionHandler(e: Option[ExceptionHandler]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
@@ -72,7 +72,8 @@ case class CustomInterceptors[F[_], O](
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =
-        DefaultDecodeFailureHandler.default.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h)))
+        DefaultDecodeFailureHandler.default.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h))),
+      rejectHandler = Some(DefaultRejectHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s)))
     )
   }
 
@@ -80,7 +81,7 @@ case class CustomInterceptors[F[_], O](
 
   /** Creates the default interceptor stack */
   def interceptors: List[Interceptor[F]] = metricsInterceptor.toList ++
-    rejectInterceptor.toList ++
+    rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
     serverLog.map(new ServerLogInterceptor[F](_)).toList ++
     additionalInterceptors ++
