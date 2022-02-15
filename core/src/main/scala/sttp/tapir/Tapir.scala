@@ -425,4 +425,11 @@ trait TapirComputedInputs { this: Tapir =>
         upgrade <- request.header(HeaderNames.Upgrade)
       } yield connection.equalsIgnoreCase("Upgrade") && upgrade.equalsIgnoreCase("websocket")).getOrElse(false)
     )
+  /** An input which matches if the request URI ends with a trailing slash, otherwise the result is a decode failure on the path. Has no
+    * effect when used by documentation or client interpreters.
+    */
+  val noTrailingSlash: EndpointInput[Unit] = extractFromRequest(_.uri.path).mapDecode(ps =>
+    if (ps.lastOption.contains("")) DecodeResult.Mismatch("", "/") else DecodeResult.Value(())
+  )(_ => Nil)
+
 }
