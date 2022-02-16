@@ -1,13 +1,11 @@
 package sttp.tapir.server.armeria
 
-import com.linecorp.armeria.common.HttpMethod
 import com.linecorp.armeria.server.Route
-import scala.collection.JavaConverters._
-import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType}
 import sttp.tapir.EndpointIO.{Body, StreamBodyWrapper}
-import sttp.tapir.EndpointInput.{FixedMethod, FixedPath, PathCapture, PathsCapture}
+import sttp.tapir.EndpointInput.{FixedPath, PathCapture, PathsCapture}
 import sttp.tapir.RawBodyType.FileBody
 import sttp.tapir.internal.{RichEndpoint, RichEndpointOutput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType}
 
 private[armeria] object RouteMapping {
 
