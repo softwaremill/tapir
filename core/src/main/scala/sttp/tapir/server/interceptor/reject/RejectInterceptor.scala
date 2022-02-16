@@ -29,7 +29,7 @@ class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor
           case f: RequestResult.Failure =>
             handler(f) match {
               case Some(value) => responder(request, value).map(RequestResult.Response(_))
-              case None     => (f: RequestResult[B]).unit
+              case None        => (f: RequestResult[B]).unit
             }
         }
     }
