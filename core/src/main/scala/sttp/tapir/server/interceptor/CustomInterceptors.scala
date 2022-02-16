@@ -18,7 +18,7 @@ import sttp.tapir.{headers, statusCode}
   *
   * @param metricsInterceptor
   *   Whether to collect metrics.
-  * @param rejectInterceptor
+  * @param rejectHandler
   *   How to respond when decoding fails for all interpreted endpoints.
   * @param exceptionHandler
   *   Whether to respond to exceptions in the server logic, or propagate them to the server.
