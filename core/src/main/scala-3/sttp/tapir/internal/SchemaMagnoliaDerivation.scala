@@ -53,6 +53,9 @@ trait SchemaMagnoliaDerivation {
         }
       }
 
+      private def subtypeNameToSchemaName(subtype: SealedTrait.Subtype[Typeclass, _, ?]): Schema.SName =
+        typeNameToSchemaName(subtype.typeInfo, mergeAnnotations(subtype.annotations, subtype.inheritedAnnotations))
+
       private def getEncodedName(annotations: Seq[Any]): Option[String] =
         annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
 
@@ -80,12 +83,18 @@ trait SchemaMagnoliaDerivation {
               .toListMap
           val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
             ctx.choose(t) { v =>
-              subtypesByName.get(typeNameToSchemaName(v.typeInfo, mergeAnnotations(v.annotations, v.inheritedAnnotations)))
+              subtypesByName.get(subtypeNameToSchemaName(v.subtype))
             }
           )
           val coproduct = genericDerivationConfig.discriminator match {
-            case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-            case None    => baseCoproduct
+            case Some(d) =>
+              val discriminatorMapping: Map[String, SRef[_]] =
+                ctx.subtypes.map { s =>
+                  val schemaName = subtypeNameToSchemaName(s)
+                  genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName)
+                }.toMap
+              baseCoproduct.addDiscriminatorField(FieldName(d), discriminatorMapping = discriminatorMapping)
+            case None => baseCoproduct
           }
 
           Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, annotations)))
