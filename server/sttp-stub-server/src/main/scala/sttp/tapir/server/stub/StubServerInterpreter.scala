@@ -2,24 +2,23 @@ package sttp.tapir.server.stub
 
 import sttp.client3.testing._
 import sttp.client3.{Request, Response}
-import sttp.model.{HasHeaders, RequestMetadata, StatusCode}
+import sttp.model.{RequestMetadata, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
+import sttp.tapir.RawBodyType
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter._
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
 import scala.util.{Success, Try}
 
-private[stub] object TestServerInterpreter {
-  def apply[F[_]: MonadError, R](
-      req: Request[_, _],
+private[stub] object StubServerInterpreter {
+  def apply[F[_]: MonadError, R, T](
+      req: Request[T, R],
       endpoints: List[ServerEndpoint[R, F]],
       interceptors: List[Interceptor[F]]
   ): F[Response[_]] = {
@@ -28,7 +27,7 @@ private[stub] object TestServerInterpreter {
       override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = cb(Success(())).map(_ => body)
     }
 
-    val interpreter = new ServerInterpreter[R, F, Any, NoStreams](endpoints, toResponseBody, interceptors, _ => ().unit)
+    val interpreter = new ServerInterpreter[R, F, Any, NoStreams](endpoints, SttpResponseEncoder.toResponseBody, interceptors, _ => ().unit)
 
     val sRequest = new SttpRequest(req)
 
@@ -41,16 +40,6 @@ private[stub] object TestServerInterpreter {
   private val toResponse: (ServerRequest, ServerResponse[Any]) => Response[Any] = (sRequest, sResponse) => {
     val metadata = RequestMetadata(sRequest.method, sRequest.uri, sRequest.headers)
     sttp.client3.Response(sResponse.body.getOrElse(()), sResponse.code, "", sResponse.headers, Nil, metadata)
-  }
-
-  private val toResponseBody: ToResponseBody[Any, NoStreams] = new ToResponseBody[Any, NoStreams] {
-    override val streams: NoStreams = NoStreams
-    override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
-    override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
-    override def fromWebSocketPipe[REQ, RESP](
-        pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
-    ): Any = pipe // impossible
   }
 
   private def requestBody[F[_]](bytes: Array[Byte])(implicit ME: MonadError[F]): RequestBody[F, NoStreams] = new RequestBody[F, NoStreams] {
