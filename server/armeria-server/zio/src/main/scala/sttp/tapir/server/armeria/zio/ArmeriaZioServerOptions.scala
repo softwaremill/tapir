@@ -1,8 +1,10 @@
 package sttp.tapir.server.armeria.zio
 
-import _root_.zio.{RIO, Task, URIO, ZIO}
+import _root_.zio.{RIO, Task, UIO, URIO, ZIO}
+import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
-import sttp.tapir.TapirFile
+import scala.util.control.NonFatal
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.armeria.ArmeriaServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -25,8 +27,8 @@ object ArmeriaZioServerOptions {
     CustomInterceptors(
       createOptions = (ci: CustomInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]]) => {
         ArmeriaZioServerOptions(
-          () => ZIO.fromFuture(_ => ArmeriaServerOptions.defaultCreateFile()),
-          file => ZIO.fromFuture(_ => ArmeriaServerOptions.defaultDeleteFile(file)),
+          defaultCreateFile,
+          defaultDeleteFile,
           ci.interceptors
         )
       }
@@ -35,6 +37,10 @@ object ArmeriaZioServerOptions {
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 
   implicit def default[R]: ArmeriaZioServerOptions[RIO[R, *]] = customInterceptors.options
+
+  def defaultCreateFile[R](): RIO[R, TapirFile] = blocking(Defaults.createTempFile())
+
+  def defaultDeleteFile[R](file: TapirFile): RIO[R, Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[R]: ServerLog[RIO[R, *]] = DefaultServerLog(
     doLogWhenHandled = debugLog[R],
@@ -48,4 +54,19 @@ object ArmeriaZioServerOptions {
       case None     => logger.debug(msg)
       case Some(ex) => logger.debug(msg, ex)
     })
+
+  private def blocking[R, T](body: => T): RIO[R, T] = {
+    Task.async { cb =>
+      CommonPools
+        .blockingTaskExecutor()
+        .execute(() => {
+          try {
+            cb(Task.succeed(body))
+          } catch {
+            case NonFatal(ex) =>
+              cb(Task.fail(ex))
+          }
+        })
+    }
+  }
 }

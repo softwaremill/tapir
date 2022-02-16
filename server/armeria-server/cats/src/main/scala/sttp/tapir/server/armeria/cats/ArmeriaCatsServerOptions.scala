@@ -2,13 +2,13 @@ package sttp.tapir.server.armeria.cats
 
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
-import com.linecorp.armeria.server.ServiceRequestContext
+import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
-import scala.concurrent.Future
-import sttp.tapir.TapirFile
+import scala.util.control.NonFatal
 import sttp.tapir.server.armeria.ArmeriaServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 final case class ArmeriaCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
@@ -29,10 +29,10 @@ object ArmeriaCatsServerOptions {
   def customInterceptors[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): CustomInterceptors[F, ArmeriaCatsServerOptions[F]] = {
     CustomInterceptors(
       createOptions = (ci: CustomInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
-        ArmeriaCatsServerOptions(
+        ArmeriaCatsServerOptions[F](
           dispatcher,
-          () => F.fromFuture(F.pure(ArmeriaServerOptions.defaultCreateFile())),
-          file => F.fromFuture(F.pure(ArmeriaServerOptions.defaultDeleteFile(file))),
+          () => defaultCreateFile()(F),
+          file => defaultDeleteFile(file)(F),
           ci.interceptors
         )
       }
@@ -40,6 +40,10 @@ object ArmeriaCatsServerOptions {
   }
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
+
+  def defaultCreateFile[F[_]: Async](): F[TapirFile] = blocking(Defaults.createTempFile())
+
+  def defaultDeleteFile[F[_]: Async](file: TapirFile): F[Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[F[_]: Async]: ServerLog[F] = DefaultServerLog[F](
     doLogWhenHandled = debugLog[F],
@@ -55,4 +59,19 @@ object ArmeriaCatsServerOptions {
       case None     => logger.debug(msg)
       case Some(ex) => logger.debug(msg, ex)
     })
+
+  private def blocking[F[_], T](body: => T)(implicit F: Async[F]): F[T] = {
+    F.async_ { cb =>
+      CommonPools
+        .blockingTaskExecutor()
+        .execute(() => {
+          try {
+            cb(Right(body))
+          } catch {
+            case NonFatal(ex) =>
+              cb(Left(ex))
+          }
+        })
+    }
+  }
 }
