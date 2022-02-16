@@ -86,4 +86,17 @@ case class PartialServerEndpoint[A, U, I, E, O, -R, F[_]](
       f: U => I => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint.Full[A, U, I, E, O, R, F] =
     ServerEndpoint(endpoint, securityLogic, recoverErrors2[U, I, E, O, F](f))
+
+  def serverLogicOption(f: U => I => F[Option[O]])(implicit eIsUnit: E =:= Unit): ServerEndpoint.Full[A, U, I, Unit, O, R, F] =
+    ServerEndpoint(
+      endpoint.asInstanceOf[Endpoint[A, I, Unit, O, R]],
+      securityLogic.asInstanceOf[MonadError[F] => A => F[Either[Unit, U]]],
+      implicit m =>
+        u =>
+          i =>
+            f(u)(i).map {
+              case None    => Left(())
+              case Some(v) => Right(v)
+            }
+    )
 }
