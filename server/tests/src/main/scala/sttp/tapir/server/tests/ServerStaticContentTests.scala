@@ -87,7 +87,7 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
-      Test("Should return acceptRanges for head request") {
+      Test("should return acceptRanges for head request") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f1").toFile
           serveRoute(filesHeadServerEndpoint("test")(testDir.getAbsolutePath))
@@ -105,7 +105,7 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
-      Test("Should return 404 for HEAD request and not existing file ") {
+      Test("should return 404 for HEAD request and not existing file ") {
         withTestFilesDirectory { testDir =>
           serveRoute(filesHeadServerEndpoint(emptyInput)(testDir.getAbsolutePath))
             .use { port =>
@@ -118,7 +118,7 @@ class ServerStaticContentTests[F[_], ROUTE](
             .unsafeToFuture()
         }
       },
-      Test("Should create head and get endpoints") {
+      Test("should create head and get endpoints") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f2").toFile
           val headAndGetEndpoint = filesServerEndpoints[F]("test")(testDir.getAbsolutePath)
@@ -425,6 +425,18 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       },
+      Test("not return a resource outside of the resource prefix directory, when the path is given as a single segment") {
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+          .use { port =>
+            val path = List("../test2/r5.txt")
+            basicRequest
+              .get(uri"http://localhost:$port/$path")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body should not be "Resource 5")
+          }
+          .unsafeToFuture()
+      },
       Test("serve resources") {
         serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
           .use { port =>
@@ -435,8 +447,8 @@ class ServerStaticContentTests[F[_], ROUTE](
 
             get("r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
               get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
-              get("d1/r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
-              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+              get("d1" :: "r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
+              get("d1" :: "d2" :: "r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
           }
           .unsafeToFuture()
       },
@@ -456,8 +468,8 @@ class ServerStaticContentTests[F[_], ROUTE](
 
             get("r1.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
               get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
-              get("d1/r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
-              get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+              get("d1" :: "r3.txt" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
+              get("d1" :: "d2" :: "r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
           }
           .unsafeToFuture()
       },
@@ -467,6 +479,20 @@ class ServerStaticContentTests[F[_], ROUTE](
             .use { port =>
               basicRequest
                 .get(uri"http://localhost:$port/../f1")
+                .response(asStringAlways)
+                .send(backend)
+                .map(_.body should not be "f1 content")
+            }
+            .unsafeToFuture()
+        }
+      },
+      Test("not return a file outside of the system path, when the path is given as a single segment") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath + "/d1"))
+            .use { port =>
+              val path = List("../f1")
+              basicRequest
+                .get(uri"http://localhost:$port/$path")
                 .response(asStringAlways)
                 .send(backend)
                 .map(_.body should not be "f1 content")
