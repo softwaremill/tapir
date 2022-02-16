@@ -66,7 +66,7 @@ case class CustomInterceptors[F[_], O](
 
   def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, O] = copy(decodeFailureHandler = d)
 
-  /** Customise the way error messages are rendered in error responses, using the default exception and decode failure handlers.
+  /** Customise the way error messages are rendered in error responses, using the default exception, decode failure and reject handlers.
     */
   def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, O] = {
     copy(
