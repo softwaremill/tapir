@@ -851,7 +851,7 @@ lazy val armeriaServerZio: ProjectMatrix =
     .settings(
       name := "tapir-armeria-server-zio",
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zio1InteropReactiveStreams
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
       )
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)

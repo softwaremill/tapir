@@ -1,13 +1,14 @@
 package sttp.tapir.server.armeria.zio
 
-import _root_.zio.{RIO, Task, UIO, URIO, ZIO}
+import _root_.zio.{RIO, Task, URIO}
 import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
-import scala.util.control.NonFatal
-import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.armeria.ArmeriaServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
+
+import scala.util.control.NonFatal
 
 final case class ArmeriaZioServerOptions[F[_]](
     createFile: () => F[TapirFile],
