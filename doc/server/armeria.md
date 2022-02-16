@@ -72,7 +72,7 @@ val tapirService = ArmeriaFutureServerInterpreter().toService(streamingResponse.
 Every endpoint can be configured by providing an instance of `ArmeriaFutureEndpointOptions`, see [server options](options.md) for details.
 Note that Armeria automatically injects an `ExecutionContext` on top of Armeria's `EventLoop` to invoke the logic.
 
-## Cats Effect typeclasses
+## Cats Effect
 
 Add the following dependency
 ```scala
