@@ -32,7 +32,7 @@ object VertxCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
-          Defaults.createTempFile().getParentFile.getAbsoluteFile,
+          VertxServerOptions.uploadDirectory(),
           file => Sync[F].delay(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors

@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.LoggerFactory
-import io.vertx.core.{Future, Handler}
+import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
@@ -75,14 +75,20 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
       rc.response.exceptionHandler { (t: Throwable) =>
         cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
-          c(FiberId.None)
+          rc.vertx().executeBlocking[Unit]((promise: Promise[Unit]) => {
+            c(FiberId.None)
+            promise.complete(())
+          }, false)
         }
         ()
       }
 
       val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
       cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-        canceler(FiberId.None)
+        rc.vertx().executeBlocking[Unit]((promise: Promise[Unit]) => {
+          canceler(FiberId.None)
+          promise.complete(())
+        }, false)
       }
 
       ()
