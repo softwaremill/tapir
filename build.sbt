@@ -799,7 +799,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
       "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
     )
   )
-  .dependsOn(tests)
+  .dependsOn(tests, sttpStubServer)
   .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
@@ -832,10 +832,14 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-sttp-stub-server"
+    name := "tapir-sttp-stub-server",
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test,
+      "io.circe" %%% "circe-generic" % Versions.circe
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core, serverTests % "test", sttpClient)
+  .dependsOn(core, sttpClient)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonJvmSettings)

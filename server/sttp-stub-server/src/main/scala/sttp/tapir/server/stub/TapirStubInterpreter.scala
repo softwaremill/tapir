@@ -56,30 +56,29 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 
   class TapirServerEndpointStub[A, U, I, E, O](sep: ServerEndpoint.Full[A, U, I, E, O, R, F]) {
     def returnSuccess(response: O, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
-      if (runSecurityLogic) {
-        append(
-          ServerEndpoint[A, U, I, E, O, R, F](
-            sep.endpoint,
-            sep.securityLogic,
-            _ => _ => _ => (Right(response): Either[E, O]).unit
-          )
-        )
-      } else new TapirEndpointStub(sep.endpoint).returnSuccess(response)
+      if (runSecurityLogic)
+        append(securedEndpoint(logic = _ => _ => _ => (Right(response): Either[E, O]).unit))
+      else new TapirEndpointStub(sep.endpoint).returnSuccess(response)
 
-    def returnError(errorResponse: E, runAuthLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
-      if (runAuthLogic) {
-        append(
-          ServerEndpoint[A, U, I, E, O, R, F](
-            sep.endpoint,
-            sep.securityLogic,
-            _ => _ => _ => (Left(errorResponse): Either[E, O]).unit
-          )
-        )
-      } else new TapirEndpointStub(sep.endpoint).returnError(errorResponse)
+    def returnError(errorResponse: E, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
+      if (runSecurityLogic)
+        append(securedEndpoint(logic = _ => _ => _ => (Left(errorResponse): Either[E, O]).unit))
+      else new TapirEndpointStub(sep.endpoint).returnError(errorResponse)
 
-    def throwException(ex: Throwable): TapirStubInterpreter[F, R, OPTIONS] = new TapirEndpointStub(sep.endpoint).throwException(ex)
+    def throwException(ex: Throwable, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] = {
+      if (runSecurityLogic)
+        append(securedEndpoint(logic = _ => _ => _ => throw ex))
+      new TapirEndpointStub(sep.endpoint).throwException(ex)
+    }
 
     def runLogic(): TapirStubInterpreter[F, R, OPTIONS] = append(sep)
+
+    private def securedEndpoint(logic: MonadError[F] => U => I => F[Either[E, O]]): ServerEndpoint[R, F] =
+      ServerEndpoint[A, U, I, E, O, R, F](
+        sep.endpoint,
+        sep.securityLogic,
+        logic
+      )
   }
 
   private def append(sep: ServerEndpoint[R, F]) = new TapirStubInterpreter[F, R, OPTIONS](endpoints :+ sep, interceptors)
