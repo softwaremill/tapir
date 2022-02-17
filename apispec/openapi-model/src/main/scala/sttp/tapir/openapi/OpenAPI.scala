@@ -121,6 +121,11 @@ final case class ServerVariable(
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 final case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]] = ListMap.empty,
+    responses: ListMap[String, ReferenceOr[Response]] = ListMap.empty,
+    parameters: ListMap[String, ReferenceOr[Parameter]] = ListMap.empty,
+    examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
+    requestBodies: ListMap[String, ReferenceOr[RequestBody]] = ListMap.empty,
+    headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
@@ -135,6 +140,40 @@ final case class Components(
     securitySchemes.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/securitySchemes/$key")))
   def schemas(updated: ListMap[String, ReferenceOr[Schema]]): Components = copy(schemas = updated)
   def securitySchemes(updated: ListMap[String, ReferenceOr[SecurityScheme]]): Components = copy(securitySchemes = updated)
+
+  def addResponse(key: String, response: Response): Components = copy(responses = responses.updated(key, Right(response)))
+  def getLocalResponse(key: String): Option[Response] = responses.get(key).flatMap(_.toOption)
+  def getReferenceToResponse(key: String): Option[Reference] =
+    responses.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/responses/$key")))
+  def responses(updated: ListMap[String, ReferenceOr[Response]]): Components = copy(responses = updated)
+
+  def addParameter(key: String, parameter: Parameter): Components =
+    copy(parameters = parameters.updated(key, Right(parameter)))
+  def getLocalParameter(key: String): Option[Parameter] = parameters.get(key).flatMap(_.toOption)
+  def getReferenceToParameter(key: String): Option[Reference] =
+    parameters.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/parameters/$key")))
+  def parameters(updated: ListMap[String, ReferenceOr[Parameter]]): Components = copy(parameters = updated)
+
+  def addExample(key: String, example: Example): Components = copy(examples = examples.updated(key, Right(example)))
+  def getLocalExample(key: String): Option[Example] = examples.get(key).flatMap(_.toOption)
+  def getReferenceToExample(key: String): Option[Reference] =
+    examples.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/examples/$key")))
+  def examples(updated: ListMap[String, ReferenceOr[Example]]): Components = copy(examples = updated)
+
+  def addRequestBody(key: String, requestBody: RequestBody): Components =
+    copy(requestBodies = requestBodies.updated(key, Right(requestBody)))
+  def getLocalRequestBody(key: String): Option[RequestBody] = requestBodies.get(key).flatMap(_.toOption)
+  def getReferenceToRequestBody(key: String): Option[Reference] =
+    requestBodies.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/requestBodies/$key")))
+  def requestBodies(updated: ListMap[String, ReferenceOr[RequestBody]]): Components = copy(requestBodies = updated)
+
+  def addHeader(key: String, header: Header): Components = copy(headers = headers.updated(key, Right(header)))
+  def getLocalHeader(key: String): Option[Header] = headers.get(key).flatMap(_.toOption)
+  def getReferenceToHeader(key: String): Option[Reference] =
+    headers.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/headers/$key")))
+
+  def headers(updated: ListMap[String, ReferenceOr[Header]]): Components = copy(headers = updated)
+
   def extensions(updated: ListMap[String, ExtensionValue]): Components = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): Components = copy(extensions = extensions.updated(key, value))
 }
@@ -373,6 +412,7 @@ final case class Response(
     description: String = "",
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
+    //links: ListMap[String, ReferenceOr[Link]] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def description(updated: String): Response = copy(description = updated)
@@ -453,3 +493,13 @@ final case class Header(
 object Header {
   val Empty: Header = Header()
 }
+
+//final case class Link(
+//    operationRef: Option[String],
+//    operationId: Option[String],
+//  parameters: ListMap[String, ???] = ListMap.empty,
+//  requestBody: RequestBody,
+//  description: Option[String],
+//  server: Server,
+//  extensions: ListMap[String, ExtensionValue] = ListMap.empty
+//)
