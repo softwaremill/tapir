@@ -47,11 +47,17 @@ class ServerInterpreter[R, F[_], B, S](
     ses match {
       case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
-        tryServerEndpoint[se.A, se.U, se.I, se.E, se.O](request, requestBody, se, endpointInterceptors).flatMap {
-          case RequestResult.Failure(failureContexts) =>
-            firstNotNone(request, requestBody, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
-          case r => r.unit
-        }
+        tryServerEndpoint[se.SECURITY_INPUT, se.PRINCIPAL, se.INPUT, se.ERROR_OUTPUT, se.OUTPUT](
+          request,
+          requestBody,
+          se,
+          endpointInterceptors
+        )
+          .flatMap {
+            case RequestResult.Failure(failureContexts) =>
+              firstNotNone(request, requestBody, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
+            case r => r.unit
+          }
     }
 
   private def tryServerEndpoint[A, U, I, E, O](
