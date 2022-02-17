@@ -389,6 +389,24 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], recoverErrors1[I, E, O, F](f))
 
+  /** Like [[serverLogic]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the result of the
+    * logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverLogicOption[F[_]](
+      f: I => F[Option[O]]
+  )(implicit aIsUnit: A =:= Unit, eIsUnit: E =:= Unit): ServerEndpoint.Full[Unit, Unit, I, Unit, O, R, F] = {
+    import sttp.monad.syntax._
+    ServerEndpoint.public(
+      this.asInstanceOf[Endpoint[Unit, I, Unit, O, R]],
+      implicit m =>
+        i =>
+          f(i).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
+
   //
 
   /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
@@ -430,6 +448,24 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
       f: A => F[U]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[A, U, I, E, O, R, F] =
     PartialServerEndpoint(this, recoverErrors1[A, E, U, F](f))
+
+  /** Like [[serverSecurityLogic]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the result of
+    * the logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverSecurityLogicOption[U, F[_]](
+      f: A => F[Option[U]]
+  )(implicit eIsUnit: E =:= Unit): PartialServerEndpoint[A, U, I, Unit, O, R, F] = {
+    import sttp.monad.syntax._
+    PartialServerEndpoint(
+      this.asInstanceOf[Endpoint[A, I, Unit, O, R]],
+      implicit m =>
+        a =>
+          f(a).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
 }
 
 case class EndpointInfo(

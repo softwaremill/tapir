@@ -577,8 +577,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.4",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.4" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.5",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.5" % Test,
       scalaTest.value % Test
     )
   )
@@ -942,7 +942,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.73.Final",
+      "io.netty" % "netty-all" % "4.1.74.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -993,7 +993,7 @@ lazy val zio1HttpServer: ProjectMatrix = (projectMatrix in file("server/zio1-htt
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio1-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC23")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test, "io.d11" %% "zhttp" % "1.0.0.0-RC24")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio1, serverTests % Test)
@@ -1002,7 +1002,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC2")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC3")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
