@@ -42,9 +42,10 @@ val e = sttp.tapir.endpoint
 Convert any endpoint to `SttpBackendStub`:
 
 ```scala mdoc:silent
+import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 
-val backend = SttpBackendStub
+val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
   .apply(IdMonad)
   .whenRequestMatchesEndpoint(e)
   .thenSuccess(ResponseWrapper(1.0))
@@ -57,7 +58,7 @@ effect can be used):
 import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 
-val anotherBackend = SttpBackendStub
+val anotherBackend: SttpBackendStub[Identity, Any] = SttpBackendStub
   .apply(IdMonad)
   .whenRequestMatchesEndpointThenLogic(e.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
 ```
