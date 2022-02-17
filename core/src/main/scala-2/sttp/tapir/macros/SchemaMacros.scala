@@ -7,6 +7,10 @@ import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, Schema
 import sttp.tapir.internal.{ModifySchemaMacro, SchemaEnumerationMacro}
 
 trait SchemaMacros[T] {
+
+  /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
+    * `modification` function. To traverse collections, use `.each`.
+    */
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.generateModify[T, U]
 }
 
