@@ -753,7 +753,7 @@ lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-doc
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
 lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
