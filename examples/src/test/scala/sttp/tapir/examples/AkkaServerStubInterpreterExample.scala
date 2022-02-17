@@ -36,7 +36,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
     val response = sttp.client3.basicRequest
       .get(uri"http://test.com/api/users/greet")
-      .header("Authorization", "Bearer secret-password")
+      .header("Authorization", "Bearer password")
       .send(server)
 
     // then
