@@ -25,7 +25,7 @@ import sttp.client3._
 import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.tapir._
-import sttp.tapir.server.ServerEndpoint.Full
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
@@ -34,17 +34,11 @@ import scala.concurrent.Future
 ```
 
 ```scala mdoc:silent
-val greetUser: Full[String, String, Unit, String, String, Any, Future] = endpoint.get
-  .in("api" / "users" / "greet")
+val someEndpoint: Endpoint[String, Unit, String, String, Any] = endpoint.get
+  .in("api")
   .securityIn(auth.bearer[String]())
   .out(stringBody)
   .errorOut(stringBody)
-  .serverSecurityLogic(token =>
-    Future.successful {
-      (if (token == "secret-password") Right("user123") else Left("unauthorized"))
-    }
-  )
-  .serverLogic(user => _ => Future.successful(Right(s"hello $user")))
 ```
 
 And the following `AkkaHttpServerOptions`:
@@ -63,30 +57,41 @@ The `backend()` method returns `SttpBackend` which runs all requests against int
 class MySpec extends AsyncFlatSpec with Matchers {
   
   val stub = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), new FutureMonad())
-    .forServerEndpoint(greetUser)
+    .whenEndpoint(someEndpoint)
     .throwException(new RuntimeException("error"))
     .backend()
 
   it should "use my custom exception handler" in {
     sttp.client3.basicRequest
-      .get(uri"http://test.com/api/users/greet")
+      .get(uri"http://test.com/api")
       .send(stub)
       .map(_.body shouldBe Left("failed due to error"))  
   }
 }
 ```
 
-A stub which executes an endpoint's server logic can also be created:
+A stub which executes an endpoint's server logic can also be created for instances of `ServerEndpoint`'s:
 
 ```scala mdoc:silent
 import scala.concurrent.ExecutionContext.Implicits.global
 
+val serverEp: ServerEndpoint[Any, Future] = someEndpoint
+  .serverSecurityLogic(token =>
+    Future.successful {
+      if (token == "password") Right("user123") else Left("unauthorized")
+    }
+  )
+  .serverLogic(user => _ => Future.successful(Right(s"hello $user")))
+
 TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), new FutureMonad())
-  .forServerEndpoint(greetUser).runLogic()
+  .whenServerEndpoint(serverEp).runLogic()
   .backend()
 ```
 
-Please note that when passing `AkkaHttpServerOptions` to `TapirStubInterpreter` server logging was disabled `options.serverLog(None)`.
+For stubbing `ServerEndpoint` logic `Full` representation of endpoint needs to be provided.
+
+Please note that when passing `AkkaHttpServerOptions` to `TapirStubInterpreter` server logging needs to be disabled `options.serverLog(None)`.
+It's not required for other interpreters default logging options.
 
 ### External APIs described with Tapir
 

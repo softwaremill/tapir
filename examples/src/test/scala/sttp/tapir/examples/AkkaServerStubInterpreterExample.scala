@@ -18,7 +18,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
   it should "use custom exception handler" in {
     val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options.serverLog(None), new FutureMonad())
-      .forServerEndpoint(UsersApi.greetUser)
+      .whenServerEndpoint(UsersApi.greetUser)
       .throwException(new RuntimeException("error"))
       .backend()
 
@@ -30,7 +30,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
   it should "run greet users logic" in {
     val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options.serverLog(None), new FutureMonad())
-      .forServerEndpoint(UsersApi.greetUser)
+      .whenServerEndpoint(UsersApi.greetUser)
       .runLogic()
       .backend()
 
@@ -53,7 +53,7 @@ object UsersApi {
     .errorOut(stringBody)
     .serverSecurityLogic(token =>
       Future.successful {
-        (if (token == "secret-password") Right("user123") else Left("unauthorized")): Either[String, String]
+        if (token == "password") Right("user123") else Left("unauthorized")
       }
     )
     .serverLogic(user => _ => Future.successful(Right(s"hello $user")))

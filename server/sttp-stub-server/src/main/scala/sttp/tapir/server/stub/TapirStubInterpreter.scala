@@ -13,15 +13,15 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     private val interceptors: List[Interceptor[F]]
 )(implicit monad: MonadError[F]) {
 
-  def forEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
+  def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
-  def forServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
+  def whenServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
     serverEndpoint
   )
 
-  def forServerEndpointRunLogic(serverEndpoint: ServerEndpoint[R, F]): TapirStubInterpreter[F, R, OPTIONS] = append(serverEndpoint)
+  def whenServerEndpointRunLogic(serverEndpoint: ServerEndpoint[R, F]): TapirStubInterpreter[F, R, OPTIONS] = append(serverEndpoint)
 
-  def forServerEndpointsRunLogic(serverEndpoints: List[ServerEndpoint[R, F]]): TapirStubInterpreter[F, R, OPTIONS] =
+  def whenServerEndpointsRunLogic(serverEndpoints: List[ServerEndpoint[R, F]]): TapirStubInterpreter[F, R, OPTIONS] =
     serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
   /** Returns `SttpBackend` which runs `ServerInterpreter` on each request */
@@ -38,10 +38,10 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
   }
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
-    def returnSuccess(response: O): TapirStubInterpreter[F, R, OPTIONS] =
+    def respond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Right(response): Either[E, O]).unit))
 
-    def returnError(errorResponse: E): TapirStubInterpreter[F, R, OPTIONS] =
+    def respondError(errorResponse: E): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Left(errorResponse): Either[E, O]).unit))
 
     def throwException(ex: Throwable): TapirStubInterpreter[F, R, OPTIONS] =
@@ -55,15 +55,15 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
   }
 
   class TapirServerEndpointStub[A, U, I, E, O](sep: ServerEndpoint.Full[A, U, I, E, O, R, F]) {
-    def returnSuccess(response: O, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
+    def respond(response: O, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => (Right(response): Either[E, O]).unit))
-      else new TapirEndpointStub(sep.endpoint).returnSuccess(response)
+      else new TapirEndpointStub(sep.endpoint).respond(response)
 
-    def returnError(errorResponse: E, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
+    def respondError(errorResponse: E, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => (Left(errorResponse): Either[E, O]).unit))
-      else new TapirEndpointStub(sep.endpoint).returnError(errorResponse)
+      else new TapirEndpointStub(sep.endpoint).respondError(errorResponse)
 
     def throwException(ex: Throwable, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] = {
       if (runSecurityLogic)
@@ -85,6 +85,9 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 }
 
 object TapirStubInterpreter {
+  def apply[F[_], R](monad: MonadError[F]): TapirStubInterpreter[F, R, Unit] =
+    new TapirStubInterpreter[F, R, Unit](endpoints = List.empty, new CustomInterceptors[F, Any](_ => ()).interceptors)(monad)
+
   def apply[F[_], R, O](options: CustomInterceptors[F, O], monad: MonadError[F]): TapirStubInterpreter[F, R, O] =
     new TapirStubInterpreter[F, R, O](endpoints = List.empty, options.interceptors)(monad)
 

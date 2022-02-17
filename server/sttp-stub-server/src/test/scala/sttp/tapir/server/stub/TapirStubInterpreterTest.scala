@@ -28,8 +28,8 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "stub endpoint logic with success response" in {
     // given
     val server = TapirStubInterpreter(options, IdMonad)
-      .forEndpoint(getProduct)
-      .returnSuccess("computer")
+      .whenEndpoint(getProduct)
+      .respond("computer")
       .backend()
 
     // when
@@ -42,8 +42,8 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "stub endpoint logic with error response" in {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, IdMonad)
-      .forEndpoint(getProduct)
-      .returnError("failed")
+      .whenEndpoint(getProduct)
+      .respondError("failed")
       .backend()
 
     // when
@@ -56,7 +56,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "run defined endpoint server and auth logic" in {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, IdMonad)
-      .forServerEndpointRunLogic(
+      .whenServerEndpointRunLogic(
         createProduct
           .serverSecurityLogic { _ => IdMonad.unit(Right("user1"): Either[String, String]) }
           .serverLogic { user => _ => IdMonad.unit(Right(s"created by $user")) }
@@ -73,12 +73,12 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "stub endpoint server logic with success response, skip auth" in {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, IdMonad)
-      .forServerEndpoint(
+      .whenServerEndpoint(
         createProduct
           .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
           .serverLogic { user => _ => IdMonad.unit(Right(s"Created by $user")) }
       )
-      .returnSuccess("created", runSecurityLogic = false)
+      .respond("created", runSecurityLogic = false)
       .backend()
 
     // when
@@ -91,12 +91,12 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "stub server endpoint logic with error response, skip auth" in {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, IdMonad)
-      .forServerEndpoint(
+      .whenServerEndpoint(
         createProduct
           .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
           .serverLogic { user => _ => IdMonad.unit(Right(s"created by $user")) }
       )
-      .returnError("failed", runAuthLogic = false)
+      .respondError("failed", runAuthLogic = false)
       .backend()
 
     // when
@@ -114,9 +114,9 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
       .rejectInterceptor(new RejectInterceptor[Identity](_ => Some(StatusCode.NotAcceptable)))
 
     val server = TapirStubInterpreter(opts, IdMonad)
-      .forEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
-      .returnSuccess("computer")
-      .forEndpoint(createProduct)
+      .whenEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
+      .respond("computer")
+      .whenEndpoint(createProduct)
       .throwException(new RuntimeException)
       .backend()
 

@@ -33,8 +33,8 @@ abstract class ServerStubInterpreterTest[F[_], R, OPTIONS] extends AsyncFlatSpec
 
   it should "use custom interceptors and stub endpoint logic" in {
     val stub: SttpBackend[F, R] = TapirStubInterpreter[F, R, OPTIONS](customInterceptors, monad)
-      .forServerEndpoint(serverEp)
-      .returnSuccess("hello")
+      .whenServerEndpoint(serverEp)
+      .respond("hello")
       .backend()
 
     val response = sttp.client3.basicRequest
