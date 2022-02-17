@@ -18,7 +18,7 @@ class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPip
     (in: Stream[Throwable, REQ]) =>
       val sends = in
         .map(o.requests.encode)
-        .mapM(ws.send(_, isContinuation = false)) // TODO support fragmented frames
+        .mapZIO(ws.send(_, isContinuation = false)) // TODO support fragmented frames
 
       def decode(frame: WebSocketFrame): F[Either[Unit, Option[RESP]]] =
         o.responses.decode(frame) match {
@@ -59,8 +59,8 @@ class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPip
           }).map(acc => acc -> Left(()))
 
       val receives = Stream
-        .repeatEffect(ws.receive())
-        .mapAccumM[Any, Throwable, Option[WebSocketFrame], Either[Unit, Option[RESP]]](
+        .repeatZIO(ws.receive())
+        .mapAccumZIO[Any, Throwable, Option[WebSocketFrame], Either[Unit, Option[RESP]]](
           None
         ) { // left - ignore; right - close or response
           case (acc, _: WebSocketFrame.Close) if !o.decodeCloseResponses =>

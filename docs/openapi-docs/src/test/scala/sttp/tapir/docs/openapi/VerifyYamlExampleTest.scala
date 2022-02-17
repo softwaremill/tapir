@@ -170,4 +170,17 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("should support summary and name for single example") {
+    val e = endpoint.in(
+      "users" / query[Option[Boolean]]("active")
+        .description("Filter for only active or inactive users.")
+        .example(Example.of(value = Some(true), name = Some("For active users"), summary = Some("Get only active users")))
+    )
+
+    val expectedYaml = load("example/expected_single_example_with_summary.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }

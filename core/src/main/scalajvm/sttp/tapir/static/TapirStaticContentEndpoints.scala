@@ -15,7 +15,8 @@ trait TapirStaticContentEndpoints {
 
   private val pathsWithoutDots: EndpointInput[List[String]] =
     paths.mapDecode(ps =>
-      if (ps.exists(p => p == "" || p == "." || p == ".."))
+      // a single path segment might contain / as well
+      if (ps.exists(p => p == "" || p == "." || p == ".." || p.startsWith("../") || p.endsWith("/..") || p.contains("/../")))
         DecodeResult.Error(ps.mkString("/"), new RuntimeException(s"Incorrect path: $ps"))
       else DecodeResult.Value(ps)
     )(identity)

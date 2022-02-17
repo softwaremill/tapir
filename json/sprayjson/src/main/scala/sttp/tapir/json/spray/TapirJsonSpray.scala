@@ -24,7 +24,7 @@ trait TapirJsonSpray {
         case Failure(e) =>
           Error(s, JsonDecodeException(errors = List.empty, e))
       }
-    } { t => t.toJson.toString() }
+    } { t => t.toJson.toString }
 
   // JsValue is a coproduct with unknown implementations
   implicit val schemaForSprayJsValue: Schema[JsValue] =

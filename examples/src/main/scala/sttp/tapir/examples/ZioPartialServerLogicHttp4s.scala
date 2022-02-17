@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import org.http4s._
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.tapir.examples.UserAuthenticationLayer._

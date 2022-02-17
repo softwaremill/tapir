@@ -1,14 +1,17 @@
 package sttp.tapir.generic
 
-import java.math.{BigDecimal => JBigDecimal}
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
-import sttp.tapir.Schema.annotations._
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations._
+import sttp.tapir.Schema.{SName, schemaForBoolean}
+import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
+import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
+import sttp.tapir.generic.auto._
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+
+import java.math.{BigDecimal => JBigDecimal}
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -241,18 +244,144 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           )
         ),
         Some(SName("sttp.tapir.generic.Person"))
+      ),
+      Schema(
+        SProduct[UnknownEntity.type](
+          List(
+            field(FieldName("who_am_i"), Schema(SString()))
+          )
+        ),
+        Some(SName("sttp.tapir.generic.UnknownEntity"))
       )
     )
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
+    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "Organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "Person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "UnknownEntity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
   }
 
+  it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "unknown-entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "unknown_entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.Organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.Person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.UnknownEntity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.unknown-entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.unknown_entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "find schema for subtypes containing parent metadata from annotations" in {
+    val schemaType = implicitly[Schema[Pet]].schemaType
+
+    val expectedCatSchema = Schema(
+      SProduct[Cat](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
+          field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Cat"))
+    )
+
+    val expectedDogSchema = Schema(
+      SProduct[Dog](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Dog"))
+    )
+
+    val expectedHamsterSchema = Schema(
+      SProduct[Hamster](
+        List(
+          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
+        )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Hamster"))
+    )
+
+    val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
+
+    List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
+      .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
+  }
 }
 
 object SchemaGenericAutoTest {
   private[generic] val stringSchema = implicitly[Schema[String]]
   private[generic] val intSchema = implicitly[Schema[Int]]
   private[generic] val longSchema = implicitly[Schema[Long]]
+  private[generic] val booleanSchema = implicitly[Schema[Boolean]]
 
   val expectedDSchema: SProduct[D] =
     SProduct[D](List(field(FieldName("someFieldName"), stringSchema)))
@@ -337,3 +466,4 @@ case class JList(data: List[IList])
 sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
+case object UnknownEntity extends Entity

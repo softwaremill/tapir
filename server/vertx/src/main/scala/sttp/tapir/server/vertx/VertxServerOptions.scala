@@ -22,4 +22,7 @@ object VertxServerOptions {
       case None     => log.info(msg, Nil: _*)
       case Some(ex) => log.info(s"$msg; exception: {}", ex)
     }
+
+  private[vertx] def uploadDirectory(): TapirFile =
+    new java.io.File(System.getProperty("java.io.tmpdir")).getAbsoluteFile
 }
