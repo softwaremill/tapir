@@ -832,14 +832,10 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-sttp-stub-server",
-    libraryDependencies ++= Seq(
-      scalaTest.value % Test,
-      "io.circe" %%% "circe-generic" % Versions.circe
-    )
+    name := "tapir-sttp-stub-server"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core, sttpClient)
+  .dependsOn(core, sttpClient, tests % Test)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonJvmSettings)

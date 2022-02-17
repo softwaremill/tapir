@@ -10,8 +10,9 @@ import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 class TapirStubInterpreter[F[_], R, OPTIONS](
     private val endpoints: List[ServerEndpoint[R, F]],
-    private val interceptors: List[Interceptor[F]]
-)(implicit monad: MonadError[F]) {
+    private val interceptors: List[Interceptor[F]],
+    private val stub: SttpBackendStub[F, R]
+) {
 
   def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
@@ -25,17 +26,8 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
   /** Returns `SttpBackend` which runs `ServerInterpreter` on each request */
-  def backend(): SttpBackend[F, R] = {
-    new SttpBackend[F, R] {
-      override def send[T, P](request: Request[T, P]): F[Response[T]] = {
-        // SttpBackendStub is used to send request since it adjusts response to the shape described by request
-        new SttpBackendStub[F, P](monad, { case _ => StubServerInterpreter(request, endpoints, interceptors) }, None).send(request)
-      }
-
-      override def close(): F[Unit] = monad.unit(())
-      override def responseMonad: MonadError[F] = monad
-    }
-  }
+  def backend(): SttpBackend[F, R] =
+    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def respond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
@@ -81,16 +73,18 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
       )
   }
 
-  private def append(sep: ServerEndpoint[R, F]) = new TapirStubInterpreter[F, R, OPTIONS](endpoints :+ sep, interceptors)
+  private def append(sep: ServerEndpoint[R, F]) = new TapirStubInterpreter[F, R, OPTIONS](endpoints :+ sep, interceptors, stub)
+
+  private implicit val monad: MonadError[F] = stub.responseMonad
 }
 
 object TapirStubInterpreter {
-  def apply[F[_], R](monad: MonadError[F]): TapirStubInterpreter[F, R, Unit] =
-    new TapirStubInterpreter[F, R, Unit](endpoints = List.empty, new CustomInterceptors[F, Any](_ => ()).interceptors)(monad)
+  def apply[F[_], R](stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, Unit] =
+    new TapirStubInterpreter[F, R, Unit](endpoints = List.empty, new CustomInterceptors[F, Any](_ => ()).interceptors, stub)
 
-  def apply[F[_], R, O](options: CustomInterceptors[F, O], monad: MonadError[F]): TapirStubInterpreter[F, R, O] =
-    new TapirStubInterpreter[F, R, O](endpoints = List.empty, options.interceptors)(monad)
+  def apply[F[_], R, O](options: CustomInterceptors[F, O], stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, O] =
+    new TapirStubInterpreter[F, R, O](endpoints = List.empty, options.interceptors, stub)
 
-  def apply[F[_], R](interceptors: List[Interceptor[F]], monad: MonadError[F]): TapirStubInterpreter[F, R, Any] =
-    new TapirStubInterpreter[F, R, Any](endpoints = List.empty, interceptors)(monad)
+  def apply[F[_], R](interceptors: List[Interceptor[F]], stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, Any] =
+    new TapirStubInterpreter[F, R, Any](endpoints = List.empty, interceptors, stub)
 }

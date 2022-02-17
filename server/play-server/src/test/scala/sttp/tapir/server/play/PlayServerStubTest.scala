@@ -5,7 +5,8 @@ import akka.stream.Materializer.matFromSystem
 import org.scalatest.BeforeAndAfterAll
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
-import sttp.monad.{FutureMonad, MonadError}
+import sttp.client3.testing.SttpBackendStub
+import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.tests.ServerStubInterpreterTest
 
@@ -19,10 +20,11 @@ class PlayServerStubTest extends ServerStubInterpreterTest[Future, AkkaStreams w
     import actorSystem.dispatcher
     PlayServerOptions.customInterceptors
   }
-  override def monad: MonadError[Future] = new FutureMonad()
+  override def stub: SttpBackendStub[Future, AkkaStreams with WebSockets] = SttpBackendStub(new FutureMonad())
   override def asFuture[A]: Future[A] => Future[A] = identity
 
   override protected def afterAll(): Unit = {
     Await.ready(actorSystem.terminate(), 10.seconds)
   }
+
 }

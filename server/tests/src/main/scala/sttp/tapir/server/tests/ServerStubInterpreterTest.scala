@@ -1,11 +1,10 @@
 package sttp.tapir.server.tests
 
-import org.scalatest.flatspec.{AnyFlatSpec, AsyncFlatSpec}
+import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.client3.SttpBackend
-import sttp.monad.MonadError
-import sttp.tapir._
 import sttp.client3._
+import sttp.client3.testing.SttpBackendStub
+import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint.Full
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.stub.TapirStubInterpreter
@@ -16,7 +15,7 @@ import scala.concurrent.Future
 abstract class ServerStubInterpreterTest[F[_], R, OPTIONS] extends AsyncFlatSpec with Matchers {
 
   def customInterceptors: CustomInterceptors[F, OPTIONS]
-  def monad: MonadError[F]
+  def stub: SttpBackendStub[F, R]
   def asFuture[A]: F[A] => Future[A]
 
   val serverEp: Full[String, String, Unit, String, String, R, F] = endpoint.get
@@ -25,14 +24,14 @@ abstract class ServerStubInterpreterTest[F[_], R, OPTIONS] extends AsyncFlatSpec
     .out(stringBody)
     .errorOut(stringBody)
     .serverSecurityLogic(token =>
-      monad.unit {
+      stub.responseMonad.unit {
         (if (token == "token123") Right("user123") else Left("unauthorized")): Either[String, String]
       }
     )
-    .serverLogic(user => _ => monad.unit(Right(s"hello $user")))
+    .serverLogic(user => _ => stub.responseMonad.unit(Right(s"hello $user")))
 
   it should "use custom interceptors and stub endpoint logic" in {
-    val stub: SttpBackend[F, R] = TapirStubInterpreter[F, R, OPTIONS](customInterceptors, monad)
+    val server: SttpBackend[F, R] = TapirStubInterpreter[F, R, OPTIONS](customInterceptors, stub)
       .whenServerEndpoint(serverEp)
       .respond("hello")
       .backend()
@@ -40,7 +39,7 @@ abstract class ServerStubInterpreterTest[F[_], R, OPTIONS] extends AsyncFlatSpec
     val response = sttp.client3.basicRequest
       .get(uri"http://test.com/greet")
       .header("Authorization", "Bearer token123")
-      .send(stub)
+      .send(server)
 
     asFuture(response).map(_.body shouldBe Right("hello"))
   }

@@ -3,8 +3,8 @@ package sttp.tapir.examples
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
+import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
-import sttp.monad.FutureMonad
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint.Full
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
   it should "use custom exception handler" in {
-    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options.serverLog(None), new FutureMonad())
+    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
       .throwException(new RuntimeException("error"))
       .backend()
@@ -29,7 +29,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
   }
 
   it should "run greet users logic" in {
-    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options.serverLog(None), new FutureMonad())
+    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
       .runLogic()
       .backend()

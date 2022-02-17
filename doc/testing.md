@@ -23,7 +23,7 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
 import sttp.model.StatusCode
-import sttp.monad.FutureMonad
+import sttp.client3.testing.SttpBackendStub
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
@@ -51,12 +51,13 @@ val options: CustomInterceptors[Future, AkkaHttpServerOptions] = AkkaHttpServerO
 ```
 
 You can write an interpreter stub for your endpoint. 
+For that you will need an `SttpBackendStub` instance for the effect of your choice (see the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html)). 
 The `backend()` method returns `SttpBackend` which runs all requests against interpreter and can be used in tests:
 
 ```scala mdoc:silent
 class MySpec extends AsyncFlatSpec with Matchers {
   
-  val stub = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), new FutureMonad())
+  val stub = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), SttpBackendStub.asynchronousFuture)
     .whenEndpoint(someEndpoint)
     .throwException(new RuntimeException("error"))
     .backend()
@@ -70,7 +71,7 @@ class MySpec extends AsyncFlatSpec with Matchers {
 }
 ```
 
-A stub which executes an endpoint's server logic can also be created for instances of `ServerEndpoint`'s:
+A stub which executes an endpoint's server logic can also be created for instances of `ServerEndpoint`:
 
 ```scala mdoc:silent
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -83,15 +84,12 @@ val serverEp: ServerEndpoint[Any, Future] = someEndpoint
   )
   .serverLogic(user => _ => Future.successful(Right(s"hello $user")))
 
-TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), new FutureMonad())
+TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](options.serverLog(None), SttpBackendStub.asynchronousFuture)
   .whenServerEndpoint(serverEp).runLogic()
   .backend()
 ```
 
 For stubbing `ServerEndpoint` logic `Full` representation of endpoint needs to be provided.
-
-Please note that when passing `AkkaHttpServerOptions` to `TapirStubInterpreter` server logging needs to be disabled `options.serverLog(None)`.
-It's not required for other interpreters default logging options.
 
 ### External APIs described with Tapir
 
