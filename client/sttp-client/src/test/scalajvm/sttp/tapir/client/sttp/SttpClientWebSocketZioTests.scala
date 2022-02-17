@@ -19,7 +19,7 @@ class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with Zio
     IO.delay {
       zio.Runtime.default
         .unsafeRunToFuture(
-          Stream(as: _*).via(p).take(receiveCount).runCollect.map(_.toList)
+          Stream(as: _*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
         )
         .future
     }
