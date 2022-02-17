@@ -500,7 +500,7 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
@@ -544,9 +544,9 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -613,7 +613,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
