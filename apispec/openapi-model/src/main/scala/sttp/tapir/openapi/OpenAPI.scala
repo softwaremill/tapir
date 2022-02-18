@@ -1,6 +1,6 @@
 package sttp.tapir.openapi
 
-import sttp.tapir.apispec.{ExampleValue, ExtensionValue, Reference, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{ExampleValue, ExtensionValue, ExternalDocumentation, Reference, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
 
 import scala.collection.immutable.ListMap
 
@@ -118,7 +118,6 @@ final case class ServerVariable(
   def addExtension(key: String, value: ExtensionValue): ServerVariable = copy(extensions = extensions.updated(key, value))
 }
 
-// todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 final case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]] = ListMap.empty,
     responses: ListMap[String, ReferenceOr[Response]] = ListMap.empty,
@@ -127,6 +126,8 @@ final case class Components(
     requestBodies: ListMap[String, ReferenceOr[RequestBody]] = ListMap.empty,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]] = ListMap.empty,
+    links: ListMap[String, ReferenceOr[Link]] = ListMap.empty,
+    callbacks: ListMap[String, ReferenceOr[Callback]] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def addSchema(key: String, schema: Schema): Components = copy(schemas = schemas.updated(key, Right(schema)))
@@ -140,42 +141,46 @@ final case class Components(
     securitySchemes.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/securitySchemes/$key")))
   def schemas(updated: ListMap[String, ReferenceOr[Schema]]): Components = copy(schemas = updated)
   def securitySchemes(updated: ListMap[String, ReferenceOr[SecurityScheme]]): Components = copy(securitySchemes = updated)
-
   def addResponse(key: String, response: Response): Components = copy(responses = responses.updated(key, Right(response)))
   def getLocalResponse(key: String): Option[Response] = responses.get(key).flatMap(_.toOption)
   def getReferenceToResponse(key: String): Option[Reference] =
     responses.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/responses/$key")))
   def responses(updated: ListMap[String, ReferenceOr[Response]]): Components = copy(responses = updated)
-
   def addParameter(key: String, parameter: Parameter): Components =
     copy(parameters = parameters.updated(key, Right(parameter)))
   def getLocalParameter(key: String): Option[Parameter] = parameters.get(key).flatMap(_.toOption)
   def getReferenceToParameter(key: String): Option[Reference] =
     parameters.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/parameters/$key")))
   def parameters(updated: ListMap[String, ReferenceOr[Parameter]]): Components = copy(parameters = updated)
-
   def addExample(key: String, example: Example): Components = copy(examples = examples.updated(key, Right(example)))
   def getLocalExample(key: String): Option[Example] = examples.get(key).flatMap(_.toOption)
   def getReferenceToExample(key: String): Option[Reference] =
     examples.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/examples/$key")))
   def examples(updated: ListMap[String, ReferenceOr[Example]]): Components = copy(examples = updated)
-
   def addRequestBody(key: String, requestBody: RequestBody): Components =
     copy(requestBodies = requestBodies.updated(key, Right(requestBody)))
   def getLocalRequestBody(key: String): Option[RequestBody] = requestBodies.get(key).flatMap(_.toOption)
   def getReferenceToRequestBody(key: String): Option[Reference] =
     requestBodies.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/requestBodies/$key")))
   def requestBodies(updated: ListMap[String, ReferenceOr[RequestBody]]): Components = copy(requestBodies = updated)
-
   def addHeader(key: String, header: Header): Components = copy(headers = headers.updated(key, Right(header)))
   def getLocalHeader(key: String): Option[Header] = headers.get(key).flatMap(_.toOption)
   def getReferenceToHeader(key: String): Option[Reference] =
     headers.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/headers/$key")))
-
   def headers(updated: ListMap[String, ReferenceOr[Header]]): Components = copy(headers = updated)
-
+  def addLink(key: String, link: Link): Components = copy(links = links.updated(key, Right(link)))
+  def getLocalLink(key: String): Option[Link] = links.get(key).flatMap(_.toOption)
+  def getReferenceToLink(key: String): Option[Reference] =
+    links.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/links/$key")))
+  def links(updated: ListMap[String, ReferenceOr[Link]]): Components = copy(links = updated)
+  def addCallback(key: String, callback: Callback): Components = copy(callbacks = callbacks.updated(key, Right(callback)))
+  def getLocalCallback(key: String): Option[Callback] = callbacks.get(key).flatMap(_.toOption)
+  def getReferenceToCallback(key: String): Option[Reference] =
+    callbacks.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/callbacks/$key")))
+  def callbacks(updated: ListMap[String, ReferenceOr[Callback]]): Components = copy(callbacks = updated)
   def extensions(updated: ListMap[String, ExtensionValue]): Components = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): Components = copy(extensions = extensions.updated(key, value))
+
 }
 
 object Components {
@@ -204,8 +209,8 @@ object Paths {
   val Empty: Paths = Paths(pathItems = ListMap.empty, extensions = ListMap.empty)
 }
 
-// todo: $ref
 final case class PathItem(
+    ref: Option[Reference] = None,
     summary: Option[String] = None,
     description: Option[String] = None,
     get: Option[Operation] = None,
@@ -222,8 +227,9 @@ final case class PathItem(
 ) {
   def mergeWith(other: PathItem): PathItem = {
     PathItem(
-      None,
-      None,
+      ref = None,
+      summary = None,
+      description = None,
       get = get.orElse(other.get),
       put = put.orElse(other.put),
       post = post.orElse(other.post),
@@ -237,6 +243,7 @@ final case class PathItem(
     )
   }
 
+  def ref(updated: Reference): PathItem = copy(ref = Some(updated))
   def summary(updated: String): PathItem = copy(summary = Some(updated))
   def description(updated: String): PathItem = copy(description = Some(updated))
   def get(updated: Operation): PathItem = copy(get = Some(updated))
@@ -257,15 +264,16 @@ final case class PathItem(
   def addExtension(key: String, value: ExtensionValue): PathItem = copy(extensions = extensions.updated(key, value))
 }
 
-// todo: external docs, callbacks, security
 final case class Operation(
     tags: List[String] = List.empty,
     summary: Option[String] = None,
     description: Option[String] = None,
+    externalDocs: Option[ExternalDocumentation] = None,
     operationId: Option[String] = None,
     parameters: List[ReferenceOr[Parameter]] = List.empty,
     requestBody: Option[ReferenceOr[RequestBody]] = None,
     responses: Responses = Responses.Empty,
+    callbacks: ListMap[String, ReferenceOr[Callback]] = ListMap.empty,
     deprecated: Option[Boolean] = None,
     security: List[SecurityRequirement] = List.empty,
     servers: List[Server] = List.empty,
@@ -275,11 +283,14 @@ final case class Operation(
   def addTag(updated: String): Operation = copy(tags = tags ++ List(updated))
   def summary(updated: String): Operation = copy(summary = Some(updated))
   def description(updated: String): Operation = copy(description = Some(updated))
+  def externalDocs(updated: ExternalDocumentation): Operation = copy(externalDocs = Some(updated))
   def operationId(updated: String): Operation = copy(operationId = Some(updated))
   def requestBody(updated: RequestBody): Operation = copy(requestBody = Some(Right(updated)))
   def addParameter(param: Parameter): Operation = copy(parameters = parameters ++ List(Right(param)))
   def addResponse(status: Int, updated: Response): Operation = copy(responses = responses.addResponse(status, updated))
   def addDefaultResponse(updated: Response): Operation = copy(responses = responses.addDefault(updated))
+  def addCallback(key: String, callback: Callback): Operation = copy(callbacks = callbacks.updated(key, Right(callback)))
+  def callbacks(updated: ListMap[String, ReferenceOr[Callback]]): Operation = copy(callbacks = updated)
   def deprecated(updated: Boolean): Operation = copy(deprecated = Some(updated))
   def security(updated: List[SecurityRequirement]): Operation = copy(security = updated)
   def addSecurity(updated: SecurityRequirement): Operation = copy(security = security ++ List(updated))
@@ -407,12 +418,11 @@ sealed trait ResponsesKey
 case object ResponsesDefaultKey extends ResponsesKey
 final case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
-// todo: links
 final case class Response(
     description: String = "",
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
-    //links: ListMap[String, ReferenceOr[Link]] = ListMap.empty,
+    links: ListMap[String, ReferenceOr[Link]] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def description(updated: String): Response = copy(description = updated)
@@ -420,6 +430,8 @@ final case class Response(
   def addMediaType(contentType: String, updated: MediaType): Response = copy(content = content.updated(contentType, updated))
   def headers(updated: ListMap[String, ReferenceOr[Header]]): Response = copy(headers = updated)
   def content(updated: ListMap[String, MediaType]): Response = copy(content = updated)
+  def addLink(key: String, link: Link): Response = copy(links = links.updated(key, Right(link)))
+  def links(updated: ListMap[String, ReferenceOr[Link]]): Response = copy(links = updated)
   def extensions(updated: ListMap[String, ExtensionValue]): Response = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): Response = copy(extensions = extensions.updated(key, value))
 }
@@ -494,12 +506,35 @@ object Header {
   val Empty: Header = Header()
 }
 
-//final case class Link(
-//    operationRef: Option[String],
-//    operationId: Option[String],
-//  parameters: ListMap[String, ???] = ListMap.empty,
-//  requestBody: RequestBody,
-//  description: Option[String],
-//  server: Server,
-//  extensions: ListMap[String, ExtensionValue] = ListMap.empty
-//)
+final case class Link(
+    operationRef: Option[String] = None,
+    operationId: Option[String] = None,
+    parameters: ListMap[String, String] = ListMap.empty,
+    requestBody: Option[String] = None,
+    description: Option[String] = None,
+    server: Option[Server] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+) {
+  def operationRef(updated: String): Link = copy(operationRef = Some(updated))
+  def operationId(updated: String): Link = copy(operationId = Some(updated))
+  def parameters(updated: ListMap[String, String]): Link = copy(parameters = updated)
+  def addParameter(key: String, value: String): Link = copy(parameters = parameters.updated(key, value))
+  def description(updated: String): Link = copy(description = Some(updated))
+  def server(updated: Server): Link = copy(server = Some(updated))
+  def extensions(updated: ListMap[String, ExtensionValue]): Link = copy(extensions = updated)
+  def addExtension(key: String, value: ExtensionValue): Link = copy(extensions = extensions.updated(key, value))
+}
+
+object Link {
+  val Empty: Link = Link()
+}
+
+final case class Callback(
+    pathItems: ListMap[String, PathItem] = ListMap.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+) {
+  def pathItems(updated: ListMap[String, PathItem]): Callback = copy(pathItems = updated)
+  def addPathItem(key: String, value: PathItem): Callback = copy(pathItems = pathItems.updated(key, value))
+  def extensions(updated: ListMap[String, ExtensionValue]): Callback = copy(extensions = updated)
+  def addExtension(key: String, value: ExtensionValue): Callback = copy(extensions = extensions.updated(key, value))
+}
