@@ -15,17 +15,11 @@ class ServerStubTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTes
 
   override protected def afterAll(): Unit = createStubServerTest.cleanUp()
 
-  val serverEp: Full[String, String, Unit, String, String, R, F] = endpoint.get
+  val serverEp: Full[Unit, Unit, Unit, String, String, Any, F] = endpoint.get
     .in("greet")
-    .securityIn(auth.bearer[String]())
     .out(stringBody)
     .errorOut(stringBody)
-    .serverSecurityLogic(token =>
-      createStubServerTest.stub.responseMonad.unit {
-        (if (token == "token123") Right("user123") else Left("unauthorized")): Either[String, String]
-      }
-    )
-    .serverLogic(user => _ => createStubServerTest.stub.responseMonad.unit(Right(s"hello $user")))
+    .serverLogic(_ => createStubServerTest.stub.responseMonad.unit(Right("hello from logic")))
 
   it should "stub endpoint logic" in {
     val server: SttpBackend[F, R] =
@@ -34,10 +28,7 @@ class ServerStubTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTes
         .respond("hello")
         .backend()
 
-    val response = sttp.client3.basicRequest
-      .get(uri"http://test.com/greet")
-      .header("Authorization", "Bearer token123")
-      .send(server)
+    val response = sttp.client3.basicRequest.get(uri"http://test.com/greet").send(server)
 
     createStubServerTest.asFuture(response).map(_.body shouldBe Right("hello"))
   }

@@ -140,18 +140,6 @@ val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
   .thenSuccess(ResponseWrapper(1.0))
 ```
 
-A stub which executes an endpoint's server logic can also be created (here with an identity effect, but any supported
-effect can be used):
-
-```scala mdoc:silent
-import sttp.client3.Identity
-import sttp.client3.monad.IdMonad
-
-val anotherBackend: SttpBackendStub[Identity, Any] = SttpBackendStub
-  .apply(IdMonad)
-  .whenRequestMatchesEndpointThenLogic(e.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
-```
-
 ## Black box testing
 
 When testing an application as a whole component, running for example in docker, you might want to stub external services
