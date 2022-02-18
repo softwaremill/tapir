@@ -20,6 +20,13 @@ final case class ArmeriaFutureServerOptions(
 
 object ArmeriaFutureServerOptions {
 
+  val defaultServerLog: ServerLog[Future] = DefaultServerLog[Future](
+    doLogWhenHandled = debugLog,
+    doLogAllDecodeFailures = debugLog,
+    doLogExceptions = (msg: String, ex: Throwable) => Future.successful(logger.warn(msg, ex)),
+    noLog = Future.unit
+  )
+
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors: CustomInterceptors[Future, ArmeriaFutureServerOptions] =
     CustomInterceptors(
@@ -38,13 +45,6 @@ object ArmeriaFutureServerOptions {
   def defaultCreateFile(): Future[TapirFile] = blocking(Defaults.createTempFile())
 
   def defaultDeleteFile(file: TapirFile): Future[Unit] = blocking(Defaults.deleteFile()(file))
-
-  val defaultServerLog: ServerLog[Future] = DefaultServerLog[Future](
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogExceptions = (msg: String, ex: Throwable) => Future.successful(logger.warn(msg, ex)),
-    noLog = Future.unit
-  )
 
   private def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] =
     Future.successful(exOpt match {

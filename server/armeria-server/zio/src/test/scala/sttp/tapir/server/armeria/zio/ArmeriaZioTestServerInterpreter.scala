@@ -1,19 +1,15 @@
 package sttp.tapir.server.armeria.zio
 
 import _root_.zio.{Runtime, Task}
-import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
-import com.linecorp.armeria.server.Server
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.armeria.TapirService
+import sttp.tapir.server.armeria.{ArmeriaTestServerInterpreter, TapirService}
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
 
-class ArmeriaZioTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams, TapirService[ZioStreams, Task]] {
+class ArmeriaZioTestServerInterpreter extends ArmeriaTestServerInterpreter[ZioStreams, Task] {
   import ArmeriaZioTestServerInterpreter._
+
   override def route(
       e: ServerEndpoint[ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
@@ -30,20 +26,6 @@ class ArmeriaZioTestServerInterpreter extends TestServerInterpreter[Task, ZioStr
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]]): TapirService[ZioStreams, Task] = {
     ArmeriaZioServerInterpreter[Any]().toService(es)
-  }
-
-  override def server(routes: NonEmptyList[TapirService[ZioStreams, Task]]): Resource[IO, Port] = {
-    val bind = IO.fromCompletableFuture(
-      IO {
-        val serverBuilder = Server
-          .builder()
-          .maxRequestLength(0)
-        routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
-        val server = serverBuilder.build()
-        server.start().thenApply[Server](_ => server)
-      }
-    )
-    Resource.make(bind)(binding => IO.fromCompletableFuture(IO(binding.stop())).void).map(_.activeLocalPort())
   }
 }
 

@@ -11,7 +11,7 @@ class ArmeriaFutureServerTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: FutureMonad = new FutureMonad()
 
-    val interpreter = new ArmeriaTestServerInterpreter()
+    val interpreter = new ArmeriaTestFutureServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
     new AllServerTests(createServerTest, interpreter, backend, basic = false).tests() ++

@@ -38,13 +38,8 @@ private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) ex
     if (ctx.path() == "/") {
       Nil
     } else {
-      // Armeria does not decode '%2F' in a path into '/' by default.
-      decodeSlash(ctx.path()).substring(1).split("/").toList
+      ctx.path().substring(1).split("/").toList
     }
-  }
-
-  private def decodeSlash(path: String): String = {
-    path.replaceAll("%2[fF]", "/")
   }
 
   override val queryParameters: QueryParams = {
