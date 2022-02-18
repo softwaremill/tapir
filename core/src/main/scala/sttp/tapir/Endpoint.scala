@@ -8,7 +8,7 @@ import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
-import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
 import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
@@ -458,6 +458,59 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     import sttp.monad.syntax._
     PartialServerEndpoint(
       this.asInstanceOf[Endpoint[A, I, Unit, O, R]],
+      implicit m =>
+        a =>
+          f(a).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
+
+  //
+
+  /** Like [[serverSecurityLogic]], but allows the security function to contribute to the overall output of the endpoint. A value for the
+    * complete output `O` defined so far has to be provided. The value `U` will be propagated as an input to the regular logic.
+    */
+  def serverSecurityLogicWithOutput[U, F[_]](
+      f: A => F[Either[E, (O, U)]]
+  ): PartialServerEndpointWithSecurityOutput[A, U, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), _ => f)
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the result is always a success (`Right`), hence when the
+    * logic type can be simplified to `A => F[(O, U)]`.
+    */
+  def serverSecurityLogicSuccessWithOutput[U, F[_]](
+      f: A => F[(O, U)]
+  ): PartialServerEndpointWithSecurityOutput[A, U, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), implicit m => a => f(a).map(Right(_)))
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the logic function is pure, that is doesn't have any side
+    * effects.
+    */
+  def serverSecurityLogicPureWithOutput[U, F[_]](
+      f: A => Either[E, (O, U)]
+  ): PartialServerEndpointWithSecurityOutput[A, U, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), implicit m => a => f(a).unit)
+
+  /** Same as [[serverSecurityLogicWithOutput]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
+    * errors.
+    */
+  def serverSecurityLogicRecoverErrorsWithOutput[U, F[_]](
+      f: A => F[(O, U)]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpointWithSecurityOutput[A, U, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), recoverErrors1[A, E, (O, U), F](f))
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the
+    * result of the logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverSecurityLogicOptionWithOutput[U, F[_]](
+      f: A => F[Option[(O, U)]]
+  )(implicit eIsUnit: E =:= Unit): PartialServerEndpointWithSecurityOutput[A, U, I, Unit, O, Unit, R, F] = {
+    import sttp.monad.syntax._
+    PartialServerEndpointWithSecurityOutput(
+      this.output,
+      this.copy(output = emptyOutput).asInstanceOf[Endpoint[A, I, Unit, Unit, R]],
       implicit m =>
         a =>
           f(a).map {
