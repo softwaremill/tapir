@@ -3,6 +3,7 @@ package sttp.tapir.server.stub
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.capabilities.Streams
 import sttp.client3._
 import sttp.client3.monad._
 import sttp.client3.testing.SttpBackendStub
@@ -153,6 +154,47 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(-1).send(backend)
 
     response shouldBe Response(Left(()), StatusCode.BadRequest)
+  }
+
+  trait TestStreams extends Streams[TestStreams] {
+    override type BinaryStream = Vector[Byte]
+    override type Pipe[X, Y] = Nothing
+  }
+  object TestStreams extends TestStreams
+
+  it should "handle endpoints with stream input" in {
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "stream")
+      .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
+      .out(stringBody)
+
+    val backend = SttpBackendStub[Identity, TestStreams](idMonad)
+      .whenRequestMatchesEndpoint(endpoint)
+      .thenSuccess("abc")
+
+    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
+      .apply(Vector(1, 2, 3))
+      .send(backend)
+
+    response.body shouldBe Right("abc")
+  }
+
+  it should "handle endpoints with stream output" in {
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "stream")
+      .out(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
+
+    val backend = SttpBackendStub[Identity, TestStreams](idMonad)
+      .whenRequestMatchesEndpoint(endpoint)
+      .thenSuccess(Vector(1, 2, 3))
+
+    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
+      .apply(())
+      .send(backend)
+
+    response.body shouldBe Vector(1, 2, 3)
   }
 }
 

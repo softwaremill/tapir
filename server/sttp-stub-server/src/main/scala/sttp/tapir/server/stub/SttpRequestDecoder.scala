@@ -1,11 +1,11 @@
 package sttp.tapir.server.stub
 
-import sttp.client3.Request
 import sttp.client3.testing._
+import sttp.client3.{Request, StreamBody}
 import sttp.model._
 import sttp.tapir.internal.RichOneOfBody
-import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext}
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, RawBodyType}
+import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, RawValue}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, RawBodyType, StreamBodyIO}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -33,7 +33,15 @@ private[stub] object SttpRequestDecoder {
                 ): DecodeBasicInputsResult
             }
 
-          case Some((Right(_), _)) => throw new UnsupportedOperationException // streaming is not supported
+          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
+            val value = request.body match {
+              case StreamBody(s) => RawValue(s)
+              case _ => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+            }
+            codec.decode(value) match {
+              case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+              case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+            }
           case None                => values
         }
       case failure: DecodeBasicInputsResult.Failure => failure
