@@ -538,3 +538,7 @@ final case class Callback(
   def extensions(updated: ListMap[String, ExtensionValue]): Callback = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): Callback = copy(extensions = extensions.updated(key, value))
 }
+
+object Callback {
+  val Empty: Callback = Callback()
+}
