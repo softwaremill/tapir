@@ -9,7 +9,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.tests.Streaming.in_stream_out_stream
 
-abstract class ServerStubInterpreterStreamingTest[F[_], S, OPTIONS](
+abstract class ServerStubStreamingTest[F[_], S, OPTIONS](
     createStubServerTest: CreateServerStubTest[F, OPTIONS],
     streams: Streams[S]
 ) extends AsyncFlatSpec
@@ -22,11 +22,10 @@ abstract class ServerStubInterpreterStreamingTest[F[_], S, OPTIONS](
   override protected def afterAll(): Unit = createStubServerTest.cleanUp()
 
   it should "accept stream input and stub stream output" in {
-    val server: SttpBackend[F, S] =
-      TapirStubInterpreter[F, S, OPTIONS](createStubServerTest.customInterceptors, createStubServerTest.stub)
-        .whenEndpoint(in_stream_out_stream(streams))
-        .respond(sampleStream.asInstanceOf[streams.BinaryStream])
-        .backend()
+    val server: SttpBackend[F, S] = TapirStubInterpreter(createStubServerTest.customInterceptors, createStubServerTest.stub)
+      .whenEndpoint(in_stream_out_stream(streams))
+      .respond(sampleStream.asInstanceOf[streams.BinaryStream])
+      .backend()
 
     val response = SttpClientInterpreter()
       .toRequestThrowDecodeFailures(in_stream_out_stream(streams), Some(uri"http://test.com"))

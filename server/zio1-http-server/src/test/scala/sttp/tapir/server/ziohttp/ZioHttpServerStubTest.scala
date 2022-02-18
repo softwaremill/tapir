@@ -3,7 +3,7 @@ package sttp.tapir.server.ziohttp
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterStreamingTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.stream.ZStream
 import zio.{Runtime, Task}
@@ -16,9 +16,9 @@ object ZioHttpCreateServerStubTest extends CreateServerStubTest[Task, ZioHttpSer
   override def asFuture[A]: Task[A] => Future[A] = task => Runtime.default.unsafeRunToFuture(task)
 }
 
-class ZioHttpServerStubTest extends ServerStubInterpreterTest(ZioHttpCreateServerStubTest)
+class ZioHttpServerStubTest extends ServerStubTest(ZioHttpCreateServerStubTest)
 
-class ZioHttpServerStubStreamingTest extends ServerStubInterpreterStreamingTest(ZioHttpCreateServerStubTest, ZioStreams) {
+class ZioHttpServerStubStreamingTest extends ServerStubStreamingTest(ZioHttpCreateServerStubTest, ZioStreams) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = ZStream.fromIterable(List("hello"))

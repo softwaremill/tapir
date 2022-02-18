@@ -8,7 +8,7 @@ import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint.Full
 import sttp.tapir.server.stub.TapirStubInterpreter
 
-class ServerStubInterpreterTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTest[F, OPTIONS])
+class ServerStubTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTest[F, OPTIONS])
     extends AsyncFlatSpec
     with Matchers
     with BeforeAndAfterAll {

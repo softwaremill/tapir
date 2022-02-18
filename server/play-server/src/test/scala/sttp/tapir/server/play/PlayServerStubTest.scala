@@ -8,7 +8,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterStreamingTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -26,9 +26,9 @@ class PlayCreateServerStubTest extends CreateServerStubTest[Future, PlayServerOp
   override def cleanUp(): Unit = Await.ready(actorSystem.terminate(), 10.seconds)
 }
 
-class PlayServerStubTest extends ServerStubInterpreterTest(new PlayCreateServerStubTest)
+class PlayServerStubTest extends ServerStubTest(new PlayCreateServerStubTest)
 
-class PlayServerStubStreamingTest extends ServerStubInterpreterStreamingTest(new PlayCreateServerStubTest, AkkaStreams) {
+class PlayServerStubStreamingTest extends ServerStubStreamingTest(new PlayCreateServerStubTest, AkkaStreams) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = Source.single(ByteString("hello"))

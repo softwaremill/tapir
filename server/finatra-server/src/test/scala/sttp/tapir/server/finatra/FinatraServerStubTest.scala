@@ -4,7 +4,7 @@ import com.twitter.util.Future
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubTest}
 
 import scala.concurrent.Promise
 
@@ -19,4 +19,4 @@ object FinatraCreateServerStubTest extends CreateServerStubTest[Future, FinatraS
   }
 }
 
-class FinatraServerStubTest extends ServerStubInterpreterTest(FinatraCreateServerStubTest)
+class FinatraServerStubTest extends ServerStubTest(FinatraCreateServerStubTest)

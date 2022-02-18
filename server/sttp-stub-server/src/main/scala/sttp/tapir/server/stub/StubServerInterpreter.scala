@@ -97,11 +97,11 @@ private[stub] object StubServerInterpreter {
               case RawBodyType.FileBody            => ME.error(new UnsupportedOperationException)
               case _: RawBodyType.MultipartBody    => ME.error(new UnsupportedOperationException)
             }
-          case _ => throw new IllegalArgumentException("Raw body type provided while endpoint accepts stream body")
+          case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
         }
       override def toStream(): streams.BinaryStream = body match {
         case Right(stream) => ME.unit(RawValue(stream))
-        case _             => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body types")
+        case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
       }
     }
 }

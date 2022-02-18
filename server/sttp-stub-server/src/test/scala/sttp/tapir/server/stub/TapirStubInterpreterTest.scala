@@ -1,5 +1,6 @@
 package sttp.tapir.server.stub
 
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.monad.IdMonad
@@ -11,6 +12,10 @@ import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.tests.Streaming.in_stream_out_stream
+
+import scala.concurrent.Future
+import scala.util.Failure
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -130,6 +135,34 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // when no matching endpoint then uses reject handler
     sttp.client3.basicRequest.get(uri"http://test.com/iamlost").send(server).code shouldBe StatusCode.NotAcceptable
   }
+
+  it should "throw exception when user sends raw body to stream input" in {
+    val server = TapirStubInterpreter(List.empty, SttpBackendStub(IdMonad))
+      .whenEndpoint(ProductsApi.inProductStream)
+      .respond(())
+      .backend()
+
+    val ex = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
+      .post(uri"http://test.com/api/products/stream")
+      .body("abc")
+      .send(server)
+
+    ex.getMessage shouldBe "Raw body provided while endpoint accepts stream body"
+  }
+
+  it should "throw exception when user sends stream body to raw input" in {
+    val server: SttpBackend[Identity, AnyStreams] = TapirStubInterpreter(List.empty, SttpBackendStub(IdMonad))
+      .whenEndpoint(ProductsApi.getProduct.in(stringBody))
+      .respond("computer")
+      .backend()
+
+    val ex = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
+      .get(uri"http://test.com/api/products")
+      .streamBody(AnyStreams)(List("a", "b", "c"))
+      .send(server)
+
+    ex.getMessage shouldBe "Stream body provided while endpoint accepts raw body type"
+  }
 }
 
 object ProductsApi {
@@ -143,4 +176,8 @@ object ProductsApi {
     .in("api" / "products")
     .out(stringBody)
     .errorOut(stringBody)
+
+  val inProductStream: Endpoint[Unit, Any, Unit, Unit, AnyStreams] = endpoint.post
+    .in("api" / "products" / "stream")
+    .in(streamTextBody(AnyStreams)(CodecFormat.TextPlain()))
 }

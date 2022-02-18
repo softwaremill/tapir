@@ -7,7 +7,7 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.netty.internal.CatsUtil.CatsMonadError
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubTest}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +17,7 @@ object NettyFutureCreateServerStubTest extends CreateServerStubTest[Future, Nett
   override def asFuture[A]: Future[A] => Future[A] = identity
 }
 
-class NettyFutureServerStubTest extends ServerStubInterpreterTest(NettyFutureCreateServerStubTest)
+class NettyFutureServerStubTest extends ServerStubTest(NettyFutureCreateServerStubTest)
 
 class NettyCatsCreateServerStubTest extends CreateServerStubTest[IO, NettyCatsServerOptions[IO]] {
   val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
@@ -30,4 +30,4 @@ class NettyCatsCreateServerStubTest extends CreateServerStubTest[IO, NettyCatsSe
   override def cleanUp(): Unit = shutdownDispatcher.unsafeToFuture()
 }
 
-class NettyCatsServerStubTest extends ServerStubInterpreterTest(new NettyCatsCreateServerStubTest)
+class NettyCatsServerStubTest extends ServerStubTest(new NettyCatsCreateServerStubTest)

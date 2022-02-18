@@ -9,7 +9,7 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterStreamingTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import zio.stream.ZStream
 import zio.{Runtime, Task}
 
@@ -21,7 +21,7 @@ object VertxFutureCreateServerStubTest extends CreateServerStubTest[Future, Vert
   override def asFuture[A]: Future[A] => Future[A] = identity
 }
 
-class VertxFutureServerStubTest extends ServerStubInterpreterTest(VertxFutureCreateServerStubTest)
+class VertxFutureServerStubTest extends ServerStubTest(VertxFutureCreateServerStubTest)
 
 class VertxCatsCreateServerStubTest extends CreateServerStubTest[IO, VertxCatsServerOptions[IO]] {
   private val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
@@ -34,9 +34,9 @@ class VertxCatsCreateServerStubTest extends CreateServerStubTest[IO, VertxCatsSe
   override def cleanUp(): Unit = shutdownDispatcher.unsafeRunSync()
 }
 
-class VertxCatsServerStubTest extends ServerStubInterpreterTest(new VertxCatsCreateServerStubTest)
+class VertxCatsServerStubTest extends ServerStubTest(new VertxCatsCreateServerStubTest)
 
-class VertxCatsServerStubStreamingTest extends ServerStubInterpreterStreamingTest(new VertxCatsCreateServerStubTest, Fs2Streams[IO]) {
+class VertxCatsServerStubStreamingTest extends ServerStubStreamingTest(new VertxCatsCreateServerStubTest, Fs2Streams[IO]) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = fs2.Stream.apply[IO, String]("hello")
@@ -48,9 +48,9 @@ object VertxZioCreateServerStubTest extends CreateServerStubTest[Task, VertxZioS
   override def asFuture[A]: Task[A] => Future[A] = task => Runtime.default.unsafeRunToFuture(task)
 }
 
-class VertxZioServerStubTest extends ServerStubInterpreterTest(VertxZioCreateServerStubTest)
+class VertxZioServerStubTest extends ServerStubTest(VertxZioCreateServerStubTest)
 
-class VertxZioServerStubStreamingTest extends ServerStubInterpreterStreamingTest(VertxZioCreateServerStubTest, ZioStreams) {
+class VertxZioServerStubStreamingTest extends ServerStubStreamingTest(VertxZioCreateServerStubTest, ZioStreams) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = ZStream.fromIterable(List("hello"))

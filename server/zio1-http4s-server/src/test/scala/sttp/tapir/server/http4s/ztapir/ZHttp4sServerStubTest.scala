@@ -5,7 +5,7 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.CustomInterceptors
-import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubInterpreterStreamingTest, ServerStubInterpreterTest}
+import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
@@ -28,9 +28,9 @@ object ZHttp4sCreateServerStubTest
   override def asFuture[A]: RIO[Clock with Blocking, A] => Future[A] = rio => Runtime.default.unsafeRunToFuture(rio)
 }
 
-class ZHttp4sServerStubTest extends ServerStubInterpreterTest(ZHttp4sCreateServerStubTest)
+class ZHttp4sServerStubTest extends ServerStubTest(ZHttp4sCreateServerStubTest)
 
-class ZHttp4sServerStubStreamingTest extends ServerStubInterpreterStreamingTest(ZHttp4sCreateServerStubTest, ZioStreams) {
+class ZHttp4sServerStubStreamingTest extends ServerStubStreamingTest(ZHttp4sCreateServerStubTest, ZioStreams) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = ZStream.fromIterable(List("hello"))
