@@ -10,8 +10,8 @@ trait ServerEndpointSyntax {
     def imapK[G[_]](fk: F ~> G)(gk: G ~> F): ServerEndpoint[R, G] =
       ServerEndpoint(
         endpoint.endpoint,
-        securityLogic = monadError => (a: endpoint.A) => fk(endpoint.securityLogic(monadError.imapK(gk)(fk))(a)),
-        logic = monadError => (u: endpoint.U) => (i: endpoint.I) => fk(endpoint.logic(monadError.imapK(gk)(fk))(u)(i))
+        securityLogic = monadError => (a: endpoint.SECURITY_INPUT) => fk(endpoint.securityLogic(monadError.imapK(gk)(fk))(a)),
+        logic = monadError => (u: endpoint.PRINCIPAL) => (i: endpoint.INPUT) => fk(endpoint.logic(monadError.imapK(gk)(fk))(u)(i))
       )
   }
 }
