@@ -10,6 +10,7 @@ import org.reactivestreams.Publisher
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import sttp.capabilities.zio.ZioStreams
+import sttp.monad.{Canceler, MonadAsyncError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
 import sttp.tapir.server.interpreter.ServerInterpreter
@@ -21,7 +22,7 @@ private[zio] final case class TapirZioService[R](
 )(implicit runtime: Runtime[R])
     extends TapirService[ZioStreams, RIO[R, *]] {
 
-  private[this] implicit val monad: RIOMonadError[R] = new RIOMonadError()
+  private[this] implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError()
   private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
 
   private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
@@ -35,10 +36,10 @@ private[zio] final case class TapirZioService[R](
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
+    implicit val rioFutureConversion: RioFutureConversion[R] = new RioFutureConversion[R]
 
-    val rioFutureConversion = new RioFutureConversion[R]
     val serverRequest = new ArmeriaServerRequest(ctx)
-    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, rioFutureConversion, zioStreamCompatible)
+    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, zioStreamCompatible)
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest, requestBody).map(ResultMapping.toArmeria)
 

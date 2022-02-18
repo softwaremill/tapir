@@ -16,9 +16,8 @@ import sttp.tapir.{FileRange, RawBodyType}
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     ctx: ServiceRequestContext,
     serverOptions: ArmeriaServerOptions[F],
-    futureConversion: FutureConversion[F],
     streamCompatible: StreamCompatible[S]
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContext, futureConversion: FutureConversion[F])
     extends RequestBody[F, S] {
 
   private val request: HttpRequest = ctx.request()
