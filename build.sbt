@@ -140,6 +140,9 @@ lazy val allAggregates = core.projectRefs ++
   redocBundle.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
+  armeriaServer.projectRefs ++
+  armeriaServerCats.projectRefs ++
+  armeriaServerZio.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
   sttpMockServer.projectRefs ++
@@ -816,6 +819,44 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)
 
+lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-armeria-server",
+    libraryDependencies ++= Seq(
+      "com.linecorp.armeria" % "armeria" % Versions.armeria,
+      "org.scala-lang.modules" %% "scala-java8-compat" % Versions.scalaJava8Compat,
+      "com.softwaremill.sttp.shared" %% "armeria" % Versions.sttpShared
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, serverTests % Test)
+
+lazy val armeriaServerCats: ProjectMatrix =
+  (projectMatrix in file("server/armeria-server/cats"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-armeria-server-cats",
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+        "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
+      )
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(armeriaServer % "compile->compile;test->test", cats, serverTests % Test)
+
+lazy val armeriaServerZio: ProjectMatrix =
+  (projectMatrix in file("server/armeria-server/zio"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-armeria-server-zio",
+      libraryDependencies ++= Seq(
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
+      )
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(armeriaServer % "compile->compile;test->test", zio, serverTests % Test)
+
 lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1250,6 +1291,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
+    armeriaServer,
     http4sServer,
     http4sClient,
     sttpClient,
@@ -1321,6 +1363,9 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
   .dependsOn(
     core % "compile->test",
     akkaHttpServer,
+    armeriaServer,
+    armeriaServerCats,
+    armeriaServerZio,
     circeJson,
     enumeratum,
     finatraServer,

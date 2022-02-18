@@ -25,6 +25,7 @@ object Versions {
   val zio1Json = "0.2.0-M3"
   val zio = "2.0.0-RC2"
   val zioInteropCats = "3.3.0-RC2"
+  val zioInteropReactiveStreams = "2.0.0-RC3"
   val zioJson = "0.3.0-RC3"
   val playClient = "2.1.7"
   val playServer = "2.8.13"
@@ -35,4 +36,7 @@ object Versions {
   val derevo = "0.13.0"
   val newtype = "0.4.4"
   val awsLambdaInterface = "2.1.0"
+  val armeria = "1.14.0"
+  val scalaJava8Compat = "1.0.2"
+  val fs2 = "3.2.4"
 }
