@@ -180,7 +180,6 @@ final case class Components(
   def callbacks(updated: ListMap[String, ReferenceOr[Callback]]): Components = copy(callbacks = updated)
   def extensions(updated: ListMap[String, ExtensionValue]): Components = copy(extensions = updated)
   def addExtension(key: String, value: ExtensionValue): Components = copy(extensions = extensions.updated(key, value))
-
 }
 
 object Components {

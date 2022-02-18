@@ -46,15 +46,15 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
     Operation(
-      e.info.tags.toList,
-      e.info.summary,
-      e.info.description,
-      e.info.name.orElse(Some(defaultId)),
-      parameters.map(Right(_)),
-      body.headOption,
-      Responses(responses),
-      if (e.info.deprecated) Some(true) else None,
-      operationSecurity(e),
+      tags = e.info.tags.toList,
+      summary = e.info.summary,
+      description = e.info.description,
+      operationId = e.info.name.orElse(Some(defaultId)),
+      parameters = parameters.map(Right(_)),
+      requestBody = body.headOption,
+      responses = Responses(responses),
+      deprecated = if (e.info.deprecated) Some(true) else None,
+      security = operationSecurity(e),
       extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
   }
