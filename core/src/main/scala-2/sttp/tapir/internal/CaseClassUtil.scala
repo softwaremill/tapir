@@ -70,4 +70,16 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
         }
     }
   }
+
+  def extractTreeAndOptTreeFromAnnotation(field: Symbol, annotationType: c.Type): Option[(Tree, Tree)] = {
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< annotationType =>
+        a.tree.children.tail match {
+          case List(t, u @ Apply(TypeApply(name @ Select(_, _), List(TypeTree())), List(_))) if name.toString.startsWith("scala.Some.apply") => (t, u)
+          case List(t, u @ Select(_, _)) if u.toString.startsWith("scala.None") => (t, u)
+          case List(t, TypeApply(Select(_, name @ TermName(_)), List(TypeTree()))) if name.decodedName.toString.startsWith("<init>$default") => (t, q"None")
+          case _       => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
+        }
+    }
+  }
 }

@@ -484,7 +484,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("use default for a query parameter") {
+  test("should use default for a query parameter") {
     val expectedYaml = load("expected_default_query_param.yml")
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
@@ -492,6 +492,19 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         Info("Entities", "1.0")
       )
       .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  // #1800
+  test("should use default for a request body") {
+    val expectedYaml = load("expected_default_request_body.yml")
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(
+        endpoint.post.in(jsonBody[ObjectWithDefaults]),
+        Info("Entities", "1.0")
+      ).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml

@@ -1,0 +1,53 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref:'#/components/schemas/FruitQuery'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FruitWithEnum'
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    FruitQuery:
+      type: object
+      properties:
+        fruitType:
+          $ref: '#/components/schemas/FruitType'
+    FruitType:
+      type: string
+      enum:
+        - APPLE
+        - PEAR
+    FruitWithEnum:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+        fruitType:
+          type: array
+          items:
+            $ref: '#/components/schemas/FruitType'
