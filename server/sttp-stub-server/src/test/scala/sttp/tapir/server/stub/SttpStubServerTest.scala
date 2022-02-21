@@ -157,7 +157,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   }
 
   trait TestStreams extends Streams[TestStreams] {
-    override type BinaryStream = Vector[Byte]
+    override type BinaryStream = Vector[Int]
     override type Pipe[X, Y] = Nothing
   }
   object TestStreams extends TestStreams
@@ -173,10 +173,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess("abc")
 
+    // when
     val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
       .apply(Vector(1, 2, 3))
       .send(backend)
 
+    // then
     response.body shouldBe Right("abc")
   }
 
@@ -190,10 +192,13 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess(Vector(1, 2, 3))
 
-    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
-      .apply(())
+    // when
+    val response = sttp.client3.basicRequest
+      .get(uri"http://test.com/api/stream")
+      .response(asStreamAlwaysUnsafe(TestStreams))
       .send(backend)
 
+    // then
     response.body shouldBe Vector(1, 2, 3)
   }
 }
