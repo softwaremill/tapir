@@ -1,8 +1,9 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.Request
-import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.model._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+
 import scala.collection.immutable.Seq
 
 class SttpRequest(r: Request[_, _]) extends ServerRequest {

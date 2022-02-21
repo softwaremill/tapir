@@ -802,7 +802,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
       "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
     )
   )
-  .dependsOn(tests)
+  .dependsOn(tests, sttpStubServer)
   .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
@@ -876,7 +876,7 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
     name := "tapir-sttp-stub-server"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core, serverTests % "test", sttpClient)
+  .dependsOn(core, sttpClient, tests % Test)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonJvmSettings)
@@ -1283,7 +1283,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
+      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      scalaTest.value % Test,
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
