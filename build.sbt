@@ -162,6 +162,8 @@ lazy val allAggregates = core.projectRefs ++
   sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
+  perfTests.projectRefs ++
+  perfServerAkkaHttpOnly.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
   documentation.projectRefs ++
@@ -329,6 +331,56 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     settings = commonJsSettings
   )
   .dependsOn(core, circeJson, cats)
+
+lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests/simulations"))
+  .enablePlugins(GatlingPlugin)
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-perf-tests",
+    libraryDependencies ++= Seq(
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.6.1" % "test",
+      "io.gatling"            % "gatling-test-framework"    % "3.6.1" % "test",
+    ) ++ loggerDependencies,
+    publishArtifact := false
+  )
+  .settings(Gatling / scalaSource := sourceDirectory.value / "test" / "scala")
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .dependsOn(core, perfServerAkkaHttpOnly % "run")
+
+lazy val perfServerAkkaHttpOnly: ProjectMatrix = (projectMatrix in file("perf-tests/servers/akka-http-only"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "perf-server-akka-http-only",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" % "akka-actor-typed_2.13" % "2.6.18",
+      "com.typesafe.akka" % "akka-stream-typed_2.13" % "2.6.18",
+      "com.typesafe.akka" % "akka-http-spray-json_2.13" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .dependsOn(core, circeJson)
+
+lazy val perfServerAkkaHttpTapir: ProjectMatrix = (projectMatrix in file("perf-tests/servers/akka-http-tapir"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "perf-server-akka-http-tapir",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" % "akka-actor-typed_2.13" % "2.6.18",
+      "com.typesafe.akka" % "akka-stream-typed_2.13" % "2.6.18",
+      "com.typesafe.akka" % "akka-http-spray-json_2.13" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .dependsOn(core, akkaHttpServer, circeJson)
+
 
 // integrations
 
