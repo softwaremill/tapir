@@ -70,4 +70,14 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
         }
     }
   }
+
+  def extractFirstTreeArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Tree] = {
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< annotationType =>
+        a.tree.children.tail match {
+          case List(t, _*) => t
+          case _           => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
+        }
+    }
+  }
 }

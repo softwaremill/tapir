@@ -17,10 +17,11 @@ object SchemaAnnotationsMacro {
     val annotations = weakTypeOf[T].typeSymbol.annotations
 
     val firstArg: Annotation => Tree = a => a.tree.children.tail.head
+    val firstTwoArgs: Annotation => (Tree, Tree) = a => (a.tree.children.tail.head, a.tree.children.tail(1))
 
     val description = annotations.collectFirst { case ann if ann.tree.tpe <:< DescriptionAnn => firstArg(ann) }
     val encodedExample = annotations.collectFirst { case ann if ann.tree.tpe <:< EncodedExampleAnn => firstArg(ann) }
-    val default = annotations.collectFirst { case ann if ann.tree.tpe <:< DefaultAnn => firstArg(ann) }
+    val default = annotations.collectFirst { case ann if ann.tree.tpe <:< DefaultAnn => firstTwoArgs(ann) }
     val format = annotations.collectFirst { case ann if ann.tree.tpe <:< FormatAnn => firstArg(ann) }
     val deprecated = annotations.collectFirst { case ann if ann.tree.tpe <:< DeprecatedAnn => q"""true""" }
     val encodedName = annotations.collectFirst { case ann if ann.tree.tpe <:< EncodedNameAnn => firstArg(ann) }

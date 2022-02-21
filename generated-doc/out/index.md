@@ -11,6 +11,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
   * [ZIO Http](server/ziohttp.md) `Http`
+  * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
@@ -149,6 +150,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/play
    server/vertx
    server/ziohttp
+   server/armeria
    server/aws
    server/options
    server/interceptors

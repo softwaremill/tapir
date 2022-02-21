@@ -411,7 +411,7 @@ object EndpointIO {
     override private[tapir] type ThisType[X] = OneOfBody[O, X]
     override def show: String = showOneOf(variants.map { variant =>
       val prefix =
-        if ((ContentTypeRange.exactNoCharset(variant.body.codec.format.mediaType)) == variant.range) "" else s"${variant.range} -> "
+        if (ContentTypeRange.exactNoCharset(variant.body.codec.format.mediaType) == variant.range) "" else s"${variant.range} -> "
       prefix + variant.body.show
     })
     override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))

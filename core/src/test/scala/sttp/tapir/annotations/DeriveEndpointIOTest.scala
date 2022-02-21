@@ -153,6 +153,27 @@ final case class TapirResponseTest2(
     setCookies: List[CookieWithMeta]
 )
 
+final case class TapirRequestTest15(
+    @query
+    @Schema.annotations.default(11)
+    field1: Int,
+    @query
+    @Schema.annotations.default(12, None)
+    field2: Int,
+    @query
+    @Schema.annotations.default(13, encoded=None)
+    field3: Int,
+    @query
+    @Schema.annotations.default(14, Some(140))
+    field4: Int,
+    @query
+    @Schema.annotations.default(15, Some("150"))
+    field5: Int,
+    @query
+    @Schema.annotations.default(16, encoded=Some(160))
+    field6: Int
+)
+
 class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
@@ -251,6 +272,18 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
 
     derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
     derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
+  }
+
+  it should "derive default annotation correctly" in {
+    val expectedInput = query[Int]("field1").default(11)
+      .and(query[Int]("field2").default(12))
+      .and(query[Int]("field3").default(13))
+      .and(query[Int]("field4").default(14))
+      .and(query[Int]("field5").default(15))
+      .and(query[Int]("field6").default(16))
+      .mapTo[TapirRequestTest15]
+
+    compareTransputs(EndpointInput.derived[TapirRequestTest15], expectedInput) shouldBe true
   }
 
   val bodyInputDerivations =

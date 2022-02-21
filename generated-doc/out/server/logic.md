@@ -109,6 +109,7 @@ There are also other variants of the methods that can be used to provide the ser
 * `serverLogicError(f: I => F[E])`: similarly for endpoints which always return an error
 * `serverLogicPure(f: I => Either[E, O])`: if the server logic function is pure, that is returns a strict value, not
   a description of side-effects
+* `serverLogicOption(f: I => F[Option[O]])`: if the error type is a `Unit`, a `None` results is treated as an error
 
 Similar variants are available to provide the security logic. 
 
@@ -164,6 +165,18 @@ val secureHelloWorld1WithLogic: ServerEndpoint[Any, Future] = secureEndpoint.get
     Future.successful(s"${salutation}, ${user.name}!")
   }
 ```
+
+### Security logic with outputs
+
+When using `.serverSecurityLogic`, the result of the security function is treated as an input to the main server logic.
+However, it might be desirable to provide some output as part of the security logic. This is possible using 
+`.serverSecurityLogicWithOutput` and its variants.
+
+The provided security function has to return a value for the output defined so far, and a value that will be provided
+to the main server logic. The security output will contribute directly to the output of the whole endpoint, unless
+an error response is returned. 
+
+Additional outputs can be then added to the resulting partial endpoint. 
 
 ## Status codes
 
