@@ -12,6 +12,7 @@ import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.swagger.SwaggerUIOptions
 
 class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
@@ -26,7 +27,7 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
   def swaggerUITest(prefix: List[String], context: List[String]): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        SwaggerInterpreter(pathPrefix = prefix, contextPath = context)
+        SwaggerInterpreter(swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
