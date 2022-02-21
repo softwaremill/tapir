@@ -6,7 +6,7 @@ import sttp.client3._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir._
-import sttp.tapir.server.ServerEndpoint.Full
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
@@ -17,19 +17,19 @@ import scala.concurrent.Future
 class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
   it should "use custom exception handler" in {
-    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options, SttpBackendStub.asynchronousFuture)
+    val stubBackend: SttpBackend[Future, Any] = TapirStubInterpreter(UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
       .throwException(new RuntimeException("error"))
       .backend()
 
     sttp.client3.basicRequest
       .get(uri"http://test.com/api/users/greet")
-      .send(server)
+      .send(stubBackend)
       .map(_.body shouldBe Left("failed due to error"))
   }
 
   it should "run greet users logic" in {
-    val server = TapirStubInterpreter[Future, Any, AkkaHttpServerOptions](UsersApi.options, SttpBackendStub.asynchronousFuture)
+    val stubBackend: SttpBackend[Future, Any] = TapirStubInterpreter(UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
       .runLogic()
       .backend()
@@ -37,7 +37,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
     val response = sttp.client3.basicRequest
       .get(uri"http://test.com/api/users/greet")
       .header("Authorization", "Bearer password")
-      .send(server)
+      .send(stubBackend)
 
     // then
     response.map(_.body shouldBe Right("hello user123"))
@@ -46,7 +46,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
 object UsersApi {
 
-  val greetUser: Full[String, String, Unit, String, String, Any, Future] = endpoint.get
+  val greetUser: ServerEndpoint[Any, Future] = endpoint.get
     .in("api" / "users" / "greet")
     .securityIn(auth.bearer[String]())
     .out(stringBody)
