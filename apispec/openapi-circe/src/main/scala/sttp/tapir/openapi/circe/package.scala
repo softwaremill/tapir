@@ -4,22 +4,7 @@ import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, JsonObject}
-import sttp.tapir.apispec.{
-  Discriminator,
-  ExampleMultipleValue,
-  ExampleSingleValue,
-  ExampleValue,
-  ExtensionValue,
-  ExternalDocumentation,
-  OAuthFlow,
-  OAuthFlows,
-  Reference,
-  ReferenceOr,
-  Schema,
-  SchemaType,
-  SecurityScheme,
-  Tag
-}
+import sttp.tapir.apispec.{Discriminator, ExampleMultipleValue, ExampleSingleValue, ExampleValue, ExtensionValue, ExternalDocumentation, OAuthFlow, OAuthFlows, Reference, ReferenceOr, Schema, SchemaType, SecurityRequirement, SecurityScheme, Tag}
 
 import scala.collection.immutable.ListMap
 
@@ -86,6 +71,8 @@ trait TapirOpenAPICirceEncoders {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
     // should be represented as an empty object (`{}`), not `null`, which is the default encoding of `ListMap`s.
     implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = false)
+    implicit def encodeListMapForCallbacks: Encoder[ListMap[String, ReferenceOr[Callback]]] =
+      doEncodeListMap(nullWhenEmpty = true)
     deriveEncoder[Operation].mapJsonObject(expandExtensions)
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem].mapJsonObject(expandExtensions)
