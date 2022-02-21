@@ -100,9 +100,8 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find schema for enumeratum enum entries and enrich with metadata from default annotations" in {
-    implicitly[Schema[TestEnumEntryWithNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithNoEncodedDefault.Value2, None))
     implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some((TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2)))
-    implicitly[Schema[TestEnumEntryWithExplicitNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithExplicitNoEncodedDefault.Value2, None))
+    implicitly[Schema[TestEnumEntryWithNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithNoEncodedDefault.Value2, None))
   }
 }
 
@@ -186,17 +185,6 @@ object TapirCodecEnumeratumTest {
     override def values: scala.collection.immutable.IndexedSeq[TestCharEnumEntry] = findValues
   }
 
-  @default(TestEnumEntryWithNoEncodedDefault.Value2)
-  sealed trait TestEnumEntryWithNoEncodedDefault extends EnumEntry
-
-  object TestEnumEntryWithNoEncodedDefault extends Enum[TestEnumEntryWithNoEncodedDefault] {
-    case object Value1 extends TestEnumEntryWithNoEncodedDefault
-    case object Value2 extends TestEnumEntryWithNoEncodedDefault
-    case object Value3 extends TestEnumEntryWithNoEncodedDefault
-
-    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithNoEncodedDefault] = findValues
-  }
-
   @default(TestEnumEntryWithSomeEncodedDefault.Value2, encoded = Some(TestEnumEntryWithSomeEncodedDefault.Value2))
   sealed trait TestEnumEntryWithSomeEncodedDefault extends EnumEntry
 
@@ -208,14 +196,14 @@ object TapirCodecEnumeratumTest {
     override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithSomeEncodedDefault] = findValues
   }
 
-  @default(TestEnumEntryWithExplicitNoEncodedDefault.Value2, encoded = None)
-  sealed trait TestEnumEntryWithExplicitNoEncodedDefault extends EnumEntry
+  @default(TestEnumEntryWithNoEncodedDefault.Value2, encoded = None)
+  sealed trait TestEnumEntryWithNoEncodedDefault extends EnumEntry
 
-  object TestEnumEntryWithExplicitNoEncodedDefault extends Enum[TestEnumEntryWithExplicitNoEncodedDefault] {
-    case object Value1 extends TestEnumEntryWithExplicitNoEncodedDefault
-    case object Value2 extends TestEnumEntryWithExplicitNoEncodedDefault
-    case object Value3 extends TestEnumEntryWithExplicitNoEncodedDefault
+  object TestEnumEntryWithNoEncodedDefault extends Enum[TestEnumEntryWithNoEncodedDefault] {
+    case object Value1 extends TestEnumEntryWithNoEncodedDefault
+    case object Value2 extends TestEnumEntryWithNoEncodedDefault
+    case object Value3 extends TestEnumEntryWithNoEncodedDefault
 
-    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithExplicitNoEncodedDefault] = findValues
+    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithNoEncodedDefault] = findValues
   }
 }
