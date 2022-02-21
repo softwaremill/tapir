@@ -5,6 +5,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerResponse
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 

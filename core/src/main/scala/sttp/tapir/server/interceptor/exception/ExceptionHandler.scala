@@ -1,8 +1,8 @@
 package sttp.tapir.server.interceptor.exception
 
 import sttp.model.StatusCode
-import sttp.tapir._
-import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.{server, _}
+import sttp.tapir.server.ValuedEndpointOutput
 
 trait ExceptionHandler {
   def apply(ctx: ExceptionContext): Option[ValuedEndpointOutput[_]]
@@ -14,5 +14,6 @@ case class DefaultExceptionHandler(response: (StatusCode, String) => ValuedEndpo
 }
 
 object DefaultExceptionHandler {
-  val handler: DefaultExceptionHandler = DefaultExceptionHandler((sc, m) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
+  val handler: DefaultExceptionHandler =
+    DefaultExceptionHandler((sc, m) => server.ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
 }

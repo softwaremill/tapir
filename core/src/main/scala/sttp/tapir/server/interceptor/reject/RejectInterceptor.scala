@@ -5,14 +5,8 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{
-  EndpointInterceptor,
-  RequestHandler,
-  RequestInterceptor,
-  RequestResult,
-  Responder,
-  ValuedEndpointOutput
-}
+import sttp.tapir.server.ValuedEndpointOutput
+import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
 
 /** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have been interpreted
   * (doesn't do anything when interpreting a single endpoint).

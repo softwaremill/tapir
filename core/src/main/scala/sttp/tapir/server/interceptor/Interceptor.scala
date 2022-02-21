@@ -1,6 +1,7 @@
 package sttp.tapir.server.interceptor
 
 import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.ValuedEndpointOutput
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
   *

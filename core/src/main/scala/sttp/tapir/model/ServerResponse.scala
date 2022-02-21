@@ -1,7 +1,7 @@
 package sttp.tapir.model
 
 import sttp.model.{Header, Headers, ResponseMetadata, StatusCode}
-import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.ValuedEndpointOutput
 
 import scala.collection.immutable.Seq
 

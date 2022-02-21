@@ -1,4 +1,4 @@
-package sttp.tapir.server.interceptor
+package sttp.tapir.server
 
 import sttp.tapir.EndpointOutput
 

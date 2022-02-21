@@ -8,10 +8,11 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.tests.Streaming.in_stream_out_stream
 
 import scala.concurrent.Future
