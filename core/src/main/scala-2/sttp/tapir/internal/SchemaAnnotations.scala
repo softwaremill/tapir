@@ -3,10 +3,12 @@ package sttp.tapir.internal
 import sttp.tapir.Schema.SName
 import sttp.tapir.{Schema, Validator}
 
+import scala.Function.tupled
+
 final case class SchemaAnnotations[T](
     description: Option[String],
     encodedExample: Option[Any],
-    default: Option[T],
+    default: Option[(T, Option[Any])],
     format: Option[String],
     deprecated: Option[Boolean],
     encodedName: Option[String],
@@ -20,7 +22,7 @@ final case class SchemaAnnotations[T](
     SchemaEnrich(s)
       .optionally(s => description.map(s.description(_)))
       .optionally(s => encodedExample.map(s.encodedExample(_)))
-      .optionally(s => default.map(s.default(_)))
+      .optionally(s => default.map(tupled(s.default(_, _))))
       .optionally(s => format.map(s.format(_)))
       .optionally(s => deprecated.map(s.deprecated(_)))
       .optionally(s => encodedName.map(en => s.name(SName(en))))
