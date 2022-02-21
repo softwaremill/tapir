@@ -118,8 +118,8 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
     }
 
     sr match {
-      case sr @ ServerResponse(_, _, Some(body)) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
-      case sr @ ServerResponse(_, _, None)       => cb(Success(())).map(_ => sr)
+      case sr @ ServerResponse(_, _, Some(body), _) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
+      case sr @ ServerResponse(_, _, None, _)       => cb(Success(())).map(_ => sr)
     }
   }
 

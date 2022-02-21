@@ -29,7 +29,7 @@ private[stub] object StubServerInterpreter {
 
     interpreter.apply(sRequest, new SttpRequestBody[F](req)).map {
       case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
-      case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
+      case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None, None))
     }
   }
 

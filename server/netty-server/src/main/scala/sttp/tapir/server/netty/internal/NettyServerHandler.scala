@@ -46,7 +46,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Futur
         route(NettyServerRequest(req))
           .map {
             case Some(response) => response
-            case None           => ServerResponse(sttp.model.StatusCode.NotFound, Nil, None)
+            case None           => ServerResponse(sttp.model.StatusCode.NotFound, Nil, None, None)
           }
           .map(toHttpResponse(_, request))
           .map(flushResponse(ctx, request, _))

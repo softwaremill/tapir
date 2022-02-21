@@ -66,7 +66,7 @@ class ServerInterpreter[R, F[_], B, S](
       se: ServerEndpoint.Full[A, U, I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
-    val defaultSecurityFailureResponse = ServerResponse[B](StatusCode.InternalServerError, Nil, None).unit
+    val defaultSecurityFailureResponse = ServerResponse[B](StatusCode.InternalServerError, Nil, None, None).unit
 
     def endpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
       endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
@@ -215,8 +215,8 @@ class ServerInterpreter[R, F[_], B, S](
 
       val headers = outputValues.headers
       outputValues.body match {
-        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers)))).unit
-        case None                  => ServerResponse(statusCode, headers, None: Option[B]).unit
+        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
+        case None                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
       }
     }
   }
