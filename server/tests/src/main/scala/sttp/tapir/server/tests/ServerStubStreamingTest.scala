@@ -24,7 +24,7 @@ abstract class ServerStubStreamingTest[F[_], S, OPTIONS](
   it should "accept stream input and stub stream output" in {
     val server: SttpBackend[F, S] = TapirStubInterpreter(createStubServerTest.customInterceptors, createStubServerTest.stub)
       .whenEndpoint(in_stream_out_stream(streams))
-      .respond(sampleStream.asInstanceOf[streams.BinaryStream])
+      .thenRespond(sampleStream.asInstanceOf[streams.BinaryStream])
       .backend()
 
     val response = SttpClientInterpreter()

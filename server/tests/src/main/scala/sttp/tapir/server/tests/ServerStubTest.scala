@@ -25,7 +25,7 @@ class ServerStubTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTes
     val server: SttpBackend[F, R] =
       TapirStubInterpreter[F, R, OPTIONS](createStubServerTest.customInterceptors, createStubServerTest.stub)
         .whenServerEndpoint(serverEp)
-        .respond("hello")
+        .thenRespond("hello")
         .backend()
 
     val response = sttp.client3.basicRequest.get(uri"http://test.com/greet").send(server)

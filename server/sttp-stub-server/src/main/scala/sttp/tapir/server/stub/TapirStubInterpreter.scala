@@ -25,18 +25,18 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
   def whenServerEndpointsRunLogic(serverEndpoints: List[ServerEndpoint[R, F]]): TapirStubInterpreter[F, R, OPTIONS] =
     serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
-  /** Returns `SttpBackend` which runs `ServerInterpreter` on each request */
+  /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
   def backend(): SttpBackend[F, R] =
     stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
-    def respond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
+    def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Right(response): Either[E, O]).unit))
 
-    def respondError(errorResponse: E): TapirStubInterpreter[F, R, OPTIONS] =
+    def thenRespondError(errorResponse: E): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Left(errorResponse): Either[E, O]).unit))
 
-    def throwException(ex: Throwable): TapirStubInterpreter[F, R, OPTIONS] =
+    def thenThrowException(ex: Throwable): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => throw ex))
 
     private def publicEndpoint(logic: MonadError[F] => I => F[Either[E, O]]): ServerEndpoint[R, F] =
@@ -47,23 +47,23 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
   }
 
   class TapirServerEndpointStub[A, U, I, E, O](sep: ServerEndpoint.Full[A, U, I, E, O, R, F]) {
-    def respond(response: O, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
+    def thenRespond(response: O, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => (Right(response): Either[E, O]).unit))
-      else new TapirEndpointStub(sep.endpoint).respond(response)
+      else new TapirEndpointStub(sep.endpoint).thenRespond(response)
 
-    def respondError(errorResponse: E, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
+    def thenRespondError(errorResponse: E, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] =
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => (Left(errorResponse): Either[E, O]).unit))
-      else new TapirEndpointStub(sep.endpoint).respondError(errorResponse)
+      else new TapirEndpointStub(sep.endpoint).thenRespondError(errorResponse)
 
-    def throwException(ex: Throwable, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] = {
+    def thenThrowException(ex: Throwable, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] = {
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => throw ex))
-      new TapirEndpointStub(sep.endpoint).throwException(ex)
+      new TapirEndpointStub(sep.endpoint).thenThrowException(ex)
     }
 
-    def runLogic(): TapirStubInterpreter[F, R, OPTIONS] = append(sep)
+    def thenRunLogic(): TapirStubInterpreter[F, R, OPTIONS] = append(sep)
 
     private def securedEndpoint(logic: MonadError[F] => U => I => F[Either[E, O]]): ServerEndpoint[R, F] =
       ServerEndpoint[A, U, I, E, O, R, F](

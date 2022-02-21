@@ -19,7 +19,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
   it should "use custom exception handler" in {
     val stubBackend: SttpBackend[Future, Any] = TapirStubInterpreter(UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
-      .throwException(new RuntimeException("error"))
+      .thenThrowException(new RuntimeException("error"))
       .backend()
 
     sttp.client3.basicRequest
@@ -31,7 +31,7 @@ class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
   it should "run greet users logic" in {
     val stubBackend: SttpBackend[Future, Any] = TapirStubInterpreter(UsersApi.options, SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(UsersApi.greetUser)
-      .runLogic()
+      .thenRunLogic()
       .backend()
 
     val response = sttp.client3.basicRequest

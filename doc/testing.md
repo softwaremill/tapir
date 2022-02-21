@@ -62,7 +62,7 @@ class MySpec extends AsyncFlatSpec with Matchers {
     // given
     val backendStub: SttpBackend[Future, Any] = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(someServerEndpoint)
-      .runLogic()
+      .thenRunLogic()
       .backend()
       
     // when
@@ -109,7 +109,7 @@ class MySpec2 extends AsyncFlatSpec with Matchers {
     // given
     val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
       .whenEndpoint(someEndpoint)
-      .throwException(new RuntimeException("error"))
+      .thenThrowException(new RuntimeException("error"))
       .backend()
       
     // when  

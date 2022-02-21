@@ -35,7 +35,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // given
     val server = TapirStubInterpreter(options, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct)
-      .respond("computer")
+      .thenRespond("computer")
       .backend()
 
     // when
@@ -49,7 +49,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct)
-      .respondError("failed")
+      .thenRespondError("failed")
       .backend()
 
     // when
@@ -84,7 +84,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
           .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
           .serverLogic { user => _ => IdMonad.unit(Right(s"Created by $user")) }
       )
-      .respond("created", runSecurityLogic = false)
+      .thenRespond("created", runSecurityLogic = false)
       .backend()
 
     // when
@@ -102,7 +102,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
           .serverSecurityLogic { _ => IdMonad.unit(Left("unauthorized"): Either[String, String]) }
           .serverLogic { user => _ => IdMonad.unit(Right(s"created by $user")) }
       )
-      .respondError("failed", runSecurityLogic = false)
+      .thenRespondError("failed", runSecurityLogic = false)
       .backend()
 
     // when
@@ -121,9 +121,9 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
     val server = TapirStubInterpreter(opts, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
-      .respond("computer")
+      .thenRespond("computer")
       .whenEndpoint(createProduct)
-      .throwException(new RuntimeException)
+      .thenThrowException(new RuntimeException)
       .backend()
 
     // when fails to decode then uses decode handler
@@ -139,7 +139,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "throw exception when user sends raw body to stream input" in {
     val server = TapirStubInterpreter(List.empty, SttpBackendStub(IdMonad))
       .whenEndpoint(ProductsApi.inProductStream)
-      .respond(())
+      .thenRespond(())
       .backend()
 
     val ex = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
@@ -153,7 +153,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   it should "throw exception when user sends stream body to raw input" in {
     val server: SttpBackend[Identity, AnyStreams] = TapirStubInterpreter(List.empty, SttpBackendStub(IdMonad))
       .whenEndpoint(ProductsApi.getProduct.in(stringBody))
-      .respond("computer")
+      .thenRespond("computer")
       .backend()
 
     val ex = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
