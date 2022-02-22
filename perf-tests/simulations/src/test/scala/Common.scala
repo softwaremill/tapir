@@ -5,9 +5,8 @@ import io.gatling.http.Predef._
 
 object Common {
   val scn = scenario("get jsons")
-    .exec(http("first json")
-      .get("/4"))
-    .pause(1)
-    .exec(http("second json")
-      .get("/35"))
+    .during(5*60) {
+      exec(http("first json")
+             .get("/4"))
+    }
 }
