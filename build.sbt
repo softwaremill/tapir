@@ -288,7 +288,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.0")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.0",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.1",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -1284,7 +1284,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
