@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.{Request, Response}
-import sttp.model.{RequestMetadata, StatusCode}
+import sttp.model.{Header, RequestMetadata, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.{ServerRequest, ServerResponse}
@@ -29,7 +29,7 @@ private[stub] object StubServerInterpreter {
 
     interpreter.apply(sRequest, new SttpRequestBody[F](req)).map {
       case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
-      case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
+      case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse.notFound)
     }
   }
 

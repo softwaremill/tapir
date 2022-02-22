@@ -2,7 +2,6 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
@@ -13,7 +12,7 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
       override def onDecodeSuccess[U, I](ctx: DecodeSuccessContext[F, U, I])(implicit
           monad: MonadError[F],
           bodyListener: BodyListener[F, B]
-      ): F[ServerResponse[B]] = {
+      ): F[ServerResponseFromOutput[B]] = {
         decodeHandler
           .onDecodeSuccess(ctx)
           .flatMap { response =>
@@ -26,7 +25,7 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
 
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[F, A]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = {
         decodeHandler
           .onSecurityFailure(ctx)
           .flatMap { response =>
@@ -39,16 +38,16 @@ class ServerLogInterceptor[F[_]](log: ServerLog[F]) extends EndpointInterceptor[
 
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]] = {
         decodeHandler
           .onDecodeFailure(ctx)
           .flatMap {
             case r @ None =>
-              log.decodeFailureNotHandled(ctx).map(_ => r: Option[ServerResponse[B]])
+              log.decodeFailureNotHandled(ctx).map(_ => r: Option[ServerResponseFromOutput[B]])
             case r @ Some(response) =>
               log
                 .decodeFailureHandled(ctx, response)
-                .map(_ => r: Option[ServerResponse[B]])
+                .map(_ => r: Option[ServerResponseFromOutput[B]])
           }
           .handleError { case e: Throwable =>
             log.exception(ctx.endpoint, ctx.request, e).flatMap(_ => monad.error(e))

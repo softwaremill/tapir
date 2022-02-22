@@ -8,7 +8,7 @@ import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.interceptor._
 
 import scala.collection.immutable
@@ -95,7 +95,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
       new EndpointHandler[Id, B] {
         override def onDecodeSuccess[U, I](
             ctx: DecodeSuccessContext[Id, U, I]
-        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponse[B]] = {
+        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponseFromOutput[B]] = {
           addCallTrail(s"$prefix success")
           endpointHandler.onDecodeSuccess(ctx)(idMonadError, bodyListener)
         }
@@ -103,14 +103,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Id, A])(implicit
             monad: MonadError[Id],
             bodyListener: BodyListener[Id, B]
-        ): Id[ServerResponse[B]] = {
+        ): Id[ServerResponseFromOutput[B]] = {
           addCallTrail(s"$prefix security failure")
           endpointHandler.onSecurityFailure(ctx)(idMonadError, bodyListener)
         }
 
         override def onDecodeFailure(
             ctx: DecodeFailureContext
-        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponse[B]]] = {
+        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponseFromOutput[B]]] = {
           addCallTrail(s"$prefix failure")
           endpointHandler.onDecodeFailure(ctx)(idMonadError, bodyListener)
         }
