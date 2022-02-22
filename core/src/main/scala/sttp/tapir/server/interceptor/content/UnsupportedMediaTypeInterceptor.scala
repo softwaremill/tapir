@@ -4,7 +4,6 @@ import sttp.model.{ContentTypeRange, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.internal._
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
@@ -17,7 +16,7 @@ class UnsupportedMediaTypeInterceptor[F[_]] extends EndpointInterceptor[F] {
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[F, U, I]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = {
         ctx.request.acceptsContentTypes match {
           case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => endpointHandler.onDecodeSuccess(ctx)
           case Right(ranges) =>
@@ -36,11 +35,12 @@ class UnsupportedMediaTypeInterceptor[F[_]] extends EndpointInterceptor[F] {
 
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[F, A]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = endpointHandler.onSecurityFailure(ctx)
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] =
+        endpointHandler.onSecurityFailure(ctx)
 
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]] =
         endpointHandler.onDecodeFailure(ctx)
     }
 }

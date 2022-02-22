@@ -4,10 +4,10 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
-import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor._
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server._
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.server.interceptor._
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile, emptyOutput}
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: List[ServerEndpoint[R, F]],
@@ -66,9 +66,10 @@ class ServerInterpreter[R, F[_], B, S](
       se: ServerEndpoint.Full[A, U, I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
-    val defaultSecurityFailureResponse = ServerResponse[B](StatusCode.InternalServerError, Nil, None).unit
+    val defaultSecurityFailureResponse =
+      ServerResponseFromOutput[B](StatusCode.InternalServerError, Nil, None, ValuedEndpointOutput(emptyOutput, ())).unit
 
-    def endpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
+    def endpointHandler(securityFailureResponse: => F[ServerResponseFromOutput[B]]): EndpointHandler[F, B] =
       endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
         interceptor(responder(defaultSuccessStatusCode), handler)
       }
@@ -115,7 +116,7 @@ class ServerInterpreter[R, F[_], B, S](
           resultOrValueFrom.value(
             endpointHandler(responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(se.endpoint.errorOutput, e)))
               .onSecurityFailure(SecurityFailureContext(se, a, request))
-              .map(RequestResult.Response(_): RequestResult[B])
+              .map(r => RequestResult.Response(r): RequestResult[B])
           )
 
         case Right(u) =>
@@ -126,7 +127,7 @@ class ServerInterpreter[R, F[_], B, S](
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse)
                 .onDecodeSuccess(interceptor.DecodeSuccessContext(se, u, params.asAny.asInstanceOf[I], request))
-                .map(RequestResult.Response(_): RequestResult[B])
+                .map(r => RequestResult.Response(r): RequestResult[B])
             )
           } yield response
       }
@@ -184,11 +185,11 @@ class ServerInterpreter[R, F[_], B, S](
         .Mismatch(oneOfBodyInput.variants.map(_.range.toString()).mkString(", or: "), request.contentType.getOrElse(""))
     ): DecodeBasicInputsResult).unit
 
-  private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
+  private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponseFromOutput[B]]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[F, U, I]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] =
         ctx.serverEndpoint
           .logic(implicitly)(ctx.securityLogicResult)(ctx.decodedInput)
           .flatMap {
@@ -198,16 +199,16 @@ class ServerInterpreter[R, F[_], B, S](
 
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[F, A]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = securityFailureResponse
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = securityFailureResponse
 
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
-        (None: Option[ServerResponse[B]]).unit(monad)
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]] =
+        (None: Option[ServerResponseFromOutput[B]]).unit(monad)
     }
 
   private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
-    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
+    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]] = {
       val outputValues =
         new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil))
           .apply(output.output, ParamsAsAny(output.value), OutputValues.empty)
@@ -215,8 +216,8 @@ class ServerInterpreter[R, F[_], B, S](
 
       val headers = outputValues.headers
       outputValues.body match {
-        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers)))).unit
-        case None                  => ServerResponse(statusCode, headers, None: Option[B]).unit
+        case Some(bodyFromHeaders) => ServerResponseFromOutput(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), output).unit
+        case None                  => ServerResponseFromOutput(statusCode, headers, None: Option[B], output).unit
       }
     }
   }
