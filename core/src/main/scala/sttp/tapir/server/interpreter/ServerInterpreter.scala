@@ -7,7 +7,7 @@ import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server._
 import sttp.tapir.server.interceptor._
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile, emptyOutput}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: List[ServerEndpoint[R, F]],
@@ -67,7 +67,7 @@ class ServerInterpreter[R, F[_], B, S](
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
     val defaultSecurityFailureResponse =
-      ServerResponseFromOutput[B](StatusCode.InternalServerError, Nil, None, ValuedEndpointOutput(emptyOutput, ())).unit
+      ServerResponseFromOutput[B](StatusCode.InternalServerError, Nil, None, ValuedEndpointOutput.Empty).unit
 
     def endpointHandler(securityFailureResponse: => F[ServerResponseFromOutput[B]]): EndpointHandler[F, B] =
       endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
