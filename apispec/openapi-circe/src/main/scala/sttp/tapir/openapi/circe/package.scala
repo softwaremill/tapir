@@ -71,8 +71,9 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
     (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {
       val fields = responses.map {
-        case (ResponsesDefaultKey, r)    => ("default", r.asJson)
-        case (ResponsesCodeKey(code), r) => (code.toString, r.asJson)
+        case (ResponsesDefaultKey, r)      => ("default", r.asJson)
+        case (ResponsesCodeKey(code), r)   => (code.toString, r.asJson)
+        case (ResponsesRangeKey(range), r) => (s"${range}XX", r.asJson)
       }
 
       Json.obj(fields.toSeq: _*)

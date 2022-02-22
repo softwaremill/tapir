@@ -426,6 +426,7 @@ object Encoding {
 sealed trait ResponsesKey
 case object ResponsesDefaultKey extends ResponsesKey
 final case class ResponsesCodeKey(code: Int) extends ResponsesKey
+final case class ResponsesRangeKey(range: Int) extends ResponsesKey
 
 final case class Response(
     description: String = "",

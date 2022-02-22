@@ -7,6 +7,7 @@ import sttp.model.StatusCode
 import sttp.tapir.docs.openapi.VerifyYamlOneOfTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
+import sttp.tapir.model.StatusCodeRange
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.ContentNegotiation
@@ -98,6 +99,22 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
         endpoint
           .out(header[String]("Location"))
           .errorOut(statusCode.description(StatusCode.NotFound, "entity not found").description(StatusCode.BadRequest, "")),
+        Info("Entities", "1.0")
+      )
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use declared status code range with description") {
+    val expectedYaml = load("oneOf/expected_one_of_status_code_range.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(
+        endpoint
+          .out(header[String]("Location"))
+          .errorOut(statusCode.description(StatusCode.NotFound, "not here").description(StatusCodeRange.ClientError, "bad input")),
         Info("Entities", "1.0")
       )
       .toYaml

@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        4XX:
+          description: bad input
+        '404':
+          description: not here
