@@ -4,31 +4,24 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 
 import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-
-import io.circe.generic.auto._
 
 import scala.io.StdIn
 import scala.concurrent.Future
-
-
-final case class Book(id: Int)
 
 object AkkaHttpTapirServer extends App {
   implicit val actorSystem = ActorSystem(Behaviors.empty, "akka-http")
   implicit val executionContext = actorSystem.executionContext
 
-  val bookEndpoint: PublicEndpoint[(Int), String, Book, Any] = endpoint
+  val bookEndpoint: PublicEndpoint[(Int), String, String, Any] = endpoint
     .get
     .in("akka-http-tapir")
     .in(path[Int]("id"))
     .errorOut(stringBody)
-    .out(jsonBody[Book])
+    .out(stringBody)
 
-  def bookEndpointLogic(id: Int): Future[Either[String, Book]] =
-    Future.successful(Right(Book(id)))
+  def bookEndpointLogic(id: Int): Future[Either[String, String]] =
+    Future.successful(Right(id.toString))
 
   val route: Route = AkkaHttpServerInterpreter()
     .toRoute(bookEndpoint.serverLogic(bookEndpointLogic))

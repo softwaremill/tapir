@@ -6,18 +6,15 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
 import scala.io.StdIn
 
-import spray.json.DefaultJsonProtocol._
-
 final case class Book(id: Int)
 
 object AkkaHttpOnlyServer extends App {
   implicit val actorSystem = ActorSystem(Behaviors.empty, "akka-http")
   implicit val executionContext = actorSystem.executionContext
-  implicit val bookMarshaller: spray.json.RootJsonFormat[Book] = jsonFormat1(Book.apply)
 
   val route = get {
     path("akka-http-only" / IntNumber) {
-      id => complete(Book(id))
+      id => complete(id.toString)
     }
   }
 

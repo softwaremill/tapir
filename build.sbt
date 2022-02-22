@@ -362,7 +362,7 @@ lazy val perfServerAkkaHttpOnly: ProjectMatrix = (projectMatrix in file("perf-te
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(core, circeJson)
+  .dependsOn(core)
 
 lazy val perfServerAkkaHttpTapir: ProjectMatrix = (projectMatrix in file("perf-tests/servers/akka-http-tapir"))
   .settings(commonJvmSettings)
@@ -371,7 +371,6 @@ lazy val perfServerAkkaHttpTapir: ProjectMatrix = (projectMatrix in file("perf-t
     libraryDependencies ++= Seq(
       "com.typesafe.akka" % "akka-actor-typed_2.13" % "2.6.18",
       "com.typesafe.akka" % "akka-stream-typed_2.13" % "2.6.18",
-      "com.typesafe.akka" % "akka-http-spray-json_2.13" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
     ),
@@ -379,7 +378,7 @@ lazy val perfServerAkkaHttpTapir: ProjectMatrix = (projectMatrix in file("perf-t
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(core, akkaHttpServer, circeJson)
+  .dependsOn(core, akkaHttpServer)
 
 
 // integrations
