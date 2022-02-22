@@ -1,6 +1,16 @@
 package sttp.tapir.openapi
 
-import sttp.tapir.apispec.{ExampleValue, ExtensionValue, ExternalDocumentation, Reference, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{
+  ExampleValue,
+  ExtensionValue,
+  ExternalDocumentation,
+  Reference,
+  ReferenceOr,
+  Schema,
+  SecurityRequirement,
+  SecurityScheme,
+  Tag
+}
 
 import scala.collection.immutable.ListMap
 

@@ -4,7 +4,22 @@ import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, JsonObject}
-import sttp.tapir.apispec.{Discriminator, ExampleMultipleValue, ExampleSingleValue, ExampleValue, ExtensionValue, ExternalDocumentation, OAuthFlow, OAuthFlows, Reference, ReferenceOr, Schema, SchemaType, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{
+  Discriminator,
+  ExampleMultipleValue,
+  ExampleSingleValue,
+  ExampleValue,
+  ExtensionValue,
+  ExternalDocumentation,
+  OAuthFlow,
+  OAuthFlows,
+  Reference,
+  ReferenceOr,
+  Schema,
+  SchemaType,
+  SecurityScheme,
+  Tag
+}
 
 import scala.collection.immutable.ListMap
 
