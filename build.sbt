@@ -621,6 +621,18 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .dependsOn(core)
 
+lazy val weePickleJson: ProjectMatrix = (projectMatrix in file("json/weepickle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-weepickle",
+    libraryDependencies ++= Seq(
+      "com.rallyhealth" %% "weepickle-v1" % Versions.weePickle,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 // metrics
 
 lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
