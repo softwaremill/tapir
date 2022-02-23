@@ -8,7 +8,7 @@ import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.RawBodyType._
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ServerRequest, StatusCodeRange}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
@@ -268,7 +268,7 @@ object EndpointOutput extends EndpointOutputMacros {
   //
 
   case class StatusCode[T](
-      documentedCodes: Map[sttp.model.StatusCode, Info[Unit]],
+      documentedCodes: Map[Either[sttp.model.StatusCode, StatusCodeRange], Info[Unit]],
       codec: Codec[sttp.model.StatusCode, T, TextPlain],
       info: Info[T]
   ) extends Atom[T] {
@@ -277,10 +277,16 @@ object EndpointOutput extends EndpointOutputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[sttp.model.StatusCode, U, TextPlain], i: Info[U]): StatusCode[U] =
       copy(codec = c, info = i)
-    override def show: String = s"status code - possible codes ($documentedCodes)"
+    override def show: String =
+      s"status code - possible codes (${documentedCodes.map { case (k, v) => k.fold(_.toString, _.toString) -> v }})"
 
     def description(code: sttp.model.StatusCode, d: String): StatusCode[T] = {
-      val updatedCodes = documentedCodes + (code -> Info.empty[Unit].description(d))
+      val updatedCodes = documentedCodes + (Left(code) -> Info.empty[Unit].description(d))
+      copy(documentedCodes = updatedCodes)
+    }
+
+    def description(range: StatusCodeRange, d: String): StatusCode[T] = {
+      val updatedCodes = documentedCodes + (Right(range) -> Info.empty[Unit].description(d))
       copy(documentedCodes = updatedCodes)
     }
   }
