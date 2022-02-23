@@ -1,6 +1,5 @@
 package sttp.tapir.server.stub
 
-import org.scalatest.Assertions
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.monad.IdMonad
@@ -10,12 +9,8 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
-import sttp.tapir.tests.Streaming.in_stream_out_stream
-
-import scala.concurrent.Future
-import scala.util.Failure
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -117,7 +112,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     val opts = options
       .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
       .exceptionHandler((_: ExceptionContext) => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
-      .rejectInterceptor(new RejectInterceptor[Identity](_ => Some(StatusCode.NotAcceptable)))
+      .rejectHandler(DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
 
     val server = TapirStubInterpreter(opts, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
@@ -133,7 +128,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     sttp.client3.basicRequest.post(uri"http://test.com/api/products").send(server).body shouldBe Right("failed due to exception")
 
     // when no matching endpoint then uses reject handler
-    sttp.client3.basicRequest.get(uri"http://test.com/iamlost").send(server).code shouldBe StatusCode.NotAcceptable
+    sttp.client3.basicRequest.delete(uri"http://test.com/api/products").send(server).code shouldBe StatusCode.NotAcceptable
   }
 
   it should "throw exception when user sends raw body to stream input" in {

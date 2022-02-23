@@ -116,7 +116,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val response = interpreter(testRequest, TestRequestBody)
 
     // then
-    response should matchPattern { case Response(ServerResponse(customStatusCode, _, Some(customBody))) => }
+    response should matchPattern { case Response(ServerResponseFromOutput(customStatusCode, _, Some(customBody), _)) => }
   }
 
   class AddToTrailInterceptor(addCallTrail: String => Unit, prefix: String) extends EndpointInterceptor[Id] {
