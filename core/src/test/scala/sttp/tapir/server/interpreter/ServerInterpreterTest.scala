@@ -9,7 +9,9 @@ import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
 
 import scala.collection.immutable
 
@@ -88,6 +90,33 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     // then
     callTrail.toList shouldBe List("x decode", "y decode", "1 security failure")
+  }
+
+  it should "use a customized reject interceptor" in {
+    // given
+    val customStatusCode = StatusCode.BadRequest
+    val customBody = "Custom body"
+
+    val rejectInterceptor = new RejectInterceptor[Id](DefaultRejectHandler((_, _) => {
+      ValuedEndpointOutput(statusCode.and(stringBody), (customStatusCode, customBody))
+    }))
+
+    val interpreter =
+      new ServerInterpreter[Any, Id, String, NoStreams](
+        List(
+          endpoint.post.serverLogic[Id](_ => Right(())),
+          endpoint.put.serverLogic[Id](_ => Right(()))
+        ),
+        StringToResponseBody,
+        List(rejectInterceptor),
+        _ => ()
+      )
+
+    // when
+    val response = interpreter(testRequest, TestRequestBody)
+
+    // then
+    response should matchPattern { case Response(ServerResponseFromOutput(customStatusCode, _, Some(customBody), _)) => }
   }
 
   class AddToTrailInterceptor(addCallTrail: String => Unit, prefix: String) extends EndpointInterceptor[Id] {
