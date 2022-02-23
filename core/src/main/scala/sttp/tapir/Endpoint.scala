@@ -390,7 +390,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit)
 
-  /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint errors. */
+  /** Same as [[serverLogic]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint errors. */
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
@@ -450,7 +450,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def serverSecurityLogicPure[PRINCIPAL, F[_]](f: A => Either[E, PRINCIPAL]): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
     PartialServerEndpoint(this, implicit m => a => f(a).unit)
 
-  /** Same as [[serverSecurityLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint errors. */
+  /** Same as [[serverSecurityLogic]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint errors. */
   def serverSecurityLogicRecoverErrors[PRINCIPAL, F[_]](
       f: A => F[PRINCIPAL]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
@@ -500,7 +500,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   ): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, E, O, Unit, R, F] =
     PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), implicit m => a => f(a).unit)
 
-  /** Same as [[serverSecurityLogicWithOutput]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
+  /** Same as [[serverSecurityLogicWithOutput]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint
     * errors.
     */
   def serverSecurityLogicRecoverErrorsWithOutput[PRINCIPAL, F[_]](
