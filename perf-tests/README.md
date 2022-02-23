@@ -1,14 +1,14 @@
 # Setup
 
-To test vanilla akka-http load, run these two commanda in two seperate `sbt` instances:
+To startup a server run `perfTests/run` and select the server you want to test.
+
+To test vanilla akka-http load, run this command in in a seperate `sbt` instance:
 ```
-perfServerAkkaHttpOnly/run
 perfTests / Gatling / testOnly perfTests.AkkaHttpOnlySimulation
 ```
 
-To test tapir with akka-http load, run these two commanda in two seperate `sbt` instances:
+To test tapir with akka-http load, run this command in in a seperate `sbt` instance:
 ```
-perfServerAkkaHttpTapir/run
 perfTests / Gatling / testOnly perfTests.AkkaHttpTapirSimulation
 ```
 
