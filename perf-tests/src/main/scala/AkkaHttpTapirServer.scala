@@ -1,3 +1,5 @@
+package perfTests
+
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
@@ -9,30 +11,47 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.io.StdIn
 import scala.concurrent.Future
 
-object AkkaHttpTapirServer extends App {
+class AkkaHttpTapirServer {
   implicit val actorSystem = ActorSystem(Behaviors.empty, "akka-http")
   implicit val executionContext = actorSystem.executionContext
 
-  val bookEndpoint: PublicEndpoint[(Int), String, String, Any] = endpoint
-    .get
-    .in("akka-http-tapir")
-    .in(path[Int]("id"))
-    .errorOut(stringBody)
-    .out(stringBody)
+  var bindingFuture: Option[scala.concurrent.Future[akka.http.scaladsl.Http.ServerBinding]] = None
 
-  def bookEndpointLogic(id: Int): Future[Either[String, String]] =
-    Future.successful(Right(id.toString))
+  def setUp() = {
+    val bookEndpoint: PublicEndpoint[(Int), String, String, Any] = endpoint
+      .get
+      .in("akka-http-tapir")
+      .in(path[Int]("id"))
+      .errorOut(stringBody)
+      .out(stringBody)
 
-  val route: Route = AkkaHttpServerInterpreter()
-    .toRoute(bookEndpoint.serverLogic(bookEndpointLogic))
+    def bookEndpointLogic(id: Int): Future[Either[String, String]] =
+      Future.successful(Right(id.toString))
 
-  val bindingFuture = Http()
-    .newServerAt("127.0.0.1", 8080)
-    .bind(route)
+    val route: Route = AkkaHttpServerInterpreter()
+      .toRoute(bookEndpoint.serverLogic(bookEndpointLogic))
 
+    this.bindingFuture = Some(Http()
+      .newServerAt("127.0.0.1", 8080)
+      .bind(route))
+  }
+
+  def tearDown() = {
+    bindingFuture match {
+      case Some(b) => {
+        b
+          .flatMap(_.unbind())
+          .onComplete(_ => actorSystem.terminate())
+      }
+      case None => ()
+    }
+  }
+}
+
+object AkkaHttpTapirServer extends App {
+  var server = new perfTests.AkkaHttpTapirServer()
+  server.setUp()
   println(s"Server now online. Please navigate to http://localhost:8080/akka-http-tapir/1\nPress RETURN to stop...")
   StdIn.readLine()
-  bindingFuture
-    .flatMap(_.unbind())
-    .onComplete(_ => actorSystem.terminate())
+  server.tearDown()
 }

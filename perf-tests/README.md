@@ -1,21 +1,21 @@
 # Setup
 
-To startup a server run `perfTests/run` and select the server you want to test.
-
-To test vanilla akka-http load, run this command in in a seperate `sbt` instance:
+To test vanilla akka-http load, run this command:
 ```
 perfTests / Gatling / testOnly perfTests.AkkaHttpOnlySimulation
 ```
 
-To test tapir with akka-http load, run this command in in a seperate `sbt` instance:
+To test tapir with akka-http load, run this command:
 ```
 perfTests / Gatling / testOnly perfTests.AkkaHttpTapirSimulation
 ```
 
+To start a server without testing run `perfTests/run` and select the server you want to test.
 
 # Test Results for 1000 users during 5 minutes
 
 akka-http only:
+
 ```
 ================================================================================
 ---- Global Information --------------------------------------------------------
@@ -42,8 +42,8 @@ Please open the following file: /home/felix/code/work/tapir/perf-tests/simulatio
 [success] Total time: 326 s (05:26), completed Feb 22, 2022, 11:11:27 AM
 ```
 
-
 akka-http with tapir:
+
 ```
 ================================================================================
 ---- Global Information --------------------------------------------------------
