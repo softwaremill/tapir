@@ -232,6 +232,22 @@ import sttp.tapir.json.zio._
 
 Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
 
+## weePickle 
+
+To use weepickle add the following dependency to your project:
+
+``` scala
+"com.softwaremill" %% "tapir-json-weepickle" % "@VERSION@"
+```
+
+Next, import the package (or extend the `TapirWeePickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonWeepickle` insteand of `TapirCircejson`)
+
+``` scala
+import sttp.taapir.json.weepickle.__
+```
+
+weePickle requires an implicit `FromTo` to be in implicit scope for any type types you need to serialize. 
+
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the
