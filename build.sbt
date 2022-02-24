@@ -625,7 +625,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
 lazy val weePickleJson: ProjectMatrix = (projectMatrix in file("json/weepickle"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-json-weepickle",
+    name := "tapir-json-weepickle-v1",
     libraryDependencies ++= Seq(
       "com.rallyhealth" %% "weepickle-v1" % Versions.weePickle,
       scalaTest.value % Test

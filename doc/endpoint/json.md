@@ -237,13 +237,13 @@ Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for e
 To use weepickle add the following dependency to your project:
 
 ``` scala
-"com.softwaremill" %% "tapir-json-weepickle" % "@VERSION@"
+"com.softwaremill" %% "tapir-json-weepickle-v1" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirWeePickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonWeepickle` insteand of `TapirCircejson`)
 
 ``` scala
-import sttp.taapir.json.weepickle.__
+import sttp.taapir.json.weepickle.v1.__
 ```
 
 weePickle requires an implicit `FromTo` to be in implicit scope for any type types you need to serialize. 

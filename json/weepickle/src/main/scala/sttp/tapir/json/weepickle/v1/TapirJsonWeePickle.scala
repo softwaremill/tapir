@@ -1,4 +1,4 @@
-package sttp.tapir.json.weepickle
+package sttp.tapir.json.weepickle.v1
 
 import scala.util.{Failure, Success, Try}
 import sttp.tapir._

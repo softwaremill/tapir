@@ -1,4 +1,4 @@
-package sttp.tapir.json.weepickle
+package sttp.tapir.json.weepickle.v1
 
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpec
