@@ -121,14 +121,4 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     removeValidators(implicitly[Schema[IList]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JList]]) shouldBe expectedJSchema
   }
-
-  it should "derive schema for enumeration and enrich schema" in {
-    val expected = Schema[Countries.Country](SString())
-      .validate(Validator.enumeration[Countries.Country](Countries.values.toList))
-      .description("country")
-      .default(Countries.PL)
-      .name(SName("country-encoded-name"))
-    implicitly[Schema[Countries.Country]] shouldBe expected
-  }
-
 }

@@ -2,7 +2,11 @@ package sttp.tapir.internal
 
 import scala.reflect.macros.blackbox
 
-object SchemaAnnotationsMacro {
+trait SchemaAnnotationsMacro {
+  implicit def derived[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacroImpl.derived[T]
+}
+
+object SchemaAnnotationsMacroImpl {
   def derived[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[SchemaAnnotations[T]] = {
     import c.universe._
 

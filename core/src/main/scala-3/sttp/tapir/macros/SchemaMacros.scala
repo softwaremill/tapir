@@ -102,6 +102,11 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
   }
 
+  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
+  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] = ${
+    SchemaCompanionMacros.derivedEnumerationValue[T]
+  }
+
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
     * that all subtypes of the sealed hierarchy `T` must be `object`s.
     *
@@ -125,6 +130,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
 }
 
 object SchemaCompanionMacros {
+
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
 
@@ -186,6 +192,35 @@ object SchemaCompanionMacros {
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
       Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(e => mappingAsMap.get($extractor(e))), Some(sname))
+    }
+  }
+
+  def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
+    import q.reflect.*
+    import sttp.tapir.internal.SchemaAnnotations
+
+    val Enumeration = TypeTree.of[scala.Enumeration].tpe
+
+    val tpe = TypeRepr.of[T]
+
+    val owner = tpe.typeSymbol.owner.tree
+
+    if (owner.symbol != Enumeration.typeSymbol) {
+      report.errorAndAbort("Can only derive Schema for values owned by scala.Enumeration")
+    } else {
+
+      val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
+      val enumeration = Symbol.requiredModule(enumerationPath)
+
+      '{
+        SchemaAnnotations
+          .derived[T]
+          .enrich(
+            Schema
+              .string[T]
+              .validate(Validator.enumeration(${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]]))
+          )
+      }
     }
   }
 

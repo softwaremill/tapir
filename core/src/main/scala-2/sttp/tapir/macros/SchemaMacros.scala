@@ -41,7 +41,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] = macro SchemaEnumerationMacro.derivedEnumeration[T]
 
   /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
-  implicit def schemaForEnumeration[T <: scala.Enumeration#Value]: Schema[T] = macro SchemaEnumerationMacro.derivedEnumerationValue[T]
+  implicit def derivedEnumerationValue[T <: scala.Enumeration#Value]: Schema[T] = macro SchemaEnumerationMacro.derivedEnumerationValue[T]
 }
 
 class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {

@@ -25,7 +25,7 @@ object SchemaEnumerationMacro {
     val owner = weakTypeT.typeSymbol.owner
 
     if (!(owner.asClass.toType <:< Enumeration)) {
-      c.abort(c.enclosingPosition, s"Can only derive Schema for values owned by scala.Enumeration")
+      c.abort(c.enclosingPosition, "Can only derive Schema for values owned by scala.Enumeration")
     } else {
 
       val enumeration = TermName(weakTypeT.toString.split("\\.").dropRight(1).last)
