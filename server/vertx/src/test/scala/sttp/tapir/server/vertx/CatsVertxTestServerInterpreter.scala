@@ -33,7 +33,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
     VertxCatsServerInterpreter(options).route(e)
   }
 
-  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]]): Router => Route = ???
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]]): Router => Route = router => es.map(route(_)(router)).last
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

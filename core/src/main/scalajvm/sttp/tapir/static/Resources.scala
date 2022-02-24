@@ -12,57 +12,59 @@ object Resources {
   def apply[F[_]: MonadError](
       classLoader: ClassLoader,
       resourcePrefix: String,
-      useETags: Boolean = true,
-      useGzippedIfAvailable: Boolean = false,
-      resourceFilter: List[String] => Boolean = _ => true
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = (resourcesInput: StaticInput) =>
-    resources(classLoader, resourcePrefix.split("/").toList, useETags, useGzippedIfAvailable, resourceFilter)(resourcesInput)
+    resources(classLoader, resourcePrefix.split("/").toList, options)(resourcesInput)
 
   private def resources[F[_]](
       classLoader: ClassLoader,
       resourcePrefix: List[String],
-      useETags: Boolean,
-      useGzippedIfAvailable: Boolean,
-      resourceFilter: List[String] => Boolean
+      options: ResourcesOptions[F]
   )(
       resourcesInput: StaticInput
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[InputStream]]] = {
-    val gzippedResource = useGzippedIfAvailable && resourcesInput.acceptEncoding.exists(_.equals("gzip"))
-    val nameComponents = resourcePrefix ++ resourcesInput.path
-    val name = nameComponents.mkString("/")
-
     def notFound = (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[InputStream]]).unit
 
-    if (resourceFilter(nameComponents)) {
-      val gzipUrl: F[Option[URL]] =
-        if (gzippedResource) m.blocking(Option(classLoader.getResource(name.concat(".gz"))))
-        else m.unit(Option.empty)
-
-      gzipUrl
-        .flatMap(maybeUrl =>
-          m.blocking(
-            maybeUrl
-              .map(url => readResource(useETags, resourcesInput, url, Some(MediaType.ApplicationGzip), Some("gzip")))
-              .getOrElse(
-                Option(classLoader.getResource(name))
-                  .map(url => readResource(useETags, resourcesInput, url, Some(contentTypeFromName(name)), None))
-                  .getOrElse(Left(StaticErrorOutput.NotFound))
-              )
-          )
-        )
-        .handleError { case _: FileNotFoundException =>
-          notFound
-        }
+    val nameComponents = resourcePrefix ++ resourcesInput.path
+    if (options.resourceFilter(nameComponents)) {
+      val useGzippedIfAvailable = options.useGzippedIfAvailable && resourcesInput.acceptEncoding.exists(_.equals("gzip"))
+      m.blocking {
+        resolveURL(classLoader, resourcePrefix, resourcesInput.path, options.defaultResource, useGzippedIfAvailable)
+          .map { case (url, mt, enc) => readResource(options.useETags, resourcesInput, url, mt, enc) }
+          .getOrElse(Left(StaticErrorOutput.NotFound))
+      }.handleError { case _: FileNotFoundException =>
+        notFound
+      }
     } else notFound
+  }
+
+  private def resolveURL(
+      classLoader: ClassLoader,
+      resourcePrefix: List[String],
+      path: List[String],
+      default: Option[List[String]],
+      useGzippedIfAvailable: Boolean
+  ): Option[(URL, MediaType, Option[String])] = {
+    val name = (resourcePrefix ++ path).mkString("/")
+
+    val result = (if (useGzippedIfAvailable) Option(classLoader.getResource(name + ".gz")).map((_, MediaType.ApplicationGzip, Some("gzip")))
+                  else None)
+      .orElse(Option(classLoader.getResource(name)).map((_, contentTypeFromName(name), None)))
+      .orElse(default match {
+        case None              => None
+        case Some(defaultPath) => resolveURL(classLoader, resourcePrefix, defaultPath, None, useGzippedIfAvailable)
+      })
+
+    if (!result.forall(_._1.toURI.getPath.contains(resourcePrefix.mkString("/")))) None else result
   }
 
   private def readResource[F[_]](
       useETags: Boolean,
       resourcesInput: StaticInput,
       url: URL,
-      contentType: Option[MediaType],
+      contentType: MediaType,
       contentEncoding: Option[String]
   ): Either[StaticErrorOutput, StaticOutput[InputStream]] = {
     val conn = url.openConnection()
@@ -74,9 +76,38 @@ object Resources {
 
     if (isModified(resourcesInput, etag, lastModified))
       Right(
-        StaticOutput.Found(conn.getInputStream, Some(Instant.ofEpochMilli(lastModified)), Some(length), contentType, etag, contentEncoding)
+        StaticOutput
+          .Found(conn.getInputStream, Some(Instant.ofEpochMilli(lastModified)), Some(length), Some(contentType), etag, contentEncoding)
       )
     else Right(StaticOutput.NotModified)
   }
+}
 
+/** @param resourceFilter
+  *   A resource will be exposed only if this function returns `true`.
+  * @param defaultResource
+  *   path segments (relative to the resource prefix from which resources are read) of the resource to return in case the one requested by
+  *   the user isn't found. This is useful for SPA apps, where the same main application resource needs to be returned regardless of the
+  *   path.
+  */
+case class ResourcesOptions[F[_]](
+    useETags: Boolean,
+    useGzippedIfAvailable: Boolean,
+    resourceFilter: List[String] => Boolean,
+    defaultResource: Option[List[String]]
+) {
+  def withUseGzippedIfAvailable: ResourcesOptions[F] = copy(useGzippedIfAvailable = true)
+  def withUseETags: ResourcesOptions[F] = copy(useETags = true)
+
+  /** A resource will be exposed only if this function returns `true`. */
+  def resourceFilter(f: List[String] => Boolean): ResourcesOptions[F] = copy(resourceFilter = f)
+
+  /** Path segments (relative to the resource prefix from which resources are read) of the resource to return in case the one requested by
+    * the user isn't found. This is useful for SPA apps, where the same main application resource needs to be returned regardless of the
+    * path.
+    */
+  def defaultResource(d: List[String]): ResourcesOptions[F] = copy(defaultResource = Some(d))
+}
+object ResourcesOptions {
+  def default[F[_]]: ResourcesOptions[F] = ResourcesOptions(useETags = true, useGzippedIfAvailable = false, _ => true, None)
 }

@@ -30,7 +30,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
     VertxFutureServerInterpreter(options).route(e)
   }
 
-  override def route(es: List[ServerEndpoint[Any, Future]]): Router => Route = ???
+  override def route(es: List[ServerEndpoint[Any, Future]]): Router => Route = router => es.map(route(_)(router)).last
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

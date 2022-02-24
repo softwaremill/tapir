@@ -15,6 +15,9 @@ class FinatraServerRequest(request: Request) extends ServerRequest {
   override lazy val headers: Seq[Header] = request.headerMap.toList.map { case (k, v) => Header(k, v) }
   override lazy val queryParameters: QueryParams =
     QueryParams.fromMultiMap(request.params.keys.toList.map(k => k -> request.params.getAll(k).toList).toMap)
-  override lazy val pathSegments: List[String] = request.path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+  override lazy val pathSegments: List[String] = {
+    val segments = request.path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    if (segments == List("")) Nil else segments // representing the root path as an empty list
+  }
   override def underlying: Any = request
 }
