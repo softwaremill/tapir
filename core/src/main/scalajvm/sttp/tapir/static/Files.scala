@@ -9,78 +9,91 @@ import sttp.tapir.{FileRange, RangeValue}
 import java.io.File
 import java.nio.file.{LinkOption, Path, Paths}
 import java.time.Instant
+import scala.annotation.tailrec
 
 object Files {
 
   // inspired by org.http4s.server.staticcontent.FileService
-  def head[F[_]: MonadError](
+  def head[F[_]](
       systemPath: String,
-      fileFilter: List[String] => Boolean = _ => true
-  ): HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = { input =>
-    MonadError[F]
-      .blocking {
-        val resolved = input.path.foldLeft(Paths.get(systemPath).toRealPath())(_.resolve(_))
-        if (fileFilter(input.path) && java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
-          val file = resolved.toFile
-          Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
-        } else Left(StaticErrorOutput.NotFound)
+      options: FilesOptions[F] = FilesOptions.default[F]
+  ): MonadError[F] => HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = implicit monad =>
+    input => {
+      MonadError[F]
+        .blocking {
+          if (!options.fileFilter(input.path)) {
+            Left(StaticErrorOutput.NotFound)
+          } else {
+            resolveRealPath(Paths.get(systemPath).toRealPath(), input.path, options.defaultFile) match {
+              case Left(error) => Left(error)
+              case Right(resolved) =>
+                val file = resolved.toFile
+                Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
+            }
+          }
+        }
+    }
+
+  def get[F[_]](
+      systemPath: String,
+      options: FilesOptions[F] = FilesOptions.default[F]
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
+    MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, options)(filesInput))
+  }
+
+  def defaultEtag[F[_]]: MonadError[F] => File => F[Option[ETag]] = monad =>
+    file =>
+      monad.blocking {
+        if (file.isFile) Some(defaultETag(file.lastModified(), file.length()))
+        else None
       }
-  }
 
-  def get[F[_]: MonadError](
-      systemPath: String
-  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    get(systemPath, defaultEtag[F], _ => true)
-
-  def get[F[_]: MonadError](
-      systemPath: String,
-      calculateETag: File => F[Option[ETag]]
-  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    get(systemPath, calculateETag, _ => true)
-
-  /** @param calculateETag
-    *   Use [[defaultETag]] or provide custom logic.
-    */
-  def get[F[_]: MonadError](
-      systemPath: String,
-      calculateETag: File => F[Option[ETag]],
-      fileFilter: List[String] => Boolean
-  ): StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] =
-    filesInput =>
-      MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, calculateETag, fileFilter)(filesInput))
-
-  def defaultEtag[F[_]: MonadError](file: File): F[Option[ETag]] = MonadError[F].blocking {
-    if (file.isFile) Some(defaultETag(file.lastModified(), file.length()))
-    else None
-  }
-
-  private def files[F[_]](realSystemPath: Path, calculateETag: File => F[Option[ETag]], fileFilter: List[String] => Boolean)(
+  private def files[F[_]](realSystemPath: Path, options: FilesOptions[F])(
       filesInput: StaticInput
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
-    val resolved = filesInput.path.foldLeft(realSystemPath)(_.resolve(_))
     m.flatten(m.blocking {
-      if (!fileFilter(filesInput.path) || !java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS))
+      if (!options.fileFilter(filesInput.path))
         (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
       else {
-        val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
-        if (!realRequestedPath.startsWith(realSystemPath))
-          (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-        else if (realRequestedPath.toFile.isDirectory) {
-          files(realSystemPath, calculateETag, fileFilter)(filesInput.copy(path = filesInput.path :+ "index.html"))
-        } else {
-          filesInput.range match {
-            case Some(range) =>
-              val fileSize = realRequestedPath.toFile.length()
-              if (range.isValid(fileSize))
-                rangeFileOutput(filesInput, realRequestedPath, calculateETag, RangeValue(range.start, range.end, fileSize)).map(Right(_))
-              else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-            case None => wholeFileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
-          }
+        resolveRealPath(realSystemPath, filesInput.path, options.defaultFile) match {
+          case Left(error) => (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+          case Right(realResolvedPath) =>
+            filesInput.range match {
+              case Some(range) =>
+                val fileSize = realResolvedPath.toFile.length()
+                if (range.isValid(fileSize))
+                  rangeFileOutput(filesInput, realResolvedPath, options.calculateETag(m), RangeValue(range.start, range.end, fileSize))
+                    .map(Right(_))
+                else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+              case None => wholeFileOutput(filesInput, realResolvedPath, options.calculateETag(m)).map(Right(_))
+            }
         }
       }
     })
+  }
+
+  @tailrec
+  private def resolveRealPath(realSystemPath: Path, path: List[String], default: Option[List[String]]): Either[StaticErrorOutput, Path] = {
+    val resolved = path.foldLeft(realSystemPath)(_.resolve(_))
+
+    if (!java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+      default match {
+        case Some(defaultPath) => resolveRealPath(realSystemPath, defaultPath, None)
+        case None              => Left(StaticErrorOutput.NotFound)
+      }
+    } else {
+      val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
+
+      if (!realRequestedPath.startsWith(realSystemPath))
+        Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, Path]
+      else if (realRequestedPath.toFile.isDirectory) {
+        resolveRealPath(realSystemPath, path :+ "index.html", default)
+      } else {
+        Right(realRequestedPath)
+      }
+    }
   }
 
   private def rangeFileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
@@ -136,4 +149,29 @@ object Files {
       else StaticOutput.NotModified.unit
   } yield result
 
+}
+
+/** @param fileFilter
+  *   A file will be exposed only if this function returns `true`.
+  * @param defaultFile
+  *   path segments (relative to the system path from which files are read) of the file to return in case the one requested by the user
+  *   isn't found. This is useful for SPA apps, where the same main application file needs to be returned regardless of the path.
+  */
+case class FilesOptions[F[_]](
+    calculateETag: MonadError[F] => File => F[Option[ETag]],
+    fileFilter: List[String] => Boolean,
+    defaultFile: Option[List[String]]
+) {
+  def calculateETag(f: File => F[Option[ETag]]): FilesOptions[F] = copy(calculateETag = _ => f)
+
+  /** A file will be exposed only if this function returns `true`. */
+  def fileFilter(f: List[String] => Boolean): FilesOptions[F] = copy(fileFilter = f)
+
+  /** Path segments (relative to the system path from which files are read) of the file to return in case the one requested by the user
+    * isn't found. This is useful for SPA apps, where the same main application file needs to be returned regardless of the path.
+    */
+  def defaultFile(d: List[String]): FilesOptions[F] = copy(defaultFile = Some(d))
+}
+object FilesOptions {
+  def default[F[_]]: FilesOptions[F] = FilesOptions(Files.defaultEtag, _ => true, None)
 }
