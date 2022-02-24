@@ -15,7 +15,10 @@ private[play] class PlayServerRequest(requestHeader: RequestHeader, requestWithC
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, Some(requestHeader.secure))
   override lazy val headers: Seq[Header] = requestHeader.headers.headers.map { case (k, v) => Header(k, v) }.toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(requestHeader.queryString)
-  override lazy val pathSegments: List[String] =
-    requestHeader.path.dropWhile(_ == '/').split("/").toList.map(UriEncoding.decodePathSegment(_, StandardCharsets.UTF_8))
+  override lazy val pathSegments: List[String] = {
+    val segments = requestHeader.path.dropWhile(_ == '/').split("/").toList.map(UriEncoding.decodePathSegment(_, StandardCharsets.UTF_8))
+    if (segments == List("")) Nil else segments // representing the root path as an empty list
+  }
+
   override def underlying: Any = requestWithContext
 }
