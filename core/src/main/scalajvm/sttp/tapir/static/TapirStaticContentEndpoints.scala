@@ -203,20 +203,15 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
-    *
-    * @param resourceFilter
-    *   resource will exposed only if this function returns `true`.
     */
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
-      useGzippedIfAvailable: Boolean = false,
-      resourceFilter: List[String] => Boolean = _ => true
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) =>
-        Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable, resourceFilter = resourceFilter)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
@@ -228,11 +223,11 @@ trait TapirStaticContentEndpoints {
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
-      useGzippedIfAvailable: Boolean = false
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(resourcesGetEndpoint(prefix)),
-      (m: MonadError[F]) => Resources(classLoader, resourcePath, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
     )
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =

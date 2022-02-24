@@ -10,7 +10,7 @@ import sttp.client3._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.static.FilesOptions
+import sttp.tapir.static.{FilesOptions, ResourcesOptions}
 import sttp.tapir.tests._
 
 import java.io.File
@@ -33,6 +33,8 @@ class ServerStaticContentTests[F[_], ROUTE](
     .head(uri"http://localhost:$port/$path")
     .response(asStringAlways)
     .send(backend)
+
+  private val classLoader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
 
   def tests(): List[Test] = {
     val baseTests = List(
@@ -341,17 +343,16 @@ class ServerStaticContentTests[F[_], ROUTE](
         }
       },
       Test("should serve a single resource") {
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test/r1.txt"))
-          .use { port => get(port, List("test", "r1.txt")).map(_.body shouldBe "Resource 1") }
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(classLoader, "test/r1.txt"))
+          .use { port => get(port, Nil).map(_.body shouldBe "Resource 1") }
           .unsafeToFuture()
       },
       Test("should serve single gzipped resource") {
-        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", useGzippedIfAvailable = true))
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(classLoader, "test/r3.txt", ResourcesOptions.default.withUseGzippedIfAvailable))
           .use { port =>
             emptyRequest
               .acceptEncoding("gzip")
-              .get(uri"http://localhost:$port/test/r3.txt")
+              .get(uri"http://localhost:$port")
               .response(asStringAlways)
               .send(backend)
               .map(r => {
@@ -364,11 +365,10 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       },
       Test("should return 404 for resources without extension") {
-        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3", useGzippedIfAvailable = true))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port =>
             emptyRequest
-              .get(uri"http://localhost:$port/test/r3")
+              .get(uri"http://localhost:$port/r3")
               .response(asStringAlways)
               .send(backend)
               .map(_.code shouldBe StatusCode.NotFound)
@@ -376,11 +376,10 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       },
       Test("should serve resource at path for preGzipped endpoint without correct header") {
-        val loader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
-        serveRoute(resourceGetServerEndpoint[F](emptyInput)(loader, "test/r3.txt", useGzippedIfAvailable = true))
+        serveRoute(resourceGetServerEndpoint[F](emptyInput)(classLoader, "test/r3.txt", ResourcesOptions.default.withUseGzippedIfAvailable))
           .use { port =>
             emptyRequest
-              .get(uri"http://localhost:$port/test/r3.txt")
+              .get(uri"http://localhost:$port")
               .response(asStringAlways)
               .send(backend)
               .map(_.body shouldBe "Resource 3")
@@ -388,17 +387,17 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       },
       Test("should not return a resource outside of the resource prefix directory") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("..", "test", "r5.txy")).map(_.body should not be "Resource 5") }
           .unsafeToFuture()
       },
       Test("should not return a resource outside of the resource prefix directory, when the path is given as a single segment") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("../test2/r5.txt")).map(_.body should not be "Resource 5") }
           .unsafeToFuture()
       },
       Test("should serve resources") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port =>
             get(port, "r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
               get(port, "r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
@@ -410,9 +409,9 @@ class ServerStaticContentTests[F[_], ROUTE](
       Test("should serve resources with filter") {
         serveRoute(
           resourcesGetServerEndpoint[F](emptyInput)(
-            classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader,
+            classLoader,
             "test",
-            resourceFilter = _.exists(_.contains("2"))
+            ResourcesOptions.default.resourceFilter(_.exists(_.contains("2")))
           )
         )
           .use { port =>
@@ -426,6 +425,16 @@ class ServerStaticContentTests[F[_], ROUTE](
       Test("should return 404 when a resource is not found") {
         serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
           .use { port => get(port, List("r3")).map(_.code shouldBe StatusCode.NotFound) }
+          .unsafeToFuture()
+      },
+      Test("should return default resource when resource is not found") {
+        serveRoute(
+          resourcesGetServerEndpoint[F]("test")(classLoader, "test", ResourcesOptions.default.defaultResource(List("d1", "r3.txt")))
+        )
+          .use { port =>
+            get(port, List("test", "r10.txt")).map(_.body shouldBe "Resource 3") >>
+              get(port, List("test", "r1.txt")).map(_.body shouldBe "Resource 1")
+          }
           .unsafeToFuture()
       },
       Test("should serve a single file from the given system path") {
