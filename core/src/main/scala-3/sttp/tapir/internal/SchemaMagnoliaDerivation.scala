@@ -53,6 +53,9 @@ trait SchemaMagnoliaDerivation {
         }
       }
 
+      private def subtypeNameToSchemaName(subtype: SealedTrait.Subtype[Typeclass, _, ?]): Schema.SName =
+        typeNameToSchemaName(subtype.typeInfo, mergeAnnotations(subtype.annotations, subtype.inheritedAnnotations))
+
       private def getEncodedName(annotations: Seq[Any]): Option[String] =
         annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
 
@@ -60,7 +63,7 @@ trait SchemaMagnoliaDerivation {
         annotations.foldLeft(schema) {
           case (schema, ann: Schema.annotations.description)            => schema.description(ann.text)
           case (schema, ann: Schema.annotations.encodedExample)         => schema.encodedExample(ann.example)
-          case (schema, ann: Schema.annotations.default[X @unchecked])  => schema.default(ann.default)
+          case (schema, ann: Schema.annotations.default[X @unchecked])  => schema.default(ann.default, ann.encoded)
           case (schema, ann: Schema.annotations.validate[X @unchecked]) => schema.validate(ann.v)
           case (schema, ann: Schema.annotations.format)                 => schema.format(ann.format)
           case (schema, _: Schema.annotations.deprecated)               => schema.deprecated(true)
@@ -73,20 +76,30 @@ trait SchemaMagnoliaDerivation {
         withCache(ctx.typeInfo, annotations) {
           val subtypesByName =
             ctx.subtypes.toList
-              .map(s => typeNameToSchemaName(s.typeInfo, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass.asInstanceOf[Typeclass[T]])
+              .map(s =>
+                typeNameToSchemaName(s.typeInfo, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass
+                  .asInstanceOf[Typeclass[T]]
+              )
               .toListMap
           val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
-            ctx.choose(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeInfo, mergeAnnotations(v.annotations, v.inheritedAnnotations))) }
+            ctx.choose(t) { v =>
+              subtypesByName.get(subtypeNameToSchemaName(v.subtype))
+            }
           )
           val coproduct = genericDerivationConfig.discriminator match {
-            case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-            case None    => baseCoproduct
+            case Some(d) =>
+              val discriminatorMapping: Map[String, SRef[_]] =
+                ctx.subtypes.map { s =>
+                  val schemaName = subtypeNameToSchemaName(s)
+                  genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName)
+                }.toMap
+              baseCoproduct.addDiscriminatorField(FieldName(d), discriminatorMapping = discriminatorMapping)
+            case None => baseCoproduct
           }
 
           Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, annotations)))
         }
       }
-
 
       private def mergeAnnotations[T](primary: Seq[Any], inherited: Seq[Any]): Seq[Any] =
         primary ++ inherited.distinct.filter {

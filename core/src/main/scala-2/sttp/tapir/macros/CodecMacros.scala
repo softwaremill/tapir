@@ -1,8 +1,9 @@
 package sttp.tapir.macros
 
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.internal.CodecEnumerationMacro
-import sttp.tapir.{DecodeResult, Validator}
+import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.internal.{CodecEnumerationMacro, CodecValueClassMacro}
+import sttp.tapir.{Codec, DecodeResult, Validator}
 
 trait CodecMacros {
 
@@ -18,6 +19,9 @@ trait CodecMacros {
     * [[CreateDerivedEnumerationCodec]].
     */
   def derivedEnumeration[L, T]: CreateDerivedEnumerationCodec[L, T] = macro CodecEnumerationMacro.derivedEnumeration[L, T]
+
+  /** Creates a codec for value class based on codecs defined in `Codec` companion */
+  implicit def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = macro CodecValueClassMacro.derivedValueClass[T]
 }
 
 class CreateDerivedEnumerationCodec[L, T](validator: Validator.Enumeration[T]) {

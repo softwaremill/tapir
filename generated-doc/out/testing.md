@@ -12,7 +12,7 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.0-M10"
 ```
 
 And the following imports:
@@ -42,9 +42,10 @@ val e = sttp.tapir.endpoint
 Convert any endpoint to `SttpBackendStub`:
 
 ```scala
+import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 
-val backend = SttpBackendStub
+val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
   .apply(IdMonad)
   .whenRequestMatchesEndpoint(e)
   .thenSuccess(ResponseWrapper(1.0))
@@ -57,7 +58,7 @@ effect can be used):
 import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 
-val anotherBackend = SttpBackendStub
+val anotherBackend: SttpBackendStub[Identity, Any] = SttpBackendStub
   .apply(IdMonad)
   .whenRequestMatchesEndpointThenLogic(e.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
 ```
@@ -79,7 +80,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.20.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.20.0-M10"
 ```
 
 Imports:
@@ -168,7 +169,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x, is shadowed by: GET /x /..., GET /x /y /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
 ```
 
 Example 2:

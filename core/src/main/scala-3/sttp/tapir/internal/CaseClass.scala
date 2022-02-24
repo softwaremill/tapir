@@ -8,7 +8,8 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   val tpe = TypeRepr.of[T]
   val symbol = tpe.typeSymbol
 
-  if !symbol.flags.is(Flags.Case) then report.throwError(s"Form codec can only be derived for case classes, but got: ${summon[Type[T]]}")
+  if !symbol.flags.is(Flags.Case) then
+    report.throwError(s"CaseClass can be instantiated only for case classes, but got: ${summon[Type[T]]}")
 
   def name = symbol.name
 
@@ -83,6 +84,11 @@ class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
 
   def extractTreeFromAnnotation(annSymbol: Symbol): Option[Tree] = constructorField.getAnnotation(annSymbol).map {
     case Apply(_, List(t)) => t
+    case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+  }
+
+  def extractFirstTreeArgFromAnnotation(annSymbol: Symbol): Option[Tree] = constructorField.getAnnotation(annSymbol).map {
+    case Apply(_, List(t, _*)) => t
     case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
   }
 

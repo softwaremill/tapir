@@ -16,6 +16,7 @@ import zio.test.environment._
 
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
+import scala.collection.immutable.Seq
 
 object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
@@ -67,7 +68,11 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
     UIO(
       RequestResult.Response(
-        ServerResponse(StatusCode.InternalServerError, scala.collection.immutable.Seq.empty[Header], Some(error.getMessage))
+        new ServerResponse[ResponseBodyType] {
+          override def code: StatusCode = StatusCode.InternalServerError
+          override def headers: Seq[Header] = scala.collection.immutable.Seq.empty[Header]
+          override def body: Option[ResponseBodyType] = Some(error.getMessage)
+        }
       )
     )
 

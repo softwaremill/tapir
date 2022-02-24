@@ -8,6 +8,10 @@ import magnolia1._
 import scala.quoted.*
 
 trait SchemaMacros[T] { this: Schema[T] =>
+
+  /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
+    * `modification` function. To traverse collections, use `.each`.
+    */
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${
     SchemaMacros.modifyImpl[T, U]('this)('path)('modification)
   }

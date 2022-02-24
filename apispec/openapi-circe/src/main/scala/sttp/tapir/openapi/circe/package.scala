@@ -60,6 +60,8 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderHeader: Encoder[Header] = deriveEncoder[Header]
   implicit val encoderExample: Encoder[Example] = deriveEncoder[Example].mapJsonObject(expandExtensions)
   implicit val encoderResponse: Encoder[Response] = deriveEncoder[Response].mapJsonObject(expandExtensions)
+  implicit val encoderLink: Encoder[Link] = deriveEncoder[Link].mapJsonObject(expandExtensions)
+  implicit val encoderCallback: Encoder[Callback] = deriveEncoder[Callback].mapJsonObject(expandExtensions)
   implicit val encoderEncoding: Encoder[Encoding] = deriveEncoder[Encoding].mapJsonObject(expandExtensions)
   implicit val encoderMediaType: Encoder[MediaType] = deriveEncoder[MediaType].mapJsonObject(expandExtensions)
   implicit val encoderRequestBody: Encoder[RequestBody] = deriveEncoder[RequestBody].mapJsonObject(expandExtensions)
@@ -69,8 +71,9 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
     (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {
       val fields = responses.map {
-        case (ResponsesDefaultKey, r)    => ("default", r.asJson)
-        case (ResponsesCodeKey(code), r) => (code.toString, r.asJson)
+        case (ResponsesDefaultKey, r)      => ("default", r.asJson)
+        case (ResponsesCodeKey(code), r)   => (code.toString, r.asJson)
+        case (ResponsesRangeKey(range), r) => (s"${range}XX", r.asJson)
       }
 
       Json.obj(fields.toSeq: _*)
@@ -84,6 +87,8 @@ trait TapirOpenAPICirceEncoders {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
     // should be represented as an empty object (`{}`), not `null`, which is the default encoding of `ListMap`s.
     implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = false)
+    implicit def encodeListMapForCallbacks: Encoder[ListMap[String, ReferenceOr[Callback]]] =
+      doEncodeListMap(nullWhenEmpty = true)
     deriveEncoder[Operation].mapJsonObject(expandExtensions)
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem].mapJsonObject(expandExtensions)

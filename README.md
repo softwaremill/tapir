@@ -16,6 +16,7 @@ interpreted as:
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
+  * [Armeria](https://tapir.softwaremill.com/en/latest/server/armeria.html) `HttpServiceWithRoutes`
   * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
@@ -95,7 +96,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.0-M10"
 ```
 
 Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then 

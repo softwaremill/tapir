@@ -1,18 +1,9 @@
 package sttp.tapir.server.interceptor.reject
 
-import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{
-  EndpointInterceptor,
-  RequestHandler,
-  RequestInterceptor,
-  RequestResult,
-  Responder,
-  ValuedEndpointOutput
-}
+import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
 
 /** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have been interpreted
   * (doesn't do anything when interpreting a single endpoint).
@@ -22,7 +13,7 @@ import sttp.tapir.server.interceptor.{
   *
   * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server implementation.
   */
-class RejectInterceptor[F[_]](handler: RequestResult.Failure => Option[StatusCode]) extends RequestInterceptor[F] {
+class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor[F] {
   override def apply[B](
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
@@ -37,25 +28,10 @@ class RejectInterceptor[F[_]](handler: RequestResult.Failure => Option[StatusCod
           case f: RequestResult.Failure if f.failures.size <= 1 => (f: RequestResult[B]).unit
           case f: RequestResult.Failure =>
             handler(f) match {
-              case Some(sc) => responder(request, ValuedEndpointOutput(statusCode, sc)).map(RequestResult.Response(_))
-              case None     => (f: RequestResult[B]).unit
+              case Some(value) => responder(request, value).map(RequestResult.Response(_))
+              case None        => (f: RequestResult[B]).unit
             }
         }
     }
-  }
-}
-
-object RejectInterceptor {
-  def default[F[_]] = new RejectInterceptor[F](failure => {
-    if (hasMethodMismatch(failure)) Some(StatusCode.MethodNotAllowed) else None
-  })
-
-  def defaultOrNotFound[F[_]] = new RejectInterceptor[F](failure => {
-    if (hasMethodMismatch(failure)) Some(StatusCode.MethodNotAllowed) else Some(StatusCode.NotFound)
-  })
-
-  def hasMethodMismatch(f: RequestResult.Failure): Boolean = f.failures.map(_.failingInput).exists {
-    case _: EndpointInput.FixedMethod[_] => true
-    case _                               => false
   }
 }

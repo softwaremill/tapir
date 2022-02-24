@@ -244,10 +244,97 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           )
         ),
         Some(SName("sttp.tapir.generic.Person"))
+      ),
+      Schema(
+        SProduct[UnknownEntity.type](
+          List(
+            field(FieldName("who_am_i"), Schema(SString()))
+          )
+        ),
+        Some(SName("sttp.tapir.generic.UnknownEntity"))
       )
     )
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
+    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "Organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "Person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "UnknownEntity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "unknown-entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "unknown_entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.Organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.Person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.UnknownEntity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.unknown-entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "sttp.tapir.generic.organization" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "sttp.tapir.generic.person" -> SRef(SName("sttp.tapir.generic.Person")),
+          "sttp.tapir.generic.unknown_entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
   }
 
   it should "find schema for subtypes containing parent metadata from annotations" in {
@@ -388,6 +475,7 @@ case class JList(data: List[IList])
 sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
+case object UnknownEntity extends Entity
 
 @description("country")
 @default(Countries.PL)

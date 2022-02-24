@@ -280,7 +280,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   object annotations {
     class description(val text: String) extends StaticAnnotation
     class encodedExample(val example: Any) extends StaticAnnotation
-    class default[T](val default: T) extends StaticAnnotation
+    class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
     class format(val format: String) extends StaticAnnotation
     class deprecated extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation

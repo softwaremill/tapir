@@ -2,7 +2,8 @@ package sttp.tapir.metrics
 
 import sttp.monad.MonadError
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interceptor.ServerResponseFromOutput
 
 case class Metric[F[_], M](
     metric: M,
@@ -13,22 +14,22 @@ case class Metric[F[_], M](
 case class EndpointMetric[F[_]](
     /** Called when an endpoint matches the request, before calling the server logic. */
     onEndpointRequest: Option[AnyEndpoint => F[Unit]] = None,
-    onResponse: Option[(AnyEndpoint, ServerResponse[_]) => F[Unit]] = None,
+    onResponse: Option[(AnyEndpoint, ServerResponseFromOutput[_]) => F[Unit]] = None,
     onException: Option[(AnyEndpoint, Throwable) => F[Unit]] = None
 ) {
   def onEndpointRequest(f: AnyEndpoint => F[Unit]): EndpointMetric[F] = this.copy(onEndpointRequest = Some(f))
-  def onResponse(f: (AnyEndpoint, ServerResponse[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponse = Some(f))
+  def onResponse(f: (AnyEndpoint, ServerResponseFromOutput[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponse = Some(f))
   def onException(f: (AnyEndpoint, Throwable) => F[Unit]): EndpointMetric[F] = this.copy(onException = Some(f))
 }
 
 case class MetricLabels(
     forRequest: Seq[(String, (AnyEndpoint, ServerRequest) => String)],
-    forResponse: Seq[(String, Either[Throwable, ServerResponse[_]] => String)]
+    forResponse: Seq[(String, Either[Throwable, ServerResponseFromOutput[_]] => String)]
 ) {
   def forRequestNames: Seq[String] = forRequest.map { case (name, _) => name }
   def forResponseNames: Seq[String] = forResponse.map { case (name, _) => name }
   def forRequest(ep: AnyEndpoint, req: ServerRequest): Seq[String] = forRequest.map { case (_, f) => f(ep, req) }
-  def forResponse(res: ServerResponse[_]): Seq[String] = forResponse.map { case (_, f) => f(Right(res)) }
+  def forResponse(res: ServerResponseFromOutput[_]): Seq[String] = forResponse.map { case (_, f) => f(Right(res)) }
   def forResponse(ex: Throwable): Seq[String] = forResponse.map { case (_, f) => f(Left(ex)) }
 }
 

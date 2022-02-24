@@ -17,7 +17,7 @@ private[openapi] class EndpointToOpenAPIComponents(
     if (keyToSchema.nonEmpty || securitySchemes.nonEmpty) {
       val sortedKeyToSchema = keyToSchema.sortByKey
       val sortedSecuritySchemes = securitySchemes.values.toMap.mapValues(Right(_)).toListMap.sortByKey
-      Some(Components(sortedKeyToSchema, sortedSecuritySchemes))
+      Some(Components(schemas = sortedKeyToSchema, securitySchemes = sortedSecuritySchemes))
     } else None
   }
 }

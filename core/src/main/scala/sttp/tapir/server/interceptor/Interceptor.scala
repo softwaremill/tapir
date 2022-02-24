@@ -1,6 +1,6 @@
 package sttp.tapir.server.interceptor
 
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
   *
@@ -58,5 +58,5 @@ object EndpointInterceptor {
 }
 
 trait Responder[F[_], B] {
-  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]]
+  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]]
 }
