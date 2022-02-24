@@ -622,7 +622,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .dependsOn(core)
 
-lazy val weePickleJson: ProjectMatrix = (projectMatrix in file("json/weepickle"))
+lazy val weePickleV1Json: ProjectMatrix = (projectMatrix in file("json/weepicklev1"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-weepickle-v1",
