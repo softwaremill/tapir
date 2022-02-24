@@ -1,10 +1,6 @@
 package sttp.tapir.generic
 
 import sttp.tapir.Schema
-import sttp.tapir.SchemaType.SString
-import sttp.tapir.internal.SchemaMagnoliaDerivation
-
-import scala.deriving.Mirror
 
 package object auto extends SchemaDerivation
 
