@@ -171,7 +171,7 @@ lazy val allAggregates = core.projectRefs ++
   openapiCodegen.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs ++
-  weePickleJson.projectRefs
+  weePickleV1Json.projectRefs
 
 val testJVM = taskKey[Unit]("Test JVM projects, without Finatra")
 val testJS = taskKey[Unit]("Test JS projects")
