@@ -39,5 +39,6 @@ object Versions {
   val armeria = "1.14.1"
   val scalaJava8Compat = "1.0.2"
   val fs2 = "3.2.5"
-  val weePickle = "1.7.2"
+  // weePickle is serious about shading. If there is ever a v2, that would belong in a separate module to help consumers avoid dependency hell
+  val weePickleV1 = "1.7.2"
 }
