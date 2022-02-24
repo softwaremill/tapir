@@ -10,6 +10,4 @@ package object auto extends SchemaDerivation
 
 trait SchemaDerivation extends SchemaMagnoliaDerivation {
   inline implicit def schemaForCaseClass[T](implicit m: Mirror.Of[T], cfg: Configuration): Derived[Schema[T]] = Derived(derived[T])
-
-  inline implicit def schemaForEnum[T <: scala.reflect.Enum]: Schema[T] = Schema(SString())
 }
