@@ -16,7 +16,8 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
   override lazy val pathSegments: List[String] = {
     // if the routes are mounted within a context (e.g. using a router), we have to match against what comes
     // after the context. This information is stored in the the PathInfoCaret attribute
-    req.pathInfo.renderString.dropWhile(_ == '/').split("/").toList.map(org.http4s.Uri.decode(_))
+    val segments = req.pathInfo.renderString.dropWhile(_ == '/').split("/").toList.map(org.http4s.Uri.decode(_))
+    if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
 
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.multiParams)
