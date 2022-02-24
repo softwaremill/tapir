@@ -306,7 +306,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       .string[MyString]
       .description("my-string")
       .encodedExample("encoded-example")
-      .default(MyString("default"))
+      .default(MyString("default"), encoded = Some("encoded-default"))
       .format("utf8")
       .deprecated(true)
       .name(SName("encoded-name"))

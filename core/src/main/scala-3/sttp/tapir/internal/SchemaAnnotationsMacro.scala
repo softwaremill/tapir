@@ -1,7 +1,8 @@
 package sttp.tapir.internal
 
-import scala.quoted.*
 import sttp.tapir.Schema.annotations.format
+
+import scala.quoted.*
 
 trait SchemaAnnotationsMacro {
   implicit inline def derived[T]: SchemaAnnotations[T] = ${
@@ -40,11 +41,24 @@ object SchemaAnnotationsMacroImpl {
         }
     }
 
+    def firstTwoAnnArgs(tpe: TypeRepr): Option[(Tree, Tree)] = {
+      annotations
+        .collectFirst {
+          case ann if ann.tpe <:< tpe =>
+            ann match {
+              case Apply(_, List(t1, t2)) => (t1, t2)
+            }
+        }
+    }
+
     val transformations: List[Expr[SchemaAnnotations[T]] => Expr[SchemaAnnotations[T]]] =
       List(
         sa => firstAnnArg(DescriptionAnn).map(arg => '{ ${ sa }.copy(description = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => firstAnnArg(EncodedExampleAnn).map(arg => '{ ${ sa }.copy(encodedExample = Some(${ arg.asExprOf[Any] })) }).getOrElse(sa),
-        sa => firstAnnArg(DefaultAnn).map(arg => '{ ${ sa }.copy(default = Some(${ arg.asExprOf[T] })) }).getOrElse(sa),
+        sa =>
+          firstTwoAnnArgs(DefaultAnn)
+            .map(args => '{ ${ sa }.copy(default = Some((${ args._1.asExprOf[T] }, ${ args._2.asExprOf[Option[Any]] }))) })
+            .getOrElse(sa),
         sa => firstAnnArg(FormatAnn).map(arg => '{ ${ sa }.copy(format = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => annotations.find { _.tpe <:< DeprecatedAnn }.map(_ => '{ ${ sa }.copy(deprecated = Some(true)) }).getOrElse(sa),
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),

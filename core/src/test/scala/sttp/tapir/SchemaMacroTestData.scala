@@ -49,7 +49,7 @@ object SchemaMacroTestData {
 
   @description("my-string")
   @encodedExample("encoded-example")
-  @default(MyString("default"))
+  @default(MyString("default"), encoded = Some("encoded-default"))
   @format("utf8")
   @Schema.annotations.deprecated
   @encodedName("encoded-name")
