@@ -84,7 +84,8 @@ trait SchemaMagnoliaDerivation {
           val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
             ctx.choose(t) { v =>
               subtypesByName.get(subtypeNameToSchemaName(v.subtype))
-            }
+            },
+            ??? //FIXME: provide impl
           )
           val coproduct = genericDerivationConfig.discriminator match {
             case Some(d) =>

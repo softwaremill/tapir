@@ -157,7 +157,7 @@ case class Schema[T](
           case s @ SOpenProduct(valueSchema) if f == Schema.ModifyCollectionElements =>
             s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))(s.fieldValues)
           case s @ SCoproduct(subtypes, _) =>
-            s.copy(subtypes = subtypes.map(_.modifyAtPath(fieldPath, modify)))(s.subtypeSchema)
+            s.copy(subtypes = subtypes.map(_.modifyAtPath(fieldPath, modify)))(s.subtypeSchema, s.applyValidation)
           case _ => schemaType
         }
         copy(schemaType = schemaType2)
@@ -191,7 +191,7 @@ case class Schema[T](
         case s @ SOpenProduct(valueSchema) =>
           s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
         case s @ SCoproduct(_, _) =>
-          s.subtypeSchema(t).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
+          s.applyValidation(t, objects2) //FIXME: getOrElse(Nil)
         case SRef(name) => objects.get(name).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case _          => Nil
       })
@@ -258,10 +258,13 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 
   implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] =
     Schema[Either[A, B]](
-      SchemaType.SCoproduct(List(sa, sb), None) {
+      SchemaType.SCoproduct(List(sa, sb), None) ({
         case Left(_)  => Some(sa)
         case Right(_) => Some(sb)
-      },
+      }, {
+        case (Left(a), objects)  => sa.applyValidation(a, objects)
+        case (Right(b), objects) => sb.applyValidation(b, objects)
+      }),
       for {
         na <- sa.name
         nb <- sb.name
