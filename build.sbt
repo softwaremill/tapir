@@ -1284,11 +1284,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
-      scalaTest.value % Test,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
-      "eu.timepit" %% "refined" % "0.9.28",
-      "org.scalatest" %%% "scalatest" % Versions.scalaTest,
-      "org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck
+      "eu.timepit" %% "refined" % Versions.refined,
+      scalaTest.value,
+      scalaTestPlusScalaCheck.value
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
