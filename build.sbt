@@ -627,7 +627,7 @@ lazy val weePickleJson: ProjectMatrix = (projectMatrix in file("json/weepickle")
   .settings(
     name := "tapir-json-weepickle-v1",
     libraryDependencies ++= Seq(
-      "com.rallyhealth" %% "weepickle-v1" % Versions.weePickle,
+      "com.rallyhealth" %% "weepickle-v1" % Versions.weePickleV1,
       scalaTest.value % Test
     )
   )
