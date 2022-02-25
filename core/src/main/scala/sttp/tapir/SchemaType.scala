@@ -125,7 +125,10 @@ object SchemaType {
       )(subtypeSchema)
     }
 
-    override def contramap[TT](g: TT => T): SchemaType[TT] = SCoproduct(subtypes, discriminator)(g.andThen(subtypeSchema))
+    override def contramap[TT](g: TT => T): SchemaType[TT] =
+      SCoproduct(subtypes.map(_.asInstanceOf[Schema[T]].map(_ => None)(g)), discriminator)(tt =>
+        subtypeSchema(g(tt)).map(_.asInstanceOf[Schema[T]].map(_ => None)(g))
+      )
     override def as[TT]: SchemaType[TT] = SCoproduct(subtypes, discriminator)(_ => None)
   }
 
