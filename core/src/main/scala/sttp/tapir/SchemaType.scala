@@ -104,9 +104,10 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(_ => Map.empty)
   }
 
-  /** Schema for a coproduct. The subtype schemas should correspond to subtypes of `T`. */
+  case class SchemaWithValue[T](schema: Schema[T], value: T)
+
   case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
-      val subtypeSchema: T => Option[Schema[_]]
+      val subtypeSchema: T => Option[SchemaWithValue[_]]
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
@@ -125,10 +126,7 @@ object SchemaType {
       )(subtypeSchema)
     }
 
-    override def contramap[TT](g: TT => T): SchemaType[TT] =
-      SCoproduct(subtypes.map(_.asInstanceOf[Schema[T]].map(_ => None)(g)), discriminator)(tt =>
-        subtypeSchema(g(tt)).map(_.asInstanceOf[Schema[T]].map(_ => None)(g))
-      )
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SCoproduct(subtypes, discriminator)(g.andThen(subtypeSchema))
     override def as[TT]: SchemaType[TT] = SCoproduct(subtypes, discriminator)(_ => None)
   }
 

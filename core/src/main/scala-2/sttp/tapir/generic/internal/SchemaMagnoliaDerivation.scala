@@ -76,7 +76,14 @@ trait SchemaMagnoliaDerivation {
           .map(s => subtypeNameToSchemaName(s) -> s.typeclass.asInstanceOf[Typeclass[T]])
           .toListMap
       val baseCoproduct =
-        SCoproduct(subtypesByName.values.toList, None)((t: T) => ctx.split(t) { v => subtypesByName.get(subtypeNameToSchemaName(v)) })
+        SCoproduct(subtypesByName.values.toList, None)((t: T) =>
+          ctx.split(t) { v =>
+            for {
+              schema <- subtypesByName.get(subtypeNameToSchemaName(v))
+              value <- v.cast.lift(t)
+            } yield SchemaWithValue(schema, value)
+          }
+        )
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) =>
           val discriminatorMapping: Map[String, SRef[_]] =
