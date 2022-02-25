@@ -106,7 +106,7 @@ object SchemaType {
 
   case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
       val subtypeSchema: T => Option[Schema[_]],
-      val applyValidation: (T, Map[SName, Schema[_]]) => List[ValidationError[_]] = ??? //FIXME: provide default
+      val subtypeValue: T => Option[(_, Schema[_])] = ??? //FIXME: merge with subtype Schema
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
