@@ -134,6 +134,19 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     s.showValidators shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
   }
 
+  it should "validate either" in {
+    val schema = Schema.schemaForEither(
+      Schema.schemaForInt.validate(Validator.min(1)),
+      Schema.schemaForString.validate(Validator.minLength(1))
+    )
+
+    schema.applyValidation(Left(10)) shouldBe Nil
+    schema.applyValidation(Right("x")) shouldBe Nil
+
+    schema.applyValidation(Left(0)) shouldBe List(ValidationError.Primitive(Validator.min(1), 0))
+    schema.applyValidation(Right("")) shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
     v match {
       case p: ValidationError.Primitive[T] => p.copy(path = Nil)

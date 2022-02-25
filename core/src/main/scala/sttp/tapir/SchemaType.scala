@@ -104,6 +104,7 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(_ => Map.empty)
   }
 
+  /** Schema for a coproduct. The subtype schemas should correspond to subtypes of `T`. */
   case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
       val subtypeSchema: T => Option[Schema[_]]
   ) extends SchemaType[T] {

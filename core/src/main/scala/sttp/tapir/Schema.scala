@@ -256,17 +256,21 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 
-  implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] =
+  implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] = {
+    val saMapped = sa.map(a => Some(Left(a)))(_.value)
+    val sbMapped = sb.map(b => Some(Right(b)))(_.value)
+
     Schema[Either[A, B]](
-      SchemaType.SCoproduct(List(sa, sb), None) {
-        case Left(_)  => Some(sa)
-        case Right(_) => Some(sb)
+      SchemaType.SCoproduct(List(saMapped, sbMapped), None) {
+        case Left(_)  => Some(saMapped)
+        case Right(_) => Some(sbMapped)
       },
       for {
-        na <- sa.name
-        nb <- sb.name
+        na <- saMapped.name
+        nb <- sbMapped.name
       } yield Schema.SName("Either", List(na.show, nb.show))
     )
+  }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
