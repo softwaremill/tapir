@@ -1,6 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.{Validator, Schema, SchemaType}
+import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.SchemaMagnoliaDerivation
 import magnolia1._
@@ -189,7 +190,10 @@ object SchemaCompanionMacros {
       )
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
-      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(e => mappingAsMap.get($extractor(e))), Some(sname))
+      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
+        val ee = $extractor(e)
+        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], ee))
+      }, Some(sname))
     }
   }
 

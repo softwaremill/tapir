@@ -191,7 +191,9 @@ case class Schema[T](
         case s @ SOpenProduct(valueSchema) =>
           s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
         case s @ SCoproduct(_, _) =>
-          s.subtypeSchema(t).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
+          s.subtypeSchema(t)
+            .map { case SchemaWithValue(s, v) => s.applyValidation(v, objects2) }
+            .getOrElse(Nil)
         case SRef(name) => objects.get(name).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case _          => Nil
       })
@@ -256,17 +258,18 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 
-  implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] =
+  implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] = {
     Schema[Either[A, B]](
       SchemaType.SCoproduct(List(sa, sb), None) {
-        case Left(_)  => Some(sa)
-        case Right(_) => Some(sb)
+        case Left(v)  => Some(SchemaWithValue(sa, v))
+        case Right(v) => Some(SchemaWithValue(sb, v))
       },
       for {
         na <- sa.name
         nb <- sb.name
       } yield Schema.SName("Either", List(na.show, nb.show))
     )
+  }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
