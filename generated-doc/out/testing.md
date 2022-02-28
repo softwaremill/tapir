@@ -1,18 +1,140 @@
 # Testing
 
-## White box testing
+## Server endpoints
 
-If you are unit testing your application you should stub all external services.
+If you are exposing endpoints using one of the server interpreters, you might want to test a complete server endpoint,
+how validations, built-in and custom [interceptors](server/interceptors.md) and [error handling](server/errors.md) 
+behaves. This might be done while providing alternate, or using the original [server logic](server/logic.md).
 
-If you are using sttp client to send HTTP requests, and if the externals apis, 
-which your application consumes, are described using tapir, you can create a stub of the service by converting 
-endpoints to `SttpBackendStub` (see the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) for 
-details on how the stub works).
+Such testing is possible by creating a special [sttp client](https://sttp.softwaremill.com) backend. When a request
+is sent using such a backend, no network traffic is happening. Instead, the request is decoded using the provided
+endpoints, the appropriate logic is run, and then the response is encoded - as in a real server interpreter. But
+similar as with a request, the response isn't sent over the network, but returned directly to the caller. Hence, 
+binding to an interface isn't necessary to run these tests.
 
-Add the dependency:
+You can define the sttp requests by hand, to see how an arbitrary request will be handled by your server endpoints.
+Or, you can interpret an endpoint as a [client](client/sttp.md), to test both how the client & server interpreters
+interact with your endpoints.
+
+The special backend that is described above is based on a `SttpBackendStub`, which can be used to stub arbitrary
+behaviors. See the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) for details.
+
+Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or `ServerEndpoint`s. To start, add the 
+dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.0"
+```
+
+Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.ServerEndpoint
+import scala.concurrent.Future
+
+val someEndpoint: Endpoint[String, Unit, String, String, Any] = endpoint.get
+  .in("api")
+  .securityIn(auth.bearer[String]())
+  .out(stringBody)
+  .errorOut(stringBody)
+  
+val someServerEndpoint: ServerEndpoint[Any, Future] = someEndpoint
+  .serverSecurityLogic(token =>
+    Future.successful {
+      if (token == "password") Right("user123") else Left("unauthorized")
+    }
+  )
+  .serverLogic(user => _ => Future.successful(Right(s"hello $user")))  
+```
+
+A test which verifies how this endpoint behaves when interpreter as a server might look as follows:
+
+```scala
+import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.matchers.should.Matchers
+import sttp.client3._
+import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.server.stub.TapirStubInterpreter
+
+class MySpec extends AsyncFlatSpec with Matchers {
+  it should "work" in {
+    // given
+    val backendStub: SttpBackend[Future, Any] = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(someServerEndpoint)
+      .thenRunLogic()
+      .backend()
+      
+    // when
+    val response = basicRequest
+      .get(uri"http://test.com/api/users/greet")
+      .header("Authorization", "Bearer password")
+      .send(backendStub)
+      
+    // then
+    response.map(_.body shouldBe Right("hello user123"))  
+  }
+}
+```
+
+The `.backend` method creates the enriched `SttpBackendStub`, using the provided server endpoints and their
+behaviors. Any requests will be handled by a stub server interpreter, using the complete request handling logic.
+
+### Custom interpreters
+
+Custom interpreters can be provided to the stub. For example, to test custom exception handling, we might have the
+following customised akka http options:
+
+```scala
+import sttp.tapir.server.interceptor.exception.ExceptionContext
+import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.model.StatusCode
+
+val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
+  AkkaHttpServerOptions.customInterceptors
+    .exceptionHandler((ctx: ExceptionContext) =>
+      Some(ValuedEndpointOutput(
+        stringBody.and(statusCode), 
+        (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError))
+      )  
+    )
+```
+
+Testing such an interceptor requires simulating an exception being thrown in the server logic:
+
+```scala
+class MySpec2 extends AsyncFlatSpec with Matchers {
+  it should "use my custom exception handler" in {
+    // given
+    val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
+      .whenEndpoint(someEndpoint)
+      .thenThrowException(new RuntimeException("error"))
+      .backend()
+      
+    // when  
+    sttp.client3.basicRequest
+      .get(uri"http://test.com/api")
+      .send(stub)
+      // then
+      .map(_.body shouldBe Left("failed due to error"))  
+  }
+}
+```
+
+Note that to provide alternate success/error outputs given a `ServerEndpoint`, the endpoint will have to be typed
+using the full type information, that is using the `ServerEndpoint.Full` alias.
+
+## External APIs
+
+If you are integrating with an external API, which is described using tapir's `Endpoint`s, or if you'd like to create
+an [sttp client stub backend](https://sttp.softwaremill.com/en/latest/testing.html), with arbitrary behavior for 
+requests matching an endpoint, you can use the tapir `SttpBackendStub` extension methods.
+
+Similarly as when testing server interpreters, add the dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.0"
 ```
 
 And the following imports:
@@ -22,7 +144,7 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.stub._
 ``` 
 
-Given the following endpoint:
+Then, given the following endpoint:
 
 ```scala
 import sttp.tapir._
@@ -39,28 +161,15 @@ val e = sttp.tapir.endpoint
   .out(jsonBody[ResponseWrapper])
 ```
 
-Convert any endpoint to `SttpBackendStub`:
+Any endpoint can be converted to `SttpBackendStub`:
 
 ```scala
 import sttp.client3.Identity
-import sttp.client3.monad.IdMonad
 
 val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
-  .apply(IdMonad)
+  .synchronous
   .whenRequestMatchesEndpoint(e)
   .thenSuccess(ResponseWrapper(1.0))
-```
-
-A stub which executes an endpoint's server logic can also be created (here with an identity effect, but any supported
-effect can be used):
-
-```scala
-import sttp.client3.Identity
-import sttp.client3.monad.IdMonad
-
-val anotherBackend: SttpBackendStub[Identity, Any] = SttpBackendStub
-  .apply(IdMonad)
-  .whenRequestMatchesEndpointThenLogic(e.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
 ```
 
 ## Black box testing
@@ -80,7 +189,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.20.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.20.0"
 ```
 
 Imports:
