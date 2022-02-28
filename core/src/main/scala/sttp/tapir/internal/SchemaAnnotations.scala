@@ -31,6 +31,4 @@ final case class SchemaAnnotations[T](
   }
 }
 
-object SchemaAnnotations {
-  implicit def schemaAnnotations[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacro.derived[T]
-}
+object SchemaAnnotations extends SchemaAnnotationsMacro

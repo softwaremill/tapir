@@ -375,6 +375,15 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
       .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
   }
+
+  it should "derive schema for enumeration and enrich schema" in {
+    val expected = Schema[Countries.Country](SString())
+      .validate(Validator.enumeration[Countries.Country](Countries.values.toList))
+      .description("country")
+      .default(Countries.PL)
+      .name(SName("country-encoded-name"))
+    implicitly[Schema[Countries.Country]] shouldBe expected
+  }
 }
 
 object SchemaGenericAutoTest {
@@ -467,3 +476,11 @@ sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 case object UnknownEntity extends Entity
+
+@description("country")
+@default(Countries.PL)
+@encodedName("country-encoded-name")
+object Countries extends Enumeration {
+  type Country = Value
+  val PL, NL, RUS = Value
+}

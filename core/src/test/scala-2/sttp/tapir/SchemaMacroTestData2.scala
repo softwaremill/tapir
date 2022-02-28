@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import sttp.tapir.Schema.annotations._
-
 object SchemaMacroTestData2 {
   object ValueClasses {
     case class UserName(name: String) extends AnyVal
@@ -17,13 +15,4 @@ object SchemaMacroTestData2 {
     final case class Num[N <: AnyVal: Numeric](n: N) extends Type
     final case class MapType(obj: Map[String, Type]) extends Type
   }
-
-  @description("my-string")
-  @encodedExample("encoded-example")
-  @default[MyString](MyString("default"))
-  @format("utf8")
-  @Schema.annotations.deprecated
-  @encodedName("encoded-name")
-  @validate[MyString](Validator.pass[MyString])
-  case class MyString(value: String)
 }

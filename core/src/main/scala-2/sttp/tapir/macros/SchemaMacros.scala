@@ -1,10 +1,10 @@
 package sttp.tapir.macros
 
 import magnolia1.Magnolia
-import sttp.tapir.{Schema, SchemaType, Validator}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.internal.{ModifySchemaMacro, SchemaEnumerationMacro}
+import sttp.tapir.{Schema, SchemaType, Validator}
 
 trait SchemaMacros[T] {
 
@@ -43,6 +43,9 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     * [[CreateDerivedEnumerationSchema]].
     */
   def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] = macro SchemaEnumerationMacro.derivedEnumeration[T]
+
+  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
+  implicit def derivedEnumerationValue[T <: scala.Enumeration#Value]: Schema[T] = macro SchemaEnumerationMacro.derivedEnumerationValue[T]
 }
 
 class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {
