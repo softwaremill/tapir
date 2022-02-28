@@ -1,4 +1,6 @@
-# Setup
+# seperate testing
+
+To start a server, run `perfTests/run` and select the server you want to test.
 
 To test vanilla akka-http load, run this command:
 ```
@@ -10,14 +12,27 @@ To test tapir with akka-http load, run this command:
 perfTests / Gatling / testOnly perfTests.AkkaHttpTapirSimulation
 ```
 
-To start a server without testing run `perfTests/run` and select the server you want to test.
+This method yields the most performant results, but requires running the commands in two seperate sbt instacnes.
 
-# Test Results for 1000 users during 5 minutes
+# single-command testing
+
+To run the server together with a test, simply:
+
+```
+perfTests/akkaHttpOnly
+```
+or
+```
+perfTests/akkaHttpTapir
+```
+
+Servers under this method are slightly less performant, but do not need to be run from seperate terminals. The performance loss doesn't seem to affect the relative performance of different servers.
+
+# test results for 1000 users during 5 minutes (seperate method)
 
 akka-http only:
 
 ```
-================================================================================
 ---- Global Information --------------------------------------------------------
 > request count                                    4837004 (OK=4837004 KO=0     )
 > min response time                                      0 (OK=0      KO=-     )
@@ -34,18 +49,11 @@ akka-http only:
 > 800 ms < t < 1200 ms                                  25 (  0%)
 > t > 1200 ms                                          860 (  0%)
 > failed                                                 0 (  0%)
-================================================================================
-Reports generated in 0s.
-Please open the following file: /home/felix/code/work/tapir/perf-tests/simulations/target/jvm-2.13/gatling/akkahttponlysimulation-20220222110602734/index.html
-[info] Simulation AkkaHttpOnlySimulation successful.
-[info] Simulation(s) execution ended.
-[success] Total time: 326 s (05:26), completed Feb 22, 2022, 11:11:27 AM
 ```
 
 akka-http with tapir:
 
 ```
-================================================================================
 ---- Global Information --------------------------------------------------------
 > request count                                    4107241 (OK=4107241 KO=0     )
 > min response time                                      0 (OK=0      KO=-     )
@@ -62,10 +70,4 @@ akka-http with tapir:
 > 800 ms < t < 1200 ms                                  42 (  0%)
 > t > 1200 ms                                          532 (  0%)
 > failed                                                 0 (  0%)
-================================================================================
-Reports generated in 0s.
-Please open the following file: /home/felix/code/work/tapir/perf-tests/simulations/target/jvm-2.13/gatling/akkahttptapirsimulation-20220222105743299/index.html
-[info] Simulation AkkaHttpTapirSimulation successful.
-[info] Simulation(s) execution ended.
-[success] Total time: 322 s (05:22), completed Feb 22, 2022, 11:03:04 AM
 ```

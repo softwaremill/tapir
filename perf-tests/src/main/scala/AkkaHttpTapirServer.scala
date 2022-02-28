@@ -54,4 +54,5 @@ object AkkaHttpTapirServer extends App {
   println(s"Server now online. Please navigate to http://localhost:8080/akka-http-tapir/1\nPress RETURN to stop...")
   StdIn.readLine()
   server.tearDown()
+  println(s"Server terminated")
 }
