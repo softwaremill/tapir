@@ -342,8 +342,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     libraryDependencies ++= Seq(
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.6.1" % "test",
       "io.gatling"            % "gatling-test-framework"    % "3.6.1" % "test",
-      "com.typesafe.akka" % "akka-actor-typed_2.13" % "2.6.18",
-      "com.typesafe.akka" % "akka-stream-typed_2.13" % "2.6.18",
+      "com.typesafe.akka" %% "akka-actor-typed" % Versions.akkaStreams,
+      "com.typesafe.akka" %% "akka-stream-typed" % Versions.akkaStreams,
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
     ) ++ loggerDependencies,
