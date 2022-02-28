@@ -3,7 +3,6 @@ package sttp.tapir
 import scala.concurrent.duration.Duration
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.SchemaType.SString
 
 class ValidatorScala3EnumTest extends AnyFlatSpec with Matchers {
   it should "validate enum" in {

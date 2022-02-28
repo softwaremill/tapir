@@ -27,8 +27,12 @@ object SchemaEnumerationMacro {
     if (!(owner.asClass.toType <:< Enumeration)) {
       c.abort(c.enclosingPosition, "Can only derive Schema for values owned by scala.Enumeration")
     } else {
+      val enumNameComponents = weakTypeT.toString.split("\\.").dropRight(1)
+      val enumeration = enumNameComponents.toList match {
+        case head :: tail => tail.foldLeft[Tree](Ident(TermName(head))) { case (tree, nextName) => Select(tree, TermName(nextName)) }
+        case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
+      }
 
-      val enumeration = TermName(weakTypeT.toString.split("\\.").dropRight(1).last)
       val validator = q"sttp.tapir.Validator.enumeration($enumeration.values.toList)"
       val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
 
