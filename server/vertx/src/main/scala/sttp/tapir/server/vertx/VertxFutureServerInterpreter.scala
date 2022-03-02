@@ -52,6 +52,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => VFuture[Void], NoStreams](
       List(e),
+      new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible),
       new VertxToResponseBody(vertxFutureServerOptions)(ReadStreamCompatible.incompatible),
       vertxFutureServerOptions.interceptors,
       vertxFutureServerOptions.deleteFile
@@ -59,7 +60,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
     val serverRequest = new VertxServerRequest(rc)
 
-    interpreter(serverRequest, new VertxRequestBody(rc, vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible))
+    interpreter(serverRequest)
       .flatMap {
         case RequestResult.Failure(_)         => FutureFromVFuture(rc.response.setStatusCode(404).end())
         case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))

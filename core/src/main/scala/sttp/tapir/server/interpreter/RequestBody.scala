@@ -2,12 +2,13 @@ package sttp.tapir.server.interpreter
 
 import sttp.capabilities.Streams
 import sttp.model.Part
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
-  def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]]
-  def toStream(): streams.BinaryStream
+  def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]]
+  def toStream(serverRequest: ServerRequest): streams.BinaryStream
 }
 
 case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil)

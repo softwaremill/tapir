@@ -19,6 +19,7 @@ trait FinatraServerInterpreter extends Logging {
   def toRoute(se: ServerEndpoint[Any, Future]): FinatraRoute = {
     val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
       List(se),
+      new FinatraRequestBody(finatraServerOptions),
       new FinatraToResponseBody,
       finatraServerOptions.interceptors,
       finatraServerOptions.deleteFile
@@ -27,7 +28,7 @@ trait FinatraServerInterpreter extends Logging {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
 
-      serverInterpreter(serverRequest, new FinatraRequestBody(request, finatraServerOptions)).map {
+      serverInterpreter(serverRequest).map {
         case RequestResult.Failure(_) => Response(Status.NotFound)
         case RequestResult.Response(response) =>
           val status = Status(response.code.code)

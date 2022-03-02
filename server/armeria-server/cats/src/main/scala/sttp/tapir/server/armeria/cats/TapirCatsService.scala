@@ -27,22 +27,23 @@ private[cats] final case class TapirCatsService[F[_]: Async](
 
   private[this] val dispatcher: Dispatcher[F] = armeriaServerOptions.dispatcher
   private[this] val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
-  private[this] val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
-    new ServerInterpreter(
-      serverEndpoints,
-      new ArmeriaToResponseBody(fs2StreamCompatible),
-      armeriaServerOptions.interceptors,
-      armeriaServerOptions.deleteFile
-    )
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
     implicit val catsFutureConversion: CatsFutureConversion[F] = new CatsFutureConversion(dispatcher)
 
+    val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
+      new ServerInterpreter(
+        serverEndpoints,
+        new ArmeriaRequestBody(armeriaServerOptions, fs2StreamCompatible),
+        new ArmeriaToResponseBody(fs2StreamCompatible),
+        armeriaServerOptions.interceptors,
+        armeriaServerOptions.deleteFile
+      )
+
     val serverRequest = new ArmeriaServerRequest(ctx)
-    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, fs2StreamCompatible)
     val future = new CompletableFuture[HttpResponse]()
-    val result = interpreter(serverRequest, requestBody).map(ResultMapping.toArmeria)
+    val result = interpreter(serverRequest).map(ResultMapping.toArmeria)
 
     val (response, cancelRef) = dispatcher.unsafeToFutureCancelable(result)
     response.onComplete {

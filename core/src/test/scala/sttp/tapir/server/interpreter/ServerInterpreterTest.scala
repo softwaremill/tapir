@@ -48,13 +48,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
         List(endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(()))),
+        TestRequestBody,
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),
         _ => ()
       )
 
     // when
-    interpreter.apply(testRequest, TestRequestBody)
+    interpreter.apply(testRequest)
 
     // then
     callTrail.toList shouldBe List("2 request", "1 success", "2 success", "3 success")
@@ -80,13 +81,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
             .serverSecurityLogic[Unit, Id](_ => Left(()))
             .serverLogic(_ => _ => Right(()))
         ),
+        TestRequestBody,
         UnitToResponseBody,
         List(new AddToTrailInterceptor(callTrail.append(_: String), "1")),
         _ => ()
       )
 
     // when
-    interpreter.apply(testRequest, TestRequestBody)
+    interpreter.apply(testRequest)
 
     // then
     callTrail.toList shouldBe List("x decode", "y decode", "1 security failure")
@@ -107,13 +109,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
           endpoint.post.serverLogic[Id](_ => Right(())),
           endpoint.put.serverLogic[Id](_ => Right(()))
         ),
+        TestRequestBody,
         StringToResponseBody,
         List(rejectInterceptor),
         _ => ()
       )
 
     // when
-    val response = interpreter(testRequest, TestRequestBody)
+    val response = interpreter(testRequest)
 
     // then
     response should matchPattern { case Response(ServerResponseFromOutput(customStatusCode, _, Some(customBody), _)) => }
