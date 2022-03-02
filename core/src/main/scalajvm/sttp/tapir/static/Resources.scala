@@ -57,7 +57,8 @@ object Resources {
         case Some(defaultPath) => resolveURL(classLoader, resourcePrefix, defaultPath, None, useGzippedIfAvailable)
       })
 
-    if (!result.forall(_._1.toURI.getPath.contains(resourcePrefix.mkString("/")))) None else result
+    // making sure that the resulting path contains the original requested path
+    if (!result.forall(_._1.toURI.toString.contains(resourcePrefix.mkString("/")))) None else result
   }
 
   private def readResource[F[_]](
