@@ -3,6 +3,6 @@
     "central"
   ],
   "dependencies": [
-    "com.softwaremill::tapir-cli:latest.release"
+    "com.softwaremill::tapir-codegen:latest.release"
   ]
 }
