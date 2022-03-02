@@ -11,6 +11,8 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.static.{FilesOptions, ResourcesOptions}
+import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests._
 
 import java.io.File
@@ -18,8 +20,8 @@ import java.nio.file.{Files, StandardOpenOption}
 import java.util.Comparator
 import scala.concurrent.Future
 
-class ServerStaticContentTests[F[_], ROUTE](
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     supportSettingContentLength: Boolean = true
 ) {
@@ -34,7 +36,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     .response(asStringAlways)
     .send(backend)
 
-  private val classLoader = classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader
+  private val classLoader = classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader
 
   def tests(): List[Test] = {
     val baseTests = List(
@@ -423,7 +425,7 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       },
       Test("should return 404 when a resource is not found") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
           .use { port => get(port, List("r3")).map(_.code shouldBe StatusCode.NotFound) }
           .unsafeToFuture()
       },
@@ -445,7 +447,7 @@ class ServerStaticContentTests[F[_], ROUTE](
         }
       },
       Test("if an etag is present, should only return the resource if it doesn't match the etag") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
           .use { port =>
             def get(etag: Option[String]) = basicRequest
               .get(uri"http://localhost:$port/r1.txt")
@@ -468,7 +470,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       }
     )
     val resourceMetadataTest = Test("should return resource metadata") {
-      serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+      serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
         .use { port =>
           get(port, List("r1.txt")).map { r =>
             r.contentLength shouldBe Some(10)
@@ -487,7 +489,11 @@ class ServerStaticContentTests[F[_], ROUTE](
   }
 
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
-    serverInterpreter.server(NonEmptyList.of(serverInterpreter.route(e)))
+    serverInterpreter.server(
+      NonEmptyList.of(
+        serverInterpreter.route(e, (ci: CustomInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
+      )
+    )
 
   def withTestFilesDirectory[T](t: File => Future[T]): Future[T] = {
     val parent = Files.createTempDirectory("tapir-tests")

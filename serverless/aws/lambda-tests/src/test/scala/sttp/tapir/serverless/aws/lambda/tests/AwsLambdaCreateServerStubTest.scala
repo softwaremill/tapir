@@ -13,26 +13,17 @@ import sttp.model.{Header, StatusCode, Uri}
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest._
 import sttp.tapir.tests.Test
 
-class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]] {
+class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerOptions[IO], Route[IO]] {
 
-  override def testServer[I, E, O](
-      e: PublicEndpoint[I, E, O, Any],
-      testNameSuffix: String,
-      decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
-  )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
-      .customInterceptors[IO]
-      .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-      .options
+  override def testServer[I, E, O](e: PublicEndpoint[I, E, O, Any], testNameSuffix: String, interceptors: Interceptors = identity)(
+      fn: I => IO[Either[E, O]]
+  )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
+    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options
       .copy(encodeResponseBody = false)
     val se: ServerEndpoint[Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
@@ -40,17 +31,10 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]]
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
-  override def testServerLogic(
-      e: ServerEndpoint[Any, IO],
-      testNameSuffix: String,
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
-  )(
+  override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String, interceptors: Interceptors = identity)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
-      .customInterceptors[IO]
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-      .options
+    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options
       .copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)

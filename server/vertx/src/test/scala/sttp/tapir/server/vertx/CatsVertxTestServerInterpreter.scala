@@ -8,32 +8,20 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.Port
 
 class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route] {
+    extends TestServerInterpreter[IO, Fs2Streams[IO], VertxCatsServerOptions[IO], Router => Route] {
 
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
-  override def route(
-      e: ServerEndpoint[Fs2Streams[IO], IO],
-      decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
-  ): Router => Route = {
-    val options: VertxCatsServerOptions[IO] =
-      VertxCatsServerOptions
-        .customInterceptors[IO](dispatcher)
-        .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-        .options
-    VertxCatsServerInterpreter(options).route(e)
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]], interceptors: Interceptors): Router => Route = {
+    val options: VertxCatsServerOptions[IO] = interceptors(VertxCatsServerOptions.customInterceptors[IO](dispatcher)).options
+    val interpreter = VertxCatsServerInterpreter(options)
+    es.map(interpreter.route).last
   }
-
-  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]]): Router => Route = router => es.map(route(_)(router)).last
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

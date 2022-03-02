@@ -7,7 +7,7 @@ import sttp.capabilities.Streams
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
-trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_]] extends TestServerInterpreter[F, S, TapirService[S, F]] {
+trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestServerInterpreter[F, S, OPTIONS, TapirService[S, F]] {
 
   override def server(routes: NonEmptyList[TapirService[S, F]]): Resource[IO, Port] = {
     val bind = IO.fromCompletableFuture(
