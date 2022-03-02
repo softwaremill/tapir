@@ -332,7 +332,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .dependsOn(core, circeJson, cats)
 
 
-val akkaHttpOnly = taskKey[Unit]("akka-http-only")
+val akkaHttpVanilla = taskKey[Unit]("akka-http-only")
 val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -351,12 +351,12 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   )
   .settings(Gatling / scalaSource := sourceDirectory.value / "test" / "scala")
   .settings(
-    fork := false,
+    fork := true,
     connectInput := true,
   )
-  .settings(akkaHttpOnly := {
-      (Compile / runMain).toTask(" perfTests.AkkaHttpOnlyServer").value
-      (Gatling / testOnly).toTask(" perfTests.AkkaHttpOnlySimulation").value
+  .settings(akkaHttpVanilla := {
+      (Compile / runMain).toTask(" perfTests.AkkaHttpVanillaServer").value
+      (Gatling / testOnly).toTask(" perfTests.AkkaHttpVanillaSimulation").value
     })
   .settings(akkaHttpTapir := {
       (Compile / runMain).toTask(" perfTests.AkkaHttpTapirServer").value

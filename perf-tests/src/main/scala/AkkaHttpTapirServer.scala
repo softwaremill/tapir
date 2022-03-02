@@ -18,18 +18,18 @@ class AkkaHttpTapirServer {
   var bindingFuture: Option[scala.concurrent.Future[akka.http.scaladsl.Http.ServerBinding]] = None
 
   def setUp() = {
-    val bookEndpoint: PublicEndpoint[(Int), String, String, Any] = endpoint
+    val intEndpoint: PublicEndpoint[(Int), String, String, Any] = endpoint
       .get
       .in("akka-http-tapir")
       .in(path[Int]("id"))
       .errorOut(stringBody)
       .out(stringBody)
 
-    def bookEndpointLogic(id: Int): Future[Either[String, String]] =
+    def intEndpointLogic(id: Int): Future[Either[String, String]] =
       Future.successful(Right(id.toString))
 
     val route: Route = AkkaHttpServerInterpreter()
-      .toRoute(bookEndpoint.serverLogic(bookEndpointLogic))
+      .toRoute(intEndpoint.serverLogic(intEndpointLogic))
 
     this.bindingFuture = Some(Http()
       .newServerAt("127.0.0.1", 8080)

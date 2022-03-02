@@ -7,14 +7,14 @@ import akka.http.scaladsl.server.Directives._
 
 import scala.io.StdIn
 
-class AkkaHttpOnlyServer {
+class AkkaHttpVanillaServer {
   implicit val actorSystem = ActorSystem(Behaviors.empty, "akka-http")
   implicit val executionContext = actorSystem.executionContext
   var bindingFuture: Option[scala.concurrent.Future[akka.http.scaladsl.Http.ServerBinding]] = None
 
   def setUp() = {
     val route = get {
-      path("akka-http-only" / IntNumber) {
+      path("akka-http-vanilla" / IntNumber) {
         id => complete(id.toString)
       }
     }
@@ -36,8 +36,8 @@ class AkkaHttpOnlyServer {
   }
 }
 
-object AkkaHttpOnlyServer extends App {
-  var server = new perfTests.AkkaHttpOnlyServer()
+object AkkaHttpVanillaServer extends App {
+  var server = new perfTests.AkkaHttpVanillaServer()
   server.setUp()
   println(s"Server now online. Please navigate to http://localhost:8080/akka-http-only/1\nPress RETURN to stop...")
   StdIn.readLine()
