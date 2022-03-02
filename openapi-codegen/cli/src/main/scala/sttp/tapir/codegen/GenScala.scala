@@ -1,4 +1,4 @@
-package sttp.tapir.cli
+package sttp.tapir.codegen
 
 import cats.data.Validated
 import cats.effect.{IO, ExitCode}

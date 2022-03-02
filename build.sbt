@@ -1333,8 +1333,8 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions)
   .settings(
-    name := "tapir-cli",
-    buildInfoPackage := "sttp.tapir.cli",
+    name := "tapir-codegen",
+    buildInfoPackage := "sttp.tapir.codegen",
     libraryDependencies ++= Seq(
       "com.monovore" %% "decline" % Versions.decline,
       "com.monovore" %% "decline-effect" % Versions.decline,

@@ -1,4 +1,4 @@
-package sttp.tapir.cli
+package sttp.tapir.codegen
 
 import cats.effect.{ExitCode, IO}
 import com.monovore.decline.Opts
