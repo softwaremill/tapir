@@ -19,8 +19,8 @@ import sttp.tapir.tests.{MultipleFileUpload, Test, data}
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerMultipartTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
+class ServerMultipartTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {

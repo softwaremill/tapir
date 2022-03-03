@@ -13,7 +13,7 @@ import sttp.tapir.tests.ContentNegotiation._
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
-class ServerContentNegotiationTests[F[_], ROUTE](createServerTest: CreateServerTest[F, Any, ROUTE])(implicit
+class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit
     m: MonadError[F]
 ) {
   import createServerTest._

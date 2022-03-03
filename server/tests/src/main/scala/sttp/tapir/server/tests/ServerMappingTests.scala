@@ -8,7 +8,7 @@ import sttp.tapir.tests.Mapping._
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
-class ServerMappingTests[F[_], ROUTE](createServerTest: CreateServerTest[F, Any, ROUTE])(implicit m: MonadError[F]) {
+class ServerMappingTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] = List(

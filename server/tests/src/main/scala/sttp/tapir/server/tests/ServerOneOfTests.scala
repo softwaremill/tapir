@@ -21,8 +21,8 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import io.circe.generic.auto._
 
-class ServerOneOfTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE]
+class ServerOneOfTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {

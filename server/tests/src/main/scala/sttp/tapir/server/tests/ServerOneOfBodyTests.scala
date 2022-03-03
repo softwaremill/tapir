@@ -15,8 +15,8 @@ import sttp.tapir.tests.OneOfBody.{
 import sttp.tapir.tests._
 import sttp.tapir.tests.data.Fruit
 
-class ServerOneOfBodyTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE]
+class ServerOneOfBodyTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {
