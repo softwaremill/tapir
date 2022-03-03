@@ -14,10 +14,10 @@ import scala.concurrent.Future
 class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, VertxFutureServerOptions, Router => Route] {
   import VertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): Router => Route = {
+  override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): Router => Route = { router =>
     val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customInterceptors).options
     val interpreter = VertxFutureServerInterpreter(options)
-    es.map(interpreter.route).last
+    es.map(interpreter.route(_)(router)).last
   }
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {

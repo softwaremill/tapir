@@ -15,10 +15,10 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
     extends TestServerInterpreter[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = {
+  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = { router =>
     val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
-    es.map(interpreter.route).last
+    es.map(interpreter.route(_)(runtime)(router)).last
   }
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
