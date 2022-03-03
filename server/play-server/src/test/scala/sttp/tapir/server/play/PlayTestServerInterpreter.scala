@@ -11,32 +11,19 @@ import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Router.Routes] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, PlayServerOptions, Routes] {
   import actorSystem.dispatcher
 
-  override def route(
-      e: ServerEndpoint[AkkaStreams with WebSockets, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
-  ): Routes = {
-    val serverOptions: PlayServerOptions =
-      PlayServerOptions.customInterceptors
-        .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-        .options
-    PlayServerInterpreter(serverOptions).toRoutes(e)
+  override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
+    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customInterceptors).options
+    PlayServerInterpreter(serverOptions).toRoutes(es)
   }
-
-  override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Routes =
-    PlayServerInterpreter().toRoutes(es)
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
     val components = new DefaultAkkaHttpServerComponents {

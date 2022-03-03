@@ -39,6 +39,8 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
         IO {
           val port = server.address.getPort
           val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+
+          // test redirect from no-trailing-slash, which should return index.html in the end
           val resp: Response[String] = basicRequest
             .response(asStringAlways)
             .get(uri"http://localhost:$port/${context ++ prefix}")
@@ -51,6 +53,15 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
           resp.history.head.code shouldBe StatusCode.PermanentRedirect
           resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+
+          // test getting a swagger-ui resource
+          val respCss: Response[String] = basicRequest
+            .response(asStringAlways)
+            .get(uri"http://localhost:$port/${context ++ prefix}/swagger-ui.css")
+            .send(backend)
+
+          respCss.code shouldBe StatusCode.Ok
+          respCss.body should include(".swagger-ui")
         }
       }
   }

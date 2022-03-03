@@ -10,9 +10,9 @@ import sttp.tapir.tests.Test
 /** All server tests in default configurations, except for streaming (which require a streams object) and web socket ones (which need to be
   * subclassed). If a custom configuration is needed, exclude the tests here, and add separately.
   */
-class AllServerTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+class AllServerTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     security: Boolean = true,
     basic: Boolean = true,

@@ -3,8 +3,6 @@ package sttp.tapir.serverless.aws.lambda.tests
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest.catsMonadIO
@@ -21,24 +19,13 @@ class AwsLambdaStubHttpTest extends TestSuite {
 }
 
 object AwsLambdaStubHttpTest {
-  private val testServerInterpreter = new TestServerInterpreter[IO, Any, Route[IO]] {
-    override def route(
-        e: ServerEndpoint[Any, IO],
-        decodeFailureHandler: Option[DecodeFailureHandler],
-        metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
-    ): Route[IO] = {
-      val serverOptions: AwsServerOptions[IO] = AwsCatsEffectServerOptions
-        .customInterceptors[IO]
-        .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-        .options
-        .copy(encodeResponseBody = false)
+  private val testServerInterpreter = new TestServerInterpreter[IO, Any, AwsServerOptions[IO], Route[IO]] {
 
-      AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
+    override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): Route[IO] = {
+      val serverOptions: AwsServerOptions[IO] =
+        interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options.copy(encodeResponseBody = false)
+      AwsCatsEffectServerInterpreter(serverOptions).toRoute(es)
     }
-
-    override def route(es: List[ServerEndpoint[Any, IO]]): Route[IO] =
-      AwsCatsEffectServerInterpreter[IO]().toRoute(es)
 
     override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???
   }
