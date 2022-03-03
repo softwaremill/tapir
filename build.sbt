@@ -332,10 +332,21 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .dependsOn(core, circeJson, cats)
 
 
-val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
-val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
-val akkaHttpVanillaMutli = taskKey[Unit]("akka-http-vanilla-multi")
-val akkaHttpTapirMulti = taskKey[Unit]("akka-http-tapir-multi")
+val akkaHttpVanilla       = taskKey[Unit]("akka-http-vanilla")
+val akkaHttpTapir         = taskKey[Unit]("akka-http-tapir")
+val akkaHttpVanillaMulti  = taskKey[Unit]("akka-http-vanilla-multi")
+val akkaHttpTapirMulti    = taskKey[Unit]("akka-http-tapir-multi")
+val http4sVanilla         = taskKey[Unit]("http4s-vanilla")
+val http4sTapir           = taskKey[Unit]("http4s-tapir")
+val http4sVanillaMulti    = taskKey[Unit]("http4s-vanilla-multi")
+val http4sTapirMulti      = taskKey[Unit]("http4s-tapir-multi")
+def genPerfTestTask(servName: String, simName: String) = Def.taskDyn {
+  Def.task {
+    (Compile / runMain).toTask(s" perfTests.${servName}Server").value
+    (Gatling / testOnly).toTask(s" perfTests.${simName}Simulation").value
+  }
+}
+
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
   .settings(commonJvmSettings)
@@ -348,6 +359,12 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.typesafe.akka" %% "akka-stream-typed" % Versions.akkaStreams,
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "org.http4s" %% "http4s-core" % Versions.http4s,
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.typelevel" %%% "cats-core" % "2.7.0",
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
     ) ++ loggerDependencies,
     publishArtifact := false
   )
@@ -356,32 +373,16 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     fork := true,
     connectInput := true,
   )
-  .settings(
-    akkaHttpVanilla := {
-      (Compile / runMain).toTask(" perfTests.AkkaHttpVanillaServer").value
-      (Gatling / testOnly).toTask(" perfTests.AkkaHttpVanillaSimulation").value
-    }
-  )
-  .settings(
-    akkaHttpTapir := {
-      (Compile / runMain).toTask(" perfTests.AkkaHttpTapirServer").value
-      (Gatling / testOnly).toTask(" perfTests.AkkaHttpTapirSimulation").value
-    }
-  )
-  .settings(
-    akkaHttpVanillaMutli := {
-      (Compile / runMain).toTask(" perfTests.AkkaHttpVanillaMultiServer").value
-      (Gatling / testOnly).toTask(" perfTests.AkkaHttpMultiSimulation").value
-    }
-  )
-  .settings(
-    akkaHttpTapirMulti := {
-      (Compile / runMain).toTask(" perfTests.AkkaHttpTapirMultiServer").value
-      (Gatling / testOnly).toTask(" perfTests.AkkaHttpMultiSimulation").value
-    }
-  )
+  .settings(akkaHttpVanilla       := {(genPerfTestTask("AkkaHttpVanilla", "OneRoute")).value})
+  .settings(akkaHttpTapir         := {(genPerfTestTask("AkkaHttpTapir",   "OneRoute")).value})
+  .settings(akkaHttpVanillaMulti  := {(genPerfTestTask("AkkaHttpVanillaMulti", "MultiRoute")).value})
+  .settings(akkaHttpTapirMulti    := {(genPerfTestTask("AkkaHttpTapirMulti",   "MultiRoute")).value})
+  .settings(http4sVanilla         := {(genPerfTestTask("Http4sVanilla", "OneRoute")).value})
+  .settings(http4sTapir           := {(genPerfTestTask("Http4sTapir",   "OneRoute")).value})
+  .settings(http4sVanillaMulti    := {(genPerfTestTask("Http4sVanillaMulti", "MultiRoute")).value})
+  .settings(http4sTapirMulti      := {(genPerfTestTask("Http4sTapirMulti",   "MultiRoute")).value})
   .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(core, akkaHttpServer)
+  .dependsOn(core, akkaHttpServer, http4sServer)
 
 
 // integrations

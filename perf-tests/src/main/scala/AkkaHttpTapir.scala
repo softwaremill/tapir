@@ -9,7 +9,6 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Directives.{concat}
 
-import scala.io.StdIn
 import scala.concurrent.Future
 
 class AkkaHttpTapirMultiServer {
@@ -18,7 +17,7 @@ class AkkaHttpTapirMultiServer {
 
   var bindingFuture: Option[scala.concurrent.Future[akka.http.scaladsl.Http.ServerBinding]] = None
 
-  def setUp() = {
+  def setUp(nRoutes: Int) = {
     def route(n: Int): Route = AkkaHttpServerInterpreter()
       .toRoute(
         endpoint
@@ -36,7 +35,7 @@ class AkkaHttpTapirMultiServer {
       Http()
         .newServerAt("127.0.0.1", 8080)
         .bind(
-          Range(1,128,1)
+          Range(1, nRoutes, 1)
             .foldLeft(route(0))(
               (acc, n) => concat(acc, route(n)))
         )
@@ -57,9 +56,16 @@ class AkkaHttpTapirMultiServer {
 
 object AkkaHttpTapirMultiServer extends App {
   var server = new perfTests.AkkaHttpTapirMultiServer()
-  server.setUp()
-  println(s"Server now online. Please navigate to http://localhost:8080/path3/1\nPress RETURN to stop...")
-  StdIn.readLine()
+  server.setUp(128)
+  Common.blockServer()
   server.tearDown()
-  println(s"Server terminated")
+  println("Server terminated")
+}
+
+object AkkaHttpTapirServer extends App {
+  var server = new perfTests.AkkaHttpTapirMultiServer()
+  server.setUp(1)
+  Common.blockServer()
+  server.tearDown()
+  println("Server terminated")
 }

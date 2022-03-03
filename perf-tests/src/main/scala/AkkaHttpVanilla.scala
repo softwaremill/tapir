@@ -5,23 +5,27 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 
-import scala.io.StdIn
-
-class AkkaHttpVanillaServer {
+class AkkaHttpVanillaMultiServer {
   implicit val actorSystem = ActorSystem(Behaviors.empty, "akka-http")
   implicit val executionContext = actorSystem.executionContext
   var bindingFuture: Option[scala.concurrent.Future[akka.http.scaladsl.Http.ServerBinding]] = None
 
-  def setUp() = {
-    val route = get {
-      path("akka-http-vanilla" / IntNumber) {
+  def setUp(nRoutes: Int) = {
+    val route = (n: Int) => get {
+      path(("path" + n.toString) / IntNumber) {
         id => complete(id.toString)
       }
     }
 
-    bindingFuture = Some(Http()
-      .newServerAt("127.0.0.1", 8080)
-      .bind(route))
+    this.bindingFuture = Some(
+      Http()
+        .newServerAt("127.0.0.1", 8080)
+        .bind(
+          Range(1, nRoutes, 1)
+            .foldLeft(route(0))(
+              (acc, n) => concat(acc, route(n)))
+        )
+    )
   }
 
   def tearDown() = {
@@ -36,11 +40,18 @@ class AkkaHttpVanillaServer {
   }
 }
 
-object AkkaHttpVanillaServer extends App {
-  var server = new perfTests.AkkaHttpVanillaServer()
-  server.setUp()
-  println(s"Server now online. Please navigate to http://localhost:8080/akka-http-only/1\nPress RETURN to stop...")
-  StdIn.readLine()
+object AkkaHttpVanillaMultiServer extends App {
+  var server = new perfTests.AkkaHttpVanillaMultiServer()
+  server.setUp(128)
+  Common.blockServer()
   server.tearDown()
-  println(s"Server terminated")
+  println("Server terminated")
+}
+
+object AkkaHttpVanillaServer extends App {
+  var server = new perfTests.AkkaHttpVanillaMultiServer()
+  server.setUp(1)
+  Common.blockServer()
+  server.tearDown()
+  println("Server terminated")
 }
