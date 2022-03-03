@@ -14,10 +14,9 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
+import sttp.monad.FutureMonad
 import sttp.monad.syntax._
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir._
-import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
@@ -85,19 +84,10 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
           val route = AkkaHttpServerInterpreter(
             AkkaHttpServerOptions.customInterceptors
-              .addInterceptor(new RequestInterceptor[Future] {
-                override def apply[B](
-                    responder: Responder[Future, B],
-                    requestHandler: EndpointInterceptor[Future] => RequestHandler[Future, B]
-                ): RequestHandler[Future, B] =
-                  new RequestHandler[Future, B] {
-                    override def apply(request: ServerRequest)(implicit monad: MonadError[Future]): Future[RequestResult[B]] = {
-                      val underlying = request.underlying.asInstanceOf[RequestContext]
-                      val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))
-                      val changedRequest = request.withUnderlying(changedUnderlying)
-                      requestHandler(EndpointInterceptor.noop)(changedRequest)
-                    }
-                  }
+              .addInterceptor(RequestInterceptor.transformServerRequest { request =>
+                val underlying = request.underlying.asInstanceOf[RequestContext]
+                val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))
+                Future.successful(request.withUnderlying(changedUnderlying))
               })
               .options
           ).toRoute(e)

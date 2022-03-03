@@ -1,5 +1,7 @@
 package sttp.tapir.server.interceptor
 
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
@@ -37,6 +39,21 @@ trait RequestInterceptor[F[_]] extends Interceptor[F] {
 
   /** @tparam B The interpreter-specific, low-level type of body. */
   def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B]
+}
+
+object RequestInterceptor {
+
+  /** Create a request interceptor which transforms the server request, prior to handling any endpoints. */
+  def transformServerRequest[F[_]](f: ServerRequest => F[ServerRequest]): RequestInterceptor[F] = new RequestInterceptor[F] {
+    override def apply[B](
+        responder: Responder[F, B],
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
+    ): RequestHandler[F, B] =
+      new RequestHandler[F, B] {
+        override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
+          f(request).flatMap(request2 => requestHandler.apply(EndpointInterceptor.noop)(request2))
+      }
+  }
 }
 
 /** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been decoded successfully, or when
