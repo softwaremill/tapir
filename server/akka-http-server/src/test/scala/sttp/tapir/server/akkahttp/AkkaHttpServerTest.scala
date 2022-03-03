@@ -1,7 +1,8 @@
 package sttp.tapir.server.akkahttp
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.server.{Directives, RequestContext}
 import akka.stream.scaladsl.{Flow, Source}
 import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
@@ -12,10 +13,13 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
+import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.model.sse.ServerSentEvent
-import sttp.monad.FutureMonad
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.monad.syntax._
 import sttp.tapir._
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -74,6 +78,44 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                     .flatMap(_.body.value.transform(sse => sse shouldBe List(sse1, sse2), ex => fail(ex)))
                 )
               }
+            }
+            .unsafeToFuture()
+        },
+        Test("replace body using a request interceptor") {
+          val e = endpoint.post.in(stringBody).out(stringBody).serverLogicSuccess[Future](body => Future.successful(body))
+
+          val route = AkkaHttpServerInterpreter(
+            AkkaHttpServerOptions.customInterceptors
+              .addInterceptor(new RequestInterceptor[Future] {
+                override def apply[B](
+                    responder: Responder[Future, B],
+                    requestHandler: EndpointInterceptor[Future] => RequestHandler[Future, B]
+                ): RequestHandler[Future, B] =
+                  new RequestHandler[Future, B] {
+                    override def apply(request: ServerRequest)(implicit monad: MonadError[Future]): Future[RequestResult[B]] = {
+                      val underlying = request.underlying.asInstanceOf[RequestContext]
+                      val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))
+                      val changedRequest = new ServerRequest {
+                        override def protocol: String = request.protocol
+                        override def connectionInfo: ConnectionInfo = request.connectionInfo
+                        override def underlying: Any = changedUnderlying
+                        override def pathSegments: List[String] = request.pathSegments
+                        override def queryParameters: QueryParams = request.queryParameters
+                        override def method: Method = request.method
+                        override def uri: Uri = request.uri
+                        override def headers: Seq[Header] = request.headers
+                      }
+                      requestHandler(EndpointInterceptor.noop)(changedRequest)
+                    }
+                  }
+              })
+              .options
+          ).toRoute(e)
+
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
             .unsafeToFuture()
         }
