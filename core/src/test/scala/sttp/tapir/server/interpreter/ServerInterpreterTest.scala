@@ -25,6 +25,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     override def method: Method = Method.GET
     override def uri: Uri = uri"http://example.com"
     override def headers: immutable.Seq[Header] = Nil
+    override def withUnderlying(underlying: Any): ServerRequest = this
   }
 
   it should "call the interceptors in the correct order" in {

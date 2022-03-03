@@ -13,13 +13,12 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
-import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.model.sse.ServerSentEvent
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.monad.syntax._
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir._
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interceptor._
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -95,16 +94,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                     override def apply(request: ServerRequest)(implicit monad: MonadError[Future]): Future[RequestResult[B]] = {
                       val underlying = request.underlying.asInstanceOf[RequestContext]
                       val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))
-                      val changedRequest = new ServerRequest {
-                        override def protocol: String = request.protocol
-                        override def connectionInfo: ConnectionInfo = request.connectionInfo
-                        override def underlying: Any = changedUnderlying
-                        override def pathSegments: List[String] = request.pathSegments
-                        override def queryParameters: QueryParams = request.queryParameters
-                        override def method: Method = request.method
-                        override def uri: Uri = request.uri
-                        override def headers: Seq[Header] = request.headers
-                      }
+                      val changedRequest = request.withUnderlying(changedUnderlying)
                       requestHandler(EndpointInterceptor.noop)(changedRequest)
                     }
                   }

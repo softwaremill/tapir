@@ -23,4 +23,6 @@ private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerReques
   override def method: Method = Method.unsafeApply(request.requestContext.http.method)
   override def uri: Uri = sttpUri
   override def headers: Seq[Header] = request.headers.map { case (n, v) => Header(n, v) }.toList
+
+  override def withUnderlying(underlying: Any): ServerRequest = new AwsServerRequest(request = underlying.asInstanceOf[AwsRequest])
 }

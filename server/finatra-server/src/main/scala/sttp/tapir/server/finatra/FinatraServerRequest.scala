@@ -20,4 +20,5 @@ class FinatraServerRequest(request: Request) extends ServerRequest {
     if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
   override def underlying: Any = request
+  override def withUnderlying(underlying: Any): ServerRequest = new FinatraServerRequest(request = underlying.asInstanceOf[Request])
 }

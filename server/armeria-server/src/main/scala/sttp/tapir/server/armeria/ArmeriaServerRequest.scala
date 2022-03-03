@@ -57,4 +57,8 @@ private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) ex
 
     QueryParams(builder.result())
   }
+
+  override def withUnderlying(underlying: Any): ServerRequest = new ArmeriaServerRequest(
+    ctx = underlying.asInstanceOf[ServiceRequestContext]
+  )
 }

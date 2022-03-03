@@ -20,6 +20,7 @@ class DecodeBasicInputsResultTest extends AnyFlatSpec with Matchers {
       override def method: Method = Method.GET
       override def uri: Uri = uri"http://example.com"
       override def headers: immutable.Seq[Header] = List(testHeader)
+      override def withUnderlying(underlying: Any): ServerRequest = this
     }
   }
 

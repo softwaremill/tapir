@@ -56,6 +56,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     override def method: Method = ???
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
+    override def withUnderlying(underlying: Any): ServerRequest = this
   }
 
   implicit val bodyListener: BodyListener[TestEffect, ResponseBodyType] = new BodyListener[TestEffect, ResponseBodyType] {
