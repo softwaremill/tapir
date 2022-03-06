@@ -18,6 +18,7 @@ case class Schema(
     writeOnly: Option[Boolean] = None,
     example: Option[ExampleValue] = None,
     deprecated: Option[Boolean] = None,
+    hidden: Option[Boolean] = None,
     oneOf: List[ReferenceOr[Schema]] = List.empty,
     discriminator: Option[Discriminator] = None,
     additionalProperties: Option[ReferenceOr[Schema]] = None,

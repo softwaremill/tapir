@@ -11,7 +11,7 @@ object BooksExample extends App with StrictLogging {
   case class Author(name: String, country: Country)
   case class Genre(name: String, description: String)
   case class Book(title: String, genre: Genre, year: Int, author: Author)
-  case class BooksQuery(genre: Option[String], limit: Limit)
+  case class BooksQuery(genre: Option[String], limit: Limit, hiddenParameter: Option[String])
 
   /** Descriptions of endpoints used in the example.
     */
@@ -35,6 +35,7 @@ object BooksExample extends App with StrictLogging {
 
     // Re-usable parameter description
     private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
+    private val hiddenParameter = query[Option[String]]("hidden").description("Hidden parameter won't appear in generated swagger spec")
 
     val booksListing: PublicEndpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
       .in("list" / "all")
@@ -42,7 +43,7 @@ object BooksExample extends App with StrictLogging {
       .out(jsonBody[Vector[Book]])
 
     val booksListingByGenre: PublicEndpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
-      .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
+      .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter.and(hiddenParameter)).mapTo[BooksQuery])
       .out(jsonBody[Vector[Book]])
   }
 
@@ -104,7 +105,7 @@ object BooksExample extends App with StrictLogging {
 
     def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] =
       Future {
-        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
+        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit, None)))
       }
 
     def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] =

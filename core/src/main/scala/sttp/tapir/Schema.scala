@@ -35,6 +35,7 @@ case class Schema[T](
     format: Option[String] = None,
     encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
+    hidden: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
 ) extends SchemaMacros[T] {
 
@@ -63,7 +64,8 @@ case class Schema[T](
       schemaType = SOption(this)(identity),
       isOptional = true,
       format = format,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -73,7 +75,8 @@ case class Schema[T](
     Schema(
       schemaType = SArray(this)(_.toIterable),
       isOptional = true,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -83,7 +86,8 @@ case class Schema[T](
     Schema(
       schemaType = SArray(this)(identity),
       isOptional = true,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
@@ -286,6 +290,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
     class format(val format: String) extends StaticAnnotation
     class deprecated extends StaticAnnotation
+    class hidden extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
   }

@@ -96,7 +96,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case EndpointIO.OneOfBody(variants, _) =>
         Right(
           RequestBody(
-            variants.collectFirst { case EndpointIO.OneOfBodyVariant(_, EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, _))) => d },
+            variants.collectFirst { case EndpointIO.OneOfBodyVariant(_, EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, false, _))) => d },
             variants
               .flatMap(variant => codecToMediaType(variant.body.codec, variant.body.info.examples, Some(variant.range.toString), Nil))
               .toListMap,
@@ -118,11 +118,11 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case q: EndpointInput.Query[_]       => queryToParameter(q)
-      case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
-      case h: EndpointIO.Header[_]         => headerToParameter(h)
-      case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
+      case q: EndpointInput.Query[_]       if ! q.info.hidden => queryToParameter(q)
+      case p: EndpointInput.PathCapture[_] if ! p.info.hidden => pathCaptureToParameter(p)
+      case h: EndpointIO.Header[_]         if ! h.info.hidden => headerToParameter(h)
+      case c: EndpointInput.Cookie[_]      if ! c.info.hidden => cookieToParameter(c)
+      case f: EndpointIO.FixedHeader[_]    if ! f.info.hidden => fixedHeaderToParameter(f)
     }
   }
 

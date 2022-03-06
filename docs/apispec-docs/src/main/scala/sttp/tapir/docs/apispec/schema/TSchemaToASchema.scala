@@ -21,16 +21,16 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
             required = p.required.map(_.encodedName),
             properties = fields.map { f =>
               f.schema match {
-                case TSchema(_, Some(name), _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
+                case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
                 case schema                                      => f.name.encodedName -> apply(schema)
               }
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
+      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
       case TSchemaType.SOption(el)                                          => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
@@ -42,7 +42,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
             .apply(
               schemas
                 .map {
-                  case TSchema(_, Some(name), _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
+                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
                   case t                                           => apply(t)
                 }
                 .sortBy {
@@ -82,7 +82,8 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       default = tschema.default.flatMap { case (_, raw) => raw.flatMap(r => exampleValue(tschema, r)) }.orElse(oschema.default),
       example = tschema.encodedExample.flatMap(exampleValue(tschema, _)).orElse(oschema.example),
       format = tschema.format.orElse(oschema.format),
-      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
+      hidden = (if (tschema.hidden) Some(true) else None).orElse(oschema.hidden)
     )
   }
 

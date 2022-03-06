@@ -118,7 +118,7 @@ object SchemaType {
     ): SCoproduct[T] = {
       SCoproduct(
         subtypes.map {
-          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _) =>
+          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _, _) =>
             s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
         },

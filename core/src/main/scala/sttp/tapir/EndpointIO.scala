@@ -84,6 +84,7 @@ object EndpointTransput {
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+    def hidden(): ThisType[T] = copyWith(codec, info.hidden(true))
     def attribute[A](k: AttributeKey[A]): Option[A] = info.attribute(k)
     def attribute[A](k: AttributeKey[A], v: A): ThisType[T] = copyWith(codec, info.attribute(k, v))
   }
@@ -489,6 +490,7 @@ object EndpointIO {
       description: Option[String],
       examples: List[Example[T]],
       deprecated: Boolean,
+      hidden: Boolean,
       attributes: AttributeMap
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
@@ -497,6 +499,7 @@ object EndpointIO {
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
+    def hidden(h: Boolean): Info[T] = copy(hidden = h)
     def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): Info[T] = copy(attributes = attributes.put(k, v))
 
@@ -507,11 +510,12 @@ object EndpointIO {
           Example(ee, name, summary)
         },
         deprecated,
+        hidden,
         attributes
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, attributes = AttributeMap.Empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, hidden = false, attributes = AttributeMap.Empty)
   }
 
   /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class maps to an endpoint

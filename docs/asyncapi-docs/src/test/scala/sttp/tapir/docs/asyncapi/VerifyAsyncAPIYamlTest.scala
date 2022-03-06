@@ -195,6 +195,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should contain all flags for query") {
     val pagingQuery = query[Int]("limit")
       .and(query[Int]("offset").deprecated())
+      .and(query[String]("Hidden").description("Hidden header").hidden())
 
     val personEndpoint = endpoint.get
       .in("persons" / pagingQuery)
@@ -208,6 +209,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should contain all flags for header") {
     val personEndpoint = endpoint.get
       .in(header[String]("Test").description("Test token").deprecated())
+      .in(header[String]("Hidden").description("Hidden header").hidden())
       .out(webSocketBody[String, CodecFormat.TextPlain, Int, CodecFormat.Json](AkkaStreams))
 
     val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header flags", "1.0").toYaml
