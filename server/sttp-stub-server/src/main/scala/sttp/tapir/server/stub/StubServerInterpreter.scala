@@ -23,11 +23,17 @@ private[stub] object StubServerInterpreter {
     }
 
     val interpreter =
-      new ServerInterpreter[R, F, Any, AnyStreams](endpoints, SttpResponseEncoder.toResponseBody, interceptors, _ => ().unit)
+      new ServerInterpreter[R, F, Any, AnyStreams](
+        endpoints,
+        new SttpRequestBody[F],
+        SttpResponseEncoder.toResponseBody,
+        interceptors,
+        _ => ().unit
+      )
 
     val sRequest = new SttpRequest(req)
 
-    interpreter.apply(sRequest, new SttpRequestBody[F](req)).map {
+    interpreter.apply(sRequest).map {
       case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
       case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse.notFound)
     }

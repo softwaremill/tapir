@@ -41,4 +41,6 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
 
   private def asInetSocketAddress(address: SocketAddress): InetSocketAddress =
     InetSocketAddress.createUnresolved(address.host, address.port)
+
+  override def withUnderlying(underlying: Any): ServerRequest = new VertxServerRequest(rc = underlying.asInstanceOf[RoutingContext])
 }

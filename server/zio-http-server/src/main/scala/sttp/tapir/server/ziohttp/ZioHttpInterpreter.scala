@@ -23,6 +23,7 @@ trait ZioHttpInterpreter[R] {
     implicit val monadError: MonadError[RIO[R, *]] = new RIOMonadError[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
       ses,
+      new ZioHttpRequestBody(zioHttpServerOptions),
       new ZioHttpToResponseBody,
       zioHttpServerOptions.interceptors,
       zioHttpServerOptions.deleteFile
@@ -31,7 +32,7 @@ trait ZioHttpInterpreter[R] {
     Http.route[Request] { case req =>
       Http.fromZIO {
         interpreter
-          .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
+          .apply(new ZioHttpServerRequest(req))
           .map {
             case RequestResult.Response(resp) =>
               Http.succeed(

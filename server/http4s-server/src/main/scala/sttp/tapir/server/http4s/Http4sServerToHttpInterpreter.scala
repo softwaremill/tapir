@@ -59,6 +59,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
     val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
       serverEndpoints,
+      new Http4sRequestBody[F, G](http4sServerOptions, fToG),
       new Http4sToResponseBody[F, G](http4sServerOptions),
       http4sServerOptions.interceptors,
       http4sServerOptions.deleteFile
@@ -67,7 +68,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)
 
-      OptionT(interpreter(serverRequest, new Http4sRequestBody[F, G](req, serverRequest, http4sServerOptions, fToG)).flatMap {
+      OptionT(interpreter(serverRequest).flatMap {
         case _: RequestResult.Failure         => none.pure[G]
         case RequestResult.Response(response) => fToG(serverResponseToHttp4s(response, webSocketBuilder)).map(_.some)
       })

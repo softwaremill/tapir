@@ -21,13 +21,14 @@ object NettyServerInterpreter {
     implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener
     val serverInterpreter = new ServerInterpreter[Any, F, ByteBuf, NoStreams](
       ses,
+      new NettyRequestBody(createFile),
       new NettyToResponseBody,
       interceptors,
       deleteFile
     )
 
     val handler: Route[F] = { (request: NettyServerRequest) =>
-      serverInterpreter(request, new NettyRequestBody(request, request, createFile))
+      serverInterpreter(request)
         .map {
           case RequestResult.Response(response) => Some(response)
           case RequestResult.Failure(_)         => None

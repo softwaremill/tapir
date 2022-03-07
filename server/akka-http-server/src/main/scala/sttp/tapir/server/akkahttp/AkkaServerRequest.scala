@@ -39,4 +39,6 @@ private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerReq
     val akkaHeaders = contentType :: contentLength.toList ++ ctx.request.headers
     akkaHeaders.filterNot(_.value == EmptyContentType).map(h => Header(h.name(), h.value()))
   }
+
+  override def withUnderlying(underlying: Any): ServerRequest = new AkkaServerRequest(ctx = underlying.asInstanceOf[RequestContext])
 }

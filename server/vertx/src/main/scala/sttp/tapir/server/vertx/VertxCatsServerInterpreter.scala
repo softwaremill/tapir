@@ -50,6 +50,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
       List(e),
+      new VertxRequestBody(vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,
       vertxCatsServerOptions.deleteFile
@@ -58,7 +59,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     { rc =>
       val serverRequest = new VertxServerRequest(rc)
 
-      val result = interpreter(serverRequest, new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible))
+      val result = interpreter(serverRequest)
         .flatMap {
           case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
           case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void

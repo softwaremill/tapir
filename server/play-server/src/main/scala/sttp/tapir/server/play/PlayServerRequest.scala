@@ -21,4 +21,6 @@ private[play] class PlayServerRequest(requestHeader: RequestHeader, requestWithC
   }
 
   override def underlying: Any = requestWithContext
+  override def withUnderlying(underlying: Any): ServerRequest =
+    new PlayServerRequest(requestHeader, requestWithContext = underlying.asInstanceOf[RequestHeader])
 }

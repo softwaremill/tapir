@@ -34,5 +34,6 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     override def method: Method = Method.GET
     override def uri: Uri = ???
     override def headers: Seq[Header] = Nil
+    override def withUnderlying(underlying: Any): ServerRequest = this
   }
 }

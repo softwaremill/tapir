@@ -22,8 +22,8 @@ object TestUtil {
 
   object TestRequestBody extends RequestBody[Id, NoStreams] {
     override val streams: Streams[NoStreams] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
-    override def toStream(): streams.BinaryStream = ???
+    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
+    override def toStream(serverRequest: ServerRequest): streams.BinaryStream = ???
   }
 
   object UnitToResponseBody extends ToResponseBody[Unit, NoStreams] {
@@ -98,6 +98,7 @@ object TestUtil {
         override def method: Method = Method.GET
         override def uri: Uri = uri"http://example.com/person"
         override def headers: immutable.Seq[Header] = Nil
+        override def withUnderlying(underlying: Any): ServerRequest = this
       }
     }
   }

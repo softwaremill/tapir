@@ -25,4 +25,6 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
   override def method: Method = Method(req.method.name.toUpperCase)
   override def uri: Uri = Uri.unsafeParse(req.uri.toString())
   override lazy val headers: Seq[Header] = req.headers.headers.map(h => Header(h.name.toString, h.value))
+
+  override def withUnderlying(underlying: Any): ServerRequest = new Http4sServerRequest(req = underlying.asInstanceOf[Request[F]])
 }
