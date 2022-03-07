@@ -11,40 +11,39 @@ import org.http4s.server.Router
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 object Vanilla {
-  def route(n: Int) = ("/path" + n.toString) -> {
+  val router = (nRoutes: Int) => Router((0 to nRoutes).map((n: Int) => ("/path" + n.toString) -> {
     val dsl = Http4sDsl[IO]
     import dsl._
     HttpRoutes.of[IO] {
       case GET -> Root / IntVar(id) =>
         Ok((id + n).toString)
     }
-  }
+  }):_*)
 }
 
 object Tapir {
-  def route(n: Int) = "/" -> {
+  val router = (nRoutes: Int) => Router("/" -> {
     Http4sServerInterpreter[IO]().toRoutes(
-      perfTests.Common.genTapirEndpoint(n).serverLogic(
-        id => IO(((id + n).toString).asRight[String])
-      )
+      (0 to nRoutes).map((n: Int) =>
+        perfTests.Common.genTapirEndpoint(n).serverLogic(
+          id => IO(((id + n).toString).asRight[String])
+        )
+      ).toList
     )
-  }
+  })
 }
 
 object Http4s {
-  def runServer(nRoutes: Int, route: Int => (String, HttpRoutes[IO])): IO[ExitCode] = {
+  def runServer(router: HttpRoutes[IO]): IO[ExitCode] = {
     BlazeServerBuilder[IO]
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router((0 to nRoutes).map(route):_*).orNotFound)
+      .withHttpApp(router.orNotFound)
       .resource
-      .use(_ => {
-             perfTests.Common.blockServer()
-             IO.pure(ExitCode.Success)
-           })
+      .use(_ => {perfTests.Common.blockServer(); IO.pure(ExitCode.Success)})
   }
 }
 
-object TapirMultiServer   extends App {Http4s.runServer( 128,  Tapir.route  ).unsafeRunSync()}
-object TapirServer        extends App {Http4s.runServer( 1,    Tapir.route  ).unsafeRunSync()}
-object VanillaMultiServer extends App {Http4s.runServer( 128,  Vanilla.route).unsafeRunSync()}
-object VanillaServer      extends App {Http4s.runServer( 1,    Vanilla.route).unsafeRunSync()}
+object TapirServer        extends App {Http4s.runServer(Tapir.router(1)).unsafeRunSync()}
+object TapirMultiServer   extends App {Http4s.runServer(Tapir.router(128)).unsafeRunSync()}
+object VanillaServer      extends App {Http4s.runServer(Vanilla.router(1)).unsafeRunSync()}
+object VanillaMultiServer extends App {Http4s.runServer(Vanilla.router(128)).unsafeRunSync()}
