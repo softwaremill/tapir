@@ -653,26 +653,41 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
 // apispec
 
 lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
-  .settings(commonJvmSettings)
+  .settings(commonSettings)
   .settings(
     name := "tapir-apispec-model"
   )
   .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
 
 // openapi
 
 lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-model"))
-  .settings(commonJvmSettings)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-model"
   )
   .settings(libraryDependencies += scalaTest.value % Test)
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(apispecModel)
 
 lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
-  .settings(commonJvmSettings)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
@@ -681,7 +696,14 @@ lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-c
     ),
     name := "tapir-openapi-circe"
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe-yaml"))
@@ -733,19 +755,34 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .settings(
     name := "tapir-apispec-docs"
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, tests % Test, apispecModel)
 
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
-  .settings(commonJvmSettings)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-docs"
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(openapiModel, core, apispecDocs, tests % Test)
 
-lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
-lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
+lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(openapiCirceYaml.jvm(scala3) % Test)
+lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13), openapiCirceYaml.jvm(scala2_13) % Test)
+lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12), openapiCirceYaml.jvm(scala2_12) % Test)
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
@@ -781,9 +818,16 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .dependsOn(swaggerUi, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
 
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
-  .settings(commonJvmSettings)
+  .settings(commonSettings)
   .settings(name := "tapir-redoc")
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core)
 
 lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"))
