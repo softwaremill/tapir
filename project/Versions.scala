@@ -39,4 +39,5 @@ object Versions {
   val armeria = "1.14.1"
   val scalaJava8Compat = "1.0.2"
   val fs2 = "3.2.5"
+  val decline = "2.2.0"
 }
