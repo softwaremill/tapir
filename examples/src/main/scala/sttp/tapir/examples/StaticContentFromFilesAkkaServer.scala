@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path, StandardOpenOption}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
-object StaticContentAkkaServer extends App {
+object StaticContentFromFilesAkkaServer extends App {
   val content = "f1 content"
   val exampleDirectory: Path = Files.createTempDirectory("akka-static-example")
   Files.write(exampleDirectory.resolve("f1"), content.getBytes, StandardOpenOption.CREATE_NEW)
