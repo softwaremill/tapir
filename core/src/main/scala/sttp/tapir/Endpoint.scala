@@ -303,8 +303,13 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
-  /** Shortened information about the endpoint, including the method (if any) and path, e.g. `POST /books/add` */
-  def showShort: String = s"${method.map(_.toString()).getOrElse("*")} ${renderPathTemplate(renderQueryParam = None)}"
+  /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
+    * string representation of the method (if any) and path, e.g. `POST /books/add`
+    */
+  def showShort: String = info.name match {
+    case None       => s"${method.map(_.toString()).getOrElse("*")} ${renderPathTemplate(renderQueryParam = None)}"
+    case Some(name) => s"[$name]"
+  }
 
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
     * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`

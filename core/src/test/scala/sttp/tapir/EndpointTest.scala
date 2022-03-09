@@ -242,7 +242,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.in("p1" / "p2") -> "* /p1/p2",
     endpoint.get.in("p1" / "p2") -> "GET /p1/p2",
     endpoint.post -> "POST *",
-    endpoint.get.in("p1").in(paths) -> "GET /p1/*"
+    endpoint.get.in("p1").in(paths) -> "GET /p1/*",
+    endpoint.get.in("p1" / "p2").name("my endpoint") -> "[my endpoint]"
   )
 
   for ((testEndpoint, expectedResult) <- showShortTestData) {
