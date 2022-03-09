@@ -4,7 +4,7 @@ import sttp.model.MediaType
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 
-import java.io.{FileNotFoundException, InputStream}
+import java.io.{File, FileNotFoundException, InputStream}
 import java.net.URL
 import java.time.Instant
 
@@ -49,6 +49,8 @@ object Resources {
   ): Option[(URL, MediaType, Option[String])] = {
     val name = (resourcePrefix ++ path).mkString("/")
 
+    println(s"$name ${classLoader.getResource(name)} ${classLoader.getResource(name + "/")}")
+
     val result = (if (useGzippedIfAvailable) Option(classLoader.getResource(name + ".gz")).map((_, MediaType.ApplicationGzip, Some("gzip")))
                   else None)
       .orElse(Option(classLoader.getResource(name)).map((_, contentTypeFromName(name), None)))
@@ -56,9 +58,18 @@ object Resources {
         case None              => None
         case Some(defaultPath) => resolveURL(classLoader, resourcePrefix, defaultPath, None, useGzippedIfAvailable)
       })
+      // making sure that the resulting path contains the original requested path
+      .filter(_._1.toURI.toString.contains(resourcePrefix.mkString("/")))
 
-    // making sure that the resulting path contains the original requested path
-    if (!result.forall(_._1.toURI.toString.contains(resourcePrefix.mkString("/")))) None else result
+    if (result.exists(r => isDirectory(classLoader, name, r._1)))
+      resolveURL(classLoader, resourcePrefix, path :+ "index.html", default, useGzippedIfAvailable)
+    else result
+  }
+
+  private def isDirectory(classLoader: ClassLoader, name: String, nameResource: URL): Boolean = {
+    // https://stackoverflow.com/questions/20105554/is-there-a-way-to-tell-if-a-classpath-resource-is-a-file-or-a-directory
+    if (nameResource.getProtocol == "file") new File(nameResource.getPath).isDirectory
+    else classLoader.getResource(name + "/") != null
   }
 
   private def readResource[F[_]](
