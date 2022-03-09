@@ -303,10 +303,12 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
-  /** Shortened information about the endpoint, including the method (if any) and path, e.g. `GET /abc/xyz` */
+  /** Shortened information about the endpoint, including the method (if any) and path, e.g. `POST /books/add` */
   def showShort: String = s"${method.map(_.toString()).getOrElse("*")} ${renderPathTemplate(renderQueryParam = None)}"
 
-  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
+  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
+    * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
+    */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
@@ -321,7 +323,8 @@ trait EndpointMetaOps {
   }
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined, including mapping
-    * information.
+    * information. E.g.: `Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout:
+    * {body as text/plain (UTF-8)}, out: -)`
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
