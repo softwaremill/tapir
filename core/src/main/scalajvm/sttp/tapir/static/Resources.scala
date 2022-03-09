@@ -49,8 +49,6 @@ object Resources {
   ): Option[(URL, MediaType, Option[String])] = {
     val name = (resourcePrefix ++ path).mkString("/")
 
-    println(s"$name ${classLoader.getResource(name)} ${classLoader.getResource(name + "/")}")
-
     val result = (if (useGzippedIfAvailable) Option(classLoader.getResource(name + ".gz")).map((_, MediaType.ApplicationGzip, Some("gzip")))
                   else None)
       .orElse(Option(classLoader.getResource(name)).map((_, contentTypeFromName(name), None)))
