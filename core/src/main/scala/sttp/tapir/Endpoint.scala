@@ -303,6 +303,9 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
+  /** Shortened information about the endpoint, including the method (if any) and path, e.g. `GET /abc/xyz` */
+  def showShort: String = s"${method.map(_.toString()).getOrElse("*")} ${renderPathTemplate(renderQueryParam = None)}"
+
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))

@@ -24,7 +24,9 @@ object RenderPathTemplate {
       .map(_.mkString("&"))
       .getOrElse("")
 
-    "/" + pathComponents.mkString("/") + (if (queryComponents.isEmpty) "" else "?" + queryComponents)
+    val path = if (pathComponents.isEmpty) "*" else "/" + pathComponents.mkString("/")
+
+    path + (if (queryComponents.isEmpty) "" else "?" + queryComponents)
   }
 
   private def renderedPathComponents(
@@ -34,6 +36,7 @@ object RenderPathTemplate {
     inputs.foldLeft((Vector.empty[String], 1)) { case ((acc, index), component) =>
       component match {
         case p: EndpointInput.PathCapture[_]  => (acc :+ pathParamRendering(index, p), index + 1)
+        case p: EndpointInput.PathsCapture[_] => (acc :+ "*", index)
         case EndpointInput.FixedPath(s, _, _) => (acc :+ UrlencodedData.encodePathSegment(s), index)
         case _                                => (acc, index)
       }
@@ -47,8 +50,9 @@ object RenderPathTemplate {
     inputs
       .foldLeft((Vector.empty[String], pathParamCount)) { case ((acc, index), component) =>
         component match {
-          case q: EndpointInput.Query[_] => (acc :+ queryParamRendering(index, q), index + 1)
-          case _                         => (acc, index)
+          case q: EndpointInput.Query[_]       => (acc :+ queryParamRendering(index, q), index + 1)
+          case q: EndpointInput.QueryParams[_] => (acc :+ "*", index)
+          case _                               => (acc, index)
         }
       }
       ._1

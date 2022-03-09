@@ -43,7 +43,7 @@ case class DefaultServerLog[F[_]](
   override def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit] =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
-        s"Request not handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
+        s"Request not handled by: ${ctx.endpoint.showShort}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
         exception(ctx)
       )
     else noLog
@@ -51,24 +51,24 @@ case class DefaultServerLog[F[_]](
   override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
+        s"Request handled by: ${ctx.endpoint.showShort}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
         exception(ctx)
       )
     else noLog
 
   override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; security logic error response: $response", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.showShort}; security logic error response: $response", None)
     else noLog
 
   override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_]): F[Unit] =
     if (logWhenHandled)
-      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; responding with code: ${response.code.code}", None)
+      doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.showShort}; responding with code: ${response.code.code}", None)
     else noLog
 
   override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit] =
     if (logLogicExceptions)
-      doLogExceptions(s"Exception when handling request $request by: ${e.show}", ex)
+      doLogExceptions(s"Exception when handling request $request by: ${e.showShort}", ex)
     else noLog
 
   private def exception(ctx: DecodeFailureContext): Option[Throwable] =
