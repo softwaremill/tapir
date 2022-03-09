@@ -346,12 +346,21 @@ trait EndpointMetaOps {
     *
     * @param includeAuth
     *   Should authentication inputs be included in the result.
+    * @param showNoPathAs
+    *   How to show the path if the endpoint does not define any path inputs.
+    * @param showPathsAs
+    *   How to show [[Tapir.paths]] inputs (if at all), which capture multiple paths segments
+    * @param showQueryParamsAs
+    *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
   def renderPathTemplate(
       renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
       renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
-  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+      includeAuth: Boolean = true,
+      showNoPathAs: String = "*",
+      showPathsAs: Option[String] = Some("*"),
+      showQueryParamsAs: Option[String] = Some("*")
+  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth, showNoPathAs, showPathsAs, showQueryParamsAs)
 
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
