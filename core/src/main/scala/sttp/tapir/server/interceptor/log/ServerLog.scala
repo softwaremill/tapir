@@ -10,24 +10,32 @@ import sttp.tapir.{AnyEndpoint, DecodeResult}
   */
 trait ServerLog[F[_]] {
 
+  /** The type of the per-request token that is generated when a request is started and passed to callbacks when the request is completed.
+    * E.g. `Unit` or a timestamp (`Long`).
+    */
+  type TOKEN
+
+  /** Invoked when the request has started to obtain the per-request token, such as the starting timestamp. */
+  def requestStarted: TOKEN
+
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, haven't provided a
     * response.
     */
-  def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit]
+  def decodeFailureNotHandled(ctx: DecodeFailureContext, token: TOKEN): F[Unit]
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response. */
-  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): F[Unit]
+  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_], token: TOKEN): F[Unit]
 
   /** Invoked when the security logic fails and returns an error. */
-  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_]): F[Unit]
+  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_], token: TOKEN): F[Unit]
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_]): F[Unit]
+  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_], token: TOKEN): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
-  def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit]
+  def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable, token: TOKEN): F[Unit]
 }
 
 case class DefaultServerLog[F[_]](
@@ -40,7 +48,8 @@ case class DefaultServerLog[F[_]](
     logLogicExceptions: Boolean = true,
     showEndpoint: AnyEndpoint => String = _.showShort,
     showRequest: ServerRequest => String = _.showShort,
-    showResponse: ServerResponseFromOutput[_] => String = _.showShort
+    showResponse: ServerResponseFromOutput[_] => String = _.showShort,
+    includeTiming: Boolean = true
 ) extends ServerLog[F] {
 
   def doLogWhenHandled(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogWhenHandled = f)
@@ -56,44 +65,52 @@ case class DefaultServerLog[F[_]](
 
   //
 
-  override def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit] =
+  override type TOKEN = Long
+
+  override def requestStarted: Long = if (includeTiming) now() else 0
+
+  override def decodeFailureNotHandled(ctx: DecodeFailureContext, token: Long): F[Unit] =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
-        s"Request: ${showRequest(ctx.request)}, not handled by: ${showEndpoint(ctx.endpoint)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
+        s"Request: ${showRequest(ctx.request)}, not handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
         exception(ctx)
       )
     else noLog
 
-  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): F[Unit] =
+  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_], token: Long): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(
             ctx.endpoint
-          )}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; response: ${showResponse(response)}",
+          )}${took(token)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; response: ${showResponse(response)}",
         exception(ctx)
       )
     else noLog
 
-  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_]): F[Unit] =
+  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_], token: Long): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}; security logic error response: ${showResponse(response)}",
+        s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; security logic error response: ${showResponse(response)}",
         None
       )
     else noLog
 
-  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_]): F[Unit] =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_], token: Long): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}; response: ${showResponse(response)}",
+        s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; response: ${showResponse(response)}",
         None
       )
     else noLog
 
-  override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit] =
+  override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable, token: Long): F[Unit] =
     if (logLogicExceptions)
-      doLogExceptions(s"Exception when handling request: ${showRequest(request)}, by: ${showEndpoint(e)}", ex)
+      doLogExceptions(s"Exception when handling request: ${showRequest(request)}, by: ${showEndpoint(e)}${took(token)}", ex)
     else noLog
+
+  private def now() = System.currentTimeMillis()
+
+  private def took(token: Long): String = if (includeTiming) s", took: ${now() - token}ms" else ""
 
   private def exception(ctx: DecodeFailureContext): Option[Throwable] =
     ctx.failure match {
