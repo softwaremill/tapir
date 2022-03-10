@@ -15,7 +15,7 @@ jobs:
       matrix:
         target-platform: [ "JVM", "JS" ]
     env:
-      JAVA_OPTS: "-Xmx3000M -Xss2M -Dsbt.task.timings=false"
+      JAVA_OPTS: "-Xmx3300M -Xss2M -Dsbt.task.timings=false"
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -67,7 +67,7 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-20.04
     env:
-      JAVA_OPTS: "-Xmx3000M -Xss2M"
+      JAVA_OPTS: "-Xmx3300M -Xss2M"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -101,7 +101,7 @@ jobs:
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-20.04
     env:
-      JAVA_OPTS: "-Xmx3000M -Xss2M"
+      JAVA_OPTS: "-Xmx3300M -Xss2M"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
