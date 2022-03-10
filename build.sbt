@@ -357,7 +357,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.6.1" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.7.6" % "test",
       "io.gatling" % "gatling-test-framework" % "3.6.1" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
@@ -1393,7 +1393,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
-  // other
+// other
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
