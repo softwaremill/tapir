@@ -1,22 +1,19 @@
 package sttp.tapir.model
 
 import sttp.model.{Header, Headers, ResponseMetadata, StatusCode}
+import sttp.tapir.server.ValuedEndpointOutput
 
 import scala.collection.immutable.Seq
 
-trait ServerResponse[+B] extends ResponseMetadata {
-  def code: StatusCode
-  def headers: Seq[Header]
-  def body: Option[B]
-
+/** @param source
+  *   The output, from which this response has been created. Might be [[ValuedEndpointOutput.Empty]] if no output is available.
+  */
+case class ServerResponse[+B](code: StatusCode, headers: Seq[Header], body: Option[B], source: Option[ValuedEndpointOutput[_]])
+    extends ResponseMetadata {
   override def statusText: String = ""
   override def toString: String = s"ServerResponse($code,${Headers.toStringSafe(headers)})"
 }
 
 object ServerResponse {
-  def notFound[B]: ServerResponse[B] = new ServerResponse[B] {
-    override def code: StatusCode = StatusCode.NotFound
-    override def headers: Seq[Header] = Nil
-    override def body: Option[B] = None
-  }
+  def notFound[B]: ServerResponse[B] = ServerResponse[B](StatusCode.NotFound, Nil, None, None)
 }

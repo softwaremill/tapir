@@ -7,8 +7,8 @@ import com.twitter.inject.Logging
 import com.twitter.util.Future
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.{ServerEndpoint, ValuedEndpointOutput}
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter._
 import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerInterpreter, FinatraServerOptions}
@@ -22,15 +22,12 @@ import sttp.tapir.server.interceptor.{
   RequestInterceptor,
   RequestResult,
   Responder,
-  SecurityFailureContext,
-  ServerResponseFromOutput,
-  ValuedEndpointOutput
+  SecurityFailureContext
 }
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.{Endpoint, TapirFile}
 
 import scala.util.Try
-
 import sttp.tapir.server.finatra.cats.conversions._
 
 trait FinatraCatsServerInterpreter[F[_]] extends Logging {
@@ -112,7 +109,7 @@ object FinatraCatsServerInterpreter {
 
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[G, U, I]
-      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponseFromOutput[B]] = {
+      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponse[B]] = {
         fToG(
           original.onDecodeSuccess(
             ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[_, U, I, _, _, _, F]])
@@ -122,7 +119,7 @@ object FinatraCatsServerInterpreter {
 
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[G, A]
-      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponseFromOutput[B]] =
+      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponse[B]] =
         fToG(
           original.onSecurityFailure(
             ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[A, _, _, _, _, _, F]])
@@ -131,14 +128,14 @@ object FinatraCatsServerInterpreter {
 
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[Option[ServerResponseFromOutput[B]]] =
+      )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[Option[ServerResponse[B]]] =
         fToG(original.onDecodeFailure(ctx))
     }
   }
 
   private def convertResponder[F[_]: Async, B](original: Responder[Future, B]): Responder[F, B] =
     new Responder[F, B] {
-      override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]] =
+      override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] =
         original(request, output).asF
     }
 

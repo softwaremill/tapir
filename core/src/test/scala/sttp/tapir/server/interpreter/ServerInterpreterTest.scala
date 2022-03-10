@@ -8,7 +8,8 @@ import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
@@ -120,7 +121,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val response = interpreter(testRequest)
 
     // then
-    response should matchPattern { case Response(ServerResponseFromOutput(customStatusCode, _, Some(customBody), _)) => }
+    response should matchPattern { case Response(ServerResponse(customStatusCode, _, Some(customBody), _)) => }
   }
 
   class AddToTrailInterceptor(addCallTrail: String => Unit, prefix: String) extends EndpointInterceptor[Id] {
@@ -128,7 +129,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
       new EndpointHandler[Id, B] {
         override def onDecodeSuccess[U, I](
             ctx: DecodeSuccessContext[Id, U, I]
-        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponseFromOutput[B]] = {
+        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponse[B]] = {
           addCallTrail(s"$prefix success")
           endpointHandler.onDecodeSuccess(ctx)(idMonadError, bodyListener)
         }
@@ -136,14 +137,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Id, A])(implicit
             monad: MonadError[Id],
             bodyListener: BodyListener[Id, B]
-        ): Id[ServerResponseFromOutput[B]] = {
+        ): Id[ServerResponse[B]] = {
           addCallTrail(s"$prefix security failure")
           endpointHandler.onSecurityFailure(ctx)(idMonadError, bodyListener)
         }
 
         override def onDecodeFailure(
             ctx: DecodeFailureContext
-        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponseFromOutput[B]]] = {
+        )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponse[B]]] = {
           addCallTrail(s"$prefix failure")
           endpointHandler.onDecodeFailure(ctx)(idMonadError, bodyListener)
         }

@@ -2,7 +2,8 @@ package sttp.tapir.server.interceptor
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.ValuedEndpointOutput
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
   *
@@ -75,5 +76,5 @@ object EndpointInterceptor {
 }
 
 trait Responder[F[_], B] {
-  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]]
+  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]]
 }

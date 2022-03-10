@@ -1,6 +1,7 @@
 package sttp.tapir.server.interceptor
 
 import sttp.monad.MonadError
+import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interpreter.BodyListener
 
 /** Handles the result of decoding a request using an endpoint's inputs. */
@@ -18,7 +19,7 @@ trait EndpointHandler[F[_], B] {
     */
   def onDecodeSuccess[U, I](
       ctx: DecodeSuccessContext[F, U, I]
-  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]]
+  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]]
 
   /** Called when the security inputs have been successfully decoded into data, but the security logic failed (either with an error result
     * or an exception). This is captured by the `ctx` parameter.
@@ -30,7 +31,7 @@ trait EndpointHandler[F[_], B] {
     */
   def onSecurityFailure[A](
       ctx: SecurityFailureContext[F, A]
-  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]]
+  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]]
 
   /** Called when the given request hasn't been successfully decoded, because of the given failure on the given input. This is captured by
     * the `ctx` parameter.
@@ -40,5 +41,5 @@ trait EndpointHandler[F[_], B] {
     */
   def onDecodeFailure(
       ctx: DecodeFailureContext
-  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]]
+  )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]]
 }
