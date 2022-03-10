@@ -1,11 +1,11 @@
 package sttp.tapir.server.akkahttp
 
 import akka.event.LoggingAdapter
-import com.sun.org.slf4j.internal.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.{Defaults, TapirFile}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Future, blocking}
 
