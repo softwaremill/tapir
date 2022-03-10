@@ -38,7 +38,7 @@ object MetricLabels {
   /** Labels request by path and method, response by status code */
   lazy val Default: MetricLabels = MetricLabels(
     forRequest = Seq(
-      "path" -> { case (ep, _) => ep.renderPathTemplate(renderQueryParam = None) },
+      "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) },
       "method" -> { case (_, req) => req.method.method }
     ),
     forResponse = Seq(

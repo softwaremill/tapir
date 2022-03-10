@@ -6,7 +6,7 @@ import com.monovore.decline.effect.CommandIOApp
 
 object Main
     extends CommandIOApp(
-      BuildInfo.name,
+      BuildInfo.nam[e,
       "Tapir Command Line Tools",
       true,
       version = BuildInfo.version

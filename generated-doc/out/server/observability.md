@@ -37,7 +37,7 @@ import sttp.tapir.metrics.MetricLabels
 
 val labels = MetricLabels(
   forRequest = Seq(
-    "path" -> { case (ep, _) => ep.renderPathTemplate() },
+    "path" -> { case (ep, _) => ep.showPathTemplate() },
     "protocol" -> { case (_, req) => req.protocol }
   ),
   forResponse = Seq()
@@ -106,7 +106,7 @@ val responsesTotal = Metric[Future, Counter](
       EndpointMetric()
         .onResponse { (ep, res) =>
           Future.successful {
-            val path = ep.renderPathTemplate()
+            val path = ep.showPathTemplate()
             val method = req.method.method
             val status = res.code.toString()
             counter.labels(path, method, status).inc()

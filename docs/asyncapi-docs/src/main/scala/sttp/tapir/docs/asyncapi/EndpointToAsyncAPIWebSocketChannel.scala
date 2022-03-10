@@ -37,7 +37,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       DocsExtensions.fromIterable(e.info.docsExtensions)
     )
 
-    (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
+    (e.showPathTemplate(showQueryParam = None, includeAuth = false), channelItem)
   }
 
   private def addMetaDataFromInfo(
