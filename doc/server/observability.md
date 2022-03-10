@@ -107,7 +107,7 @@ val responsesTotal = Metric[Future, Counter](
         .onResponse { (ep, res) =>
           Future.successful {
             val path = ep.showPathTemplate()
-            val method = req.method.method**
+            val method = req.method.method
             val status = res.code.toString()
             counter.labels(path, method, status).inc()
           }
