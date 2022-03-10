@@ -5,7 +5,7 @@ import sttp.model.Method
 import sttp.monad.syntax._
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
+import sttp.tapir.ShowPathTemplate.{ShowPathParam, ShowQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
@@ -327,7 +327,7 @@ trait EndpointMetaOps {
   /** Equivalent to `.toString`, shows the whole case class structure. */
   def showRaw: String = toString
 
-  /** Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
+  /** Shows endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
     * {{{
     * endpoint.in("p1" / path[String] / query[String]("par2"))
     * }}}
@@ -336,11 +336,11 @@ trait EndpointMetaOps {
     * @param includeAuth
     *   Should authentication inputs be included in the result.
     */
-  def renderPathTemplate(
-      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
+  def showPathTemplate(
+      showPathParam: ShowPathParam = ShowPathTemplate.Defaults.path,
+      showQueryParam: Option[ShowQueryParam] = Some(ShowPathTemplate.Defaults.query),
       includeAuth: Boolean = true
-  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+  ): String = ShowPathTemplate(this)(showPathParam, showQueryParam, includeAuth)
 
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
