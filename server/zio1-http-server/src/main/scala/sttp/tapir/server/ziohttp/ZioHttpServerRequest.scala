@@ -20,7 +20,8 @@ class ZioHttpServerRequest(req: Request) extends ServerRequest {
   override def underlying: Any = req
   override lazy val pathSegments: List[String] = req.url.path.toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
-  override lazy val method: SttpMethod = SttpMethod(req.method.asHttpMethod.name().toUpperCase)
+  override lazy val method: SttpMethod = SttpMethod(req.method.toJava.name().toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.toString)
-  override lazy val headers: Seq[SttpHeader] = req.getHeaders.toList.map { case (k, v) => SttpHeader(k, v) }
+  override lazy val headers: Seq[SttpHeader] = req.headers.toList.map { case (k, v) => SttpHeader(k, v) }
+  override def withUnderlying(underlying: Any): ServerRequest = new ZioHttpServerRequest(req = underlying.asInstanceOf[Request])
 }

@@ -60,7 +60,7 @@ trait SchemaMagnoliaDerivation {
     annotations.foldLeft(schema) {
       case (schema, ann: Schema.annotations.description)    => schema.description(ann.text)
       case (schema, ann: Schema.annotations.encodedExample) => schema.encodedExample(ann.example)
-      case (schema, ann: Schema.annotations.default[X])     => schema.default(ann.default)
+      case (schema, ann: Schema.annotations.default[X])     => schema.default(ann.default, ann.encoded)
       case (schema, ann: Schema.annotations.validate[X])    => schema.validate(ann.v)
       case (schema, ann: Schema.annotations.format)         => schema.format(ann.format)
       case (schema, _: Schema.annotations.deprecated)       => schema.deprecated(true)
@@ -76,7 +76,14 @@ trait SchemaMagnoliaDerivation {
           .map(s => subtypeNameToSchemaName(s) -> s.typeclass.asInstanceOf[Typeclass[T]])
           .toListMap
       val baseCoproduct =
-        SCoproduct(subtypesByName.values.toList, None)((t: T) => ctx.split(t) { v => subtypesByName.get(subtypeNameToSchemaName(v)) })
+        SCoproduct(subtypesByName.values.toList, None)((t: T) =>
+          ctx.split(t) { v =>
+            for {
+              schema <- subtypesByName.get(subtypeNameToSchemaName(v))
+              value <- v.cast.lift(t)
+            } yield SchemaWithValue(schema, value)
+          }
+        )
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) =>
           val discriminatorMapping: Map[String, SRef[_]] =

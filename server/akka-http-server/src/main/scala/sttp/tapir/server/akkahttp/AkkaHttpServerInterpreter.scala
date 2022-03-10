@@ -39,6 +39,7 @@ trait AkkaHttpServerInterpreter {
 
         val interpreter = new ServerInterpreter(
           ses,
+          new AkkaRequestBody(akkaHttpServerOptions),
           new AkkaToResponseBody,
           akkaHttpServerOptions.interceptors,
           akkaHttpServerOptions.deleteFile
@@ -46,7 +47,7 @@ trait AkkaHttpServerInterpreter {
 
         extractRequestContext { ctx =>
           val serverRequest = new AkkaServerRequest(ctx)
-          onSuccess(interpreter(serverRequest, new AkkaRequestBody(ctx, serverRequest, akkaHttpServerOptions))) {
+          onSuccess(interpreter(serverRequest)) {
             case RequestResult.Failure(_)         => reject
             case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)
           }

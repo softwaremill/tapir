@@ -10,7 +10,7 @@ import zio.{Task, ZIO}
 import org.scalatest.matchers.should.Matchers._
 
 class ZioHttpCompositionTest(
-    createServerTest: CreateServerTest[Task, Any, Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
+    createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
 ) {
   import createServerTest._
 
@@ -21,7 +21,7 @@ class ZioHttpCompositionTest(
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
         val route1: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
-        val route2: RHttpApp[Any] = Http.collect { case Method.GET -> Root / "p2" =>
+        val route2: RHttpApp[Any] = Http.collect { case Method.GET -> !! / "p2" =>
           zhttp.http.Response.ok
         }
         val route3: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep3)

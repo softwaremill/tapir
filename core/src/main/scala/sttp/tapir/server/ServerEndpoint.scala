@@ -16,32 +16,34 @@ import scala.reflect.ClassTag
   */
 abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with EndpointMetaOps { outer =>
 
-  /** "Auth": Security input parameter types. */
-  type A
+  /** Security input parameter types (abbreviated as `A`). */
+  type SECURITY_INPUT
 
-  /** "User": The type of the value returned by the security logic. */
-  type U
+  /** The type of the value returned by the security logic, e.g. a user (abbreviated as `U`). */
+  type PRINCIPAL
 
-  /** Input parameter types. */
-  type I
+  /** Input parameter types (abbreviated as `I`). */
+  type INPUT
 
-  /** Error output parameter types. */
-  type E
+  /** Error output parameter types (abbreviated as `E`). */
+  type ERROR_OUTPUT
 
-  /** Output parameter types. */
-  type O
+  /** Output parameter types (abbreviated as `O`). */
+  type OUTPUT
 
-  def endpoint: Endpoint[A, I, E, O, R]
-  def securityLogic: MonadError[F] => A => F[Either[E, U]]
-  def logic: MonadError[F] => U => I => F[Either[E, O]]
+  def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
+  def securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]]
+  def logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]]
 
-  override type ThisType[-_R] = ServerEndpoint.Full[A, U, I, E, O, _R, F]
-  override def securityInput: EndpointInput[A] = endpoint.securityInput
-  override def input: EndpointInput[I] = endpoint.input
-  override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
-  override def output: EndpointOutput[O] = endpoint.output
+  override type ThisType[-_R] = ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, _R, F]
+  override def securityInput: EndpointInput[SECURITY_INPUT] = endpoint.securityInput
+  override def input: EndpointInput[INPUT] = endpoint.input
+  override def errorOutput: EndpointOutput[ERROR_OUTPUT] = endpoint.errorOutput
+  override def output: EndpointOutput[OUTPUT] = endpoint.output
   override def info: EndpointInfo = endpoint.info
-  override private[tapir] def withInfo(info: EndpointInfo): ServerEndpoint.Full[A, U, I, E, O, R, F] =
+  override private[tapir] def withInfo(
+      info: EndpointInfo
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, F] =
     ServerEndpoint(endpoint.info(info), securityLogic, logic)
 
   override protected def showType: String = "ServerEndpoint"
@@ -87,27 +89,28 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
       additionalSecurityLogic: MonadError[F] => A2 => F[Either[E2, Unit]]
   ): ServerEndpoint[R, F] =
     new ServerEndpoint[R, F] {
-      override type A = (A2, outer.A)
-      override type U = outer.U
-      override type I = outer.I
-      override type E = Any
-      override type O = outer.O
+      override type SECURITY_INPUT = (A2, outer.SECURITY_INPUT)
+      override type PRINCIPAL = outer.PRINCIPAL
+      override type INPUT = outer.INPUT
+      override type ERROR_OUTPUT = Any
+      override type OUTPUT = outer.OUTPUT
 
-      override def endpoint: Endpoint[A, I, E, O, R] =
+      override def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] =
         outer.endpoint
           .prependSecurityIn(additionalSecurityInput)
           .errorOutVariantsFromCurrent[Any](current => List(oneOfVariant[E2](securityErrorOutput), oneOfDefaultVariant(current)))
 
-      override def securityLogic: MonadError[F] => A => F[Either[E, U]] = implicit m =>
+      override def securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]] = implicit m =>
         a =>
           additionalSecurityLogic(m)(a._1).flatMap {
-            case Left(e2)  => (Left(e2): Either[E, U]).unit
-            case Right(()) => outer.securityLogic(m)(a._2).asInstanceOf[F[Either[E, U]]] // avoiding .map(identity)
+            case Left(e2)  => (Left(e2): Either[ERROR_OUTPUT, PRINCIPAL]).unit
+            case Right(()) => outer.securityLogic(m)(a._2).asInstanceOf[F[Either[ERROR_OUTPUT, PRINCIPAL]]] // avoiding .map(identity)
           }
 
       // we're widening the `E` type, the logic still will always return `outer.E`, so this cast is safe
       // instead, we could have written: `implicit m => u => i => outer.logic(m)(u)(i).map(identity)`
-      override def logic: MonadError[F] => U => I => F[Either[E, O]] = outer.logic.asInstanceOf[MonadError[F] => U => I => F[Either[E, O]]]
+      override def logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]] =
+        outer.logic.asInstanceOf[MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]]]
     }
 }
 
@@ -118,44 +121,44 @@ object ServerEndpoint {
   /** The full type of a server endpoint, capturing the types of all input/output parameters. Most of the time, the simpler
     * `ServerEndpoint[R, F]` can be used instead.
     */
-  type Full[_A, _U, _I, _E, _O, -R, F[_]] = ServerEndpoint[R, F] {
-    type A = _A
-    type U = _U
-    type I = _I
-    type E = _E
-    type O = _O
+  type Full[_SECURITY_INPUT, _PRINCIPAL, _INPUT, _ERROR_OUTPUT, _OUTPUT, -R, F[_]] = ServerEndpoint[R, F] {
+    type SECURITY_INPUT = _SECURITY_INPUT
+    type PRINCIPAL = _PRINCIPAL
+    type INPUT = _INPUT
+    type ERROR_OUTPUT = _ERROR_OUTPUT
+    type OUTPUT = _OUTPUT
   }
 
   /** Create a public server endpoint, with an empty (no-op) security logic, which always succeeds. */
-  def public[I, E, O, R, F[_]](
-      endpoint: Endpoint[Unit, I, E, O, R],
-      logic: MonadError[F] => I => F[Either[E, O]]
-  ): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
+  def public[INPUT, ERROR_OUTPUT, OUTPUT, R, F[_]](
+      endpoint: Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, R],
+      logic: MonadError[F] => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]]
+  ): ServerEndpoint.Full[Unit, Unit, INPUT, ERROR_OUTPUT, OUTPUT, R, F] =
     ServerEndpoint(endpoint, emptySecurityLogic, m => _ => logic(m))
 
   /** Create a server endpoint, with the given security and main logic functions, which match the shape defined by `endpoint`. */
-  def apply[A, U, I, E, O, R, F[_]](
-      endpoint: Endpoint[A, I, E, O, R],
-      securityLogic: MonadError[F] => A => F[Either[E, U]],
-      logic: MonadError[F] => U => I => F[Either[E, O]]
-  ): ServerEndpoint.Full[A, U, I, E, O, R, F] = {
-    type _A = A
-    type _U = U
-    type _I = I
-    type _E = E
-    type _O = O
+  def apply[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, F[_]](
+      endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R],
+      securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]],
+      logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]]
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, F] = {
+    type _SECURITY_INPUT = SECURITY_INPUT
+    type _PRINCIPAL = PRINCIPAL
+    type _INPUT = INPUT
+    type _ERROR_OUTPUT = ERROR_OUTPUT
+    type _OUTPUT = OUTPUT
     val e = endpoint
     val s = securityLogic
     val l = logic
     new ServerEndpoint[R, F] {
-      override type A = _A
-      override type U = _U
-      override type I = _I
-      override type E = _E
-      override type O = _O
-      override def endpoint: Endpoint[A, I, E, O, R] = e
-      override def securityLogic: MonadError[F] => A => F[Either[E, U]] = s
-      override def logic: MonadError[F] => U => I => F[Either[E, O]] = l
+      override type SECURITY_INPUT = _SECURITY_INPUT
+      override type PRINCIPAL = _PRINCIPAL
+      override type INPUT = _INPUT
+      override type ERROR_OUTPUT = _ERROR_OUTPUT
+      override type OUTPUT = _OUTPUT
+      override def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] = e
+      override def securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]] = s
+      override def logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]] = l
     }
   }
 }

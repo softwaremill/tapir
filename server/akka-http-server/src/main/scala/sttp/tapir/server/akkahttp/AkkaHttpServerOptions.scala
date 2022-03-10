@@ -1,9 +1,9 @@
 package sttp.tapir.server.akkahttp
 
-import akka.event.LoggingAdapter
+import akka.event.{LoggingAdapter, NoLogging}
 import akka.http.scaladsl.server.RequestContext
 import sttp.monad.{FutureMonad, MonadError}
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.{AnyEndpoint, Defaults, TapirFile}
@@ -32,7 +32,10 @@ class AkkaHttpServerLog extends ServerLog[Future] {
     )
   }
 
-  private def loggerFrom(request: ServerRequest): LoggingAdapter = request.underlying.asInstanceOf[RequestContext].log
+  private def loggerFrom(request: ServerRequest): LoggingAdapter = request.underlying match {
+    case rc: RequestContext => rc.log
+    case _                  => NoLogging
+  }
   private def loggerFrom(ctx: DecodeFailureContext): LoggingAdapter = loggerFrom(ctx.request)
 
   private def debugLog(log: LoggingAdapter)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
@@ -51,17 +54,17 @@ class AkkaHttpServerLog extends ServerLog[Future] {
 
   override def decodeFailureHandled(
       ctx: DecodeFailureContext,
-      response: ServerResponse[_]
+      response: ServerResponseFromOutput[_]
   ): Future[Unit] = defaultServerLog(loggerFrom(ctx)).decodeFailureHandled(ctx, response)
 
   override def securityFailureHandled(
       ctx: SecurityFailureContext[Future, _],
-      response: ServerResponse[_]
+      response: ServerResponseFromOutput[_]
   ): Future[Unit] = defaultServerLog(loggerFrom(ctx.request)).securityFailureHandled(ctx, response)
 
   override def requestHandled(
       ctx: DecodeSuccessContext[Future, _, _],
-      response: ServerResponse[_]
+      response: ServerResponseFromOutput[_]
   ): Future[Unit] = defaultServerLog(loggerFrom(ctx.request)).requestHandled(ctx, response)
 
   override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): Future[Unit] =

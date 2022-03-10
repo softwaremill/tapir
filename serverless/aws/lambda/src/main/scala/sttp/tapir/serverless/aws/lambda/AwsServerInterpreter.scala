@@ -20,6 +20,7 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
     val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
       ses,
+      new AwsRequestBody[F](),
       new AwsToResponseBody(awsServerOptions),
       awsServerOptions.interceptors,
       deleteFile = _ => ().unit // no file support
@@ -28,7 +29,7 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
     { (request: AwsRequest) =>
       val serverRequest = new AwsServerRequest(request)
 
-      interpreter.apply(serverRequest, new AwsRequestBody[F](request)).map {
+      interpreter.apply(serverRequest).map {
         case RequestResult.Failure(_) =>
           AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
         case RequestResult.Response(res) =>

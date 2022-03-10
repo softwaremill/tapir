@@ -6,7 +6,7 @@ import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.{FileRange, _}
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.time.Instant
 
 /** Static content endpoints, including files and resources. */
@@ -17,7 +17,7 @@ trait TapirStaticContentEndpoints {
     paths.mapDecode(ps =>
       // a single path segment might contain / as well
       if (ps.exists(p => p == "" || p == "." || p == ".." || p.startsWith("../") || p.endsWith("/..") || p.contains("/../")))
-        DecodeResult.Error(ps.mkString("/"), new RuntimeException(s"Incorrect path: $ps"))
+        DecodeResult.Error(ps.mkString("/"), new RuntimeException(s"Incorrect path: ${ps.mkString("/")}"))
       else DecodeResult.Value(ps)
     )(identity)
 
@@ -158,28 +158,19 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
-    *
-    * @param fileFilter
-    *   file will exposed only if this function returns `true`.
     */
   def filesGetServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(
-      filesGetEndpoint(prefix),
-      (m: MonadError[F]) => Files.get(systemPath, Files.defaultEtag[F](_: File)(m), fileFilter)(m)
-    )
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(filesGetEndpoint(prefix), Files.get(systemPath, options))
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
-    *
-    * @param fileFilter
-    *   file will exposed only if this function returns `true`.
     */
   def filesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), (m: MonadError[F]) => Files.head(systemPath, fileFilter)(m))
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Files.head(systemPath, options))
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
@@ -189,14 +180,11 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
-    *
-    * @param fileFilter
-    *   file will exposed only if this function returns `true`.
     */
   def filesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
-  )(systemPath: String, fileFilter: List[String] => Boolean = _ => true): List[ServerEndpoint[Any, F]] =
-    List(filesHeadServerEndpoint(prefix)(systemPath, fileFilter), filesGetServerEndpoint(prefix)(systemPath, fileFilter))
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
+    List(filesHeadServerEndpoint(prefix)(systemPath, options), filesGetServerEndpoint(prefix)(systemPath, options))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
@@ -215,20 +203,15 @@ trait TapirStaticContentEndpoints {
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
-    *
-    * @param resourceFilter
-    *   resource will exposed only if this function returns `true`.
     */
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
-      useGzippedIfAvailable: Boolean = false,
-      resourceFilter: List[String] => Boolean = _ => true
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) =>
-        Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable, resourceFilter = resourceFilter)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
@@ -240,11 +223,11 @@ trait TapirStaticContentEndpoints {
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
-      useGzippedIfAvailable: Boolean = false
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(resourcesGetEndpoint(prefix)),
-      (m: MonadError[F]) => Resources(classLoader, resourcePath, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
     )
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =

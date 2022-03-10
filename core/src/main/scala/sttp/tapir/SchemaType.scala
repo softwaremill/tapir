@@ -104,8 +104,10 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(_ => Map.empty)
   }
 
+  case class SchemaWithValue[T](schema: Schema[T], value: T)
+
   case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
-      val subtypeSchema: T => Option[Schema[_]]
+      val subtypeSchema: T => Option[SchemaWithValue[_]]
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 

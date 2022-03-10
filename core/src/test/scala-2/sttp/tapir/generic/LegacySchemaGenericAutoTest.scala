@@ -1,14 +1,14 @@
 package sttp.tapir.generic
 
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType}
-
-import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
+import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
+import sttp.tapir.generic.auto._
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+
+import scala.concurrent.Future
 
 class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import sttp.tapir.generic.SchemaGenericAutoTest._
@@ -121,5 +121,4 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     removeValidators(implicitly[Schema[IList]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JList]]) shouldBe expectedJSchema
   }
-
 }

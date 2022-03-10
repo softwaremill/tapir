@@ -80,6 +80,7 @@ In some cases, codecs can be automatically derived:
 
 * for supported [json](json.md) libraries
 * for urlencoded and multipart [forms](forms.md)
+* for value classes (extending `AnyVal`)
 
 Automatic codec derivation usually requires other implicits, such as:
 

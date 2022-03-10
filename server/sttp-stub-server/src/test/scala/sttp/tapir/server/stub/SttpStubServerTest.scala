@@ -3,6 +3,7 @@ package sttp.tapir.server.stub
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.capabilities.Streams
 import sttp.client3._
 import sttp.client3.monad._
 import sttp.client3.testing.SttpBackendStub
@@ -12,8 +13,6 @@ import sttp.tapir._
 import sttp.tapir.client.sttp._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, Responder}
 
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
@@ -157,73 +156,50 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     response shouldBe Response(Left(()), StatusCode.BadRequest)
   }
 
-  it should "stub server endpoint" in {
+  trait TestStreams extends Streams[TestStreams] {
+    override type BinaryStream = Vector[Int]
+    override type Pipe[X, Y] = Nothing
+  }
+  object TestStreams extends TestStreams
+
+  it should "handle endpoints with stream input" in {
     // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("api" / "hello")
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "stream")
+      .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
       .out(stringBody)
-      .get
-      .serverLogic { _ => idMonad.unit(Right("hello")) }
+
+    val backend = SttpBackendStub[Identity, TestStreams](idMonad)
+      .whenRequestMatchesEndpoint(endpoint)
+      .thenSuccess("abc")
 
     // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint)
-      .whenAnyRequest
-      .thenRespondServerError()
+    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
+      .apply(Vector(1, 2, 3))
+      .send(backend)
 
     // then
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/unknown").send(backend).code shouldBe StatusCode.InternalServerError
+    response.body shouldBe Right("abc")
   }
 
-  it should "work with request bodies when interpreting endpoints" in {
+  it should "handle endpoints with stream output" in {
     // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("mirror")
-      .in(stringBody)
-      .out(stringBody)
-      .post
-      .serverLogic { in => idMonad.unit(Right(in)) }
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "stream")
+      .out(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
+
+    val backend = SttpBackendStub[Identity, TestStreams](idMonad)
+      .whenRequestMatchesEndpoint(endpoint)
+      .thenSuccess(Vector(1, 2, 3))
 
     // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint)
+    val response = sttp.client3.basicRequest
+      .get(uri"http://test.com/api/stream")
+      .response(asStreamAlwaysUnsafe(TestStreams))
+      .send(backend)
 
     // then
-    sttp.client3.basicRequest.post(uri"/mirror").body("hello").send(backend).body shouldBe Right("hello")
-  }
-
-  it should "stub server endpoint with interceptors" in {
-    // given
-    val endpoint: ServerEndpoint[Any, Identity] = sttp.tapir.endpoint
-      .in("api" / "hello")
-      .out(stringBody)
-      .get
-      .serverLogic { _ => idMonad.unit(Right("hello")) }
-
-    var x = 0
-
-    val interceptor: RequestInterceptor[Identity] = {
-      new RequestInterceptor[Identity] {
-        override def apply[B](
-            responder: Responder[Identity, B],
-            requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, B]
-        ): RequestHandler[Identity, B] = RequestHandler.from { (request, _: MonadError[Identity]) =>
-          x = 10
-          requestHandler(EndpointInterceptor.noop).apply(request)
-        }
-      }
-    }
-
-    // when
-    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesEndpointThenLogic(endpoint, List(interceptor))
-      .whenAnyRequest
-      .thenRespondServerError()
-
-    // then
-    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
-    x shouldBe 10
+    response.body shouldBe Vector(1, 2, 3)
   }
 }
 

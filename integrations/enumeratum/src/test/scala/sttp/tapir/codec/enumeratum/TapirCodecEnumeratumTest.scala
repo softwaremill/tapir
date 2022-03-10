@@ -6,7 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.Schema.SName
-import sttp.tapir.Schema.annotations.description
+import sttp.tapir.Schema.annotations.{default, description}
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
@@ -48,7 +48,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](implicitly[Schema[TestCharEnumEntry]].validator)
   }
 
-  private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]) = {
+  private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]): Unit = {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
@@ -62,7 +62,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 
   private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit
       enum: E
-  ) = {
+  ): Unit = {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
@@ -85,20 +85,24 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     testValueEnumPlainCodec[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[PlainCodec[TestByteEnumEntry]])
   }
 
-  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit enum: Enum[E]) = {
+  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit enum: Enum[E]): Unit = {
     enum.values.foreach { v =>
       codec.encode(v) shouldBe v.entryName
       codec.decode(v.entryName) shouldBe DecodeResult.Value(v)
     }
   }
 
-  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit enum: E) = {
+  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit enum: E): Unit = {
     enum.values.foreach { v =>
       codec.encode(v) shouldBe v.value.toString
       codec.decode(v.value.toString) shouldBe DecodeResult.Value(v)
     }
   }
 
+  it should "find schema for enumeratum enum entries and enrich with metadata from default annotations" in {
+    implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some((TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2)))
+    implicitly[Schema[TestEnumEntryWithNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithNoEncodedDefault.Value2, None))
+  }
 }
 
 object TapirCodecEnumeratumTest {
@@ -179,5 +183,27 @@ object TapirCodecEnumeratumTest {
     case object Value3 extends TestCharEnumEntry('3')
 
     override def values: scala.collection.immutable.IndexedSeq[TestCharEnumEntry] = findValues
+  }
+
+  @default(TestEnumEntryWithSomeEncodedDefault.Value2, encoded = Some(TestEnumEntryWithSomeEncodedDefault.Value2))
+  sealed trait TestEnumEntryWithSomeEncodedDefault extends EnumEntry
+
+  object TestEnumEntryWithSomeEncodedDefault extends Enum[TestEnumEntryWithSomeEncodedDefault] {
+    case object Value1 extends TestEnumEntryWithSomeEncodedDefault
+    case object Value2 extends TestEnumEntryWithSomeEncodedDefault
+    case object Value3 extends TestEnumEntryWithSomeEncodedDefault
+
+    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithSomeEncodedDefault] = findValues
+  }
+
+  @default(TestEnumEntryWithNoEncodedDefault.Value2, encoded = None)
+  sealed trait TestEnumEntryWithNoEncodedDefault extends EnumEntry
+
+  object TestEnumEntryWithNoEncodedDefault extends Enum[TestEnumEntryWithNoEncodedDefault] {
+    case object Value1 extends TestEnumEntryWithNoEncodedDefault
+    case object Value2 extends TestEnumEntryWithNoEncodedDefault
+    case object Value3 extends TestEnumEntryWithNoEncodedDefault
+
+    override def values: scala.collection.immutable.IndexedSeq[TestEnumEntryWithNoEncodedDefault] = findValues
   }
 }

@@ -151,7 +151,7 @@ field of a case class. One way the automatic & semi-automatic derivation can be 
 
 * `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
 * `@description` sets description for the whole case class or its field
-* `@default` sets default value for a case class field
+* `@default` sets default value for a case class field (plus an optional encoded form used in documentation)
 * `@encodedExample` sets example value for a case class field which is used in the documentation in the encoded form
 * `@format` sets the format for a case class field
 * `@deprecated` marks a case class's field as deprecated

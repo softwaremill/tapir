@@ -1,6 +1,8 @@
 package sttp.tapir.server.interceptor
 
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.monad.MonadError
+import sttp.monad.syntax._
+import sttp.tapir.model.ServerRequest
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
   *
@@ -39,6 +41,21 @@ trait RequestInterceptor[F[_]] extends Interceptor[F] {
   def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B]
 }
 
+object RequestInterceptor {
+
+  /** Create a request interceptor which transforms the server request, prior to handling any endpoints. */
+  def transformServerRequest[F[_]](f: ServerRequest => F[ServerRequest]): RequestInterceptor[F] = new RequestInterceptor[F] {
+    override def apply[B](
+        responder: Responder[F, B],
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
+    ): RequestHandler[F, B] =
+      new RequestHandler[F, B] {
+        override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
+          f(request).flatMap(request2 => requestHandler.apply(EndpointInterceptor.noop)(request2))
+      }
+  }
+}
+
 /** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been decoded successfully, or when
   * decoding has failed. Ultimately, when all interceptors are run, the endpoint's server logic will be run (in case of a decode success),
   * or `None` will be returned (in case of decode failure).
@@ -58,5 +75,5 @@ object EndpointInterceptor {
 }
 
 trait Responder[F[_], B] {
-  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]]
+  def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]]
 }

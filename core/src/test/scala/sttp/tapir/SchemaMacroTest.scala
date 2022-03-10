@@ -6,8 +6,10 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
+import sttp.tapir.internal.SchemaAnnotations
+import sttp.tapir.generic.Configuration
+import sttp.tapir.generic.D
 import sttp.tapir.generic.auto._
-import sttp.tapir.generic.{Configuration, D}
 
 class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
   import SchemaMacroTestData._
@@ -293,4 +295,21 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected
   }
 
+  behavior of "SchemaAnnotations enrich"
+
+  it should "derive schema annotations and enrich schema" in {
+    val baseSchema = Schema.string[MyString]
+
+    val enriched = implicitly[SchemaAnnotations[MyString]].enrich(baseSchema)
+
+    enriched shouldBe Schema
+      .string[MyString]
+      .description("my-string")
+      .encodedExample("encoded-example")
+      .default(MyString("default"), encoded = Some("encoded-default"))
+      .format("utf8")
+      .deprecated(true)
+      .name(SName("encoded-name"))
+      .validate(Validator.pass[MyString])
+  }
 }

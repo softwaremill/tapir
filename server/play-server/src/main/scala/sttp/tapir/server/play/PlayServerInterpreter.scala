@@ -73,12 +73,13 @@ trait PlayServerInterpreter {
         val serverRequest = new PlayServerRequest(header, request)
         val interpreter = new ServerInterpreter(
           serverEndpoints,
+          new PlayRequestBody(playServerOptions),
           new PlayToResponseBody,
           playServerOptions.interceptors,
           playServerOptions.deleteFile
         )
 
-        interpreter(serverRequest, new PlayRequestBody(request, playServerOptions)).map {
+        interpreter(serverRequest).map {
           case RequestResult.Failure(_) =>
             Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
           case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>

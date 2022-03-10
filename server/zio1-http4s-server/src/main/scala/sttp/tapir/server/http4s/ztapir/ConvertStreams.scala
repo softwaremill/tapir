@@ -18,10 +18,10 @@ object ConvertStreams {
   ): ServerEndpoint[Fs2Streams[RIO[R, *]] with C, RIO[R, *]] =
     ServerEndpoint(
       Endpoint(
-        forInput(se.securityInput).asInstanceOf[EndpointInput[se.A]],
-        forInput(se.input).asInstanceOf[EndpointInput[se.I]],
-        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[se.E]],
-        forOutput(se.output).asInstanceOf[EndpointOutput[se.O]],
+        forInput(se.securityInput).asInstanceOf[EndpointInput[se.SECURITY_INPUT]],
+        forInput(se.input).asInstanceOf[EndpointInput[se.INPUT]],
+        forOutput(se.errorOutput).asInstanceOf[EndpointOutput[se.ERROR_OUTPUT]],
+        forOutput(se.output).asInstanceOf[EndpointOutput[se.OUTPUT]],
         se.info
       ),
       se.securityLogic,

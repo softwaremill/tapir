@@ -7,29 +7,19 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import zio.{Runtime, Task}
 
-class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route] {
+class ZioVertxTestServerInterpreter(vertx: Vertx)
+    extends TestServerInterpreter[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route(
-      e: ServerEndpoint[ZioStreams, Task],
-      decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Task]] = None
-  ): Router => Route = {
-    val options: VertxZioServerOptions[Task] =
-      VertxZioServerOptions.customInterceptors
-        .metricsInterceptor(metricsInterceptor)
-        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-        .options
-    VertxZioServerInterpreter(options).route(e)
+  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = { router =>
+    val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customInterceptors).options
+    val interpreter = VertxZioServerInterpreter(options)
+    es.map(interpreter.route(_)(runtime)(router)).last
   }
-
-  override def route(es: List[ServerEndpoint[ZioStreams, Task]]): Router => Route = ???
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

@@ -21,9 +21,9 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
-class ServerBasicTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+class ServerBasicTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,
@@ -529,7 +529,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(
       in_path_fixed_capture_fixed_capture,
       "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
-      Some(decodeFailureHandlerBadRequestOnPathFailure)
+      _.decodeFailureHandler(decodeFailureHandlerBadRequestOnPathFailure)
     )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/customer/asd/orders/2").send(backend).map { response =>
         response.body shouldBe Left("Invalid value for: path parameter customer_id")
@@ -539,7 +539,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(
       in_path_fixed_capture_fixed_capture,
       "Returns 404 if path 'shape' doesn't match",
-      Some(decodeFailureHandlerBadRequestOnPathFailure)
+      _.decodeFailureHandler(decodeFailureHandlerBadRequestOnPathFailure)
     )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/customer").send(backend).map(response => response.code shouldBe StatusCode.NotFound) >>
         basicRequest.get(uri"$baseUri/customer/asd").send(backend).map(response => response.code shouldBe StatusCode.NotFound) >>

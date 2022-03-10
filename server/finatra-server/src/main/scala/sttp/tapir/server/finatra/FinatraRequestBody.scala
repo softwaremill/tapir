@@ -7,6 +7,7 @@ import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.NoStreams
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
@@ -16,13 +17,15 @@ import java.nio.charset.Charset
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) extends RequestBody[Future, NoStreams] {
+class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBody[Future, NoStreams] {
   override val streams: NoStreams = NoStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] =
-    toRaw(bodyType, request.content, request.charset.map(Charset.forName))
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+    val request = finatraRequest(serverRequest)
+    toRaw(request, bodyType, request.content, request.charset.map(Charset.forName))
+  }
 
-  private def toRaw[R](bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[RawValue[R]] = {
+  private def toRaw[R](request: Request, bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[RawValue[R]] = {
     def asByteArray: Array[Byte] = {
       val array = new Array[Byte](body.length)
       body.write(array, 0)
@@ -92,7 +95,7 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
 
             for {
               partType <- m.partType(name)
-              futureBody = toRaw(partType, Buf.ByteArray.Owned(multiPartItem.data), charset)
+              futureBody = toRaw(request, partType, Buf.ByteArray.Owned(multiPartItem.data), charset)
             } yield futureBody
               .map(body =>
                 Part(
@@ -108,5 +111,7 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
       .map(_.toList)
   }
 
-  override def toStream(): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
+
+  private def finatraRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
 }

@@ -19,7 +19,8 @@ import sttp.tapir.tests.Security.{
 }
 import sttp.tapir.tests.Test
 
-class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE])(implicit m: MonadError[F]) extends Matchers {
+class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE])(implicit m: MonadError[F])
+    extends Matchers {
   import createServerTest._
   private val Realm = "realm"
 
@@ -112,7 +113,7 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     testServerLogic(
       endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
       s"missing $authType with endpoint hiding",
-      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
+      _.decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
     ) { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.NotFound
@@ -146,7 +147,7 @@ class ServerSecurityTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, 
     testServerLogic(
       endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result),
       s"invalid request $authType with endpoint hiding",
-      Some(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
+      _.decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
     ) { (backend, baseUri) =>
       auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.NotFound)
     }

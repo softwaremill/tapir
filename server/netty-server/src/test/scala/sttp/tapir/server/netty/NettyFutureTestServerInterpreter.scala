@@ -4,31 +4,17 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
-    extends TestServerInterpreter[Future, Any, FutureRoute] {
+    extends TestServerInterpreter[Future, Any, NettyFutureServerOptions, FutureRoute] {
 
-  override def route(
-      e: ServerEndpoint[Any, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
-  ): FutureRoute = {
-    val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.customInterceptors
-      .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-      .options
-
-    NettyFutureServerInterpreter(serverOptions).toRoute(List(e))
-  }
-
-  override def route(es: List[ServerEndpoint[Any, Future]]): FutureRoute = {
-    NettyFutureServerInterpreter().toRoute(es)
+  override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FutureRoute = {
+    val serverOptions: NettyFutureServerOptions = interceptors(NettyFutureServerOptions.customInterceptors).options
+    NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
 
   override def server(routes: NonEmptyList[FutureRoute]): Resource[IO, Port] = {

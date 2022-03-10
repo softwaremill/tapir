@@ -19,8 +19,8 @@ import sttp.tapir.tests.{MultipleFileUpload, Test, data}
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerMultipartTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
+class ServerMultipartTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {
@@ -70,7 +70,7 @@ class ServerMultipartTests[F[_], ROUTE](
           .send(backend)
           .map { r =>
             r.code shouldBe StatusCode.Ok
-            if (partOtherHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
+            if (partOtherHeaderSupport) r.body should include regex "((?i)X-Auth):[ ]?Some\\(12Aa\\)"
             r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
           }
       },
@@ -99,9 +99,9 @@ class ServerMultipartTests[F[_], ROUTE](
           .map { r =>
             r.code shouldBe StatusCode.Ok
             if (partOtherHeaderSupport) {
-              r.body should include("X-Auth: 12Aax")
-              r.body should include("X-Auth: 12Abx")
-              r.body should include("X-Auth: 12Acx")
+              r.body should include regex "((?i)X-Auth):[ ]?12Aax"
+              r.body should include regex "((?i)X-Auth):[ ]?12Abx"
+              r.body should include regex "((?i)X-Auth):[ ]?12Acx"
             }
             r.body should include("peach mario 1 result")
             r.body should include("peach mario 2 result")
@@ -148,7 +148,7 @@ class ServerMultipartTests[F[_], ROUTE](
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.Ok
-          r.body.toLowerCase() should include("content-type: text/html")
+          r.body.toLowerCase() should include regex "content-type:[ ]?text/html"
         }
     }
   )

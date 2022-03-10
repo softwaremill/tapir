@@ -9,8 +9,8 @@ import sttp.tapir.tests.Validation._
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
-class ServerValidationTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE]
+class ServerValidationTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {

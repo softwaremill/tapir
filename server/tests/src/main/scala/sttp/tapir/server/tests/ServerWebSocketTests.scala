@@ -10,14 +10,15 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
-abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
-    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
+abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
     val streams: S
 )(implicit
     m: MonadError[F]
@@ -52,9 +53,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
       val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
-      testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>
-        pureResult(stringEcho.asRight[Unit])
-      ) { (backend, baseUri) =>
+      testServer(
+        endpoint.out(stringWs).name("metrics"),
+        interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+      )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
         basicRequest
           .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {

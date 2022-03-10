@@ -33,11 +33,14 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
   }
   override lazy val pathSegments: List[String] = {
     val path = Option(rc.request.path).getOrElse("")
-    path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    val segments = path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
 
   override def underlying: Any = rc
 
   private def asInetSocketAddress(address: SocketAddress): InetSocketAddress =
     InetSocketAddress.createUnresolved(address.host, address.port)
+
+  override def withUnderlying(underlying: Any): ServerRequest = new VertxServerRequest(rc = underlying.asInstanceOf[RoutingContext])
 }

@@ -8,6 +8,7 @@ import play.core.parsers.Multipart
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.internal._
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
@@ -16,23 +17,28 @@ import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], serverOptions: PlayServerOptions)(implicit
+private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
 ) extends RequestBody[Future, AkkaStreams] {
 
   override val streams: AkkaStreams = AkkaStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+    val request = playRequest(serverRequest)
     val charset = request.charset.map(Charset.forName)
-    toRaw(bodyType, charset, () => request.body, None)
+    toRaw(request, bodyType, charset, () => request.body, None)
   }
 
-  override def toStream(): streams.BinaryStream = {
-    request.body
-  }
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = playRequest(serverRequest).body
 
-  private def toRaw[R](bodyType: RawBodyType[R], charset: Option[Charset], body: () => Source[ByteString, Any], bodyAsFile: Option[File])(
-      implicit mat: Materializer
+  private def toRaw[R](
+      request: Request[AkkaStreams.BinaryStream],
+      bodyType: RawBodyType[R],
+      charset: Option[Charset],
+      body: () => Source[ByteString, Any],
+      bodyAsFile: Option[File]
+  )(implicit
+      mat: Materializer
   ): Future[RawValue[R]] = {
     def bodyAsByteString() = body().runWith(Sink.fold(ByteString.newBuilder)(_ append _)).map(_.result())
     bodyType match {
@@ -71,6 +77,7 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
         val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value) =>
           m.partType(key).map { partType =>
             toRaw(
+              request,
               partType,
               charset(partType),
               () => Source.single(ByteString(value.flatMap(_.getBytes).toArray)),
@@ -83,6 +90,7 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
           m.partType(f.key)
             .map { partType =>
               toRaw(
+                request,
                 partType,
                 charset(partType),
                 () => FileIO.fromPath(f.ref.path),
@@ -106,4 +114,6 @@ private[play] class PlayRequestBody(request: Request[Source[ByteString, Any]], s
         Future.sequence(dataParts ++ fileParts).map(ps => ps.collect { case Some(p) => p }).map(RawValue.fromParts)
     }
   }
+
+  private def playRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[Source[ByteString, Any]]]
 }

@@ -63,7 +63,7 @@ trait SchemaMagnoliaDerivation {
         annotations.foldLeft(schema) {
           case (schema, ann: Schema.annotations.description)            => schema.description(ann.text)
           case (schema, ann: Schema.annotations.encodedExample)         => schema.encodedExample(ann.example)
-          case (schema, ann: Schema.annotations.default[X @unchecked])  => schema.default(ann.default)
+          case (schema, ann: Schema.annotations.default[X @unchecked])  => schema.default(ann.default, ann.encoded)
           case (schema, ann: Schema.annotations.validate[X @unchecked]) => schema.validate(ann.v)
           case (schema, ann: Schema.annotations.format)                 => schema.format(ann.format)
           case (schema, _: Schema.annotations.deprecated)               => schema.deprecated(true)
@@ -83,7 +83,7 @@ trait SchemaMagnoliaDerivation {
               .toListMap
           val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
             ctx.choose(t) { v =>
-              subtypesByName.get(subtypeNameToSchemaName(v.subtype))
+              subtypesByName.get(subtypeNameToSchemaName(v.subtype)).map(s => SchemaWithValue(s, v.value))
             }
           )
           val coproduct = genericDerivationConfig.discriminator match {

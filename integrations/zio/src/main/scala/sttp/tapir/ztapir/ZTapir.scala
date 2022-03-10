@@ -7,7 +7,9 @@ import zio.{RIO, ZIO}
 trait ZTapir {
   type ZServerEndpoint[R, -C] = ServerEndpoint[C, RIO[R, *]]
 
-  implicit class RichZEndpoint[A, I, E, O, C](e: Endpoint[A, I, E, O, C]) {
+  implicit class RichZEndpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, C](
+      e: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, C]
+  ) {
 
     /** Combine this public endpoint description with a function, which implements the server-side logic. The logic returns a result, which
       * is either an error or a successful output, wrapped in an effect type `F`. For secure endpoints, use [[zServerSecurityLogic]].
@@ -18,8 +20,8 @@ trait ZTapir {
       * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
       * specified.
       */
-    def zServerLogic[R](logic: I => ZIO[R, E, O])(implicit aIsUnit: A =:= Unit): ZServerEndpoint[R, C] =
-      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, I, E, O, C]], _ => logic(_: I).either.resurrect)
+    def zServerLogic[R](logic: INPUT => ZIO[R, ERROR_OUTPUT, OUTPUT])(implicit aIsUnit: SECURITY_INPUT =:= Unit): ZServerEndpoint[R, C] =
+      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, C]], _ => logic(_: INPUT).either.resurrect)
 
     /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
       *
@@ -32,11 +34,13 @@ trait ZTapir {
       * An example use-case is defining an endpoint with fully-defined errors, and with security logic built-in. Such an endpoint can be
       * then extended by multiple other endpoints, by specifying different inputs, outputs and the main logic.
       */
-    def zServerSecurityLogic[R, U](f: A => ZIO[R, E, U]): ZPartialServerEndpoint[R, A, U, I, E, O, C] =
+    def zServerSecurityLogic[R, U](
+        f: SECURITY_INPUT => ZIO[R, ERROR_OUTPUT, U]
+    ): ZPartialServerEndpoint[R, SECURITY_INPUT, U, INPUT, ERROR_OUTPUT, OUTPUT, C] =
       ZPartialServerEndpoint(e, f)
   }
 
-  implicit class RichZServiceEndpoint[R, A, U, I, E, O, C](zse: ZServerEndpoint[R, C]) {
+  implicit class RichZServerEndpoint[R, C](zse: ZServerEndpoint[R, C]) {
 
     /** Extends the environment so that it can be made uniform across multiple endpoints. */
     def widen[R2 <: R]: ZServerEndpoint[R2, C] = zse.asInstanceOf[ZServerEndpoint[R2, C]] // this is fine
