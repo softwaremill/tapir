@@ -44,6 +44,7 @@ object ArmeriaZioServerOptions {
   def defaultDeleteFile[R](file: TapirFile): RIO[R, Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[R]: ServerLog[RIO[R, *]] = DefaultServerLog(
+    doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[R],
     doLogAllDecodeFailures = debugLog[R],
     doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { logger.warn(msg, ex) },

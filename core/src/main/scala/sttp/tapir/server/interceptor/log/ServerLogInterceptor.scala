@@ -2,6 +2,7 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 
@@ -13,7 +14,12 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
   ): RequestHandler[F, B] = {
-    requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, serverLog.requestStarted))
+    val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, serverLog.requestToken))
+    new RequestHandler[F, B] {
+      override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] = {
+        serverLog.requestReceived(request).flatMap(_ => delegate(request))
+      }
+    }
   }
 }
 

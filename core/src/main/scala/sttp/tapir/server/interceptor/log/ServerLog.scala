@@ -15,8 +15,11 @@ trait ServerLog[F[_]] {
     */
   type TOKEN
 
-  /** Invoked when the request has started to obtain the per-request token, such as the starting timestamp. */
-  def requestStarted: TOKEN
+  /** Invoked when the request has been received. */
+  def requestReceived(request: ServerRequest): F[Unit]
+
+  /** Invoked when the request has been received to obtain the per-request token, such as the starting timestamp. */
+  def requestToken: TOKEN
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, haven't provided a
     * response.
@@ -39,10 +42,12 @@ trait ServerLog[F[_]] {
 }
 
 case class DefaultServerLog[F[_]](
+    doLogWhenReceived: String => F[Unit],
     doLogWhenHandled: (String, Option[Throwable]) => F[Unit],
     doLogAllDecodeFailures: (String, Option[Throwable]) => F[Unit],
     doLogExceptions: (String, Throwable) => F[Unit],
     noLog: F[Unit],
+    logWhenReceived: Boolean = false,
     logWhenHandled: Boolean = true,
     logAllDecodeFailures: Boolean = false,
     logLogicExceptions: Boolean = true,
@@ -67,7 +72,10 @@ case class DefaultServerLog[F[_]](
 
   override type TOKEN = Long
 
-  override def requestStarted: Long = if (includeTiming) now() else 0
+  override def requestReceived(request: ServerRequest): F[Unit] =
+    if (logWhenReceived) doLogWhenReceived(s"Request received: ${showRequest(request)}") else noLog
+
+  override def requestToken: Long = if (includeTiming) now() else 0
 
   override def decodeFailureNotHandled(ctx: DecodeFailureContext, token: Long): F[Unit] =
     if (logAllDecodeFailures)

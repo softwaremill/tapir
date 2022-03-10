@@ -50,6 +50,7 @@ object AkkaHttpServerOptions {
     def errorLog(msg: String, ex: Throwable): Future[Unit] = Future.successful(log.error(msg, ex))
 
     DefaultServerLog[Future](
+      doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
       doLogExceptions = errorLog,
@@ -70,6 +71,7 @@ object AkkaHttpServerOptions {
     }
 
     DefaultServerLog[Future](
+      doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
       doLogExceptions = errorLog,

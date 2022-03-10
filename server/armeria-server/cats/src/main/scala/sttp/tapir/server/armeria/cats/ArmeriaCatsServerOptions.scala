@@ -46,6 +46,7 @@ object ArmeriaCatsServerOptions {
   def defaultDeleteFile[F[_]: Async](file: TapirFile): F[Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[F[_]: Async]: ServerLog[F] = DefaultServerLog[F](
+    doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[F],
     doLogAllDecodeFailures = debugLog[F],
     doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay(logger.warn(msg, ex)),

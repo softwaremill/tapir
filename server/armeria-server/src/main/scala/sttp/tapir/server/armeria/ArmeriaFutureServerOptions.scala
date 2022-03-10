@@ -21,6 +21,7 @@ final case class ArmeriaFutureServerOptions(
 object ArmeriaFutureServerOptions {
 
   val defaultServerLog: ServerLog[Future] = DefaultServerLog[Future](
+    doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
     doLogExceptions = (msg: String, ex: Throwable) => Future.successful(logger.warn(msg, ex)),

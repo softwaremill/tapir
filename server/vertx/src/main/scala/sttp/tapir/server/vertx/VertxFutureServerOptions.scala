@@ -56,6 +56,7 @@ object VertxFutureServerOptions {
       implicit val monadError: MonadError[Future] = new FutureMonad
 
       DefaultServerLog(
+        doLogWhenReceived = debugLog(log)(_, None),
         doLogWhenHandled = debugLog(log),
         doLogAllDecodeFailures = infoLog(log),
         doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
