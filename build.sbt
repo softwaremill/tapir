@@ -165,6 +165,7 @@ lazy val allAggregates = core.projectRefs ++
   sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
+  perfTests.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
   documentation.projectRefs ++
@@ -334,6 +335,55 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     settings = commonJsSettings
   )
   .dependsOn(core, circeJson, cats)
+
+val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
+val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
+val akkaHttpVanillaMulti = taskKey[Unit]("akka-http-vanilla-multi")
+val akkaHttpTapirMulti = taskKey[Unit]("akka-http-tapir-multi")
+val http4sVanilla = taskKey[Unit]("http4s-vanilla")
+val http4sTapir = taskKey[Unit]("http4s-tapir")
+val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
+val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
+def genPerfTestTask(servName: String, simName: String) = Def.taskDyn {
+  Def.task {
+    (Compile / runMain).toTask(s" perfTests.${servName}Server").value
+    (Gatling / testOnly).toTask(s" perfTests.${simName}Simulation").value
+  }
+}
+
+lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
+  .enablePlugins(GatlingPlugin)
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-perf-tests",
+    libraryDependencies ++= Seq(
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.6.1" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.6.1" % "test",
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "org.http4s" %% "http4s-core" % Versions.http4s,
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
+    ) ++ loggerDependencies,
+    publishArtifact := false
+  )
+  .settings(Gatling / scalaSource := sourceDirectory.value / "test" / "scala")
+  .settings(
+    fork := true,
+    connectInput := true
+  )
+  .settings(akkaHttpVanilla := { (genPerfTestTask("AkkaHttp.Vanilla", "OneRoute")).value })
+  .settings(akkaHttpTapir := { (genPerfTestTask("AkkaHttp.Tapir", "OneRoute")).value })
+  .settings(akkaHttpVanillaMulti := { (genPerfTestTask("AkkaHttp.VanillaMulti", "MultiRoute")).value })
+  .settings(akkaHttpTapirMulti := { (genPerfTestTask("AkkaHttp.TapirMulti", "MultiRoute")).value })
+  .settings(http4sVanilla := { (genPerfTestTask("Http4s.Vanilla", "OneRoute")).value })
+  .settings(http4sTapir := { (genPerfTestTask("Http4s.Tapir", "OneRoute")).value })
+  .settings(http4sVanillaMulti := { (genPerfTestTask("Http4s.VanillaMulti", "MultiRoute")).value })
+  .settings(http4sTapirMulti := { (genPerfTestTask("Http4s.TapirMulti", "MultiRoute")).value })
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .dependsOn(core, akkaHttpServer, http4sServer)
 
 // integrations
 
