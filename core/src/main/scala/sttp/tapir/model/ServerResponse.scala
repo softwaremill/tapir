@@ -12,6 +12,9 @@ case class ServerResponse[+B](code: StatusCode, headers: Seq[Header], body: Opti
     extends ResponseMetadata {
   override def statusText: String = ""
   override def toString: String = s"ServerResponse($code,${Headers.toStringSafe(headers)})"
+
+  def showShort: String = code.toString()
+  def showCodeAndHeaders: String = s"$code (${Headers.toStringSafe(headers)})"
 }
 
 object ServerResponse {

@@ -303,7 +303,17 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
-  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
+  /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
+    * string representation of the method (if any) and path, e.g. `POST /books/add`
+    */
+  def showShort: String = info.name match {
+    case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
+    case Some(name) => s"[$name]"
+  }
+
+  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
+    * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
+    */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
@@ -318,7 +328,8 @@ trait EndpointMetaOps {
   }
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined, including mapping
-    * information.
+    * information. E.g.: `Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout:
+    * {body as text/plain (UTF-8)}, out: -)`
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
@@ -335,12 +346,21 @@ trait EndpointMetaOps {
     *
     * @param includeAuth
     *   Should authentication inputs be included in the result.
+    * @param showNoPathAs
+    *   How to show the path if the endpoint does not define any path inputs.
+    * @param showPathsAs
+    *   How to show [[Tapir.paths]] inputs (if at all), which capture multiple paths segments
+    * @param showQueryParamsAs
+    *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
   def showPathTemplate(
       showPathParam: ShowPathParam = ShowPathTemplate.Defaults.path,
       showQueryParam: Option[ShowQueryParam] = Some(ShowPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
-  ): String = ShowPathTemplate(this)(showPathParam, showQueryParam, includeAuth)
+      includeAuth: Boolean = true,
+      showNoPathAs: String = "*",
+      showPathsAs: Option[String] = Some("*"),
+      showQueryParamsAs: Option[String] = Some("*")
+  ): String = ShowPathTemplate(this)(showPathParam, showQueryParam, includeAuth, showNoPathAs, showPathsAs, showQueryParamsAs)
 
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).

@@ -148,7 +148,7 @@ code is unclear and be improved for the benefit of all.
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
 causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
 
-* run only JVM tests using `testJVM`
+* run only JVM tests for a specific Scala version using `testJVM2_13`
 * test single JS projects
 * use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 

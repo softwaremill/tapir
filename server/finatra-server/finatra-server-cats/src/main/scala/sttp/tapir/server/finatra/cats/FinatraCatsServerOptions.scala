@@ -22,6 +22,7 @@ object FinatraCatsServerOptions extends Logging {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, FinatraCatsServerOptions[F]] = {
     def finatraCatsServerLog(finatraServerLog: DefaultServerLog[Future]): ServerLog[F] = DefaultServerLog[F](
+      doLogWhenReceived = m => finatraServerLog.doLogWhenReceived(m).asF,
       doLogWhenHandled = (m, e) => finatraServerLog.doLogWhenHandled(m, e).asF,
       doLogAllDecodeFailures = (m, e) => finatraServerLog.doLogAllDecodeFailures(m, e).asF,
       doLogExceptions = (m, e) => finatraServerLog.doLogExceptions(m, e).asF,
