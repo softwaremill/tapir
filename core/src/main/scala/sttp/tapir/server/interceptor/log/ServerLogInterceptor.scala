@@ -2,7 +2,7 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 

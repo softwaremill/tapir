@@ -53,7 +53,7 @@ case class DefaultServerLog[F[_]](
     logLogicExceptions: Boolean = true,
     showEndpoint: AnyEndpoint => String = _.showShort,
     showRequest: ServerRequest => String = _.showShort,
-    showResponse: ServerResponseFromOutput[_] => String = _.showShort,
+    showResponse: ServerResponse[_] => String = _.showShort,
     includeTiming: Boolean = true
 ) extends ServerLog[F] {
 
@@ -66,7 +66,7 @@ case class DefaultServerLog[F[_]](
   def logLogicExceptions(doLog: Boolean): DefaultServerLog[F] = copy(logLogicExceptions = doLog)
   def showEndpoint(s: AnyEndpoint => String): DefaultServerLog[F] = copy(showEndpoint = s)
   def showRequest(s: ServerRequest => String): DefaultServerLog[F] = copy(showRequest = s)
-  def showResponse(s: ServerResponseFromOutput[_] => String): DefaultServerLog[F] = copy(showResponse = s)
+  def showResponse(s: ServerResponse[_] => String): DefaultServerLog[F] = copy(showResponse = s)
 
   //
 

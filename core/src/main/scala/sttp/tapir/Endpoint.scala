@@ -307,7 +307,7 @@ trait EndpointMetaOps {
     * string representation of the method (if any) and path, e.g. `POST /books/add`
     */
   def showShort: String = info.name match {
-    case None       => s"${method.map(_.toString()).getOrElse("*")} ${renderPathTemplate(renderQueryParam = None)}"
+    case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
     case Some(name) => s"[$name]"
   }
 
