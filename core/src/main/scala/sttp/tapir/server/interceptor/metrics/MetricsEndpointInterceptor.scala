@@ -4,6 +4,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.metrics.{EndpointMetric, Metric}
+import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListener._
@@ -40,10 +41,10 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
 
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[F, U, I]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {
-          val responseWithMetrics: F[ServerResponseFromOutput[B]] = for {
+          val responseWithMetrics: F[ServerResponse[B]] = for {
             _ <- collectRequestMetrics(ctx.endpoint)
             response <- endpointHandler.onDecodeSuccess(ctx)
             withMetrics <- withBodyOnComplete(ctx.endpoint, response)
@@ -56,10 +57,10 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
       /** Collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage. */
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[F, A]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onSecurityFailure(ctx)
         else {
-          val responseWithMetrics: F[ServerResponseFromOutput[B]] = for {
+          val responseWithMetrics: F[ServerResponse[B]] = for {
             _ <- collectRequestMetrics(ctx.endpoint)
             response <- endpointHandler.onSecurityFailure(ctx)
             withMetrics <- withBodyOnComplete(ctx.endpoint, response)
@@ -74,10 +75,10 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
         */
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]] = {
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeFailure(ctx)
         else {
-          val responseWithMetrics: F[Option[ServerResponseFromOutput[B]]] = for {
+          val responseWithMetrics: F[Option[ServerResponse[B]]] = for {
             response <- endpointHandler.onDecodeFailure(ctx)
             withMetrics <- response match {
               case Some(response) =>
@@ -105,10 +106,10 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
     sequence(endpointMetrics)
   }
 
-  private def withBodyOnComplete[B](endpoint: AnyEndpoint, sr: ServerResponseFromOutput[B])(implicit
+  private def withBodyOnComplete[B](endpoint: AnyEndpoint, sr: ServerResponse[B])(implicit
       monad: MonadError[F],
       bodyListener: BodyListener[F, B]
-  ): F[ServerResponseFromOutput[B]] = {
+  ): F[ServerResponse[B]] = {
     val cb: Try[Unit] => F[Unit] = {
       case Success(_) =>
         collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(endpoint, sr) }
@@ -117,8 +118,8 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
     }
 
     sr match {
-      case sr @ ServerResponseFromOutput(_, _, Some(body), _) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
-      case sr @ ServerResponseFromOutput(_, _, None, _)       => cb(Success(())).map(_ => sr)
+      case sr @ ServerResponse(_, _, Some(body), _) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
+      case sr @ ServerResponse(_, _, None, _)       => cb(Success(())).map(_ => sr)
     }
   }
 

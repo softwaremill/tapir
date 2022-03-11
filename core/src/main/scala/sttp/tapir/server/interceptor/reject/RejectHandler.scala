@@ -2,8 +2,9 @@ package sttp.tapir.server.interceptor.reject
 
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler._
-import sttp.tapir.server.interceptor.{RequestResult, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.RequestResult
 
 trait RejectHandler {
   def apply(failure: RequestResult.Failure): Option[ValuedEndpointOutput[_]]

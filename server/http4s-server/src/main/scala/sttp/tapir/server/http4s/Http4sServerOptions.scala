@@ -44,6 +44,7 @@ object Http4sServerOptions {
       implicit val monadError: MonadError[G] = new CatsMonadError[G]
 
       DefaultServerLog(
+        doLogWhenReceived = debugLog(_, None),
         doLogWhenHandled = debugLog[G],
         doLogAllDecodeFailures = debugLog[G],
         doLogExceptions = (msg: String, ex: Throwable) => Sync[G].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg)),

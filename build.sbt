@@ -175,7 +175,10 @@ lazy val allAggregates = core.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs
 
-val testJVM = taskKey[Unit]("Test JVM projects, without Finatra")
+// separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
+val testJVM_2_12 = taskKey[Unit]("Test JVM Scala 2.12 projects, without Finatra")
+val testJVM_2_13 = taskKey[Unit]("Test JVM Scala 2.13 projects, without Finatra")
+val testJVM_3 = taskKey[Unit]("Test JVM Scala 3 projects, without Finatra")
 val testJS = taskKey[Unit]("Test JS projects")
 val testDocs = taskKey[Unit]("Test docs projects")
 val testServers = taskKey[Unit]("Test server projects")
@@ -215,7 +218,11 @@ lazy val rootProject = (project in file("."))
   .settings(
     publishArtifact := false,
     name := "tapir",
-    testJVM := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra"))).value,
+    testJVM_2_12 := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && p.contains("2_12"))).value,
+    testJVM_2_13 := (Test / test)
+      .all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && !p.contains("2_12") && !p.contains("3")))
+      .value,
+    testJVM_3 := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && p.contains("3"))).value,
     testJS := (Test / test).all(filterProject(_.contains("JS"))).value,
     testDocs := (Test / test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
     testServers := (Test / test).all(filterProject(p => p.contains("Server"))).value,
@@ -357,7 +364,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.6.1" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.7.6" % "test",
       "io.gatling" % "gatling-test-framework" % "3.7.6" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
@@ -908,6 +915,7 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "com.typesafe.akka" %% "akka-slf4j" % Versions.akkaStreams,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test
     )

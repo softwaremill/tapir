@@ -7,10 +7,11 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 

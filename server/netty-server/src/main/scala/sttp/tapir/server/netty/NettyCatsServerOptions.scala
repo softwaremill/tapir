@@ -46,10 +46,13 @@ object NettyCatsServerOptions {
       createOptions = (ci: CustomInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
+  private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
+
   def defaultServerLog[F[_]: Async]: ServerLog[F] = {
     implicit val monadError: MonadError[F] = new CatsMonadError[F]
 
     DefaultServerLog(
+      doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog[F],
       doLogAllDecodeFailures = debugLog[F],
       doLogExceptions = errorLog[F],
@@ -58,12 +61,10 @@ object NettyCatsServerOptions {
   }
 
   private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): F[Unit] = Sync[F].delay {
-    val log = Logger[NettyCatsServerInterpreter[F]]
     NettyDefaults.debugLog(log, msg, exOpt)
   }
 
   private def errorLog[F[_]: Async](msg: String, ex: Throwable): F[Unit] = Sync[F].delay {
-    val log = Logger[NettyCatsServerInterpreter[F]]
     log.error(msg, ex)
   }
 }

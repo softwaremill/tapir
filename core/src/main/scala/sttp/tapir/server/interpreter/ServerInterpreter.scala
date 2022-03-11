@@ -4,7 +4,7 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server._
 import sttp.tapir.server.interceptor._
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
@@ -64,9 +64,9 @@ class ServerInterpreter[R, F[_], B, S](
       endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
     val defaultSecurityFailureResponse =
-      ServerResponseFromOutput[B](StatusCode.InternalServerError, Nil, None, ValuedEndpointOutput.Empty).unit
+      ServerResponse[B](StatusCode.InternalServerError, Nil, None, None).unit
 
-    def endpointHandler(securityFailureResponse: => F[ServerResponseFromOutput[B]]): EndpointHandler[F, B] =
+    def endpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
       endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
         interceptor(responder(defaultSuccessStatusCode), handler)
       }
@@ -181,11 +181,11 @@ class ServerInterpreter[R, F[_], B, S](
         .Mismatch(oneOfBodyInput.variants.map(_.range.toString()).mkString(", or: "), request.contentType.getOrElse(""))
     ): DecodeBasicInputsResult).unit
 
-  private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponseFromOutput[B]]): EndpointHandler[F, B] =
+  private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[U, I](
           ctx: DecodeSuccessContext[F, U, I]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] =
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
         ctx.serverEndpoint
           .logic(implicitly)(ctx.principal)(ctx.decodedInput)
           .flatMap {
@@ -195,16 +195,16 @@ class ServerInterpreter[R, F[_], B, S](
 
       override def onSecurityFailure[A](
           ctx: SecurityFailureContext[F, A]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponseFromOutput[B]] = securityFailureResponse
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = securityFailureResponse
 
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponseFromOutput[B]]] =
-        (None: Option[ServerResponseFromOutput[B]]).unit(monad)
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
+        (None: Option[ServerResponse[B]]).unit(monad)
     }
 
   private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
-    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponseFromOutput[B]] = {
+    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
       val outputValues =
         new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil))
           .apply(output.output, ParamsAsAny(output.value), OutputValues.empty)
@@ -212,8 +212,8 @@ class ServerInterpreter[R, F[_], B, S](
 
       val headers = outputValues.headers
       outputValues.body match {
-        case Some(bodyFromHeaders) => ServerResponseFromOutput(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), output).unit
-        case None                  => ServerResponseFromOutput(statusCode, headers, None: Option[B], output).unit
+        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
+        case None                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
       }
     }
   }

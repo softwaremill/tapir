@@ -27,7 +27,6 @@ case class NettyFutureServerOptions(
 
 object NettyFutureServerOptions {
   val default: NettyFutureServerOptions = customInterceptors.options
-  val log = Logger[NettyFutureServerInterpreter]
 
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
     NettyDefaults.DefaultHost,
@@ -50,11 +49,14 @@ object NettyFutureServerOptions {
     ).serverLog(defaultServerLog)
   }
 
+  private val log = Logger[NettyFutureServerInterpreter]
+
   lazy val defaultServerLog: ServerLog[Future] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     implicit val monadError: MonadError[Future] = new FutureMonad
 
     DefaultServerLog(
+      doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
       doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },

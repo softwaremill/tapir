@@ -4,7 +4,8 @@ import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, MultipartDecodeException}
 import sttp.tapir.DecodeResult.{Error, InvalidValue, Mismatch, Missing, Multiple}
 import sttp.tapir.internal.RichEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ValuedEndpointOutput}
+import sttp.tapir.server.ValuedEndpointOutput
+import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, _}
 
 import scala.annotation.tailrec

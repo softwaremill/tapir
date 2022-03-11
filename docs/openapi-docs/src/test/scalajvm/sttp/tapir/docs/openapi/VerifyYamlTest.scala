@@ -504,7 +504,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .toOpenAPI(
         endpoint.post.in(jsonBody[ObjectWithDefaults]),
         Info("Entities", "1.0")
-      ).toYaml
+      )
+      .toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
