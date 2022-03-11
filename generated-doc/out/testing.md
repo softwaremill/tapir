@@ -87,9 +87,10 @@ following customised akka http options:
 
 ```scala
 import sttp.tapir.server.interceptor.exception.ExceptionContext
-import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.model.StatusCode
+import sttp.tapir.server.ValuedEndpointOutput
 
 val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
   AkkaHttpServerOptions.customInterceptors

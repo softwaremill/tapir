@@ -5,8 +5,7 @@ import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCou
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics._
 import sttp.tapir.metrics.{EndpointMetric, Metric, MetricLabels}
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.ServerResponseFromOutput
+import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.time.{Duration, Instant}
@@ -128,7 +127,7 @@ object OpenTelemetryMetrics {
   private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes =
     l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponseFromOutput[_]]): Attributes =
+  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes =
     l.forResponse.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(res)) }).build()
 
   private def merge(a1: Attributes, a2: Attributes): Attributes = a1.toBuilder.putAll(a2).build()

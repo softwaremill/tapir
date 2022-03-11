@@ -1,6 +1,6 @@
-package sttp.tapir.server.interceptor
+package sttp.tapir.server
 
-import sttp.tapir.{emptyOutput, EndpointOutput}
+import sttp.tapir.EndpointOutput
 
 case class ValuedEndpointOutput[T](output: EndpointOutput[T], value: T) {
   def prepend[U](otherOutput: EndpointOutput[U], otherValue: U): ValuedEndpointOutput[(U, T)] =
@@ -8,8 +8,4 @@ case class ValuedEndpointOutput[T](output: EndpointOutput[T], value: T) {
 
   def append[U](otherOutput: EndpointOutput[U], otherValue: U): ValuedEndpointOutput[(T, U)] =
     ValuedEndpointOutput(output.and(otherOutput), (value, otherValue))
-}
-
-object ValuedEndpointOutput {
-  val Empty: ValuedEndpointOutput[Unit] = ValuedEndpointOutput(emptyOutput, ())
 }

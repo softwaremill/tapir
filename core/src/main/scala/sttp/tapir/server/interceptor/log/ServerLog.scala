@@ -1,7 +1,7 @@
 package sttp.tapir.server.interceptor.log
 
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext, ServerResponseFromOutput}
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext}
 import sttp.tapir.{AnyEndpoint, DecodeResult}
 
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
@@ -16,15 +16,15 @@ trait ServerLog[F[_]] {
   def decodeFailureNotHandled(ctx: DecodeFailureContext): F[Unit]
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, provided a response. */
-  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): F[Unit]
+  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): F[Unit]
 
   /** Invoked when the security logic fails and returns an error. */
-  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_]): F[Unit]
+  def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_]): F[Unit]
+  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): F[Unit]
@@ -48,7 +48,7 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): F[Unit] =
+  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
@@ -56,12 +56,12 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponseFromOutput[_]): F[Unit] =
+  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; security logic error response: $response", None)
     else noLog
 
-  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponseFromOutput[_]): F[Unit] =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_]): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(s"Request ${ctx.request} handled by: ${ctx.endpoint.show}; responding with code: ${response.code.code}", None)
     else noLog
