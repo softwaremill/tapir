@@ -126,11 +126,11 @@ We'll need to provide both the endpoint output which should be used for error me
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
-import sttp.tapir.server.ValuedEndpointOutput
 
 case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
