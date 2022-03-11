@@ -254,7 +254,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   private val pathAllowedCharacters = Rfc3986.PathSegment.mkString
 
-  val renderTestData = List(
+  val showPathTemplateTestData = List(
     (endpoint, "*"),
     (endpoint.in(""), "/"),
     (endpoint.in("p1"), "/p1"),
@@ -273,17 +273,17 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1").in(queryParams), "/p1?*")
   )
 
-  for ((testEndpoint, expectedRenderPath) <- renderTestData) {
-    s"renderPath for ${testEndpoint.showDetail}" should s"be $expectedRenderPath" in {
-      testEndpoint.renderPathTemplate() shouldBe expectedRenderPath
+  for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {
+    s"showPathTemplate for ${testEndpoint.showDetail}" should s"be $expectedShownPath" in {
+      testEndpoint.showPathTemplate() shouldBe expectedShownPath
     }
   }
 
-  "renderPath" should "keep param count in render functions" in {
+  "showPathTemplate" should "keep param count in show functions" in {
     val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
-    testEndpoint.renderPathTemplate(
-      renderPathParam = (index, _) => s"{par$index}",
-      renderQueryParam = Some((index, query) => s"${query.name}={par$index}")
+    testEndpoint.showPathTemplate(
+      showPathParam = (index, _) => s"{par$index}",
+      showQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
   }
 

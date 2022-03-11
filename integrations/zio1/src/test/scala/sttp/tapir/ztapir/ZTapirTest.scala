@@ -67,15 +67,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO(
-      RequestResult.Response(
-        new ServerResponse[ResponseBodyType] {
-          override def code: StatusCode = StatusCode.InternalServerError
-          override def headers: Seq[Header] = scala.collection.immutable.Seq.empty[Header]
-          override def body: Option[ResponseBodyType] = Some(error.getMessage)
-        }
-      )
-    )
+    UIO(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 

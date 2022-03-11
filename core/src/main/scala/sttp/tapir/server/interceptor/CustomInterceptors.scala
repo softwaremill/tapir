@@ -1,5 +1,6 @@
 package sttp.tapir.server.interceptor
 
+import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
@@ -66,8 +67,7 @@ case class CustomInterceptors[F[_], O](
 
   def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, O] = copy(decodeFailureHandler = d)
 
-  /** Customise the way error messages are rendered in error responses, using the default exception, decode failure and reject handlers.
-    */
+  /** Customise the way error messages are shown in error responses, using the default exception, decode failure and reject handlers. */
   def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),

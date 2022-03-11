@@ -37,7 +37,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       trace = if (method == TRACE) operation else None
     )
 
-    (e.renderPathTemplate(renderQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), pathItem)
+    (e.showPathTemplate(showQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
