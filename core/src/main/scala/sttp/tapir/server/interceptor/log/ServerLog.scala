@@ -4,6 +4,8 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext}
 import sttp.tapir.{AnyEndpoint, DecodeResult}
 
+import java.time.Clock
+
 /** Used by [[ServerLogInterceptor]] to log how a request was handled.
   * @tparam F[_]
   *   Interpreter-specific effect type constructor.
@@ -54,7 +56,8 @@ case class DefaultServerLog[F[_]](
     showEndpoint: AnyEndpoint => String = _.showShort,
     showRequest: ServerRequest => String = _.showShort,
     showResponse: ServerResponse[_] => String = _.showShort,
-    includeTiming: Boolean = true
+    includeTiming: Boolean = true,
+    clock: Clock = Clock.systemUTC()
 ) extends ServerLog[F] {
 
   def doLogWhenHandled(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogWhenHandled = f)
@@ -67,6 +70,8 @@ case class DefaultServerLog[F[_]](
   def showEndpoint(s: AnyEndpoint => String): DefaultServerLog[F] = copy(showEndpoint = s)
   def showRequest(s: ServerRequest => String): DefaultServerLog[F] = copy(showRequest = s)
   def showResponse(s: ServerResponse[_] => String): DefaultServerLog[F] = copy(showResponse = s)
+  def includeTiming(doInclude: Boolean): DefaultServerLog[F] = copy(includeTiming = doInclude)
+  def clock(c: Clock): DefaultServerLog[F] = copy(clock = c)
 
   //
 
@@ -116,7 +121,7 @@ case class DefaultServerLog[F[_]](
       doLogExceptions(s"Exception when handling request: ${showRequest(request)}, by: ${showEndpoint(e)}${took(token)}", ex)
     else noLog
 
-  private def now() = System.currentTimeMillis()
+  private def now() = clock.instant().toEpochMilli
 
   private def took(token: Long): String = if (includeTiming) s", took: ${now() - token}ms" else ""
 
