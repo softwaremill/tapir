@@ -62,7 +62,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.body shouldBe Right("orange None")) *>
           basicRequest.get(uri"$baseUri?fruit=orange&amount=10").send(backend).map(_.body shouldBe Right("orange Some(10)"))
     },
-    testServer(in_header_out_string) { case (p1: String, h: String) => pureResult(s"$p1".asRight[Unit]) } { (backend, baseUri) =>
+    testServer(in_header_out_string)((p1: String) => pureResult(s"$p1".asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri").header("X-Role", "Admin").send(backend).map(_.body shouldBe Right("Admin"))
     },
     testServer(in_path_path_out_string) { case (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit]) } {

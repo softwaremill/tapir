@@ -290,7 +290,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
     class format(val format: String) extends StaticAnnotation
     class deprecated extends StaticAnnotation
-    class hidden extends StaticAnnotation
+    class hideInDocs extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
   }

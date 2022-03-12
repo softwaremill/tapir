@@ -22,7 +22,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   private val schemaDefaultType = c.weakTypeOf[Schema.annotations.default[_]]
   private val schemaFormatType = c.weakTypeOf[Schema.annotations.format]
   private val schemaDeprecatedType = c.weakTypeOf[Schema.annotations.deprecated]
-  private val schemaHiddenType = c.weakTypeOf[Schema.annotations.hidden]
+  private val schemaHiddenType = c.weakTypeOf[Schema.annotations.hideInDocs]
   private val schemaValidateType = c.weakTypeOf[Schema.annotations.validate[_]]
 
   private val descriptionType = c.weakTypeOf[description]

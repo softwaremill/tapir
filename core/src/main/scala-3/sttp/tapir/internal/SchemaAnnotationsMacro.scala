@@ -20,7 +20,7 @@ object SchemaAnnotationsMacroImpl {
     val DefaultAnn = TypeTree.of[sttp.tapir.Schema.annotations.default[_]].tpe
     val FormatAnn = TypeTree.of[sttp.tapir.Schema.annotations.format].tpe
     val DeprecatedAnn = TypeTree.of[sttp.tapir.Schema.annotations.deprecated].tpe
-    val HiddenAnn = TypeTree.of[sttp.tapir.Schema.annotations.hidden].tpe
+    val HiddenAnn = TypeTree.of[sttp.tapir.Schema.annotations.hideInDocs].tpe
     val EncodedNameAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedName].tpe
     val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
 

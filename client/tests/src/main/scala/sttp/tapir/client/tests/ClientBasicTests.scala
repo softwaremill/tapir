@@ -28,7 +28,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(endpoint, (), (), Right(()))
     testClient(in_query_out_string, (), "apple", Right("fruit: apple"))
     testClient(in_query_query_out_string, (), ("apple", Some(10)), Right("fruit: apple 10"))
-    testClient(in_header_out_string, (), ("Admin", "hidden"), Right("Role: Admin"))
+    testClient(in_header_out_string, (), "Admin", Right("Role: Admin"))
     testClient(in_path_path_out_string, (), ("apple", 10), Right("apple 10 None"))
     testClient(
       in_path_path_out_string.name("special characters in path"),

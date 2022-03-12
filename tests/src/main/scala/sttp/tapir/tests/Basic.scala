@@ -20,8 +20,7 @@ object Basic {
   val in_query_query_out_string: PublicEndpoint[(String, Option[Int]), Unit, String, Any] =
     endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(stringBody)
 
-  val in_header_out_string: PublicEndpoint[(String, String), Unit, String, Any] =
-    endpoint.in(header[String]("X-Role").and(header[String]("hidden").hidden())).out(stringBody)
+  val in_header_out_string: PublicEndpoint[String, Unit, String, Any] = endpoint.in(header[String]("X-Role")).out(stringBody)
 
   val in_path_path_out_string: PublicEndpoint[(String, Int), Unit, String, Any] =
     endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
