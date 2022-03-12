@@ -35,7 +35,7 @@ case class Schema[T](
     format: Option[String] = None,
     encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
-    hidden: Boolean = false,
+    hideInDocs: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
 ) extends SchemaMacros[T] {
 
@@ -65,7 +65,7 @@ case class Schema[T](
       isOptional = true,
       format = format,
       deprecated = deprecated,
-      hidden = hidden
+      hideInDocs = hideInDocs
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -76,7 +76,7 @@ case class Schema[T](
       schemaType = SArray(this)(_.toIterable),
       isOptional = true,
       deprecated = deprecated,
-      hidden = hidden
+      hideInDocs = hideInDocs
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -87,7 +87,7 @@ case class Schema[T](
       schemaType = SArray(this)(identity),
       isOptional = true,
       deprecated = deprecated,
-      hidden = hidden
+      hideInDocs = hideInDocs
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
