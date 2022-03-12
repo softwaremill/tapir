@@ -83,7 +83,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       example = tschema.encodedExample.flatMap(exampleValue(tschema, _)).orElse(oschema.example),
       format = tschema.format.orElse(oschema.format),
       deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
-      hideInDocs = (if (tschema.hidden) Some(true) else None).orElse(oschema.hideInDocs)
+      hideInDocs = (if (tschema.hideInDocs) Some(true) else None).orElse(oschema.hideInDocs)
     )
   }
 
