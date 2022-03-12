@@ -38,6 +38,7 @@ object VertxZioServerOptions {
   object Log {
     def defaultServerLog[R](log: Logger): ServerLog[RIO[R, *]] = {
       DefaultServerLog(
+        doLogWhenReceived = debugLog(log)(_, None),
         doLogWhenHandled = debugLog(log),
         doLogAllDecodeFailures = infoLog(log),
         doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { log.error(msg, ex) },

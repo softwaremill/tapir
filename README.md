@@ -96,7 +96,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.0-M1"
 ```
 
 Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then 
@@ -148,7 +148,7 @@ code is unclear and be improved for the benefit of all.
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
 causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
 
-* run only JVM tests using `testJVM`
+* run only JVM tests for a specific Scala version using `testJVM2_13`
 * test single JS projects
 * use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 

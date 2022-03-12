@@ -206,7 +206,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1/p2"), "/p1%2Fp2 -> -/-"),
     (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
     (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
-    (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
+    (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /* -> -/-"),
     (
       endpoint.post.in(query[String]("q1")).in(query[Option[Int]]("q2")).in(stringBody).errorOut(stringBody),
       "POST ?q1 ?q2 {body as text/plain (UTF-8)} -> {body as text/plain (UTF-8)}/-"
@@ -236,10 +236,27 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     }
   }
 
+  val showShortTestData = List(
+    endpoint -> "* *",
+    endpoint.in("p1") -> "* /p1",
+    endpoint.in("p1" / "p2") -> "* /p1/p2",
+    endpoint.get.in("p1" / "p2") -> "GET /p1/p2",
+    endpoint.post -> "POST *",
+    endpoint.get.in("p1").in(paths) -> "GET /p1/*",
+    endpoint.get.in("p1" / "p2").name("my endpoint") -> "[my endpoint]"
+  )
+
+  for ((testEndpoint, expectedResult) <- showShortTestData) {
+    s"short show for ${testEndpoint.showDetail}" should s"be $expectedResult" in {
+      testEndpoint.showShort shouldBe expectedResult
+    }
+  }
+
   private val pathAllowedCharacters = Rfc3986.PathSegment.mkString
 
-  val renderTestData = List(
-    (endpoint, "/"),
+  val showPathTemplateTestData = List(
+    (endpoint, "*"),
+    (endpoint.in(""), "/"),
     (endpoint.in("p1"), "/p1"),
     (endpoint.in("p1" / "p2"), "/p1/p2"),
     (endpoint.securityIn("p1").in("p2"), "/p1/p2"),
@@ -251,20 +268,22 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
     (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
     (endpoint.in("p1/p2"), "/p1%2Fp2"),
-    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters)
+    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters),
+    (endpoint.in("p1" / paths), "/p1/*"),
+    (endpoint.in("p1").in(queryParams), "/p1?*")
   )
 
-  for ((testEndpoint, expectedRenderPath) <- renderTestData) {
-    s"renderPath for ${testEndpoint.showDetail}" should s"be $expectedRenderPath" in {
-      testEndpoint.renderPathTemplate() shouldBe expectedRenderPath
+  for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {
+    s"showPathTemplate for ${testEndpoint.showDetail}" should s"be $expectedShownPath" in {
+      testEndpoint.showPathTemplate() shouldBe expectedShownPath
     }
   }
 
-  "renderPath" should "keep param count in render functions" in {
+  "showPathTemplate" should "keep param count in show functions" in {
     val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
-    testEndpoint.renderPathTemplate(
-      renderPathParam = (index, _) => s"{par$index}",
-      renderQueryParam = Some((index, query) => s"${query.name}={par$index}")
+    testEndpoint.showPathTemplate(
+      showPathParam = (index, _) => s"{par$index}",
+      showQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
   }
 

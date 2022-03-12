@@ -153,7 +153,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): PathsCapture[U] = copy(codec = c, info = i)
-    override def show = s"/..."
+    override def show = s"/*"
   }
 
   case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
@@ -170,7 +170,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[sttp.model.QueryParams, U, TextPlain], i: Info[U]): QueryParams[U] =
       copy(codec = c, info = i)
-    override def show: String = s"?..."
+    override def show: String = s"?*"
   }
 
   case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: Info[T]) extends Atom[T] {

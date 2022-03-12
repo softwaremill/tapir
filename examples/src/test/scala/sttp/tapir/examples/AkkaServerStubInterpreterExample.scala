@@ -6,10 +6,10 @@ import sttp.client3._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir._
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.{ServerEndpoint, ValuedEndpointOutput}
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.interceptor.exception.ExceptionContext
-import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import scala.concurrent.Future

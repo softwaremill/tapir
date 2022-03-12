@@ -17,6 +17,14 @@ trait ServerRequest extends RequestMetadata {
 
   lazy val acceptsContentTypes: Either[String, Seq[ContentTypeRange]] = Accepts.parse(headers)
   lazy val contentTypeParsed: Option[MediaType] = contentType.flatMap(MediaType.parse(_).toOption)
+
+  /** Create a copy of this server request, which reads data from the given underlying implementation. The type of `underlying` should be
+    * the same as the type of `this.underlying`.
+    */
+  def withUnderlying(underlying: Any): ServerRequest
+
+  /** A short representation of this request, including the request method, path and query. */
+  def showShort: String = s"$method ${uri.copy(scheme = None, authority = None, fragmentSegment = None).toString}"
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])

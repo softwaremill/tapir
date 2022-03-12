@@ -28,8 +28,8 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private val exampleRequestBody = new RequestBody[TestEffect, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-    override def toRaw[R](bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
-    override def toStream(): streams.BinaryStream = ???
+    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
+    override def toStream(serverRequest: ServerRequest): streams.BinaryStream = ???
   }
 
   private val exampleToResponse: ToResponseBody[ResponseBodyType, RequestBodyType] = new ToResponseBody[ResponseBodyType, RequestBodyType] {
@@ -56,6 +56,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     override def method: Method = ???
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
+    override def withUnderlying(underlying: Any): ServerRequest = this
   }
 
   implicit val bodyListener: BodyListener[TestEffect, ResponseBodyType] = new BodyListener[TestEffect, ResponseBodyType] {
@@ -65,15 +66,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO(
-      RequestResult.Response(
-        new ServerResponse[ResponseBodyType] {
-          override def code: StatusCode = StatusCode.InternalServerError
-          override def headers: Seq[Header] = scala.collection.immutable.Seq.empty[Header]
-          override def body: Option[ResponseBodyType] = Some(error.getMessage)
-        }
-      )
-    )
+    UIO(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 
@@ -88,12 +81,13 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
       List(serverEndpoint),
+      exampleRequestBody,
       exampleToResponse,
       List.empty,
       _ => ZIO.unit
     )
 
-    interpreter(testRequest, exampleRequestBody)
+    interpreter(testRequest)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
@@ -116,12 +110,13 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
       List(serverEndpoint),
+      exampleRequestBody,
       exampleToResponse,
       List.empty,
       _ => ZIO.unit
     )
 
-    interpreter(testRequest, exampleRequestBody)
+    interpreter(testRequest)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(

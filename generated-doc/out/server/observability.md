@@ -37,7 +37,7 @@ import sttp.tapir.metrics.MetricLabels
 
 val labels = MetricLabels(
   forRequest = Seq(
-    "path" -> { case (ep, _) => ep.renderPathTemplate() },
+    "path" -> { case (ep, _) => ep.showPathTemplate() },
     "protocol" -> { case (_, req) => req.protocol }
   ),
   forResponse = Seq()
@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.0.0-M1"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -106,7 +106,7 @@ val responsesTotal = Metric[Future, Counter](
       EndpointMetric()
         .onResponse { (ep, res) =>
           Future.successful {
-            val path = ep.renderPathTemplate()
+            val path = ep.showPathTemplate()
             val method = req.method.method
             val status = res.code.toString()
             counter.labels(path, method, status).inc()
@@ -124,7 +124,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.0.0-M1"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one

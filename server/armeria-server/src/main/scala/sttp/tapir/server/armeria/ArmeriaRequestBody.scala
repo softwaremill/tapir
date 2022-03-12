@@ -1,74 +1,78 @@
 package sttp.tapir.server.armeria
 
+import com.linecorp.armeria.common.HttpData
 import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, Multipart}
 import com.linecorp.armeria.common.stream.{StreamMessage, StreamMessages}
-import com.linecorp.armeria.common.{HttpData, HttpRequest}
 import com.linecorp.armeria.server.ServiceRequestContext
+import sttp.capabilities.Streams
+import sttp.model.Part
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.{FileRange, RawBodyType}
+
 import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import sttp.capabilities.Streams
-import sttp.model.Part
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType}
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
-    ctx: ServiceRequestContext,
     serverOptions: ArmeriaServerOptions[F],
     streamCompatible: StreamCompatible[S]
 )(implicit ec: ExecutionContext, futureConversion: FutureConversion[F])
     extends RequestBody[F, S] {
 
-  private val request: HttpRequest = ctx.request()
-
   override val streams: Streams[S] = streamCompatible.streams
 
-  override def toStream(): streams.BinaryStream = {
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
     streamCompatible
-      .fromArmeriaStream(request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]])
+      .fromArmeriaStream(armeriaCtx(serverRequest).request().filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]])
       .asInstanceOf[streams.BinaryStream]
   }
 
-  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = futureConversion.from(bodyType match {
-    case RawBodyType.StringBody(_) =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
-    case RawBodyType.ByteArrayBody =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
-    case RawBodyType.ByteBufferBody =>
-      request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().byteBuf().nioBuffer())).toScala
-    case RawBodyType.InputStreamBody =>
-      request
-        .aggregate()
-        .thenApply[RawValue[R]](agg => RawValue(new ByteArrayInputStream(agg.content().array())))
-        .toScala
-    case RawBodyType.FileBody =>
-      val bodyStream = request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]]
-      for {
-        file <- futureConversion.to(serverOptions.createFile())
-        _ <- StreamMessages.writeTo(bodyStream, file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
-        fileRange = FileRange(file)
-      } yield RawValue(fileRange, Seq(fileRange))
-    case m: RawBodyType.MultipartBody =>
-      Multipart
-        .from(request)
-        .aggregate()
-        .toScala
-        .flatMap(multipart => {
-          val rawParts = multipart
-            .bodyParts()
-            .asScala
-            .toList
-            .flatMap(part => m.partType(part.name()).map(toRawPart(part, _)))
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+    val ctx = armeriaCtx(serverRequest)
+    val request = ctx.request()
 
-          Future
-            .sequence(rawParts)
-            .map(RawValue.fromParts(_))
-        })
-        .asInstanceOf[Future[RawValue[R]]]
-  })
+    futureConversion.from(bodyType match {
+      case RawBodyType.StringBody(_) =>
+        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
+      case RawBodyType.ByteArrayBody =>
+        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
+      case RawBodyType.ByteBufferBody =>
+        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().byteBuf().nioBuffer())).toScala
+      case RawBodyType.InputStreamBody =>
+        request
+          .aggregate()
+          .thenApply[RawValue[R]](agg => RawValue(new ByteArrayInputStream(agg.content().array())))
+          .toScala
+      case RawBodyType.FileBody =>
+        val bodyStream = request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]]
+        for {
+          file <- futureConversion.to(serverOptions.createFile())
+          _ <- StreamMessages.writeTo(bodyStream, file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
+          fileRange = FileRange(file)
+        } yield RawValue(fileRange, Seq(fileRange))
+      case m: RawBodyType.MultipartBody =>
+        Multipart
+          .from(request)
+          .aggregate()
+          .toScala
+          .flatMap(multipart => {
+            val rawParts = multipart
+              .bodyParts()
+              .asScala
+              .toList
+              .flatMap(part => m.partType(part.name()).map(toRawPart(ctx, part, _)))
 
-  private def toRawFromHttpData[R](body: HttpData, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+            Future
+              .sequence(rawParts)
+              .map(RawValue.fromParts(_))
+          })
+          .asInstanceOf[Future[RawValue[R]]]
+    })
+  }
+
+  private def toRawFromHttpData[R](ctx: ServiceRequestContext, body: HttpData, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     bodyType match {
       case RawBodyType.StringBody(_)   => Future.successful(RawValue(body.toStringUtf8))
       case RawBodyType.ByteArrayBody   => Future.successful(RawValue(body.array()))
@@ -85,8 +89,8 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     }
   }
 
-  private def toRawPart[R](part: AggregatedBodyPart, bodyType: RawBodyType[R]): Future[Part[R]] = {
-    toRawFromHttpData(part.content(), bodyType)
+  private def toRawPart[R](ctx: ServiceRequestContext, part: AggregatedBodyPart, bodyType: RawBodyType[R]): Future[Part[R]] = {
+    toRawFromHttpData(ctx, part.content(), bodyType)
       .map((r: RawValue[R]) =>
         Part(
           name = part.name,
@@ -101,4 +105,6 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
         )
       )
   }
+
+  private def armeriaCtx(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[ServiceRequestContext]
 }

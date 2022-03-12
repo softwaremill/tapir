@@ -3,17 +3,18 @@ package sttp.tapir.server.stub
 import sttp.client3.{ByteArrayBody, ByteBufferBody, FileBody, InputStreamBody, MultipartBody, NoBody, Request, StreamBody, StringBody}
 import sttp.monad.MonadError
 import sttp.tapir.RawBodyType
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
-class SttpRequestBody[F[_]](request: Request[_, _])(implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
+class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] =
-    body match {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] =
+    body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {
           case RawBodyType.StringBody(charset) => ME.unit(RawValue(new String(bytes, charset)))
@@ -26,13 +27,15 @@ class SttpRequestBody[F[_]](request: Request[_, _])(implicit ME: MonadError[F]) 
       case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
     }
 
-  override def toStream(): streams.BinaryStream = body match {
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = body(serverRequest) match {
     case Right(stream) => ME.unit(RawValue(stream))
     case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
   }
 
+  private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[_, _]]
+
   /** Either bytes or any stream */
-  private val body: Either[Array[Byte], Any] = request.body match {
+  private def body(serverRequest: ServerRequest): Either[Array[Byte], Any] = sttpRequest(serverRequest).body match {
     case NoBody                     => Left(Array.emptyByteArray)
     case StringBody(s, encoding, _) => Left(s.getBytes(encoding))
     case ByteArrayBody(b, _)        => Left(b)

@@ -15,4 +15,5 @@ class SttpRequest(r: Request[_, _]) extends ServerRequest {
   override def underlying: Any = r
   override def pathSegments: List[String] = r.uri.pathSegments.segments.map(_.v).toList
   override def uri: Uri = r.uri
+  override def withUnderlying(underlying: Any): ServerRequest = new SttpRequest(r = underlying.asInstanceOf[Request[_, _]])
 }

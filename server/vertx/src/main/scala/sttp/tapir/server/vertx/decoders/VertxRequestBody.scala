@@ -6,6 +6,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.model.Part
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, RawBodyType}
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.vertx.VertxServerOptions
@@ -21,78 +22,82 @@ import scala.collection.JavaConverters._
 import scala.util.Random
 
 class VertxRequestBody[F[_], S <: Streams[S]](
-    rc: RoutingContext,
     serverOptions: VertxServerOptions[F],
     fromVFuture: FromVFuture[F]
 )(implicit val readStreamCompatible: ReadStreamCompatible[S])
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = fromVFuture(bodyType match {
-    case RawBodyType.StringBody(defaultCharset) =>
-      Future.succeededFuture(RawValue(Option(rc.getBodyAsString(defaultCharset.toString)).getOrElse("")))
-    case RawBodyType.ByteArrayBody =>
-      Future.succeededFuture(RawValue(Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)))
-    case RawBodyType.ByteBufferBody =>
-      Future.succeededFuture(RawValue(Option(rc.getBody).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
-    case RawBodyType.InputStreamBody =>
-      val bytes = Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)
-      Future.succeededFuture(RawValue(new ByteArrayInputStream(bytes)))
-    case RawBodyType.FileBody =>
-      rc.fileUploads().asScala.headOption match {
-        case Some(upload) =>
-          Future.succeededFuture {
-            val file = FileRange(new File(upload.uploadedFileName()))
-            RawValue(file, Seq(file))
-          }
-        case None if rc.getBody != null =>
-          val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
-          val fs = rc.vertx.fileSystem
-          val result = fs
-            .createFile(filePath)
-            .flatMap(_ => fs.writeFile(filePath, rc.getBody))
-            .flatMap(_ =>
-              Future.succeededFuture {
-                val file = FileRange(new File(filePath))
-                RawValue(file, Seq(file))
-              }
-            )
-          result
-        case None =>
-          Future.failedFuture[RawValue[FileRange]]("No body")
-      }
-    case mp: RawBodyType.MultipartBody =>
-      Future.succeededFuture {
-        val formParts = rc
-          .request()
-          .formAttributes()
-          .entries()
-          .asScala
-          .map { e =>
-            mp.partType(e.getKey)
-              .flatMap(rawBodyType => extractStringPart(e.getValue, rawBodyType))
-              .map(body => Part(e.getKey, body))
-          }
-          .toList
-          .flatten
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+    val rc = routingContext(serverRequest)
+    fromVFuture(bodyType match {
+      case RawBodyType.StringBody(defaultCharset) =>
+        Future.succeededFuture(RawValue(Option(rc.getBodyAsString(defaultCharset.toString)).getOrElse("")))
+      case RawBodyType.ByteArrayBody =>
+        Future.succeededFuture(RawValue(Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)))
+      case RawBodyType.ByteBufferBody =>
+        Future.succeededFuture(RawValue(Option(rc.getBody).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
+      case RawBodyType.InputStreamBody =>
+        val bytes = Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)
+        Future.succeededFuture(RawValue(new ByteArrayInputStream(bytes)))
+      case RawBodyType.FileBody =>
+        rc.fileUploads().asScala.headOption match {
+          case Some(upload) =>
+            Future.succeededFuture {
+              val file = FileRange(new File(upload.uploadedFileName()))
+              RawValue(file, Seq(file))
+            }
+          case None if rc.getBody != null =>
+            val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+            val fs = rc.vertx.fileSystem
+            val result = fs
+              .createFile(filePath)
+              .flatMap(_ => fs.writeFile(filePath, rc.getBody))
+              .flatMap(_ =>
+                Future.succeededFuture {
+                  val file = FileRange(new File(filePath))
+                  RawValue(file, Seq(file))
+                }
+              )
+            result
+          case None =>
+            Future.failedFuture[RawValue[FileRange]]("No body")
+        }
+      case mp: RawBodyType.MultipartBody =>
+        Future.succeededFuture {
+          val formParts = rc
+            .request()
+            .formAttributes()
+            .entries()
+            .asScala
+            .map { e =>
+              mp.partType(e.getKey)
+                .flatMap(rawBodyType => extractStringPart(e.getValue, rawBodyType))
+                .map(body => Part(e.getKey, body))
+            }
+            .toList
+            .flatten
 
-        val fileParts = rc
-          .fileUploads()
-          .asScala
-          .map { fu =>
-            mp.partType(fu.name())
-              .flatMap(rawBodyType => extractFilePart(fu, rawBodyType))
-              .map(body => Part(fu.name(), body, fileName = Option(fu.fileName())))
-          }
-          .toList
-          .flatten
+          val fileParts = rc
+            .fileUploads()
+            .asScala
+            .map { fu =>
+              mp.partType(fu.name())
+                .flatMap(rawBodyType => extractFilePart(fu, rawBodyType))
+                .map(body => Part(fu.name(), body, fileName = Option(fu.fileName())))
+            }
+            .toList
+            .flatten
 
-        RawValue.fromParts(formParts ++ fileParts)
-      }
-  })
+          RawValue.fromParts(formParts ++ fileParts)
+        }
+    })
+  }
 
-  override def toStream(): streams.BinaryStream =
-    readStreamCompatible.fromReadStream(rc.request.asInstanceOf[ReadStream[Buffer]]).asInstanceOf[streams.BinaryStream]
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream =
+    readStreamCompatible
+      .fromReadStream(routingContext(serverRequest).request.asInstanceOf[ReadStream[Buffer]])
+      .asInstanceOf[streams.BinaryStream]
 
   private def extractStringPart[B](part: String, bodyType: RawBodyType[B]): Option[Any] = {
     bodyType match {
@@ -116,7 +121,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     }
   }
 
-  private def readFileBytes(fu: FileUpload) = {
-    Files.readAllBytes(Paths.get(fu.uploadedFileName()))
-  }
+  private def readFileBytes(fu: FileUpload) = Files.readAllBytes(Paths.get(fu.uploadedFileName()))
+
+  private def routingContext(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[RoutingContext]
 }

@@ -44,6 +44,7 @@ object VertxCatsServerOptions {
   object Log {
     def defaultServerLog[F[_]: Async](log: Logger): ServerLog[F] = {
       DefaultServerLog(
+        doLogWhenReceived = debugLog(log)(_, None),
         doLogWhenHandled = debugLog[F](log),
         doLogAllDecodeFailures = infoLog[F](log),
         doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay { log.error(msg, ex) },

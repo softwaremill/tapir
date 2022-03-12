@@ -41,6 +41,7 @@ object FinatraServerOptions extends Logging {
   private[finatra] lazy val futurePool = FuturePool.unboundedPool
 
   lazy val defaultServerLog: DefaultServerLog[Future] = DefaultServerLog(
+    doLogWhenReceived = msg => futurePool(debug(msg)),
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
     doLogExceptions = (msg: String, ex: Throwable) => futurePool { error(msg, ex) },
