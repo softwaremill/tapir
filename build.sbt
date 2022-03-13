@@ -41,6 +41,11 @@ def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): L
     case _            => List(sourceDir / "scalajvm-2")
   }
 
+def inlineOptions(scalaVersion: String) = CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, _)) => Seq("-Xmax-inlines", "64")
+    case _            => Seq.empty[String]
+  }
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
@@ -57,7 +62,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
-  scalacOptions += "-Ywarn-macros:after",
+  scalacOptions ++= (inlineOptions(scalaVersion.value) ++ Seq("-Ywarn-macros:after")),
   evictionErrorLevel := Level.Info
 )
 

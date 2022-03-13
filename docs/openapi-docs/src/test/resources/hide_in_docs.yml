@@ -1,6 +1,48 @@
 openapi: 3.0.3
 info:
-  title: Unique parameters
+  title: Hide in docs
   version: '1.0'
 paths:
-  /:
+  /auth/hidden/api/echo/headers:
+    get:
+      operationId: getAuthApiEcho
+      parameters:
+        - name: s1
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: c1
+          in: cookie
+          required: true
+          schema:
+            type: integer
+        - name: q1
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: h1
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          headers:
+            Set-Cookie:
+              required:false
+              schema:
+                type:array
+                items:
+                type:string
+        '400':
+          description: 'Invalidvaluefor:headers1,Invalidvaluefor:headers2,
+            Invalidvaluefor:cookiec1,Invalidvaluefor:cookiec2,Invalidvalue
+            for:queryparameterq1,Invalidvaluefor:queryparameterq2,Invalid
+            valuefor:headerh1,Invalidvaluefor:headerh2'
+          content:
+            text/plain:
+          schema:
+            type: string

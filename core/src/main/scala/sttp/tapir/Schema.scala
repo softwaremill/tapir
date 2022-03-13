@@ -114,6 +114,8 @@ case class Schema[T](
 
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
+  def hideInDocs(d: Boolean): Schema[T] = copy(hideInDocs = d)
+
   def show: String = s"schema is $schemaType"
 
   def showValidators: Option[String] = {

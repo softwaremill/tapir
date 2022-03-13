@@ -130,7 +130,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
   )
 
   val allTestEndpoints9 = List(
-    hidden_in_the_docs
+    hide_in_docs
   )
 
   val allTestEndpoints = allTestEndpoints0 ++ allTestEndpoints1 ++ allTestEndpoints2 ++ allTestEndpoints3 ++
