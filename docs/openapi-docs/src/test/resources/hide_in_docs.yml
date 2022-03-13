@@ -3,7 +3,7 @@ info:
   title: Hide in docs
   version: '1.0'
 paths:
-  /auth/hidden/api/echo/headers:
+  /auth/api/echo:
     get:
       operationId: getAuthApiEcho
       parameters:
