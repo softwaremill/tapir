@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info:
+  title: Unique parameters
+  version: '1.0'
+paths:
+  /:

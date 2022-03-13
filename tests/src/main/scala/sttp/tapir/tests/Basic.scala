@@ -181,4 +181,16 @@ object Basic {
 
   val in_path_security_no_regular: Endpoint[Unit, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").out(stringBody)
+
+  val hide_in_docs: Endpoint[(String, String), (Int, String, String, String), Unit, List[String], Any] =
+    endpoint.get
+      .securityIn("auth" / "hidden".hideInDocs())
+      .securityIn(header[String]("s1"))
+      .securityIn(header[String]("s2").hideInDocs())
+      .in("api" / "echo" / "headers".hideInDocs())
+      .in(cookie[Int]("c1"))
+      .in(cookie[String]("c2").hideInDocs())
+      .in(header[String]("h1"))
+      .in(header[String]("h2").hideInDocs())
+      .out(header[List[String]]("Set-Cookie"))
 }
