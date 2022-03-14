@@ -3,8 +3,16 @@ package sttp.tapir.testing
 import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
 import sttp.tapir.{AnyEndpoint, EndpointInput}
 
-object FindShadowedInputs {
+object EndpointVerifier {
   def apply(endpoint: AnyEndpoint): Option[String] = {
+    val secShadowing = findSecurityShadowing(endpoint)
+    secShadowing match {
+      case None => findWildcardShadowing(endpoint)
+      case _ => secShadowing
+    }
+  }
+
+  def findSecurityShadowing(endpoint: AnyEndpoint): Option[String] = {
     val paths = inputPathSegments(endpoint.securityInput)
       .zip(
         inputPathSegments(endpoint.input)
@@ -13,6 +21,19 @@ object FindShadowedInputs {
 
     if (paths.length != 0) {
       Some(endpoint.input.show + ", is shadowed by: " + endpoint.securityInput.show)
+    } else {
+      None
+    }
+  }
+
+  def findWildcardShadowing(endpoint: AnyEndpoint): Option[String] = {
+    val secPaths = inputPathSegments(endpoint.securityInput)
+    val paths = inputPathSegments(endpoint.input)
+
+    if (secPaths.indexOf(WildcardPathSegment) != secPaths.length - 1) {
+      Some(s"WildcardPathSegment /* at index ${secPaths.indexOf(WildcardPathSegment)} shadows the rest of the path")
+    } else if (paths.indexOf(WildcardPathSegment) != paths.length - 1) {
+      Some(s"WildcardPathSegment /* at index ${paths.indexOf(WildcardPathSegment)} shadows the rest of the path")
     } else {
       None
     }
