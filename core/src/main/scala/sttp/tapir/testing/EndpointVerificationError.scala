@@ -34,6 +34,17 @@ case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends Endpoi
   override def toString: String = showAllPaths(e) + ", is shadowed by: " + by.input.show
 }
 
+/** Paths in an enpoint are incorrect if a wildcard `paths` segment appears before any other segment. The `paths` segment consumes all of
+  * the remaining paths, so any segment after it will never match.
+  *
+  * Examples of incorrectly defined paths:
+  *
+  * {{{
+  * endpoint.get.in("x" / paths / "y")
+  * endpoint.get.in(paths / path[String].name("x")))
+  * endpoint.get.securityIn(paths).in("x")
+  * }}}
+  */
 case class IncorrectPathsError(e: AnyEndpoint, at: Int) extends EndpointVerificationError {
   override def toString: String = s"A wildcard pattern in ${showAllPaths(e)} shadows the rest of the paths at index $at"
 }
