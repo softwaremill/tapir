@@ -15,6 +15,7 @@ case class ServerResponse[+B](code: StatusCode, headers: Seq[Header], body: Opti
 
   def showShort: String = code.toString()
   def showCodeAndHeaders: String = s"$code (${Headers.toStringSafe(headers)})"
+  def addHeaders(additionalHeaders: Seq[Header]): ServerResponse[B] = copy(headers = headers ++ additionalHeaders)
 }
 
 object ServerResponse {
