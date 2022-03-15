@@ -60,6 +60,7 @@ case class DefaultServerLog[F[_]](
     clock: Clock = Clock.systemUTC()
 ) extends ServerLog[F] {
 
+  def doLogWhenReceived(f: String => F[Unit]): DefaultServerLog[F] = copy(doLogWhenReceived = f)
   def doLogWhenHandled(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogWhenHandled = f)
   def doLogAllDecodeFailures(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogAllDecodeFailures = f)
   def doLogExceptions(f: (String, Throwable) => F[Unit]): DefaultServerLog[F] = copy(doLogExceptions = f)
