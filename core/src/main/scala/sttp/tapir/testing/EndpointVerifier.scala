@@ -1,45 +1,68 @@
 package sttp.tapir.testing
 
 import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
-import sttp.tapir.{AnyEndpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, testing}
+
+import scala.annotation.tailrec
 
 object EndpointVerifier {
-  def apply(endpoint: AnyEndpoint): Option[String] = {
-    val secShadowing = findSecurityShadowing(endpoint)
-    secShadowing match {
-      case None => findWildcardShadowing(endpoint)
-      case _ => secShadowing
-    }
+  def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
+    findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
+    findIncorrectPaths(endpoints).toSet
   }
 
-  def findSecurityShadowing(endpoint: AnyEndpoint): Option[String] = {
-    val paths = inputPathSegments(endpoint.securityInput)
-      .zip(
-        inputPathSegments(endpoint.input)
-      )
-      .takeWhile(p => p._1.equals(WildcardPathSegment) || p._1.equals(p._2) || p._1.equals(PathVariableSegment))
-
-    if (paths.length != 0) {
-      Some(endpoint.input.show + ", is shadowed by: " + endpoint.securityInput.show)
-    } else {
-      None
-    }
+  private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
+    endpoints
+      .map(e => {
+        val paths = extractPathSegments(e)
+        val wildCardIndex = paths.indexOf(WildcardPathSegment)
+        (! List(paths.length - 1, -1).contains(wildCardIndex), IncorrectPathsError(e, wildCardIndex))
+      })
+      .filter(_._1).map(_._2)
   }
 
-  def findWildcardShadowing(endpoint: AnyEndpoint): Option[String] = {
-    val secPaths = inputPathSegments(endpoint.securityInput)
-    val paths = inputPathSegments(endpoint.input)
-
-    if (secPaths.indexOf(WildcardPathSegment) != secPaths.length - 1) {
-      Some(s"WildcardPathSegment /* at index ${secPaths.indexOf(WildcardPathSegment)} shadows the rest of the path")
-    } else if (paths.indexOf(WildcardPathSegment) != paths.length - 1) {
-      Some(s"WildcardPathSegment /* at index ${paths.indexOf(WildcardPathSegment)} shadows the rest of the path")
-    } else {
-      None
+  @tailrec
+  private def findShadowedEndpoints(endpoints: List[AnyEndpoint], acc: List[ShadowedEndpointError]): List[ShadowedEndpointError] =
+    endpoints match {
+      case endpoint :: endpoints => findShadowedEndpoints(endpoints, acc ::: findAllShadowedByEndpoint(endpoint, endpoints))
+      case Nil                   => acc
     }
+
+  private def findAllShadowedByEndpoint(endpoint: AnyEndpoint, in: List[AnyEndpoint]): List[ShadowedEndpointError] = {
+    in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpointError(e, endpoint))
   }
 
-  private def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
+  private def checkIfShadows(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
+    checkMethods(e1, e2) && checkPaths(e1, e2)
+
+  private def checkMethods(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
+    e1.method.equals(e2.method) || e1.method.isEmpty
+
+  private def checkPaths(e1: AnyEndpoint, e2: AnyEndpoint): Boolean = {
+    val e1Segments = extractPathSegments(e1)
+    val e2Segments = extractPathSegments(e2)
+    val commonSegments = e1Segments
+      .zip(e2Segments)
+      .filter(p => p._1.equals(WildcardPathSegment) || p._1.equals(p._2) || p._1.equals(PathVariableSegment))
+
+    if (e1Segments.size == commonSegments.size && e1Segments.size == e2Segments.size) true
+    else if (e1Segments.size == commonSegments.size && endsWithWildcard(e1Segments)) true
+    else if (e1Segments.size - 1 == commonSegments.size && e2Segments.size == commonSegments.size && endsWithWildcard(e1Segments)) true
+    else false
+  }
+
+  private def endsWithWildcard(paths: Vector[PathComponent]): Boolean = {
+    paths.nonEmpty && paths.indexOf(WildcardPathSegment) == paths.size - 1
+  }
+
+  private def extractPathSegments(endpoint: AnyEndpoint): Vector[PathComponent] = {
+    inputPathSegments(
+      endpoint.securityInput
+        .and(endpoint.input)
+    )
+  }
+
+  def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
     input
       .traverseInputs({
         case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
@@ -48,3 +71,8 @@ object EndpointVerifier {
       })
   }
 }
+
+sealed trait PathComponent
+case object PathVariableSegment extends PathComponent
+case object WildcardPathSegment extends PathComponent
+case class FixedPathSegment(s: String) extends PathComponent
