@@ -618,7 +618,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should respect hideInDocs annotation") {
+  test("should respect hidden annotation") {
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(Basic.hide_in_docs, Info("Hide in docs", "1.0"))
       .toYaml

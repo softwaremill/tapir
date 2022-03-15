@@ -38,10 +38,10 @@ paths:
                 items:
                 type:string
         '400':
-          description: 'Invalidvaluefor:headers1,Invalidvaluefor:headers2,
-            Invalidvaluefor:cookiec1,Invalidvaluefor:cookiec2,Invalidvalue
-            for:queryparameterq1,Invalidvaluefor:queryparameterq2,Invalid
-            valuefor:headerh1,Invalidvaluefor:headerh2'
+          description: 'Invalid value for: header s1, Invalid value for: header s2,
+            Invalid value for: cookie c1, Invalid value for: cookie c2, Invalid value
+            for: query parameter q1, Invalid value for: query parameter q2, Invalid
+            value for: header h1, Invalid value for: header h2'
           content:
             text/plain:
           schema:

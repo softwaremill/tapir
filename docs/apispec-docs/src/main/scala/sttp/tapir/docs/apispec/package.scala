@@ -50,8 +50,8 @@ package object apispec {
   private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
-        case EndpointInput.PathCapture(name, _, i) if ! i.hideInDocs => Left(name)
-        case EndpointInput.FixedPath(s, _, i)      if ! i.hideInDocs => Right(s)
+        case EndpointInput.PathCapture(name, _, i) if ! i.hidden => Left(name)
+        case EndpointInput.FixedPath(s, _, i)      if ! i.hidden => Right(s)
       }
       .foldLeft(Vector.empty[String]) { case (acc, component) =>
         component match {

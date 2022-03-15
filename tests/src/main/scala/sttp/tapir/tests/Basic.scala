@@ -184,15 +184,15 @@ object Basic {
 
   val hide_in_docs: Endpoint[(String, String), (Int, String, Int, String, String, String), Unit, List[String], Any] =
     endpoint.get
-      .securityIn("auth" / "hidden".hideInDocs())
+      .securityIn("auth" / "hidden".hidden())
       .securityIn(header[String]("s1"))
-      .securityIn(header[String]("s2").hideInDocs())
-      .in("api" / "echo" / "headers".hideInDocs())
+      .securityIn(header[String]("s2").hidden())
+      .in("api" / "echo" / "headers".hidden())
       .in(cookie[Int]("c1"))
-      .in(cookie[String]("c2").hideInDocs())
+      .in(cookie[String]("c2").hidden())
       .in(query[Int]("q1"))
-      .in(query[String]("q2").hideInDocs())
+      .in(query[String]("q2").hidden())
       .in(header[String]("h1"))
-      .in(header[String]("h2").hideInDocs())
+      .in(header[String]("h2").hidden())
       .out(header[List[String]]("Set-Cookie"))
 }

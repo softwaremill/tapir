@@ -381,7 +381,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       .validate(Validator.enumeration[Countries.Country](Countries.values.toList))
       .description("country")
       .default(Countries.PL)
-      .hideInDocs(false)
       .name(SName("country-encoded-name"))
     implicitly[Schema[Countries.Country]] shouldBe expected
   }

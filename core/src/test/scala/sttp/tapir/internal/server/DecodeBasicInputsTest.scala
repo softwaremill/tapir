@@ -16,7 +16,7 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     case class X(v: String)
     val e = new RuntimeException()
     implicit val xCodec: Codec[String, X, TextPlain] = Codec.string.map(_ => throw e)(_.v)
-    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false, hideInDocs = false, AttributeMap.Empty))
+    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false, AttributeMap.Empty))
 
     // when & then
     DecodeBasicInputs(input, DecodeInputsContext(StubServerRequest))._1 shouldBe DecodeBasicInputsResult.Failure(
