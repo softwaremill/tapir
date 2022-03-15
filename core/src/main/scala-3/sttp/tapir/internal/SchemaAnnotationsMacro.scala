@@ -67,6 +67,6 @@ object SchemaAnnotationsMacroImpl {
           firstAnnArg(ValidateAnn).map(arg => '{ ${ sa }.copy(validate = Some(${ arg.asExprOf[sttp.tapir.Validator[T]] })) }).getOrElse(sa)
       )
 
-    transformations.foldLeft('{ SchemaAnnotations[T](None, None, None, None, None, None, None) })((sa, t) => t(sa))
+    transformations.foldLeft('{ SchemaAnnotations[T](None, None, None, None, None, None, None, None) })((sa, t) => t(sa))
   }
 }
