@@ -369,9 +369,6 @@ trait EndpointMetaOps {
     import sttp.tapir.internal._
     input.method.orElse(securityInput.method)
   }
-
-  @deprecated("Use method", since = "0.19.0")
-  def httpMethod: Option[Method] = method
 }
 
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
