@@ -11,7 +11,6 @@ import sttp.model._
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -20,6 +19,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.metric.MetricLabels
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.collection.immutable

@@ -33,7 +33,7 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 could be used, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.MetricLabels
+import sttp.tapir.server.metric.MetricLabels
 
 val labels = MetricLabels(
   forRequest = Seq(

@@ -6,9 +6,9 @@ import io.prometheus.client.{CollectorRegistry, Counter, Gauge, Histogram}
 import sttp.monad.MonadError
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
-import sttp.tapir.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.metric.{EndpointMetric, Metric, MetricLabels}
 
 import java.io.StringWriter
 import java.time.{Clock, Duration}

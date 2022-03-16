@@ -3,11 +3,11 @@ package sttp.tapir.server.interceptor.metrics
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListener._
+import sttp.tapir.server.metric.{EndpointMetric, Metric}
 
 import scala.util.{Failure, Success, Try}
 

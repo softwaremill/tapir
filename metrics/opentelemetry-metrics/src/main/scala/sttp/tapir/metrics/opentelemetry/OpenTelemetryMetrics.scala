@@ -4,9 +4,9 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCounter, Meter}
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics._
-import sttp.tapir.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.metric.{EndpointMetric, Metric, MetricLabels}
 
 import java.time.{Duration, Instant}
 

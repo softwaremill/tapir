@@ -6,9 +6,9 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.metric.{EndpointMetric, Metric}
 import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Basic.{in_input_stream_out_input_stream, in_json_out_json, in_root_path}
 import sttp.tapir.tests.Test

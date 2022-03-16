@@ -12,11 +12,11 @@ import org.scalatest.time.{Second, Span}
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.metric.MetricLabels
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -1,4 +1,4 @@
-package sttp.tapir.metrics
+package sttp.tapir.server.metric
 
 import sttp.monad.MonadError
 import sttp.tapir.AnyEndpoint

@@ -33,8 +33,7 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 could be used, for example:
 
 ```scala
-import sttp.tapir.metrics.MetricLabels
-
+import sttp.tapir.server.metric.MetricLabels
 val labels = MetricLabels(
   forRequest = Seq(
     "path" -> { case (ep, _) => ep.showPathTemplate() },
@@ -88,8 +87,10 @@ Also, custom metric creation is possible and attaching it to `PrometheusMetrics`
 
 ```scala
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.{EndpointMetric, Metric}
+import sttp.tapir.metrics.Metric
 import io.prometheus.client.{CollectorRegistry, Counter}
+import sttp.tapir.server.metric.{EndpointMetric, Metric}
+
 import scala.concurrent.Future
 
 // Metric for counting responses labeled by path, method and status code
