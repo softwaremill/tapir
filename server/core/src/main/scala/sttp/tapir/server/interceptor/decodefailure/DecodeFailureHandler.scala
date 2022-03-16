@@ -4,9 +4,9 @@ import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, MultipartDecodeException}
 import sttp.tapir.DecodeResult.{Error, InvalidValue, Mismatch, Missing, Multiple}
 import sttp.tapir.internal.RichEndpoint
-import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, _}
+import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, server, _}
 
 import scala.annotation.tailrec
 
@@ -77,7 +77,7 @@ object DefaultDecodeFailureHandler {
     default.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, default.respond(ctx)))
 
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
-    ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
+    server.model.ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
 
   /** @param badRequestOnPathErrorIfPathShapeMatches
     *   Should a status 400 be returned if the shape of the path of the request matches, but decoding some path segment fails with a

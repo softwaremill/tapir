@@ -4,10 +4,11 @@ import sttp.client3.{Request, Response}
 import sttp.model.{Header, RequestMetadata, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter._
+import sttp.tapir.server.model.ServerResponse
 
 import scala.util.{Success, Try}
 

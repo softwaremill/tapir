@@ -1,10 +1,10 @@
 package sttp.tapir.server.interceptor.reject
 
 import sttp.model.StatusCode
-import sttp.tapir._
-import sttp.tapir.server.ValuedEndpointOutput
+import sttp.tapir.{server, _}
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler._
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.model.ValuedEndpointOutput
 
 trait RejectHandler {
   def apply(failure: RequestResult.Failure): Option[ValuedEndpointOutput[_]]
@@ -21,10 +21,14 @@ case class DefaultRejectHandler(
 }
 
 object DefaultRejectHandler {
-  val default: DefaultRejectHandler = DefaultRejectHandler((sc, m) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
+  val default: DefaultRejectHandler =
+    DefaultRejectHandler((sc, m) => server.model.ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
 
   val defaultOrNotFound: DefaultRejectHandler =
-    DefaultRejectHandler((sc, m) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)), Some(StatusCodeAndBody.NotFound))
+    DefaultRejectHandler(
+      (sc, m) => server.model.ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)),
+      Some(StatusCodeAndBody.NotFound)
+    )
 
   private def hasMethodMismatch(f: RequestResult.Failure): Boolean = f.failures.map(_.failingInput).exists {
     case _: EndpointInput.FixedMethod[_] => true

@@ -3,10 +3,11 @@ package sttp.tapir.server.interceptor.cors
 import sttp.model.{Header, HeaderNames, Method}
 import sttp.monad.MonadError
 import sttp.monad.syntax.MonadErrorOps
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor.cors.CORSConfig._
 import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
+import sttp.tapir.server.model.ServerResponse
 
 class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestInterceptor[F] {
   override def apply[B](

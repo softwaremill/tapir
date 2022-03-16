@@ -1,7 +1,8 @@
 package sttp.tapir.server.interceptor.log
 
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext}
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.{AnyEndpoint, DecodeResult}
 
 import java.time.Clock

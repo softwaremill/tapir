@@ -2,7 +2,8 @@ package sttp.tapir.server.metric
 
 import sttp.monad.MonadError
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.model.ServerResponse
 
 case class Metric[F[_], M](
     metric: M,

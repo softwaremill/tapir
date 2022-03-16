@@ -4,9 +4,10 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
-import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server._
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.{model, _}
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
@@ -111,7 +112,7 @@ class ServerInterpreter[R, F[_], B, S](
       response <- securityLogicResult match {
         case Left(e) =>
           resultOrValueFrom.value(
-            endpointHandler(responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(se.endpoint.errorOutput, e)))
+            endpointHandler(responder(defaultErrorStatusCode)(request, model.ValuedEndpointOutput(se.endpoint.errorOutput, e)))
               .onSecurityFailure(SecurityFailureContext(se, a, request))
               .map(r => RequestResult.Response(r): RequestResult[B])
           )
@@ -189,8 +190,10 @@ class ServerInterpreter[R, F[_], B, S](
         ctx.serverEndpoint
           .logic(implicitly)(ctx.principal)(ctx.decodedInput)
           .flatMap {
-            case Right(result) => responder(defaultSuccessStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.output, result))
-            case Left(err)     => responder(defaultErrorStatusCode)(ctx.request, ValuedEndpointOutput(ctx.serverEndpoint.errorOutput, err))
+            case Right(result) =>
+              responder(defaultSuccessStatusCode)(ctx.request, model.ValuedEndpointOutput(ctx.serverEndpoint.output, result))
+            case Left(err) =>
+              responder(defaultErrorStatusCode)(ctx.request, model.ValuedEndpointOutput(ctx.serverEndpoint.errorOutput, err))
           }
 
       override def onSecurityFailure[A](

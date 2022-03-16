@@ -1,6 +1,5 @@
 package sttp.tapir.server.interceptor
 
-import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -8,6 +7,7 @@ import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, Excepti
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectHandler, RejectInterceptor}
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.{headers, statusCode}
 
 /** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via `addInterceptor`, sitting

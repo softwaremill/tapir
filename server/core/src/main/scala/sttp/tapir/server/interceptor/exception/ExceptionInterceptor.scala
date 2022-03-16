@@ -3,9 +3,10 @@ package sttp.tapir.server.interceptor.exception
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
+import sttp.tapir.server.model.ServerResponse
 
 import scala.util.control.NonFatal
 

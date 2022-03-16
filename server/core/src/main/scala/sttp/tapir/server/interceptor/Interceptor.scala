@@ -2,8 +2,8 @@ package sttp.tapir.server.interceptor
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.ValuedEndpointOutput
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
   *

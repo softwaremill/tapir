@@ -1,8 +1,8 @@
 package sttp.tapir.server.interceptor
 
 import sttp.monad.MonadError
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interpreter.BodyListener
+import sttp.tapir.server.model.ServerResponse
 
 /** Handles the result of decoding a request using an endpoint's inputs. */
 trait EndpointHandler[F[_], B] {

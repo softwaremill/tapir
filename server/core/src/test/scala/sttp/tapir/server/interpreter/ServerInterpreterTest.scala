@@ -6,14 +6,14 @@ import sttp.model.Uri._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
-import sttp.tapir._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
-import sttp.tapir.server.ValuedEndpointOutput
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
-import sttp.tapir.server.TestUtil._
+import sttp.tapir.server.model.ServerResponse
+import sttp.tapir._
 
 import scala.collection.immutable
 
@@ -103,7 +103,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val customBody = "Custom body"
 
     val rejectInterceptor = new RejectInterceptor[Id](DefaultRejectHandler((_, _) => {
-      ValuedEndpointOutput(statusCode.and(stringBody), (customStatusCode, customBody))
+      server.model.ValuedEndpointOutput(statusCode.and(stringBody), (customStatusCode, customBody))
     }))
 
     val interpreter =

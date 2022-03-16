@@ -2,9 +2,10 @@ package sttp.tapir.server.interceptor.log
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
+import sttp.tapir.server.model.ServerResponse
 
 /** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
