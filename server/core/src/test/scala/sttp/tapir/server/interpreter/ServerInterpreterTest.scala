@@ -13,6 +13,7 @@ import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
+import sttp.tapir.server.TestUtil._
 
 import scala.collection.immutable
 

@@ -10,6 +10,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Second, Span}
 import sttp.tapir.TestUtil._
+import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.server.ServerEndpoint

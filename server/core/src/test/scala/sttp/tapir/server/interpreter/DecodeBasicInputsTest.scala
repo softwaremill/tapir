@@ -1,4 +1,4 @@
-package sttp.tapir.internal.server
+package sttp.tapir.server.interpreter
 
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain

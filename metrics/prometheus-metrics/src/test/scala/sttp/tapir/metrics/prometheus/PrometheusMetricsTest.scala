@@ -9,6 +9,7 @@ import org.scalatest.time.{Second, Span}
 import sttp.model.Uri._
 import sttp.model._
 import sttp.tapir.TestUtil._
+import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._

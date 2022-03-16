@@ -1,4 +1,5 @@
 package sttp.tapir.server.interpreter
+
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.Uri._
