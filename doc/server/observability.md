@@ -88,7 +88,7 @@ Also, custom metric creation is possible and attaching it to `PrometheusMetrics`
 
 ```scala mdoc:compile-only
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.{EndpointMetric, Metric}
+import sttp.tapir.server.metric.{EndpointMetric, Metric}
 import io.prometheus.client.{CollectorRegistry, Counter}
 import scala.concurrent.Future
 
