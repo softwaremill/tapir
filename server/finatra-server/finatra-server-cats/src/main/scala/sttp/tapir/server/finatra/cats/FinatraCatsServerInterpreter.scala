@@ -7,8 +7,8 @@ import com.twitter.inject.Logging
 import com.twitter.util.Future
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.{ServerEndpoint, ValuedEndpointOutput}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter._
 import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerInterpreter, FinatraServerOptions}
@@ -29,6 +29,7 @@ import sttp.tapir.{Endpoint, TapirFile}
 
 import scala.util.Try
 import sttp.tapir.server.finatra.cats.conversions._
+import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
 trait FinatraCatsServerInterpreter[F[_]] extends Logging {
 

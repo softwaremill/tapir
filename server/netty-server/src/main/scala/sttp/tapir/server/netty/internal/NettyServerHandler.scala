@@ -6,7 +6,7 @@ import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleCha
 import io.netty.handler.codec.http._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._

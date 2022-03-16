@@ -9,9 +9,9 @@ import io.prometheus.client.CollectorRegistry
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

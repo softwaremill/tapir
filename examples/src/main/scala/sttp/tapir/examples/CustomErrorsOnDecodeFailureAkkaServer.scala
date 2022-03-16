@@ -3,14 +3,14 @@ package sttp.tapir.examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import sttp.tapir._
+import sttp.tapir.{server, _}
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import sttp.client3._
-import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.model.ValuedEndpointOutput
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // corresponds to: GET /?amount=...
@@ -24,7 +24,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
       ctx.failingInput match {
         // when defining how a decode failure should be handled, we need to describe the output to be used, and
         // a value for this output
-        case EndpointInput.Query(_, _, _) => Some(ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
+        case EndpointInput.Query(_, _, _) => Some(server.model.ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
         // in other cases, using the default behavior
         case _ => DefaultDecodeFailureHandler.default(ctx)
       }
