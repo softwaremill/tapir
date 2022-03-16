@@ -3,9 +3,8 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.syntax._
-import sttp.tapir.EndpointInput.FixedMethod
+import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.ShowPathTemplate.{ShowPathParam, ShowQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
@@ -354,8 +353,8 @@ trait EndpointMetaOps {
     *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
   def showPathTemplate(
-      showPathParam: ShowPathParam = ShowPathTemplate.Defaults.path,
-      showQueryParam: Option[ShowQueryParam] = Some(ShowPathTemplate.Defaults.query),
+      showPathParam: (Int, PathCapture[_]) => String = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}"),
+      showQueryParam: Option[(Int, Query[_]) => String] = Some((_, q) => s"${q.name}={${q.name}}"),
       includeAuth: Boolean = true,
       showNoPathAs: String = "*",
       showPathsAs: Option[String] = Some("*"),

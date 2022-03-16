@@ -1,16 +1,11 @@
-package sttp.tapir
+package sttp.tapir.internal
 
 import sttp.tapir.EndpointInput.{PathCapture, Query}
-import sttp.tapir.internal.UrlencodedData
+import sttp.tapir.{EndpointInput, EndpointMetaOps}
 
 object ShowPathTemplate {
   type ShowPathParam = (Int, PathCapture[_]) => String
   type ShowQueryParam = (Int, Query[_]) => String
-
-  object Defaults {
-    val path: ShowPathParam = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}")
-    val query: ShowQueryParam = (_, q) => s"${q.name}={${q.name}}"
-  }
 
   def apply(
       e: EndpointMetaOps
@@ -22,7 +17,6 @@ object ShowPathTemplate {
       showPathsAs: Option[String],
       showQueryParamsAs: Option[String]
   ): String = {
-    import sttp.tapir.internal._
 
     val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs(includeAuth)
     val (pathComponents, pathParamCount) = shownPathComponents(inputs, showPathParam, showPathsAs)
