@@ -25,8 +25,8 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) if ! info.hidden => addMetaDataFromInfo(name, codec, info) }
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) if ! info.hidden => addMetaDataFromInfo(name, codec, info) }
+    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) if ! codec.schema.hidden => addMetaDataFromInfo(name, codec, info) }
+    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) if ! codec.schema.hidden => addMetaDataFromInfo(name, codec, info) }
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
