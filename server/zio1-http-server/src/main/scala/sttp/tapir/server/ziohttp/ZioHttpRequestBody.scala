@@ -10,8 +10,8 @@ import sttp.tapir.server.interpreter.RequestBody
 import zhttp.http.Request
 import zio.RIO
 import zio.Task
-import zio.stream.Stream
-import zio.stream.ZStream
+import zio.blocking.Blocking
+import zio.stream.{Stream, ZSink, ZStream}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -25,7 +25,13 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
     case RawBodyType.ByteBufferBody             => asByteArray(serverRequest).map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
     case RawBodyType.InputStreamBody            => asByteArray(serverRequest).map(new ByteArrayInputStream(_)).map(RawValue(_))
     case RawBodyType.FileBody =>
-      serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
+      for {
+        tmpFile <- serverOptions.createFile(serverRequest)
+        _ <- toStream(serverRequest).asInstanceOf[Stream[Throwable, Byte]].run(ZSink.fromFile(tmpFile.toPath)).provideLayer(Blocking.live)
+      } yield {
+        val fileRange = FileRange(tmpFile)
+        RawValue(fileRange, Seq(fileRange))
+      }
     case RawBodyType.MultipartBody(_, _) => Task.never
   }
 

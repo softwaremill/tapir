@@ -89,8 +89,8 @@ following customised akka http options:
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
-import sttp.tapir.server.ValuedEndpointOutput
 import sttp.model.StatusCode
+import sttp.tapir.server.model.ValuedEndpointOutput
 
 val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
   AkkaHttpServerOptions.customInterceptors

@@ -12,10 +12,10 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Method, StatusCode}
 import sttp.monad.FutureMonad
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, ServerInterpreter}
+import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 

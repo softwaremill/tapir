@@ -33,14 +33,14 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 could be used, for example:
 
 ```scala
-import sttp.tapir.metrics.MetricLabels
+import sttp.tapir.server.metrics.MetricLabels
 
 val labels = MetricLabels(
-  forRequest = Seq(
-    "path" -> { case (ep, _) => ep.showPathTemplate() },
-    "protocol" -> { case (_, req) => req.protocol }
-  ),
-  forResponse = Seq()
+   forRequest = Seq(
+      "path" -> { case (ep, _) => ep.showPathTemplate() },
+      "protocol" -> { case (_, req) => req.protocol }
+   ),
+   forResponse = Seq()
 )
 ```
 
@@ -61,8 +61,8 @@ For example, using `AkkaServerInterpeter`:
 import akka.http.scaladsl.server.Route
 import io.prometheus.client.CollectorRegistry
 import sttp.monad.FutureMonad
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -87,33 +87,35 @@ val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusM
 Also, custom metric creation is possible and attaching it to `PrometheusMetrics`, for example:
 
 ```scala
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.{EndpointMetric, Metric}
+import sttp.tapir.metrics.Metric
 import io.prometheus.client.{CollectorRegistry, Counter}
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
+
 import scala.concurrent.Future
 
 // Metric for counting responses labeled by path, method and status code
 val responsesTotal = Metric[Future, Counter](
-  Counter
-    .build()
-    .namespace("tapir")
-    .name("responses_total")
-    .help("HTTP responses")
-    .labelNames("path", "method", "status")
-    .register(CollectorRegistry.defaultRegistry),
-  onRequest = { (req, counter, _) =>
-    Future.successful(
-      EndpointMetric()
-        .onResponse { (ep, res) =>
-          Future.successful {
-            val path = ep.showPathTemplate()
-            val method = req.method.method
-            val status = res.code.toString()
-            counter.labels(path, method, status).inc()
-          }
-        }
-    )
-  }
+   Counter
+           .build()
+           .namespace("tapir")
+           .name("responses_total")
+           .help("HTTP responses")
+           .labelNames("path", "method", "status")
+           .register(CollectorRegistry.defaultRegistry),
+   onRequest = { (req, counter, _) =>
+      Future.successful(
+         EndpointMetric()
+                 .onResponse { (ep, res) =>
+                    Future.successful {
+                       val path = ep.showPathTemplate()
+                       val method = req.method.method
+                       val status = res.code.toString()
+                       counter.labels(path, method, status).inc()
+                    }
+                 }
+      )
+   }
 )
 
 val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry).withCustom(responsesTotal)
@@ -134,8 +136,9 @@ of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/ex
 default metrics, simply:
 
 ```scala
-import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics
 import io.opentelemetry.api.metrics.{Meter, MeterProvider}
+import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
+
 import scala.concurrent.Future
 
 val provider: MeterProvider = ???

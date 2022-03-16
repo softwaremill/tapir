@@ -6,7 +6,8 @@ import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, Serve
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
 import sttp.tapir.{CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec

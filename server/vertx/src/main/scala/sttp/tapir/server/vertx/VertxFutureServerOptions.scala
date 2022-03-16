@@ -1,13 +1,12 @@
 package sttp.tapir.server.vertx
 
-import io.vertx.core.logging.Logger
-import io.vertx.core.logging.LoggerFactory
+import io.vertx.core.logging.{Logger, LoggerFactory}
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
 import sttp.monad.{FutureMonad, MonadError}
-import sttp.tapir.{Defaults, TapirFile}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,7 +40,7 @@ object VertxFutureServerOptions {
           ci.interceptors,
           None
         )
-    ).serverLog(Log.defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
+    ).serverLog(defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
   val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,27 +49,25 @@ object VertxFutureServerOptions {
 
   val default: VertxFutureServerOptions = customInterceptors.options
 
-  object Log {
-    def defaultServerLog(log: Logger): ServerLog[Future] = {
-      import scala.concurrent.ExecutionContext.Implicits.global
-      implicit val monadError: MonadError[Future] = new FutureMonad
+  def defaultServerLog(log: Logger): ServerLog[Future] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val monadError: MonadError[Future] = new FutureMonad
 
-      DefaultServerLog(
-        doLogWhenReceived = debugLog(log)(_, None),
-        doLogWhenHandled = debugLog(log),
-        doLogAllDecodeFailures = infoLog(log),
-        doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
-        noLog = Future.successful(())
-      )
-    }
+    DefaultServerLog(
+      doLogWhenReceived = debugLog(log)(_, None),
+      doLogWhenHandled = debugLog(log),
+      doLogAllDecodeFailures = infoLog(log),
+      doLogExceptions = (msg: String, ex: Throwable) => Future.successful { log.error(msg, ex) },
+      noLog = Future.successful(())
+    )
+  }
 
-    private def debugLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
-      VertxServerOptions.debugLog(log)(msg, exOpt)
-    }
+  private def debugLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
+    VertxServerOptions.debugLog(log)(msg, exOpt)
+  }
 
-    private def infoLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
-      VertxServerOptions.infoLog(log)(msg, exOpt)
-    }
+  private def infoLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
+    VertxServerOptions.infoLog(log)(msg, exOpt)
   }
 }
 
