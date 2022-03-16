@@ -1,12 +1,12 @@
-package sttp.tapir.metrics.opentelemetry
+package sttp.tapir.server.metrics.opentelemetry
 
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCounter, Meter}
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics._
+import OpenTelemetryMetrics._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.metric.{EndpointMetric, Metric, MetricLabels}
+import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.model.ServerResponse
 
 import java.time.{Duration, Instant}

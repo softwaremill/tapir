@@ -6,7 +6,7 @@ import sttp.tapir.AnyEndpoint
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListener._
-import sttp.tapir.server.metric.{EndpointMetric, Metric}
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.util.{Failure, Success, Try}

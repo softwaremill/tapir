@@ -1,4 +1,4 @@
-package sttp.tapir.metrics.prometheus
+package sttp.tapir.server.metrics.prometheus
 
 import io.prometheus.client.CollectorRegistry.defaultRegistry
 import io.prometheus.client.exporter.common.TextFormat
@@ -8,7 +8,7 @@ import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.metric.{EndpointMetric, Metric, MetricLabels}
+import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 
 import java.io.StringWriter
 import java.time.{Clock, Duration}

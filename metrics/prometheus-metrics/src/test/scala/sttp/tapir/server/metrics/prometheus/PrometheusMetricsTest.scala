@@ -1,4 +1,4 @@
-package sttp.tapir.metrics.prometheus
+package sttp.tapir.server.metrics.prometheus
 
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -11,15 +11,15 @@ import sttp.model._
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.metrics.prometheus.PrometheusMetrics._
-import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
+import PrometheusMetrics._
+import PrometheusMetricsTest._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.metric.MetricLabels
+import sttp.tapir.server.metrics.MetricLabels
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.collection.immutable

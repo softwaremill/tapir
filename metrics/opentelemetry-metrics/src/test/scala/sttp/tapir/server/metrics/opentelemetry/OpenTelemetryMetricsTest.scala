@@ -1,4 +1,4 @@
-package sttp.tapir.metrics.opentelemetry
+package sttp.tapir.server.metrics.opentelemetry
 
 import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
@@ -16,7 +16,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.metric.MetricLabels
+import sttp.tapir.server.metrics.MetricLabels
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global

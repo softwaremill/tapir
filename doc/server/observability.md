@@ -33,7 +33,7 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 could be used, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.metric.MetricLabels
+import sttp.tapir.server.metrics.MetricLabels
 
 val labels = MetricLabels(
   forRequest = Seq(
@@ -61,7 +61,7 @@ For example, using `AkkaServerInterpeter`:
 import akka.http.scaladsl.server.Route
 import io.prometheus.client.CollectorRegistry
 import sttp.monad.FutureMonad
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -87,8 +87,8 @@ val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusM
 Also, custom metric creation is possible and attaching it to `PrometheusMetrics`, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.server.metric.{EndpointMetric, Metric}
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import io.prometheus.client.{CollectorRegistry, Counter}
 import scala.concurrent.Future
 
@@ -134,7 +134,7 @@ of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/ex
 default metrics, simply:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics
+import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import io.opentelemetry.api.metrics.{Meter, MeterProvider}
 import scala.concurrent.Future
 
