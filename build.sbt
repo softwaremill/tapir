@@ -163,6 +163,7 @@ lazy val allAggregates = core.projectRefs ++
   awsSam.projectRefs ++
   awsTerraform.projectRefs ++
   awsExamples.projectRefs ++
+  clientCore.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   sttpClientWsZio1.projectRefs ++
@@ -1279,6 +1280,17 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   )
   .dependsOn(tests)
 
+lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-client",
+    description := "Core classes for client interpreters",
+    libraryDependencies ++= Seq(scalaTest.value % Test)
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-client"))
   .settings(clientTestServerSettings)
   .settings(commonSettings)
@@ -1291,7 +1303,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core, clientTests % Test)
+  .dependsOn(clientCore, clientTests % Test)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
   .settings(clientTestServerSettings)
@@ -1331,7 +1343,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       )
     )
   )
-  .dependsOn(core, clientTests % Test)
+  .dependsOn(clientCore, clientTests % Test)
 
 lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-client-ws-zio1"))
   .settings(clientTestServerSettings)
@@ -1361,7 +1373,7 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(core, clientTests % Test)
+  .dependsOn(clientCore, clientTests % Test)
 
 import scala.collection.JavaConverters._
 
