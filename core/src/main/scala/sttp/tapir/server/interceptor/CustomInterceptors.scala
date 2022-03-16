@@ -2,6 +2,7 @@ package sttp.tapir.server.interceptor
 
 import sttp.tapir.server.ValuedEndpointOutput
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
+import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
@@ -36,6 +37,7 @@ import sttp.tapir.{headers, statusCode}
 case class CustomInterceptors[F[_], O](
     createOptions: CustomInterceptors[F, O] => O,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
+    corsInterceptor: Option[CORSInterceptor[F]] = None,
     rejectHandler: Option[RejectHandler] = Some(DefaultRejectHandler.default),
     exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler.handler),
     serverLog: Option[ServerLog[F]] = None,
@@ -47,6 +49,9 @@ case class CustomInterceptors[F[_], O](
 ) {
   def metricsInterceptor(m: MetricsRequestInterceptor[F]): CustomInterceptors[F, O] = copy(metricsInterceptor = Some(m))
   def metricsInterceptor(m: Option[MetricsRequestInterceptor[F]]): CustomInterceptors[F, O] = copy(metricsInterceptor = m)
+
+  def corsInterceptor(c: CORSInterceptor[F]): CustomInterceptors[F, O] = copy(corsInterceptor = Some(c))
+  def corsInterceptor(c: Option[CORSInterceptor[F]]): CustomInterceptors[F, O] = copy(corsInterceptor = c)
 
   def rejectHandler(r: RejectHandler): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
   def rejectHandler(r: Option[RejectHandler]): CustomInterceptors[F, O] = copy(rejectHandler = r)
@@ -81,6 +86,7 @@ case class CustomInterceptors[F[_], O](
 
   /** Creates the default interceptor stack */
   def interceptors: List[Interceptor[F]] = metricsInterceptor.toList ++
+    corsInterceptor.toList ++
     rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
     serverLog.map(new ServerLogInterceptor[F](_)).toList ++
