@@ -1,5 +1,6 @@
-package sttp.tapir
+package sttp.tapir.model
 
+import sttp.tapir.DecodeResult
 import sttp.ws.{WebSocketException, WebSocketFrame}
 
 class UnsupportedWebSocketFrameException(f: WebSocketFrame) extends WebSocketException(s"Unsupported web socket frame: $f")
