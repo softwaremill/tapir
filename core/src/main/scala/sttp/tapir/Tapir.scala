@@ -36,7 +36,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header(name, value))
   def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
-  // TODO: cache directives
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
