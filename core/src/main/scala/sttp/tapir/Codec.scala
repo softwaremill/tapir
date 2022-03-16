@@ -15,7 +15,7 @@ import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
 import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
-import sttp.tapir.model.UsernamePassword
+import sttp.tapir.model.{UnsupportedWebSocketFrameException, UsernamePassword}
 import sttp.ws.WebSocketFrame
 
 import scala.annotation.{implicitNotFound, tailrec}

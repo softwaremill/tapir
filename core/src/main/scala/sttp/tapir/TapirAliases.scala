@@ -40,9 +40,6 @@ trait TapirAliases {
   type AnyListCodec = sttp.tapir.AnyListCodec
   type MultipartCodec[T] = sttp.tapir.MultipartCodec[T]
 
-  /** ShowPathTemplate.scala */
-  val ShowPathTemplate = sttp.tapir.ShowPathTemplate
-
   /** SchemaType.scala */
   type SchemaType[T] = sttp.tapir.SchemaType[T]
   val SchemaType = sttp.tapir.SchemaType

@@ -8,7 +8,8 @@ import fs2._
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
 import scodec.bits.ByteVector
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
 private[http4s] object Http4sWebSockets {
