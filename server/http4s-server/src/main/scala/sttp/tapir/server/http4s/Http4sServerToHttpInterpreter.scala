@@ -17,7 +17,8 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
 class Http4sInvalidWebSocketUse(val message: String) extends Exception
@@ -58,10 +59,10 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
     val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
-      serverEndpoints,
+      FilterServerEndpoints(serverEndpoints),
       new Http4sRequestBody[F, G](http4sServerOptions, fToG),
       new Http4sToResponseBody[F, G](http4sServerOptions),
-      http4sServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(http4sServerOptions.interceptors, serverEndpoints),
       http4sServerOptions.deleteFile
     )
 

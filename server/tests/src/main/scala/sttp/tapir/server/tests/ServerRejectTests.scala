@@ -10,7 +10,6 @@ import sttp.tapir._
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.model.ValuedEndpointOutput
-import sttp.tapir.server.tests.ServerRejectTests.endpoints
 import sttp.tapir.tests._
 
 class ServerRejectTests[F[_], OPTIONS, ROUTE](
@@ -25,16 +24,23 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
   def tests(): List[Test] = List(
     testServer(
       "given a list of endpoints, should return 405 for unsupported methods",
-      NonEmptyList.of(route(endpoints))
+      NonEmptyList.of(route(samePathEndpoints))
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.delete(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
     },
     testServer(
+      "given a list of endpoints with different paths, should return 405 for unsupported methods",
+      NonEmptyList.of(route(differentPathEndpoints))
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/path1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.delete(uri"$baseUri/path1").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
+    },
+    testServer(
       "given a list of endpoints and a customized reject handler, should return a custom response for unsupported methods",
       NonEmptyList.of(
         route(
-          endpoints,
+          samePathEndpoints,
           (ci: CustomInterceptors[F, OPTIONS]) =>
             ci.rejectHandler(DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest)))
         )
@@ -53,12 +59,14 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
       basicRequest.post(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
-}
 
-object ServerRejectTests {
-
-  private def endpoints[F[_]: MonadError] = List(
+  private val samePathEndpoints = List(
     endpoint.get.in("path").serverLogic((_: Unit) => pureResult(().asRight[Unit])),
     endpoint.post.in("path").serverLogic((_: Unit) => pureResult(().asRight[Unit]))
+  )
+
+  private val differentPathEndpoints = List(
+    endpoint.get.in("path1").serverLogic((_: Unit) => pureResult(().asRight[Unit])),
+    endpoint.post.in("path2").serverLogic((_: Unit) => pureResult(().asRight[Unit]))
   )
 }

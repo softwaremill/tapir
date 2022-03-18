@@ -6,7 +6,8 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
 private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
@@ -19,10 +20,10 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 
     val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
-      ses,
+      FilterServerEndpoints(ses),
       new AwsRequestBody[F](),
       new AwsToResponseBody(awsServerOptions),
-      awsServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(awsServerOptions.interceptors, ses),
       deleteFile = _ => ().unit // no file support
     )
 

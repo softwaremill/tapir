@@ -51,7 +51,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => VFuture[Void], NoStreams](
-      List(e),
+      _ => List(e),
       new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible),
       new VertxToResponseBody(vertxFutureServerOptions)(ReadStreamCompatible.incompatible),
       vertxFutureServerOptions.interceptors,

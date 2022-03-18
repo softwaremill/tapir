@@ -49,7 +49,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
-      List(e),
+      _ => List(e),
       new VertxRequestBody(vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,

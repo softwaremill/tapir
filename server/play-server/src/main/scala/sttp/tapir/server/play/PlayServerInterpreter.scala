@@ -14,7 +14,14 @@ import sttp.model.{Method, StatusCode}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
-import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, ServerInterpreter}
+import sttp.tapir.server.interpreter.{
+  BodyListener,
+  DecodeBasicInputs,
+  DecodeBasicInputsResult,
+  DecodeInputsContext,
+  FilterServerEndpoints,
+  ServerInterpreter
+}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -72,7 +79,7 @@ trait PlayServerInterpreter {
         implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
         val serverRequest = new PlayServerRequest(header, request)
         val interpreter = new ServerInterpreter(
-          serverEndpoints,
+          FilterServerEndpoints(serverEndpoints),
           new PlayRequestBody(playServerOptions),
           new PlayToResponseBody,
           playServerOptions.interceptors,

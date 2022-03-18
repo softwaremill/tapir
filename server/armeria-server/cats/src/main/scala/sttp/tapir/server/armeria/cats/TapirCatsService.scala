@@ -6,8 +6,10 @@ import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.ServiceRequestContext
 import fs2.interop.reactivestreams._
 import fs2.{Chunk, Stream}
+
 import java.util.concurrent.CompletableFuture
 import org.reactivestreams.Publisher
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import sttp.capabilities.fs2.Fs2Streams
@@ -15,7 +17,8 @@ import sttp.monad.MonadAsyncError
 import sttp.monad.syntax._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
 private[cats] final case class TapirCatsService[F[_]: Async](
     serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]],
@@ -34,10 +37,10 @@ private[cats] final case class TapirCatsService[F[_]: Async](
 
     val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
       new ServerInterpreter(
-        serverEndpoints,
+        FilterServerEndpoints(serverEndpoints),
         new ArmeriaRequestBody(armeriaServerOptions, fs2StreamCompatible),
         new ArmeriaToResponseBody(fs2StreamCompatible),
-        armeriaServerOptions.interceptors,
+        RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
         armeriaServerOptions.deleteFile
       )
 

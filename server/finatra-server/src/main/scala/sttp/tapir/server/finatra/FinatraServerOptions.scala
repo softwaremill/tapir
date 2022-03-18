@@ -21,7 +21,7 @@ object FinatraServerOptions extends Logging {
     CustomInterceptors(
       createOptions = (ci: CustomInterceptors[Future, FinatraServerOptions]) =>
         FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(None)
 
   val default: FinatraServerOptions = customInterceptors.options
 

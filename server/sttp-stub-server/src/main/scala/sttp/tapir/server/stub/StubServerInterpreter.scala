@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.{Request, Response}
-import sttp.model.{Header, RequestMetadata, StatusCode}
+import sttp.model.RequestMetadata
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
@@ -25,7 +25,7 @@ private[stub] object StubServerInterpreter {
 
     val interpreter =
       new ServerInterpreter[R, F, Any, AnyStreams](
-        endpoints,
+        FilterServerEndpoints(endpoints),
         new SttpRequestBody[F],
         SttpResponseEncoder.toResponseBody,
         interceptors,

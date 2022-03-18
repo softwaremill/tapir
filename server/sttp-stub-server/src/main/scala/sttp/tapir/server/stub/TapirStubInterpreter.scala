@@ -6,6 +6,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
 class TapirStubInterpreter[F[_], R, OPTIONS](
@@ -27,7 +28,9 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 
   /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
   def backend(): SttpBackend[F, R] =
-    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
+    stub.whenAnyRequest.thenRespondF(req =>
+      StubServerInterpreter(req, endpoints, RejectInterceptor.disableWhenSingleEndpoint(interceptors, endpoints))
+    )
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =

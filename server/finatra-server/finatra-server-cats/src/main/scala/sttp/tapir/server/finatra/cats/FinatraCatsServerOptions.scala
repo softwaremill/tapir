@@ -37,7 +37,7 @@ object FinatraCatsServerOptions extends Logging {
           FinatraServerOptions.defaultDeleteFile(FinatraServerOptions.futurePool)(_).asF,
           ci.interceptors
         )
-    ).serverLog(finatraCatsServerLog(FinatraServerOptions.defaultServerLog))
+    ).serverLog(finatraCatsServerLog(FinatraServerOptions.defaultServerLog)).rejectHandler(None)
   }
 
   def default[F[_]: Async](dispatcher: Dispatcher[F]): FinatraCatsServerOptions[F] = customInterceptors(dispatcher).options

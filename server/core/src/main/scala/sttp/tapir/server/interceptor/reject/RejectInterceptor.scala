@@ -3,7 +3,8 @@ package sttp.tapir.server.interceptor.reject
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor._
 
 /** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have been interpreted
   * (doesn't do anything when interpreting a single endpoint).
@@ -23,9 +24,6 @@ class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor
       override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
         next(request).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
-          // when interpreting a single endpoint (hence dealing with a single failure), not doing anything, as returning
-          // a method mismatch only makes sense when there are more endpoints
-          case f: RequestResult.Failure if f.failures.size <= 1 => (f: RequestResult[B]).unit
           case f: RequestResult.Failure =>
             handler(f) match {
               case Some(value) => responder(request, value).map(RequestResult.Response(_))
@@ -34,4 +32,13 @@ class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor
         }
     }
   }
+}
+
+object RejectInterceptor {
+
+  /** When interpreting a single endpoint, disabling the reject interceptor, as returning a method mismatch only makes sense when there are
+    * more endpoints
+    */
+  def disableWhenSingleEndpoint[F[_]](interceptors: List[Interceptor[F]], ses: List[ServerEndpoint[_, F]]): List[Interceptor[F]] =
+    if (ses.length > 1) interceptors else interceptors.filterNot(_.isInstanceOf[RejectInterceptor[F]])
 }

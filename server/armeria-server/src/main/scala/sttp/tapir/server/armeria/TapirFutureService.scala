@@ -2,14 +2,17 @@ package sttp.tapir.server.armeria
 
 import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.ServiceRequestContext
+
 import java.util.concurrent.CompletableFuture
 import org.reactivestreams.Publisher
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import sttp.capabilities.armeria.ArmeriaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
 private[armeria] final case class TapirFutureService(
     serverEndpoints: List[ServerEndpoint[ArmeriaStreams, Future]],
@@ -26,10 +29,10 @@ private[armeria] final case class TapirFutureService(
     val serverRequest = new ArmeriaServerRequest(ctx)
     val future = new CompletableFuture[HttpResponse]()
     val interpreter: ServerInterpreter[ArmeriaStreams, Future, ArmeriaResponseType, ArmeriaStreams] = new ServerInterpreter(
-      serverEndpoints,
+      FilterServerEndpoints(serverEndpoints),
       new ArmeriaRequestBody(armeriaServerOptions, ArmeriaStreamCompatible),
       new ArmeriaToResponseBody(ArmeriaStreamCompatible),
-      armeriaServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
       armeriaServerOptions.deleteFile
     )
 

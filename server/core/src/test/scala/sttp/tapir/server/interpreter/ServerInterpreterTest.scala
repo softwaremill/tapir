@@ -50,7 +50,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
-        List(endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(()))),
+        _ => List(endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(()))),
         TestRequestBody,
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),
@@ -76,14 +76,15 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
-        List(
-          endpoint
-            .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
-            .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
-            .in(plainBody[StringWrapper](addToTrailCodec("z")))
-            .serverSecurityLogic[Unit, Id](_ => Left(()))
-            .serverLogic(_ => _ => Right(()))
-        ),
+        _ =>
+          List(
+            endpoint
+              .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
+              .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
+              .in(plainBody[StringWrapper](addToTrailCodec("z")))
+              .serverSecurityLogic[Unit, Id](_ => Left(()))
+              .serverLogic(_ => _ => Right(()))
+          ),
         TestRequestBody,
         UnitToResponseBody,
         List(new AddToTrailInterceptor(callTrail.append(_: String), "1")),
@@ -108,10 +109,11 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        List(
-          endpoint.post.serverLogic[Id](_ => Right(())),
-          endpoint.put.serverLogic[Id](_ => Right(()))
-        ),
+        _ =>
+          List(
+            endpoint.post.serverLogic[Id](_ => Right(())),
+            endpoint.put.serverLogic[Id](_ => Right(()))
+          ),
         TestRequestBody,
         StringToResponseBody,
         List(rejectInterceptor),
@@ -122,7 +124,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val response = interpreter(testRequest)
 
     // then
-    response should matchPattern { case Response(ServerResponse(customStatusCode, _, Some(customBody), _)) => }
+    response should matchPattern { case Response(ServerResponse(_, _, Some(_), _)) => }
   }
 
   class AddToTrailInterceptor(addCallTrail: String => Unit, prefix: String) extends EndpointInterceptor[Id] {
