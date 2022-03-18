@@ -20,7 +20,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.Future
@@ -32,13 +32,15 @@ trait AkkaHttpServerInterpreter {
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
   def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
+    val filterServerEndpoints = FilterServerEndpoints(ses)
+
     extractExecutionContext { implicit ec =>
       extractMaterializer { implicit mat =>
         implicit val monad: FutureMonad = new FutureMonad()
         implicit val bodyListener: BodyListener[Future, AkkaResponseBody] = new AkkaBodyListener
 
         val interpreter = new ServerInterpreter(
-          ses,
+          filterServerEndpoints,
           new AkkaRequestBody(akkaHttpServerOptions),
           new AkkaToResponseBody,
           akkaHttpServerOptions.interceptors,

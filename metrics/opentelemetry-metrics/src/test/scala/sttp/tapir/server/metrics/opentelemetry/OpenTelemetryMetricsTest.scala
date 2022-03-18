@@ -33,7 +33,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = OpenTelemetryMetrics[Id](meter).withRequestsTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        List(serverEp),
+        _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
@@ -63,7 +63,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = OpenTelemetryMetrics[Id](meter).withRequestsActive()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        List(serverEp),
+        _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
@@ -95,7 +95,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
-      List(serverEp),
+      _ => List(serverEp),
       TestRequestBody,
       UnitToResponseBody,
       List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
@@ -150,7 +150,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesDuration()
     def interpret(sleep: Int) =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        List(waitServerEp(sleep)),
+        _ => List(waitServerEp(sleep)),
         TestRequestBody,
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
@@ -184,7 +184,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal(labels)
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        List(serverEp),
+        _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
@@ -206,7 +206,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val meter = provider.get("tapir-instrumentation")
     val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
-      List(serverEp),
+      _ => List(serverEp),
       TestRequestBody,
       StringToResponseBody,
       List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler.handler)),

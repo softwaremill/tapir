@@ -5,7 +5,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
 import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
@@ -22,7 +22,7 @@ trait ZioHttpInterpreter[R] {
     implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
     implicit val monadError: MonadError[RIO[R, *]] = new RIOMonadError[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
-      ses,
+      FilterServerEndpoints(ses),
       new ZioHttpRequestBody(zioHttpServerOptions),
       new ZioHttpToResponseBody,
       zioHttpServerOptions.interceptors,

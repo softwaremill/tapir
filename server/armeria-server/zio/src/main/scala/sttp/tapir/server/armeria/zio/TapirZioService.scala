@@ -9,7 +9,7 @@ import org.reactivestreams.Publisher
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +32,7 @@ private[zio] final case class TapirZioService[R](
 
     val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
       new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
-        serverEndpoints,
+        FilterServerEndpoints(serverEndpoints),
         new ArmeriaRequestBody(armeriaServerOptions, zioStreamCompatible),
         new ArmeriaToResponseBody(zioStreamCompatible),
         armeriaServerOptions.interceptors,

@@ -11,7 +11,7 @@ import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
-    serverEndpoints: List[ServerEndpoint[R, F]],
+    serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F]],
@@ -27,7 +27,7 @@ class ServerInterpreter[R, F[_], B, S](
       responder: Responder[F, B]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, serverEndpoints, eisAcc.reverse, Nil) }
+      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, serverEndpoints(request), eisAcc.reverse, Nil) }
       case (i: RequestInterceptor[F]) :: tail =>
         i(
           responder,

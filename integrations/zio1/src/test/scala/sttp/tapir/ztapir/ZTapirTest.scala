@@ -82,7 +82,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
-      List(serverEndpoint),
+      _ => List(serverEndpoint),
       exampleRequestBody,
       exampleToResponse,
       List.empty,
@@ -111,7 +111,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
-      List(serverEndpoint),
+      _ => List(serverEndpoint),
       exampleRequestBody,
       exampleToResponse,
       List.empty,

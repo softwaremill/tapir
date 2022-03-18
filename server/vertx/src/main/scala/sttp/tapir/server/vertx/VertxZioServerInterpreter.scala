@@ -38,7 +38,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
-      List(e),
+      _ => List(e),
       new VertxRequestBody[RIO[R, *], ZioStreams](vertxZioServerOptions, fromVFuture)(zioReadStream),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
