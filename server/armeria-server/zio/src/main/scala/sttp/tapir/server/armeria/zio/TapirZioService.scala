@@ -9,6 +9,7 @@ import org.reactivestreams.Publisher
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 
 import java.util.concurrent.CompletableFuture
@@ -35,7 +36,7 @@ private[zio] final case class TapirZioService[R](
         FilterServerEndpoints(serverEndpoints),
         new ArmeriaRequestBody(armeriaServerOptions, zioStreamCompatible),
         new ArmeriaToResponseBody(zioStreamCompatible),
-        armeriaServerOptions.interceptors,
+        RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
         armeriaServerOptions.deleteFile
       )
 

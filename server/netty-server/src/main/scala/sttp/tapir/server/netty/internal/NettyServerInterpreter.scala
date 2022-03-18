@@ -7,6 +7,7 @@ import sttp.tapir.TapirFile
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
@@ -23,7 +24,7 @@ object NettyServerInterpreter {
       FilterServerEndpoints(ses),
       new NettyRequestBody(createFile),
       new NettyToResponseBody,
-      interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
       deleteFile
     )
 

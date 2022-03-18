@@ -20,6 +20,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
@@ -33,6 +34,7 @@ trait AkkaHttpServerInterpreter {
 
   def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(akkaHttpServerOptions.interceptors, ses)
 
     extractExecutionContext { implicit ec =>
       extractMaterializer { implicit mat =>
@@ -43,7 +45,7 @@ trait AkkaHttpServerInterpreter {
           filterServerEndpoints,
           new AkkaRequestBody(akkaHttpServerOptions),
           new AkkaToResponseBody,
-          akkaHttpServerOptions.interceptors,
+          interceptors,
           akkaHttpServerOptions.deleteFile
         )
 

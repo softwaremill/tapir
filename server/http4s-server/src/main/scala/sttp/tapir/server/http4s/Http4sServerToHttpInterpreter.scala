@@ -17,6 +17,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
@@ -61,7 +62,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
       FilterServerEndpoints(serverEndpoints),
       new Http4sRequestBody[F, G](http4sServerOptions, fToG),
       new Http4sToResponseBody[F, G](http4sServerOptions),
-      http4sServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(http4sServerOptions.interceptors, serverEndpoints),
       http4sServerOptions.deleteFile
     )
 

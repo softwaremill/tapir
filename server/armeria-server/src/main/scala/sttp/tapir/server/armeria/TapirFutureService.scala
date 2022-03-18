@@ -11,6 +11,7 @@ import scala.util.{Failure, Success}
 import sttp.capabilities.armeria.ArmeriaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
 private[armeria] final case class TapirFutureService(
@@ -31,7 +32,7 @@ private[armeria] final case class TapirFutureService(
       FilterServerEndpoints(serverEndpoints),
       new ArmeriaRequestBody(armeriaServerOptions, ArmeriaStreamCompatible),
       new ArmeriaToResponseBody(ArmeriaStreamCompatible),
-      armeriaServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
       armeriaServerOptions.deleteFile
     )
 

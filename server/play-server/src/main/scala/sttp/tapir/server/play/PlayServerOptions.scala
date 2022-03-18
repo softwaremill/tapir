@@ -41,7 +41,7 @@ object PlayServerOptions {
           ci.decodeFailureHandler,
           ci.interceptors
         )
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(None)
 
   val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global

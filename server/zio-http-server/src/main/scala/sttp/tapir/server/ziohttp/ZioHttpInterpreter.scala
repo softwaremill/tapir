@@ -5,6 +5,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
 import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
@@ -25,7 +26,7 @@ trait ZioHttpInterpreter[R] {
       FilterServerEndpoints(ses),
       new ZioHttpRequestBody(zioHttpServerOptions),
       new ZioHttpToResponseBody,
-      zioHttpServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(zioHttpServerOptions.interceptors, ses),
       zioHttpServerOptions.deleteFile
     )
 
