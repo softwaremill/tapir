@@ -1,10 +1,11 @@
-package perfTests.AkkaHttp
+package sttp.tapir.perf
 
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
+import sttp.tapir.perf
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -26,7 +27,7 @@ object Tapir {
     AkkaHttpServerInterpreter().toRoute(
       (0 to nRoutes)
         .map((n: Int) =>
-          perfTests.Common
+          perf.Common
             .genTapirEndpoint(n)
             .serverLogic((id: Int) => Future.successful(Right((id + n).toString)): Future[Either[String, String]])
         )
@@ -42,7 +43,7 @@ object AkkaHttp {
     Http()
       .newServerAt("127.0.0.1", 8080)
       .bind(router)
-      .flatMap((x) => { perfTests.Common.blockServer(); x.unbind() })
+      .flatMap((x) => { Common.blockServer(); x.unbind() })
       .onComplete(_ => actorSystem.terminate())
   }
 }

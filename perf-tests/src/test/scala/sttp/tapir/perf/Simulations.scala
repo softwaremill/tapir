@@ -1,4 +1,4 @@
-package perfTests
+package sttp.tapir.perf
 
 import io.gatling.core.Predef._
 import io.gatling.core.structure.{PopulationBuilder, ScenarioBuilder}

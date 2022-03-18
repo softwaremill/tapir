@@ -1,6 +1,7 @@
-package perfTests
+package sttp.tapir.perf
 
-import sttp.tapir._
+import sttp.tapir.{PublicEndpoint, endpoint, path, stringBody}
+
 import scala.io.StdIn
 
 object Common {
