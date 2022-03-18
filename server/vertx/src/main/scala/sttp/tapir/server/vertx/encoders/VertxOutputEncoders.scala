@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.encoders
 
 import io.vertx.core.Future
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.server.model.ServerResponse
 
 import scala.util.control.NonFatal
 

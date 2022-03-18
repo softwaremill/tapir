@@ -7,8 +7,9 @@ import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir._
-import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.tests.ServerRejectTests.endpoints
 import sttp.tapir.tests._
 

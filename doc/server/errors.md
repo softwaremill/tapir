@@ -126,7 +126,7 @@ We'll need to provide both the endpoint output which should be used for error me
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._

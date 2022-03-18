@@ -1,10 +1,10 @@
 object Versions {
   val http4s = "0.23.10"
-  val catsEffect = "3.3.6"
+  val catsEffect = "3.3.7"
   val circe = "0.14.1"
   val circeYaml = "0.14.1"
   val sttp = "3.4.1"
-  val sttpModel = "1.4.23"
+  val sttpModel = "1.4.25"
   val sttpShared = "1.3.2"
   val akkaHttp = "10.2.9"
   val akkaStreams = "2.6.18"

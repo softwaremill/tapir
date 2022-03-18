@@ -53,6 +53,7 @@ object PlayServerOptions {
     implicit val monadError: MonadError[Future] = new FutureMonad
 
     DefaultServerLog(
+      doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
       doLogExceptions = (msg: String, ex: Throwable) => Future.successful { logger.error(msg, ex) },

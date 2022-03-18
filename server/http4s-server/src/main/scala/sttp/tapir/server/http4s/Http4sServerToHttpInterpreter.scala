@@ -15,10 +15,10 @@ import org.typelevel.ci.CIString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.model.ServerResponse
 
 class Http4sInvalidWebSocketUse(val message: String) extends Exception
 

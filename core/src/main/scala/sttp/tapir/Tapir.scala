@@ -36,7 +36,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header(name, value))
   def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
-  // TODO: cache directives
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
@@ -66,9 +65,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def plainBody[T: Codec[String, *, TextPlain]]: EndpointIO.Body[String, T] = plainBody(StandardCharsets.UTF_8)
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
-
-  @scala.deprecated(message = "Use customJsonBody", since = "0.18.0")
-  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = customJsonBody[T]
 
   /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
     *
@@ -270,10 +266,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariant[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariant(statusCode(code).and(output))
 
-  @deprecated("Use oneOfVariant", since = "0.19.0")
-  def oneOfMapping[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
-    oneOfVariant(code, output)
-
   private val primitiveToBoxedClasses = Map[Class[_], Class[_]](
     classOf[Byte] -> classOf[java.lang.Byte],
     classOf[Short] -> classOf[java.lang.Short],
@@ -312,13 +304,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       runtimeClass: Class[_]
   ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
-  @deprecated("Use oneOfVariantClassMatcher", since = "0.19.0")
-  def oneOfMappingClassMatcher[T](
-      code: StatusCode,
-      output: EndpointOutput[T],
-      runtimeClass: Class[_]
-  ): OneOfVariant[T] = oneOfVariantClassMatcher(code, output, runtimeClass)
-
   /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -337,11 +322,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       matcher: PartialFunction[Any, Boolean]
   ): OneOfVariant[T] =
     OneOfVariant(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
-
-  @deprecated("Use oneOfVariantValueMatcher", since = "0.19.0")
-  def oneOfMappingValueMatcher[T](code: StatusCode, output: EndpointOutput[T])(
-      matcher: PartialFunction[Any, Boolean]
-  ): OneOfVariant[T] = oneOfVariantValueMatcher(code, output)(matcher)
 
   /** Create a one-of-variant which `output` if the provided value exactly matches one of the values provided in the second argument list.
     *
@@ -369,15 +349,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
 
-  @deprecated("Use oneOfVariantExactMatcher", since = "0.19.0")
-  def oneOfMappingExactMatcher[T: ClassTag](
-      code: StatusCode,
-      output: EndpointOutput[T]
-  )(
-      firstExactValue: T,
-      rest: T*
-  ): OneOfVariant[T] = oneOfVariantExactMatcher(code, output)(firstExactValue, rest: _*)
-
   /** Experimental!
     *
     * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
@@ -400,17 +371,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(implicitly[MatchType[T]].partial)
 
-  @deprecated("Use oneOfVariantFromMatchType", since = "0.19.0")
-  def oneOfMappingFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
-    oneOfVariantFromMatchType(code, output)
-
   /** Create a fallback variant to be used in [[oneOf]] output descriptions. Multiple such variants can be specified, with different body
     * content types.
     */
   def oneOfDefaultVariant[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
-
-  @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
-  def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
   /** A body input or output, which can be one of the given variants. All variants should represent `T` instances using different content
     * types. Hence, the content type is used as a discriminator to choose the appropriate variant.

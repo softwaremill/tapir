@@ -6,11 +6,13 @@ import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
+import sttp.tapir
 import sttp.tapir._
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.model.ValuedEndpointOutput
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -111,8 +113,8 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // given
     val opts = options
       .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
-      .exceptionHandler((_: ExceptionContext) => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
-      .rejectHandler(DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
+      .exceptionHandler((_: ExceptionContext) => Some(tapir.server.model.ValuedEndpointOutput(stringBody, "failed due to exception")))
+      .rejectHandler(DefaultRejectHandler((_, _) => tapir.server.model.ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
 
     val server = TapirStubInterpreter(opts, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))

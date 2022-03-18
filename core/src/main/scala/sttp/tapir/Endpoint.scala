@@ -3,9 +3,8 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.syntax._
-import sttp.tapir.EndpointInput.FixedMethod
+import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
@@ -303,7 +302,17 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
-  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
+  /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
+    * string representation of the method (if any) and path, e.g. `POST /books/add`
+    */
+  def showShort: String = info.name match {
+    case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
+    case Some(name) => s"[$name]"
+  }
+
+  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
+    * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
+    */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
@@ -318,7 +327,8 @@ trait EndpointMetaOps {
   }
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined, including mapping
-    * information.
+    * information. E.g.: `Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout:
+    * {body as text/plain (UTF-8)}, out: -)`
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
@@ -327,7 +337,7 @@ trait EndpointMetaOps {
   /** Equivalent to `.toString`, shows the whole case class structure. */
   def showRaw: String = toString
 
-  /** Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
+  /** Shows endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
     * {{{
     * endpoint.in("p1" / path[String] / query[String]("par2"))
     * }}}
@@ -335,12 +345,21 @@ trait EndpointMetaOps {
     *
     * @param includeAuth
     *   Should authentication inputs be included in the result.
+    * @param showNoPathAs
+    *   How to show the path if the endpoint does not define any path inputs.
+    * @param showPathsAs
+    *   How to show [[Tapir.paths]] inputs (if at all), which capture multiple paths segments
+    * @param showQueryParamsAs
+    *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
-  def renderPathTemplate(
-      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
-  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+  def showPathTemplate(
+      showPathParam: (Int, PathCapture[_]) => String = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}"),
+      showQueryParam: Option[(Int, Query[_]) => String] = Some((_, q) => s"${q.name}={${q.name}}"),
+      includeAuth: Boolean = true,
+      showNoPathAs: String = "*",
+      showPathsAs: Option[String] = Some("*"),
+      showQueryParamsAs: Option[String] = Some("*")
+  ): String = ShowPathTemplate(this)(showPathParam, showQueryParam, includeAuth, showNoPathAs, showPathsAs, showQueryParamsAs)
 
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
@@ -349,9 +368,6 @@ trait EndpointMetaOps {
     import sttp.tapir.internal._
     input.method.orElse(securityInput.method)
   }
-
-  @deprecated("Use method", since = "0.19.0")
-  def httpMethod: Option[Method] = method
 }
 
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>

@@ -33,11 +33,11 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 could be used, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.MetricLabels
+import sttp.tapir.server.metrics.MetricLabels
 
 val labels = MetricLabels(
   forRequest = Seq(
-    "path" -> { case (ep, _) => ep.renderPathTemplate() },
+    "path" -> { case (ep, _) => ep.showPathTemplate() },
     "protocol" -> { case (_, req) => req.protocol }
   ),
   forResponse = Seq()
@@ -61,7 +61,7 @@ For example, using `AkkaServerInterpeter`:
 import akka.http.scaladsl.server.Route
 import io.prometheus.client.CollectorRegistry
 import sttp.monad.FutureMonad
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -87,8 +87,8 @@ val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusM
 Also, custom metric creation is possible and attaching it to `PrometheusMetrics`, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.{EndpointMetric, Metric}
+import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import io.prometheus.client.{CollectorRegistry, Counter}
 import scala.concurrent.Future
 
@@ -106,7 +106,7 @@ val responsesTotal = Metric[Future, Counter](
       EndpointMetric()
         .onResponse { (ep, res) =>
           Future.successful {
-            val path = ep.renderPathTemplate()
+            val path = ep.showPathTemplate()
             val method = req.method.method
             val status = res.code.toString()
             counter.labels(path, method, status).inc()
@@ -134,7 +134,7 @@ of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/ex
 default metrics, simply:
 
 ```scala mdoc:compile-only
-import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics
+import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import io.opentelemetry.api.metrics.{Meter, MeterProvider}
 import scala.concurrent.Future
 

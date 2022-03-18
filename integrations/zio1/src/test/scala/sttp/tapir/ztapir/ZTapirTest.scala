@@ -6,7 +6,8 @@ import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, Serve
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
 import sttp.tapir.{CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec
@@ -67,15 +68,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO(
-      RequestResult.Response(
-        new ServerResponse[ResponseBodyType] {
-          override def code: StatusCode = StatusCode.InternalServerError
-          override def headers: Seq[Header] = scala.collection.immutable.Seq.empty[Header]
-          override def body: Option[ResponseBodyType] = Some(error.getMessage)
-        }
-      )
-    )
+    UIO(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 

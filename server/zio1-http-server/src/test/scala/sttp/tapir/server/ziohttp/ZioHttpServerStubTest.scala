@@ -6,7 +6,7 @@ import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.stream.ZStream
-import zio.{Runtime, Task}
+import zio.{Runtime, Schedule, Task}
 
 import scala.concurrent.Future
 
@@ -20,6 +20,7 @@ class ZioHttpServerStubTest extends ServerStubTest(ZioHttpCreateServerStubTest)
 
 class ZioHttpServerStubStreamingTest extends ServerStubStreamingTest(ZioHttpCreateServerStubTest, ZioStreams) {
 
+
   /** Must be an instance of streams.BinaryStream */
-  override def sampleStream: Any = ZStream.fromIterable(List("hello"))
+  override def sampleStream: Any = ZStream("1").repeat(Schedule.forever).take(60000 * 1024)
 }
