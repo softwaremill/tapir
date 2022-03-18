@@ -6,12 +6,12 @@ import cats.syntax.all._
 import org.http4s._
 import org.http4s.dsl._
 import org.http4s.implicits._
-import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.Router
+import org.http4s.blaze.server.BlazeServerBuilder
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 object Vanilla {
-  val router = (nRoutes: Int) =>
+  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router(
       (0 to nRoutes).map((n: Int) =>
         ("/path" + n.toString) -> {
@@ -26,7 +26,7 @@ object Vanilla {
 }
 
 object Tapir {
-  val router = (nRoutes: Int) =>
+  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
       Http4sServerInterpreter[IO]().toRoutes(
         (0 to nRoutes)

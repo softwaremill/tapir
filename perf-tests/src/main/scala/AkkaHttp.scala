@@ -5,10 +5,11 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.Http
-import scala.concurrent.Future
+
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Vanilla {
-  val router = (nRoutes: Int) =>
+  val router: Int => Route = (nRoutes: Int) =>
     concat(
       (0 to nRoutes).map((n: Int) =>
         get {
@@ -21,7 +22,7 @@ object Vanilla {
 }
 
 object Tapir {
-  val router = (nRoutes: Int) =>
+  val router: Int => Route = (nRoutes: Int) =>
     AkkaHttpServerInterpreter().toRoute(
       (0 to nRoutes)
         .map((n: Int) =>
@@ -34,10 +35,10 @@ object Tapir {
 }
 
 object AkkaHttp {
-  implicit val actorSystem = ActorSystem("akka-http")
-  implicit val executionContext = actorSystem.dispatcher
+  implicit val actorSystem: ActorSystem = ActorSystem("akka-http")
+  implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
 
-  def runServer(router: Route) = {
+  def runServer(router: Route): Unit = {
     Http()
       .newServerAt("127.0.0.1", 8080)
       .bind(router)

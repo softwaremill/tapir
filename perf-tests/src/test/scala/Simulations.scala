@@ -1,20 +1,25 @@
 package perfTests
 
 import io.gatling.core.Predef._
+import io.gatling.core.structure.{PopulationBuilder, ScenarioBuilder}
 import io.gatling.http.Predef._
 
+import scala.concurrent.duration.DurationInt
+
 object CommonSimulations {
-  val scn = scenario("get plaintext")
-    .during(5 * 60) {
+  private val duration = 5.minutes
+  private val userCount = 100
+  private val baseUrl = "http://127.0.0.1:8080"
+
+  val scn: ScenarioBuilder = scenario("get plaintext")
+    .during(duration.toSeconds.toInt) {
       exec(
         http("first plaintext")
           .get("/4")
       )
     }
-  val userCount = 100
-  val baseUrl = "http://127.0.0.1:8080"
 
-  def genericInjection(n: Int) = {
+  def genericInjection(n: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl + "/path" + n.toString)
     scn.inject(atOnceUsers(userCount)).protocols(httpProtocol)
   }
