@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M2"
 ```
 
 Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
@@ -89,8 +89,8 @@ following customised akka http options:
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
-import sttp.model.StatusCode
 import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.model.StatusCode
 
 val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
   AkkaHttpServerOptions.customInterceptors
@@ -135,7 +135,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M2"
 ```
 
 And the following imports:
@@ -190,7 +190,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.0.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.0.0-M2"
 ```
 
 Imports:

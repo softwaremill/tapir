@@ -125,17 +125,16 @@ for you.
 We'll need to provide both the endpoint output which should be used for error messages, along with the output's value:
 
 ```scala
-import sttp.tapir.{server, _}
+import sttp.tapir._
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
-import sttp.tapir.server.model.ValuedEndpointOutput
 
 case class MyFailure(msg: String)
-
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
-  server.model.ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
+  ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 
 val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customInterceptors
