@@ -19,7 +19,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName),
-            properties = fields.map { f =>
+            properties = fields.filterNot(_.schema.hidden).map { f =>
               f.schema match {
                 case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
                 case schema                                      => f.name.encodedName -> apply(schema)
@@ -40,7 +40,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema
             .apply(
-              schemas
+              schemas.filterNot(_.hidden)
                 .map {
                   case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
                   case t                                           => apply(t)
@@ -59,7 +59,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
             additionalProperties = Some(valueSchema.name match {
               case Some(name) => Left(nameToSchemaReference.map(name))
               case _          => apply(valueSchema)
-            })
+            }).filterNot(_ => valueSchema.hidden)
           )
         )
     }
@@ -82,8 +82,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       default = tschema.default.flatMap { case (_, raw) => raw.flatMap(r => exampleValue(tschema, r)) }.orElse(oschema.default),
       example = tschema.encodedExample.flatMap(exampleValue(tschema, _)).orElse(oschema.example),
       format = tschema.format.orElse(oschema.format),
-      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
-      hidden = (if (tschema.hidden) Some(true) else None).orElse(oschema.hidden)
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
     )
   }
 
