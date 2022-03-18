@@ -1,14 +1,17 @@
-package perfTests.AkkaHttp
+package sttp.tapir.perf.akka
 
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
-import scala.concurrent.Future
+import sttp.tapir.perf
+import sttp.tapir.perf.Common
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Vanilla {
-  val router = (nRoutes: Int) =>
+  val router: Int => Route = (nRoutes: Int) =>
     concat(
       (0 to nRoutes).map((n: Int) =>
         get {
@@ -21,11 +24,11 @@ object Vanilla {
 }
 
 object Tapir {
-  val router = (nRoutes: Int) =>
+  val router: Int => Route = (nRoutes: Int) =>
     AkkaHttpServerInterpreter().toRoute(
       (0 to nRoutes)
         .map((n: Int) =>
-          perfTests.Common
+          perf.Common
             .genTapirEndpoint(n)
             .serverLogic((id: Int) => Future.successful(Right((id + n).toString)): Future[Either[String, String]])
         )
@@ -34,14 +37,14 @@ object Tapir {
 }
 
 object AkkaHttp {
-  implicit val actorSystem = ActorSystem("akka-http")
-  implicit val executionContext = actorSystem.dispatcher
+  implicit val actorSystem: ActorSystem = ActorSystem("akka-http")
+  implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
 
-  def runServer(router: Route) = {
+  def runServer(router: Route): Unit = {
     Http()
       .newServerAt("127.0.0.1", 8080)
       .bind(router)
-      .flatMap((x) => { perfTests.Common.blockServer(); x.unbind() })
+      .flatMap((x) => { Common.blockServer(); x.unbind() })
       .onComplete(_ => actorSystem.terminate())
   }
 }

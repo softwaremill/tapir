@@ -1,15 +1,19 @@
 # seperate testing
 
-To start a server, run `perfTests/run` and select the server you want to test.
+To start a server, run `perfTests/run` and select the server you want to test, or in a single command:
 
-To test vanilla akka-http load, run this command:
 ```
-perfTests / Gatling / testOnly perfTests.AkkaHttpVanillaSimulation
+sbt "perfTests/runMain sttp.tapir.perf.akka.VanillaMultiServer"
+// or
+sbt "perfTests/runMain sttp.tapir.perf.akka.TapirMultiServer"
+// or others ...
 ```
 
-To test tapir with akka-http load, run this command:
+Then run the test:
 ```
-perfTests / Gatling / testOnly perfTests.AkkaHttpTapirSimulation
+sbt "perfTests/Gatling/testOnly sttp.tapir.perf.OneRouteSimulation"
+// or
+sbt "perfTests/Gatling/testOnly sttp.tapir.perf.MultiRouteSimulation"
 ```
 
 This method yields the most performant results, but requires running the commands in two seperate sbt instacnes.

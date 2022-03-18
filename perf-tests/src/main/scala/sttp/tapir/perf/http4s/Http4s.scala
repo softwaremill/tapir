@@ -1,17 +1,19 @@
-package perfTests.Http4s
+package sttp.tapir.perf.http4s
 
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import org.http4s._
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl._
 import org.http4s.implicits._
-import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.Router
+import sttp.tapir.perf
+import sttp.tapir.perf.Common
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 object Vanilla {
-  val router = (nRoutes: Int) =>
+  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router(
       (0 to nRoutes).map((n: Int) =>
         ("/path" + n.toString) -> {
@@ -26,11 +28,11 @@ object Vanilla {
 }
 
 object Tapir {
-  val router = (nRoutes: Int) =>
+  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
       Http4sServerInterpreter[IO]().toRoutes(
         (0 to nRoutes)
-          .map((n: Int) => perfTests.Common.genTapirEndpoint(n).serverLogic(id => IO(((id + n).toString).asRight[String])))
+          .map((n: Int) => Common.genTapirEndpoint(n).serverLogic(id => IO(((id + n).toString).asRight[String])))
           .toList
       )
     })
@@ -42,7 +44,7 @@ object Http4s {
       .bindHttp(8080, "localhost")
       .withHttpApp(router.orNotFound)
       .resource
-      .use(_ => { perfTests.Common.blockServer(); IO.pure(ExitCode.Success) })
+      .use(_ => { perf.Common.blockServer(); IO.pure(ExitCode.Success) })
   }
 }
 
