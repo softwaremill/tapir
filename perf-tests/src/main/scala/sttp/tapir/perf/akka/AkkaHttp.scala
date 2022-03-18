@@ -1,10 +1,11 @@
-package sttp.tapir.perf
+package sttp.tapir.perf.akka
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import sttp.tapir.perf
+import sttp.tapir.perf.Common
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

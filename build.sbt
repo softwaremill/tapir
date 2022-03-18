@@ -5,6 +5,7 @@ import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+import sbtassembly.AssemblyPlugin.autoImport.assembly // explicit import to avoid clash with gatling plugin
 
 import java.net.URL
 import scala.concurrent.duration.DurationInt
@@ -357,8 +358,8 @@ val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
 val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
 def genPerfTestTask(servName: String, simName: String) = Def.taskDyn {
   Def.task {
-    (Compile / runMain).toTask(s" perfTests.${servName}Server").value
-    (Gatling / testOnly).toTask(s" perfTests.${simName}Simulation").value
+    (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
+    (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
   }
 }
 
@@ -385,14 +386,14 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     fork := true,
     connectInput := true
   )
-  .settings(akkaHttpVanilla := { (genPerfTestTask("AkkaHttp.Vanilla", "OneRoute")).value })
-  .settings(akkaHttpTapir := { (genPerfTestTask("AkkaHttp.Tapir", "OneRoute")).value })
-  .settings(akkaHttpVanillaMulti := { (genPerfTestTask("AkkaHttp.VanillaMulti", "MultiRoute")).value })
-  .settings(akkaHttpTapirMulti := { (genPerfTestTask("AkkaHttp.TapirMulti", "MultiRoute")).value })
-  .settings(http4sVanilla := { (genPerfTestTask("Http4s.Vanilla", "OneRoute")).value })
-  .settings(http4sTapir := { (genPerfTestTask("Http4s.Tapir", "OneRoute")).value })
-  .settings(http4sVanillaMulti := { (genPerfTestTask("Http4s.VanillaMulti", "MultiRoute")).value })
-  .settings(http4sTapirMulti := { (genPerfTestTask("Http4s.TapirMulti", "MultiRoute")).value })
+  .settings(akkaHttpVanilla := { (genPerfTestTask("akka.Vanilla", "OneRoute")).value })
+  .settings(akkaHttpTapir := { (genPerfTestTask("akka.Tapir", "OneRoute")).value })
+  .settings(akkaHttpVanillaMulti := { (genPerfTestTask("akka.VanillaMulti", "MultiRoute")).value })
+  .settings(akkaHttpTapirMulti := { (genPerfTestTask("akka.TapirMulti", "MultiRoute")).value })
+  .settings(http4sVanilla := { (genPerfTestTask("http4s.Vanilla", "OneRoute")).value })
+  .settings(http4sTapir := { (genPerfTestTask("http4s.Tapir", "OneRoute")).value })
+  .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
+  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(core, akkaHttpServer, http4sServer)
 

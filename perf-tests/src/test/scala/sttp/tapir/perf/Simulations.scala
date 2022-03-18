@@ -7,7 +7,7 @@ import io.gatling.http.Predef._
 import scala.concurrent.duration.DurationInt
 
 object CommonSimulations {
-  private val duration = 5.minutes
+  private val duration = 1.minute
   private val userCount = 100
   private val baseUrl = "http://127.0.0.1:8080"
 

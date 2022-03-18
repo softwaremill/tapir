@@ -1,4 +1,4 @@
-package sttp.tapir.perf
+package sttp.tapir.perf.http4s
 
 import cats.effect._
 import cats.effect.unsafe.implicits.global
@@ -9,6 +9,7 @@ import org.http4s.dsl._
 import org.http4s.implicits._
 import org.http4s.server.Router
 import sttp.tapir.perf
+import sttp.tapir.perf.Common
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 object Vanilla {
