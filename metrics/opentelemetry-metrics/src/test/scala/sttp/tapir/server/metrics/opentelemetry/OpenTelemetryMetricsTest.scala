@@ -8,7 +8,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Second, Span}
+import org.scalatest.time.{Seconds, Span}
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
@@ -30,7 +30,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi { name =>
-      Thread.sleep(900)
+      Thread.sleep(2000)
       PersonsApi.defaultLogic(name)
     }.serverEp
     val metrics = OpenTelemetryMetrics[Id](meter).addRequestsActive()
@@ -46,14 +46,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     // when
     val response = Future { interpreter.apply(PersonsApi.request("Jacob")) }
 
-    Thread.sleep(100)
+    Thread.sleep(500)
 
     // then
     val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 1
 
-    ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
+    ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       val point = longSumData(reader).head
       point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
       point.getValue shouldBe 0
@@ -136,16 +136,18 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpret(200)
     interpret(300)
 
-    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala.head
-    point.getAttributes shouldBe Attributes.of(
-      AttributeKey.stringKey("method"),
-      "GET",
-      AttributeKey.stringKey("path"),
-      "/person",
-      AttributeKey.stringKey("status"),
-      "2xx",
-      AttributeKey.stringKey("phase"),
-      "body"
+    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala
+    point.map(_.getAttributes) should contain(
+      Attributes.of(
+        AttributeKey.stringKey("method"),
+        "GET",
+        AttributeKey.stringKey("path"),
+        "/person",
+        AttributeKey.stringKey("status"),
+        "2xx",
+        AttributeKey.stringKey("phase"),
+        "body"
+      )
     )
   }
 

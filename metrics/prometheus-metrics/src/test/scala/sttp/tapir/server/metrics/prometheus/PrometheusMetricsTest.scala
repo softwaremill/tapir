@@ -5,7 +5,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Second, Span}
+import org.scalatest.time.{Seconds, Span}
 import sttp.model.Uri._
 import sttp.model._
 import sttp.tapir.TestUtil._
@@ -32,7 +32,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests active" in {
     // given
     val serverEp = PersonsApi { name =>
-      Thread.sleep(900)
+      Thread.sleep(2000)
       PersonsApi.defaultLogic(name)
     }.serverEp
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsActive()
@@ -48,13 +48,13 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     // when
     val response = Future { interpreter.apply(PersonsApi.request("Jacob")) }
 
-    Thread.sleep(100)
+    Thread.sleep(500)
 
     // then
     collectorRegistryCodec
       .encode(metrics.registry) should include("tapir_request_active{path=\"/person\",method=\"GET\",} 1.0")
 
-    ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
+    ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       collectorRegistryCodec
         .encode(metrics.registry) should include("tapir_request_active{path=\"/person\",method=\"GET\",} 0.0")
     }
