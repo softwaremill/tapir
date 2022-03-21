@@ -49,11 +49,13 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
   override protected def showType: String = "ServerEndpoint"
 
   /** Prepends an additional input to this endpoint. This is useful when adding a context path to endpoints, e.g.
-    * `serverEndpoint.prependIn("api" / "v1")`.
+    * `serverEndpoint.prependSecurityIn("api" / "v1")`.
     *
-    * The given endpoint can't map to any values in the request, hence its type is `EndpointInput[Unit]`.
+    * The given input can't map to any values in the request, hence its type is `EndpointInput[Unit]`; it has to be "netural" so that
+    * the server logic function can remain unchanged.
     *
-    * The input is prepended to the security input, so that it comes before any other path-related inputs (either security or regular).
+    * The input is prepended to the security inputs, so that it is decoded before any other path-related inputs (either security or 
+    * regular).
     */
   def prependSecurityIn(additionalInput: EndpointInput[Unit]): ServerEndpoint[R, F] = new ServerEndpoint[R, F] {
     override type SECURITY_INPUT = outer.SECURITY_INPUT
