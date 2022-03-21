@@ -18,39 +18,16 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.metrics.MetricLabels
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Success, Try}
 
 class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
-
-  "default metrics" should "collect requests total" in {
-    // given
-    val serverEp = PersonsApi().serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsTotal()
-    val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
-        _ => List(serverEp),
-        TestRequestBody,
-        StringToResponseBody,
-        List(metrics.metricsInterceptor()),
-        _ => ()
-      )
-
-    // when
-    interpreter.apply(PersonsApi.request("Jacob"))
-    interpreter.apply(PersonsApi.request("Mike"))
-    interpreter.apply(PersonsApi.request("Janusz"))
-
-    // then
-    collectorRegistryCodec
-      .encode(metrics.registry)
-      .contains("tapir_requests_total{path=\"/person\",method=\"GET\",} 3.0") shouldBe true
-  }
 
   "default metrics" should "collect requests active" in {
     // given
@@ -58,7 +35,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       Thread.sleep(900)
       PersonsApi.defaultLogic(name)
     }.serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsActive()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsActive()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(serverEp),
@@ -75,20 +52,18 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     collectorRegistryCodec
-      .encode(metrics.registry)
-      .contains("tapir_requests_active{path=\"/person\",method=\"GET\",} 1.0") shouldBe true
+      .encode(metrics.registry) should include("tapir_request_active{path=\"/person\",method=\"GET\",} 1.0")
 
     ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
       collectorRegistryCodec
-        .encode(metrics.registry)
-        .contains("tapir_requests_active{path=\"/person\",method=\"GET\",} 0.0") shouldBe true
+        .encode(metrics.registry) should include("tapir_request_active{path=\"/person\",method=\"GET\",} 0.0")
     }
   }
 
-  "default metrics" should "collect responses total" in {
+  "default metrics" should "collect requests total" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
@@ -105,11 +80,11 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
-    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"2xx\",} 2.0") shouldBe true
-    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"4xx\",} 2.0") shouldBe true
+    encoded should include("tapir_request_total{path=\"/person\",method=\"GET\",status=\"2xx\",} 2.0")
+    encoded should include("tapir_request_total{path=\"/person\",method=\"GET\",status=\"4xx\",} 2.0")
   }
 
-  "default metrics" should "collect responses duration" in {
+  "default metrics" should "collect requests duration" in {
     // given
     val clock = new TestClock()
     val waitServerEp: Long => ServerEndpoint[Any, Id] = millis => {
@@ -118,44 +93,72 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
         PersonsApi.defaultLogic(name)
       }.serverEp
     }
+    val waitBodyListener: Long => BodyListener[Id, String] = millis =>
+      new BodyListener[Id, String] {
+        override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
+          clock.forward(millis)
+          cb(Success(()))
+          body
+        }
+      }
 
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration(clock = clock)
-    def interpret(sleep: Long) =
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsDuration(clock = clock)
+    def interpret(sleepHeaders: Long, sleepBody: Long) =
       new ServerInterpreter[Any, Id, String, NoStreams](
-        _ => List(waitServerEp(sleep)),
+        _ => List(waitServerEp(sleepHeaders)),
         TestRequestBody,
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
         _ => ()
-      )
-        .apply(PersonsApi.request("Jacob"))
+      )(implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
 
     // when
-    interpret(101)
-    interpret(201)
-    interpret(301)
+    interpret(101, 1001)
+    interpret(201, 2001)
+    interpret(301, 3001)
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
 
+    // headers
     // no response in less than 100ms
-    encoded.contains("tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.1\",} 0.0") shouldBe true
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"headers\",le=\"0.1\",} 0.0"
+    )
 
     // two under 250ms
-    encoded.contains(
-      "tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.25\",} 2.0"
-    ) shouldBe true
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"headers\",le=\"0.25\",} 2.0"
+    )
 
     // all under 500ms
-    encoded.contains("tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.5\",} 3.0") shouldBe true
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"headers\",le=\"0.5\",} 3.0"
+    )
+
+    // body
+    // no response in less than 1000ms
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"body\",le=\"1.0\",} 0.0"
+    )
+
+    // two under 2500ms
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"body\",le=\"2.5\",} 2.0"
+    )
+
+    // all under 5000ms
+    encoded should include(
+      "tapir_request_duration_seconds_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",phase=\"body\",le=\"5.0\",} 3.0"
+    )
   }
 
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
+    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
 
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal(labels)
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsTotal(labels)
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(serverEp),
@@ -169,13 +172,13 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Jacob"))
 
     // then
-    collectorRegistryCodec.encode(metrics.registry).contains("tapir_responses_total{key=\"value\",} 1.0") shouldBe true
+    collectorRegistryCodec.encode(metrics.registry) should include("tapir_request_total{key=\"value\",} 1.0")
   }
 
   "interceptor" should "not collect metrics from prometheus endpoint" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(metrics.metricsEndpoint, serverEp),
@@ -191,14 +194,14 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     collectorRegistryCodec.encode(metrics.registry) shouldBe
-      """# HELP tapir_responses_total Total HTTP responses
-        |# TYPE tapir_responses_total counter
+      """# HELP tapir_request_total Total HTTP requests
+        |# TYPE tapir_request_total counter
         |""".stripMargin
   }
 
   "metrics server endpoint" should "return encoded registry" in {
     // given
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(metrics.metricsEndpoint),
@@ -212,9 +215,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(getMetricsRequest) match {
       case RequestResult.Response(response) =>
         response.body.map { b =>
-          b shouldBe """# HELP tapir_responses_total Total HTTP responses
-                     |# TYPE tapir_responses_total counter
-                     |""".stripMargin
+          b shouldBe """# HELP tapir_request_total Total HTTP requests
+                       |# TYPE tapir_request_total counter
+                       |""".stripMargin
         } getOrElse fail()
       case _ => fail()
     }
@@ -223,7 +226,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "metrics" should "be collected on exception when response from exception handler" in {
     // given
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).addRequestsTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
@@ -236,9 +239,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Jacob"))
 
     // then
-    collectorRegistryCodec
-      .encode(metrics.registry)
-      .contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"5xx\",} 1.0") shouldBe true
+    collectorRegistryCodec.encode(metrics.registry) should include(
+      "tapir_request_total{path=\"/person\",method=\"GET\",status=\"5xx\",} 1.0"
+    )
   }
 }
 

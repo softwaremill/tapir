@@ -32,7 +32,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   val collectorRegistry = CollectorRegistry.defaultRegistry
 
   val prometheusMetrics = PrometheusMetrics[Future]("tapir", collectorRegistry)
-    .withRequestsTotal()
+    .addRequestsTotal()
     .withResponsesTotal()
 
   val serverOptions: AkkaHttpServerOptions =
