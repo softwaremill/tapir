@@ -48,6 +48,26 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
 
   override protected def showType: String = "ServerEndpoint"
 
+  /** Prepends an additional input to this endpoint. This is useful when adding a context path to endpoints, e.g.
+    * `serverEndpoint.prependSecurityIn("api" / "v1")`.
+    *
+    * The given input can't map to any values in the request, hence its type is `EndpointInput[Unit]`; it has to be "netural" so that
+    * the server logic function can remain unchanged.
+    *
+    * The input is prepended to the security inputs, so that it is decoded before any other path-related inputs (either security or 
+    * regular).
+    */
+  def prependSecurityIn(additionalInput: EndpointInput[Unit]): ServerEndpoint[R, F] = new ServerEndpoint[R, F] {
+    override type SECURITY_INPUT = outer.SECURITY_INPUT
+    override type PRINCIPAL = outer.PRINCIPAL
+    override type INPUT = outer.INPUT
+    override type ERROR_OUTPUT = outer.ERROR_OUTPUT
+    override type OUTPUT = outer.OUTPUT
+    override def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] = outer.endpoint.prependSecurityIn(additionalInput)
+    override def securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]] = outer.securityLogic
+    override def logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]] = outer.logic
+  }
+
   /** Prepends additional security logic to this endpoint. This is useful when adding security to file/resource-serving endpoints. The
     * additional security logic should return a `Right(())` to indicate success, or a `Left(E2)` to indicate failure; in this case, the
     * given error output will be used to create the response.
@@ -56,7 +76,7 @@ abstract class ServerEndpoint[-R, F[_]] extends EndpointInfoOps[R] with Endpoint
     * `endpoint.securityInput`.
     *
     * The error output will consist of two variants: either the `securityErrorOutput` (the [[ClassTag]] requirement for `E2` is used to
-    * create the [[oneOfVariant]]). In the absence of sum types, the resulting errors are types as `Any`.
+    * create the [[oneOfVariant]]). In the absence of sum types, the resulting errors are typed as `Any`.
     *
     * The security logic is modified so that first `additionalSecurityLogic` is run, followed by the security logic defined so far.
     *
