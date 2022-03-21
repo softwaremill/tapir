@@ -8,7 +8,7 @@ import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Second, Span}
+import org.scalatest.time.{Seconds, Span}
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
@@ -24,43 +24,16 @@ import scala.concurrent.Future
 
 class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
-  "default metrics" should "collect requests total" in {
-    // given
-    val reader = InMemoryMetricReader.create()
-    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
-    val meter = provider.get("tapir-instrumentation")
-    val serverEp = PersonsApi().serverEp
-    val metrics = OpenTelemetryMetrics[Id](meter).withRequestsTotal()
-    val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
-        _ => List(serverEp),
-        TestRequestBody,
-        StringToResponseBody,
-        List(metrics.metricsInterceptor()),
-        _ => ()
-      )
-
-    // when
-    interpreter.apply(PersonsApi.request("Jacob"))
-    interpreter.apply(PersonsApi.request("Mike"))
-    interpreter.apply(PersonsApi.request("Janusz"))
-
-    // then
-    val point = longSumData(reader).head
-    point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
-    point.getValue shouldBe 3
-  }
-
   "default metrics" should "collect requests active" in {
     // given
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi { name =>
-      Thread.sleep(900)
+      Thread.sleep(2000)
       PersonsApi.defaultLogic(name)
     }.serverEp
-    val metrics = OpenTelemetryMetrics[Id](meter).withRequestsActive()
+    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsActive()
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(serverEp),
@@ -73,27 +46,27 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     // when
     val response = Future { interpreter.apply(PersonsApi.request("Jacob")) }
 
-    Thread.sleep(100)
+    Thread.sleep(500)
 
     // then
     val point = longSumData(reader).head
     point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 1
 
-    ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
+    ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       val point = longSumData(reader).head
       point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
       point.getValue shouldBe 0
     }
   }
 
-  "default metrics" should "collect responses total" in {
+  "default metrics" should "collect requests total" in {
     // given
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
-    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
+    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
@@ -135,7 +108,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       } shouldBe 2
   }
 
-  "default metrics" should "collect responses duration" in {
+  "default metrics" should "collect requests duration" in {
     // given
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
@@ -147,7 +120,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       }.serverEp
     }
 
-    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesDuration()
+    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsDuration()
     def interpret(sleep: Int) =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(waitServerEp(sleep)),
@@ -163,25 +136,29 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpret(200)
     interpret(300)
 
-    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala.head
-    point.getAttributes shouldBe Attributes.of(
-      AttributeKey.stringKey("method"),
-      "GET",
-      AttributeKey.stringKey("path"),
-      "/person",
-      AttributeKey.stringKey("status"),
-      "2xx"
+    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala
+    point.map(_.getAttributes) should contain(
+      Attributes.of(
+        AttributeKey.stringKey("method"),
+        "GET",
+        AttributeKey.stringKey("path"),
+        "/person",
+        AttributeKey.stringKey("status"),
+        "2xx",
+        AttributeKey.stringKey("phase"),
+        "body"
+      )
     )
   }
 
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
+    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
-    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal(labels)
+    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal(labels)
     val interpreter =
       new ServerInterpreter[Any, Id, String, NoStreams](
         _ => List(serverEp),
@@ -204,7 +181,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
-    val metrics = OpenTelemetryMetrics[Id](meter).withResponsesTotal()
+    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
