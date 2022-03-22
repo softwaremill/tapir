@@ -15,13 +15,14 @@ import java.time.{Clock, Duration}
 case class PrometheusMetrics[F[_]](
     namespace: String = "tapir",
     registry: CollectorRegistry = CollectorRegistry.defaultRegistry,
-    metrics: List[Metric[F, _]] = List.empty[Metric[F, _]]
+    metrics: List[Metric[F, _]] = List.empty[Metric[F, _]],
+    endpointPrefix: EndpointInput[Unit] = "metrics"
 ) {
   import PrometheusMetrics._
 
   /** An endpoint exposing the current metric values. */
   lazy val metricsEndpoint: ServerEndpoint[Any, F] = ServerEndpoint.public(
-    endpoint.get.in("metrics").out(plainBody[CollectorRegistry]),
+    endpoint.get.in(endpointPrefix).out(plainBody[CollectorRegistry]),
     (monad: MonadError[F]) => (_: Unit) => monad.eval(Right(registry): Either[Unit, CollectorRegistry])
   )
 
