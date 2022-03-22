@@ -165,7 +165,7 @@ object DefaultDecodeFailureHandler {
         case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
         case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
         case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
-        case EndpointIO.Header(name, _, i)           => s"Invalid value for: header $name"
+        case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
         case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
         case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
         case _                                       => "Invalid value"
