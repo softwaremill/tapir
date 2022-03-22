@@ -104,7 +104,7 @@ object BooksExample extends App with StrictLogging {
 
     def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] =
       Future {
-        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit, None)))
+        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
       }
 
     def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] =
