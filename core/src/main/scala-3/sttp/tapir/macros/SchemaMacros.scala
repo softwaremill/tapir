@@ -190,7 +190,7 @@ object SchemaCompanionMacros {
       val mappingAsMap = mappingAsList.toMap
       val discriminator = SDiscriminator(
         _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) })),
-        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
+        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _)) =>
           $asString.apply(k) -> SRef(fname)
         }
       )

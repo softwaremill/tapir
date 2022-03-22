@@ -60,7 +60,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
-  scalacOptions += "-Ywarn-macros:after",
+  scalacOptions ++= Seq("-Ywarn-macros:after"),
   evictionErrorLevel := Level.Info
 )
 

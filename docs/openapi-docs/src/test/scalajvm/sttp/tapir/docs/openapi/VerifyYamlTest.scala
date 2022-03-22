@@ -23,7 +23,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
-import sttp.tapir.tests.Multipart
+import sttp.tapir.tests.{Basic, Multipart}
 import sttp.tapir.tests.data.{FruitAmount, Person}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
@@ -618,6 +618,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should respect hidden annotation") {
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(Basic.hide_in_docs, Info("Hide in docs", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("hide_in_docs.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
   test("should not duplicate open api path parameters") {
     val correlationHeader = header[String]("correlation-id")
 
@@ -631,6 +641,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
 }
 
 object VerifyYamlTest {

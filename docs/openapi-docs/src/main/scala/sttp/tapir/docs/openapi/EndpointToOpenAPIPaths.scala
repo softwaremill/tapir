@@ -118,11 +118,11 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case q: EndpointInput.Query[_]       => queryToParameter(q)
-      case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
-      case h: EndpointIO.Header[_]         => headerToParameter(h)
-      case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
+      case q: EndpointInput.Query[_]       if ! q.codec.schema.hidden => queryToParameter(q)
+      case p: EndpointInput.PathCapture[_] if ! p.codec.schema.hidden => pathCaptureToParameter(p)
+      case h: EndpointIO.Header[_]         if ! h.codec.schema.hidden => headerToParameter(h)
+      case c: EndpointInput.Cookie[_]      if ! c.codec.schema.hidden => cookieToParameter(c)
+      case f: EndpointIO.FixedHeader[_]    if ! f.codec.schema.hidden => fixedHeaderToParameter(f)
     }
   }
 

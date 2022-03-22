@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: Hide in docs
+  version: '1.0'
+paths:
+  /auth/api/echo:
+    get:
+      operationId: getAuthApiEcho
+      parameters:
+        - name: s1
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: c1
+          in: cookie
+          required: true
+          schema:
+            type: integer
+        - name: q1
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: h1
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          headers:
+            Set-Cookie:
+              required:false
+              schema:
+                type:array
+                items:
+                type:string
+        '400':
+          description: 'Invalid value for: header s1, Invalid value for: header s2,
+            Invalid value for: cookie c1, Invalid value for: cookie c2, Invalid value
+            for: query parameter q1, Invalid value for: query parameter q2, Invalid
+            value for: header h1, Invalid value for: header h2'
+          content:
+            text/plain:
+          schema:
+            type: string
