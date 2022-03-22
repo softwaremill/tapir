@@ -198,7 +198,7 @@ object SchemaCompanionMacros {
       val subtypes = mappingAsList.map(_._2)
       Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
         val ee = $extractor(e)
-        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], ee))
+        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
       }, Some(sname))
     }
   }

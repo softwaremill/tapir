@@ -163,6 +163,26 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     schema.applyValidation(EitherWrapper(Right(""))) shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
   }
 
+  it should "validate oneOf object" in {
+    case class SomeObject(value: String)
+    object SomeObject {
+      implicit def someObjectSchema: Schema[SomeObject] = Schema.derived[SomeObject].validate(Validator.custom(_ => Nil))
+    }
+
+    sealed trait Entity {
+      def kind: String
+    }
+    object Entity {
+      implicit val entitySchema: Schema[Entity] =
+        Schema.oneOfUsingField[Entity, String](_.kind, identity)("person" -> Schema.derived[Person])
+    }
+    case class Person(obj: SomeObject) extends Entity {
+      override def kind: String = "person"
+    }
+
+    Entity.entitySchema.applyValidation(Person(SomeObject("1234")))
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
     v match {
       case p: ValidationError.Primitive[T] => p.copy(path = Nil)

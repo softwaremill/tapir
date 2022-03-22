@@ -71,7 +71,7 @@ object OneOfMacro {
             val subtypes = mappingAsList.map(_._2)
             Schema(SCoproduct(subtypes, _root_.scala.Some(discriminator)) { e => 
               val ee = $extractor(e)
-              mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], ee))
+              mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], e))
             }, Some(sname))
           }"""
 
