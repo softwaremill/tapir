@@ -36,11 +36,11 @@ could be used, for example:
 import sttp.tapir.server.metrics.MetricLabels
 
 val labels = MetricLabels(
-  forRequest = Seq(
+  forRequest = List(
     "path" -> { case (ep, _) => ep.showPathTemplate() },
     "protocol" -> { case (_, req) => req.protocol }
   ),
-  forResponse = Seq()
+  forResponse = Nil
 )
 ```
 
@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.0.0-M3"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -60,31 +60,35 @@ For example, using `AkkaServerInterpeter`:
 ```scala
 import akka.http.scaladsl.server.Route
 import io.prometheus.client.CollectorRegistry
-import sttp.monad.FutureMonad
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-implicit val monad: FutureMonad = new FutureMonad()
+// an instance with default metrics; use PrometheusMetrics[Future]() for an empty one
+val prometheusMetrics = PrometheusMetrics.default[Future]()
 
-val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
-  .withRequestsTotal()
-  .withResponsesTotal()
-  .withResponsesDuration()
-
+// enable metrics collection
 val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
 
+// route which exposes the current metrics values
 val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
 ```
 
+By default, the following metrics are exposed:
+
+* `tapir_request_active{path, method}` (gauge)
+* `tapir_request_total{path, method, status}` (counter)
+* `tapir_request_duration_seconds{path, method, status, phase}` (histogram)
+
+The namespace and label names/values can be customised when creating the `PrometheusMetrics` instance.
+
 ### Custom metrics
 
-Also, custom metric creation is possible and attaching it to `PrometheusMetrics`, for example:
+To create and add custom metrics:
 
 ```scala
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
@@ -104,7 +108,7 @@ val responsesTotal = Metric[Future, Counter](
   onRequest = { (req, counter, _) =>
     Future.successful(
       EndpointMetric()
-        .onResponse { (ep, res) =>
+        .onResponseBody { (ep, res) =>
           Future.successful {
             val path = ep.showPathTemplate()
             val method = req.method.method
@@ -116,7 +120,8 @@ val responsesTotal = Metric[Future, Counter](
   }
 )
 
-val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry).withCustom(responsesTotal)
+val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
+  .addCustom(responsesTotal)
 ```
 
 ## OpenTelemetry metrics
@@ -124,7 +129,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.0.0-M3"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -141,11 +146,7 @@ import scala.concurrent.Future
 val provider: MeterProvider = ???
 val meter: Meter = provider.get("instrumentation-name")
 
-val metrics = OpenTelemetryMetrics[Future](meter)
-  .withRequestsTotal()
-  .withRequestsActive()
-  .withResponsesTotal()
-  .withResponsesDuration()
+val metrics = OpenTelemetryMetrics.default[Future](meter)
 
-val metricsInterceptor = metrics.metricsInterceptor() // add me to your server options
+val metricsInterceptor = metrics.metricsInterceptor() // add to your server options
 ```

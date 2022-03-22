@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-M3"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -46,7 +46,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-M3"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -56,8 +56,8 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-M2"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-M3"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M3"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -193,12 +193,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-M3"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-M3"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:

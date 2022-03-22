@@ -118,8 +118,8 @@ object ServerMetricsTest {
   }
 
   def newRequestCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](new Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.unit(c.++()) }) })
 
   def newResponseCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](new Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponse { (_, _) => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponseBody { (_, _) => m.unit(c.++()) }) })
 }

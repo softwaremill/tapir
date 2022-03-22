@@ -5,7 +5,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
-import io.prometheus.client.CollectorRegistry
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -29,11 +28,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .errorOut(stringBody)
       .serverLogic { p => Future.successful { if (p.name == "Jacob") Right("Welcome") else Left("Unauthorized") } }
 
-  val collectorRegistry = CollectorRegistry.defaultRegistry
-
-  val prometheusMetrics = PrometheusMetrics[Future]("tapir", collectorRegistry)
-    .withRequestsTotal()
-    .withResponsesTotal()
+  val prometheusMetrics = PrometheusMetrics.default[Future]()
 
   val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors

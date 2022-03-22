@@ -303,7 +303,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.0")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.1",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -336,7 +336,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
-      "com.softwaremill.common" %%% "tagging" % "2.3.2",
+      "com.softwaremill.common" %%% "tagging" % "2.3.3",
       scalaTest.value,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ) ++ loggerDependencies
@@ -1429,7 +1429,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
     libraryDependencies ++= Seq(
       "com.monovore" %% "decline" % Versions.decline,
       "com.monovore" %% "decline-effect" % Versions.decline,
-      "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0"
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
     )
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
