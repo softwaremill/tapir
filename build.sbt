@@ -1429,7 +1429,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
     libraryDependencies ++= Seq(
       "com.monovore" %% "decline" % Versions.decline,
       "com.monovore" %% "decline-effect" % Versions.decline,
-      "org.scala-lang.modules" %% "scala-collection-compat" % "2.6.0"
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
     )
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
