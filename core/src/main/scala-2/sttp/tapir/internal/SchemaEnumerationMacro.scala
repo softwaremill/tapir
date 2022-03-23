@@ -11,7 +11,7 @@ object SchemaEnumerationMacro {
 
     // this needs to be a macro so that we can call another macro - Validator.derivedEnumeration
     c.Expr[CreateDerivedEnumerationSchema[T]](q"""
-      new sttp.tapir.macros.CreateDerivedEnumerationSchema(Validator.derivedEnumeration)
+      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema(_root_.sttp.tapir.Validator.derivedEnumeration)
     """)
   }
 
@@ -33,7 +33,7 @@ object SchemaEnumerationMacro {
         case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      val validator = q"sttp.tapir.Validator.enumeration($enumeration.values.toList)"
+      val validator = q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList)"
       val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
 
       c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")

@@ -6,7 +6,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.concurrent.Future
 

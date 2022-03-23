@@ -256,6 +256,25 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
   }
 
+  it should "create a schema using oneOfField given an enum extractor" in {
+    sealed trait YEnum
+    case object Y1 extends YEnum
+
+    sealed trait YConf {
+      def kind: YEnum
+    }
+    final case class Y1Conf(size: Int) extends YConf {
+      override def kind: YEnum = Y1
+    }
+
+    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum](encode = Some(_.toString))
+
+    implicit val yConfSchema: Schema[YConf] = {
+      val y1ConfSchema: Schema[Y1Conf] = Schema.derived[Y1Conf]
+      Schema.oneOfUsingField[YConf, YEnum](_.kind, _.toString)((Y1: YEnum) -> y1ConfSchema)
+    }
+  }
+
   behavior of "apply default"
 
   it should "add default to product" in {
