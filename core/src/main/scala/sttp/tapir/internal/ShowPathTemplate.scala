@@ -37,10 +37,10 @@ object ShowPathTemplate {
   ): (Vector[String], Int) =
     inputs.foldLeft((Vector.empty[String], 1)) { case ((acc, index), component) =>
       component match {
-        case p: EndpointInput.PathCapture[_]  => (acc :+ showPathParam(index, p), index + 1)
-        case _: EndpointInput.PathsCapture[_] => (showPathsAs.fold(acc)(acc :+ _), index)
-        case EndpointInput.FixedPath(s, _, _) => (acc :+ UrlencodedData.encodePathSegment(s), index)
-        case _                                => (acc, index)
+        case p: EndpointInput.PathCapture[_] if !p.codec.schema.hidden  => (acc :+ showPathParam(index, p), index + 1)
+        case p: EndpointInput.PathsCapture[_] if !p.codec.schema.hidden => (showPathsAs.fold(acc)(acc :+ _), index)
+        case p: EndpointInput.FixedPath[_] if !p.codec.schema.hidden    => (acc :+ UrlencodedData.encodePathSegment(p.s), index)
+        case _                                                          => (acc, index)
       }
     }
 
@@ -53,9 +53,9 @@ object ShowPathTemplate {
     inputs
       .foldLeft((Vector.empty[String], pathParamCount)) { case ((acc, index), component) =>
         component match {
-          case q: EndpointInput.Query[_]       => (acc :+ showQueryParam(index, q), index + 1)
-          case _: EndpointInput.QueryParams[_] => (showQueryParamsAs.fold(acc)(acc :+ _), index)
-          case _                               => (acc, index)
+          case q: EndpointInput.Query[_] if !q.codec.schema.hidden       => (acc :+ showQueryParam(index, q), index + 1)
+          case q: EndpointInput.QueryParams[_] if !q.codec.schema.hidden => (showQueryParamsAs.fold(acc)(acc :+ _), index)
+          case _                                                         => (acc, index)
         }
       }
       ._1

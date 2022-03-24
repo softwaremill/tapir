@@ -190,7 +190,7 @@ object SchemaCompanionMacros {
       val mappingAsMap = mappingAsList.toMap
       val discriminator = SDiscriminator(
         _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) })),
-        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
+        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _)) =>
           $asString.apply(k) -> SRef(fname)
         }
       )
@@ -198,7 +198,7 @@ object SchemaCompanionMacros {
       val subtypes = mappingAsList.map(_._2)
       Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
         val ee = $extractor(e)
-        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], ee))
+        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
       }, Some(sname))
     }
   }

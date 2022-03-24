@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import sttp.client3._
-import sttp.model.{HeaderNames, StatusCode}
+import sttp.model.HeaderNames
 import sttp.tapir._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter

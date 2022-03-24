@@ -40,6 +40,7 @@ object OneOfMacro {
       }
     }
     val weakTypeE = weakTypeOf[E]
+    val weakTypeV = weakTypeOf[V]
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
       def allTypeArguments(tn: c.Type): Seq[c.Type] = tn.typeArgs.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
@@ -61,7 +62,7 @@ object OneOfMacro {
               _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
               // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
               mappingAsMap.toList.flatMap { 
-                case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
+                case (k, Schema(_, Some(fname), _, _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
                 case _ => Nil
               }
               .toMap
@@ -70,8 +71,8 @@ object OneOfMacro {
             // cast needed because of Scala 2.12
             val subtypes = mappingAsList.map(_._2)
             Schema(SCoproduct(subtypes, _root_.scala.Some(discriminator)) { e => 
-              val ee = $extractor(e)
-              mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], ee))
+              val ee: $weakTypeV = $extractor(e)
+              mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], e))
             }, Some(sname))
           }"""
 

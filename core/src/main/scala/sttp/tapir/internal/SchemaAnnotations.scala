@@ -11,6 +11,7 @@ final case class SchemaAnnotations[T](
     default: Option[(T, Option[Any])],
     format: Option[String],
     deprecated: Option[Boolean],
+    hidden: Option[Boolean],
     encodedName: Option[String],
     validate: Option[Validator[T]]
 ) {
@@ -25,6 +26,7 @@ final case class SchemaAnnotations[T](
       .optionally(s => default.map(tupled(s.default(_, _))))
       .optionally(s => format.map(s.format(_)))
       .optionally(s => deprecated.map(s.deprecated(_)))
+      .optionally(s => hidden.map(s.hidden(_)))
       .optionally(s => encodedName.map(en => s.name(SName(en))))
       .optionally(s => validate.map(s.validate))
       .current
