@@ -73,6 +73,6 @@ object EndpointVerifier {
 }
 
 sealed trait PathComponent
-case object PathVariableSegment extends PathComponent
-case object WildcardPathSegment extends PathComponent
-case class FixedPathSegment(s: String) extends PathComponent
+private case object PathVariableSegment extends PathComponent
+private case object WildcardPathSegment extends PathComponent
+private case class FixedPathSegment(s: String) extends PathComponent

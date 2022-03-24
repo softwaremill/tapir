@@ -34,8 +34,8 @@ case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends Endpoi
   override def toString: String = showAllPaths(e) + ", is shadowed by: " + by.input.show
 }
 
-/** Paths in an enpoint are incorrect if a wildcard `paths` segment appears before any other segment. The `paths` segment consumes all of
-  * the remaining paths, so any segment after it will never match.
+/** Paths in an enpoint are incorrect if a wildcard `paths` segment appears before any other input. The `paths` input consumes all of
+  * the remaining paths, so any input after it will never match.
   *
   * Examples of incorrectly defined paths:
   *
