@@ -33,7 +33,9 @@ object SchemaEnumerationMacro {
         case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      val validator = q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList)"
+      val validator =
+        q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
+            .mkString(".")})))"
       val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
 
       c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")
