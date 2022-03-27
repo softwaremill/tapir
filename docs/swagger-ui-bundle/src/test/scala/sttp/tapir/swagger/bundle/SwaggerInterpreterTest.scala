@@ -49,10 +49,16 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           val docsPath = (context ++ prefix).mkString("/")
 
           resp.code shouldBe StatusCode.Ok
-          resp.body should include(s"/$docsPath/docs.yaml")
-
           resp.history.head.code shouldBe StatusCode.PermanentRedirect
           resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+
+          // test getting swagger-initializer.js, which should contain replaced link to spec
+          val initializerJsResp = basicRequest
+            .response(asStringAlways)
+            .get(uri"http://localhost:$port/${context ++ prefix}/swagger-initializer.js")
+            .send(backend)
+
+          initializerJsResp.body should include(s"/$docsPath/docs.yaml")
 
           // test getting a swagger-ui resource
           val respCss: Response[String] = basicRequest
