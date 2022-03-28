@@ -1,8 +1,6 @@
 package sttp.tapir.server.http4s
 
 import cats.effect.Sync
-import sttp.monad.MonadError
-import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
@@ -40,8 +38,6 @@ object Http4sServerOptions {
   def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[G[_]: Sync]: DefaultServerLog[G] = {
-    implicit val monadError: MonadError[G] = new CatsMonadError[G]
-
     DefaultServerLog(
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog[G],
