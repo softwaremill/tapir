@@ -1,5 +1,6 @@
 package sttp.tapir.codec.enumeratum
 
+import enumeratum.EnumEntry.Snakecase
 import enumeratum._
 import enumeratum.values._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -8,6 +9,8 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.{default, description}
 import sttp.tapir.SchemaType.{SInteger, SString}
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
@@ -100,8 +103,30 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find schema for enumeratum enum entries and enrich with metadata from default annotations" in {
-    implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some((TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2)))
+    implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some(
+      (TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2))
+    )
     implicitly[Schema[TestEnumEntryWithNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithNoEncodedDefault.Value2, None))
+  }
+
+  it should "create schema with custom discriminator based on enumeratum enum" in {
+    // given
+    sealed trait OfferType extends EnumEntry with Snakecase
+    object OfferType {
+      case object OfferOne extends OfferType
+    }
+
+    sealed trait CreateOfferRequest {
+      def `type`: OfferType
+    }
+
+    final case class CreateOfferOneRequest(`type`: OfferType) extends CreateOfferRequest
+
+    // then - should compile
+    val createOfferRequestSchema: Schema[CreateOfferRequest] = {
+      val one = implicitly[Derived[Schema[CreateOfferOneRequest]]].value
+      Schema.oneOfUsingField[CreateOfferRequest, OfferType](_.`type`, _.entryName)(OfferType.OfferOne -> one)
+    }
   }
 }
 
