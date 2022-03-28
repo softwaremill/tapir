@@ -13,3 +13,15 @@
 * metrics classes and interceptors have moved to the `sttp.tapir.server.metrics` package
 * `Endpoint.renderPathTemplate` is renamed to `Endpoint.showPathTemplate`
 * web socket exceptions `UnsupportedWebSocketFrameException` and `WebSocketFrameDecodeFailure` are now in the `sttp.tapir.model` package
+
+## From 0.19 to 0.20
+
+See the [release notes](https://github.com/softwaremill/tapir/releases/tag/v0.20.0)
+
+## From 0.18 to 0.19
+
+See the [release notes](https://github.com/softwaremill/tapir/releases/tag/v0.19.0)
+
+## From 0.17 to 0.18
+
+See the [release notes](https://github.com/softwaremill/tapir/releases/tag/v0.18.0)
