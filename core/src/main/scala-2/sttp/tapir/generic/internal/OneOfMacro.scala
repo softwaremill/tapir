@@ -57,7 +57,7 @@ object OneOfMacro {
             import _root_.sttp.tapir.SchemaType._
             import _root_.scala.collection.immutable.{List, Map}
             val mappingAsList = List(..$mapping)
-            val mappingAsMap = mappingAsList.toMap
+            val mappingAsMap: Map[$weakTypeV, Schema[_]] = mappingAsList.toMap
             val discriminator = SDiscriminator(
               _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
               // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)

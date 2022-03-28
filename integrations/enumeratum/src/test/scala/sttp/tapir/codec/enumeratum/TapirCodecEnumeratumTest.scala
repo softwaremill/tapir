@@ -103,26 +103,17 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find schema for enumeratum enum entries and enrich with metadata from default annotations" in {
-    implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some((TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2)))
+    implicitly[Schema[TestEnumEntryWithSomeEncodedDefault]].default shouldBe Some(
+      (TestEnumEntryWithSomeEncodedDefault.Value2, Some(TestEnumEntryWithSomeEncodedDefault.Value2))
+    )
     implicitly[Schema[TestEnumEntryWithNoEncodedDefault]].default shouldBe Some((TestEnumEntryWithNoEncodedDefault.Value2, None))
   }
 
   it should "create schema with custom discriminator based on enumeratum enum" in {
-    // i'm not sure if this is relevant, but our tapir and circe configuration is setup to automatically handle
-    // coproducts with a `type` discriminator, but this case is an exception where we don't want the coproduct subtype's
-    // constructor name to be used as the value in openapi docs
-    //import io.circe.generic.{extras => circe}
-    //implicit val circeConfig =
-    //  circe.Configuration.default.withSnakeCaseMemberNames.withDiscriminator("type").copy(transformConstructorNames =
-    //    transformConstructorNamesConfig)
-    import sttp.tapir.{generic => tapir}
-    implicit val tapirConfig =
-      tapir.Configuration.default.withSnakeCaseMemberNames.withSnakeCaseDiscriminatorValues.withDiscriminator("type")
-
+    // given
     sealed trait OfferType extends EnumEntry with Snakecase
     object OfferType {
       case object OfferOne extends OfferType
-      case object OfferTwo extends OfferType
     }
 
     sealed trait CreateOfferRequest {
@@ -130,15 +121,11 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     }
 
     final case class CreateOfferOneRequest(`type`: OfferType) extends CreateOfferRequest
-    final case class CreateOfferTwoRequest(`type`: OfferType) extends CreateOfferRequest
 
-    implicit lazy val createOfferRequestSchema: Schema[CreateOfferRequest] = {
+    // then - should compile
+    val createOfferRequestSchema: Schema[CreateOfferRequest] = {
       val one = implicitly[Derived[Schema[CreateOfferOneRequest]]].value
-      val two = implicitly[Derived[Schema[CreateOfferTwoRequest]]].value
-      Schema.oneOfUsingField[CreateOfferRequest, OfferType](_.`type`, _.entryName)(
-        OfferType.OfferOne -> one,
-        OfferType.OfferTwo -> two
-      )
+      Schema.oneOfUsingField[CreateOfferRequest, OfferType](_.`type`, _.entryName)(OfferType.OfferOne -> one)
     }
   }
 }
