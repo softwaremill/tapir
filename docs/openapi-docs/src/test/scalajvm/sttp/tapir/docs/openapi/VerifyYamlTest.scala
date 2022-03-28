@@ -11,7 +11,7 @@ import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.description
 import sttp.tapir.docs.apispec.DocsExtension
-import sttp.tapir.docs.openapi.VerifyYamlTest.Problem
+import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
 import sttp.tapir.docs.openapi.dtos.Book
@@ -642,6 +642,17 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
+  test("should contain named schema component and values for enumeration") {
+    implicit val numberCodec: io.circe.Codec[Number] = null
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in("numbers").in(jsonBody[Number]), Info("Numbers", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("expected_enumeration_values.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlTest {
@@ -655,4 +666,10 @@ object VerifyYamlTest {
         )
       )
   }
+
+  object Numbers extends Enumeration {
+    val One, Two, Three = Value
+  }
+
+  case class Number(value: Numbers.Value)
 }

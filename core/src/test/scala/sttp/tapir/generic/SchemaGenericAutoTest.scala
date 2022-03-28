@@ -378,11 +378,29 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "derive schema for enumeration and enrich schema" in {
     val expected = Schema[Countries.Country](SString())
-      .validate(Validator.enumeration[Countries.Country](Countries.values.toList))
+      .validate(
+        Validator.enumeration[Countries.Country](
+          Countries.values.toList,
+          (v: Countries.Country) => Option(v),
+          Some(SName("sttp.tapir.generic.Countries"))
+        )
+      )
       .description("country")
       .default(Countries.PL)
       .name(SName("country-encoded-name"))
-    implicitly[Schema[Countries.Country]] shouldBe expected
+
+    val actual = implicitly[Schema[Countries.Country]]
+
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(na)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Countries.PL) shouldBe ee(Countries.PL)
+        na shouldBe ne
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+    actual.default shouldBe expected.default
+    actual.name shouldBe expected.name
   }
 }
 
@@ -482,5 +500,5 @@ case object UnknownEntity extends Entity
 @encodedName("country-encoded-name")
 object Countries extends Enumeration {
   type Country = Value
-  val PL, NL, RUS = Value
+  val PL, NL = Value
 }

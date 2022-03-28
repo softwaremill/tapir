@@ -196,10 +196,13 @@ object SchemaCompanionMacros {
       )
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
-      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
-        val ee = $extractor(e)
-        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
-      }, Some(sname))
+      Schema(
+        SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
+          val ee = $extractor(e)
+          mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
+        },
+        Some(sname)
+      )
     }
   }
 
@@ -220,16 +223,23 @@ object SchemaCompanionMacros {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
       val enumeration = Symbol.requiredModule(enumerationPath)
 
+      val sName = '{ Some(Schema.SName(${ Expr(enumerationPath) })) }
+
       '{
         SchemaAnnotations
           .derived[T]
           .enrich(
             Schema
               .string[T]
-              .validate(Validator.enumeration(${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]]))
+              .validate(
+                Validator.enumeration(
+                  ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
+                  v => Option(v),
+                  $sName
+                )
+              )
           )
       }
     }
   }
-
 }
