@@ -1,9 +1,10 @@
 package sttp.tapir.swagger
 
-import sttp.model.{HeaderNames, QueryParams, StatusCode}
+import sttp.model.{HeaderNames, MediaType, QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 
+import java.nio.charset.StandardCharsets
 import java.util.Properties
 import scala.io.Source
 
@@ -16,8 +17,8 @@ object SwaggerUI {
     p.getProperty("version")
   }
 
-  private val indexHtml = {
-    val s = getClass.getResourceAsStream(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/index.html")
+  private val swaggerInitializerJs = {
+    val s = getClass.getResourceAsStream(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/swagger-initializer.js")
     val r = Source.fromInputStream(s, "UTF-8").mkString
     s.close()
     r
@@ -53,19 +54,28 @@ object SwaggerUI {
 
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
-    val indexHtmlWithReplacedUrl = indexHtml.replace("https://petstore.swagger.io/v2/swagger.json", s"/$prefixFromRoot/${options.yamlName}")
+    val swaggerInitializerJsWithReplacedUrl =
+      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"/$prefixFromRoot/${options.yamlName}")
+
     val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
       val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
       Right(s"/$prefixFromRoot/$queryString")
     }
-    val slashEndpoint = baseEndpoint.in("").out(htmlBodyUtf8).serverLogicPure[F](_ => Right(indexHtmlWithReplacedUrl))
-    val indexEndpoint = baseEndpoint.in("index.html").out(htmlBodyUtf8).serverLogicPure[F](_ => Right(indexHtmlWithReplacedUrl))
+
+    val textJavascriptUtf8: EndpointIO.Body[String, String] =
+      EndpointIO.Body(
+        RawBodyType.StringBody(StandardCharsets.UTF_8),
+        Codec.string.format(new CodecFormat { override def mediaType: MediaType = MediaType.TextJavascript }),
+        EndpointIO.Info.empty
+      )
+    val swaggerInitializerJsEndpoint =
+      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
 
     val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    List(yamlEndpoint, oauth2Endpoint, redirectToSlashEndpoint, slashEndpoint, indexEndpoint, resourcesEndpoint)
+    List(yamlEndpoint, oauth2Endpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
   }
 }
