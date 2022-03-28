@@ -10,6 +10,8 @@ trait EndpointHandler[F[_], B] {
   /** Called when the request has been successfully decoded into data, and when the security logic succeeded. This is captured by the `ctx`
     * parameter.
     *
+    * @tparam A
+    *   The type of the endpoint's security inputs.
     * @tparam U
     *   Type of the successful result of the security logic.
     * @tparam I
@@ -17,8 +19,8 @@ trait EndpointHandler[F[_], B] {
     * @return
     *   An effect, describing the server's response.
     */
-  def onDecodeSuccess[U, I](
-      ctx: DecodeSuccessContext[F, U, I]
+  def onDecodeSuccess[A, U, I](
+      ctx: DecodeSuccessContext[F, A, U, I]
   )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]]
 
   /** Called when the security inputs have been successfully decoded into data, but the security logic failed (either with an error result

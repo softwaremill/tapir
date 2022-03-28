@@ -39,8 +39,8 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
   override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
 
-      override def onDecodeSuccess[U, I](
-          ctx: DecodeSuccessContext[F, U, I]
+      override def onDecodeSuccess[A, U, I](
+          ctx: DecodeSuccessContext[F, A, U, I]
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {

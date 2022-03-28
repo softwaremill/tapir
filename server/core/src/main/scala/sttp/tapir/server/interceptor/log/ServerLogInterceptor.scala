@@ -27,7 +27,7 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
 class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN = T }, token: T) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
-      override def onDecodeSuccess[U, I](ctx: DecodeSuccessContext[F, U, I])(implicit
+      override def onDecodeSuccess[A, U, I](ctx: DecodeSuccessContext[F, A, U, I])(implicit
           monad: MonadError[F],
           bodyListener: BodyListener[F, B]
       ): F[ServerResponse[B]] = {

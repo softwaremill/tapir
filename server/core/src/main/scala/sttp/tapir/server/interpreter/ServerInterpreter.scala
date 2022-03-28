@@ -74,7 +74,7 @@ class ServerInterpreter[R, F[_], B, S](
 
     def resultOrValueFrom = new ResultOrValueFrom {
       def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
-        val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
+        val decodeFailureContext = interceptor.DecodeFailureContext(se.endpoint, input, failure, request)
         endpointHandler(defaultSecurityFailureResponse)
           .onDecodeFailure(decodeFailureContext)
           .map {
@@ -124,7 +124,7 @@ class ServerInterpreter[R, F[_], B, S](
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse)
-                .onDecodeSuccess(interceptor.DecodeSuccessContext(se, u, params.asAny.asInstanceOf[I], request))
+                .onDecodeSuccess(interceptor.DecodeSuccessContext(se, a, u, params.asAny.asInstanceOf[I], request))
                 .map(r => RequestResult.Response(r): RequestResult[B])
             )
           } yield response
@@ -184,11 +184,11 @@ class ServerInterpreter[R, F[_], B, S](
 
   private def defaultEndpointHandler(securityFailureResponse: => F[ServerResponse[B]]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
-      override def onDecodeSuccess[U, I](
-          ctx: DecodeSuccessContext[F, U, I]
+      override def onDecodeSuccess[A, U, I](
+          ctx: DecodeSuccessContext[F, A, U, I]
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
         ctx.serverEndpoint
-          .logic(implicitly)(ctx.principal)(ctx.decodedInput)
+          .logic(implicitly)(ctx.principal)(ctx.input)
           .flatMap {
             case Right(result) =>
               responder(defaultSuccessStatusCode)(ctx.request, model.ValuedEndpointOutput(ctx.serverEndpoint.output, result))

@@ -38,7 +38,7 @@ trait ServerLog[F[_]] {
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by providing a response,
     * with the given status code.
     */
-  def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_], token: TOKEN): F[Unit]
+  def requestHandled(ctx: DecodeSuccessContext[F, _, _, _], response: ServerResponse[_], token: TOKEN): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable, token: TOKEN): F[Unit]
@@ -110,7 +110,7 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def requestHandled(ctx: DecodeSuccessContext[F, _, _], response: ServerResponse[_], token: Long): F[Unit] =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _, _], response: ServerResponse[_], token: Long): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; response: ${showResponse(response)}",
