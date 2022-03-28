@@ -41,7 +41,7 @@ trait ServerLog[F[_]] {
   def requestHandled(ctx: DecodeSuccessContext[F, _, _, _], response: ServerResponse[_], token: TOKEN): F[Unit]
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
-  def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable, token: TOKEN): F[Unit]
+  def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit]
 }
 
 case class DefaultServerLog[F[_]](
@@ -118,9 +118,9 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable, token: Long): F[Unit] =
+  override def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: Long): F[Unit] =
     if (logLogicExceptions)
-      doLogExceptions(s"Exception when handling request: ${showRequest(request)}, by: ${showEndpoint(e)}${took(token)}", ex)
+      doLogExceptions(s"Exception when handling request: ${showRequest(ctx.request)}, by: ${showEndpoint(ctx.endpoint)}${took(token)}", ex)
     else noLog
 
   private def now() = clock.instant().toEpochMilli

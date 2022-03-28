@@ -11,5 +11,5 @@ case class DecodeSuccessContext[F[_], A, U, I](
     input: I,
     request: ServerRequest
 ) {
-  def endpoint: Endpoint[_, I, _, _, _] = serverEndpoint.endpoint
+  def endpoint: Endpoint[A, I, _, _, _] = serverEndpoint.endpoint
 }
