@@ -71,6 +71,8 @@ object Color extends Enumeration with EnumHelper {
 }
 ``` 
 
+Tapir `Schema` for any `Enumeration.Value` can also be auto or semi-auto derived using `import sttp.tapir.generic.auto._` or `Schema.derivedEnumerationValue`.
+
 ## NewType integration
 
 If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapir-newtype` module will provide implicit codecs and
