@@ -27,7 +27,7 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
 class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN = T }, token: T) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
-      override def onDecodeSuccess[U, I](ctx: DecodeSuccessContext[F, U, I])(implicit
+      override def onDecodeSuccess[A, U, I](ctx: DecodeSuccessContext[F, A, U, I])(implicit
           monad: MonadError[F],
           bodyListener: BodyListener[F, B]
       ): F[ServerResponse[B]] = {
@@ -37,7 +37,9 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
             serverLog.requestHandled(ctx, response, token).map(_ => response)
           }
           .handleError { case e: Throwable =>
-            serverLog.exception(ctx.endpoint, ctx.request, e, token).flatMap(_ => monad.error(e))
+            serverLog
+              .exception(ExceptionContext(ctx.endpoint, Some(ctx.securityInput), Some(ctx.principal), ctx.request), e, token)
+              .flatMap(_ => monad.error(e))
           }
       }
 
@@ -50,7 +52,9 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
             serverLog.securityFailureHandled(ctx, response, token).map(_ => response)
           }
           .handleError { case e: Throwable =>
-            serverLog.exception(ctx.endpoint, ctx.request, e, token).flatMap(_ => monad.error(e))
+            serverLog
+              .exception(ExceptionContext(ctx.endpoint, Some(ctx.securityInput), None, ctx.request), e, token)
+              .flatMap(_ => monad.error(e))
           }
       }
 
@@ -68,7 +72,9 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
                 .map(_ => r: Option[ServerResponse[B]])
           }
           .handleError { case e: Throwable =>
-            serverLog.exception(ctx.endpoint, ctx.request, e, token).flatMap(_ => monad.error(e))
+            serverLog
+              .exception(ExceptionContext(ctx.endpoint, None, None, ctx.request), e, token)
+              .flatMap(_ => monad.error(e))
           }
       }
     }

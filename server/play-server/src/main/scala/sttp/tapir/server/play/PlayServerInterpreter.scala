@@ -54,7 +54,7 @@ trait PlayServerInterpreter {
           DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest), matchWholePath = true) match {
             case (DecodeBasicInputsResult.Values(_, _), _) => true
             case (DecodeBasicInputsResult.Failure(input, failure), _) =>
-              playServerOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
+              playServerOptions.decodeFailureHandler(DecodeFailureContext(se.endpoint, input, failure, serverRequest)).isDefined
           }
         }
       }
