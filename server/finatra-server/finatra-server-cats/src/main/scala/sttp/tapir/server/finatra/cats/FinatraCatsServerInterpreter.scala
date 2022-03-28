@@ -108,12 +108,12 @@ object FinatraCatsServerInterpreter {
             gToF(bodyListener.onComplete(body)(x => fToG(cb(x))))
         }
 
-      override def onDecodeSuccess[U, I](
-          ctx: DecodeSuccessContext[G, U, I]
+      override def onDecodeSuccess[A, U, I](
+          ctx: DecodeSuccessContext[G, A, U, I]
       )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponse[B]] = {
         fToG(
           original.onDecodeSuccess(
-            ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[_, U, I, _, _, _, F]])
+            ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[A, U, I, _, _, _, F]])
           )
         )
       }
