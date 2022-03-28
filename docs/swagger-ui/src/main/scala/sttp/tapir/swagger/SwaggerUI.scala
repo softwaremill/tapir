@@ -1,10 +1,9 @@
 package sttp.tapir.swagger
 
-import sttp.model.{HeaderNames, MediaType, QueryParams, StatusCode}
+import sttp.model.{HeaderNames, QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 
-import java.nio.charset.StandardCharsets
 import java.util.Properties
 import scala.io.Source
 
@@ -62,12 +61,7 @@ object SwaggerUI {
       Right(s"/$prefixFromRoot/$queryString")
     }
 
-    val textJavascriptUtf8: EndpointIO.Body[String, String] =
-      EndpointIO.Body(
-        RawBodyType.StringBody(StandardCharsets.UTF_8),
-        Codec.string.format(new CodecFormat { override def mediaType: MediaType = MediaType.TextJavascript }),
-        EndpointIO.Info.empty
-      )
+    val textJavascriptUtf8: EndpointIO.Body[String, String] = anyFromUtf8StringBody(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
       baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
 
