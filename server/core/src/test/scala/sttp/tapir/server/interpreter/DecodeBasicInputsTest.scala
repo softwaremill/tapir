@@ -3,7 +3,6 @@ package sttp.tapir.server.interpreter
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext}
 import sttp.tapir.{AttributeMap, Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
