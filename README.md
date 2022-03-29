@@ -27,13 +27,13 @@ interpreted as:
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
-## Adopters
+## ⚠️ April 2022: Building an adopters page
 
-⚠️ Is your company already using tapir? We're building an "adopters" section in the documentation, and the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
+Is your company already using tapir? We're building an "adopters" section in the documentation, and the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
 
-Please email us at [tapir@softwaremill.com](tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest. 
+Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest. 
 
-We're seeing tapir's download numbers going steadily up; the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
+We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
 
 ## Teaser
 
