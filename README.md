@@ -27,7 +27,7 @@ interpreted as:
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
-## ⚠️ April 2022: Building an adopters page
+## 🐣️ April 2022: Building an adopters page
 
 Is your company already using tapir? We're building an "adopters" section in the documentation, and the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
 

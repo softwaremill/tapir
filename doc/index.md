@@ -33,7 +33,7 @@ Tapir is available:
 * selected modules (core; http4s, vertx, netty, aws servers; sttp and http4s clients; openapi; some js and datatype integrations) - Scala 3 on the JVM  
 * selected modules (aws server; sttp client; some js and datatype integrations) - Scala 2.12, 2.13 and 3 using Scala.JS.
 
-## ⚠️ April 2022: Building an adopters page
+## 🐣️ April 2022: Building an adopters page
 
 Is your company already using tapir? We're building an "adopters" section in the documentation, and the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
 
