@@ -327,8 +327,11 @@ trait EndpointMetaOps {
   }
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined, including mapping
-    * information. E.g.: `Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout:
-    * {body as text/plain (UTF-8)}, out: -)`
+    * information. E.g.:
+    *
+    * {{{
+    * Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout: {body as text/plain (UTF-8)}, out: -)
+    * }}}
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
