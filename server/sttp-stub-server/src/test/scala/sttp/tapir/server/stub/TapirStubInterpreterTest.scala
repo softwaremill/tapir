@@ -8,6 +8,7 @@ import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir
 import sttp.tapir._
+import sttp.tapir.client.sttp.{SttpClientInterpreter, WebSocketToPipe}
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionContext
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
@@ -159,6 +160,26 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
       .send(server)
 
     ex.getMessage shouldBe "Stream body provided while endpoint accepts raw body type"
+  }
+
+  it should "allow overriding response parsing description created by sttp client interpreter to test exception handling" in {
+    // given
+    val se = endpoint.get.in("test").serverLogicSuccess[Identity](_ => throw new RuntimeException("Error"))
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenServerEndpoint(se)
+      .thenRunLogic()
+      .backend()
+
+    // when
+    val request = SttpClientInterpreter()
+      .toRequest(se.endpoint, None)
+      .apply(())
+      .response(asString)
+    val response = request.send(server)
+
+    // then
+    response.body shouldBe Left("Internal server error")
+    response.code shouldBe StatusCode.InternalServerError
   }
 }
 
