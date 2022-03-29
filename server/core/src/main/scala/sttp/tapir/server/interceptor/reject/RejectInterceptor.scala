@@ -15,14 +15,16 @@ import sttp.tapir.server.interceptor._
   * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server implementation.
   */
 class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor[F] {
-  override def apply[B](
+  override def apply[R, B](
       responder: Responder[F, B],
-      requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
-  ): RequestHandler[F, B] = {
+      requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+  ): RequestHandler[F, R, B] = {
     val next = requestHandler(EndpointInterceptor.noop)
-    new RequestHandler[F, B] {
-      override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
-        next(request).flatMap {
+    new RequestHandler[F, R, B] {
+      override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+          monad: MonadError[F]
+      ): F[RequestResult[B]] =
+        next(request, endpoints).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
           case f: RequestResult.Failure =>
             handler(f) match {

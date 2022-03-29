@@ -3,7 +3,7 @@ package sttp.tapir.server.interpreter
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.{AttributeMap, Codec, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.{AttributeKey, AttributeMap, Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -33,6 +33,8 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     override def method: Method = Method.GET
     override def uri: Uri = ???
     override def headers: Seq[Header] = Nil
+    override def attribute[T](k: AttributeKey[T]): Option[T] = None
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
     override def withUnderlying(underlying: Any): ServerRequest = this
   }
 }

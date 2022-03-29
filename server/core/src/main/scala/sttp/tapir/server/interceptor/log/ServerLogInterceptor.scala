@@ -3,22 +3,23 @@ package sttp.tapir.server.interceptor.log
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
 
 /** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
-
-  /** @tparam B The interpreter-specific, low-level type of body. */
-  override def apply[B](
+  override def apply[R, B](
       responder: Responder[F, B],
-      requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
-  ): RequestHandler[F, B] = {
+      requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+  ): RequestHandler[F, R, B] = {
     val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, serverLog.requestToken))
-    new RequestHandler[F, B] {
-      override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] = {
-        serverLog.requestReceived(request).flatMap(_ => delegate(request))
+    new RequestHandler[F, R, B] {
+      override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+          monad: MonadError[F]
+      ): F[RequestResult[B]] = {
+        serverLog.requestReceived(request).flatMap(_ => delegate(request, endpoints))
       }
     }
   }

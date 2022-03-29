@@ -28,7 +28,7 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
     )
 
     { (request: AwsRequest) =>
-      val serverRequest = new AwsServerRequest(request)
+      val serverRequest = AwsServerRequest(request)
 
       interpreter.apply(serverRequest).map {
         case RequestResult.Failure(_) =>

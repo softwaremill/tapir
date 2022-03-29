@@ -150,6 +150,8 @@ class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
     override def withUnderlying(underlying: Any): ServerRequest = ???
     override def method: Method = ???
     override def uri: Uri = ???
+    override def attribute[T](k: AttributeKey[T]): Option[T] = ???
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = ???
     override def headers: Seq[Header] = ???
   }
 }

@@ -46,7 +46,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     )
 
     { rc =>
-      val serverRequest = new VertxServerRequest(rc)
+      val serverRequest = VertxServerRequest(rc)
 
       val result: ZIO[R, Throwable, Any] =
         interpreter(serverRequest)

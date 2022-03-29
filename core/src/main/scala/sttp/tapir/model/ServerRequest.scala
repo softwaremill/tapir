@@ -2,6 +2,7 @@ package sttp.tapir.model
 
 import sttp.model.headers.Accepts
 import sttp.model.{ContentTypeRange, Header, MediaType, Method, QueryParams, RequestMetadata, Uri}
+import sttp.tapir.AttributeKey
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
@@ -17,6 +18,9 @@ trait ServerRequest extends RequestMetadata {
 
   lazy val acceptsContentTypes: Either[String, Seq[ContentTypeRange]] = Accepts.parse(headers)
   lazy val contentTypeParsed: Option[MediaType] = contentType.flatMap(MediaType.parse(_).toOption)
+
+  def attribute[T](k: AttributeKey[T]): Option[T]
+  def attribute[T](k: AttributeKey[T], v: T): ServerRequest
 
   /** Create a copy of this server request, which reads data from the given underlying implementation. The type of `underlying` should be
     * the same as the type of `this.underlying`.
@@ -68,6 +72,18 @@ class ServerRequestOverride(
   override def pathSegments: List[String] = pathSegmentsOverride.getOrElse(delegate.pathSegments)
   override def queryParameters: QueryParams = queryParametersOverride.getOrElse(delegate.queryParameters)
   override def headers: Seq[Header] = headersOverride.getOrElse(delegate.headers)
+  override def attribute[T](k: AttributeKey[T]): Option[T] = delegate.attribute(k)
+  override def attribute[T](k: AttributeKey[T], v: T): ServerRequest =
+    new ServerRequestOverride(
+      methodOverride,
+      uriOverride,
+      protocolOverride,
+      connectionInfoOverride,
+      pathSegmentsOverride,
+      queryParametersOverride,
+      headersOverride,
+      delegate.attribute(k, v)
+    )
   override def withUnderlying(underlying: Any): ServerRequest =
     new ServerRequestOverride(
       methodOverride,

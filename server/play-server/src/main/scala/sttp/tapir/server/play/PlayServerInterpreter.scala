@@ -49,7 +49,7 @@ trait PlayServerInterpreter {
 
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
-        val serverRequest = new PlayServerRequest(request, request)
+        val serverRequest = PlayServerRequest(request, request)
         serverEndpoints.exists { se =>
           DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest), matchWholePath = true) match {
             case (DecodeBasicInputsResult.Values(_, _), _) => true
@@ -77,7 +77,7 @@ trait PlayServerInterpreter {
           request: Request[AkkaStreams.BinaryStream]
       ): Future[Either[Result, Flow[Message, Message, Any]]] = {
         implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
-        val serverRequest = new PlayServerRequest(header, request)
+        val serverRequest = PlayServerRequest(header, request)
         val interpreter = new ServerInterpreter(
           FilterServerEndpoints(serverEndpoints),
           new PlayRequestBody(playServerOptions),

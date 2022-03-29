@@ -13,6 +13,7 @@ import sttp.tapir.server.TestUtil._
 import sttp.tapir.internal.NoStreams
 import PrometheusMetrics._
 import PrometheusMetricsTest._
+import sttp.tapir.AttributeKey
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -255,6 +256,8 @@ object PrometheusMetricsTest {
     override def method: Method = Method.GET
     override def uri: Uri = uri"http://example.com/metrics"
     override def headers: immutable.Seq[Header] = Nil
+    override def attribute[T](k: AttributeKey[T]): Option[T] = None
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
     override def withUnderlying(underlying: Any): ServerRequest = this
   }
 }

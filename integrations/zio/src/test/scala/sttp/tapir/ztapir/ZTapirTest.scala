@@ -5,7 +5,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
-import sttp.tapir.{CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{AttributeKey, CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
@@ -57,6 +57,8 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     override def method: Method = ???
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
+    override def attribute[T](k: AttributeKey[T]): Option[T] = None
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
     override def withUnderlying(underlying: Any): ServerRequest = this
   }
 

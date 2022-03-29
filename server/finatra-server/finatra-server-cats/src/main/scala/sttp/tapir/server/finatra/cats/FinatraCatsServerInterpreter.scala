@@ -40,7 +40,7 @@ trait FinatraCatsServerInterpreter[F[_]] extends Logging {
   def finatraCatsServerOptions: FinatraCatsServerOptions[F]
 
   def toRoute(e: ServerEndpoint[Any, F]): FinatraRoute = {
-    implicit val dispatcher = finatraCatsServerOptions.dispatcher
+    implicit val dispatcher: Dispatcher[F] = finatraCatsServerOptions.dispatcher
     val finatraCreateFile: Array[Byte] => Future[TapirFile] = bytes => finatraCatsServerOptions.createFile(bytes).asTwitterFuture
     val finatraDeleteFile: TapirFile => Future[Unit] = file => finatraCatsServerOptions.deleteFile(file).asTwitterFuture
     val interceptors = finatraCatsServerOptions.interceptors.map(convertInterceptor(_))
@@ -58,7 +58,7 @@ trait FinatraCatsServerInterpreter[F[_]] extends Logging {
 }
 
 object FinatraCatsServerInterpreter {
-  private type RequestHandlerLogic[F[_], B] = EndpointInterceptor[F] => RequestHandler[F, B]
+  private type RequestHandlerLogic[F[_], R, B] = EndpointInterceptor[F] => RequestHandler[F, R, B]
 
   def apply[F[_]](
       dispatcher: Dispatcher[F]
@@ -76,31 +76,32 @@ object FinatraCatsServerInterpreter {
     }
   }
 
-  private def convertHandler[F[_]: MonadError, G[_]: MonadError, B](
+  private def convertEndpoint[F[_]: MonadError, G[_], R](
+      original: ServerEndpoint[R, F],
+      fToG: F ~> G
+  ): ServerEndpoint[R, G] = {
+    new ServerEndpoint[R, G] {
+      override type SECURITY_INPUT = original.SECURITY_INPUT
+      override type PRINCIPAL = original.PRINCIPAL
+      override type INPUT = original.INPUT
+      override type ERROR_OUTPUT = original.ERROR_OUTPUT
+      override type OUTPUT = original.OUTPUT
+
+      override def logic: MonadError[G] => PRINCIPAL => INPUT => G[Either[ERROR_OUTPUT, OUTPUT]] = _ =>
+        p => i => fToG(original.logic(MonadError[F])(p)(i))
+
+      override def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] = original.endpoint
+
+      override def securityLogic: MonadError[G] => SECURITY_INPUT => G[Either[ERROR_OUTPUT, PRINCIPAL]] = _ =>
+        si => fToG(original.securityLogic(MonadError[F])(si))
+    }
+  }
+
+  private def convertHandler[F[_]: MonadError, G[_], B](
       original: EndpointHandler[F, B],
       fToG: F ~> G,
       gToF: G ~> F
   ): EndpointHandler[G, B] = {
-    def convertEndpoint[R](
-        original: ServerEndpoint[R, G]
-    ): ServerEndpoint[R, F] = {
-      new ServerEndpoint[R, F] {
-        override type SECURITY_INPUT = original.SECURITY_INPUT
-        override type PRINCIPAL = original.PRINCIPAL
-        override type INPUT = original.INPUT
-        override type ERROR_OUTPUT = original.ERROR_OUTPUT
-        override type OUTPUT = original.OUTPUT
-
-        override def logic: MonadError[F] => PRINCIPAL => INPUT => F[Either[ERROR_OUTPUT, OUTPUT]] = _ =>
-          p => i => gToF(original.logic(MonadError[G])(p)(i))
-
-        override def endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] = original.endpoint
-
-        override def securityLogic: MonadError[F] => SECURITY_INPUT => F[Either[ERROR_OUTPUT, PRINCIPAL]] = _ =>
-          si => gToF(original.securityLogic(MonadError[G])(si))
-      }
-    }
-
     new EndpointHandler[G, B] {
       private implicit def bodyListenerF(implicit bodyListener: BodyListener[G, B]): BodyListener[F, B] =
         new BodyListener[F, B] {
@@ -113,7 +114,10 @@ object FinatraCatsServerInterpreter {
       )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponse[B]] = {
         fToG(
           original.onDecodeSuccess(
-            ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[A, U, I, _, _, _, F]])
+            ctx.copy(serverEndpoint =
+              convertEndpoint[G, F, Any](ctx.serverEndpoint.asInstanceOf[ServerEndpoint[Any, G]], gToF)(monad)
+                .asInstanceOf[ServerEndpoint.Full[A, U, I, _, _, _, F]]
+            )
           )
         )
       }
@@ -123,7 +127,10 @@ object FinatraCatsServerInterpreter {
       )(implicit monad: MonadError[G], bodyListener: BodyListener[G, B]): G[ServerResponse[B]] =
         fToG(
           original.onSecurityFailure(
-            ctx.copy(serverEndpoint = convertEndpoint(ctx.serverEndpoint).asInstanceOf[ServerEndpoint.Full[A, _, _, _, _, _, F]])
+            ctx.copy(serverEndpoint =
+              convertEndpoint[G, F, Any](ctx.serverEndpoint.asInstanceOf[ServerEndpoint[Any, G]], gToF)(monad)
+                .asInstanceOf[ServerEndpoint.Full[A, _, _, _, _, _, F]]
+            )
           )
         )
 
@@ -141,25 +148,41 @@ object FinatraCatsServerInterpreter {
     }
 
   private def convertInterceptor[F[_]: Async: Dispatcher: MonadError](original: Interceptor[F]): Interceptor[Future] = {
+    val fToFuture = new (F ~> Future) {
+      override def apply[A](f: F[A]): Future[A] = f.asTwitterFuture
+    }
+    val futureToF = new (Future ~> F) {
+      override def apply[A](future: Future[A]): F[A] = future.asF
+    }
+
     def convertRequestInterceptor(interceptor: RequestInterceptor[F]): RequestInterceptor[Future] = new RequestInterceptor[Future] {
-      override def apply[B](
+      override def apply[R, B](
           responder: Responder[Future, B],
-          requestHandler: RequestHandlerLogic[Future, B]
-      ): RequestHandler[Future, B] = {
-        def convertRequestHandler: RequestHandlerLogic[Future, B] => RequestHandlerLogic[F, B] =
+          requestHandler: RequestHandlerLogic[Future, R, B]
+      ): RequestHandler[Future, R, B] = {
+        def convertRequestHandler: RequestHandlerLogic[Future, R, B] => RequestHandlerLogic[F, R, B] =
           original =>
             interceptorF => {
-              new RequestHandler[F, B] {
-                override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
-                  original(convertEndpointInterceptor(interceptorF))(request)(FutureMonadError).asF
+              new RequestHandler[F, R, B] {
+                override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+                    monad: MonadError[F]
+                ): F[RequestResult[B]] =
+                  original(convertEndpointInterceptor(interceptorF))(
+                    request,
+                    endpoints.map(convertEndpoint[F, Future, R](_, fToFuture)(monad))
+                  )(
+                    FutureMonadError
+                  ).asF
               }
             }
 
         val handler = interceptor(convertResponder(responder), convertRequestHandler(requestHandler))
 
-        new RequestHandler[Future, B] {
-          override def apply(request: ServerRequest)(implicit monad: MonadError[Future]): Future[RequestResult[B]] =
-            handler(request).asTwitterFuture
+        new RequestHandler[Future, R, B] {
+          override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, Future]])(implicit
+              monad: MonadError[Future]
+          ): Future[RequestResult[B]] =
+            handler(request, endpoints.map(convertEndpoint[Future, F, R](_, futureToF))).asTwitterFuture
         }
       }
     }
@@ -170,14 +193,6 @@ object FinatraCatsServerInterpreter {
             responder: Responder[Future, B],
             endpointHandler: EndpointHandler[Future, B]
         ): EndpointHandler[Future, B] = {
-          val fToFuture = new (F ~> Future) {
-            override def apply[A](f: F[A]): Future[A] = f.asTwitterFuture
-          }
-
-          val futureToF = new (Future ~> F) {
-            override def apply[A](future: Future[A]): F[A] = future.asF
-          }
-
           val handler: EndpointHandler[F, B] =
             interceptor(convertResponder(responder), convertHandler(endpointHandler, futureToF, fToFuture))
 

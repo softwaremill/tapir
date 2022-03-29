@@ -34,7 +34,7 @@ trait ZioHttpInterpreter[R] {
       Http
         .fromZIO(
           interpreter
-            .apply(new ZioHttpServerRequest(req))
+            .apply(ZioHttpServerRequest(req))
             .map {
               case RequestResult.Response(resp) =>
                 Http.succeed(

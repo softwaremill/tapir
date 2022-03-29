@@ -3,6 +3,7 @@ package sttp.tapir.server.interceptor
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
 /** Intercepts requests, and endpoint decode events. Using interceptors it's possible to:
@@ -38,23 +39,50 @@ sealed trait Interceptor[F[_]]
   */
 trait RequestInterceptor[F[_]] extends Interceptor[F] {
 
-  /** @tparam B The interpreter-specific, low-level type of body. */
-  def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B]
+  /** @tparam R
+    *   The interpreter-specific supported capabilities, such as streaming support, websockets or `Any`.
+    * @tparam B
+    *   The interpreter-specific, low-level type of body.
+    */
+  def apply[R, B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]): RequestHandler[F, R, B]
 }
 
 object RequestInterceptor {
 
   /** Create a request interceptor which transforms the server request, prior to handling any endpoints. */
   def transformServerRequest[F[_]](f: ServerRequest => F[ServerRequest]): RequestInterceptor[F] = new RequestInterceptor[F] {
-    override def apply[B](
+    override def apply[R, B](
         responder: Responder[F, B],
-        requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
-    ): RequestHandler[F, B] =
-      new RequestHandler[F, B] {
-        override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] =
-          f(request).flatMap(request2 => requestHandler.apply(EndpointInterceptor.noop)(request2))
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+    ): RequestHandler[F, R, B] =
+      new RequestHandler[F, R, B] {
+        override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+            monad: MonadError[F]
+        ): F[RequestResult[B]] =
+          f(request).flatMap(request2 => requestHandler(EndpointInterceptor.noop)(request2, endpoints))
       }
   }
+
+  trait ServerEndpointFilter[F[_]] {
+    def apply[R](endpoint: List[ServerEndpoint[R, F]]): F[List[ServerEndpoint[R, F]]]
+  }
+
+  /** Filter the server endpoints for which decoding will be later attempted, in sequence. */
+  def filterServerEndpoints[F[_]](filter: ServerEndpointFilter[F]): RequestInterceptor[F] =
+    new RequestInterceptor[F] {
+      override def apply[R, B](
+          responder: Responder[F, B],
+          requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+      ): RequestHandler[F, R, B] = {
+        new RequestHandler[F, R, B] {
+          override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+              monad: MonadError[F]
+          ): F[RequestResult[B]] = {
+            filter(endpoints).flatMap(endpoints2 => requestHandler(EndpointInterceptor.noop)(request, endpoints2))
+          }
+        }
+      }
+    }
 }
 
 /** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been decoded successfully, or when
