@@ -104,7 +104,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.0-M5"
 ```
 
 Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then 
