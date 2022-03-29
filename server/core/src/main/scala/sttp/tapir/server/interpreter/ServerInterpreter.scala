@@ -17,21 +17,22 @@ class ServerInterpreter[R, F[_], B, S](
     interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply(request: ServerRequest): F[RequestResult[B]] =
-    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode)).apply(request))
+  def apply(request: ServerRequest): F[RequestResult[B]] = monad.suspend {
+    callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode)).apply(request, serverEndpoints(request))
+  }
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
       is: List[Interceptor[F]],
       eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B]
-  ): RequestHandler[F, B] = {
+  ): RequestHandler[F, R, B] = {
     is match {
-      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, serverEndpoints(request), eisAcc.reverse, Nil) }
+      case Nil => RequestHandler.from { (request, ses, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
       case (i: RequestInterceptor[F]) :: tail =>
         i(
           responder,
-          { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder).apply(request) } }
+          { ei => RequestHandler.from { (request, ses, _) => callInterceptors(tail, ei :: eisAcc, responder).apply(request, ses) } }
         )
       case (ei: EndpointInterceptor[F]) :: tail => callInterceptors(tail, ei :: eisAcc, responder)
     }

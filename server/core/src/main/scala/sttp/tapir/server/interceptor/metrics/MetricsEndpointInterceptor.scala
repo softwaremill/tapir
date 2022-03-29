@@ -13,8 +13,11 @@ import scala.util.{Failure, Success, Try}
 
 class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[AnyEndpoint]) extends RequestInterceptor[F] {
 
-  override def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B] =
-    RequestHandler.from { (request, monad) =>
+  override def apply[R, B](
+      responder: Responder[F, B],
+      requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+  ): RequestHandler[F, R, B] =
+    RequestHandler.from { (request, endpoints, monad) =>
       implicit val m: MonadError[F] = monad
       metrics
         .foldLeft(List.empty[EndpointMetric[F]].unit) { (mAcc, metric) =>
@@ -26,7 +29,7 @@ class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoin
           } yield endpointMetric :: metrics
         }
         .flatMap { endpointMetrics =>
-          requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics.reverse, ignoreEndpoints)).apply(request)
+          requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics.reverse, ignoreEndpoints)).apply(request, endpoints)
         }
     }
 }

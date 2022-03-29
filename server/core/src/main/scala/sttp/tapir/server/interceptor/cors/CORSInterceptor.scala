@@ -4,25 +4,28 @@ import sttp.model.{Header, HeaderNames, Method}
 import sttp.monad.MonadError
 import sttp.monad.syntax.MonadErrorOps
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor.cors.CORSConfig._
 import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
 import sttp.tapir.server.model.ServerResponse
 
 class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestInterceptor[F] {
-  override def apply[B](
+  override def apply[R, B](
       responder: Responder[F, B],
-      requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
-  ): RequestHandler[F, B] =
-    new RequestHandler[F, B] {
-      override def apply(request: ServerRequest)(implicit me: MonadError[F]): F[RequestResult[B]] = {
-        val handler = request.header(HeaderNames.Origin).map(cors).getOrElse(nonCors(_))
-        handler(request)
+      requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+  ): RequestHandler[F, R, B] =
+    new RequestHandler[F, R, B] {
+      override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit me: MonadError[F]): F[RequestResult[B]] = {
+        val handler = request.header(HeaderNames.Origin).map(cors).getOrElse(nonCors(_, _))
+        handler(request, endpoints)
       }
 
       private val next = requestHandler(EndpointInterceptor.noop)
 
-      private def cors(origin: String)(request: ServerRequest)(implicit me: MonadError[F]): F[RequestResult[B]] = {
+      private def cors(
+          origin: String
+      )(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit me: MonadError[F]): F[RequestResult[B]] = {
         def headerValues(rawHeader: String): Set[String] = rawHeader.split("\\s*,\\s*").toSet
 
         def preflight(requestedHeaderNames: Set[String], requestedMethodName: String): F[RequestResult[B]] = {
@@ -51,7 +54,7 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
             ResponseHeaders.varyNonPreflight
           ).flatten
 
-          next(request).map {
+          next(request, endpoints).map {
             case Response(serverResponse) => Response(serverResponse.addHeaders(responseHeaders))
             case failure                  => failure
           }
@@ -70,7 +73,9 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
         }
       }
 
-      private def nonCors(request: ServerRequest)(implicit monad: MonadError[F]): F[RequestResult[B]] = next(request)
+      private def nonCors(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+          monad: MonadError[F]
+      ): F[RequestResult[B]] = next(request, endpoints)
     }
 
   private[cors] object ResponseHeaders {

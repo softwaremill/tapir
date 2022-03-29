@@ -38,12 +38,12 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     // should be called first, as it's the only request interceptor; creates an endpoint interceptor, which should be
     // added to the endpoint interceptor stack in the correct place
     val interceptor2 = new RequestInterceptor[Id] {
-      override def apply[B](
+      override def apply[R, B](
           responder: Responder[Id, B],
-          requestHandler: EndpointInterceptor[Id] => RequestHandler[Id, B]
-      ): RequestHandler[Id, B] = RequestHandler.from { (request, monad) =>
+          requestHandler: EndpointInterceptor[Id] => RequestHandler[Id, R, B]
+      ): RequestHandler[Id, R, B] = RequestHandler.from { (request, endpoints, monad) =>
         callTrail.append("2 request")
-        requestHandler(new AddToTrailInterceptor(callTrail.append(_: String), "2")).apply(request)(monad)
+        requestHandler(new AddToTrailInterceptor(callTrail.append(_: String), "2")).apply(request, endpoints)(monad)
       }
     }
     val interceptor3 = new AddToTrailInterceptor(callTrail.append(_: String), "3")

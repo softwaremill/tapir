@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
+import sttp.client3.SttpBackend
 import sttp.client3.testing.SttpBackendStub
-import sttp.client3.{Request, Response, SttpBackend}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
