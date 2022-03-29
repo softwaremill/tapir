@@ -2,13 +2,17 @@ package sttp.tapir.server.armeria
 
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.server.ServiceRequestContext
+
 import java.net.InetSocketAddress
 import scala.collection.JavaConverters._
 import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+
 import scala.collection.immutable.Seq
 
-private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) extends ServerRequest {
+private[armeria] final case class ArmeriaServerRequest(ctx: ServiceRequestContext, attributes: AttributeMap = AttributeMap.Empty)
+    extends ServerRequest {
   private lazy val request: HttpRequest = ctx.request
 
   lazy val connectionInfo: ConnectionInfo = {
@@ -58,7 +62,11 @@ private[armeria] final class ArmeriaServerRequest(ctx: ServiceRequestContext) ex
     QueryParams(builder.result())
   }
 
-  override def withUnderlying(underlying: Any): ServerRequest = new ArmeriaServerRequest(
-    ctx = underlying.asInstanceOf[ServiceRequestContext]
+  def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  def attribute[T](k: AttributeKey[T], v: T): ArmeriaServerRequest = copy(attributes = attributes.put(k, v))
+
+  override def withUnderlying(underlying: Any): ServerRequest = ArmeriaServerRequest(
+    underlying.asInstanceOf[ServiceRequestContext],
+    attributes
   )
 }

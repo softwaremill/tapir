@@ -6,13 +6,14 @@ import java.net.InetSocketAddress
 import io.vertx.core.net.SocketAddress
 import io.vertx.ext.web.RoutingContext
 import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.vertx.routing.MethodMapping
 
 import scala.collection.immutable._
 import scala.collection.JavaConverters._
 
-private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerRequest {
+private[vertx] case class VertxServerRequest(rc: RoutingContext, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   lazy val connectionInfo: ConnectionInfo = {
     val conn = rc.request.connection
     ConnectionInfo(
@@ -39,8 +40,12 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
 
   override def underlying: Any = rc
 
+  override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  override def attribute[T](k: AttributeKey[T], v: T): VertxServerRequest = copy(attributes = attributes.put(k, v))
+
   private def asInetSocketAddress(address: SocketAddress): InetSocketAddress =
     InetSocketAddress.createUnresolved(address.host, address.port)
 
-  override def withUnderlying(underlying: Any): ServerRequest = new VertxServerRequest(rc = underlying.asInstanceOf[RoutingContext])
+  override def withUnderlying(underlying: Any): ServerRequest =
+    new VertxServerRequest(rc = underlying.asInstanceOf[RoutingContext], attributes)
 }

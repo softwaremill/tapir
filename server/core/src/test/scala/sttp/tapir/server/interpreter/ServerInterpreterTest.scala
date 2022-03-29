@@ -27,6 +27,8 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     override def method: Method = Method.GET
     override def uri: Uri = uri"http://example.com"
     override def headers: immutable.Seq[Header] = Nil
+    override def attribute[T](k: AttributeKey[T]): Option[T] = None
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
     override def withUnderlying(underlying: Any): ServerRequest = this
   }
 

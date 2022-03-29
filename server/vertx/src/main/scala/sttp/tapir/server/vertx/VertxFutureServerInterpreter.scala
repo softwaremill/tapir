@@ -58,7 +58,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
       vertxFutureServerOptions.deleteFile
     )
 
-    val serverRequest = new VertxServerRequest(rc)
+    val serverRequest = VertxServerRequest(rc)
 
     interpreter(serverRequest)
       .flatMap {

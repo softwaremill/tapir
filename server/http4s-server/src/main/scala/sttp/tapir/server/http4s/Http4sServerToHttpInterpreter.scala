@@ -67,7 +67,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
     )
 
     Kleisli { (req: Request[F]) =>
-      val serverRequest = new Http4sServerRequest(req)
+      val serverRequest = Http4sServerRequest(req)
 
       OptionT(interpreter(serverRequest).flatMap {
         case _: RequestResult.Failure         => none.pure[G]

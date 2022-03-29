@@ -50,7 +50,7 @@ trait AkkaHttpServerInterpreter {
         )
 
         extractRequestContext { ctx =>
-          val serverRequest = new AkkaServerRequest(ctx)
+          val serverRequest = AkkaServerRequest(ctx)
           onSuccess(interpreter(serverRequest)) {
             case RequestResult.Failure(_)         => reject
             case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)

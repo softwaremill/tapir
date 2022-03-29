@@ -57,7 +57,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     )
 
     { rc =>
-      val serverRequest = new VertxServerRequest(rc)
+      val serverRequest = VertxServerRequest(rc)
 
       val result = interpreter(serverRequest)
         .flatMap {
