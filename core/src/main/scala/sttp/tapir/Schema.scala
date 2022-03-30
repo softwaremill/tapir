@@ -291,8 +291,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Unit: SName = SName(fullName = "Unit")
   }
 
-  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]].
-    */
+  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]]. */
   object annotations {
     class description(val text: String) extends StaticAnnotation
     class encodedExample(val example: Any) extends StaticAnnotation
@@ -302,6 +301,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class hidden extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
+    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
   }
 }
 
