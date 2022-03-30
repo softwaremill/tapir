@@ -161,7 +161,7 @@ final case class TapirRequestTest15(
     @Schema.annotations.default(12, None)
     field2: Int,
     @query
-    @Schema.annotations.default(13, encoded=None)
+    @Schema.annotations.default(13, encoded = None)
     field3: Int,
     @query
     @Schema.annotations.default(14, Some(140))
@@ -170,9 +170,17 @@ final case class TapirRequestTest15(
     @Schema.annotations.default(15, Some("150"))
     field5: Int,
     @query
-    @Schema.annotations.default(16, encoded=Some(160))
+    @Schema.annotations.default(16, encoded = Some(160))
     field6: Int
 )
+
+final case class TapirRequestTest16(@customise({
+  case a: EndpointTransput.Atom[_] => a.attribute(TapirRequestTest16.testAttributeKey, "test")
+  case x                           => x
+}) @query field: Int)
+object TapirRequestTest16 {
+  val testAttributeKey: AttributeKey[String] = AttributeKey[String]
+}
 
 class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
@@ -275,7 +283,8 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
   }
 
   it should "derive default annotation correctly" in {
-    val expectedInput = query[Int]("field1").default(11)
+    val expectedInput = query[Int]("field1")
+      .default(11)
       .and(query[Int]("field2").default(12))
       .and(query[Int]("field3").default(13))
       .and(query[Int]("field4").default(14))
@@ -284,6 +293,11 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
       .mapTo[TapirRequestTest15]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest15], expectedInput) shouldBe true
+  }
+
+  it should "customise inputs" in {
+    val expectedInput = query[Int]("field").attribute(TapirRequestTest16.testAttributeKey, "test")
+    compareTransputs(EndpointInput.derived[TapirRequestTest16], expectedInput) shouldBe true
   }
 
   val bodyInputDerivations =
@@ -500,8 +514,11 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
         (l, r) match {
           case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
             info1 == info2
-          case (Auth(input1, securitySchemeName1, challenge1, info1), Auth(input2, securitySchemeName2, challenge2, info2)) =>
-            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && info1 == info2 && compareTransputs(input1, input2)
+          case (Auth(input1, securitySchemeName1, challenge1, type1, info1), Auth(input2, securitySchemeName2, challenge2, type2, info2)) =>
+            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && type1 == type2 && info1 == info2 && compareTransputs(
+              input1,
+              input2
+            )
           case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
             bodyType1 == bodyType2 && info1 == info2
           case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>

@@ -62,7 +62,7 @@ object OneOfMacro {
               _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
               // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
               mappingAsMap.toList.flatMap { 
-                case (k, Schema(_, Some(fname), _, _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
+                case (k, Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
                 case _ => Nil
               }
               .toMap

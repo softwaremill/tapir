@@ -3,7 +3,7 @@ package sttp.tapir.generic.internal
 import sttp.model.Header
 import sttp.model.headers.Cookie
 import sttp.tapir.EndpointIO.annotations._
-import sttp.tapir.{Codec, MultipartCodec, RawPart, Schema}
+import sttp.tapir.{Codec, EndpointTransput, MultipartCodec, RawPart, Schema}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.internal.CaseClassUtil
 
@@ -27,6 +27,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
 
   private val descriptionType = c.weakTypeOf[description]
   private val exampleType = c.weakTypeOf[example]
+  private val customiseType = c.weakTypeOf[customise]
 
   private val apikeyType = c.weakTypeOf[apikey]
   protected val securitySchemeNameType = c.weakTypeOf[securitySchemeName]
@@ -159,10 +160,16 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
         util.findAnnotation(field, apikeyType).fold(i) { a =>
           val challenge = authChallenge(a)
           setSecuritySchemeName(
-            q"_root_.sttp.tapir.EndpointInput.Auth($i, None, $challenge, _root_.sttp.tapir.EndpointInput.AuthInfo.ApiKey())",
+            q"_root_.sttp.tapir.EndpointInput.Auth($i, None, $challenge, _root_.sttp.tapir.EndpointInput.AuthType.ApiKey(), _root_.sttp.tapir.EndpointInput.AuthInfo.Empty)",
             util.findAnnotation(field, securitySchemeNameType)
           )
-        }
+        },
+      i =>
+        util
+          .extractFirstTreeArgFromAnnotation(field, customiseType)
+          .fold(i) { f =>
+            q"sttp.tapir.generic.internal.EndpointAnnotationsMacro.customise($i, ${c.untypecheck(f)})"
+          }
     )
 
     transformations.foldLeft(input)((i, f) => f(i))
@@ -180,4 +187,9 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
       q"${c.untypecheck(auth)}.securitySchemeName(${c.untypecheck(name.tree)}.name)"
     }
   }
+}
+
+object EndpointAnnotationsMacro {
+  // we assume that the customisation function doesn't return a value of a different type
+  def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]
 }

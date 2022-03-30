@@ -177,6 +177,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
   private val descriptionAnnotationSymbol = TypeTree.of[EndpointIO.annotations.description].tpe.typeSymbol
   private val exampleAnnotationSymbol = TypeTree.of[EndpointIO.annotations.example].tpe.typeSymbol
+  private val customiseAnnotationSymbol = TypeTree.of[EndpointIO.annotations.customise].tpe.typeSymbol
 
   // schema symbols
   private val schemaDescriptionAnnotationSymbol = TypeTree.of[Schema.annotations.description].tpe.typeSymbol
@@ -335,7 +336,15 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     apikey
       .map(ak =>
         setSecuritySchemeName(
-          '{ EndpointInput.Auth($input, None, ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge, EndpointInput.AuthInfo.ApiKey()) },
+          '{
+            EndpointInput.Auth(
+              $input,
+              None,
+              ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge,
+              EndpointInput.AuthType.ApiKey(),
+              EndpointInput.AuthInfo.Empty
+            )
+          },
           schemeName
         )
       )
@@ -391,6 +400,11 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
         field
           .extractTreeFromAnnotation(schemaValidateAnnotationSymbol)
           .map(v => addMetadataToAtom(field, t, '{ i => i.validate(${ v.asExprOf[Validator[f]] }) }))
+          .getOrElse(t),
+      t =>
+        field
+          .extractTreeFromAnnotation(customiseAnnotationSymbol)
+          .map(f => '{ AnnotationsMacros.customise($t, ${ f.asExprOf[EndpointTransput[_] => EndpointTransput[_]] }) })
           .getOrElse(t)
     )
 
@@ -441,3 +455,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     }
   }
 }
+
+object AnnotationsMacros:
+  // we assume that the customisation function doesn't return a value of a different type
+  def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]

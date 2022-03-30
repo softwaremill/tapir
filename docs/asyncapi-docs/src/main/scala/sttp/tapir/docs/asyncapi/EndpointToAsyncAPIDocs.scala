@@ -3,7 +3,7 @@ package sttp.tapir.docs.asyncapi
 import sttp.tapir.apispec.SecurityRequirement
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
-import sttp.tapir.docs.apispec.{DocsExtension, SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
+import sttp.tapir.docs.apispec.{DocsExtension, DocsExtensions, SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 import sttp.tapir.{EndpointInput, _}
 
@@ -51,8 +51,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
   private def securityRequirements(securitySchemes: SecuritySchemes, e: AnyEndpoint): List[SecurityRequirement] = {
     val auths = e.auths
     val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
-        securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
+      case auth @ EndpointInput.Auth(_, _, _, authType: EndpointInput.AuthType.ScopedOAuth2, _) =>
+        securitySchemes.get(auth).map(_._1).map((_, authType.requiredScopes.toVector))
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 

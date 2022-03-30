@@ -2,6 +2,7 @@ package sttp.tapir.docs.apispec
 
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointAuth
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
@@ -40,37 +41,41 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo], apiKeyAuthTypeName: String): SecurityScheme =
-    a.authInfo match {
-      case EndpointInput.AuthInfo.ApiKey() =>
+  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthType], apiKeyAuthTypeName: String): SecurityScheme = {
+    val extensions = DocsExtensions.fromIterable(a.docsExtensions)
+    a.authType match {
+      case EndpointInput.AuthType.ApiKey() =>
         val (name, in) = apiKeyInputNameAndIn(a.input.asVectorOfBasicInputs())
-        SecurityScheme(apiKeyAuthTypeName, None, Some(name), Some(in), None, None, None, None)
-      case EndpointInput.AuthInfo.Http(scheme) =>
-        SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
-      case EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
+        SecurityScheme(apiKeyAuthTypeName, a.info.description, Some(name), Some(in), None, None, None, None, extensions)
+      case EndpointInput.AuthType.Http(scheme) =>
+        SecurityScheme("http", a.info.description, None, None, Some(scheme.toLowerCase()), None, None, None, extensions)
+      case EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
         SecurityScheme(
           "oauth2",
-          None,
+          a.info.description,
           None,
           None,
           None,
           None,
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
-          None
+          None,
+          extensions
         )
-      case EndpointInput.AuthInfo.ScopedOAuth2(EndpointInput.AuthInfo.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
+      case EndpointInput.AuthType.ScopedOAuth2(EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
         SecurityScheme(
           "oauth2",
-          None,
+          a.info.description,
           None,
           None,
           None,
           None,
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
-          None
+          None,
+          extensions
         )
       case _ => throw new RuntimeException("Impossible, but the compiler complains.")
     }
+  }
 
   private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =
     input match {

@@ -4,7 +4,7 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
-import sttp.tapir.docs.apispec.exampleValue
+import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal._
 import sttp.tapir.model.StatusCodeRange

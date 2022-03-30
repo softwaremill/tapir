@@ -6,7 +6,7 @@ import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
+import sttp.tapir.docs.apispec.{DocsExtensions, SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
 
@@ -62,7 +62,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
     val auths = e.auths
     val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
+      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthType.ScopedOAuth2, _) =>
         securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
@@ -118,11 +118,11 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case q: EndpointInput.Query[_]       if ! q.codec.schema.hidden => queryToParameter(q)
-      case p: EndpointInput.PathCapture[_] if ! p.codec.schema.hidden => pathCaptureToParameter(p)
-      case h: EndpointIO.Header[_]         if ! h.codec.schema.hidden => headerToParameter(h)
-      case c: EndpointInput.Cookie[_]      if ! c.codec.schema.hidden => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader[_]    if ! f.codec.schema.hidden => fixedHeaderToParameter(f)
+      case q: EndpointInput.Query[_] if !q.codec.schema.hidden       => queryToParameter(q)
+      case p: EndpointInput.PathCapture[_] if !p.codec.schema.hidden => pathCaptureToParameter(p)
+      case h: EndpointIO.Header[_] if !h.codec.schema.hidden         => headerToParameter(h)
+      case c: EndpointInput.Cookie[_] if !c.codec.schema.hidden      => cookieToParameter(c)
+      case f: EndpointIO.FixedHeader[_] if !f.codec.schema.hidden    => fixedHeaderToParameter(f)
     }
   }
 

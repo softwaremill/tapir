@@ -81,7 +81,7 @@ AsyncAPI supports adding [extensions](https://www.asyncapi.com/docs/specificatio
 similarly as in OpenAPI. 
 
 Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
-method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
+method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala mdoc:silent
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._

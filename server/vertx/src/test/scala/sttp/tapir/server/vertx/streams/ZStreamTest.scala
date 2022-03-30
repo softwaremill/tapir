@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.EitherValues._
 import _root_.zio._
 import _root_.zio.durationInt
 import _root_.zio.stream.ZStream

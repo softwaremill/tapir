@@ -9,7 +9,7 @@ import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
 import java.math.{BigDecimal => JBigDecimal}
 
@@ -221,6 +221,11 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       ),
       Some(SName("sttp.tapir.generic.L"))
     )
+  }
+
+  it should "customise the schema using the given function" in {
+    val schema = implicitly[Schema[M]]
+    schema.attribute(M.testAttributeKey) shouldBe Some("test")
   }
 
   it should "generate one-of schema using the given discriminator" in {
@@ -479,6 +484,12 @@ case class L(
     firstField: Int,
     secondField: Int
 )
+
+@customise(s => s.attribute(M.testAttributeKey, "test"))
+case class M(field: Int)
+object M {
+  val testAttributeKey: AttributeKey[String] = AttributeKey[String]
+}
 
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node

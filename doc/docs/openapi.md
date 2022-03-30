@@ -147,7 +147,7 @@ of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
 
 Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
-method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
+method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -185,7 +185,7 @@ val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title
 ```
 
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
-object manually or using f.e. [Quicklens](https://github.com/softwaremill/quicklens)
+object manually or using a tool such as [quicklens](https://github.com/softwaremill/quicklens).
 
 ## Exposing generated OpenAPI documentation
 

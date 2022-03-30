@@ -36,7 +36,8 @@ case class Schema[T](
     encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
     hidden: Boolean = false,
-    validator: Validator[T] = Validator.pass[T]
+    validator: Validator[T] = Validator.pass[T],
+    attributes: AttributeMap = AttributeMap.Empty
 ) extends SchemaMacros[T] {
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
@@ -65,7 +66,8 @@ case class Schema[T](
       isOptional = true,
       format = format,
       deprecated = deprecated,
-      hidden = hidden
+      hidden = hidden,
+      attributes = attributes
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -76,7 +78,8 @@ case class Schema[T](
       schemaType = SArray(this)(_.toIterable),
       isOptional = true,
       deprecated = deprecated,
-      hidden = hidden
+      hidden = hidden,
+      attributes = attributes
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -87,7 +90,8 @@ case class Schema[T](
       schemaType = SArray(this)(identity),
       isOptional = true,
       deprecated = deprecated,
-      hidden = hidden
+      hidden = hidden,
+      attributes = attributes
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
@@ -217,6 +221,9 @@ case class Schema[T](
       case _                         => false
     })
   }
+
+  def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+  def attribute[A](k: AttributeKey[A], v: A): Schema[T] = copy(attributes = attributes.put(k, v))
 }
 
 object Schema extends LowPrioritySchema with SchemaCompanionMacros {
@@ -284,8 +291,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Unit: SName = SName(fullName = "Unit")
   }
 
-  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]].
-    */
+  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]]. */
   object annotations {
     class description(val text: String) extends StaticAnnotation
     class encodedExample(val example: Any) extends StaticAnnotation
@@ -295,6 +301,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class hidden extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
     class validate[T](val v: Validator[T]) extends StaticAnnotation
+    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
   }
 }
 
