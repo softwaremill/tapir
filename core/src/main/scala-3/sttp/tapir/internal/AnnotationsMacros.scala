@@ -336,7 +336,15 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     apikey
       .map(ak =>
         setSecuritySchemeName(
-          '{ EndpointInput.Auth($input, None, ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge, EndpointInput.AuthType.ApiKey()) },
+          '{
+            EndpointInput.Auth(
+              $input,
+              None,
+              ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge,
+              EndpointInput.AuthType.ApiKey(),
+              EndpointInput.AuthInfo.Empty
+            )
+          },
           schemeName
         )
       )

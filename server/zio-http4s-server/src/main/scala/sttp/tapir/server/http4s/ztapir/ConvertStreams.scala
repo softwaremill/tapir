@@ -41,8 +41,8 @@ object ConvertStreams {
         EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
         EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
-      case EndpointInput.Auth(wrapped, securitySchemeName, challenge, info) =>
-        EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], securitySchemeName, challenge, info)
+      case EndpointInput.Auth(wrapped, securitySchemeName, challenge, authType, info) =>
+        EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], securitySchemeName, challenge, authType, info)
       // all other cases - unchanged
       case _ => input
     }

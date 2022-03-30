@@ -514,8 +514,11 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
         (l, r) match {
           case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
             info1 == info2
-          case (Auth(input1, securitySchemeName1, challenge1, info1), Auth(input2, securitySchemeName2, challenge2, info2)) =>
-            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && info1 == info2 && compareTransputs(input1, input2)
+          case (Auth(input1, securitySchemeName1, challenge1, type1, info1), Auth(input2, securitySchemeName2, challenge2, type2, info2)) =>
+            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && type1 == type2 && info1 == info2 && compareTransputs(
+              input1,
+              input2
+            )
           case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
             bodyType1 == bodyType2 && info1 == info2
           case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>
