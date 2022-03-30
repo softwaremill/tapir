@@ -192,43 +192,43 @@ object EndpointInput extends EndpointInputMacros {
   //
 
   /** An input with authentication credentials metadata, used when generating documentation. */
-  case class Auth[T, INFO <: AuthInfo](
+  case class Auth[T, TYPE <: AuthType](
       input: Single[T],
       securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
-      authInfo: INFO
+      authType: TYPE
   ) extends Single[T] {
-    override private[tapir] type ThisType[X] = Auth[X, INFO]
-    override def show: String = authInfo match {
-      case AuthInfo.Http(scheme)       => s"auth($scheme http, via ${input.show})"
-      case AuthInfo.ApiKey()           => s"auth(api key, via ${input.show})"
-      case AuthInfo.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
-      case AuthInfo.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
+    override private[tapir] type ThisType[X] = Auth[X, TYPE]
+    override def show: String = authType match {
+      case AuthType.Http(scheme)       => s"auth($scheme http, via ${input.show})"
+      case AuthType.ApiKey()           => s"auth(api key, via ${input.show})"
+      case AuthType.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
+      case AuthType.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
       case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
     }
-    override def map[U](mapping: Mapping[T, U]): Auth[U, INFO] = copy(input = input.map(mapping))
+    override def map[U](mapping: Mapping[T, U]): Auth[U, TYPE] = copy(input = input.map(mapping))
 
-    def securitySchemeName(name: String): Auth[T, INFO] = copy(securitySchemeName = Some(name))
-    def challengeRealm(realm: String): Auth[T, INFO] = copy(challenge = challenge.realm(realm))
-    def requiredScopes(requiredScopes: Seq[String])(implicit ev: INFO =:= AuthInfo.OAuth2): Auth[T, AuthInfo.ScopedOAuth2] =
-      copy(authInfo = authInfo.requiredScopes(requiredScopes))
+    def securitySchemeName(name: String): Auth[T, TYPE] = copy(securitySchemeName = Some(name))
+    def challengeRealm(realm: String): Auth[T, TYPE] = copy(challenge = challenge.realm(realm))
+    def requiredScopes(requiredScopes: Seq[String])(implicit ev: TYPE =:= AuthType.OAuth2): Auth[T, AuthType.ScopedOAuth2] =
+      copy(authType = authType.requiredScopes(requiredScopes))
   }
 
-  sealed trait AuthInfo
-  object AuthInfo {
-    case class Http(scheme: String) extends AuthInfo {
+  sealed trait AuthType
+  object AuthType {
+    case class Http(scheme: String) extends AuthType {
       def scheme(s: String): Http = copy(scheme = s)
     }
-    case class ApiKey() extends AuthInfo
+    case class ApiKey() extends AuthType
     case class OAuth2(
         authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
         refreshUrl: Option[String]
-    ) extends AuthInfo {
+    ) extends AuthType {
       def requiredScopes(requiredScopes: Seq[String]): ScopedOAuth2 = ScopedOAuth2(this, requiredScopes)
     }
-    case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthInfo {
+    case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthType {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
     }
   }

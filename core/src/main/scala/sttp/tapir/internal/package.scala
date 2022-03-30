@@ -60,7 +60,7 @@ package object internal {
   implicit class RichEndpoint[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R]) {
     private def allInputs = endpoint.securityInput.and(endpoint.input)
 
-    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]] =
       allInputs.traverseInputs { case a: EndpointInput.Auth[_, _] =>
         Vector(a)
       }

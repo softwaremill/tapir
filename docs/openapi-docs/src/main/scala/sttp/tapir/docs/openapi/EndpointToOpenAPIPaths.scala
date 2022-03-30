@@ -62,7 +62,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
     val auths = e.auths
     val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
+      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthType.ScopedOAuth2) =>
         securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
       case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
