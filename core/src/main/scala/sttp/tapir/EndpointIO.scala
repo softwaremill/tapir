@@ -196,7 +196,8 @@ object EndpointInput extends EndpointInputMacros {
       input: Single[T],
       securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
-      authType: TYPE
+      authType: TYPE,
+      attributes: AttributeMap = AttributeMap.Empty
   ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, TYPE]
     override def show: String = authType match {
@@ -212,6 +213,9 @@ object EndpointInput extends EndpointInputMacros {
     def challengeRealm(realm: String): Auth[T, TYPE] = copy(challenge = challenge.realm(realm))
     def requiredScopes(requiredScopes: Seq[String])(implicit ev: TYPE =:= AuthType.OAuth2): Auth[T, AuthType.ScopedOAuth2] =
       copy(authType = authType.requiredScopes(requiredScopes))
+
+    def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): Auth[T, TYPE] = copy(attributes = attributes.put(k, v))
   }
 
   sealed trait AuthType

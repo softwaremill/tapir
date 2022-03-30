@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.{AttributeKey, EndpointIO, EndpointInfo, EndpointInfoOps, EndpointTransput, Schema, WebSocketBodyOutput}
+import sttp.tapir.{AttributeKey, EndpointIO, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointTransput, Schema, WebSocketBodyOutput}
 
 case class DocsExtension[A](key: String, value: A, codec: JsonCodec[A]) {
   def rawValue: String = codec.encode(value)
@@ -51,6 +51,13 @@ object DocsExtensionAttribute {
       b.copy(requestsInfo = b.requestsInfo.docsExtension(key, value))
     def responsesDocsExtension[A: JsonCodec](key: String, value: A): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
       b.copy(responsesInfo = b.responsesInfo.docsExtension(key, value))
+  }
+
+  implicit class RichEndpointAuth[T, TYPE <: EndpointInput.AuthType](e: EndpointInput.Auth[T, TYPE]) {
+    def docsExtension[D: JsonCodec](key: String, value: D): EndpointInput.Auth[T, TYPE] =
+      e.attribute(docsExtensionAttributeKey, docsExtensions :+ DocsExtension.of(key, value))
+
+    def docsExtensions: Vector[DocsExtension[_]] = e.attribute(docsExtensionAttributeKey).getOrElse(Vector.empty)
   }
 
   implicit class RichSchema[T](s: Schema[T]) {

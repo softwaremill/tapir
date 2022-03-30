@@ -7,7 +7,7 @@ import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.model.{Method, StatusCode}
+import sttp.model.{HeaderNames, Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.description
 import sttp.tapir.docs.apispec.DocsExtension
@@ -566,6 +566,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title", "1.0")).toYaml
 
     noIndentation(actualYaml) shouldBe load("expected_extensions_schema.yml")
+  }
+
+  test("should add openapi extensions to the security scheme") {
+    import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
+    case class MyExtension(string: String, int: Int)
+    val sampleEndpoint =
+      endpoint.post.in(auth.apiKey(header[String](HeaderNames.Authorization)).docsExtension("x-schema", MyExtension("a", 1)))
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe load("expected_extensions_security_scheme.yml")
   }
 
   test("should include a response even if all outputs are empty, with descriptions") {
