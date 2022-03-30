@@ -45,7 +45,7 @@ import scala.concurrent.duration.FiniteDuration
   *     and are always `basic`
   */
 sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
-  private[tapir] type ThisType[X]
+  private[tapir] type ThisType[X] <: EndpointTransput[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
@@ -544,6 +544,7 @@ object EndpointIO {
     class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
     class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
     class securitySchemeName(val name: String) extends StaticAnnotation
+    class customise(val f: EndpointTransput[_] => EndpointTransput[_]) extends StaticAnnotation
 
     /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with
       * `{...}` (curly braces), and reference the name using [[annotations.path]].
