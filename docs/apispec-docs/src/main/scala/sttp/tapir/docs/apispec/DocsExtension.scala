@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.{AttributeKey, EndpointIO, EndpointInfo, EndpointInfoOps, EndpointTransput, WebSocketBodyOutput}
+import sttp.tapir.{AttributeKey, EndpointIO, EndpointInfo, EndpointInfoOps, EndpointTransput, Schema, WebSocketBodyOutput}
 
 case class DocsExtension[A](key: String, value: A, codec: JsonCodec[A]) {
   def rawValue: String = codec.encode(value)
@@ -53,4 +53,9 @@ object DocsExtensionAttribute {
       b.copy(responsesInfo = b.responsesInfo.docsExtension(key, value))
   }
 
+  implicit class RichSchema[T](s: Schema[T]) {
+    def docsExtension[D: JsonCodec](key: String, value: D): Schema[T] =
+      s.attribute(docsExtensionAttributeKey, docsExtensions :+ DocsExtension.of(key, value))
+    def docsExtensions: Vector[DocsExtension[_]] = s.attribute(docsExtensionAttributeKey).getOrElse(Vector.empty)
+  }
 }

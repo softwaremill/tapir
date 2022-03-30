@@ -3,7 +3,7 @@ package sttp.tapir.docs.asyncapi
 import sttp.tapir.apispec.SecurityRequirement
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
-import sttp.tapir.docs.apispec.{DocsExtension, SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
+import sttp.tapir.docs.apispec.{DocsExtension, DocsExtensions, SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 import sttp.tapir.{EndpointInput, _}
 

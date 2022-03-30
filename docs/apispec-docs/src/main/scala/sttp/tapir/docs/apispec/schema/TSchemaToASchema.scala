@@ -2,7 +2,8 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.exampleValue
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
+import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
@@ -86,7 +87,8 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       default = tschema.default.flatMap { case (_, raw) => raw.flatMap(r => exampleValue(tschema, r)) }.orElse(oschema.default),
       example = tschema.encodedExample.flatMap(exampleValue(tschema, _)).orElse(oschema.example),
       format = tschema.format.orElse(oschema.format),
-      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
+      extensions = DocsExtensions.fromIterable(tschema.docsExtensions)
     )
   }
 

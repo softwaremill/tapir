@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.tapir.apispec.{ReferenceOr, Schema}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
+import sttp.tapir.docs.apispec.DocsExtensions
 import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 

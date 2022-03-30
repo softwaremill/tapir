@@ -557,6 +557,17 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe load("expected_extensions.yml")
   }
 
+  test("should add openapi extensions to the schema") {
+    import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+
+    case class MyExtension(string: String, int: Int)
+    val sampleEndpoint = endpoint.post.in(jsonBody[FruitAmount].schema(_.docsExtension("x-schema", MyExtension("a", 1))))
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe load("expected_extensions_schema.yml")
+  }
+
   test("should include a response even if all outputs are empty, with descriptions") {
     sealed trait Base
     case object Success extends Base
