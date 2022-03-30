@@ -1,6 +1,5 @@
 package sttp.tapir.docs.asyncapi
 
-import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -13,7 +12,6 @@ import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
 

@@ -19,19 +19,22 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName),
-            properties = fields.filterNot(_.schema.hidden).map { f =>
-              f.schema match {
-                case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
-                case schema                                      => f.name.encodedName -> apply(schema)
+            properties = fields
+              .filterNot(_.schema.hidden)
+              .map { f =>
+                f.schema match {
+                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
+                  case schema                                            => f.name.encodedName -> apply(schema)
+                }
               }
-            }.toListMap
+              .toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
-      case TSchemaType.SOption(el)                                          => apply(el, isOptionElement = true)
+      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
+      case TSchemaType.SOption(el)                                                => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
@@ -40,10 +43,11 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema
             .apply(
-              schemas.filterNot(_.hidden)
+              schemas
+                .filterNot(_.hidden)
                 .map {
-                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
-                  case t                                           => apply(t)
+                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
+                  case t                                                 => apply(t)
                 }
                 .sortBy {
                   case Left(Reference(ref)) => ref
