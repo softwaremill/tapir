@@ -46,13 +46,13 @@ private[docs] object SecuritySchemesForEndpoints {
     a.authType match {
       case EndpointInput.AuthType.ApiKey() =>
         val (name, in) = apiKeyInputNameAndIn(a.input.asVectorOfBasicInputs())
-        SecurityScheme(apiKeyAuthTypeName, None, Some(name), Some(in), None, None, None, None, extensions)
+        SecurityScheme(apiKeyAuthTypeName, a.info.description, Some(name), Some(in), None, None, None, None, extensions)
       case EndpointInput.AuthType.Http(scheme) =>
-        SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None, extensions)
+        SecurityScheme("http", a.info.description, None, None, Some(scheme.toLowerCase()), None, None, None, extensions)
       case EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
         SecurityScheme(
           "oauth2",
-          None,
+          a.info.description,
           None,
           None,
           None,
@@ -64,7 +64,7 @@ private[docs] object SecuritySchemesForEndpoints {
       case EndpointInput.AuthType.ScopedOAuth2(EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
         SecurityScheme(
           "oauth2",
-          None,
+          a.info.description,
           None,
           None,
           None,

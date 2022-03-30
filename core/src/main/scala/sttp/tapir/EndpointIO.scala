@@ -197,7 +197,7 @@ object EndpointInput extends EndpointInputMacros {
       securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
       authType: TYPE,
-      attributes: AttributeMap = AttributeMap.Empty
+      info: AuthInfo
   ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, TYPE]
     override def show: String = authType match {
@@ -214,8 +214,10 @@ object EndpointInput extends EndpointInputMacros {
     def requiredScopes(requiredScopes: Seq[String])(implicit ev: TYPE =:= AuthType.OAuth2): Auth[T, AuthType.ScopedOAuth2] =
       copy(authType = authType.requiredScopes(requiredScopes))
 
-    def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
-    def attribute[A](k: AttributeKey[A], v: A): Auth[T, TYPE] = copy(attributes = attributes.put(k, v))
+    def description(d: String): Auth[T, TYPE] = copy(info = info.description(d))
+
+    def attribute[A](k: AttributeKey[A]): Option[A] = info.attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): Auth[T, TYPE] = copy(info = info.attribute(k, v))
   }
 
   sealed trait AuthType
@@ -235,6 +237,16 @@ object EndpointInput extends EndpointInputMacros {
     case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthType {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
     }
+  }
+
+  case class AuthInfo(description: Option[String], attributes: AttributeMap) {
+    def description(d: String): AuthInfo = copy(description = Some(d))
+
+    def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): AuthInfo = copy(attributes = attributes.put(k, v))
+  }
+  object AuthInfo {
+    val Empty = AuthInfo(None, AttributeMap.Empty)
   }
 
   //

@@ -55,6 +55,17 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support descriptions in security schemes") {
+    val expectedYaml = load("security/expected_auth_with_description.yml")
+
+    val e = endpoint.securityIn(auth.bearer[String]().description("put your token here")).in("secure" / "bearer").out(stringBody)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should support Oauth2") {
     val expectedYaml = load("security/expected_oauth2.yml")
     val oauth2 =
