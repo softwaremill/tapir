@@ -13,7 +13,7 @@ object TapirAuth {
       input: EndpointInput.Single[T],
       challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge("ApiKey")
   ): EndpointInput.Auth[T, EndpointInput.AuthType.ApiKey] =
-    EndpointInput.Auth(input, None, challenge, EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
+    EndpointInput.Auth(input, challenge, EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
   /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a base64-encoded
     * username/password combination, use: `basic[UsernamePassword]`
@@ -38,7 +38,6 @@ object TapirAuth {
       Codec.list(Codec.string.map(stringPrefixWithSpace(authScheme))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
     EndpointInput.Auth(
       header[T](HeaderNames.Authorization)(authCodec),
-      None,
       challenge,
       EndpointInput.AuthType.Http(authScheme),
       EndpointInput.AuthInfo.Empty
@@ -55,7 +54,6 @@ object TapirAuth {
     ): Auth[String, EndpointInput.AuthType.OAuth2] = {
       EndpointInput.Auth(
         header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
-        None,
         challenge,
         EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl),
         EndpointInput.AuthInfo.Empty

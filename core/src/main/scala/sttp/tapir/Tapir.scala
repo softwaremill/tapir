@@ -425,7 +425,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * multiple optional authentication inputs (which by default are treated as alternatives).
     */
   val emptyAuth: EndpointInput.Auth[Unit, EndpointInput.AuthType.ApiKey] =
-    EndpointInput.Auth(emptyInput, None, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
+    EndpointInput.Auth(emptyInput, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
   val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Unit, Nothing, Unit, Any](

@@ -194,7 +194,6 @@ object EndpointInput extends EndpointInputMacros {
   /** An input with authentication credentials metadata, used when generating documentation. */
   case class Auth[T, TYPE <: AuthType](
       input: Single[T],
-      securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
       authType: TYPE,
       info: AuthInfo
@@ -211,7 +210,8 @@ object EndpointInput extends EndpointInputMacros {
       }
     override def map[U](mapping: Mapping[T, U]): Auth[U, TYPE] = copy(input = input.map(mapping))
 
-    def securitySchemeName(name: String): Auth[T, TYPE] = copy(securitySchemeName = Some(name))
+    def securitySchemeName: Option[String] = info.securitySchemeName
+    def securitySchemeName(name: String): Auth[T, TYPE] = copy(info = info.securitySchemeName(name))
     def challengeRealm(realm: String): Auth[T, TYPE] = copy(challenge = challenge.realm(realm))
     def requiredScopes(requiredScopes: Seq[String])(implicit ev: TYPE =:= AuthType.OAuth2): Auth[T, AuthType.ScopedOAuth2] =
       copy(authType = authType.requiredScopes(requiredScopes))
@@ -248,16 +248,16 @@ object EndpointInput extends EndpointInputMacros {
     }
   }
 
-  case class AuthInfo(description: Option[String], attributes: AttributeMap, group: Option[String]) {
+  case class AuthInfo(securitySchemeName: Option[String], description: Option[String], attributes: AttributeMap, group: Option[String]) {
+    def securitySchemeName(name: String): AuthInfo = copy(securitySchemeName = Some(name))
     def description(d: String): AuthInfo = copy(description = Some(d))
-
     def group(g: String): AuthInfo = copy(group = Some(g))
 
     def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): AuthInfo = copy(attributes = attributes.put(k, v))
   }
   object AuthInfo {
-    val Empty: AuthInfo = AuthInfo(None, AttributeMap.Empty, None)
+    val Empty: AuthInfo = AuthInfo(None, None, AttributeMap.Empty, None)
   }
 
   //

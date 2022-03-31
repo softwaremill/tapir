@@ -339,7 +339,6 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
           '{
             EndpointInput.Auth(
               $input,
-              None,
               ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge,
               EndpointInput.AuthType.ApiKey(),
               EndpointInput.AuthInfo.Empty

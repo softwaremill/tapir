@@ -41,7 +41,7 @@ private[docs] class SecurityRequirementsForEndpoints(securitySchemes: SecuritySc
   }
 
   private def securityRequirement(auths: Seq[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]]): SecurityRequirement = auths.flatMap {
-    case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthType.ScopedOAuth2, _) =>
+    case auth @ EndpointInput.Auth(_, _, info: EndpointInput.AuthType.ScopedOAuth2, _) =>
       securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
     case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
   }.toListMap
