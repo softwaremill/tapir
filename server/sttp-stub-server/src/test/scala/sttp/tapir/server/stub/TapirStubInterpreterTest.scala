@@ -2,15 +2,15 @@ package sttp.tapir.server.stub
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.client3._
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
-import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir
 import sttp.tapir._
-import sttp.tapir.client.sttp.{SttpClientInterpreter, WebSocketToPipe}
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.interceptor.exception.ExceptionContext
+import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
@@ -111,10 +111,12 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   }
 
   it should "use interceptors from server options" in {
+    val exceptionHandler =
+      ExceptionHandler.pure[Identity](_ => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
     // given
     val opts = options
       .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
-      .exceptionHandler((_: ExceptionContext) => Some(tapir.server.model.ValuedEndpointOutput(stringBody, "failed due to exception")))
+      .exceptionHandler(exceptionHandler)
       .rejectHandler(DefaultRejectHandler((_, _) => tapir.server.model.ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
 
     val server = TapirStubInterpreter(opts, SttpBackendStub(IdMonad))

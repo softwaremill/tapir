@@ -43,7 +43,7 @@ case class CustomInterceptors[F[_], O](
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     corsInterceptor: Option[CORSInterceptor[F]] = None,
     rejectHandler: Option[RejectHandler] = Some(DefaultRejectHandler.default),
-    exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler.handler),
+    exceptionHandler: Option[ExceptionHandler[F]] = Some(DefaultExceptionHandler[F]),
     serverLog: Option[ServerLog[F]] = None,
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
       new UnsupportedMediaTypeInterceptor[F]()
@@ -62,8 +62,8 @@ case class CustomInterceptors[F[_], O](
   def rejectHandler(r: RejectHandler): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
   def rejectHandler(r: Option[RejectHandler]): CustomInterceptors[F, O] = copy(rejectHandler = r)
 
-  def exceptionHandler(e: ExceptionHandler): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
-  def exceptionHandler(e: Option[ExceptionHandler]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
+  def exceptionHandler(e: ExceptionHandler[F]): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
+  def exceptionHandler(e: Option[ExceptionHandler[F]]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
 
   def serverLog(log: ServerLog[F]): CustomInterceptors[F, O] = copy(serverLog = Some(log))
   def serverLog(log: Option[ServerLog[F]]): CustomInterceptors[F, O] = copy(serverLog = log)

@@ -8,7 +8,7 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
-import sttp.tapir.server.interceptor.exception.ExceptionContext
+import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.stub.TapirStubInterpreter
@@ -59,8 +59,9 @@ object UsersApi {
     )
     .serverLogic(user => _ => Future.successful(Right(s"hello $user")))
 
+  val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
+    Option(ValuedEndpointOutput(stringBody.and(statusCode), (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)))
+  )
   val options: CustomInterceptors[Future, AkkaHttpServerOptions] = AkkaHttpServerOptions.customInterceptors
-    .exceptionHandler((ctx: ExceptionContext) =>
-      Option(ValuedEndpointOutput(stringBody.and(statusCode), (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)))
-    )
+    .exceptionHandler(exceptionHandler)
 }

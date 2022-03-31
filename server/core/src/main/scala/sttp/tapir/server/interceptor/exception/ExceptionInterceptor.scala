@@ -10,7 +10,7 @@ import sttp.tapir.server.model.ServerResponse
 
 import scala.util.control.NonFatal
 
-class ExceptionInterceptor[F[_]](handler: ExceptionHandler) extends EndpointInterceptor[F] {
+class ExceptionInterceptor[F[_]](handler: ExceptionHandler[F]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[A, U, I](
@@ -38,11 +38,10 @@ class ExceptionInterceptor[F[_]](handler: ExceptionHandler) extends EndpointInte
 
       private def onException(e: Throwable, endpoint: AnyEndpoint, request: ServerRequest)(implicit
           monad: MonadError[F]
-      ): F[ServerResponse[B]] = handler(
-        ExceptionContext(e, endpoint, request)
-      ) match {
-        case Some(value) => responder(request, value)
-        case None        => monad.error(e)
-      }
+      ): F[ServerResponse[B]] =
+        handler(ExceptionContext(e, endpoint, request)).flatMap {
+          case Some(output) => responder(request, output)
+          case None         => monad.error(e)
+        }
     }
 }
