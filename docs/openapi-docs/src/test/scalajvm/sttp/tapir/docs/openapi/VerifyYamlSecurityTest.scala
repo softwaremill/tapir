@@ -7,7 +7,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.{auth, endpoint, header, path, stringBody, _}
 
-import scala.collection.immutable.{Seq, ListMap}
+import scala.collection.immutable.{ListMap, Seq}
 
 class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
 
@@ -32,6 +32,48 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
     val e3 = endpoint.securityIn(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support multiple optional authentications as alternative authentication methods") {
+    val expectedYaml = load("security/expected_multiple_optional_auth.yml")
+
+    val e1 = endpoint
+      .securityIn("api1")
+      .securityIn(auth.apiKey(header[Option[String]]("apikey1")).securitySchemeName("sec1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2"))
+
+    val e2 = endpoint
+      .securityIn("api2")
+      .securityIn(auth.apiKey(header[Option[String]]("apikey1")).securitySchemeName("sec1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2"))
+      .securityIn(emptyAuth)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support groups of optional authentications") {
+    val expectedYaml = load("security/expected_multiple_optional_grouped_auth.yml")
+
+    val e1 = endpoint
+      .securityIn("api1")
+      .securityIn(auth.apiKey(header[Option[String]]("apikey1")).securitySchemeName("sec1").group("g1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2").group("g1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey3")).securitySchemeName("sec3"))
+
+    val e2 = endpoint
+      .securityIn("api2")
+      .securityIn(auth.apiKey(header[Option[String]]("apikey1")).securitySchemeName("sec1").group("g1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2").group("g1"))
+      .securityIn(auth.apiKey(header[Option[String]]("apikey3")).securitySchemeName("sec3"))
+      .securityIn(emptyAuth)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

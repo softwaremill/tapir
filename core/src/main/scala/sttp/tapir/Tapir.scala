@@ -2,7 +2,7 @@ package sttp.tapir
 
 import sttp.capabilities.Streams
 import sttp.model._
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{ModifyMacroSupport, _}
@@ -421,6 +421,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
 
   val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+
+  /** An empty authentication input, to express the fact (for documentation) that authentication is optional, event in the presence of
+    * multiple optional authentication inputs (which by default are treated as alternatives).
+    */
+  val emptyAuth: EndpointInput.Auth[Unit, EndpointInput.AuthType.ApiKey] =
+    EndpointInput.Auth(emptyOutput, None, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
   val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Unit, Nothing, Unit, Any](

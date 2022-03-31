@@ -113,7 +113,8 @@ object DefaultDecodeFailureHandler {
           if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
             (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
         Some(onlyStatus(StatusCode.BadRequest))
-      case a: EndpointInput.Auth[_, _] => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
+      // if the failing input contains an authentication input (potentially nested), sending its challenge
+      case FirstAuth(a) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
       case _: EndpointInput.Basic[_] => None
       // all other inputs (tuples, mapped) - responding with bad request
@@ -143,6 +144,17 @@ object DefaultDecodeFailureHandler {
         }
         missingAuth(ctx.endpoint.securityInput).orElse(missingAuth(ctx.endpoint.input)).getOrElse(ctx.failingInput)
       case _ => ctx.failingInput
+    }
+  }
+
+  private object FirstAuth {
+    def unapply(input: EndpointInput[_]): Option[EndpointInput.Auth[_, _]] = input match {
+      case a: EndpointInput.Auth[_, _]           => Some(a)
+      case EndpointInput.MappedPair(input, _)    => unapply(input)
+      case EndpointIO.MappedPair(input, _)       => unapply(input)
+      case EndpointInput.Pair(left, right, _, _) => unapply(left).orElse(unapply(right))
+      case EndpointIO.Pair(left, right, _, _)    => unapply(left).orElse(unapply(right))
+      case _                                     => None
     }
   }
 

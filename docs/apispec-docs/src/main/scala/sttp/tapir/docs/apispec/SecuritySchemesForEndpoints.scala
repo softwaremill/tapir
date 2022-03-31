@@ -15,7 +15,8 @@ private[docs] object SecuritySchemesForEndpoints {
     *   https://www.asyncapi.com/docs/specifications/v2.2.0#securitySchemeObject valid name is `httpApiKey`.
     */
   def apply(es: Iterable[AnyEndpoint], apiKeyAuthTypeName: String): SecuritySchemes = {
-    val auths = es.flatMap(e => e.auths)
+    // discarding emptyAuth-s as they are only a marker that authentication is optional
+    val auths = es.flatMap(e => e.auths).filterNot(_.isInputEmpty)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a, apiKeyAuthTypeName)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
     val takenNames = authSecuritySchemes.flatMap(_._1.securitySchemeName).toSet

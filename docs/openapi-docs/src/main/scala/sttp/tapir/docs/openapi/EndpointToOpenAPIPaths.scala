@@ -6,7 +6,7 @@ import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.{DocsExtensions, SecuritySchemes, namedPathComponents}
+import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
 
@@ -15,6 +15,7 @@ import scala.collection.immutable.ListMap
 private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
   private val codecToMediaType = new CodecToMediaType(schemas)
   private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
+  private val securityRequirementsForEndpoint = new SecurityRequirementsForEndpoints(securitySchemes)
 
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
@@ -54,32 +55,9 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       requestBody = body.headOption,
       responses = Responses(responses),
       deprecated = if (e.info.deprecated) Some(true) else None,
-      security = operationSecurity(e),
+      security = securityRequirementsForEndpoint(e),
       extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
-  }
-
-  private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
-    val auths = e.auths
-    val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthType.ScopedOAuth2, _) =>
-        securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
-      case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
-    }.toListMap
-
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
-      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
-    }
-
-    if (securityRequirement.isEmpty) List.empty
-    else {
-      if (securityOptional) {
-        List(ListMap.empty: SecurityRequirement, securityRequirement)
-      } else {
-        List(securityRequirement)
-      }
-    }
   }
 
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
