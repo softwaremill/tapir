@@ -200,13 +200,15 @@ object EndpointInput extends EndpointInputMacros {
       info: AuthInfo
   ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, TYPE]
-    override def show: String = authType match {
-      case AuthType.Http(scheme)       => s"auth($scheme http, via ${input.show})"
-      case AuthType.ApiKey()           => s"auth(api key, via ${input.show})"
-      case AuthType.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
-      case AuthType.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
-      case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
-    }
+    override def show: String = if (isInputEmpty) s"auth(-)"
+    else
+      authType match {
+        case AuthType.Http(scheme)       => s"auth($scheme http, via ${input.show})"
+        case AuthType.ApiKey()           => s"auth(api key, via ${input.show})"
+        case AuthType.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
+        case AuthType.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
+        case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
+      }
     override def map[U](mapping: Mapping[T, U]): Auth[U, TYPE] = copy(input = input.map(mapping))
 
     def securitySchemeName(name: String): Auth[T, TYPE] = copy(securitySchemeName = Some(name))
@@ -216,8 +218,15 @@ object EndpointInput extends EndpointInputMacros {
 
     def description(d: String): Auth[T, TYPE] = copy(info = info.description(d))
 
+    /** Authentication inputs in the same group will always become a single security requirement in the documentation (requiring all
+      * authentication methods), even if they are all optional.
+      */
+    def group(g: String): Auth[T, TYPE] = copy(info = info.group(g))
+
     def attribute[A](k: AttributeKey[A]): Option[A] = info.attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): Auth[T, TYPE] = copy(info = info.attribute(k, v))
+
+    private[tapir] def isInputEmpty: Boolean = input.isInstanceOf[EndpointIO.Empty[T]]
   }
 
   sealed trait AuthType
@@ -239,14 +248,16 @@ object EndpointInput extends EndpointInputMacros {
     }
   }
 
-  case class AuthInfo(description: Option[String], attributes: AttributeMap) {
+  case class AuthInfo(description: Option[String], attributes: AttributeMap, group: Option[String]) {
     def description(d: String): AuthInfo = copy(description = Some(d))
+
+    def group(g: String): AuthInfo = copy(group = Some(g))
 
     def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): AuthInfo = copy(attributes = attributes.put(k, v))
   }
   object AuthInfo {
-    val Empty = AuthInfo(None, AttributeMap.Empty)
+    val Empty: AuthInfo = AuthInfo(None, AttributeMap.Empty, None)
   }
 
   //
