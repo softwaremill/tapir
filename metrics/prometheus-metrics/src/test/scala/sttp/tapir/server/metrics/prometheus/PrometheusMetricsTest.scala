@@ -232,7 +232,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       _ => List(serverEp),
       TestRequestBody,
       StringToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler.handler)),
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Id])),
       _ => ()
     )
 

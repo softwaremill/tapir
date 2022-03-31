@@ -86,20 +86,22 @@ Custom interpreters can be provided to the stub. For example, to test custom exc
 following customised akka http options:
 
 ```scala mdoc:silent
-import sttp.tapir.server.interceptor.exception.ExceptionContext
+import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.CustomInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
+val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
+    Some(ValuedEndpointOutput(
+      stringBody.and(statusCode),
+      (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
+    ))
+)
+
 val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
   AkkaHttpServerOptions.customInterceptors
-    .exceptionHandler((ctx: ExceptionContext) =>
-      Some(ValuedEndpointOutput(
-        stringBody.and(statusCode), 
-        (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError))
-      )  
-    )
+    .exceptionHandler(exceptionHandler)
 ```
 
 Testing such an interceptor requires simulating an exception being thrown in the server logic:
