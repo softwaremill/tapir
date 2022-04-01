@@ -14,7 +14,7 @@ import sttp.tapir.server.interceptor._
   *
   * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server implementation.
   */
-class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor[F] {
+class RejectInterceptor[F[_]](handler: RejectHandler[F]) extends RequestInterceptor[F] {
   override def apply[R, B](
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
@@ -27,7 +27,7 @@ class RejectInterceptor[F[_]](handler: RejectHandler) extends RequestInterceptor
         next(request, endpoints).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
           case f: RequestResult.Failure =>
-            handler(f) match {
+            handler(f).flatMap {
               case Some(value) => responder(request, value).map(RequestResult.Response(_))
               case None        => (f: RequestResult[B]).unit
             }

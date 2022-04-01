@@ -42,7 +42,9 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
         route(
           samePathEndpoints,
           (ci: CustomInterceptors[F, OPTIONS]) =>
-            ci.rejectHandler(DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest)))
+            ci.rejectHandler(
+              DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest), None): DefaultRejectHandler[F]
+            )
         )
       )
     ) { (backend, baseUri) =>

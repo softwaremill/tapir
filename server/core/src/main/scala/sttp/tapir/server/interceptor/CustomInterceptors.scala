@@ -42,7 +42,7 @@ case class CustomInterceptors[F[_], O](
     prependedInterceptors: List[Interceptor[F]] = Nil,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     corsInterceptor: Option[CORSInterceptor[F]] = None,
-    rejectHandler: Option[RejectHandler] = Some(DefaultRejectHandler.default),
+    rejectHandler: Option[RejectHandler[F]] = Some(DefaultRejectHandler[F]),
     exceptionHandler: Option[ExceptionHandler[F]] = Some(DefaultExceptionHandler[F]),
     serverLog: Option[ServerLog[F]] = None,
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
@@ -59,8 +59,8 @@ case class CustomInterceptors[F[_], O](
   def corsInterceptor(c: CORSInterceptor[F]): CustomInterceptors[F, O] = copy(corsInterceptor = Some(c))
   def corsInterceptor(c: Option[CORSInterceptor[F]]): CustomInterceptors[F, O] = copy(corsInterceptor = c)
 
-  def rejectHandler(r: RejectHandler): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
-  def rejectHandler(r: Option[RejectHandler]): CustomInterceptors[F, O] = copy(rejectHandler = r)
+  def rejectHandler(r: RejectHandler[F]): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
+  def rejectHandler(r: Option[RejectHandler[F]]): CustomInterceptors[F, O] = copy(rejectHandler = r)
 
   def exceptionHandler(e: ExceptionHandler[F]): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
   def exceptionHandler(e: Option[ExceptionHandler[F]]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
@@ -83,7 +83,7 @@ case class CustomInterceptors[F[_], O](
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =
         DefaultDecodeFailureHandler.default.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h))),
-      rejectHandler = Some(DefaultRejectHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s)))
+      rejectHandler = Some(DefaultRejectHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s), None))
     )
   }
 
