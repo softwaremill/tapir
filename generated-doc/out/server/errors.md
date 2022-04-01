@@ -133,12 +133,13 @@ import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
 case class MyFailure(msg: String)
+
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 
 val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customInterceptors
-  .errorOutput(myFailureResponse)
+  .defaultHandlers(myFailureResponse)
   .options
 ```
 

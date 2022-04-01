@@ -19,7 +19,8 @@ import sttp.tapir.{headers, statusCode}
   * use.
   *
   * @param prependedInterceptors
-  *   Additional interceptors, which will be called first, e.g. handling decode failures, or providing alternate responses.
+  *   Additional interceptors, which will be called first on request / last on response, e.g. performing logging, metrics, or providing
+  *   alternate responses.
   * @param metricsInterceptor
   *   Whether to collect metrics.
   * @param rejectHandler
@@ -31,11 +32,14 @@ import sttp.tapir.{headers, statusCode}
   * @param unsupportedMediaTypeInterceptor
   *   Whether to return 415 (unsupported media type) if there's no body in the endpoint's outputs, which can satisfy the constraints from
   *   the `Accept` header.
-  * @param appendedInterceptors
-  *   Additional interceptors, which will be called last (but before the `decodeFailureHandler` one), e.g. handling decode failures, or
-  *   providing alternate responses.
+  * @param additionalInterceptors
+  *   Additional interceptors, which will be called before (on request) / after (on response) the `decodeFailureHandler` one, e.g.
+  *   performing logging, metrics, or providing alternate responses.
   * @param decodeFailureHandler
   *   The decode failure handler, from which an interceptor will be created. Determines whether to respond when an input fails to decode.
+  * @param appendedInterceptors
+  *   Additional interceptors, which will be called last on request / first on response, e.g. handling decode failures, or providing
+  *   alternate responses.
   */
 case class CustomInterceptors[F[_], O](
     createOptions: CustomInterceptors[F, O] => O,
@@ -48,8 +52,9 @@ case class CustomInterceptors[F[_], O](
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
       new UnsupportedMediaTypeInterceptor[F]()
     ),
-    appendedInterceptors: List[Interceptor[F]] = Nil,
-    decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default
+    additionalInterceptors: List[Interceptor[F]] = Nil,
+    decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default,
+    appendedInterceptors: List[Interceptor[F]] = Nil
 ) {
   def prependInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(prependedInterceptors = prependedInterceptors :+ i)
 
@@ -73,12 +78,23 @@ case class CustomInterceptors[F[_], O](
   def unsupportedMediaTypeInterceptor(u: Option[UnsupportedMediaTypeInterceptor[F]]): CustomInterceptors[F, O] =
     copy(unsupportedMediaTypeInterceptor = u)
 
-  def appendInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
+  def addInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(additionalInterceptors = additionalInterceptors :+ i)
 
   def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, O] = copy(decodeFailureHandler = d)
 
-  /** Customise the way error messages are shown in error responses, using the default exception, decode failure and reject handlers. */
-  def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, O] = {
+  def appendInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
+
+  /** Use the default exception, decode failure and reject handlers.
+    * @param errorMessageOutput
+    *   customise the way error messages are shown in error responses
+    * @param notFoundWhenRejected
+    *   return a 404 formatted using `errorMessageOutput` when the request was rejected by all endpoints (using
+    *   [[DefaultRejectHandler.orNotFound]]), instead of propagating the rejection to the server library
+    */
+  def defaultHandlers(
+      errorMessageOutput: String => ValuedEndpointOutput[_],
+      notFoundWhenRejected: Boolean = false
+  ): CustomInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =
@@ -97,8 +113,9 @@ case class CustomInterceptors[F[_], O](
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
     serverLog.map(new ServerLogInterceptor[F](_)).toList ++
     unsupportedMediaTypeInterceptor.toList ++
-    appendedInterceptors ++
-    List(new DecodeFailureInterceptor[F](decodeFailureHandler))
+    additionalInterceptors ++
+    List(new DecodeFailureInterceptor[F](decodeFailureHandler)) ++
+    appendedInterceptors
 
   def options: O = createOptions(this)
 }
