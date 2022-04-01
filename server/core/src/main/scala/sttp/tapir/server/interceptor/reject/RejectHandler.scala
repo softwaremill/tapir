@@ -1,32 +1,46 @@
 package sttp.tapir.server.interceptor.reject
 
 import sttp.model.StatusCode
-import sttp.tapir.{server, _}
-import sttp.tapir.server.interceptor.reject.DefaultRejectHandler._
+import sttp.monad.MonadError
+import sttp.tapir._
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.model.ValuedEndpointOutput
 
-trait RejectHandler {
-  def apply(failure: RequestResult.Failure): Option[ValuedEndpointOutput[_]]
+trait RejectHandler[F[_]] {
+  def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
 }
 
-case class DefaultRejectHandler(
+object RejectHandler {
+  def apply[F[_]](f: RequestResult.Failure => F[Option[ValuedEndpointOutput[_]]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      f(failure)
+  }
+
+  def pure[F[_]](f: RequestResult.Failure => Option[ValuedEndpointOutput[_]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      monad.unit(f(failure))
+  }
+}
+
+case class DefaultRejectHandler[F[_]](
     response: (StatusCode, String) => ValuedEndpointOutput[_],
-    defaultStatusCodeAndBody: Option[(StatusCode, String)] = None
-) extends RejectHandler {
-  override def apply(failure: RequestResult.Failure): Option[ValuedEndpointOutput[_]] = {
+    defaultStatusCodeAndBody: Option[(StatusCode, String)]
+) extends RejectHandler[F] {
+  override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
+    import DefaultRejectHandler._
+
     val statusCodeAndBody = if (hasMethodMismatch(failure)) Some(StatusCodeAndBody.MethodNotAllowed) else defaultStatusCodeAndBody
-    statusCodeAndBody.map(response.tupled)
+    monad.unit(statusCodeAndBody.map(response.tupled))
   }
 }
 
 object DefaultRejectHandler {
-  val default: DefaultRejectHandler =
-    DefaultRejectHandler((sc, m) => server.model.ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)))
+  def apply[F[_]]: RejectHandler[F] =
+    DefaultRejectHandler[F]((sc: StatusCode, m: String) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)), None)
 
-  val defaultOrNotFound: DefaultRejectHandler =
-    DefaultRejectHandler(
-      (sc, m) => server.model.ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)),
+  def orNotFound[F[_]]: RejectHandler[F] =
+    DefaultRejectHandler[F](
+      (sc: StatusCode, m: String) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)),
       Some(StatusCodeAndBody.NotFound)
     )
 
