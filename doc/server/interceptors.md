@@ -36,6 +36,6 @@ E.g., if the result is a failed effect (an exception), it will first be logged b
 only later passed to the exception interceptor.
 
 Using `customInterceptors` on the options companion object, it is possible to customise the built-in interceptors. New 
-ones can be prepended to the interceptor stack using `.prependInterceptor`, or appended using `.appendInterceptor`. 
-However, the decode failure interceptor is alwyas the last one. Customisation can include removing the interceptor 
+ones can be prepended to the interceptor stack using `.prependInterceptor`, added before the decode failure interceptor
+using `.addInterceptor`, or appended using `.appendInterceptor`. Customisation can include removing the interceptor 
 altogether.
