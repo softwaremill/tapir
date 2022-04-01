@@ -39,7 +39,7 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
     toHttp(List(se))
 
   def toHttp(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], G]]): Http[OptionT[G, *], F] =
-    toHttp(serverEndpoints, None)(fToG)(gToF)
+    toHttp(serverEndpoints, None)
 
   def toWebSocketsHttp(
       se: ServerEndpoint[Fs2Streams[F] with WebSockets, G],
@@ -49,12 +49,12 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
   def toWebSocketsHttp(
       serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
       webSocketBuilder: WebSocketBuilder2[F]
-  ): Http[OptionT[G, *], F] = toHttp(serverEndpoints, Some(webSocketBuilder))(fToG)(gToF)
+  ): Http[OptionT[G, *], F] = toHttp(serverEndpoints, Some(webSocketBuilder))
 
   private def toHttp(
       serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
-  )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
+  ): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
