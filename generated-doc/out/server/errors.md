@@ -119,8 +119,8 @@ and endpoint's paths are the same), but when decoding some part of the path ends
 ## Customising how error messages are rendered
 
 To return error responses in a different format (other than plain text), you can customise both the exception, decode
-failure and reject handlers individually, or use the `CustomInterceptors.errorOutput` method which customises the default ones
-for you. 
+failure and reject handlers individually, or use the `CustomInterceptors.defaultHandlers` method which customises the 
+default ones for you. 
 
 We'll need to provide both the endpoint output which should be used for error messages, along with the output's value:
 
@@ -133,7 +133,6 @@ import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
 case class MyFailure(msg: String)
-
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 

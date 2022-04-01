@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.0.0-M5"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "1.0.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.0.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "1.0.0-M6"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -81,7 +81,7 @@ AsyncAPI supports adding [extensions](https://www.asyncapi.com/docs/specificatio
 similarly as in OpenAPI. 
 
 Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
-method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
+method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._
