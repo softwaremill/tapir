@@ -84,8 +84,17 @@ case class CustomInterceptors[F[_], O](
 
   def appendInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
 
-  /** Customise the way error messages are shown in error responses, using the default exception, decode failure and reject handlers. */
-  def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, O] = {
+  /** Use the default exception, decode failure and reject handlers.
+    * @param errorMessageOutput
+    *   customise the way error messages are shown in error responses
+    * @param notFoundWhenRejected
+    *   return a 404 formatted using `errorMessageOutput` when the request was rejected by all endpoints (using
+    *   [[DefaultRejectHandler.orNotFound]]), instead of propagating the rejection to the server library
+    */
+  def defaultHandlers(
+      errorMessageOutput: String => ValuedEndpointOutput[_],
+      notFoundWhenRejected: Boolean = false
+  ): CustomInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =
