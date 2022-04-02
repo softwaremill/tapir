@@ -20,7 +20,6 @@ class ZioHttpServerStubTest extends ServerStubTest(ZioHttpCreateServerStubTest)
 
 class ZioHttpServerStubStreamingTest extends ServerStubStreamingTest(ZioHttpCreateServerStubTest, ZioStreams) {
 
-
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = ZStream("1").repeat(Schedule.forever).take(60000 * 1024)
 }
