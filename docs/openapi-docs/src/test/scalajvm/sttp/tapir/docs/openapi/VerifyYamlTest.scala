@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi
 
 import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.syntax.EncoderOps
 import io.circe.yaml.Printer.StringStyle
 import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
@@ -9,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, Method, StatusCode}
 import sttp.tapir.Schema.SName
-import sttp.tapir.Schema.annotations.description
+import sttp.tapir.Schema.annotations.{default, description, encodedExample}
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
@@ -637,6 +638,21 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
 
     val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should generate default and example values for nested optional fields") {
+    case class Nested(nestedValue: String)
+    case class ClassWithNestedOptionalField(
+        @encodedExample(Nested("foo").asJson) @default(Some(Nested("foo")), Some("""{"nestedValue": "foo"}""")) value: Option[Nested]
+    )
+
+    val e = endpoint.in(jsonBody[ClassWithNestedOptionalField])
+    val expectedYaml = load("expected_default_and_example_on_nested_option_field.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("ClassWithNestedOptionalField", "1.0")).toYaml
+
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
