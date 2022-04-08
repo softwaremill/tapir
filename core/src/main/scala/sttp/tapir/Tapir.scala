@@ -423,7 +423,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
 
   val emptyInput: EndpointInput[Unit] = emptyIO
 
-  /** An empty authentication input, to express the fact (for documentation) that authentication is optional, event in the presence of
+  /** An empty authentication input, to express the fact (for documentation) that authentication is optional, even in the presence of
     * multiple optional authentication inputs (which by default are treated as alternatives).
     */
   val emptyAuth: EndpointInput.Auth[Unit, EndpointInput.AuthType.ApiKey] =
