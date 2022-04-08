@@ -8,7 +8,7 @@ import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,12 +27,12 @@ case class PlayServerOptions(
 object PlayServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors(implicit
+  def customiseInterceptors(implicit
       mat: Materializer,
       ec: ExecutionContext
-  ): CustomInterceptors[Future, PlayServerOptions] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, PlayServerOptions]) =>
+  ): CustomiseInterceptors[Future, PlayServerOptions] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, PlayServerOptions]) =>
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile,
@@ -68,7 +68,7 @@ object PlayServerOptions {
     }
   }
 
-  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customInterceptors.options
+  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors.options
 
   lazy val logger: Logger = Logger(this.getClass.getPackage.getName)
 }

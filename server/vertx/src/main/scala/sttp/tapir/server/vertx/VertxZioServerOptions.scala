@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task, URIO}
 
@@ -21,9 +21,9 @@ final case class VertxZioServerOptions[F[_]](
 object VertxZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[R]: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
+  def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
           VertxServerOptions.uploadDirectory(),
           file => Task[Unit](Defaults.deleteFile()(file)),
@@ -32,7 +32,7 @@ object VertxZioServerOptions {
         )
     ).serverLog(defaultServerLog[R](LoggerFactory.getLogger("tapir-vertx")))
 
-  implicit def default[R]: VertxZioServerOptions[RIO[R, *]] = customInterceptors.options
+  implicit def default[R]: VertxZioServerOptions[RIO[R, *]] = customiseInterceptors.options
 
   def defaultServerLog[R](log: Logger): ServerLog[RIO[R, *]] = {
     DefaultServerLog(

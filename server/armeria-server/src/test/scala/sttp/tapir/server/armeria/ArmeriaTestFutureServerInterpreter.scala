@@ -8,7 +8,7 @@ import scala.concurrent.Future
 class ArmeriaTestFutureServerInterpreter extends ArmeriaTestServerInterpreter[ArmeriaStreams, Future, ArmeriaFutureServerOptions] {
 
   override def route(es: List[ServerEndpoint[ArmeriaStreams, Future]], interceptors: Interceptors): TapirService[ArmeriaStreams, Future] = {
-    val serverOptions: ArmeriaFutureServerOptions = interceptors(ArmeriaFutureServerOptions.customInterceptors).options
+    val serverOptions: ArmeriaFutureServerOptions = interceptors(ArmeriaFutureServerOptions.customiseInterceptors).options
     ArmeriaFutureServerInterpreter(serverOptions).toService(es)
   }
 }

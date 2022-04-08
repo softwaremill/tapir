@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s
 import cats.effect.Sync
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 /** @tparam F
@@ -26,9 +26,9 @@ case class Http4sServerOptions[F[_], G[_]](
 object Http4sServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, Http4sServerOptions[F, G]] = {
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[G, Http4sServerOptions[F, G]]) =>
+  def customiseInterceptors[F[_], G[_]: Sync]: CustomiseInterceptors[G, Http4sServerOptions[F, G]] = {
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[G, Http4sServerOptions[F, G]]) =>
         Http4sServerOptions[F, G](defaultCreateFile[G], defaultDeleteFile[G], 8192, ci.interceptors)
     ).serverLog(defaultServerLog)
   }
@@ -53,5 +53,5 @@ object Http4sServerOptions {
       case Some(ex) => Sync[G].delay(Http4sServerToHttpInterpreter.log.debug(ex)(msg))
     }
 
-  def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] = customInterceptors[F, G].options
+  def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] = customiseInterceptors[F, G].options
 }

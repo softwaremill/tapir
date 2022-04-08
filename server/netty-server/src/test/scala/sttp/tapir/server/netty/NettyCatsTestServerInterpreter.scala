@@ -12,7 +12,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     extends TestServerInterpreter[IO, Any, NettyCatsServerOptions[IO], Route[IO]] {
 
   override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): Route[IO] = {
-    val serverOptions: NettyCatsServerOptions[IO] = interceptors(NettyCatsServerOptions.customInterceptors[IO](dispatcher)).options
+    val serverOptions: NettyCatsServerOptions[IO] = interceptors(NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)).options
     NettyCatsServerInterpreter(serverOptions).toRoute(es)
   }
 

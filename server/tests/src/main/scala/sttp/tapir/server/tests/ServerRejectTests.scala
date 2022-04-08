@@ -7,7 +7,7 @@ import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir._
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.tests._
@@ -41,7 +41,7 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
       NonEmptyList.of(
         route(
           samePathEndpoints,
-          (ci: CustomInterceptors[F, OPTIONS]) =>
+          (ci: CustomiseInterceptors[F, OPTIONS]) =>
             ci.rejectHandler(
               DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest), None): DefaultRejectHandler[F]
             )

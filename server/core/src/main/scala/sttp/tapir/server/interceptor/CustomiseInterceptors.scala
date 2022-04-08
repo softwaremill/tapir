@@ -41,8 +41,8 @@ import sttp.tapir.{headers, statusCode}
   *   Additional interceptors, which will be called last on request / first on response, e.g. handling decode failures, or providing
   *   alternate responses.
   */
-case class CustomInterceptors[F[_], O](
-    createOptions: CustomInterceptors[F, O] => O,
+case class CustomiseInterceptors[F[_], O](
+    createOptions: CustomiseInterceptors[F, O] => O,
     prependedInterceptors: List[Interceptor[F]] = Nil,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     corsInterceptor: Option[CORSInterceptor[F]] = None,
@@ -56,33 +56,33 @@ case class CustomInterceptors[F[_], O](
     decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default,
     appendedInterceptors: List[Interceptor[F]] = Nil
 ) {
-  def prependInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(prependedInterceptors = prependedInterceptors :+ i)
+  def prependInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(prependedInterceptors = prependedInterceptors :+ i)
 
-  def metricsInterceptor(m: MetricsRequestInterceptor[F]): CustomInterceptors[F, O] = copy(metricsInterceptor = Some(m))
-  def metricsInterceptor(m: Option[MetricsRequestInterceptor[F]]): CustomInterceptors[F, O] = copy(metricsInterceptor = m)
+  def metricsInterceptor(m: MetricsRequestInterceptor[F]): CustomiseInterceptors[F, O] = copy(metricsInterceptor = Some(m))
+  def metricsInterceptor(m: Option[MetricsRequestInterceptor[F]]): CustomiseInterceptors[F, O] = copy(metricsInterceptor = m)
 
-  def corsInterceptor(c: CORSInterceptor[F]): CustomInterceptors[F, O] = copy(corsInterceptor = Some(c))
-  def corsInterceptor(c: Option[CORSInterceptor[F]]): CustomInterceptors[F, O] = copy(corsInterceptor = c)
+  def corsInterceptor(c: CORSInterceptor[F]): CustomiseInterceptors[F, O] = copy(corsInterceptor = Some(c))
+  def corsInterceptor(c: Option[CORSInterceptor[F]]): CustomiseInterceptors[F, O] = copy(corsInterceptor = c)
 
-  def rejectHandler(r: RejectHandler[F]): CustomInterceptors[F, O] = copy(rejectHandler = Some(r))
-  def rejectHandler(r: Option[RejectHandler[F]]): CustomInterceptors[F, O] = copy(rejectHandler = r)
+  def rejectHandler(r: RejectHandler[F]): CustomiseInterceptors[F, O] = copy(rejectHandler = Some(r))
+  def rejectHandler(r: Option[RejectHandler[F]]): CustomiseInterceptors[F, O] = copy(rejectHandler = r)
 
-  def exceptionHandler(e: ExceptionHandler[F]): CustomInterceptors[F, O] = copy(exceptionHandler = Some(e))
-  def exceptionHandler(e: Option[ExceptionHandler[F]]): CustomInterceptors[F, O] = copy(exceptionHandler = e)
+  def exceptionHandler(e: ExceptionHandler[F]): CustomiseInterceptors[F, O] = copy(exceptionHandler = Some(e))
+  def exceptionHandler(e: Option[ExceptionHandler[F]]): CustomiseInterceptors[F, O] = copy(exceptionHandler = e)
 
-  def serverLog(log: ServerLog[F]): CustomInterceptors[F, O] = copy(serverLog = Some(log))
-  def serverLog(log: Option[ServerLog[F]]): CustomInterceptors[F, O] = copy(serverLog = log)
+  def serverLog(log: ServerLog[F]): CustomiseInterceptors[F, O] = copy(serverLog = Some(log))
+  def serverLog(log: Option[ServerLog[F]]): CustomiseInterceptors[F, O] = copy(serverLog = log)
 
-  def unsupportedMediaTypeInterceptor(u: UnsupportedMediaTypeInterceptor[F]): CustomInterceptors[F, O] =
+  def unsupportedMediaTypeInterceptor(u: UnsupportedMediaTypeInterceptor[F]): CustomiseInterceptors[F, O] =
     copy(unsupportedMediaTypeInterceptor = Some(u))
-  def unsupportedMediaTypeInterceptor(u: Option[UnsupportedMediaTypeInterceptor[F]]): CustomInterceptors[F, O] =
+  def unsupportedMediaTypeInterceptor(u: Option[UnsupportedMediaTypeInterceptor[F]]): CustomiseInterceptors[F, O] =
     copy(unsupportedMediaTypeInterceptor = u)
 
-  def addInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(additionalInterceptors = additionalInterceptors :+ i)
+  def addInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(additionalInterceptors = additionalInterceptors :+ i)
 
-  def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, O] = copy(decodeFailureHandler = d)
+  def decodeFailureHandler(d: DecodeFailureHandler): CustomiseInterceptors[F, O] = copy(decodeFailureHandler = d)
 
-  def appendInterceptor(i: Interceptor[F]): CustomInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
+  def appendInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
 
   /** Use the default exception, decode failure and reject handlers.
     * @param errorMessageOutput
@@ -94,7 +94,7 @@ case class CustomInterceptors[F[_], O](
   def defaultHandlers(
       errorMessageOutput: String => ValuedEndpointOutput[_],
       notFoundWhenRejected: Boolean = false
-  ): CustomInterceptors[F, O] = {
+  ): CustomiseInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler =

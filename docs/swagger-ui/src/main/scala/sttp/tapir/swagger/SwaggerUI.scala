@@ -61,7 +61,7 @@ object SwaggerUI {
       Right(s"/$prefixFromRoot/$queryString")
     }
 
-    val textJavascriptUtf8: EndpointIO.Body[String, String] = anyFromUtf8StringBody(Codec.string.format(CodecFormat.TextJavascript()))
+    val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
       baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
 

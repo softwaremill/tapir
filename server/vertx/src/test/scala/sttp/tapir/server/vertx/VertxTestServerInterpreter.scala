@@ -15,7 +15,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
   import VertxTestServerInterpreter._
 
   override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): Router => Route = { router =>
-    val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customInterceptors).options
+    val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customiseInterceptors).options
     val interpreter = VertxFutureServerInterpreter(options)
     es.map(interpreter.route(_)(router)).last
   }

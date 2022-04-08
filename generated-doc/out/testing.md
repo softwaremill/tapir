@@ -87,20 +87,20 @@ following customised akka http options:
 
 ```scala
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
 val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
-    Some(ValuedEndpointOutput(
-      stringBody.and(statusCode),
-      (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
-    ))
+  Some(ValuedEndpointOutput(
+    stringBody.and(statusCode),
+    (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
+  ))
 )
 
-val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
-  AkkaHttpServerOptions.customInterceptors
+val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] =
+  AkkaHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
 ```
 

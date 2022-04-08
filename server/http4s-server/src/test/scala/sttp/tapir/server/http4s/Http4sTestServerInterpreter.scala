@@ -23,7 +23,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Routes = {
-    val serverOptions: Http4sServerOptions[IO, IO] = interceptors(Http4sServerOptions.customInterceptors[IO, IO]).options
+    val serverOptions: Http4sServerOptions[IO, IO] = interceptors(Http4sServerOptions.customiseInterceptors[IO, IO]).options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
 

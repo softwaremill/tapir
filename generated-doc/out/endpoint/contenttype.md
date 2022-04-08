@@ -29,12 +29,13 @@ import sttp.tapir.Codec.{JsonCodec, XmlCodec}
 import sttp.model.StatusCode
 
 case class Entity(name: String)
+
 implicit val jsonCodecForOrganization: JsonCodec[Entity] = ???
 implicit val xmlCodecForOrganization: XmlCodec[Entity] = ???
 
 endpoint.out(
   oneOf(
-    oneOfVariant(customJsonBody[Entity]),
+    oneOfVariant(customCodecJsonBody[Entity]),
     oneOfVariant(xmlBody[Entity])
   )
 )

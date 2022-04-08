@@ -23,7 +23,7 @@ class ServerStubTest[F[_], R, OPTIONS](createStubServerTest: CreateServerStubTes
 
   it should "stub endpoint logic" in {
     val server: SttpBackend[F, R] =
-      TapirStubInterpreter[F, R, OPTIONS](createStubServerTest.customInterceptors, createStubServerTest.stub)
+      TapirStubInterpreter[F, R, OPTIONS](createStubServerTest.customiseInterceptors, createStubServerTest.stub)
         .whenServerEndpoint(serverEp)
         .thenRespond("hello")
         .backend()

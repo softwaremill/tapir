@@ -13,7 +13,7 @@ import scala.concurrent.duration.DurationInt
 
 class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraServerOptions, FinatraRoute] {
   override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FinatraRoute = {
-    implicit val serverOptions: FinatraServerOptions = interceptors(FinatraServerOptions.customInterceptors).options
+    implicit val serverOptions: FinatraServerOptions = interceptors(FinatraServerOptions.customiseInterceptors).options
     val interpreter = FinatraServerInterpreter(serverOptions)
     es.map(interpreter.toRoute).last
   }

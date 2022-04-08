@@ -83,7 +83,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.post.in(stringBody).out(stringBody).serverLogicSuccess[Future](body => Future.successful(body))
 
           val route = AkkaHttpServerInterpreter(
-            AkkaHttpServerOptions.customInterceptors
+            AkkaHttpServerOptions.customiseInterceptors
               .prependInterceptor(RequestInterceptor.transformServerRequest { request =>
                 val underlying = request.underlying.asInstanceOf[RequestContext]
                 val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))

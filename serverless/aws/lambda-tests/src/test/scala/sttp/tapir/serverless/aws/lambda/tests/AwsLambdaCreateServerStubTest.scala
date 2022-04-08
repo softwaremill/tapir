@@ -23,7 +23,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
   override def testServer[I, E, O](e: PublicEndpoint[I, E, O, Any], testNameSuffix: String, interceptors: Interceptors = identity)(
       fn: I => IO[Either[E, O]]
   )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
-    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options
+    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customiseInterceptors[IO]).options
       .copy(encodeResponseBody = false)
     val se: ServerEndpoint[Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
@@ -34,7 +34,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
   override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String, interceptors: Interceptors = identity)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options
+    val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customiseInterceptors[IO]).options
       .copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)

@@ -34,8 +34,8 @@ object ContentNegotiation {
         sttp.tapir.oneOf(
           oneOfVariant(StatusCode.Ok, jsonBody[Organization]),
           oneOfVariant(StatusCode.Ok, xmlBody[Organization]),
-          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
-          oneOfVariant(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Ok, stringBodyAnyFormat(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Ok, stringBodyAnyFormat(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
         )
       )
 

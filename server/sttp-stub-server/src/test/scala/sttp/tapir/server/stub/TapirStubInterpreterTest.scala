@@ -11,7 +11,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.reject.RejectHandler
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
@@ -20,11 +20,11 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
   case class ServerOptions(interceptors: List[Interceptor[Identity]])
   object ServerOptions {
-    def customInterceptors: CustomInterceptors[Identity, ServerOptions] =
-      CustomInterceptors(createOptions = (ci: CustomInterceptors[Identity, ServerOptions]) => ServerOptions(ci.interceptors))
+    def customiseInterceptors: CustomiseInterceptors[Identity, ServerOptions] =
+      CustomiseInterceptors(createOptions = (ci: CustomiseInterceptors[Identity, ServerOptions]) => ServerOptions(ci.interceptors))
   }
 
-  val options: CustomInterceptors[Identity, ServerOptions] = ServerOptions.customInterceptors
+  val options: CustomiseInterceptors[Identity, ServerOptions] = ServerOptions.customiseInterceptors
 
   behavior of "TapirStubInterpreter"
 

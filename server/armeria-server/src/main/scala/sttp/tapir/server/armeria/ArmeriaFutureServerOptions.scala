@@ -6,7 +6,7 @@ import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 final case class ArmeriaFutureServerOptions(
     createFile: () => Future[TapirFile],
@@ -29,9 +29,9 @@ object ArmeriaFutureServerOptions {
   )
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, ArmeriaFutureServerOptions] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, ArmeriaFutureServerOptions]) =>
+  def customiseInterceptors: CustomiseInterceptors[Future, ArmeriaFutureServerOptions] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, ArmeriaFutureServerOptions]) =>
         ArmeriaFutureServerOptions(
           defaultCreateFile,
           defaultDeleteFile,
@@ -39,7 +39,7 @@ object ArmeriaFutureServerOptions {
         )
     ).serverLog(defaultServerLog)
 
-  val default: ArmeriaFutureServerOptions = customInterceptors.options
+  val default: ArmeriaFutureServerOptions = customiseInterceptors.options
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 

@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.Logger
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{Future, blocking}
@@ -26,7 +26,7 @@ case class NettyFutureServerOptions(
 }
 
 object NettyFutureServerOptions {
-  val default: NettyFutureServerOptions = customInterceptors.options
+  val default: NettyFutureServerOptions = customiseInterceptors.options
 
   def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
     NettyDefaults.DefaultHost,
@@ -43,9 +43,9 @@ object NettyFutureServerOptions {
     NettyOptions.default
   )
 
-  def customInterceptors: CustomInterceptors[Future, NettyFutureServerOptions] = {
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
+  def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
