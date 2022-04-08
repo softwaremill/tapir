@@ -59,6 +59,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def stringBody(charset: Charset): EndpointIO.Body[String, String] =
     EndpointIO.Body(RawBodyType.StringBody(charset), Codec.string, EndpointIO.Info.empty)
 
+  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
+  def stringBodyUtf8AnyFormat[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
+    stringBodyAnyFormat[T, CF](codec, StandardCharsets.UTF_8)
+
+  /** A body in any format, read using the given `codec`, from a raw string read using `charset`. */
+  def stringBodyAnyFormat[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
+    EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
+
   val htmlBodyUtf8: EndpointIO.Body[String, String] =
     EndpointIO.Body(RawBodyType.StringBody(StandardCharsets.UTF_8), Codec.string.format(CodecFormat.TextHtml()), EndpointIO.Info.empty)
 
@@ -73,10 +81,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * Unless you have defined a custom json codec, the `jsonBody` methods should be used.
     */
-  def customJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+  def customCodecJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(implicitly[Codec[String, T, Json]])
 
   /** Requires an implicit [[Codec.XmlCodec]] in scope. Such a codec can be created using [[Codec.xml]]. */
-  def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
+  def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(implicitly[Codec[String, T, Xml]])
 
   def rawBinaryBody[R](rbt: RawBodyType.Binary[R])(implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
     EndpointIO.Body(rbt, codec, EndpointIO.Info.empty)
@@ -98,9 +106,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody(RawBodyType.FileBody).map(_.file)(d => FileRange(d))
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
-    anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)
+    stringBodyUtf8AnyFormat[T, CodecFormat.XWwwFormUrlencoded](implicitly)
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]](charset: Charset): EndpointIO.Body[String, T] =
-    anyFromStringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
+    stringBodyAnyFormat[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
 
   val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[Part[Array[Byte]]]] = multipartBody(MultipartCodec.Default)
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
@@ -195,14 +203,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       .decodeCloseRequests(true)
       .decodeCloseResponses(true)
       .autoPing(None)
-
-  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
-  def anyFromUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
-    anyFromStringBody[T, CF](codec, StandardCharsets.UTF_8)
-
-  /** A body in any format, read using the given `codec`, from a raw string read using `charset`. */
-  def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
-    EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
   /** Inputs which describe authentication credentials with metadata. */
   def auth: TapirAuth.type = TapirAuth

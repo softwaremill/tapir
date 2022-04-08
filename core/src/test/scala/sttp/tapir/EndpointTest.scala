@@ -93,8 +93,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.get
       .out(
         sttp.tapir.oneOf(
-          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
-          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Accepted, stringBodyAnyFormat(codec, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Accepted, stringBodyAnyFormat(codec, StandardCharsets.ISO_8859_1))
         )
       )
   }

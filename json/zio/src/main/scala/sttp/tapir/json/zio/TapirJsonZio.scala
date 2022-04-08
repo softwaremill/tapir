@@ -5,14 +5,14 @@ import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.{SCoproduct, SNumber, SProduct}
-import sttp.tapir.{EndpointIO, FieldName, Schema, anyFromUtf8StringBody}
+import sttp.tapir.{EndpointIO, FieldName, Schema, stringBodyUtf8AnyFormat}
 import zio.json.ast.Json
 import zio.json.ast.Json.Obj
 import zio.json.{JsonDecoder, JsonEncoder, _}
 
 trait TapirJsonZio {
 
-  def jsonBody[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(zioCodec[T])
+  def jsonBody[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(zioCodec[T])
 
   implicit def zioCodec[T: JsonEncoder: JsonDecoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>

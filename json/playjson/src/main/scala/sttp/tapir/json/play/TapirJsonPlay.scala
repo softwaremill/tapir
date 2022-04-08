@@ -11,7 +11,7 @@ import sttp.tapir.Schema.SName
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonPlay {
-  def jsonBody[T: Reads: Writes: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(readsWritesCodec[T])
+  def jsonBody[T: Reads: Writes: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(readsWritesCodec[T])
 
   implicit def readsWritesCodec[T: Reads: Writes: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>

@@ -2,6 +2,9 @@
 
 ## From 0.20 to 1.0
 
+* `customJsonBody` is renamed to `customCodecJsonBody`
+* `anyFromStringBody` is renamed to `stringBodyAnyFormat`
+* `anyFromUtf8StringBody` is renamed to `stringBodyUtf8AnyFormat`
 * `CustomInterceptors` is renamed to `CustomiseInterceptors` as this better reflects the functionality of the class
 * `CustomiseInterceptors.errorOutput` is renamed to `.defaultHandlers`, with additional options added.
 * in custom server interpreters, the `RejectInterecptor` must be now disabled explicitly using `RejectInterceptor.disableWhenSingleEndpoint` when a single endpoint is being interpreted; the `ServerInterpreter` no longer knows about all endpoints, as it is now parametrised with a function which gives the potentially matching endpoints, given a `ServerRequest`
