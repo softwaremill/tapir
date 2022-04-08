@@ -21,7 +21,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
   import actorSystem.dispatcher
 
   override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
-    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customInterceptors).options
+    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors).options
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 

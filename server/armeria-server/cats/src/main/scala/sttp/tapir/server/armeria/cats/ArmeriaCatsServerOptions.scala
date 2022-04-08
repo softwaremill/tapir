@@ -7,7 +7,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.util.control.NonFatal
 import sttp.tapir.server.armeria.ArmeriaServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 final case class ArmeriaCatsServerOptions[F[_]](
@@ -26,9 +26,11 @@ final case class ArmeriaCatsServerOptions[F[_]](
 object ArmeriaCatsServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): CustomInterceptors[F, ArmeriaCatsServerOptions[F]] = {
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
+  def customiseInterceptors[F[_]](
+      dispatcher: Dispatcher[F]
+  )(implicit F: Async[F]): CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]] = {
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
         ArmeriaCatsServerOptions[F](
           dispatcher,
           () => defaultCreateFile()(F),
@@ -53,7 +55,7 @@ object ArmeriaCatsServerOptions {
     noLog = Async[F].pure(())
   )
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): ArmeriaCatsServerOptions[F] = customInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): ArmeriaCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 
   private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): F[Unit] =
     Sync[F].delay(exOpt match {

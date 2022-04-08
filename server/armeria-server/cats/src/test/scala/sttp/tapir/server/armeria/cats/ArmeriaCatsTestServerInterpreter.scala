@@ -10,7 +10,7 @@ class ArmeriaCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
     extends ArmeriaTestServerInterpreter[Fs2Streams[IO], IO, ArmeriaCatsServerOptions[IO]] {
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]], interceptors: Interceptors): TapirService[Fs2Streams[IO], IO] = {
-    val options: ArmeriaCatsServerOptions[IO] = interceptors(ArmeriaCatsServerOptions.customInterceptors[IO](dispatcher)).options
+    val options: ArmeriaCatsServerOptions[IO] = interceptors(ArmeriaCatsServerOptions.customiseInterceptors[IO](dispatcher)).options
     ArmeriaCatsServerInterpreter(options).toService(es)
   }
 }

@@ -15,7 +15,7 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): FinatraRoute = {
-    val serverOptions: FinatraCatsServerOptions[IO] = interceptors(FinatraCatsServerOptions.customInterceptors(dispatcher)).options
+    val serverOptions: FinatraCatsServerOptions[IO] = interceptors(FinatraCatsServerOptions.customiseInterceptors(dispatcher)).options
     val interpreter = FinatraCatsServerInterpreter[IO](serverOptions)
     es.map(interpreter.toRoute).last
   }

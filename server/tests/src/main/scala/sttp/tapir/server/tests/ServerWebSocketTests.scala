@@ -10,7 +10,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Test
@@ -55,7 +55,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
 
       testServer(
         endpoint.out(stringWs).name("metrics"),
-        interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
       )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
         basicRequest
           .response(asWebSocket { (ws: WebSocket[IO]) =>

@@ -21,9 +21,9 @@ case class AkkaHttpServerOptions(
 object AkkaHttpServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, AkkaHttpServerOptions] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, AkkaHttpServerOptions]) =>
+  def customiseInterceptors: CustomiseInterceptors[Future, AkkaHttpServerOptions] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, AkkaHttpServerOptions]) =>
         AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
     ).serverLog(defaultSlf4jServerLog)
 
@@ -79,5 +79,5 @@ object AkkaHttpServerOptions {
     )
   }
 
-  val default: AkkaHttpServerOptions = customInterceptors.options
+  val default: AkkaHttpServerOptions = customiseInterceptors.options
 }

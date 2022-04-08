@@ -5,7 +5,7 @@ import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,9 +31,9 @@ final case class VertxFutureServerOptions(
 object VertxFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, VertxFutureServerOptions] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, VertxFutureServerOptions]) =>
+  def customiseInterceptors: CustomiseInterceptors[Future, VertxFutureServerOptions] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
           VertxServerOptions.uploadDirectory(),
           defaultDeleteFile,
@@ -47,7 +47,7 @@ object VertxFutureServerOptions {
     Future(Defaults.deleteFile()(file))
   }
 
-  val default: VertxFutureServerOptions = customInterceptors.options
+  val default: VertxFutureServerOptions = customiseInterceptors.options
 
   def defaultServerLog(log: Logger): ServerLog[Future] = {
     import scala.concurrent.ExecutionContext.Implicits.global

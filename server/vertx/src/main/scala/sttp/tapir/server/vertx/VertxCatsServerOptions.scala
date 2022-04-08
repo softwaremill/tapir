@@ -6,7 +6,7 @@ import cats.effect.std.Dispatcher
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 final case class VertxCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],
@@ -24,11 +24,11 @@ final case class VertxCatsServerOptions[F[_]](
 object VertxCatsServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]: Async](
+  def customiseInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
-  ): CustomInterceptors[F, VertxCatsServerOptions[F]] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, VertxCatsServerOptions[F]]) =>
+  ): CustomiseInterceptors[F, VertxCatsServerOptions[F]] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[F, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
           VertxServerOptions.uploadDirectory(),
@@ -38,7 +38,7 @@ object VertxCatsServerOptions {
         )
     ).serverLog(defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 
   def defaultServerLog[F[_]: Async](log: Logger): ServerLog[F] = {
     DefaultServerLog(

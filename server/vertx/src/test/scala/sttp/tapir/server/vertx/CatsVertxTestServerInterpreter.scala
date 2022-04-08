@@ -18,7 +18,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]], interceptors: Interceptors): Router => Route = { router =>
-    val options: VertxCatsServerOptions[IO] = interceptors(VertxCatsServerOptions.customInterceptors[IO](dispatcher)).options
+    val options: VertxCatsServerOptions[IO] = interceptors(VertxCatsServerOptions.customiseInterceptors[IO](dispatcher)).options
     val interpreter = VertxCatsServerInterpreter(options)
     es.map(interpreter.route(_)(router)).last
   }

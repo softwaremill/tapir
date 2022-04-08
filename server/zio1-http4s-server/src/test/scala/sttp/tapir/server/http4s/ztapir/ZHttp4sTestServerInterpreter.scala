@@ -31,7 +31,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[F, ZioStreams w
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
-    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customInterceptors).options
+    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors).options
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }
 
