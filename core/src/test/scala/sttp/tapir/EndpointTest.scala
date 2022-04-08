@@ -38,6 +38,10 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.securityIn(auth.bearer[String]()).securityIn(path[String]("foo")).mapSecurityInTo[Foo]
   }
 
+  it should "compile a path fold" in {
+    endpoint.in(List("a", "b", "c").foldLeft(emptyInput)(_ / _))
+  }
+
   trait TestStreams extends Streams[TestStreams] {
     override type BinaryStream = Vector[Byte]
     override type Pipe[X, Y] = Nothing
@@ -271,7 +275,10 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters),
     (endpoint.in("p1" / paths), "/p1/*"),
     (endpoint.in("p1").in(queryParams), "/p1?*"),
-    (endpoint.in("p1" / "p2".schema(_.hidden(true)) / query[String]("par1") / query[String]("par2").schema(_.hidden(true))), "/p1?par1={par1}")
+    (
+      endpoint.in("p1" / "p2".schema(_.hidden(true)) / query[String]("par1") / query[String]("par2").schema(_.hidden(true))),
+      "/p1?par1={par1}"
+    )
   )
 
   for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {

@@ -413,19 +413,21 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, b) }, Mapping.id)
 
-  val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  private val emptyIO: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+
+  val emptyOutput: EndpointOutput.Atom[Unit] = emptyIO
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
-  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
+  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyIO.map(_ => value)(_ => ())
 
-  val emptyInput: EndpointIO.Empty[Unit] = emptyOutput
+  val emptyInput: EndpointInput[Unit] = emptyIO
 
   /** An empty authentication input, to express the fact (for documentation) that authentication is optional, event in the presence of
     * multiple optional authentication inputs (which by default are treated as alternatives).
     */
   val emptyAuth: EndpointInput.Auth[Unit, EndpointInput.AuthType.ApiKey] =
-    EndpointInput.Auth(emptyInput, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
+    EndpointInput.Auth(emptyIO, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
   val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Unit, Nothing, Unit, Any](
