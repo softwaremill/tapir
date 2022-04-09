@@ -11,7 +11,7 @@
 * **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
 * **observability**: leverage the metadata to report rich metrics and tracing information
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
-* **library**, not a framework: integrates with your stack
+* **library, not a framework**: integrates with your stack
 
 ## Intro
 
