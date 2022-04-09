@@ -4,6 +4,17 @@
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
+## Why tapir?
+
+* type-safety: compile-time guarantees, develop-time completions, read-time information
+* declarative: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* OpenAPI / Swagger integration: generate documentation from endpoint descriptions
+* observability: leverage the metadata to report rich metrics and tracing information
+* abstraction: re-use common endpoint definitions, as well as individual inputs/outputs
+* library, not a framework: integrates with your stack
+
+## Intro
+
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
 interpreted as:

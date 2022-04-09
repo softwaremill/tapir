@@ -1,5 +1,16 @@
 # tapir, or Typed API descRiptions
 
+## Why tapir?
+
+* type-safety: compile-time guarantees, develop-time completions, read-time information
+* declarative: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* OpenAPI / Swagger integration: generate documentation from endpoint descriptions
+* observability: leverage the metadata to report rich metrics and tracing information
+* abstraction: re-use common endpoint definitions, as well as individual inputs/outputs
+* library, not a framework: integrates with your stack
+
+## Intro
+
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input and output parameters. An endpoint specification can be interpreted as:
 
