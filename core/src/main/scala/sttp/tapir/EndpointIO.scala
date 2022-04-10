@@ -417,7 +417,7 @@ object EndpointIO {
     override private[tapir] def copyWith[U](c: Codec[R, U, CodecFormat], i: Info[U]): Body[R, U] = copy(codec = c, info = i)
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[_]] match {
-        case RawBodyType.StringBody(charset) => s" (${charset.toString})"
+        case RawBodyType.StringBody(charset) => s"(${charset.toString})"
         case _                               => ""
       }
       val format = codec.format.mediaType
