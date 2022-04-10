@@ -7,7 +7,7 @@ case class FileRange(file: TapirFile, range: Option[RangeValue] = None)
 
 case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
   def toContentRange: ContentRange =
-    ContentRange(ContentRangeUnits.Bytes, start.zip(end).headOption, Some(fileSize))
+    ContentRange(ContentRangeUnits.Bytes, start.zip(end), Some(fileSize))
 
   def contentLength: Long = (start, end) match {
     case (Some(_start), Some(_end)) => _end - _start + 1
