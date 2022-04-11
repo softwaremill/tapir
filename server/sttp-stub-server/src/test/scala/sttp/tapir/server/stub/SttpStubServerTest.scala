@@ -174,7 +174,8 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .thenSuccess("abc")
 
     // when
-    val response = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
+    val response = SttpClientInterpreter()
+      .toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
       .apply(Vector(1, 2, 3))
       .send(backend)
 

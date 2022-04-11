@@ -36,13 +36,13 @@ private[stub] object SttpRequestDecoder {
           case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
             val value = request.body match {
               case StreamBody(s) => RawValue(s)
-              case _ => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+              case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
             }
             codec.decode(value) match {
               case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
               case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
             }
-          case None                => values
+          case None => values
         }
       case failure: DecodeBasicInputsResult.Failure => failure
     }

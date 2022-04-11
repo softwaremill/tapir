@@ -61,10 +61,12 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = load("enum/expected_enumeratum_enum_using_first_specified_default_value.yml")
     val ep1 = endpoint
-      .in("fruit-by-type1").in(query[Enumeratum.FruitType]("type1").default(PEAR))
+      .in("fruit-by-type1")
+      .in(query[Enumeratum.FruitType]("type1").default(PEAR))
       .out(jsonBody[Enumeratum.FruitWithEnum])
     val ep2 = endpoint
-      .in("fruit-by-type2").in(query[Enumeratum.FruitType]("type2").default(APPLE))
+      .in("fruit-by-type2")
+      .in(query[Enumeratum.FruitType]("type2").default(APPLE))
       .out(jsonBody[Enumeratum.FruitWithEnum])
 
     val actualYaml =
@@ -78,8 +80,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     import sttp.tapir.codec.enumeratum._
 
     val expectedYaml = load("enum/expected_enumeratum_enum_not_adding_default_when_no_encoded_value_specified.yml")
-    val ep = endpoint
-      .post.in(jsonBody[Enumeratum.FruitQuery])
+    val ep = endpoint.post
+      .in(jsonBody[Enumeratum.FruitQuery])
       .out(jsonBody[Enumeratum.FruitWithEnum])
 
     val actualYaml =
@@ -93,8 +95,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     import sttp.tapir.codec.enumeratum._
 
     val expectedYaml = load("enum/expected_enumeratum_enum_adding_default_when_encoded_value_specified.yml")
-    val ep = endpoint
-      .post.in(jsonBody[Enumeratum.FruitQueryWithEncoded])
+    val ep = endpoint.post
+      .in(jsonBody[Enumeratum.FruitQueryWithEncoded])
       .out(jsonBody[Enumeratum.FruitWithEnum])
 
     val actualYaml =
@@ -120,7 +122,7 @@ object VerifyYamlEnumeratumTest {
     }
 
     case class FruitQuery(@default(FruitType.PEAR) fruitType: FruitType)
-    case class FruitQueryWithEncoded(@default(FruitType.PEAR, encoded=Some(FruitType.PEAR)) fruitType: FruitType)
+    case class FruitQueryWithEncoded(@default(FruitType.PEAR, encoded = Some(FruitType.PEAR)) fruitType: FruitType)
 
     @description("* 1 - One\n* 2 - Two\n* 3 - Three")
     sealed abstract class MyNumber(val value: Int) extends IntEnumEntry
