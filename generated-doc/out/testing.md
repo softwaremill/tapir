@@ -93,13 +93,13 @@ import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
 val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
-  Some(ValuedEndpointOutput(
-    stringBody.and(statusCode),
-    (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
-  ))
+    Some(ValuedEndpointOutput(
+      stringBody.and(statusCode),
+      (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
+    ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] =
+val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = 
   AkkaHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
 ```
@@ -281,7 +281,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /*, GET /x, is shadowed by: GET /x /*)"
+// res2: String = "Set(GET /x, is shadowed by: GET /x /*, GET /x /y /x, is shadowed by: GET /x /*)"
 ```
 
 Example 2:
