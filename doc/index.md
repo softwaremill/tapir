@@ -52,6 +52,19 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 
 We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
 
+# Adopters
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="https://www.colisweb.com"><img src="/_static/adopters/colisweb.png" alt="Colisweb" width="120"/></a>
+<a href="https://swissborg.com"><img src="/_static/adopters/swissborg.png" alt="Swissborg" width="160"/></a>
+<a href="https://www.kelkoogroup.com"><img src="/_static/adopters/kelkoogroup.jpg" alt="Kelkoo group" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="https://kaizo.com"><img src="/_static/adopters/kaizo.png" alt="Kaizo" width="160"/></a>
+<a href="https://www.process.st/"><img src="/_static/adopters/process_street.png" alt="Process Street" width="100"/></a>
+<a href="https://www.softwaremill.com/"><img src="/_static/adopters/softwaremill.png" alt="Softwaremill" width="160"/></a>
+</div>
+
 ## Code teaser
 
 ```scala mdoc:compile-only
