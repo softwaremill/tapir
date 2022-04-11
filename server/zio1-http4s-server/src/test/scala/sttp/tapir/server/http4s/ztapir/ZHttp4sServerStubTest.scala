@@ -17,12 +17,11 @@ import scala.concurrent.Future
 object ZHttp4sCreateServerStubTest
     extends CreateServerStubTest[
       RIO[Clock with Blocking, *],
-      Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+      Http4sServerOptions[RIO[Clock with Blocking, *]]
     ] {
-  override def customiseInterceptors
-      : CustomiseInterceptors[RIO[Clock with Blocking, *], Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]] =
+  override def customiseInterceptors: CustomiseInterceptors[RIO[Clock with Blocking, *], Http4sServerOptions[RIO[Clock with Blocking, *]]] =
     Http4sServerOptions
-      .customiseInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+      .customiseInterceptors[RIO[Clock with Blocking, *]]
 
   override def stub[R]: SttpBackendStub[RIO[Clock with Blocking, *], R] = SttpBackendStub(new CatsMonadError[RIO[Clock with Blocking, *]])
   override def asFuture[A]: RIO[Clock with Blocking, A] => Future[A] = rio => Runtime.default.unsafeRunToFuture(rio)
