@@ -52,7 +52,7 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 
 We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
 
-# Adopters
+## Adopters
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.colisweb.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="120"/></a>
