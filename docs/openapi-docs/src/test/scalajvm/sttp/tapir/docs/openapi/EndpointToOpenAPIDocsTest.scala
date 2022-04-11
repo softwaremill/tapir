@@ -129,13 +129,8 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     Validation.in_valid_int_array
   )
 
-  val allTestEndpoints9 = List(
-    hide_in_docs
-  )
-
   val allTestEndpoints = allTestEndpoints0 ++ allTestEndpoints1 ++ allTestEndpoints2 ++ allTestEndpoints3 ++
-    allTestEndpoints4 ++ allTestEndpoints5 ++ allTestEndpoints6 ++ allTestEndpoints7 ++ allTestEndpoints8 ++
-    allTestEndpoints9
+    allTestEndpoints4 ++ allTestEndpoints5 ++ allTestEndpoints6 ++ allTestEndpoints7 ++ allTestEndpoints8
 
   for (e <- allTestEndpoints) {
     test(s"${e.showDetail} should convert to open api") {
