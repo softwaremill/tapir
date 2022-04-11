@@ -38,15 +38,15 @@ object Redoc {
   def apply[F[_]](
       title: String,
       spec: String,
-      prefix: List[String] = List("docs"),
-      specName: String = "docs.yaml",
-      htmlName: String = "index.html",
+      options: RedocUIOptions,
       redocVersion: String = defaultRedocVersion
   ): List[ServerEndpoint[Any, F]] = {
-    val prefixInput = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixAsPath = prefix.mkString("/")
+    val specName = options.specName
+    val htmlName = options.htmlName
 
-    val html: String = redocHtml(title, s"/$prefixAsPath/$specName", redocVersion)
+    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
+
+    val prefixFromRoot = (options.contextPath ++ options.pathPrefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     def contentEndpoint(fileName: String, mediaType: MediaType) =
@@ -59,8 +59,10 @@ object Redoc {
       else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
       else MediaType("text", "plain")
 
-    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/$prefixAsPath/$htmlName"))
+    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/$prefixFromRoot/$htmlName"))
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
+
+    val html: String = redocHtml(title, s"/$prefixFromRoot/$specName", redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
     List(redirectToHtmlEndpoint, specEndpoint, htmlEndpoint)

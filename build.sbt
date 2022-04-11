@@ -896,9 +896,15 @@ lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
 
 lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"))
   .settings(commonJvmSettings)
-  .settings(name := "tapir-redoc-bundle")
+  .settings(
+    name := "tapir-redoc-bundle",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      scalaTest.value % Test
+    )
+  )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(redoc, openapiDocs, openapiCirceYaml)
+  .dependsOn(redoc, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
 
 // server
 
