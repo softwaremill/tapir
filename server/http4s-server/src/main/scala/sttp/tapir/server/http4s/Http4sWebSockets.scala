@@ -27,7 +27,7 @@ private[http4s] object Http4sWebSockets {
         case None                    => Stream.empty
       }
 
-      autoPongs
+      (autoPongs
         .map {
           case _: WebSocketFrame.Close if !o.decodeCloseRequests => None
           case f =>
@@ -40,7 +40,7 @@ private[http4s] object Http4sWebSockets {
         .through(pipe)
         .map(o.responses.encode)
         .mergeHaltL(Stream.repeatEval(pongs.take))
-        .mergeHaltL(autoPings)
+        .mergeHaltL(autoPings) ++ Stream(WebSocketFrame.close))
         .map(frameToHttp4sFrame)
     }
   }
