@@ -3,6 +3,7 @@ package sttp.tapir.server.http4s
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
+import fs2.Pipe
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.scalatest.OptionValues
@@ -106,6 +107,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
       new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+        override def emptyPipe[A, B]: Pipe[IO, A, B] = _ => fs2.Stream.empty
       }.tests() ++
       additionalTests()
   }
