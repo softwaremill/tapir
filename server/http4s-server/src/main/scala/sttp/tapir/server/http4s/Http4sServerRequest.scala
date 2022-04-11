@@ -31,5 +31,5 @@ private[http4s] case class Http4sServerRequest[F[_]](req: Request[F], attributes
   override def attribute[T](k: AttributeKey[T], v: T): Http4sServerRequest[F] = copy(attributes = attributes.put(k, v))
 
   override def withUnderlying(underlying: Any): ServerRequest =
-    new Http4sServerRequest(req = underlying.asInstanceOf[Request[F]], attributes)
+    Http4sServerRequest(req = underlying.asInstanceOf[Request[F]], attributes)
 }
