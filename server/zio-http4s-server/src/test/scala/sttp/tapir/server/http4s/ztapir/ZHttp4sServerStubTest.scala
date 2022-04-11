@@ -12,8 +12,8 @@ import zio.{Clock, RIO, Runtime}
 
 import scala.concurrent.Future
 
-object ZHttp4sCreateServerStubTest extends CreateServerStubTest[RIO[Clock, *], Http4sServerOptions[RIO[Clock, *], RIO[Clock, *]]] {
-  override def customiseInterceptors: CustomiseInterceptors[RIO[Clock, *], Http4sServerOptions[RIO[Clock, *], RIO[Clock, *]]] =
+object ZHttp4sCreateServerStubTest extends CreateServerStubTest[RIO[Clock, *], Http4sServerOptions[RIO[Clock, *]]] {
+  override def customiseInterceptors: CustomiseInterceptors[RIO[Clock, *], Http4sServerOptions[RIO[Clock, *]]] =
     Http4sServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[RIO[Clock, *], R] = SttpBackendStub(new CatsMonadError[RIO[Clock, *]])
   override def asFuture[A]: RIO[Clock, A] => Future[A] = rio => Runtime.default.unsafeRunToFuture(rio)

@@ -11,6 +11,7 @@
 * the names of Prometheus and OpenTelemetry metrics have changed; there are now three metrics (requests active, total and duration), instead of the previous 4 (requests active, total, response total and duration). Moreover, the request duration metric includes an additional label - phase (either headers or body), measuring how long it takes to create the headers or the body.
 * `CustomiseInterceptors.appendInterceptor` is replaced with `.addInterceptor`; `.prependInterceptor` and `.appendInterceptor` methods are also added
 * `RequestHandler`, returned by `RequestInterceptor`, now also accepts a list of server endpoints. This allows to dynamically filter the endpoints. Moreover, there's a new type parameter in `RequestInterceptor` and `RequestHandler`, `R`, specifying the capabilities required by the given server endpoints.
+* the http4s server interpreters have only one effect parameter, instead of two (`F` for the general effect and `G` for the body effect). This separation stopped making sense with the introduction of `BodyListener` some time ago and keeping `ServerInterpreter` using a single effect.
 
 ### Moved traits, classes, objects
 

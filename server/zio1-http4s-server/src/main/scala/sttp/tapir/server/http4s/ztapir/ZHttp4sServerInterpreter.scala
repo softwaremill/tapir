@@ -13,7 +13,7 @@ import zio.interop.catz._
 
 trait ZHttp4sServerInterpreter[R] {
 
-  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *]] =
     Http4sServerOptions.default
 
   def from(se: ZServerEndpoint[R, ZioStreams]): ServerEndpointsToRoutes = from(List(se))
@@ -56,10 +56,10 @@ object ZHttp4sServerInterpreter {
   }
 
   def apply[R](
-      serverOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]]
+      serverOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *]]
   ): ZHttp4sServerInterpreter[R] = {
     new ZHttp4sServerInterpreter[R] {
-      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *]] =
         serverOptions
     }
   }

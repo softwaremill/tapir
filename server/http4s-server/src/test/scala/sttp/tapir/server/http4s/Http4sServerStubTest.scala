@@ -10,8 +10,8 @@ import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, S
 
 import scala.concurrent.Future
 
-object Http4sCreateServerStubTest extends CreateServerStubTest[IO, Http4sServerOptions[IO, IO]] {
-  override def customiseInterceptors: CustomiseInterceptors[IO, Http4sServerOptions[IO, IO]] = Http4sServerOptions.customiseInterceptors
+object Http4sCreateServerStubTest extends CreateServerStubTest[IO, Http4sServerOptions[IO]] {
+  override def customiseInterceptors: CustomiseInterceptors[IO, Http4sServerOptions[IO]] = Http4sServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[IO, R] = SttpBackendStub[IO, R](new CatsMonadError[IO])
   override def asFuture[A]: IO[A] => Future[A] = io => io.unsafeToFuture()
 }
