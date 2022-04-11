@@ -13,6 +13,7 @@ import akka.http.scaladsl.server.Directives.{
 }
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.Method
@@ -85,7 +86,13 @@ trait AkkaHttpServerInterpreter {
               entity = HttpEntity.Default(contentType, contentLength, Source.empty)
             )
           )
-        } else complete(HttpResponse(statusCode, headers = akkaHeaders))
+        } else
+          response.contentType match {
+            case Some(t) =>
+              val contentType = ContentType.parse(t).getOrElse(ContentTypes.NoContentType)
+              complete(HttpResponse(statusCode, headers = akkaHeaders, entity = HttpEntity.Strict(contentType, ByteString.empty)))
+            case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
+          }
     }
   }
 }
