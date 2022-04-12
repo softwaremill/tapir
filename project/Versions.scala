@@ -35,7 +35,7 @@ object Versions {
   val jwtScala = "5.0.0"
   val derevo = "0.13.0"
   val newtype = "0.4.4"
-  val awsLambdaInterface = "2.1.0"
+  val awsLambdaInterface = "2.1.1"
   val armeria = "1.15.0"
   val scalaJava8Compat = "1.0.2"
   val fs2 = "3.2.7"
