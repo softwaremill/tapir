@@ -110,7 +110,7 @@ trait PlayServerInterpreter {
                   Left(
                     Result(ResponseHeader(status, headers), HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType))
                   )
-                else Left(Result(ResponseHeader(status, headers), HttpEntity.NoEntity))
+                else Left(Result(ResponseHeader(status, headers), HttpEntity.Strict(ByteString.empty, response.contentType)))
             }
         }
       }

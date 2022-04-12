@@ -4,10 +4,10 @@ import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.Streams
 import sttp.client3._
-import sttp.model.{Header, HeaderNames}
+import sttp.model.{Header, HeaderNames, MediaType}
 import sttp.monad.MonadError
 import sttp.tapir.tests.Test
-import sttp.tapir.tests.Streaming.{in_stream_out_stream, in_stream_out_stream_with_content_length}
+import sttp.tapir.tests.Streaming.{in_stream_out_stream, in_stream_out_stream_with_content_length, out_custom_content_type_stream_body}
 
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE], streams: Streams[S])(implicit
     m: MonadError[F]
@@ -43,6 +43,26 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
               }
             }
         }
+      },
+      testServer(out_custom_content_type_stream_body(streams)) { case (k, s) =>
+        pureResult((if (k < 0) (MediaType.ApplicationJson.toString(), s) else (MediaType.ApplicationXml.toString(), s)).asRight[Unit])
+      } { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri?kind=-1")
+          .body(penPineapple)
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right(penPineapple)
+            r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+          } >>
+          basicRequest
+            .post(uri"$baseUri?kind=1")
+            .body(penPineapple)
+            .send(backend)
+            .map { r =>
+              r.body shouldBe Right(penPineapple)
+              r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+            }
       }
     )
   }
