@@ -57,10 +57,12 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
 
           val docsPath = (context ++ prefix).mkString("/")
 
+          val docPathWithTrail = if (docsPath.isEmpty) docsPath else docsPath + "/"
+
           resp.code shouldBe StatusCode.Ok
           resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          resp.history.head.headers("Location").head shouldBe s"/$docsPath/${RedocUIOptions.default.htmlName}"
-          resp.body should include(s"/$docsPath/docs.yaml")
+          resp.history.head.headers("Location").head shouldBe s"/$docPathWithTrail${RedocUIOptions.default.htmlName}"
+          resp.body should include(s"/${docPathWithTrail}docs.yaml")
         }
       }
   }
