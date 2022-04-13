@@ -5,7 +5,7 @@ object Versions {
   val circeYaml = "0.14.1"
   val sttp = "3.4.1"
   val sttpModel = "1.4.25"
-  val sttpShared = "1.3.2"
+  val sttpShared = "1.3.4"
   val akkaHttp = "10.2.9"
   val akkaStreams = "2.6.19"
   val swaggerUi = "4.10.3"
