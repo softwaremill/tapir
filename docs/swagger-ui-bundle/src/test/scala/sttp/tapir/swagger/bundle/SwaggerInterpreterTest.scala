@@ -24,10 +24,12 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  def swaggerUITest(prefix: List[String], context: List[String]): IO[Assertion] = {
+  def swaggerUITest(prefix: List[String], context: List[String], useRelativePath: Boolean): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        SwaggerInterpreter(swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
+        SwaggerInterpreter(swaggerUIOptions =
+          SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context, useRelativePath = useRelativePath)
+        )
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
@@ -50,7 +52,11 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
           resp.code shouldBe StatusCode.Ok
           resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+          if (useRelativePath) {
+            resp.history.head.headers("Location").head shouldBe s"./${prefix.last}/"
+          } else {
+            resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+          }
 
           // test getting swagger-initializer.js, which should contain replaced link to spec
           val initializerJsResp = basicRequest
@@ -58,7 +64,11 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
             .get(uri"http://localhost:$port/${context ++ prefix}/swagger-initializer.js")
             .send(backend)
 
-          initializerJsResp.body should include(s"/$docsPath/docs.yaml")
+          if (useRelativePath) {
+            initializerJsResp.body should include(s"./docs.yaml")
+          } else {
+            initializerJsResp.body should include(s"/$docsPath/docs.yaml")
+          }
 
           // test getting a swagger-ui resource
           val respCss: Response[String] = basicRequest
@@ -72,15 +82,28 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
       }
   }
 
-  test("swagger UI under / route and /docs endpoint") {
-    swaggerUITest(List("docs"), Nil).unsafeRunSync()
+  test("swagger UI at /docs endpoint, using relative path") {
+    swaggerUITest(List("docs"), Nil, true).unsafeRunSync()
   }
 
-  test("swagger UI under /internal route /docs endpoint") {
-    swaggerUITest(List("docs"), List("internal")).unsafeRunSync()
+  test("swagger UI at /api/docs endpoint, using relative path") {
+    swaggerUITest(List("api", "docs"), Nil, true).unsafeRunSync()
   }
 
-  test("swagger UI under /internal/secret route /api/docs endpoint") {
-    swaggerUITest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
+  test("swagger UI ignores context route using relative path") {
+    swaggerUITest(List("api", "docs"), List("ignored"), true).unsafeRunSync()
   }
+
+  test("swagger UI under / route and /docs endpoint, no relative path") {
+    swaggerUITest(List("docs"), Nil, false).unsafeRunSync()
+  }
+
+  test("swagger UI under /internal route /docs endpoint, no relative path") {
+    swaggerUITest(List("docs"), List("internal"), false).unsafeRunSync()
+  }
+
+  test("swagger UI under /internal/secret route /api/docs endpoint, no relative path") {
+    swaggerUITest(List("api", "docs"), List("internal", "secret"), false).unsafeRunSync()
+  }
+
 }

@@ -32,10 +32,12 @@ object SwaggerUI {
     */
   def apply[F[_]](yaml: String, options: SwaggerUIOptions = SwaggerUIOptions.default): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixFromRoot = (options.contextPath ++ options.pathPrefix).mkString("/")
+    val prefixFromRoot = if (options.useRelativePath) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
+
+    val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
 
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
@@ -48,18 +50,24 @@ object SwaggerUI {
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"/$prefixFromRoot/oauth2-redirect.html$queryString")
+        Right(s"$prefixFromRoot/oauth2-redirect.html$queryString")
       }
 
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
     val swaggerInitializerJsWithReplacedUrl =
-      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"/$prefixFromRoot/${options.yamlName}")
+      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"$prefixFromRoot/${options.yamlName}")
 
-    val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
-      val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-      Right(s"/$prefixFromRoot/$queryString")
-    }
+    val redirectToSlashEndpoint = baseEndpoint
+      .in(noTrailingSlash)
+      .in(queryParams)
+      .in(lastSegmentInput)
+      .out(redirectOutput)
+      .serverLogicPure[F] { case (params, lastSegment) =>
+        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
+        val path = if (options.useRelativePath) lastSegment.map(str => s"$str/").getOrElse("") else ""
+        Right(s"$prefixFromRoot/$path$queryString")
+      }
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = anyFromUtf8StringBody(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
