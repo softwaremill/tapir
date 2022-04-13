@@ -6,7 +6,6 @@ import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import sttp.tapir._
-import sttp.tapir.examples.MultipleEndpointsDocumentationHttp4sServer.booksListingRoutes
 import sttp.tapir.redoc.RedocUIOptions
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.http4s.Http4sServerInterpreter
