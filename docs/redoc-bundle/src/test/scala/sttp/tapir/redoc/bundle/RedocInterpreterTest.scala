@@ -21,6 +21,14 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
+  test(s"redoc UI under root") {
+    redocTest(Nil, Nil).unsafeRunSync()
+  }
+
+  test(s"redoc UI under /api/v1 and empty endpoint") {
+    redocTest(Nil, List("api", "v1")).unsafeRunSync()
+  }
+
   test(s"redoc UI under / route and /docs/ endpoint") {
     redocTest(List("docs"), Nil).unsafeRunSync()
   }
