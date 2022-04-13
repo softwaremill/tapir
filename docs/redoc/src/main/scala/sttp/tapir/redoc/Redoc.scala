@@ -38,20 +38,25 @@ object Redoc {
   def apply[F[_]](
       title: String,
       spec: String,
-      prefix: List[String] = List("docs"),
-      specName: String = "docs.yaml",
-      htmlName: String = "index.html",
-      redocVersion: String = defaultRedocVersion
+      options: RedocUIOptions
   ): List[ServerEndpoint[Any, F]] = {
-    val prefixInput = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixAsPath = prefix.mkString("/")
+    val specName = options.specName
+    val htmlName = options.htmlName
 
-    val html: String = redocHtml(title, s"/$prefixAsPath/$specName", redocVersion)
+    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath) match {
+      case Nil => stringToPath("")
+      case x   => x.reduce[EndpointInput[Unit]](_.and(_))
+    }
+    val prefixFromRoot = (options.contextPath ++ options.pathPrefix) match {
+      case Nil => None
+      case x   => Option(x.mkString("/"))
+    }
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
+    val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
+
     def contentEndpoint(fileName: String, mediaType: MediaType) =
       baseEndpoint.in(fileName).out(stringBody).out(header(Header.contentType(mediaType)))
-    val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
 
     val specNameLowerCase = specName.toLowerCase
     val specMediaType =
@@ -59,10 +64,20 @@ object Redoc {
       else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
       else MediaType("text", "plain")
 
-    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/$prefixAsPath/$htmlName"))
+    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/${concat(prefixFromRoot, htmlName)}"))
+    val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
+      val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
+      Right(s"/$prefixFromRoot/$queryString")
+    }
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
+
+    val html: String = redocHtml(title, s"/${concat(prefixFromRoot, specName)}", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
-    List(redirectToHtmlEndpoint, specEndpoint, htmlEndpoint)
+    List(redirectToHtmlEndpoint, redirectToSlashEndpoint, specEndpoint, htmlEndpoint)
+  }
+
+  private def concat(prefixFromRoot: Option[String], fileName: String) = {
+    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"$fileName")
   }
 }
