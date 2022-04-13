@@ -13,7 +13,6 @@ trait RedocInterpreter {
   def customiseDocsModel: OpenAPI => OpenAPI
   def redocUIOptions: RedocUIOptions
   def addServerWhenContextPathPresent: Boolean
-  def redocVersion: String
 
   def fromEndpoints[F[_]](
       endpoints: List[AnyEndpoint],
@@ -26,7 +25,7 @@ trait RedocInterpreter {
     } else openapi0
     val openapi = customiseDocsModel(openapi1)
     val yaml = openapi.toYaml
-    Redoc(info.title, yaml, redocUIOptions, redocVersion)
+    Redoc(info.title, yaml, redocUIOptions)
   }
 
   def fromEndpoints[F[_]](
@@ -77,27 +76,22 @@ object RedocInterpreter {
     *   Should a default server entry be added to the generated [[OpenAPI]] model pointing to the context path, if a non-empty context path
     *   is specified in `swaggerUIOptions`. In presence of a context path, either the endpoints need to be prefixed with the context path,
     *   or a server entry must be added, for invocations from within the Swagger UI to work properly. Defaults to `true`.
-    * @param redocVersion
-    *   \- version of Redoc library
     */
   def apply(
       openAPIInterpreterOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default,
       customiseDocsModel: OpenAPI => OpenAPI = identity,
       redocUIOptions: RedocUIOptions = RedocUIOptions.default,
-      addServerWhenContextPathPresent: Boolean = true,
-      redocVersion: String = "2.0.0-rc.56"
+      addServerWhenContextPathPresent: Boolean = true
   ): RedocInterpreter = {
     val opts = openAPIInterpreterOptions
     val cdm = customiseDocsModel
     val r = redocUIOptions
     val aswcpp = addServerWhenContextPathPresent
-    val rv = redocVersion
     new RedocInterpreter {
       override val openAPIInterpreterOptions: OpenAPIDocsOptions = opts
       override val customiseDocsModel: OpenAPI => OpenAPI = cdm
       override val redocUIOptions: RedocUIOptions = r
       override val addServerWhenContextPathPresent: Boolean = aswcpp
-      override val redocVersion: String = rv
     }
   }
 }

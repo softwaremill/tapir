@@ -38,8 +38,7 @@ object Redoc {
   def apply[F[_]](
       title: String,
       spec: String,
-      options: RedocUIOptions,
-      redocVersion: String = defaultRedocVersion
+      options: RedocUIOptions
   ): List[ServerEndpoint[Any, F]] = {
     val specName = options.specName
     val htmlName = options.htmlName
@@ -72,7 +71,7 @@ object Redoc {
     }
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
 
-    val html: String = redocHtml(title, s"/${concat(prefixFromRoot, specName)}", redocVersion)
+    val html: String = redocHtml(title, s"/${concat(prefixFromRoot, specName)}", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
     List(redirectToHtmlEndpoint, redirectToSlashEndpoint, specEndpoint, htmlEndpoint)
