@@ -48,9 +48,13 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
           val docsPath = (context ++ prefix).mkString("/")
 
+          val docPathWithTrail = if (docsPath.isEmpty) docsPath else docsPath + "/"
+
           resp.code shouldBe StatusCode.Ok
-          resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+          resp.history.headOption.map { historicalResp =>
+            historicalResp.code shouldBe StatusCode.PermanentRedirect
+            historicalResp.headers("Location").head shouldBe s"/$docsPath/"
+          }
 
           // test getting swagger-initializer.js, which should contain replaced link to spec
           val initializerJsResp = basicRequest
@@ -58,7 +62,7 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
             .get(uri"http://localhost:$port/${context ++ prefix}/swagger-initializer.js")
             .send(backend)
 
-          initializerJsResp.body should include(s"/$docsPath/docs.yaml")
+          initializerJsResp.body should include(s"/${docPathWithTrail}docs.yaml")
 
           // test getting a swagger-ui resource
           val respCss: Response[String] = basicRequest
@@ -70,6 +74,14 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           respCss.body should include(".swagger-ui")
         }
       }
+  }
+
+  test(s"swagger UI under root") {
+    swaggerUITest(Nil, Nil).unsafeRunSync()
+  }
+
+  test(s"swagger UI under /api/v1 and empty endpoint") {
+    swaggerUITest(Nil, List("api", "v1")).unsafeRunSync()
   }
 
   test("swagger UI under / route and /docs endpoint") {
