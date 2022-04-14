@@ -75,7 +75,7 @@ object Redoc {
       Right(concat(prefixFromRoot, queryString))
     }
 
-    if (emptyInput.equals(prefixInput))
+    if (options.pathPrefix == Nil)
       docEndpoints ++ List(redirectToHtmlEndpoint)
     else
       docEndpoints ++ List(redirectToHtmlEndpoint, redirectToSlashEndpoint)
