@@ -21,37 +21,50 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  test(s"redoc UI at root") {
-    redocTest(Nil, Nil).unsafeRunSync()
+  test(s"redoc UI at root, relative path") {
+    redocTest(Nil, Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test(s"redoc UI at ./docs endpoint") {
-    redocTest(List("docs"), Nil).unsafeRunSync()
+  test(s"redoc UI at ./docs endpoint, relative path") {
+    redocTest(List("docs"), Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test("redoc UI at ./api/docs endpoint") {
-    redocTest(List("api", "docs"), Nil).unsafeRunSync()
+  test("redoc UI at ./api/docs endpoint, relative path") {
+    redocTest(List("api", "docs"), Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test(s"redoc UI at /api/v1 and empty endpoint") {
-    redocTest(Nil, List("api", "v1")).unsafeRunSync()
+  test(s"redoc UI at root, absolute path") {
+    redocTest(Nil, Nil, useRelativePaths = false).unsafeRunSync()
   }
 
-  test(s"redoc UI at /internal route /docs endpoint") {
-    redocTest(List("docs"), List("internal")).unsafeRunSync()
+  test(s"redoc UI at ./docs endpoint, absolute path") {
+    redocTest(List("docs"), Nil, useRelativePaths = false).unsafeRunSync()
   }
 
-  test(s"redoc UI at /internal/secret route /api/docs endpoint ") {
-    redocTest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
+  test("redoc UI at ./api/docs endpoint, absolute path") {
+    redocTest(List("api", "docs"), Nil, useRelativePaths = false).unsafeRunSync()
   }
 
-  private def redocTest(prefix: List[String], context: List[String]): IO[Assertion] = {
+  test(s"redoc UI at /api/v1 and empty endpoint, absolute path") {
+    redocTest(Nil, List("api", "v1"), useRelativePaths = false).unsafeRunSync()
+  }
+
+  test(s"redoc UI at /internal route /docs endpoint, absolute path") {
+    redocTest(List("docs"), List("internal"), useRelativePaths = false).unsafeRunSync()
+  }
+
+  test(s"redoc UI at /internal/secret route /api/docs endpoint, absolute path") {
+    redocTest(List("api", "docs"), List("internal", "secret"), useRelativePaths = false).unsafeRunSync()
+  }
+
+  private def redocTest(prefix: List[String], context: List[String], useRelativePaths: Boolean): IO[Assertion] = {
     val redocUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        RedocInterpreter(redocUIOptions = RedocUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
+        RedocInterpreter(redocUIOptions =
+          RedocUIOptions.default.copy(pathPrefix = prefix, contextPath = context, useRelativePaths = useRelativePaths)
+        )
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
-    val useRelativePath = context.isEmpty
 
     BlazeServerBuilder[IO]
       .bindHttp(0, "localhost")
@@ -72,19 +85,25 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
           resp.history should have size (1)
 
           val docPath =
-            if (useRelativePath) "."
+            if (useRelativePaths) "."
             else (if ((context ++ prefix).isEmpty) ""
                   else s"/${(context ++ prefix).mkString("/")}")
           resp.body should include(s"$docPath/docs.yaml")
 
-          val redirectPath = if (useRelativePath) {
+          val redirectPath = if (useRelativePaths) {
             prefix.lastOption match {
               case Some(lastPrefix) => s"./$lastPrefix"
               case None             => "."
             }
-          } else "/" + (context ++ prefix).mkString("/")
+          } else {
+            (context ++ prefix) match {
+              case Nil => ""
+              case l   => "/" + l.mkString("/")
+            }
+          }
           val firstHistory = resp.history.head
           firstHistory.code shouldBe StatusCode.PermanentRedirect
+          println(firstHistory.header("Location"))
           firstHistory.header("Location") shouldBe Some(s"$redirectPath/${RedocUIOptions.default.htmlName}")
 
           // test getting docs.yaml

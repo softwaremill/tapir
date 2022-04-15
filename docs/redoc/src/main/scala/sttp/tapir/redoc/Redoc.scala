@@ -45,16 +45,6 @@ object Redoc {
 
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
 
-    val useRelativePath = options.contextPath.isEmpty
-    val fullPrefix =
-      if (useRelativePath) Some(".")
-      else {
-        options.contextPath ++ options.pathPrefix match {
-          case Nil      => None
-          case segments => Some("/" + segments.mkString("/"))
-        }
-      }
-
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
 
@@ -69,7 +59,8 @@ object Redoc {
 
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
 
-    val html: String = redocHtml(title, s"${concat(fullPrefix, specName)}", options.redocVersion)
+    val specPrefix = if (options.useRelativePaths) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
+    val html: String = redocHtml(title, s"$specPrefix/$specName", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
     val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)
@@ -79,19 +70,19 @@ object Redoc {
         .in(lastSegmentInput)
         .out(redirectOutput)
         .serverLogicPure[F] { lastSegment =>
-          if (useRelativePath) {
+          if (options.useRelativePaths) {
             val pathFromLastSegment: String = lastSegment match {
               case Some(s) if s.nonEmpty => s + "/"
               case _                     => ""
             }
-            Right(s"${concat(fullPrefix, pathFromLastSegment + htmlName)}")
-          } else Right(concat(fullPrefix, htmlName))
+            Right(s"./$pathFromLastSegment$htmlName")
+          } else
+            Right(options.contextPath ++ options.pathPrefix match {
+              case Nil      => s"/$htmlName"
+              case segments => s"/${segments.mkString("/")}/$htmlName"
+            })
         }
 
     List(specEndpoint, htmlEndpoint, redirectToHtmlEndpoint)
-  }
-
-  private def concat(prefixFromRoot: Option[String], fileName: String) = {
-    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"$fileName")
   }
 }

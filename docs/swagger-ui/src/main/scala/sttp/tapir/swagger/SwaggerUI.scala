@@ -31,10 +31,9 @@ object SwaggerUI {
     *   Options to customise how the documentation is exposed through SwaggerUI, e.g. the path.
     */
   def apply[F[_]](yaml: String, options: SwaggerUIOptions = SwaggerUIOptions.default): List[ServerEndpoint[Any, F]] = {
-    val useRelativePath = options.contextPath.isEmpty
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
     val prefixFromRoot =
-      if (useRelativePath) Some(".")
+      if (options.useRelativePaths) Some(".")
       else {
         options.contextPath ++ options.pathPrefix match {
           case Nil => None
@@ -84,7 +83,7 @@ object SwaggerUI {
         .out(redirectOutput)
         .serverLogicPure[F] { case (params, lastSegment) =>
           val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-          val path = if (useRelativePath) lastSegment.map(str => s"$str/").getOrElse("") else ""
+          val path = if (options.useRelativePaths) lastSegment.map(str => s"$str/").getOrElse("") else ""
           Right(s"${concat(prefixFromRoot, path + queryString)}")
         }
 
