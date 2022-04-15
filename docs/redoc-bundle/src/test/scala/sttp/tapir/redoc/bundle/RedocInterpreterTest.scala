@@ -21,23 +21,27 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  test(s"redoc UI under root") {
+  test(s"redoc UI at root") {
     redocTest(Nil, Nil).unsafeRunSync()
   }
 
-  test(s"redoc UI under /api/v1 and empty endpoint") {
-    redocTest(Nil, List("api", "v1")).unsafeRunSync()
-  }
-
-  test(s"redoc UI under / route and /docs/ endpoint") {
+  test(s"redoc UI at ./docs endpoint") {
     redocTest(List("docs"), Nil).unsafeRunSync()
   }
 
-  test(s"redoc UI under /internal route /docs/ endpoint") {
+  test("redoc UI at ./api/docs endpoint") {
+    redocTest(List("api", "docs"), Nil).unsafeRunSync()
+  }
+
+  test(s"redoc UI at /api/v1 and empty endpoint") {
+    redocTest(Nil, List("api", "v1")).unsafeRunSync()
+  }
+
+  test(s"redoc UI at /internal route /docs endpoint") {
     redocTest(List("docs"), List("internal")).unsafeRunSync()
   }
 
-  test(s"redoc UI under /internal/secret route /api/docs/ endpoint ") {
+  test(s"redoc UI at /internal/secret route /api/docs endpoint ") {
     redocTest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
   }
 
@@ -47,6 +51,7 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
         RedocInterpreter(redocUIOptions = RedocUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
+    val useRelativePath = context.isEmpty
 
     BlazeServerBuilder[IO]
       .bindHttp(0, "localhost")
@@ -57,20 +62,39 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
           val port = server.address.getPort
           val client: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
-          // test redirect from no-trailing-slash, which should return index.html in the end
+          // test no-trailing-slash redirect to index.html
           val resp: Response[String] = basicRequest
             .response(asStringAlways)
-            .get(uri"http://localhost:$port/${context ++ prefix}/")
+            .get(uri"http://localhost:$port/${context ++ prefix}")
             .send(client)
 
-          val docsPath = (context ++ prefix).mkString("/")
-
-          val docPathWithTrail = if (docsPath.isEmpty) docsPath else docsPath + "/"
-
           resp.code shouldBe StatusCode.Ok
-          resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          resp.history.head.headers("Location").head shouldBe s"/$docPathWithTrail${RedocUIOptions.default.htmlName}"
-          resp.body should include(s"/${docPathWithTrail}docs.yaml")
+          resp.history should have size (1)
+
+          val docPath =
+            if (useRelativePath) "."
+            else (if ((context ++ prefix).isEmpty) ""
+                  else s"/${(context ++ prefix).mkString("/")}")
+          resp.body should include(s"$docPath/docs.yaml")
+
+          val redirectPath = if (useRelativePath) {
+            prefix.lastOption match {
+              case Some(lastPrefix) => s"./$lastPrefix"
+              case None             => "."
+            }
+          } else "/" + (context ++ prefix).mkString("/")
+          val firstHistory = resp.history.head
+          firstHistory.code shouldBe StatusCode.PermanentRedirect
+          firstHistory.header("Location") shouldBe Some(s"$redirectPath/${RedocUIOptions.default.htmlName}")
+
+          // test getting docs.yaml
+          val yamlResp: Response[String] = basicRequest
+            .response(asStringAlways)
+            .get(uri"http://localhost:$port/${context ++ prefix}/docs.yaml")
+            .send(client)
+
+          yamlResp.code shouldBe StatusCode.Ok
+          yamlResp.body should include("The tapir library")
         }
       }
   }

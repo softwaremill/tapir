@@ -45,10 +45,15 @@ object Redoc {
 
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
 
-    val prefixFromRoot = (options.contextPath ++ options.pathPrefix) match {
-      case Nil => None
-      case x   => Option(x.mkString("/"))
-    }
+    val useRelativePath = options.contextPath.isEmpty
+    val fullPrefix =
+      if (useRelativePath) Some(".")
+      else {
+        options.contextPath ++ options.pathPrefix match {
+          case Nil      => None
+          case segments => Some("/" + segments.mkString("/"))
+        }
+      }
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -64,21 +69,26 @@ object Redoc {
 
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
 
-    val html: String = redocHtml(title, s"/${concat(prefixFromRoot, specName)}", options.redocVersion)
+    val html: String = redocHtml(title, s"${concat(fullPrefix, specName)}", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
-    val docEndpoints = List(specEndpoint, htmlEndpoint)
+    val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)
 
-    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/${concat(prefixFromRoot, htmlName)}"))
-    val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
-      val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-      Right(concat(prefixFromRoot, queryString))
-    }
+    val redirectToHtmlEndpoint =
+      baseEndpoint
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { lastSegment =>
+          if (useRelativePath) {
+            val pathFromLastSegment: String = lastSegment match {
+              case Some(s) if s.nonEmpty => s + "/"
+              case _                     => ""
+            }
+            Right(s"${concat(fullPrefix, pathFromLastSegment + htmlName)}")
+          } else Right(concat(fullPrefix, htmlName))
+        }
 
-    if (options.pathPrefix == Nil)
-      docEndpoints ++ List(redirectToHtmlEndpoint)
-    else
-      docEndpoints ++ List(redirectToHtmlEndpoint, redirectToSlashEndpoint)
+    List(specEndpoint, htmlEndpoint, redirectToHtmlEndpoint)
   }
 
   private def concat(prefixFromRoot: Option[String], fileName: String) = {
