@@ -31,7 +31,7 @@ val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
 By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
-changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the swagger endpoints are deployed 
+changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the SwaggerUI endpoints are deployed 
 within a context, and you don't want Swagger to use relative paths, you'll need to set the `useRelativePaths` options
 to `false`, and specify the `contextPath` one.
 
