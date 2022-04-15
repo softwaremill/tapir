@@ -45,8 +45,6 @@ object SwaggerUI {
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
 
-    val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
-
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
       .out(stringBody)
@@ -78,6 +76,7 @@ object SwaggerUI {
 
     if (options.pathPrefix == Nil) List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
     else {
+      val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
       val redirectToSlashEndpoint = baseEndpoint
         .in(noTrailingSlash)
         .in(queryParams)

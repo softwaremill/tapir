@@ -85,28 +85,27 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
       }
   }
 
-  test("swagger UI at /docs endpoint, using relative path") {
-    swaggerUITest(List("docs"), Nil).unsafeRunSync()
-  }
-
-  test("swagger UI at /api/docs endpoint, using relative path") {
-    swaggerUITest(List("api", "docs"), Nil).unsafeRunSync()
-  }
-
-  test(s"swagger UI under root, using relative path") {
+  test(s"swagger UI at root") {
     swaggerUITest(Nil, Nil).unsafeRunSync()
   }
 
-  test(s"swagger UI under /api/v1 and empty endpoint, no relative path") {
+  test("swagger UI at ./docs endpoint") {
+    swaggerUITest(List("docs"), Nil).unsafeRunSync()
+  }
+
+  test("swagger UI at ./api/docs endpoint") {
+    swaggerUITest(List("api", "docs"), Nil).unsafeRunSync()
+  }
+
+  test(s"swagger UI at ./api/v1 and empty endpoint") {
     swaggerUITest(Nil, List("api", "v1")).unsafeRunSync()
   }
 
-  test("swagger UI under /internal route /docs endpoint, no relative path") {
+  test("swagger UI at /internal route /docs endpoint") {
     swaggerUITest(List("docs"), List("internal")).unsafeRunSync()
   }
 
-  test("swagger UI under /internal/secret route /api/docs endpoint, no relative path") {
+  test("swagger UI at /internal/secret route /api/docs endpoint") {
     swaggerUITest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
   }
-
 }
