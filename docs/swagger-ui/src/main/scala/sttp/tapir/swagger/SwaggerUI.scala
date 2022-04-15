@@ -68,7 +68,7 @@ object SwaggerUI {
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    if (options.pathPrefix == Nil) List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    if (options.pathPrefix == Nil) List(yamlEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint, oauth2Endpoint)
     else {
       val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
       val redirectToSlashEndpoint = baseEndpoint
@@ -82,7 +82,7 @@ object SwaggerUI {
           Right(s"${concat(fullPathPrefix, path + queryString)}")
         }
 
-      List(yamlEndpoint, redirectToSlashEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+      List(yamlEndpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint, oauth2Endpoint)
     }
 
   }
