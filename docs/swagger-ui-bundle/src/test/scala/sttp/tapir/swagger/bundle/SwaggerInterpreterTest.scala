@@ -53,14 +53,12 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           val docPathWithTrail = if (docsPath.isEmpty) docsPath else docsPath + "/"
 
           resp.code shouldBe StatusCode.Ok
-          } else {
-            resp.history.headOption.map { historicalResp =>
-              historicalResp.code shouldBe StatusCode.PermanentRedirect
-              if (useRelativePath) {
-                historicalResp.headers("Location").head shouldBe s"./${prefix.last}/"
-              } else {
-                historicalResp.headers("Location").head shouldBe s"/$docsPath/"
-              }
+          resp.history.headOption.map { historicalResp =>
+            historicalResp.code shouldBe StatusCode.PermanentRedirect
+            if (useRelativePath) {
+              historicalResp.headers("Location").head shouldBe s"./${prefix.last}/"
+            } else {
+              historicalResp.headers("Location").head shouldBe s"/$docsPath/"
             }
           }
 
@@ -73,7 +71,7 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           if (useRelativePath) {
             initializerJsResp.body should include(s"./docs.yaml")
           } else {
-            initializerJsResp.body should include(s"/$docPathWithTrail/docs.yaml")
+            initializerJsResp.body should include(s"/${docPathWithTrail}docs.yaml")
           }
 
           // test getting a swagger-ui resource
@@ -87,8 +85,6 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
         }
       }
   }
-
-
 
   test("swagger UI at /docs endpoint, using relative path") {
     swaggerUITest(List("docs"), Nil, true).unsafeRunSync()

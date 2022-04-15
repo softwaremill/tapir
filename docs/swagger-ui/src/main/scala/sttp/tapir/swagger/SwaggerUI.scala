@@ -66,17 +66,6 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(prefixFromRoot, options.yamlName)}")
 
-    val redirectToSlashEndpoint = baseEndpoint
-      .in(noTrailingSlash)
-      .in(queryParams)
-      .in(lastSegmentInput)
-      .out(redirectOutput)
-      .serverLogicPure[F] { case (params, lastSegment) =>
-        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        val path = if (options.useRelativePath) lastSegment.map(str => s"$str/").getOrElse("") else ""
-        Right(s"${concat(prefixFromRoot, queryString)}")
-      }
-
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
       baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
@@ -86,14 +75,25 @@ object SwaggerUI {
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    if (options.pathPrefix == Nil)
-      List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
-    else
+    if (options.pathPrefix == Nil) List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    else {
+      val redirectToSlashEndpoint = baseEndpoint
+        .in(noTrailingSlash)
+        .in(queryParams)
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { case (params, lastSegment) =>
+          val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
+          val path = if (options.useRelativePath) lastSegment.map(str => s"$str/").getOrElse("") else ""
+          Right(s"${concat(prefixFromRoot, path + queryString)}")
+        }
+
       List(yamlEndpoint, redirectToSlashEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    }
 
   }
 
   private def concat(prefixFromRoot: Option[String], fileName: String) = {
-    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"$fileName")
+    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"/$fileName")
   }
 }
