@@ -24,14 +24,13 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  def swaggerUITest(prefix: List[String], context: List[String], useRelativePath: Boolean): IO[Assertion] = {
+  def swaggerUITest(prefix: List[String], context: List[String]): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        SwaggerInterpreter(swaggerUIOptions =
-          SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context, useRelativePath = useRelativePath)
-        )
+        SwaggerInterpreter(swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
+    val useRelativePath = context.isEmpty
 
     BlazeServerBuilder[IO]
       .bindHttp(0, "localhost")
@@ -87,35 +86,27 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
   }
 
   test("swagger UI at /docs endpoint, using relative path") {
-    swaggerUITest(List("docs"), Nil, true).unsafeRunSync()
+    swaggerUITest(List("docs"), Nil).unsafeRunSync()
   }
 
   test("swagger UI at /api/docs endpoint, using relative path") {
-    swaggerUITest(List("api", "docs"), Nil, true).unsafeRunSync()
+    swaggerUITest(List("api", "docs"), Nil).unsafeRunSync()
   }
 
-  test("swagger UI ignores context route using relative path") {
-    swaggerUITest(List("api", "docs"), List("ignored"), true).unsafeRunSync()
-  }
-
-  test(s"swagger UI under root, no relative path") {
-    swaggerUITest(Nil, Nil, false).unsafeRunSync()
+  test(s"swagger UI under root, using relative path") {
+    swaggerUITest(Nil, Nil).unsafeRunSync()
   }
 
   test(s"swagger UI under /api/v1 and empty endpoint, no relative path") {
-    swaggerUITest(Nil, List("api", "v1"), false).unsafeRunSync()
-  }
-
-  test("swagger UI under / route and /docs endpoint, no relative path") {
-    swaggerUITest(List("docs"), Nil, false).unsafeRunSync()
+    swaggerUITest(Nil, List("api", "v1")).unsafeRunSync()
   }
 
   test("swagger UI under /internal route /docs endpoint, no relative path") {
-    swaggerUITest(List("docs"), List("internal"), false).unsafeRunSync()
+    swaggerUITest(List("docs"), List("internal")).unsafeRunSync()
   }
 
   test("swagger UI under /internal/secret route /api/docs endpoint, no relative path") {
-    swaggerUITest(List("api", "docs"), List("internal", "secret"), false).unsafeRunSync()
+    swaggerUITest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
   }
 
 }
