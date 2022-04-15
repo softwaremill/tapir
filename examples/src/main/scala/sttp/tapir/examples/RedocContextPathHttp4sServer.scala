@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 
 object RedocContextPathHttp4sServer extends IOApp {
   val contextPath = List("api", "v1")
-  val docPathPrefix: List[String] = Nil // "redoc" :: Nil
+  val docPathPrefix: List[String] = "redoc" :: Nil
 
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
