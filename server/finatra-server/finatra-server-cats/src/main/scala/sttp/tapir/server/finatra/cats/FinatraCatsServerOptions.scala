@@ -7,7 +7,7 @@ import com.twitter.util.logging.Logging
 import sttp.tapir.TapirFile
 import sttp.tapir.server.finatra.FinatraServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.finatra.cats.conversions._
 
 case class FinatraCatsServerOptions[F[_]](
@@ -20,7 +20,7 @@ case class FinatraCatsServerOptions[F[_]](
 object FinatraCatsServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, FinatraCatsServerOptions[F]] = {
+  def customiseInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomiseInterceptors[F, FinatraCatsServerOptions[F]] = {
     def finatraCatsServerLog(finatraServerLog: DefaultServerLog[Future]): ServerLog[F] = DefaultServerLog[F](
       doLogWhenReceived = m => finatraServerLog.doLogWhenReceived(m).asF,
       doLogWhenHandled = (m, e) => finatraServerLog.doLogWhenHandled(m, e).asF,
@@ -29,8 +29,8 @@ object FinatraCatsServerOptions extends Logging {
       noLog = finatraServerLog.noLog.asF
     )
 
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, FinatraCatsServerOptions[F]]) =>
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[F, FinatraCatsServerOptions[F]]) =>
         FinatraCatsServerOptions[F](
           dispatcher,
           FinatraServerOptions.defaultCreateFile(FinatraServerOptions.futurePool)(_).asF,
@@ -40,5 +40,5 @@ object FinatraCatsServerOptions extends Logging {
     ).serverLog(finatraCatsServerLog(FinatraServerOptions.defaultServerLog)).rejectHandler(None)
   }
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): FinatraCatsServerOptions[F] = customInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): FinatraCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 }

@@ -15,7 +15,7 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
     extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
-    val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customInterceptors).options
+    val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 

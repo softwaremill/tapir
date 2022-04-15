@@ -9,7 +9,7 @@ import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.stub.TapirStubInterpreter
 
@@ -62,6 +62,6 @@ object UsersApi {
   val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     Option(ValuedEndpointOutput(stringBody.and(statusCode), (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)))
   )
-  val options: CustomInterceptors[Future, AkkaHttpServerOptions] = AkkaHttpServerOptions.customInterceptors
+  val options: CustomiseInterceptors[Future, AkkaHttpServerOptions] = AkkaHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
 }

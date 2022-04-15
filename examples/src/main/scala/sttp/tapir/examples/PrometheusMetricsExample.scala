@@ -31,7 +31,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   val prometheusMetrics = PrometheusMetrics.default[Future]()
 
   val serverOptions: AkkaHttpServerOptions =
-    AkkaHttpServerOptions.customInterceptors
+    AkkaHttpServerOptions.customiseInterceptors
       // Adds an interceptor which collects metrics by executing callbacks
       .metricsInterceptor(prometheusMetrics.metricsInterceptor())
       .options

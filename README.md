@@ -4,6 +4,17 @@
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
+## Why tapir?
+
+* **type-safety**: compile-time guarantees, develop-time completions, read-time information
+* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
+* **observability**: leverage the metadata to report rich metrics and tracing information
+* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
+* **library, not a framework**: integrates with your stack
+
+## Intro
+
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
 interpreted as:
@@ -34,6 +45,12 @@ Is your company already using tapir? We're building an "adopters" section in the
 Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest. 
 
 We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
+
+## Adopters
+
+| <a href="https://www.colisweb.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="120"/></a> | <a href="https://swissborg.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swissborg.png" alt="Swissborg" width="160"/></a> | <a href="https://www.kelkoogroup.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kelkoogroup.png" alt="Kelkoo group" width="160"/></a> |
+| :---: | :---: | :---: |
+| <a href="https://kaizo.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kaizo.png" alt="Kaizo" width="160"/></a> | <a href="https://www.process.st/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/process_street.png" alt="Process Street" width="100"/></a> | <a href="https://www.softwaremill.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="Softwaremill" width="160"/></a>
 
 ## Teaser
 
@@ -168,4 +185,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2021 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2022 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

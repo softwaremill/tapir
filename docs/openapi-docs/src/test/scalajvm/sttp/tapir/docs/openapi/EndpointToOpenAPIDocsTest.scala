@@ -4,6 +4,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.AnyEndpoint
 import sttp.tapir.tests.Security._
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Files._
@@ -13,8 +14,7 @@ import sttp.tapir.tests.OneOf._
 
 class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
 
-  // TODO: combine after https://github.com/lampepfl/dotty/issues/12915 is fixed
-  val allTestEndpoints0 = List(
+  val allTestEndpoints: List[AnyEndpoint] = List(
     in_query_out_string,
     in_query_out_infallible_string,
     in_query_query_out_string,
@@ -24,10 +24,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_string_out_string,
     in_path,
     in_fixed_header_out_string,
-    in_mapped_query_out_string
-  )
-
-  val allTestEndpoints1 = List(
+    in_mapped_query_out_string,
     in_mapped_path_out_string,
     in_mapped_path_path_out_string,
     in_query_mapped_path_path_out_string,
@@ -36,10 +33,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_header_before_path,
     in_json_out_json,
     in_content_type_fixed_header,
-    in_content_type_header_with_custom_decode_results
-  )
-
-  val allTestEndpoints2 = List(
+    in_content_type_header_with_custom_decode_results,
     in_byte_array_out_byte_array,
     in_byte_buffer_out_byte_buffer,
     in_input_stream_out_input_stream,
@@ -49,10 +43,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_unit_out_string,
     in_unit_error_out_string,
     in_form_out_form,
-    in_query_params_out_string
-  )
-
-  val allTestEndpoints3 = List(
+    in_query_params_out_string,
     in_headers_out_headers,
     in_json_out_headers,
     in_paths_out_string,
@@ -62,10 +53,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_simple_multipart_out_multipart,
     in_simple_multipart_out_string,
     in_simple_multipart_out_raw_string,
-    in_file_multipart_out_multipart
-  )
-
-  val allTestEndpoints4 = List(
+    in_file_multipart_out_multipart,
     in_raw_multipart_out_string,
     in_cookie_cookie_out_header,
     in_cookies_out_cookies,
@@ -75,10 +63,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_extract_request_out_string,
     in_security_apikey_header_out_string,
     in_security_apikey_query_out_string,
-    in_security_basic_out_string
-  )
-
-  val allTestEndpoints5 = List(
+    in_security_basic_out_string,
     in_security_bearer_out_string,
     in_string_out_status_from_string,
     in_int_out_value_form_exact_match,
@@ -88,10 +73,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     delete_endpoint,
     in_string_out_content_type_string,
     in_content_type_out_string,
-    in_unit_out_html
-  )
-
-  val allTestEndpoints6 = List(
+    in_unit_out_html,
     in_unit_out_header_redirect,
     in_unit_out_fixed_header,
     in_optional_json_out_optional_json,
@@ -101,10 +83,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     in_4query_out_4header_extended,
     in_3query_out_3header_mapped_to_tuple,
     in_2query_out_2query_mapped_to_unit,
-    in_query_with_default_out_string
-  )
-
-  val allTestEndpoints7 = List(
+    in_query_with_default_out_string,
     out_fixed_content_type_header,
     out_json_or_default_json,
     out_no_content_or_ok_empty_output,
@@ -114,10 +93,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     Validation.in_query_tagged,
     Validation.in_query,
     Validation.in_valid_json,
-    Validation.in_valid_optional_json
-  )
-
-  val allTestEndpoints8 = List(
+    Validation.in_valid_optional_json,
     Validation.in_valid_query,
     Validation.in_valid_json_collection,
     Validation.in_valid_map,
@@ -128,14 +104,6 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     Validation.in_json_wrapper_enum,
     Validation.in_valid_int_array
   )
-
-  val allTestEndpoints9 = List(
-    hide_in_docs
-  )
-
-  val allTestEndpoints = allTestEndpoints0 ++ allTestEndpoints1 ++ allTestEndpoints2 ++ allTestEndpoints3 ++
-    allTestEndpoints4 ++ allTestEndpoints5 ++ allTestEndpoints6 ++ allTestEndpoints7 ++ allTestEndpoints8 ++
-    allTestEndpoints9
 
   for (e <- allTestEndpoints) {
     test(s"${e.showDetail} should convert to open api") {

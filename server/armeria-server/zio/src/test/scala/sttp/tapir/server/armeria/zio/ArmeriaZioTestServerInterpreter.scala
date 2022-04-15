@@ -9,7 +9,7 @@ class ArmeriaZioTestServerInterpreter extends ArmeriaTestServerInterpreter[ZioSt
   import ArmeriaZioTestServerInterpreter._
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): TapirService[ZioStreams, Task] = {
-    val options: ArmeriaZioServerOptions[Task] = interceptors(ArmeriaZioServerOptions.customInterceptors).options
+    val options: ArmeriaZioServerOptions[Task] = interceptors(ArmeriaZioServerOptions.customiseInterceptors).options
     ArmeriaZioServerInterpreter(options).toService(es)
   }
 }

@@ -12,11 +12,11 @@ import sttp.client3._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests._
 
 trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
-  protected type Interceptors = CustomInterceptors[F, OPTIONS] => CustomInterceptors[F, OPTIONS]
+  protected type Interceptors = CustomiseInterceptors[F, OPTIONS] => CustomiseInterceptors[F, OPTIONS]
 
   def testServer[I, E, O](
       e: PublicEndpoint[I, E, O, R],

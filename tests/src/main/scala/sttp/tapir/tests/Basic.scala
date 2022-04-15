@@ -2,7 +2,7 @@ package sttp.tapir.tests
 
 import io.circe.generic.auto._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.model.{Header, MediaType, QueryParams, StatusCode}
+import sttp.model.{Header, HeaderNames, MediaType, QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -182,17 +182,9 @@ object Basic {
   val in_path_security_no_regular: Endpoint[Unit, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").out(stringBody)
 
-  val hide_in_docs: Endpoint[(String, String), (Int, String, Int, String, String, String), Unit, List[String], Any] =
-    endpoint.get
-      .securityIn("auth" / "hidden".schema(_.copy(hidden = true)))
-      .securityIn(header[String]("s1"))
-      .securityIn(header[String]("s2").schema(_.copy(hidden = true)))
-      .in("api" / "echo" / "headers".schema(_.copy(hidden = true)))
-      .in(cookie[Int]("c1"))
-      .in(cookie[String]("c2").schema(_.copy(hidden = true)))
-      .in(query[Int]("q1"))
-      .in(query[String]("q2").schema(_.copy(hidden = true)))
-      .in(header[String]("h1"))
-      .in(header[String]("h2").schema(_.copy(hidden = true)))
-      .out(header[List[String]]("Set-Cookie"))
+  val out_custom_content_type_empty_body: PublicEndpoint[Int, Unit, String, Any] =
+    endpoint.in(query[Int]("kind")).out(header[String](HeaderNames.ContentType))
+
+  val out_custom_content_type_string_body: PublicEndpoint[Int, Unit, (String, String), Any] =
+    endpoint.in(query[Int]("kind")).out(header[String](HeaderNames.ContentType)).out(stringBody)
 }

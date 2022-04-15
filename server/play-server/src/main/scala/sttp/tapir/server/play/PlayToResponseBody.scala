@@ -102,7 +102,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       format: CodecFormat,
       charset: Option[Charset]
   ): PlayResponseBody = {
-    Right(streamOrChunk(v, headers.contentLength, Option(formatToContentType(format, charset))))
+    Right(streamOrChunk(v, headers.contentLength, Option(headers.contentType.getOrElse(formatToContentType(format, charset)))))
   }
 
   private def streamOrChunk(stream: streams.BinaryStream, contentLength: Option[Long], contentType: Option[String]): HttpEntity = {

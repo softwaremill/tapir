@@ -4,7 +4,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.http4s.Http4sServerOptions
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -17,12 +17,11 @@ import scala.concurrent.Future
 object ZHttp4sCreateServerStubTest
     extends CreateServerStubTest[
       RIO[Clock with Blocking, *],
-      Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+      Http4sServerOptions[RIO[Clock with Blocking, *]]
     ] {
-  override def customInterceptors
-      : CustomInterceptors[RIO[Clock with Blocking, *], Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]] =
+  override def customiseInterceptors: CustomiseInterceptors[RIO[Clock with Blocking, *], Http4sServerOptions[RIO[Clock with Blocking, *]]] =
     Http4sServerOptions
-      .customInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+      .customiseInterceptors[RIO[Clock with Blocking, *]]
 
   override def stub[R]: SttpBackendStub[RIO[Clock with Blocking, *], R] = SttpBackendStub(new CatsMonadError[RIO[Clock with Blocking, *]])
   override def asFuture[A]: RIO[Clock with Blocking, A] => Future[A] = rio => Runtime.default.unsafeRunToFuture(rio)

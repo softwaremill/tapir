@@ -8,7 +8,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import zio.stream.ZStream
 import zio.{Runtime, Task}
@@ -16,7 +16,8 @@ import zio.{Runtime, Task}
 import scala.concurrent.{ExecutionContext, Future}
 
 object VertxFutureCreateServerStubTest extends CreateServerStubTest[Future, VertxFutureServerOptions] {
-  override def customInterceptors: CustomInterceptors[Future, VertxFutureServerOptions] = VertxFutureServerOptions.customInterceptors
+  override def customiseInterceptors: CustomiseInterceptors[Future, VertxFutureServerOptions] =
+    VertxFutureServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[Future, R] = SttpBackendStub(new FutureMonad()(ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity
 }
@@ -26,8 +27,8 @@ class VertxFutureServerStubTest extends ServerStubTest(VertxFutureCreateServerSt
 class VertxCatsCreateServerStubTest extends CreateServerStubTest[IO, VertxCatsServerOptions[IO]] {
   private val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
 
-  override def customInterceptors: CustomInterceptors[IO, VertxCatsServerOptions[IO]] =
-    VertxCatsServerOptions.customInterceptors(dispatcher)
+  override def customiseInterceptors: CustomiseInterceptors[IO, VertxCatsServerOptions[IO]] =
+    VertxCatsServerOptions.customiseInterceptors(dispatcher)
   override def stub[R]: SttpBackendStub[IO, R] = SttpBackendStub(new CatsMonadError[IO])
   override def asFuture[A]: IO[A] => Future[A] = io => io.unsafeToFuture()
 
@@ -43,7 +44,7 @@ class VertxCatsServerStubStreamingTest extends ServerStubStreamingTest(new Vertx
 }
 
 object VertxZioCreateServerStubTest extends CreateServerStubTest[Task, VertxZioServerOptions[Task]] {
-  override def customInterceptors: CustomInterceptors[Task, VertxZioServerOptions[Task]] = VertxZioServerOptions.customInterceptors
+  override def customiseInterceptors: CustomiseInterceptors[Task, VertxZioServerOptions[Task]] = VertxZioServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(VertxZioServerInterpreter.monadError)
   override def asFuture[A]: Task[A] => Future[A] = task => Runtime.default.unsafeRunToFuture(task)
 }

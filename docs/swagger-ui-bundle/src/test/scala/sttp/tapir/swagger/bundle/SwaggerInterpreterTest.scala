@@ -50,12 +50,18 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
           val docsPath = (context ++ prefix).mkString("/")
 
+          val docPathWithTrail = if (docsPath.isEmpty) docsPath else docsPath + "/"
+
           resp.code shouldBe StatusCode.Ok
-          resp.history.head.code shouldBe StatusCode.PermanentRedirect
-          if (useRelativePath) {
-            resp.history.head.headers("Location").head shouldBe s"./${prefix.last}/"
           } else {
-            resp.history.head.headers("Location").head shouldBe s"/$docsPath/"
+            resp.history.headOption.map { historicalResp =>
+              historicalResp.code shouldBe StatusCode.PermanentRedirect
+              if (useRelativePath) {
+                historicalResp.headers("Location").head shouldBe s"./${prefix.last}/"
+              } else {
+                historicalResp.headers("Location").head shouldBe s"/$docsPath/"
+              }
+            }
           }
 
           // test getting swagger-initializer.js, which should contain replaced link to spec
@@ -67,7 +73,7 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           if (useRelativePath) {
             initializerJsResp.body should include(s"./docs.yaml")
           } else {
-            initializerJsResp.body should include(s"/$docsPath/docs.yaml")
+            initializerJsResp.body should include(s"/$docPathWithTrail/docs.yaml")
           }
 
           // test getting a swagger-ui resource
@@ -82,6 +88,8 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
       }
   }
 
+
+
   test("swagger UI at /docs endpoint, using relative path") {
     swaggerUITest(List("docs"), Nil, true).unsafeRunSync()
   }
@@ -92,6 +100,14 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
   test("swagger UI ignores context route using relative path") {
     swaggerUITest(List("api", "docs"), List("ignored"), true).unsafeRunSync()
+  }
+
+  test(s"swagger UI under root, no relative path") {
+    swaggerUITest(Nil, Nil, false).unsafeRunSync()
+  }
+
+  test(s"swagger UI under /api/v1 and empty endpoint, no relative path") {
+    swaggerUITest(Nil, List("api", "v1"), false).unsafeRunSync()
   }
 
   test("swagger UI under / route and /docs endpoint, no relative path") {

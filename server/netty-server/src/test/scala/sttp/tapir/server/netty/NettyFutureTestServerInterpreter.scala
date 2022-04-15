@@ -13,7 +13,7 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     extends TestServerInterpreter[Future, Any, NettyFutureServerOptions, FutureRoute] {
 
   override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FutureRoute = {
-    val serverOptions: NettyFutureServerOptions = interceptors(NettyFutureServerOptions.customInterceptors).options
+    val serverOptions: NettyFutureServerOptions = interceptors(NettyFutureServerOptions.customiseInterceptors).options
     NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
 

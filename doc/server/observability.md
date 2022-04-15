@@ -70,7 +70,7 @@ val prometheusMetrics = PrometheusMetrics.default[Future]()
 
 // enable metrics collection
 val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
-  .customInterceptors
+  .customiseInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
 

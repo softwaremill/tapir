@@ -19,11 +19,11 @@ object Http4sTestServerInterpreter {
   type Routes = WebSocketBuilder2[IO] => HttpRoutes[IO]
 }
 
-class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, Http4sServerOptions[IO, IO], Routes] {
+class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, Http4sServerOptions[IO], Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Routes = {
-    val serverOptions: Http4sServerOptions[IO, IO] = interceptors(Http4sServerOptions.customInterceptors[IO, IO]).options
+    val serverOptions: Http4sServerOptions[IO] = interceptors(Http4sServerOptions.customiseInterceptors[IO]).options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
 

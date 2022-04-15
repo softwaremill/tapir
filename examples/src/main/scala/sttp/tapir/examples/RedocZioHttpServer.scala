@@ -28,7 +28,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
       printLine("Press any key to exit ...") *>
-      Server.start(8080, petRoutes <> redocRoutes).fork.flatMap { fiber =>
+      Server.start(8080, petRoutes ++ redocRoutes).fork.flatMap { fiber =>
         readLine *> fiber.interrupt
       }
   }.exitCode

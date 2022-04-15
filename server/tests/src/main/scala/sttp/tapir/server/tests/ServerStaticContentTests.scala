@@ -11,7 +11,7 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.static.{FilesOptions, ResourcesOptions}
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests._
 
@@ -512,7 +512,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
       NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
+        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
       )
     )
 

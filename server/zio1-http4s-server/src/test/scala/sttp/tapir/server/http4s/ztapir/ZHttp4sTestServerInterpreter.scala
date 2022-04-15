@@ -24,14 +24,14 @@ import scala.concurrent.ExecutionContext
 object ZHttp4sTestServerInterpreter {
   type F[A] = RIO[Clock with Blocking, A]
   type Routes = WebSocketBuilder2[F] => HttpRoutes[F]
-  type ServerOptions = Http4sServerOptions[F, F]
+  type ServerOptions = Http4sServerOptions[F]
 }
 
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[F, ZioStreams with WebSockets, ServerOptions, Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ZServerEndpoint[Clock with Blocking, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
-    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customInterceptors).options
+    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors).options
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }
 

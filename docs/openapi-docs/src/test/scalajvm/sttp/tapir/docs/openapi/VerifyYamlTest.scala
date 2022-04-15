@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi
 
 import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.syntax.EncoderOps
 import io.circe.yaml.Printer.StringStyle
 import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
@@ -9,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, Method, StatusCode}
 import sttp.tapir.Schema.SName
-import sttp.tapir.Schema.annotations.description
+import sttp.tapir.Schema.annotations.{default, description, encodedExample}
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
@@ -641,9 +642,38 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should generate default and example values for nested optional fields") {
+    case class Nested(nestedValue: String)
+    case class ClassWithNestedOptionalField(
+        @encodedExample(Nested("foo").asJson) @default(Some(Nested("foo")), Some("""{"nestedValue": "foo"}""")) value: Option[Nested]
+    )
+
+    val e = endpoint.in(jsonBody[ClassWithNestedOptionalField])
+    val expectedYaml = load("expected_default_and_example_on_nested_option_field.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("ClassWithNestedOptionalField", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should respect hidden annotation") {
+    val hide_in_docs: Endpoint[(String, String), (Int, String, Int, String, String, String), Unit, List[String], Any] =
+      endpoint.get
+        .securityIn("auth" / "hidden".schema(_.copy(hidden = true)))
+        .securityIn(header[String]("s1"))
+        .securityIn(header[String]("s2").schema(_.copy(hidden = true)))
+        .in("api" / "echo" / "headers".schema(_.copy(hidden = true)))
+        .in(cookie[Int]("c1"))
+        .in(cookie[String]("c2").schema(_.copy(hidden = true)))
+        .in(query[Int]("q1"))
+        .in(query[String]("q2").schema(_.copy(hidden = true)))
+        .in(header[String]("h1"))
+        .in(header[String]("h2").schema(_.copy(hidden = true)))
+        .out(header[List[String]]("Set-Cookie"))
+
     val actualYaml = OpenAPIDocsInterpreter()
-      .toOpenAPI(Basic.hide_in_docs, Info("Hide in docs", "1.0"))
+      .toOpenAPI(hide_in_docs, Info("Hide in docs", "1.0"))
       .toYaml
 
     val expectedYaml = load("hide_in_docs.yml")

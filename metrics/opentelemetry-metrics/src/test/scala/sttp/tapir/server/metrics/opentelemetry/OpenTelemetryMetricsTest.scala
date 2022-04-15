@@ -136,7 +136,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpret(200)
     interpret(300)
 
-    val point = reader.collectAllMetrics().asScala.head.getDoubleHistogramData.getPoints.asScala
+    val point = reader.collectAllMetrics().asScala.head.getHistogramData.getPoints.asScala
     point.map(_.getAttributes) should contain(
       Attributes.of(
         AttributeKey.stringKey("method"),

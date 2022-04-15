@@ -1,7 +1,7 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.effect.{IO, Resource}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
@@ -33,6 +33,7 @@ class PlayServerTest extends TestSuite {
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
+          override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests()
     }
   }

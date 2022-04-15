@@ -641,8 +641,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.8",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.8" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.13",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.13" % Test,
       scalaTest.value % Test
     )
   )
@@ -704,10 +704,10 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.11.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.11.0",
-      "io.opentelemetry" % "opentelemetry-sdk-metrics-testing" % "1.11.0-alpha" % Test,
-      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.5.0-alpha" % Test,
+      "io.opentelemetry" % "opentelemetry-api" % "1.13.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.13.0",
+      "io.opentelemetry" % "opentelemetry-sdk-metrics-testing" % "1.13.0-alpha" % Test,
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.13.0-alpha" % Test,
       scalaTest.value % Test
     )
   )
@@ -896,9 +896,15 @@ lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
 
 lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"))
   .settings(commonJvmSettings)
-  .settings(name := "tapir-redoc-bundle")
+  .settings(
+    name := "tapir-redoc-bundle",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      scalaTest.value % Test
+    )
+  )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(redoc, openapiDocs, openapiCirceYaml)
+  .dependsOn(redoc, openapiDocs, openapiCirceYaml, sttpClient % Test, http4sServer % Test)
 
 // server
 
@@ -1068,7 +1074,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.75.Final",
+      "io.netty" % "netty-all" % "4.1.76.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016

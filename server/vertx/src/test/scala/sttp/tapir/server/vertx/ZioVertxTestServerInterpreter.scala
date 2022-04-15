@@ -16,7 +16,7 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
   import ZioVertxTestServerInterpreter._
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = { router =>
-    val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customInterceptors).options
+    val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customiseInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
     es.map(interpreter.route(_)(runtime)(router)).last
   }

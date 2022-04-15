@@ -18,4 +18,13 @@ object Streaming {
     val sb = streamTextBody[S](s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(header[Long](HeaderNames.ContentLength)).in(sb).out(header[Long](HeaderNames.ContentLength)).out(sb)
   }
+
+  def out_custom_content_type_stream_body[S](s: Streams[S]): PublicEndpoint[(Int, s.BinaryStream), Unit, (String, s.BinaryStream), S] = {
+    val sb = streamTextBody[S](s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    endpoint.post
+      .in(query[Int]("kind"))
+      .in(sb)
+      .out(header[String](HeaderNames.ContentType))
+      .out(sb)
+  }
 }

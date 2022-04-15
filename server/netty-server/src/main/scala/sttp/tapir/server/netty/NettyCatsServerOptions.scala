@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.Logger
 import sttp.monad.MonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.netty.internal.CatsUtil.CatsMonadError
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -28,7 +28,7 @@ case class NettyCatsServerOptions[F[_]](
 }
 
 object NettyCatsServerOptions {
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 
   def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
     NettyCatsServerOptions(
@@ -41,9 +41,9 @@ object NettyCatsServerOptions {
       NettyOptions.default
     )
 
-  def customInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomInterceptors[F, NettyCatsServerOptions[F]] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
+  def customiseInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
   private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
