@@ -13,20 +13,18 @@ import sttp.tapir.server.http4s.Http4sServerInterpreter
 import scala.concurrent.ExecutionContext
 
 object RedocContextPathHttp4sServer extends IOApp {
-  val contextPath = List("api", "v1")
+  val contextPath: List[String] = List("api", "v1")
   val docPathPrefix: List[String] = "redoc" :: Nil
 
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
-  // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  // adding redoc endpoints
-  val routes: HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutes(
-      helloWorld.serverLogic(name => IO(s"Hello, $name!".asRight[Unit])) ::
-        RedocInterpreter(redocUIOptions = RedocUIOptions.default.contextPath(contextPath).pathPrefix(docPathPrefix))
-          .fromEndpoints[IO](List(helloWorld), "The tapir library", "1.0.0")
-    )
+  val routes: HttpRoutes[IO] = {
+    val redocEndpoints = RedocInterpreter(redocUIOptions = RedocUIOptions.default.contextPath(contextPath).pathPrefix(docPathPrefix))
+      .fromEndpoints[IO](List(helloWorld), "The tapir library", "1.0.0")
+
+    Http4sServerInterpreter[IO]().toRoutes(helloWorld.serverLogic(name => IO(s"Hello, $name!".asRight[Unit])) :: redocEndpoints)
+  }
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
