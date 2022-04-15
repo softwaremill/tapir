@@ -33,13 +33,8 @@ object SwaggerUI {
   def apply[F[_]](yaml: String, options: SwaggerUIOptions = SwaggerUIOptions.default): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
     val prefixFromRoot =
-      if (options.useRelativePaths) Some(".")
-      else {
-        options.contextPath ++ options.pathPrefix match {
-          case Nil => None
-          case x   => Some("/" + x.mkString("/"))
-        }
-      }
+      if (options.useRelativePaths) "."
+      else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -92,7 +87,5 @@ object SwaggerUI {
 
   }
 
-  private def concat(prefixFromRoot: Option[String], fileName: String) = {
-    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"/$fileName")
-  }
+  private def concat(l: String, r: String) = s"$l/$r"
 }
