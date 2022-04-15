@@ -10,8 +10,8 @@ package sttp.tapir.swagger
   *   be specified for redirects and yaml reference to work correctly. E.g. when context path is `List("api", "v1")`, and other parameters
   *   are left with default values, the generated full path to the yaml will be `/api/v1/docs/docs.yaml`. Defaults to `Nil`.
   * @param useRelativePath
-  *   If true, uses relative path for loading OpenAPI definition from Swagger UI and redirecting slashless route. WHen using it,
-  *   `contextPath` setting is ignored.
+  *   If true, uses relative path for loading OpenAPI definition from Swagger UI and redirecting slashless route. When using it,
+  *   `contextPath` setting is ignored.  Defaults to `true`.
   */
 case class SwaggerUIOptions(pathPrefix: List[String], yamlName: String, contextPath: List[String], useRelativePath: Boolean) {
   def pathPrefix(pathPrefix: List[String]): SwaggerUIOptions = copy(pathPrefix = pathPrefix)
