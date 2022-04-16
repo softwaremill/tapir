@@ -32,10 +32,9 @@ object SwaggerUI {
     */
   def apply[F[_]](yaml: String, options: SwaggerUIOptions = SwaggerUIOptions.default): List[ServerEndpoint[Any, F]] = {
     val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
-    val prefixFromRoot = (options.contextPath ++ options.pathPrefix) match {
-      case Nil => None
-      case x   => Option(x.mkString("/"))
-    }
+    val fullPathPrefix =
+      if (options.useRelativePaths) "."
+      else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -52,18 +51,13 @@ object SwaggerUI {
       .out(redirectOutput)
       .serverLogicPure[F] { (params: QueryParams) =>
         val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"/${concat(prefixFromRoot, oauth2redirectFileName)}$queryString")
+        Right(s"${concat(fullPathPrefix, oauth2redirectFileName)}$queryString")
       }
 
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
     val swaggerInitializerJsWithReplacedUrl =
-      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"/${concat(prefixFromRoot, options.yamlName)}")
-
-    val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
-      val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-      Right(s"/${concat(prefixFromRoot, queryString)}")
-    }
+      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
@@ -74,14 +68,24 @@ object SwaggerUI {
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    if (options.pathPrefix == Nil)
-      List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
-    else
+    if (options.pathPrefix == Nil) List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    else {
+      val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
+      val redirectToSlashEndpoint = baseEndpoint
+        .in(noTrailingSlash)
+        .in(queryParams)
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { case (params, lastSegment) =>
+          val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
+          val path = if (options.useRelativePaths) lastSegment.map(str => s"$str/").getOrElse("") else ""
+          Right(s"${concat(fullPathPrefix, path + queryString)}")
+        }
+
       List(yamlEndpoint, redirectToSlashEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    }
 
   }
 
-  private def concat(prefixFromRoot: Option[String], fileName: String) = {
-    prefixFromRoot.map(pref => s"$pref/$fileName").getOrElse(s"$fileName")
-  }
+  private def concat(l: String, r: String) = s"$l/$r"
 }

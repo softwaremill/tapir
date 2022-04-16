@@ -24,10 +24,12 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
     .in(query[String]("q"))
     .out(stringBody)
 
-  def swaggerUITest(prefix: List[String], context: List[String]): IO[Assertion] = {
+  def swaggerUITest(prefix: List[String], context: List[String], useRelativePaths: Boolean): IO[Assertion] = {
     val swaggerUIRoutes: HttpRoutes[IO] =
       Http4sServerInterpreter[IO]().toRoutes(
-        SwaggerInterpreter(swaggerUIOptions = SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context))
+        SwaggerInterpreter(swaggerUIOptions =
+          SwaggerUIOptions.default.copy(pathPrefix = prefix, contextPath = context, useRelativePaths = useRelativePaths)
+        )
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
@@ -53,7 +55,11 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
           resp.code shouldBe StatusCode.Ok
           resp.history.headOption.map { historicalResp =>
             historicalResp.code shouldBe StatusCode.PermanentRedirect
-            historicalResp.headers("Location").head shouldBe s"/$docsPath/"
+            if (useRelativePaths) {
+              historicalResp.headers("Location").head shouldBe s"./${prefix.last}/"
+            } else {
+              historicalResp.headers("Location").head shouldBe s"/$docsPath/"
+            }
           }
 
           // test getting swagger-initializer.js, which should contain replaced link to spec
@@ -62,7 +68,11 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
             .get(uri"http://localhost:$port/${context ++ prefix}/swagger-initializer.js")
             .send(backend)
 
-          initializerJsResp.body should include(s"/${docPathWithTrail}docs.yaml")
+          if (useRelativePaths) {
+            initializerJsResp.body should include(s"./docs.yaml")
+          } else {
+            initializerJsResp.body should include(s"/${docPathWithTrail}docs.yaml")
+          }
 
           // test getting a swagger-ui resource
           val respCss: Response[String] = basicRequest
@@ -76,23 +86,39 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
       }
   }
 
-  test(s"swagger UI under root") {
-    swaggerUITest(Nil, Nil).unsafeRunSync()
+  test(s"swagger UI at root, relative path") {
+    swaggerUITest(Nil, Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test(s"swagger UI under /api/v1 and empty endpoint") {
-    swaggerUITest(Nil, List("api", "v1")).unsafeRunSync()
+  test("swagger UI at ./docs endpoint, relative path") {
+    swaggerUITest(List("docs"), Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test("swagger UI under / route and /docs endpoint") {
-    swaggerUITest(List("docs"), Nil).unsafeRunSync()
+  test("swagger UI at ./api/docs endpoint, relative path") {
+    swaggerUITest(List("api", "docs"), Nil, useRelativePaths = true).unsafeRunSync()
   }
 
-  test("swagger UI under /internal route /docs endpoint") {
-    swaggerUITest(List("docs"), List("internal")).unsafeRunSync()
+  test(s"swagger UI at root, absolute path") {
+    swaggerUITest(Nil, Nil, useRelativePaths = false).unsafeRunSync()
   }
 
-  test("swagger UI under /internal/secret route /api/docs endpoint") {
-    swaggerUITest(List("api", "docs"), List("internal", "secret")).unsafeRunSync()
+  test("swagger UI at ./docs endpoint, absolute path") {
+    swaggerUITest(List("docs"), Nil, useRelativePaths = false).unsafeRunSync()
+  }
+
+  test("swagger UI at ./api/docs endpoint, absolute path") {
+    swaggerUITest(List("api", "docs"), Nil, useRelativePaths = false).unsafeRunSync()
+  }
+
+  test(s"swagger UI at ./api/v1 and empty endpoint, absolute path") {
+    swaggerUITest(Nil, List("api", "v1"), useRelativePaths = false).unsafeRunSync()
+  }
+
+  test("swagger UI at /internal route /docs endpoint, absolute path") {
+    swaggerUITest(List("docs"), List("internal"), useRelativePaths = false).unsafeRunSync()
+  }
+
+  test("swagger UI at /internal/secret route /api/docs endpoint, absolute path") {
+    swaggerUITest(List("api", "docs"), List("internal", "secret"), useRelativePaths = false).unsafeRunSync()
   }
 }

@@ -31,8 +31,9 @@ val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
 By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
-changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the swagger endpoints are deployed 
-within a context, this information needs to be passed to the interpreter, to create proper redirects. 
+changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the Swagger UI endpoints are deployed 
+within a context, and you don't want Swagger to use relative paths, you'll need to set the `useRelativePaths` options
+to `false`, and specify the `contextPath` one.
 
 Moreover, model generation can be configured - see below for more details on `OpenAPIDocsOptions` and the method
 parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
