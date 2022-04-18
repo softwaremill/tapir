@@ -80,7 +80,7 @@ private object ZioStreamCompatible {
 
 private class RioFutureConversion[R](implicit ec: ExecutionContext, runtime: Runtime[R]) extends FutureConversion[RIO[R, *]] {
   def from[T](f: => Future[T]): RIO[R, T] = {
-    RIO.effectAsync { cb =>
+    RIO.async { cb =>
       f.onComplete {
         case Failure(exception) => cb(Task.fail(exception))
         case Success(value)     => cb(Task.succeed(value))

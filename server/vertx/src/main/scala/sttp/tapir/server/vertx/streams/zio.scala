@@ -31,7 +31,7 @@ object zio {
       runtime
         .unsafeRunSync(for {
           promise <- Promise.make[Nothing, Unit]
-          state <- ZRef.make(StreamState.empty(promise))
+          state <- Ref.make(StreamState.empty(promise))
           _ <- stream.runForeachChunk { chunk =>
             val buffer = Buffer.buffer(chunk.toArray)
             state.get.flatMap {
@@ -111,7 +111,7 @@ object zio {
     override def fromReadStream(readStream: ReadStream[Buffer]): Stream[Throwable, Byte] =
       runtime
         .unsafeRunSync(for {
-          stateRef <- ZRef.make(ReadStreamState[UIO, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))
+          stateRef <- Ref.make(ReadStreamState[UIO, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))
           stream = ZStream.unfoldChunkZIO(()) { _ =>
             for {
               dfd <- Promise.make[Nothing, WrappedBuffer[Chunk[Byte]]]

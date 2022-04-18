@@ -16,4 +16,5 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
   def route(es: List[ServerEndpoint[R, F]], interceptors: Interceptors = identity): ROUTE
 
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
+
 }

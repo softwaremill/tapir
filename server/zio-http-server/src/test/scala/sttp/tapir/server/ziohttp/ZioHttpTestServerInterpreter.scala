@@ -1,6 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
+import cats.effect.implicits.effectResourceOps
 import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
@@ -21,11 +22,17 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactor
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-    val env = ZEnvironment(eventLoopGroup).add(channelFactory)
-    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _)) ++ Server.maxRequestSize(10000000)
-    Server
-      .make(server ++ Server.port(0))
-      .provideEnvironment(env)
+    val layers: ZLayer[Any, Nothing, EventLoopGroup with ServerChannelFactory] =
+      ZLayer.succeed(eventLoopGroup) ++ ZLayer.succeed(channelFactory)
+
+    val server: Server[Any, Throwable] =
+      Server.app(routes.toList.reduce(_ ++ _)) // ++ Server.enableObjectAggregator(10000000)
+
+    val io: ZIO[Scope, Throwable, Server.Start] = ZIO
+      .scoped(Server.make(server ++ Server.port(0)))
+      .provide(layers)
+
+    io
       .map(_.port)
       .toResource[IO]
   }
