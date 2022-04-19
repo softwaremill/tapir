@@ -172,28 +172,26 @@ An HTTP server can then be started as in the following example:
 import sttp.tapir._
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 import sttp.tapir.ztapir._
-import zio._
 import com.linecorp.armeria.server.Server
+import zio.{ExitCode, Runtime, UIO, URIO, ZEnv, ZIO, ZIOAppDefault}
 
-object Main extends zio.App {
+object Main extends ZIOAppDefault {
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
     implicit val runtime = Runtime.default
-    
+
     val tapirEndpoint: PublicEndpoint[String, Unit, String, Any] = ???
     def logic(key: String): UIO[String] = ???
-     
-    ZManaged
-      .make(ZIO.fromCompletableFuture {
-        val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
 
-        val server = Server
-          .builder()
-          .service(tapirService)
-          .build()
-        server.start().thenApply[Server](_ => server)
-      }) { server =>
-        ZIO.fromCompletableFuture(server.closeAsync()).orDie
-      }.useForever.as(ExitCode.success).orDie 
+    val s = ZIO.fromCompletableFuture {
+      val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
+      val server = Server
+        .builder()
+        .service(tapirService)
+        .build()
+      server.start().thenApply[Server](_ => server)
+    }
+
+    ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever.as(ExitCode.success).orDie
   }
 }
 ```
