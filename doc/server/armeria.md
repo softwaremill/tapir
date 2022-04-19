@@ -169,14 +169,14 @@ This object contains `toService(e: ServerEndpoint[ZioStreams, RIO[R, *]])` metho
 An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
+import com.linecorp.armeria.server.Server
 import sttp.tapir._
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 import sttp.tapir.ztapir._
-import com.linecorp.armeria.server.Server
-import zio.{ExitCode, Runtime, UIO, URIO, ZEnv, ZIO, ZIOAppDefault}
+import zio.{ExitCode, Runtime, UIO, URIO, ZIO, ZIOAppDefault}
 
 object Main extends ZIOAppDefault {
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
+  override def run: URIO[Any, ExitCode] = {
     implicit val runtime = Runtime.default
 
     val tapirEndpoint: PublicEndpoint[String, Unit, String, Any] = ???
@@ -191,7 +191,7 @@ object Main extends ZIOAppDefault {
       server.start().thenApply[Server](_ => server)
     }
 
-    ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever.as(ExitCode.success).orDie
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever).exitCode
   }
 }
 ```
