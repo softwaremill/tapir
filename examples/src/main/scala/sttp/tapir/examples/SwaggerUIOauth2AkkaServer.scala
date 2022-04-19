@@ -4,9 +4,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{Route, RouteConcatenation}
 import sttp.tapir._
 import sttp.tapir.server.PartialServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
-import sttp.tapir.server.interceptor.cors.{CORSConfig, CORSInterceptor}
-import sttp.tapir.swagger.SwaggerUIOptions
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import scala.concurrent.duration.DurationInt
@@ -31,7 +29,7 @@ import scala.concurrent.{Await, Future, Promise}
   * Go to: [[http://localhost:3333/docs]] And try authorize by using `Authorize` by providing details of clients and user
   */
 object SwaggerUIOauth2AkkaServer extends App with RouteConcatenation {
-  implicit val actorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
 
   def authLogic(token: String): Future[Either[Int, String]] = Future.successful(Right(token))
 
@@ -55,8 +53,6 @@ object SwaggerUIOauth2AkkaServer extends App with RouteConcatenation {
       .in(query[String]("word"))
       .out(plainBody[Int])
       .serverLogic(_ => word => countCharacters(word))
-
-  val corsConfig = CORSConfig.default.allowAllOrigins.allowAllHeaders.exposeAllHeaders
 
   val countCharactersRoute: Route =
     AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint)
