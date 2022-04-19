@@ -3,7 +3,6 @@ package sttp.tapir.server.finatra.cats
 import cats.effect.Async
 import cats.effect.std.Dispatcher
 import cats.~>
-import com.twitter.inject.Logging
 import com.twitter.util.Future
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
@@ -31,7 +30,7 @@ import scala.util.Try
 import sttp.tapir.server.finatra.cats.conversions._
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
-trait FinatraCatsServerInterpreter[F[_]] extends Logging {
+trait FinatraCatsServerInterpreter[F[_]] {
 
   implicit def fa: Async[F]
 
