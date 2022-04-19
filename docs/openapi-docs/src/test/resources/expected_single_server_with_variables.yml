@@ -31,6 +31,7 @@ paths:
           required: false
           schema:
             type: integer
+            format: int32
       responses:
         '200':
           description: ''

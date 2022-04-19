@@ -22,9 +22,11 @@ channels:
             limit:
               type: integer
               description: GET `limit` field description
+              format: int32
             offset:
               type: integer
               description: GET `offset` field description
+              format: int32
 components:
   messages:
     string:
@@ -34,4 +36,5 @@ components:
     integer:
       payload:
         type: integer
+        format: int32
       contentType: application/json

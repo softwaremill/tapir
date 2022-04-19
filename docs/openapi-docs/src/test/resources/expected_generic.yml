@@ -48,6 +48,7 @@ components:
       properties:
         data:
           type: integer
+          format: int32
     G_String:
       required:
         - data

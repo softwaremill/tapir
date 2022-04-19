@@ -33,6 +33,7 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
       x-schema:
         string: a
         int: 1
