@@ -67,6 +67,7 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
 x-root-bool: true
 x-root-list:
   - 1

@@ -244,7 +244,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         SProduct[Person](
           List(
             field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
+            field(FieldName("age"), Schema(SInteger(), format = Some("int32"))),
             field(FieldName("who_am_i"), Schema(SString()))
           )
         ),

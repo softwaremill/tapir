@@ -41,6 +41,7 @@ components:
           $ref: '#/components/schemas/ErrorCode'
     ErrorCode:
       type: integer
+      format: int32
       enum:
         - 1
         - 2

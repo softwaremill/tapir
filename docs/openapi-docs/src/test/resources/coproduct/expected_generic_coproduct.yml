@@ -54,6 +54,7 @@ components:
       properties:
         data:
           type: integer
+          format: int32
     GenericPerson_String:
       required:
         - data

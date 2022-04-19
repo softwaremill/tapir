@@ -22,8 +22,10 @@ channels:
           properties:
             limit:
               type: integer
+              format: int32
             offset:
               type: integer
+              format: int32
 components:
   messages:
     string:

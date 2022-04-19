@@ -34,6 +34,7 @@ components:
       properties:
         optionalIntField:
           type: integer
+          format: int32
           nullable: true
         requiredStringField:
           type: string
