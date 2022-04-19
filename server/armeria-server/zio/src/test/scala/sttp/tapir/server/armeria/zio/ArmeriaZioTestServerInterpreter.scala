@@ -15,5 +15,5 @@ class ArmeriaZioTestServerInterpreter extends ArmeriaTestServerInterpreter[ZioSt
 }
 
 object ArmeriaZioTestServerInterpreter {
-  implicit val runtime: Runtime[zio.ZEnv] = Runtime.default
+  implicit val runtime: Runtime[Any] = Runtime.default
 }

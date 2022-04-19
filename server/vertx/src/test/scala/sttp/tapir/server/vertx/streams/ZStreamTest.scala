@@ -59,8 +59,8 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunToFuture(for {
-        ref <- ZRef.make[List[Int]](Nil)
-        completed <- ZRef.make[Boolean](false)
+        ref <- Ref.make[List[Int]](Nil)
+        completed <- Ref.make[Boolean](false)
         _ <- Task.attempt {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
@@ -96,9 +96,9 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunToFuture(for {
-        ref <- ZRef.make[List[Int]](Nil)
-        completedRef <- ZRef.make[Boolean](false)
-        interruptedRef <- ZRef.make[Option[Throwable]](None)
+        ref <- Ref.make[List[Int]](Nil)
+        completedRef <- Ref.make[Boolean](false)
+        interruptedRef <- Ref.make[Option[Throwable]](None)
         _ <- Task.attempt {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
@@ -132,11 +132,13 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- stream
-          .mapChunks((chunkAsInt _).andThen(Chunk.single))
-          .toIterator
-          .map(_.toList)
-          .useNow
+        resultFiber <- ZIO
+          .scoped(
+            stream
+              .mapChunks((chunkAsInt _).andThen(Chunk.single))
+              .toIterator
+              .map(_.toList)
+          )
           .fork
         _ <- ZIO.attempt {
           (1 to count).foreach { i =>
@@ -161,12 +163,14 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- stream
-          .mapChunks((chunkAsInt _).andThen(Chunk.single))
-          .mapZIO(i => ZIO.sleep(50.millis).as(i))
-          .toIterator
-          .map(_.toList)
-          .useNow
+        resultFiber <- ZIO
+          .scoped(
+            stream
+              .mapChunks((chunkAsInt _).andThen(Chunk.single))
+              .mapZIO(i => ZIO.sleep(50.millis).as(i))
+              .toIterator
+              .map(_.toList)
+          )
           .fork
         _ <- ZIO
           .attempt({
@@ -194,12 +198,14 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- stream
-          .mapChunks((chunkAsInt _).andThen(Chunk.single))
-          .mapZIO(i => ZIO.sleep(50.millis).as(i))
-          .toIterator
-          .map(_.toList)
-          .useNow
+        resultFiber <- ZIO
+          .scoped(
+            stream
+              .mapChunks((chunkAsInt _).andThen(Chunk.single))
+              .mapZIO(i => ZIO.sleep(50.millis).as(i))
+              .toIterator
+              .map(_.toList)
+          )
           .fork
         _ <- ZIO
           .attempt({

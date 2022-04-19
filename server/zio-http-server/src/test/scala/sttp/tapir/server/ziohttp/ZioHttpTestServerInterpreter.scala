@@ -1,7 +1,6 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
-import cats.effect.implicits.effectResourceOps
 import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
@@ -32,8 +31,6 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactor
       .scoped(Server.make(server ++ Server.port(0)))
       .provide(layers)
 
-    io
-      .map(_.port)
-      .toResource[IO]
+    Resource.scoped[IO, Any, Int](io.map(_.port))
   }
 }
