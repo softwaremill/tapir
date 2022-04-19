@@ -5,7 +5,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import zio.{RIO, ZIO}
 import sttp.tapir.ztapir._
-import zio.Clock
 
 class ZEndpointTest extends AnyFlatSpec with Matchers {
   it should "compile with widened endpoints" in {
@@ -20,7 +19,7 @@ class ZEndpointTest extends AnyFlatSpec with Matchers {
       endpoint.serverLogic(_ => ZIO.right(()): ZIO[Service2, Nothing, Either[Unit, Unit]])
 
     type Env = Service1 with Service2
-    val routes: HttpRoutes[RIO[Env with Clock, *]] =
+    val routes: HttpRoutes[RIO[Env, *]] =
       ZHttp4sServerInterpreter().from(List(serverEndpoint1.widen[Env], serverEndpoint2.widen[Env])).toRoutes
   }
 }

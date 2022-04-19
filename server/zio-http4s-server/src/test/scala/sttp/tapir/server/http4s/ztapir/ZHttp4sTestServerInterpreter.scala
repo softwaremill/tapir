@@ -13,31 +13,31 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import sttp.tapir.ztapir.ZServerEndpoint
+import zio.Task
 import zio.interop.catz._
 import zio.interop.catz.implicits._
-import zio.{Clock, RIO}
 
 import scala.concurrent.ExecutionContext
 
 object ZHttp4sTestServerInterpreter {
-  type F[A] = RIO[Clock, A]
+  type F[A] = Task[A]
   type Routes = WebSocketBuilder2[F] => HttpRoutes[F]
   type ServerOptions = Http4sServerOptions[F]
 }
 
-class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock, *], ZioStreams with WebSockets, ServerOptions, Routes] {
+class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def route(es: List[ZServerEndpoint[Clock, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
-    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[RIO[Clock, *]]).options
+  override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
+    val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
-    val service: WebSocketBuilder2[RIO[Clock, *]] => HttpApp[RIO[Clock, *]] =
+    val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    val serverResource = BlazeServerBuilder[RIO[Clock, *]]
+    val serverResource = BlazeServerBuilder[Task]
       .withExecutionContext(ExecutionContext.global)
       .bindHttp(0, "localhost")
       .withHttpWebSocketApp(service)
@@ -45,7 +45,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[RIO[Clock, *], 
       .map(_.address.getPort)
 
     // Converting a zio.RIO-resource to an cats.IO-resource
-    val runtime = implicitly[zio.Runtime[Clock]]
+    val runtime = implicitly[zio.Runtime[Any]]
     Resource
       .eval(IO.fromFuture(IO(runtime.unsafeRunToFuture(serverResource.allocated))))
       .flatMap { case (port, release) =>
