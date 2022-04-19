@@ -170,7 +170,7 @@ import sttp.tapir.server.vertx.VertxZioServerInterpreter
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 import zio._
 
-object Short extends zio.ZIOAppDefault {
+object Short extends ZIOAppDefault {
   override implicit val runtime = zio.Runtime.default
 
   val responseEndpoint =
@@ -181,18 +181,25 @@ object Short extends zio.ZIOAppDefault {
 
   val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
 
-  override def run =
-    ZIO
-      .acquireReleaseWith(ZIO.attempt {
-        val vertx = Vertx.vertx()
-        val server = vertx.createHttpServer()
-        val router = Router.router(vertx)
-        attach(router)
-        server.requestHandler(router).listen(8080)
-      } flatMap (_.asRIO))({ server =>
-        ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
-      })
-      .useForever
+  override def run = {
+    ZIO.scoped(
+      ZIO
+        .acquireRelease(
+          ZIO
+            .attempt {
+              val vertx = Vertx.vertx()
+              val server = vertx.createHttpServer()
+              val router = Router.router(vertx)
+              attach(router)
+              server.requestHandler(router).listen(8080)
+            }
+            .flatMap(_.asRIO)
+        ) { server =>
+          ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
+        }
+        .forever
+    )
+  }
 }
 ```
 
