@@ -44,16 +44,6 @@ object SwaggerUI {
       .out(stringBody)
       .serverLogicPure[F](_ => Right(yaml))
 
-    val oauth2redirectFileName = "oauth2-redirect.html"
-    val oauth2Endpoint = baseEndpoint
-      .in(oauth2redirectFileName)
-      .in(queryParams)
-      .out(redirectOutput)
-      .serverLogicPure[F] { (params: QueryParams) =>
-        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"${concat(fullPathPrefix, oauth2redirectFileName)}$queryString")
-      }
-
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
     val swaggerInitializerJsWithReplacedUrl =
@@ -68,7 +58,7 @@ object SwaggerUI {
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    if (options.pathPrefix == Nil) List(yamlEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    if (options.pathPrefix == Nil) List(yamlEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
     else {
       val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
       val redirectToSlashEndpoint = baseEndpoint
@@ -82,7 +72,7 @@ object SwaggerUI {
           Right(s"${concat(fullPathPrefix, path + queryString)}")
         }
 
-      List(yamlEndpoint, redirectToSlashEndpoint, oauth2Endpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+      List(yamlEndpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
     }
 
   }
