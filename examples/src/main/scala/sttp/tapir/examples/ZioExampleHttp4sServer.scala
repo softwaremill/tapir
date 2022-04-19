@@ -50,7 +50,7 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
 
   // Starting the server
   val serve: Task[Unit] =
-    BlazeServerBuilder[RIO[Any, *]]
+    BlazeServerBuilder[Task]
       .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
