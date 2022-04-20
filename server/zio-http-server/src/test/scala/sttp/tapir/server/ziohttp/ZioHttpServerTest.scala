@@ -30,7 +30,6 @@ class ZioHttpServerTest extends TestSuite {
           createServerTest,
           interpreter,
           multipleValueHeaderSupport = false,
-          inputStreamSupport = true,
           supportsUrlEncodedPathSegments = false,
           supportsMultipleSetCookieHeaders = false,
           invulnerableToUnsanitizedHeaders = false
