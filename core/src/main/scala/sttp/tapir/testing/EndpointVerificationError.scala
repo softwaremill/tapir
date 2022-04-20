@@ -1,18 +1,10 @@
 package sttp.tapir.testing
 
-import sttp.tapir.AnyEndpoint
+import sttp.tapir.internal.RichEndpointInput
+import sttp.tapir.testing.EndpointVerificationError.showMethodWithFullPath
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
-class EndpointVerificationError {
-  def showAllPaths(e: AnyEndpoint) = {
-    val secPathsLen = EndpointVerifier.inputPathSegments(e.securityInput).length
-
-    if (secPathsLen > 0) {
-      e.input.show.patch(4, e.securityInput.show + " ", 0)
-    } else {
-      e.input.show
-    }
-  }
-}
+sealed trait EndpointVerificationError
 
 /** Endpoint `e1` is shadowed by endpoint `e2` when all requests that match `e2` also match `e1`. Here, "request matches endpoint" takes
   * into account only the method & shape of the path. It does *not* take into account possible decoding failures: these might impact
@@ -31,11 +23,11 @@ class EndpointVerificationError {
   * }}}
   */
 case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends EndpointVerificationError {
-  override def toString: String = showAllPaths(e) + ", is shadowed by: " + by.input.show
+  override def toString: String = showMethodWithFullPath(e) + ", is shadowed by: " + showMethodWithFullPath(by)
 }
 
-/** Paths in an enpoint are incorrect if a wildcard `paths` segment appears before any other input. The `paths` input consumes all of
-  * the remaining paths, so any input after it will never match.
+/** Inputs in an endpoint are incorrect if a wildcard `paths` segment appears before any other segment. Reason: The wildcard `paths`
+  * consumes all of the remaining input, so any segment after it will never be matched.
   *
   * Examples of incorrectly defined paths:
   *
@@ -46,5 +38,21 @@ case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends Endpoi
   * }}}
   */
 case class IncorrectPathsError(e: AnyEndpoint, at: Int) extends EndpointVerificationError {
-  override def toString: String = s"A wildcard pattern in ${showAllPaths(e)} shadows the rest of the paths at index $at"
+  override def toString: String = s"A wildcard pattern in ${showMethodWithFullPath(e)} shadows the rest of the paths at index $at"
+}
+
+private[testing] object EndpointVerificationError {
+  private[testing] def showMethodWithFullPath(e: AnyEndpoint) = {
+    val fullInput = e.securityInput.and(e.input)
+
+    val fullInputPath = fullInput
+      .traverseInputs {
+        case a @ EndpointInput.FixedPath(_, _, _)   => Vector(a)
+        case b @ EndpointInput.PathsCapture(_, _)   => Vector(b)
+        case c @ EndpointInput.PathCapture(_, _, _) => Vector(c)
+      }
+    val finalPathShow = fullInputPath.map(_.show).mkString(" ")
+
+    fullInput.method.map(_ + " " + finalPathShow).getOrElse(finalPathShow)
+  }
 }

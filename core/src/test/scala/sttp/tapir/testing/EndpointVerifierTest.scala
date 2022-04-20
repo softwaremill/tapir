@@ -190,4 +190,82 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
     val result = EndpointVerifier(Nil)
     result shouldBe Set()
   }
+
+  it should "not detect incorrect path input when input is fixed" in {
+    val e = endpoint.get.in("x" / "y")
+
+    val result = EndpointVerifier(List(e))
+
+    result shouldBe Set()
+  }
+
+  it should "not detect incorrect path input when wildcard `paths` segment appears as the last at input" in {
+    val e = endpoint.get.in("x" / paths)
+
+    val result = EndpointVerifier(List(e))
+
+    result shouldBe Set()
+  }
+
+  it should "not detect incorrect path input when wildcard `paths` segment appears as the last at security input" in {
+    val e = endpoint.get.securityIn("x" / paths)
+
+    val result = EndpointVerifier(List(e))
+
+    result shouldBe Set()
+  }
+
+  it should "detect incorrect path input when wildcard `paths` segment appears before the last at input" in {
+    val e = endpoint.get.in("x" / paths / "y" / "z")
+
+    val result = EndpointVerifier(List(e))
+
+    val expectedResult = Set(IncorrectPathsError(e, 1))
+    result shouldBe expectedResult
+  }
+
+  it should "detect incorrect path input when wildcard `paths` segment appears before the last security input" in {
+    val e = endpoint.get.securityIn("x" / paths / "y" / "z")
+
+    val result = EndpointVerifier(List(e))
+
+    val expectedResult = Set(IncorrectPathsError(e, 1))
+    result shouldBe expectedResult
+  }
+
+  it should "detect incorrect path input when wildcard `paths` segment and any path is defined in standard input" in {
+    val e = endpoint.get.securityIn(paths).in("x")
+
+    val result = EndpointVerifier(List(e))
+
+    val expectedResult = Set(IncorrectPathsError(e, 0))
+    result shouldBe expectedResult
+  }
+
+  it should "not detect any incorrect path input when wildcard `paths` segment is defined as last segment of path" in {
+    val e = endpoint.get.in(paths).securityIn("x")
+
+    val result = EndpointVerifier(List(e))
+
+    result shouldBe Set()
+  }
+
+  it should "detect incorrect path input when wildacard `paths` segment overlaps other path segments and return proper index in path" in {
+    val e = endpoint.options.in("a" / "b" / "c").securityIn("x" / "y" / paths)
+
+    val result = EndpointVerifier(List(e))
+
+    val expectedResult = Set(IncorrectPathsError(e, 2))
+    result shouldBe expectedResult
+  }
+
+  it should "detect shadowed endpoints and incorrect path simultaneously" in {
+    val e1 = endpoint.options.securityIn("x" / paths).out(stringBody)
+    val e2 = endpoint.options.in("a" / "b" / "c").securityIn("x" / "y" / paths).out(stringBody)
+
+    val result = EndpointVerifier(List(e1, e2))
+
+    val expectedResult = Set(ShadowedEndpointError(e2, e1), IncorrectPathsError(e2, 2))
+    result shouldBe expectedResult
+  }
 }

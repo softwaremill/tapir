@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 object EndpointVerifier {
   def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
     findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
-    findIncorrectPaths(endpoints).toSet
+      findIncorrectPaths(endpoints).toSet
   }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
@@ -16,9 +16,10 @@ object EndpointVerifier {
       .map(e => {
         val paths = extractPathSegments(e)
         val wildCardIndex = paths.indexOf(WildcardPathSegment)
-        (! List(paths.length - 1, -1).contains(wildCardIndex), IncorrectPathsError(e, wildCardIndex))
+        (!List(paths.length - 1, -1).contains(wildCardIndex), IncorrectPathsError(e, wildCardIndex))
       })
-      .filter(_._1).map(_._2)
+      .filter(_._1)
+      .map(_._2)
   }
 
   @tailrec
@@ -62,7 +63,7 @@ object EndpointVerifier {
     )
   }
 
-  def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
+  private def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
     input
       .traverseInputs({
         case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
@@ -72,7 +73,7 @@ object EndpointVerifier {
   }
 }
 
-sealed trait PathComponent
+private sealed trait PathComponent
 private case object PathVariableSegment extends PathComponent
 private case object WildcardPathSegment extends PathComponent
 private case class FixedPathSegment(s: String) extends PathComponent
