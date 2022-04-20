@@ -36,7 +36,7 @@ object Versions {
   val derevo = "0.13.0"
   val newtype = "0.4.4"
   val awsLambdaInterface = "2.1.1"
-  val armeria = "1.15.0"
+  val armeria = "1.16.0"
   val scalaJava8Compat = "1.0.2"
   val fs2 = "3.2.7"
   val decline = "2.2.0"
