@@ -19,13 +19,10 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
     val penPineapple = "pen pineapple apple pen"
 
     List(
-      // TODO: remove explicit type parameters when https://github.com/lampepfl/dotty/issues/12803 fixed
-      testServer[streams.BinaryStream, Unit, streams.BinaryStream](in_stream_out_stream(streams))((s: streams.BinaryStream) =>
-        pureResult(s.asRight[Unit])
-      ) { (backend, baseUri) =>
+      testServer(in_stream_out_stream(streams))((s: streams.BinaryStream) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
         basicRequest.post(uri"$baseUri/api/echo").body(penPineapple).send(backend).map(_.body shouldBe Right(penPineapple))
       },
-      testServer[(Long, streams.BinaryStream), Unit, (Long, streams.BinaryStream)](
+      testServer(
         in_stream_out_stream_with_content_length(streams)
       )((in: (Long, streams.BinaryStream)) => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
         {
