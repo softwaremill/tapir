@@ -2,6 +2,7 @@ package sttp.tapir.testing
 
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
+import sttp.model.Method
 import sttp.tapir._
 
 class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
@@ -267,5 +268,22 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
 
     val expectedResult = Set(ShadowedEndpointError(e2, e1), IncorrectPathsError(e2, 2))
     result shouldBe expectedResult
+  }
+
+  it should "detect duplicated methods under endpoint" in {
+    val e = endpoint.get.options
+
+    val result = EndpointVerifier(List(e))
+
+    result shouldBe Set(DuplicatedMethodDefinitionError(e, List(Method.GET, Method.OPTIONS)))
+  }
+
+  it should "not detect duplicated methods when there is at most one method defined" in {
+    val e1 = endpoint.in("a")
+    val e2 = endpoint.get.in("b")
+
+    val result = EndpointVerifier(List(e1, e2))
+
+    result shouldBe Set()
   }
 }

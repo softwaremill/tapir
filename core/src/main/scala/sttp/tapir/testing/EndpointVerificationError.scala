@@ -1,8 +1,7 @@
 package sttp.tapir.testing
 
-import sttp.tapir.internal.RichEndpointInput
-import sttp.tapir.testing.EndpointVerificationError.showMethodWithFullPath
-import sttp.tapir.{AnyEndpoint, EndpointInput}
+import sttp.model.Method
+import sttp.tapir.AnyEndpoint
 
 sealed trait EndpointVerificationError
 
@@ -39,4 +38,17 @@ case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends Endpoi
   */
 case class IncorrectPathsError(e: AnyEndpoint, at: Int) extends EndpointVerificationError {
   override def toString: String = s"A wildcard pattern in ${e.showShort} shadows the rest of the paths at index $at"
+}
+
+/** Endpoint `e` has multiple methods definitions but should have at most 1 defined.
+  *
+  * Examples of incorrectly defined endpoints:
+  *
+  * {{{
+  *   endpoint.get.post
+  *   endpoint.post.in("x" / paths).get
+  * }}}
+  */
+case class DuplicatedMethodDefinitionError(e: AnyEndpoint, methods: List[Method]) extends EndpointVerificationError {
+  override def toString: String = s"An endpoint ${e.show} have multiple method definitions: $methods"
 }

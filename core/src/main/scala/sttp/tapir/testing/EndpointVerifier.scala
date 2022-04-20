@@ -1,5 +1,6 @@
 package sttp.tapir.testing
 
+import sttp.model.Method
 import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
 import sttp.tapir.{AnyEndpoint, EndpointInput, testing}
 
@@ -8,7 +9,8 @@ import scala.annotation.tailrec
 object EndpointVerifier {
   def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
     findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
-      findIncorrectPaths(endpoints).toSet
+      findIncorrectPaths(endpoints).toSet ++
+      findDuplicatedMethodDefinitions(endpoints).toSet
   }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
@@ -70,6 +72,17 @@ object EndpointVerifier {
         case EndpointInput.PathsCapture(_, _)   => Vector(WildcardPathSegment)
         case EndpointInput.PathCapture(_, _, _) => Vector(PathVariableSegment)
       })
+  }
+
+  private def findDuplicatedMethodDefinitions(endpoints: List[AnyEndpoint]): List[EndpointVerificationError] = {
+    endpoints
+      .map { e => e -> inputDefinedMethods(e.input).toList }
+      .filter(_._2.length > 1)
+      .map { case (endpoint, methods) => DuplicatedMethodDefinitionError(endpoint, methods) }
+  }
+
+  private def inputDefinedMethods(input: EndpointInput[_]): Vector[Method] = {
+    input.traverseInputs { case EndpointInput.FixedMethod(m, _, _) => Vector(m) }
   }
 }
 
