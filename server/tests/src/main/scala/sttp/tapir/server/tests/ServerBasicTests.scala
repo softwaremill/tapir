@@ -245,7 +245,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(in_string_out_content_type_string, "dynamic content type")((b: String) => pureResult((b, "image/png").asRight[Unit])) {
       (backend, baseUri) =>
-        basicStringRequest.get(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
+        basicStringRequest.post(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
           r.contentType shouldBe Some("image/png")
           r.body shouldBe "test"
         }
