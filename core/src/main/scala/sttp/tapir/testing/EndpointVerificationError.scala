@@ -23,7 +23,7 @@ sealed trait EndpointVerificationError
   * }}}
   */
 case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends EndpointVerificationError {
-  override def toString: String = showMethodWithFullPath(e) + ", is shadowed by: " + showMethodWithFullPath(by)
+  override def toString: String = e.showShort + ", is shadowed by: " + by.showShort
 }
 
 /** Inputs in an endpoint are incorrect if a wildcard `paths` segment appears before any other segment. Reason: The wildcard `paths`
@@ -38,21 +38,5 @@ case class ShadowedEndpointError(e: AnyEndpoint, by: AnyEndpoint) extends Endpoi
   * }}}
   */
 case class IncorrectPathsError(e: AnyEndpoint, at: Int) extends EndpointVerificationError {
-  override def toString: String = s"A wildcard pattern in ${showMethodWithFullPath(e)} shadows the rest of the paths at index $at"
-}
-
-private[testing] object EndpointVerificationError {
-  private[testing] def showMethodWithFullPath(e: AnyEndpoint) = {
-    val fullInput = e.securityInput.and(e.input)
-
-    val fullInputPath = fullInput
-      .traverseInputs {
-        case a @ EndpointInput.FixedPath(_, _, _)   => Vector(a)
-        case b @ EndpointInput.PathsCapture(_, _)   => Vector(b)
-        case c @ EndpointInput.PathCapture(_, _, _) => Vector(c)
-      }
-    val finalPathShow = fullInputPath.map(_.show).mkString(" ")
-
-    fullInput.method.map(_.method + " " + finalPathShow).getOrElse(finalPathShow)
-  }
+  override def toString: String = s"A wildcard pattern in ${e.showShort} shadows the rest of the paths at index $at"
 }
