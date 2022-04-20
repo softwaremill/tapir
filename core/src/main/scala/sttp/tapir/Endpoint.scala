@@ -257,7 +257,7 @@ trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, 
   def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[A, I, E, OP, R with R2] =
     withOutput(output.and(i.toEndpointIO))
 
-  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R] =
+  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R with R2] =
     withOutput(i.toEndpointIO.and(output))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
