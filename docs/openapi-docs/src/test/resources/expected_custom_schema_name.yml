@@ -17,6 +17,7 @@ paths:
           required: false
           schema:
             type: integer
+            format: int32
       responses:
         '200':
           description: ''
@@ -45,6 +46,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int32
         - name: color
           in: query
           required: true
@@ -58,6 +60,7 @@ paths:
               required: true
               schema:
                 type: integer
+                format: int32
           content:
             application/json:
               schema:
@@ -87,3 +90,4 @@ components:
           type: string
         amount:
           type: integer
+          format: int32

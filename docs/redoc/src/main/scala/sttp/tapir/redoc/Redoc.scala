@@ -38,20 +38,18 @@ object Redoc {
   def apply[F[_]](
       title: String,
       spec: String,
-      prefix: List[String] = List("docs"),
-      specName: String = "docs.yaml",
-      htmlName: String = "index.html",
-      redocVersion: String = defaultRedocVersion
+      options: RedocUIOptions
   ): List[ServerEndpoint[Any, F]] = {
-    val prefixInput = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixAsPath = prefix.mkString("/")
+    val specName = options.specName
+    val htmlName = options.htmlName
 
-    val html: String = redocHtml(title, s"/$prefixAsPath/$specName", redocVersion)
+    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
+    val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
+
     def contentEndpoint(fileName: String, mediaType: MediaType) =
       baseEndpoint.in(fileName).out(stringBody).out(header(Header.contentType(mediaType)))
-    val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
 
     val specNameLowerCase = specName.toLowerCase
     val specMediaType =
@@ -59,10 +57,32 @@ object Redoc {
       else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
       else MediaType("text", "plain")
 
-    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/$prefixAsPath/$htmlName"))
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
+
+    val specPrefix = if (options.useRelativePaths) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
+    val html: String = redocHtml(title, s"$specPrefix/$specName", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
-    List(redirectToHtmlEndpoint, specEndpoint, htmlEndpoint)
+    val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)
+
+    val redirectToHtmlEndpoint =
+      baseEndpoint
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { lastSegment =>
+          if (options.useRelativePaths) {
+            val pathFromLastSegment: String = lastSegment match {
+              case Some(s) if s.nonEmpty => s + "/"
+              case _                     => ""
+            }
+            Right(s"./$pathFromLastSegment$htmlName")
+          } else
+            Right(options.contextPath ++ options.pathPrefix match {
+              case Nil      => s"/$htmlName"
+              case segments => s"/${segments.mkString("/")}/$htmlName"
+            })
+        }
+
+    List(specEndpoint, htmlEndpoint, redirectToHtmlEndpoint)
   }
 }

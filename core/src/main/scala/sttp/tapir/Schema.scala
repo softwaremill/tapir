@@ -238,7 +238,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForString: Schema[String] = Schema(SString())
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger())
   implicit val schemaForShort: Schema[Short] = Schema(SInteger())
-  implicit val schemaForInt: Schema[Int] = Schema(SInteger())
+  implicit val schemaForInt: Schema[Int] = Schema(SInteger[Int]()).format("int32")
   implicit val schemaForLong: Schema[Long] = Schema(SInteger[Long]()).format("int64")
   implicit val schemaForFloat: Schema[Float] = Schema(SNumber[Float]()).format("float")
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber[Double]()).format("double")

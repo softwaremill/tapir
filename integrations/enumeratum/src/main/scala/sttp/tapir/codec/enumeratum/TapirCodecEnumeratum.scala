@@ -38,10 +38,10 @@ trait TapirCodecEnumeratum {
     Validator.enumeration(enum.values.toList, v => Some(v.value), Some(SName(fullName(`enum`))))
 
   implicit def schemaForIntEnumEntry[E <: IntEnumEntry](implicit annotations: SchemaAnnotations[E], enum: IntEnum[E]): Schema[E] =
-    annotations.enrich(Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Int, E]))
+    annotations.enrich(Schema[E](SchemaType.SInteger(), format = Some("int32")).validate(validatorValueEnumEntry[Int, E]))
 
   implicit def schemaForLongEnumEntry[E <: LongEnumEntry](implicit annotations: SchemaAnnotations[E], enum: LongEnum[E]): Schema[E] =
-    annotations.enrich(Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Long, E]))
+    annotations.enrich(Schema[E](SchemaType.SInteger(), format = Some("int64")).validate(validatorValueEnumEntry[Long, E]))
 
   implicit def schemaForShortEnumEntry[E <: ShortEnumEntry](implicit annotations: SchemaAnnotations[E], enum: ShortEnum[E]): Schema[E] =
     annotations.enrich(Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Short, E]))

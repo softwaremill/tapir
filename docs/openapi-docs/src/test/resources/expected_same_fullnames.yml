@@ -41,3 +41,4 @@ components:
       properties:
         legsCount:
           type: integer
+          format: int32

@@ -33,6 +33,7 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
       description: Amount of fruits
     ObjectWithOption:
       type: object

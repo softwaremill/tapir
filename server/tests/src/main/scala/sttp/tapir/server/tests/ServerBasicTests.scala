@@ -332,6 +332,36 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .headers(Header(HeaderNames.ContentType, "multipart/form-data; boundary=abc"))
         .send(backend)
         .map(_.body shouldBe Right("x"))
+    },
+    testServer(out_custom_content_type_empty_body)(k =>
+      pureResult((if (k < 0) MediaType.ApplicationJson.toString() else MediaType.ApplicationXml.toString()).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map(_.contentType shouldBe Some(MediaType.ApplicationJson.toString())) >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map(_.contentType shouldBe Some(MediaType.ApplicationXml.toString()))
+    },
+    testServer(out_custom_content_type_string_body)(k =>
+      pureResult((if (k < 0) (MediaType.ApplicationJson.toString(), "{}") else (MediaType.ApplicationXml.toString(), "<>")).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("{}")
+          r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+        } >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("<>")
+            r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+          }
     }
   )
 

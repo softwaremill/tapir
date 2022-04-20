@@ -33,4 +33,5 @@ components:
     integer:
       payload:
         type: integer
+        format: int32
       contentType: application/json

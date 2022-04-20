@@ -5,7 +5,7 @@
 To expose an endpoint using a [Netty](https://netty.io)-based server, first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.0-M7"
 ```
 
 Then, use:

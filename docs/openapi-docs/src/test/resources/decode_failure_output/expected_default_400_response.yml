@@ -12,6 +12,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: int32
             minimum: 0
       responses:
         '200':

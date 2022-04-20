@@ -39,7 +39,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             field.tpe.asType match
               case '[f] =>
                 inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> idx)
-                wrapInput(field, makePathInput[f](field))
+                wrapInput[f](field, makePathInput[f](field))
           case None =>
             report.throwError(s"${caseClass.name}.${fieldName} must have the @path annotation, as it is referenced from @endpointInput.")
         }
@@ -82,7 +82,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
               )
             }
           inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> fieldIdx)
-          wrapInput(field, input)
+          wrapInput[f](field, input)
     }
 
     val result = (pathInputs ::: nonPathInputs).map(_.asTerm).reduceLeft { (left, right) =>

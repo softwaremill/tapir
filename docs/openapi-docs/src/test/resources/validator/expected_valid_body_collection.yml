@@ -42,4 +42,5 @@ components:
           minLength: 4
         amount:
           type: integer
+          format: int32
           minimum: 1

@@ -31,8 +31,10 @@ object SwaggerUI {
     *   Options to customise how the documentation is exposed through SwaggerUI, e.g. the path.
     */
   def apply[F[_]](yaml: String, options: SwaggerUIOptions = SwaggerUIOptions.default): List[ServerEndpoint[Any, F]] = {
-    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixFromRoot = (options.contextPath ++ options.pathPrefix).mkString("/")
+    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
+    val fullPathPrefix =
+      if (options.useRelativePaths) "."
+      else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
@@ -42,24 +44,10 @@ object SwaggerUI {
       .out(stringBody)
       .serverLogicPure[F](_ => Right(yaml))
 
-    val oauth2Endpoint = baseEndpoint
-      .in("oauth2-redirect.html")
-      .in(queryParams)
-      .out(redirectOutput)
-      .serverLogicPure[F] { (params: QueryParams) =>
-        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-        Right(s"/$prefixFromRoot/oauth2-redirect.html$queryString")
-      }
-
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
     val swaggerInitializerJsWithReplacedUrl =
-      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"/$prefixFromRoot/${options.yamlName}")
-
-    val redirectToSlashEndpoint = baseEndpoint.in(noTrailingSlash).in(queryParams).out(redirectOutput).serverLogicPure[F] { params =>
-      val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
-      Right(s"/$prefixFromRoot/$queryString")
-    }
+      swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
@@ -70,6 +58,24 @@ object SwaggerUI {
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 
-    List(yamlEndpoint, oauth2Endpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    if (options.pathPrefix == Nil) List(yamlEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    else {
+      val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(request => request.pathSegments.lastOption)
+      val redirectToSlashEndpoint = baseEndpoint
+        .in(noTrailingSlash)
+        .in(queryParams)
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { case (params, lastSegment) =>
+          val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
+          val path = if (options.useRelativePaths) lastSegment.map(str => s"$str/").getOrElse("") else ""
+          Right(s"${concat(fullPathPrefix, path + queryString)}")
+        }
+
+      List(yamlEndpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
+    }
+
   }
+
+  private def concat(l: String, r: String) = s"$l/$r"
 }

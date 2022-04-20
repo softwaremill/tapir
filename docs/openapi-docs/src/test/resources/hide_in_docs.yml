@@ -17,11 +17,13 @@ paths:
           required: true
           schema:
             type: integer
+            format: int32
         - name: q1
           in: query
           required: true
           schema:
             type: integer
+            format: int32
         - name: h1
           in: header
           required: true
