@@ -53,6 +53,6 @@ private[testing] object EndpointVerificationError {
       }
     val finalPathShow = fullInputPath.map(_.show).mkString(" ")
 
-    fullInput.method.map(_ + " " + finalPathShow).getOrElse(finalPathShow)
+    fullInput.method.map(_.method + " " + finalPathShow).getOrElse(finalPathShow)
   }
 }
