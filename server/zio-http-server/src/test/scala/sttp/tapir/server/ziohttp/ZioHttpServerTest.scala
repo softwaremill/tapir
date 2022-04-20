@@ -35,9 +35,7 @@ class ZioHttpServerTest extends TestSuite {
           supportsMultipleSetCookieHeaders = false,
           invulnerableToUnsanitizedHeaders = false
         ).tests() ++
-          // TODO: re-enable static content once a newer zio http is available. Currently these tests often fail with:
-          // Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [f2 content], parser state [STATUS_LINE]
-          new AllServerTests(createServerTest, interpreter, backend, basic = false, staticContent = false, multipart = false, file = false)
+          new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, file = false)
             .tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ZioHttpCompositionTest(createServerTest).tests()
