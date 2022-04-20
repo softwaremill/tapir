@@ -26,12 +26,7 @@ private[vertx] case class VertxServerRequest(rc: RoutingContext, attributes: Att
   override lazy val protocol: String = Option(rc.request.scheme).getOrElse("")
   override lazy val uri: Uri = Uri.unsafeParse(rc.request.uri)
   override lazy val headers: Seq[Header] = rc.request.headers.entries.asScala.iterator.map(e => Header(e.getKey, e.getValue)).toList
-  override lazy val queryParameters: QueryParams = {
-    val params = rc.request.params
-    QueryParams.fromMultiMap(
-      params.names.asScala.map { key => (key, params.getAll(key).asScala.toList) }.toMap
-    )
-  }
+  override lazy val queryParameters: QueryParams = Uri.unsafeParse(rc.request.uri()).params
   override lazy val pathSegments: List[String] = {
     val path = Option(rc.request.path).getOrElse("")
     val segments = path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)

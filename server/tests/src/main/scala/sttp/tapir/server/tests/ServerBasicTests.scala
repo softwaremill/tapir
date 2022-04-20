@@ -158,6 +158,14 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
+    testServer(endpoint.get.in(path[String]("pathParam")).in(queryParams).out(stringBody)) { case (pathParam: String, mqp: QueryParams) =>
+      pureResult(s"pathParam:$pathParam queryParams:${mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&")}".asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri/abc?xyz=123")
+        .send(backend)
+        .map(_.body shouldBe Right("pathParam:abc queryParams:xyz=123"))
+    },
     testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
       pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2.toList}").mkString("&").asRight[Unit])
     ) { (backend, baseUri) =>
