@@ -311,7 +311,7 @@ lead to situation where all other inputs defined after `paths` wildcard segment 
 can use `EndpointVerifier` util class which takes an input of
 type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
 
-Example:
+Example 1:
 
 ```scala mdoc:silent
 import sttp.tapir.testing.EndpointVerifier
@@ -324,4 +324,24 @@ Results in:
 
 ```scala mdoc
 result.toString
+```
+
+### Duplicated method definitions at endpoint
+
+It is possible to define an endpoint where there are methods multiple times defined. To detect such cases one can use 
+`EndpointVerifier` util class which takes an input of type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.testing.EndpointVerifier
+
+val ep = endpoint.options.in("a" / "b" / "c").get
+val result2 = EndpointVerifier(List(ep))
+```
+
+Results in:
+
+```scala mdoc
+result2.toString
 ```
