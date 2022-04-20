@@ -592,7 +592,7 @@ object EndpointIO {
 
 /*
 Streaming body is a special kind of input, as it influences the 4th type parameter of `Endpoint`. Other inputs
-(`EndpointInput`s and `EndpointIO`s aren't parametrised with the type of streams that they use (to make them simpler),
+(`EndpointInput`s and `EndpointIO`s) aren't parametrised with the type of streams that they use (to make them simpler),
 so we need to pass the streaming information directly between the streaming body input and the endpoint.
 
 That's why the streaming body input is a separate trait, unrelated to `EndpointInput`: it can't be combined with
