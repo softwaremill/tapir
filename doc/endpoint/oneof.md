@@ -181,8 +181,18 @@ on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the 
 type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
 endpoints, which require including streaming bodies in output variants.
 
-Note that if the same streaming body description is used in all branches of a `oneOf`, this can be refactored into
-a regular streaming body output + a varying set of output headers, expressed using `oneOf`.
+```eval_rst
+.. note::
+
+  If the same streaming body description is used in all branches of a ``oneOf``, this can be refactored into
+  a regular streaming body output + a varying set of output headers, expressed using ``oneOf``.
+```
+
+```eval_rst
+.. warning::
+
+  Mixed streaming and non-streaming bodies defined as ``oneOf`` variants currently won't work with client interpreters.
+```
 
 ## Next
 
