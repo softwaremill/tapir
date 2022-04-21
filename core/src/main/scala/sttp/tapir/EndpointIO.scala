@@ -218,6 +218,8 @@ object EndpointInput extends EndpointInputMacros {
 
     def description(d: String): Auth[T, TYPE] = copy(info = info.description(d))
 
+    def bearerFormat(f: String): Auth[T, TYPE] = copy(info = info.bearerFormat(f))
+
     /** Authentication inputs in the same group will always become a single security requirement in the documentation (requiring all
       * authentication methods), even if they are all optional.
       */
@@ -248,16 +250,23 @@ object EndpointInput extends EndpointInputMacros {
     }
   }
 
-  case class AuthInfo(securitySchemeName: Option[String], description: Option[String], attributes: AttributeMap, group: Option[String]) {
+  case class AuthInfo(
+      securitySchemeName: Option[String],
+      description: Option[String],
+      attributes: AttributeMap,
+      group: Option[String],
+      bearerFormat: Option[String]
+  ) {
     def securitySchemeName(name: String): AuthInfo = copy(securitySchemeName = Some(name))
     def description(d: String): AuthInfo = copy(description = Some(d))
     def group(g: String): AuthInfo = copy(group = Some(g))
+    def bearerFormat(format: String): AuthInfo = copy(bearerFormat = Some(format))
 
     def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
     def attribute[A](k: AttributeKey[A], v: A): AuthInfo = copy(attributes = attributes.put(k, v))
   }
   object AuthInfo {
-    val Empty: AuthInfo = AuthInfo(None, None, AttributeMap.Empty, None)
+    val Empty: AuthInfo = AuthInfo(None, None, AttributeMap.Empty, None, None)
   }
 
   //
