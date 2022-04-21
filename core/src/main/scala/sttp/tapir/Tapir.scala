@@ -427,9 +427,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def oneOfBody[T](
       first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+      // this is needed so that the signature is different from the previous method
+      second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
       others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
   ): EndpointIO.OneOfBody[T, T] =
-    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) }, Mapping.id)
+    EndpointIO.OneOfBody[T, T](
+      (first +: second +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) },
+      Mapping.id
+    )
 
   private val emptyIO: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
