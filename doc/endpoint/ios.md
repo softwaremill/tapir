@@ -240,6 +240,19 @@ A fixed status code can be specified using the `statusCode(code)` output.
 Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with
 `400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
 
+## OpenAPI description
+
+### Hidden input/output
+
+It's possible to hide an input/output from the OpenAPI description using following syntax:
+
+```scala mdoc:silent:reset
+import sttp.tapir._
+
+val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.copy(hidden = true))
+```
+
+
 ## Next
 
 Read on about [one-of mappings](oneof.md).
