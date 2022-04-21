@@ -181,6 +181,9 @@ causes another problem: out of memory when running JS tests for multiple modules
 
 You can test only server/client/doc/other projects using `testServers`, `testClients`, `testDocs` and `testOther`.
 
+To verify that the code snippet in docs compile, run `compileDocumentation`. A full mdoc run is done during a release
+(when the documentation is generated).
+
 ## Commercial Support
 
 We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!
