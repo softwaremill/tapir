@@ -398,7 +398,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
-      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), b)),
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Left(b))),
+      Mapping.id
+    )
+
+  /** Streaming variant of [[oneOfBody]]. */
+  def oneOfBody[T](first: EndpointIO.StreamBodyWrapper[_, T], others: EndpointIO.StreamBodyWrapper[_, T]*): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T](
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Right(b))),
       Mapping.id
     )
 
@@ -411,7 +418,18 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       first: (ContentTypeRange, EndpointIO.Body[_, T]),
       others: (ContentTypeRange, EndpointIO.Body[_, T])*
   ): EndpointIO.OneOfBody[T, T] =
-    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, b) }, Mapping.id)
+    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Left(b)) }, Mapping.id)
+
+  /** Streaming variant of [[oneOfBody]].
+    *
+    * Allows explicitly specifying the content type range, for which each body will be used, instead of defaulting to the exact media type
+    * as specified by the body's codec. This is only used when choosing which body to decode.
+    */
+  def oneOfBody[T](
+      first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+      others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
+  ): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) }, Mapping.id)
 
   private val emptyIO: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 

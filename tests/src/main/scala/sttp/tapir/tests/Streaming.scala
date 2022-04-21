@@ -43,4 +43,16 @@ object Streaming {
         )
       )
   }
+
+  def in_stream_out_either_json_xml_stream[S](
+      s: Streams[S]
+  ): PublicEndpoint[s.BinaryStream, Unit, s.BinaryStream, S] = {
+    def textStream(format: CodecFormat) = streamTextBody(s)(format, None)
+
+    endpoint.post
+      .in(textStream(CodecFormat.TextPlain()))
+      .out(
+        oneOfBody(textStream(CodecFormat.Json()).toEndpointIO, textStream(CodecFormat.Xml()).toEndpointIO)
+      )
+  }
 }

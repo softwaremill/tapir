@@ -8,6 +8,7 @@ import sttp.model.{Header, HeaderNames, MediaType}
 import sttp.monad.MonadError
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.Streaming.{
+  in_stream_out_either_json_xml_stream,
   in_stream_out_stream,
   in_stream_out_stream_with_content_length,
   in_string_stream_out_either_stream_string,
@@ -80,6 +81,26 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
             .body(penPineapple)
             .send(backend)
             .map(_.body shouldBe Right("was not left"))
+      },
+      testServer(in_stream_out_either_json_xml_stream(streams)) { s => pureResult(s.asRight[Unit]) } { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri")
+          .body(penPineapple)
+          .header(Header.accept(MediaType.ApplicationXml, MediaType.ApplicationJson))
+          .send(backend)
+          .map { r =>
+            r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+            r.body shouldBe Right(penPineapple)
+          } >>
+          basicRequest
+            .post(uri"$baseUri")
+            .body(penPineapple)
+            .header(Header.accept(MediaType.ApplicationJson, MediaType.ApplicationXml))
+            .send(backend)
+            .map { r =>
+              r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+              r.body shouldBe Right(penPineapple)
+            }
       }
     )
   }

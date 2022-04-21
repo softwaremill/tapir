@@ -91,7 +91,14 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case EndpointIO.OneOfBody(variants, _) => setInputParams(variants.head.body, params, uri, req)
+      case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, uri, req)
+      case EndpointIO.OneOfBody(
+            EndpointIO.OneOfBodyVariant(_, Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)))) :: _,
+            _
+          ) =>
+        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
+        (uri, req2)
+      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
@@ -206,8 +213,9 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
-      Vector(streams)
+    out.traverseOutputs {
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => Vector(streams)
+      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.toOption).map(_.wrapped.streams).toVector
     }.headOption
   }
 
