@@ -443,6 +443,10 @@ object EndpointIO {
     def show: String = body.fold(_.show, _.show)
     def mediaTypeWithCharset: MediaType = body.fold(_.mediaTypeWithCharset, _.mediaTypeWithCharset)
     def codec: Codec[_, O, _ <: CodecFormat] = body.fold(_.codec, _.codec)
+    private[tapir] def bodyAsAtom: EndpointIO.Atom[O] = body match {
+      case Left(b)  => b
+      case Right(b) => b
+    }
   }
   case class OneOfBody[O, T](variants: List[OneOfBodyVariant[O]], mapping: Mapping[O, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = OneOfBody[O, X]
