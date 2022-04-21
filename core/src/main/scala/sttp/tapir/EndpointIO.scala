@@ -591,7 +591,7 @@ object EndpointIO {
 }
 
 /*
-Streaming body is a special kind of input, as it influences the 4th type parameter of `Endpoint`. Other inputs
+Streaming body is a special kind of input/output, as it influences the 4th type parameter of `Endpoint`. Other inputs
 (`EndpointInput`s and `EndpointIO`s) aren't parametrised with the type of streams that they use (to make them simpler),
 so we need to pass the streaming information directly between the streaming body input and the endpoint.
 
@@ -600,8 +600,8 @@ other inputs, and the `Endpoint.in(EndpointInput)` method can't be used to add a
 overloaded variant `Endpoint.in(StreamBody)`, which takes into account the streaming type.
 
 Internally, the streaming body is converted into a wrapper `EndpointIO`, which "forgets" about the streaming
-information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
-factory method in `Tapir` which would directly create an instance of it.
+information. This can also be done by the end user with `.toEndpointIO`, if the body should be used e.g. in `oneOf`.
+However, this decreases type safety, as the streaming requirement is lost.
 
 BS == streams.BinaryStream, but we can't express this using dependent types here.
  */
@@ -617,7 +617,12 @@ case class StreamBodyIO[BS, T, S](
   override private[tapir] type CF = CodecFormat
   override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
-  private[tapir] def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
+  /** Lift this streaming body into an [[EndpointIO]], so that it can be used as a regular endpoint input/output, "forgetting" the streaming
+    * requirement. This is useful when using the streaming body in [[Tapir.oneOf]] or [[Tapir.oneOfBody]], however at the expense of type
+    * safety: the fact that the endpoint can only be interpreted by an interpreter supporting the given stream type is lost; in case of a
+    * mismatch, a run-time error will occur.
+    */
+  def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
 
   /** Add an example of a "deserialized" stream value. This should be given in an encoded form, e.g. in case of json - as a [[String]], as
     * the stream body doesn't have access to the codec that will be later used for deserialization.

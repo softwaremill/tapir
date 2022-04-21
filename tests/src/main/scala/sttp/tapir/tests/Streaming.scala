@@ -27,4 +27,20 @@ object Streaming {
       .out(header[String](HeaderNames.ContentType))
       .out(sb)
   }
+
+  def in_string_stream_out_either_stream_string[S](
+      s: Streams[S]
+  ): PublicEndpoint[(String, s.BinaryStream), Unit, Either[s.BinaryStream, String], S] = {
+    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+
+    endpoint.post
+      .in(query[String]("which"))
+      .in(sb)
+      .out(
+        oneOf(
+          oneOfVariantClassMatcher(sb.toEndpointIO.map(Left(_))(_.value), classOf[Left[s.BinaryStream, String]]),
+          oneOfVariantClassMatcher(stringBody.map(Right(_))(_.value), classOf[Right[s.BinaryStream, String]])
+        )
+      )
+  }
 }
