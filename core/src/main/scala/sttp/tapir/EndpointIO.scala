@@ -440,9 +440,10 @@ object EndpointIO {
   }
 
   case class OneOfBodyVariant[O](range: ContentTypeRange, body: Either[Body[_, O], StreamBodyWrapper[_, O]]) {
-    def show: String = body.fold(_.show, _.show)
+    def show: String = bodyAsAtom.show
     def mediaTypeWithCharset: MediaType = body.fold(_.mediaTypeWithCharset, _.mediaTypeWithCharset)
-    def codec: Codec[_, O, _ <: CodecFormat] = body.fold(_.codec, _.codec)
+    def codec: Codec[_, O, _ <: CodecFormat] = bodyAsAtom.codec
+    def info: Info[O] = bodyAsAtom.info
     private[tapir] def bodyAsAtom: EndpointIO.Atom[O] = body match {
       case Left(b)  => b
       case Right(b) => b
