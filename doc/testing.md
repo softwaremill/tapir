@@ -258,23 +258,24 @@ val result = SttpClientInterpreter()
 result == out 
 ```
 
-## Shadowed endpoints
+## Endpoints verification
+### Shadowed endpoints
 
 It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such
 case when all matching requests will be handled by the first endpoint; the second endpoint will always be omitted. 
-To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
-type `List[AnyEndpoint]` an outputs `Set[ShadowedEndpoint]`.
+To detect such cases one can use `EndpointVerifier` util class which takes an input of
+type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
 
 Example 1:
 
 ```scala mdoc:silent
-import sttp.tapir.testing.FindShadowedEndpoints
+import sttp.tapir.testing.EndpointVerifier
 
 val e1 = endpoint.get.in("x" / paths)
 val e2 = endpoint.get.in("x" / "y" / "x")
 val e3 = endpoint.get.in("x")
 val e4 = endpoint.get.in("y" / "x")
-val res = FindShadowedEndpoints(List(e1, e2, e3, e4)) 
+val res = EndpointVerifier(List(e1, e2, e3, e4)) 
 ```
 
 Results in:
@@ -286,11 +287,11 @@ res.toString
 Example 2:
 
 ```scala mdoc:silent:nest
-import sttp.tapir.testing.FindShadowedEndpoints
+import sttp.tapir.testing.EndpointVerifier
 
 val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
 val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
-val res = FindShadowedEndpoints(List(e1, e2))
+val res = EndpointVerifier(List(e1, e2))
 ```
 
 Results in:
@@ -302,3 +303,45 @@ res.toString
 Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
 decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
 [`DecodeFailureHandler`](server/errors.md#decode-failures) used.
+
+### Incorrect path at endpoint
+
+It is possible to define an endpoint where some part of an input will consume whole remaining path. That case can 
+lead to situation where all other inputs defined after `paths` wildcard segment are omitted. To detect such cases one
+can use `EndpointVerifier` util class which takes an input of
+type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.testing.EndpointVerifier
+
+val e = endpoint.options.in("a" / "b" / "c").securityIn("x" / "y" / paths)
+val result = EndpointVerifier(List(e))
+```
+
+Results in:
+
+```scala mdoc
+result.toString
+```
+
+### Duplicated method definitions at endpoint
+
+It is possible to define an endpoint where there are methods multiple times defined. To detect such cases one can use 
+`EndpointVerifier` util class which takes an input of type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.testing.EndpointVerifier
+
+val ep = endpoint.options.in("a" / "b" / "c").get
+val result2 = EndpointVerifier(List(ep))
+```
+
+Results in:
+
+```scala mdoc
+result2.toString
+```
