@@ -51,7 +51,7 @@ object ConvertStreams {
             case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
               EndpointIO.OneOfBodyVariant(range, Right(forInput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
           },
-          mapping
+          mapping.asInstanceOf[Mapping[Any, Any]]
         )
       // all other cases - unchanged
       case _ => input
@@ -84,7 +84,7 @@ object ConvertStreams {
             case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
               EndpointIO.OneOfBodyVariant(range, Right(forOutput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
           },
-          mapping
+          mapping.asInstanceOf[Mapping[Any, Any]]
         )
       // all other cases - unchanged
       case _ => output
