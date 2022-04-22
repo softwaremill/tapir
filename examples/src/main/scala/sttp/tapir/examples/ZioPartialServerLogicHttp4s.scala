@@ -26,7 +26,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
     .zServerSecurityLogic(UserService.auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  val secureHelloWorld1WithLogic = secureEndpoint.get
+  val secureHelloWorld1WithLogic: ZServerEndpoint[UserService, Any] = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
@@ -39,8 +39,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
     ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic)).toRoutes
 
   // testing
-  // RIO[UserService, Unit]
-  val test: RIO[Any, Unit] = ZIO.scoped {
+  val test: Task[Unit] = ZIO.scoped {
     AsyncHttpClientZioBackend.scoped().flatMap { backend =>
       def testWith(path: String, salutation: String, token: String): Task[String] =
         backend
@@ -69,7 +68,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 
   //
 
-  override def run =
+  override def run: URIO[Any, ExitCode] =
     BlazeServerBuilder[RIO[UserService, *]]
       .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
       .bindHttp(8080, "localhost")

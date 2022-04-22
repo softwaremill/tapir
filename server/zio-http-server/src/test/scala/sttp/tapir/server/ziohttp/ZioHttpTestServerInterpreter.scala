@@ -24,8 +24,7 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactor
     val layers: ZLayer[Any, Nothing, EventLoopGroup with ServerChannelFactory] =
       ZLayer.succeed(eventLoopGroup) ++ ZLayer.succeed(channelFactory)
 
-    val server: Server[Any, Throwable] =
-      Server.app(routes.toList.reduce(_ ++ _)) // ++ Server.enableObjectAggregator(10000000)
+    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _))
 
     val io: ZIO[Scope, Throwable, Server.Start] = ZIO
       .scoped(Server.make(server ++ Server.port(0)))
