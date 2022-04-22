@@ -11,7 +11,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.{IO, RIO, Task, UIO, ZIOAppDefault}
+import zio.{ExitCode, IO, Task, UIO, URIO, ZIOAppDefault}
 import zio.interop.catz._
 
 object ZioExampleHttp4sServer extends ZIOAppDefault {
@@ -21,7 +21,7 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes = ZHttp4sServerInterpreter()
+  val petRoutes: HttpRoutes[Task] = ZHttp4sServerInterpreter()
     .from(petEndpoint.zServerLogic { petId =>
       if (petId == 35) {
         UIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
@@ -39,13 +39,13 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Any, *]] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
+  val petServerRoutes: HttpRoutes[Task] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
 
   //
 
-  val swaggerRoutes =
+  val swaggerRoutes: HttpRoutes[Task] =
     ZHttp4sServerInterpreter()
-      .from(SwaggerInterpreter().fromEndpoints[RIO[Any, *]](List(petEndpoint), "Our pets", "1.0"))
+      .from(SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
       .toRoutes
 
   // Starting the server
@@ -58,5 +58,5 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
       .compile
       .drain
 
-  override def run = serve.exitCode
+  override def run: URIO[Any, ExitCode] = serve.exitCode
 }
