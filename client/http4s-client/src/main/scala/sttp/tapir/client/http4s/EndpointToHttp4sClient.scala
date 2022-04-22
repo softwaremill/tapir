@@ -96,9 +96,15 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
           currentUri.withQueryParam(key, values)
         }
         req.withUri(uri)
-      case EndpointIO.Empty(_, _)              => req
-      case EndpointIO.Body(bodyType, codec, _) => setBody(value, bodyType, codec, req)
-      case EndpointIO.OneOfBody(variants, _)   => setInputParams(variants.head.body, params, req)
+      case EndpointIO.Empty(_, _)                                                   => req
+      case EndpointIO.Body(bodyType, codec, _)                                      => setBody(value, bodyType, codec, req)
+      case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, req)
+      case EndpointIO.OneOfBody(
+            EndpointIO.OneOfBodyVariant(_, Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)))) :: _,
+            _
+          ) =>
+        setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
+      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>

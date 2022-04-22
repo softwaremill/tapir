@@ -2,7 +2,7 @@ package sttp.tapir.server.stub
 
 import sttp.client3.Response
 import sttp.model.{ContentTypeRange, HasHeaders, Headers, StatusCode}
-import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 

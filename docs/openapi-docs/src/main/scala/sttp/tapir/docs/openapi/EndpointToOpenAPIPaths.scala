@@ -2,13 +2,12 @@ package sttp.tapir.docs.openapi
 
 import sttp.model.Method
 import sttp.tapir._
-import sttp.tapir.internal._
-import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
+import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
+import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
+import sttp.tapir.internal._
+import sttp.tapir.openapi._
 
 import scala.collection.immutable.ListMap
 
@@ -74,12 +73,12 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case EndpointIO.OneOfBody(variants, _) =>
         Right(
           RequestBody(
-            variants.collectFirst { case EndpointIO.OneOfBodyVariant(_, EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, _))) => d },
+            variants.flatMap(_.info.description).headOption,
             variants
-              .flatMap(variant => codecToMediaType(variant.body.codec, variant.body.info.examples, Some(variant.range.toString), Nil))
+              .flatMap(variant => codecToMediaType(variant.codec, variant.info.examples, Some(variant.range.toString), Nil))
               .toListMap,
-            Some(!variants.forall(_.body.codec.schema.isOptional)),
-            DocsExtensions.fromIterable(variants.flatMap(_.body.info.docsExtensions))
+            Some(!variants.forall(_.codec.schema.isOptional)),
+            DocsExtensions.fromIterable(variants.flatMap(_.info.docsExtensions))
           )
         )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
