@@ -247,6 +247,16 @@ val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
 object manually or using a tool such as [quicklens](https://github.com/softwaremill/quicklens).
 
+## Hiding inputs/outputs
+
+It's possible to hide an input/output from the OpenAPI description using following syntax:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+
+val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.hidden(true))
+```
+
 ## Exposing generated OpenAPI documentation
 
 Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
