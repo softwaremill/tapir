@@ -323,7 +323,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "org.scala-js" %%% "scalajs-dom" % "2.1.0",
-        ("org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0").cross(CrossVersion.for3Use2_13),
+        // TODO: remove once https://github.com/scalatest/scalatest/issues/2116 is fixed
+        ("org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0").cross(CrossVersion.for3Use2_13) % Test,
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
         "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.jsScalaJavaTime % Test
       )
