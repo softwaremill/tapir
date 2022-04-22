@@ -169,6 +169,31 @@ oneOfBody(
 )
 ```
 
+## oneOf and non-blocking streaming
+
+[Streaming bodies](streaming.md) can't be used as normal inputs/outputs, as the streaming requirement needs to be 
+propagated to the `Endpoint` type. This way, we assure at compile-time that only interpreters supporting the given 
+streaming type can be used to interpret an endpoint.
+
+However, this makes it impossible to use streaming bodies in `oneOf` (via `oneOfVariant`) and `oneOfBody`, as both
+require normal input/outputs as parameters. To bypass this limitation, a `.toEndpointIO` method is available
+on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the streaming requirement. This decreases
+type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
+endpoints, which require including streaming bodies in output variants.
+
+```eval_rst
+.. note::
+
+  If the same streaming body description is used in all branches of a ``oneOf``, this can be refactored into
+  a regular streaming body output + a varying set of output headers, expressed using ``oneOf``.
+```
+
+```eval_rst
+.. warning::
+
+  Mixed streaming and non-streaming bodies defined as ``oneOf`` variants currently won't work with client interpreters.
+```
+
 ## Next
 
 Read on about [codecs](codecs.md).

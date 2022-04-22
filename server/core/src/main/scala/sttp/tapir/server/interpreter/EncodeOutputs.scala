@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
-import sttp.tapir.EndpointIO.{Body, OneOfBodyVariant}
+import sttp.tapir.EndpointIO.{Body, OneOfBodyVariant, StreamBodyWrapper}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
@@ -74,9 +74,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     }
   }
 
-  private def chooseOneOfVariant(variants: List[OneOfBodyVariant[_]]): Body[_, _] = {
-    val mediaTypeToBody = variants.map(v => v.body.mediaTypeWithCharset -> v.body)
-    chooseBestVariant[Body[_, _]](mediaTypeToBody).getOrElse(variants.head.body)
+  private def chooseOneOfVariant(variants: List[OneOfBodyVariant[_]]): EndpointIO.Atom[_] = {
+    val mediaTypeToBody = variants.map(v => v.mediaTypeWithCharset -> v)
+    chooseBestVariant[OneOfBodyVariant[_]](mediaTypeToBody).getOrElse(variants.head).bodyAsAtom
   }
 
   private def chooseOneOfVariant(variants: Seq[OneOfVariant[_]]): OneOfVariant[_] = {

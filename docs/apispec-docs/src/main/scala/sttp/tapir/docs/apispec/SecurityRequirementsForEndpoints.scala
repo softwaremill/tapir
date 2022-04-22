@@ -49,6 +49,6 @@ private[docs] class SecurityRequirementsForEndpoints(securitySchemes: SecuritySc
   private def authOptional(auths: Seq[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]]): Boolean =
     auths.flatMap(_.asVectorOfBasicInputs()).forall {
       case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
+      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)
     }
 }

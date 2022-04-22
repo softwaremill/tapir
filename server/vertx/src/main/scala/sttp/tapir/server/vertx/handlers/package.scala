@@ -24,7 +24,7 @@ package object handlers {
   private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route): Route = {
     val bodyType = e.asVectorOfBasicInputs().flatMap {
       case body: EndpointIO.Body[_, _]              => Vector(body.bodyType)
-      case EndpointIO.OneOfBody(variants, _)        => variants.map(_.body.bodyType).toVector
+      case EndpointIO.OneOfBody(variants, _)        => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
       case body: EndpointIO.StreamBodyWrapper[_, _] => Vector(body)
       case _                                        => Vector.empty
     }

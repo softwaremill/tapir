@@ -53,7 +53,7 @@ private[openapi] class EndpointToOperationResponse(
 
     val docsExtensions = outputs.flatMap(_.flatMap {
       case o: EndpointOutput.Atom[_]         => o.info.docsExtensions
-      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.info.docsExtensions)
+      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.info.docsExtensions)
     })
     statusCodeKeys.flatMap { sck =>
       val responseKey = sck

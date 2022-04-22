@@ -1,24 +1,38 @@
 package sttp.tapir.testing
 
+import sttp.model.Method
 import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
 import sttp.tapir.{AnyEndpoint, EndpointInput, testing}
 
 import scala.annotation.tailrec
 
-object FindShadowedEndpoints {
-  def apply(endpoints: List[AnyEndpoint]): Set[ShadowedEndpoint] = {
-    findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet
+object EndpointVerifier {
+  def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
+    findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
+      findIncorrectPaths(endpoints).toSet ++
+      findDuplicatedMethodDefinitions(endpoints).toSet
+  }
+
+  private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
+    endpoints
+      .map(e => {
+        val paths = extractPathSegments(e)
+        val wildCardIndex = paths.indexOf(WildcardPathSegment)
+        (!List(paths.length - 1, -1).contains(wildCardIndex), IncorrectPathsError(e, wildCardIndex))
+      })
+      .filter(_._1)
+      .map(_._2)
   }
 
   @tailrec
-  private def findShadowedEndpoints(endpoints: List[AnyEndpoint], acc: List[ShadowedEndpoint]): List[ShadowedEndpoint] =
+  private def findShadowedEndpoints(endpoints: List[AnyEndpoint], acc: List[ShadowedEndpointError]): List[ShadowedEndpointError] =
     endpoints match {
       case endpoint :: endpoints => findShadowedEndpoints(endpoints, acc ::: findAllShadowedByEndpoint(endpoint, endpoints))
       case Nil                   => acc
     }
 
-  private def findAllShadowedByEndpoint(endpoint: AnyEndpoint, in: List[AnyEndpoint]): List[ShadowedEndpoint] = {
-    in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpoint(e, endpoint))
+  private def findAllShadowedByEndpoint(endpoint: AnyEndpoint, in: List[AnyEndpoint]): List[ShadowedEndpointError] = {
+    in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpointError(e, endpoint))
   }
 
   private def checkIfShadows(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
@@ -45,13 +59,30 @@ object FindShadowedEndpoints {
   }
 
   private def extractPathSegments(endpoint: AnyEndpoint): Vector[PathComponent] = {
-    endpoint.securityInput
-      .and(endpoint.input)
+    inputPathSegments(
+      endpoint.securityInput
+        .and(endpoint.input)
+    )
+  }
+
+  private def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
+    input
       .traverseInputs({
         case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
         case EndpointInput.PathsCapture(_, _)   => Vector(WildcardPathSegment)
         case EndpointInput.PathCapture(_, _, _) => Vector(PathVariableSegment)
       })
+  }
+
+  private def findDuplicatedMethodDefinitions(endpoints: List[AnyEndpoint]): List[EndpointVerificationError] = {
+    endpoints
+      .map { e => e -> inputDefinedMethods(e.input).toList }
+      .filter(_._2.length > 1)
+      .map { case (endpoint, methods) => DuplicatedMethodDefinitionError(endpoint, methods) }
+  }
+
+  private def inputDefinedMethods(input: EndpointInput[_]): Vector[Method] = {
+    input.traverseInputs { case EndpointInput.FixedMethod(m, _, _) => Vector(m) }
   }
 }
 

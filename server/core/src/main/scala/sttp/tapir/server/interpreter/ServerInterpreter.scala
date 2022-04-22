@@ -8,7 +8,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.{model, _}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
@@ -142,20 +142,25 @@ class ServerInterpreter[R, F[_], B, S](
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(body) => decodeBody(request, values, body)
-              case None       => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
+              case Some(Left(body))                                          => decodeBody(request, values, body)
+              case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body)
+              case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
-
-          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec: Codec[Any, Any, _], _, _, _))), _)) =>
-            (codec.decode(requestBody.toStream(request)) match {
-              case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-              case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
-            }).unit
-
-          case None => (values: DecodeBasicInputsResult).unit
+          case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) => decodeStreamingBody(request, values, bodyInput)
+          case None                                                                => (values: DecodeBasicInputsResult).unit
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
+
+  private def decodeStreamingBody(
+      request: ServerRequest,
+      values: DecodeBasicInputsResult.Values,
+      bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]
+  ): F[DecodeBasicInputsResult] =
+    (bodyInput.codec.decode(requestBody.toStream(request)) match {
+      case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+      case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+    }).unit
 
   private def decodeBody[RAW, T](
       request: ServerRequest,

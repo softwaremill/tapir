@@ -61,6 +61,7 @@ We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, t
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://kaizo.com" title="Kaizo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kaizo.png" alt="Kaizo" width="160"/></a>
+<a href="https://tranzzo.com" title="Tranzzo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/tranzzo.svg" alt="Tranzzo" width="160"/></a>
 <a href="https://www.softwaremill.com/" title="SoftwareMill"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="SoftwareMill" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">

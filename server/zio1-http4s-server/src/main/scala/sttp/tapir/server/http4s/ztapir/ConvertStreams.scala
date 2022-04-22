@@ -43,6 +43,16 @@ object ConvertStreams {
         EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointInput.Auth(wrapped, challenge, authType, info) =>
         EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, authType, info)
+      case EndpointIO.OneOfBody(variants, mapping) =>
+        EndpointIO.OneOfBody(
+          variants.map {
+            case EndpointIO.OneOfBodyVariant(range, Left(body)) =>
+              EndpointIO.OneOfBodyVariant(range, Left(forInput(body).asInstanceOf[EndpointIO.Body[_, Any]]))
+            case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
+              EndpointIO.OneOfBodyVariant(range, Right(forInput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
+          },
+          mapping.asInstanceOf[Mapping[Any, Any]]
+        )
       // all other cases - unchanged
       case _ => input
     }
@@ -64,6 +74,16 @@ object ConvertStreams {
       case EndpointOutput.OneOf(mappings, mapping) =>
         EndpointOutput.OneOf[Any, Any](
           mappings.map(m => OneOfVariant(forOutput(m.output), m.appliesTo)),
+          mapping.asInstanceOf[Mapping[Any, Any]]
+        )
+      case EndpointIO.OneOfBody(variants, mapping) =>
+        EndpointIO.OneOfBody(
+          variants.map {
+            case EndpointIO.OneOfBodyVariant(range, Left(body)) =>
+              EndpointIO.OneOfBodyVariant(range, Left(forOutput(body).asInstanceOf[EndpointIO.Body[_, Any]]))
+            case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
+              EndpointIO.OneOfBodyVariant(range, Right(forOutput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
+          },
           mapping.asInstanceOf[Mapping[Any, Any]]
         )
       // all other cases - unchanged

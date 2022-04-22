@@ -19,7 +19,7 @@ abstract class ClientOutputParams {
               .flatMap(MediaType.parse(_).toOption)
               .flatMap(ct => variants.find(v => ct.matches(v.range)))
               .getOrElse(variants.head)
-            body2.flatMap(decode(bodyVariant.body.codec, _))
+            body2.flatMap(decode(bodyVariant.codec, _))
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => decode(codec, body)
           case EndpointOutput.WebSocketBodyWrapper(o)                        => decodeWebSocketBody(o, body)
           case EndpointIO.Header(name, codec, _)                             => codec.decode(meta.headers(name).toList)

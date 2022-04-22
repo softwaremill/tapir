@@ -7,7 +7,13 @@ import sttp.client3._
 import sttp.model.{Header, HeaderNames, MediaType}
 import sttp.monad.MonadError
 import sttp.tapir.tests.Test
-import sttp.tapir.tests.Streaming.{in_stream_out_stream, in_stream_out_stream_with_content_length, out_custom_content_type_stream_body}
+import sttp.tapir.tests.Streaming.{
+  in_stream_out_either_json_xml_stream,
+  in_stream_out_stream,
+  in_stream_out_stream_with_content_length,
+  in_string_stream_out_either_stream_string,
+  out_custom_content_type_stream_body
+}
 
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE], streams: Streams[S])(implicit
     m: MonadError[F]
@@ -59,6 +65,41 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
             .map { r =>
               r.body shouldBe Right(penPineapple)
               r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+            }
+      },
+      testServer(in_string_stream_out_either_stream_string(streams)) {
+        case ("left", s) => pureResult((Left(s): Either[streams.BinaryStream, String]).asRight[Unit])
+        case _           => pureResult((Right("was not left"): Either[streams.BinaryStream, String]).asRight[Unit])
+      } { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri?which=left")
+          .body(penPineapple)
+          .send(backend)
+          .map(_.body shouldBe Right(penPineapple)) >>
+          basicRequest
+            .post(uri"$baseUri?which=right")
+            .body(penPineapple)
+            .send(backend)
+            .map(_.body shouldBe Right("was not left"))
+      },
+      testServer(in_stream_out_either_json_xml_stream(streams)) { s => pureResult(s.asRight[Unit]) } { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri")
+          .body(penPineapple)
+          .header(Header.accept(MediaType.ApplicationXml, MediaType.ApplicationJson))
+          .send(backend)
+          .map { r =>
+            r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+            r.body shouldBe Right(penPineapple)
+          } >>
+          basicRequest
+            .post(uri"$baseUri")
+            .body(penPineapple)
+            .header(Header.accept(MediaType.ApplicationJson, MediaType.ApplicationXml))
+            .send(backend)
+            .map { r =>
+              r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+              r.body shouldBe Right(penPineapple)
             }
       }
     )
