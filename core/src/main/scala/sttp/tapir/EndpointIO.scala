@@ -218,7 +218,7 @@ object EndpointInput extends EndpointInputMacros {
 
     def description(d: String): Auth[T, TYPE] = copy(info = info.description(d))
 
-    def bearerFormat(f: String): Auth[T, TYPE] = copy(info = info.bearerFormat(f))
+    def bearerFormat(f: String)(implicit typeIsHttp: TYPE =:= AuthType.Http): Auth[T, AuthType.Http] = copy(info = info.bearerFormat(f))
 
     /** Authentication inputs in the same group will always become a single security requirement in the documentation (requiring all
       * authentication methods), even if they are all optional.
