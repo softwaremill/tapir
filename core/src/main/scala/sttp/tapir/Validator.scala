@@ -212,14 +212,13 @@ object Validator extends ValidatorMacros {
 
   def show[T](v: Validator[T]): Option[String] = {
     v match {
-      case Min(value, exclusive) => Some(s"${if (exclusive) ">" else ">="}$value")
-      case Max(value, exclusive) => Some(s"${if (exclusive) "<" else "<="}$value")
-      // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
-      case p: Pattern[T]                     => Some(s"~${p.value}")
-      case m: MinLength[T]                   => Some(s"length>=${m.value}")
-      case m: MaxLength[T]                   => Some(s"length<=${m.value}")
-      case m: MinSize[T, _]                  => Some(s"size>=${m.value}")
-      case m: MaxSize[T, _]                  => Some(s"size<=${m.value}")
+      case Min(value, exclusive)             => Some(s"${if (exclusive) ">" else ">="}$value")
+      case Max(value, exclusive)             => Some(s"${if (exclusive) "<" else "<="}$value")
+      case Pattern(value)                    => Some(s"~$value")
+      case MinLength(value)                  => Some(s"length>=$value")
+      case MaxLength(value)                  => Some(s"length<=$value")
+      case MinSize(value)                    => Some(s"size>=$value")
+      case MaxSize(value)                    => Some(s"size<=$value")
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
       case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
       case Mapped(wrapped, _)                => show(wrapped)
