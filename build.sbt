@@ -1547,6 +1547,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
   .jvmPlatform(scalaVersions = List(documentationScalaVersion))
   .dependsOn(
     core % "compile->test",
+    testing,
     akkaHttpServer,
     armeriaServer,
     armeriaServerCats,
