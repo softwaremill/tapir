@@ -2,6 +2,7 @@
 
 ## From 0.20 to 1.0
 
+* `EndpointVerifier` is moved to a separate `tapir-testing` module
 * `customJsonBody` is renamed to `customCodecJsonBody`
 * `anyFromStringBody` is renamed to `stringBodyAnyFormat`
 * `anyFromUtf8StringBody` is renamed to `stringBodyUtf8AnyFormat`

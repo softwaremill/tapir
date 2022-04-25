@@ -110,6 +110,7 @@ lazy val loggerDependencies = Seq(
 )
 
 lazy val allAggregates = core.projectRefs ++
+  testing.projectRefs ++
   cats.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
@@ -329,6 +330,16 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     )
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
+
+lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-testing",
+    libraryDependencies ++= Seq(scalaTest.value % Test) ++ loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .dependsOn(core)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
