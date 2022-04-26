@@ -112,6 +112,8 @@ trait PlayServerInterpreter {
                   )
                 else Left(Result(ResponseHeader(status, headers), HttpEntity.Strict(ByteString.empty, response.contentType)))
             }
+        }.recover {
+          case e:PlayBodyParserException => Left(e.result)
         }
       }
     }

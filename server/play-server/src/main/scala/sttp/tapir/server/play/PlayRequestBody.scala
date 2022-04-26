@@ -3,7 +3,7 @@ package sttp.tapir.server.play
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink, Source}
 import akka.util.ByteString
-import play.api.mvc.Request
+import play.api.mvc.{Request, Result}
 import play.core.parsers.Multipart
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, MediaType, Part}
@@ -71,8 +71,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
     )
     bodyParser.apply(request).run(body()).flatMap {
-      case Left(_) =>
-        Future.failed(new IllegalArgumentException("Unable to parse multipart form data.")) // TODO
+      case Left(r) =>
+        Future.failed(new PlayBodyParserException(r))
       case Right(value) =>
         val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value) =>
           m.partType(key).map { partType =>
@@ -117,3 +117,5 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
 
   private def playRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[Source[ByteString, Any]]]
 }
+
+class PlayBodyParserException(val result: Result) extends Exception
