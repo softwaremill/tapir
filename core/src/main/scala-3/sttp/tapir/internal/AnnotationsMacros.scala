@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.quoted.*
 import scala.deriving.Mirror
 
-class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
+private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   import quotes.reflect.*
 
   private val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
@@ -455,6 +455,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   }
 }
 
+// TODO: make private[tapir] once Scala3 compilation is fixed
 object AnnotationsMacros:
   // we assume that the customisation function doesn't return a value of a different type
   def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]
