@@ -5,7 +5,8 @@ import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.internal.{FileChunk, NoStreams}
+import sttp.tapir.capabilities.NoStreams
+import sttp.tapir.internal.FileChunk
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 

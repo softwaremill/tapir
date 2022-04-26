@@ -4,7 +4,7 @@ import sttp.capabilities.Streams
 import sttp.model._
 import sttp.tapir.TestUtil.Id
 import sttp.tapir._
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
 

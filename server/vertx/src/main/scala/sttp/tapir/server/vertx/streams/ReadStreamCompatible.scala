@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.streams
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import sttp.capabilities.Streams
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 
 trait ReadStreamCompatible[S <: Streams[S]] {
   val streams: S

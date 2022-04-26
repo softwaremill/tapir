@@ -6,13 +6,14 @@ import sttp.client3._
 import sttp.client3.testing._
 import sttp.model.Uri.UriContext
 import sttp.model.{ContentTypeRange, HasHeaders, Header, HeaderNames, Headers, MediaType, StatusCode, Uri}
-import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.mockserver.impl.JsonCodecs._
 import cats.syntax.either._
 
 import java.nio.charset.Charset
 import io.circe.parser._
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
 

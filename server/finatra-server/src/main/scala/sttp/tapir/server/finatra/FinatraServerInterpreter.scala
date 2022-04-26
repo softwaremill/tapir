@@ -5,6 +5,7 @@ import com.twitter.util.Future
 import com.twitter.util.logging.Logging
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.PathCapture
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError

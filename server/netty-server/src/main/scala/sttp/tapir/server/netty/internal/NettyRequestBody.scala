@@ -5,9 +5,9 @@ import io.netty.handler.codec.http.FullHttpRequest
 import sttp.capabilities
 import sttp.monad.MonadError
 import sttp.tapir.{FileRange, RawBodyType, TapirFile}
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.netty.NettyServerRequest
 

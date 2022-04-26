@@ -10,10 +10,10 @@ import sttp.model.Uri._
 import sttp.model._
 import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
-import sttp.tapir.internal.NoStreams
 import PrometheusMetrics._
 import PrometheusMetricsTest._
 import sttp.tapir.AttributeKey
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult

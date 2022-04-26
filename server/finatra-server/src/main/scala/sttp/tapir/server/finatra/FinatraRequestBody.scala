@@ -6,7 +6,7 @@ import com.twitter.io.Buf
 import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, RawPart}

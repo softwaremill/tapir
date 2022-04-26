@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf
 import sttp.monad.syntax._
 import sttp.monad.MonadError
 import sttp.tapir.TapirFile
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
