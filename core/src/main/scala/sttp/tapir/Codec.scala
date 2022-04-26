@@ -385,6 +385,13 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
+  private[tapir] def listBinaryFiltered[T, U, CF <: CodecFormat](c: Codec[T, U, CF], predicate: T => Boolean): Codec[List[T], List[U], CF] =
+    id[List[T], CF](c.format, Schema.binary)
+      .mapDecode(ts => DecodeResult.sequence(ts.filter(predicate).map(c.decode)).map(_.toList))(us => us.map(c.encode))
+
+  private[tapir] def listFiltered[T, U, CF <: CodecFormat](c: Codec[T, U, CF], predicate: T => Boolean): Codec[List[T], List[U], CF] =
+    listBinaryFiltered(c, predicate).schema(c.schema.asIterable[List])
+
   /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given base codec `c`.
     *
     * The schema is copied from the base codec.

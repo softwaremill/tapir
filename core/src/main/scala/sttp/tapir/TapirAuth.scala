@@ -2,6 +2,7 @@ package sttp.tapir
 
 import sttp.model.HeaderNames
 import sttp.model.headers.{AuthenticationScheme, WWWAuthenticateChallenge}
+import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.Auth
 
 import scala.collection.immutable.ListMap
@@ -34,8 +35,14 @@ object TapirAuth {
       challenge: WWWAuthenticateChallenge
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
-    val authCodec =
-      Codec.list(Codec.string.map(stringPrefixWithSpace(authScheme))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
+    val authCodec = Codec
+      .listFiltered[String, String, TextPlain](
+        Codec.string.map(stringPrefixWithSpace(authScheme)),
+        _.toLowerCase.startsWith(authScheme.toLowerCase())
+      )
+      .mapDecode(codec.decode)(codec.encode)
+      .schema(codec.schema)
+
     EndpointInput.Auth(
       header[T](HeaderNames.Authorization)(authCodec),
       challenge,

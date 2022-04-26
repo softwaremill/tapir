@@ -16,6 +16,16 @@ object Security {
   val in_security_basic_out_string: Endpoint[UsernamePassword, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").securityIn(auth.basic[UsernamePassword]()).out(stringBody)
 
+  val in_security_option_basic_out_string: Endpoint[Option[UsernamePassword], Unit, Unit, String, Any] =
+    endpoint.securityIn("auth").securityIn(auth.basic[Option[UsernamePassword]]()).out(stringBody)
+
+  val in_security_option_basic_option_bearer_out_string: Endpoint[(Option[UsernamePassword], Option[String]), Unit, Unit, String, Any] =
+    endpoint
+      .securityIn("auth")
+      .securityIn(auth.basic[Option[UsernamePassword]]())
+      .securityIn(auth.bearer[Option[String]]())
+      .out(stringBody)
+
   val in_security_bearer_out_string: Endpoint[String, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").securityIn(auth.bearer[String]()).out(stringBody)
 }
