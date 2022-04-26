@@ -11,7 +11,7 @@ trait FormCodecMacros {
     ${ FormCodecMacros.formCaseClassCodecImpl[T]('c) }
 }
 
-object FormCodecMacros {
+private[tapir] object FormCodecMacros {
   def formCaseClassCodecImpl[T: Type](
       conf: Expr[Configuration]
   )(using q: Quotes): Expr[Codec[String, T, CodecFormat.XWwwFormUrlencoded]] = {

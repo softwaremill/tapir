@@ -15,7 +15,7 @@ trait MultipartCodecMacros {
     ${ MultipartCodecMacros.multipartCaseClassCodecImpl[T]('c) }
 }
 
-object MultipartCodecMacros {
+private[tapir] object MultipartCodecMacros {
   def multipartCaseClassCodecImpl[T: Type](conf: Expr[Configuration])(using q: Quotes): Expr[MultipartCodec[T]] = {
     import quotes.reflect.*
     val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)

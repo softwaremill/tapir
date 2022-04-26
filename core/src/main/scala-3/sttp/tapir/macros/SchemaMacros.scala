@@ -18,7 +18,7 @@ trait SchemaMacros[T] { this: Schema[T] =>
   }
 }
 
-object SchemaMacros {
+private[tapir] object SchemaMacros {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
   def modifyImpl[T: Type, U: Type](
@@ -134,7 +134,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   }
 }
 
-object SchemaCompanionMacros {
+private[tapir] object SchemaCompanionMacros {
 
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
