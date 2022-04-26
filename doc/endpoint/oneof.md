@@ -117,7 +117,7 @@ val baseEndpoint = endpoint.errorOut(
 Of course, you could use `oneOfVariantValueMatcher` to do runtime filtering for other purpose than solving type erasure.
 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
-To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
+To make that more easy, we provide the `MatchType` typeclass, so you can automatically derive that partial function:
 
 ```scala mdoc:silent:nest
 import sttp.tapir.typelevel.MatchType
