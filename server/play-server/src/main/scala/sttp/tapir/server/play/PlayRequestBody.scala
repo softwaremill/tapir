@@ -1,7 +1,7 @@
 package sttp.tapir.server.play
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{FileIO, Sink, Source}
+import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
 import play.api.mvc.{Request, Result}
 import play.core.parsers.Multipart
@@ -40,10 +40,16 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   )(implicit
       mat: Materializer
   ): Future[RawValue[R]] = {
-    def bodyAsByteString() = body().runWith(Sink.fold(ByteString.newBuilder)(_ append _)).map(_.result())
+    //playBodyParsers is used, so that the maxLength limits from Play configuration are applied
+    def bodyAsByteString(): Future[ByteString] = {
+      serverOptions.playBodyParsers.byteString.apply(request).run(body()).flatMap {
+        case Left(result) => Future.failed(new PlayBodyParserException(result))
+        case Right(value) => Future.successful(value)
+      }
+    }
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        bodyAsByteString().map(b => RawValue(new String(b.toArray, charset.getOrElse(defaultCharset))))
+        bodyAsByteString().map(b => RawValue(b.decodeString(charset.getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => bodyAsByteString().map(b => RawValue(b.toArray))
       case RawBodyType.ByteBufferBody  => bodyAsByteString().map(b => RawValue(b.toByteBuffer))
       case RawBodyType.InputStreamBody => bodyAsByteString().map(b => RawValue(new ByteArrayInputStream(b.toArray)))
@@ -54,7 +60,10 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
             Future.successful(RawValue(tapirFile, Seq(tapirFile)))
           case None =>
             val file = FileRange(serverOptions.temporaryFileCreator.create().toFile)
-            body().runWith(FileIO.toPath(file.file.toPath)).map(_ => RawValue(file, Seq(file)))
+            serverOptions.playBodyParsers.file(file.file).apply(request).run(body()).flatMap {
+              case Left(result) => Future.failed(new PlayBodyParserException(result))
+              case Right(_) => Future.successful(RawValue(file, Seq(file)))
+            }
         }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }
@@ -80,7 +89,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
               request,
               partType,
               charset(partType),
-              () => Source.single(ByteString(value.flatMap(_.getBytes).toArray)),
+              () => Source(value.map(ByteString.apply)),
               None
             ).map(body => Some(Part(key, body.value)))
           }

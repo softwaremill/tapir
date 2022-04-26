@@ -496,9 +496,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/p2")
-        .body("a" * 1000000)
+        .body("a" * 100000)
         .send(backend)
-        .map { r => r.body shouldBe "p2 1000000" }
+        .map { r => r.body shouldBe "p2 100000" }
     },
     testServer(
       "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
