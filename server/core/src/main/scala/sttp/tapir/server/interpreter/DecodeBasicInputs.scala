@@ -295,6 +295,16 @@ object DecodeBasicInputs {
         val decodedCookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)
         (decodedCookieValue, ctx)
 
+      // Hacky special case for Authorization header with optional inputs
+      case EndpointIO.Header("Authorization", codec, _) =>
+        val value = codec.decode(ctx.header("Authorization")) match {
+          // flawn: fail in decoding turn into not provided
+          case failure: DecodeResult.Failure if codec.schema.isOptional =>
+            DecodeResult.Value(None)
+          case other => other
+        }
+        (value, ctx)
+
       case EndpointIO.Header(name, codec, _) =>
         (codec.decode(ctx.header(name)), ctx)
 
