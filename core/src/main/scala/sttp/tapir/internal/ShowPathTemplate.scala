@@ -3,7 +3,7 @@ package sttp.tapir.internal
 import sttp.tapir.EndpointInput.{PathCapture, Query}
 import sttp.tapir.{EndpointInput, EndpointMetaOps}
 
-object ShowPathTemplate {
+private[tapir] object ShowPathTemplate {
   type ShowPathParam = (Int, PathCapture[_]) => String
   type ShowQueryParam = (Int, Query[_]) => String
 
