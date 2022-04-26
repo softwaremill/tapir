@@ -5,7 +5,7 @@ import sttp.tapir.SchemaAnnotations
 
 import scala.quoted.*
 
-object SchemaAnnotationsMacro {
+private[tapir] object SchemaAnnotationsMacro {
   def derived[T: Type](using q: Quotes): Expr[SchemaAnnotations[T]] = {
     import q.reflect.*
 

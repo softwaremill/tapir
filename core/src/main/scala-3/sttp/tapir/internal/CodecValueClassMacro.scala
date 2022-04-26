@@ -5,7 +5,7 @@ import sttp.tapir.CodecFormat.TextPlain
 
 import scala.quoted.*
 
-object CodecValueClassMacro {
+private[tapir] object CodecValueClassMacro {
 
   inline def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = ${ derivedValueClassImpl[T] }
   private def derivedValueClassImpl[T: Type](using q: Quotes): Expr[Codec[String, T, TextPlain]] = {
