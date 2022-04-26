@@ -1,4 +1,4 @@
-package sttp.tapir.internal
+package sttp.tapir.server.finatra
 
 import sttp.tapir.FileRange
 
