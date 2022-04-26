@@ -1,9 +1,8 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.model._
-import sttp.tapir.EndpointInput
 import sttp.tapir.EndpointIO.annotations._
-import sttp.tapir.internal.CaseClassUtil
+import sttp.tapir.EndpointInput
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox

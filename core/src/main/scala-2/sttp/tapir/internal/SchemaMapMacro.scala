@@ -1,10 +1,10 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.tapir.Schema
 
 import scala.reflect.macros.blackbox
 
-object SchemaMapMacro {
+private[tapir] object SchemaMapMacro {
   def generateSchemaForStringMap[V: c.WeakTypeTag](
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {

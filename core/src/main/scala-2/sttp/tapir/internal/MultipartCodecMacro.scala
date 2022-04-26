@@ -1,8 +1,7 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
-import sttp.tapir.{MultipartCodec, Schema}
 import sttp.tapir.generic.Configuration
-import sttp.tapir.internal.CaseClassUtil
+import sttp.tapir.{MultipartCodec, Schema}
 
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox

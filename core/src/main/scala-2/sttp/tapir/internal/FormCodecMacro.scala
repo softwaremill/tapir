@@ -1,7 +1,6 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.tapir.generic.Configuration
-import sttp.tapir.internal.CaseClassUtil
 import sttp.tapir.{Codec, CodecFormat, Schema}
 
 import scala.reflect.macros.blackbox

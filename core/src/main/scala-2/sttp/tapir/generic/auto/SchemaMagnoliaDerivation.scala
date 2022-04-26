@@ -1,9 +1,9 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.generic.auto
 
 import magnolia1._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.internal.SchemaMagnoliaDerivation.deriveCache
+import sttp.tapir.generic.auto.SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{FieldName, Schema, SchemaType}
 
@@ -138,5 +138,5 @@ trait SchemaMagnoliaDerivation {
 }
 
 object SchemaMagnoliaDerivation {
-  private[internal] val deriveCache: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
+  private[auto] val deriveCache: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

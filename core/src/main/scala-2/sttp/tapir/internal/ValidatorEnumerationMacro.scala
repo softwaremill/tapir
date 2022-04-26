@@ -1,4 +1,4 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.tapir.Validator
 

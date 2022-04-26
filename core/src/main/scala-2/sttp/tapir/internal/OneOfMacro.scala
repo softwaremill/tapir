@@ -1,4 +1,4 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
@@ -6,7 +6,7 @@ import sttp.tapir.generic.Configuration
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
-object OneOfMacro {
+private[tapir] object OneOfMacro {
   // http://onoffswitch.net/extracting-scala-method-names-objects-macros/
 
   def generateOneOfUsingField[E: c.WeakTypeTag, V: c.WeakTypeTag](

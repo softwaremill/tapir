@@ -1,16 +1,15 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.model.Header
 import sttp.model.headers.Cookie
+import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.{Codec, EndpointTransput, MultipartCodec, RawPart, Schema}
-import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
+private[tapir] abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   import c.universe._
 
   protected val headerType = c.weakTypeOf[header]
@@ -168,7 +167,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
         util
           .extractFirstTreeArgFromAnnotation(field, customiseType)
           .fold(i) { f =>
-            q"sttp.tapir.generic.internal.EndpointAnnotationsMacro.customise($i, ${c.untypecheck(f)})"
+            q"sttp.tapir.internal.EndpointAnnotationsMacro.customise($i, ${c.untypecheck(f)})"
           }
     )
 
@@ -189,7 +188,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   }
 }
 
-object EndpointAnnotationsMacro {
+private[tapir] object EndpointAnnotationsMacro {
   // we assume that the customisation function doesn't return a value of a different type
   def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]
 }
