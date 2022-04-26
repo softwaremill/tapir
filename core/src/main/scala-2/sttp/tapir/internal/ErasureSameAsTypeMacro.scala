@@ -4,7 +4,7 @@ import sttp.tapir.typelevel.ErasureSameAsType
 
 import scala.reflect.macros.blackbox
 
-object ErasureSameAsTypeMacro {
+private[tapir] object ErasureSameAsTypeMacro {
   def instance[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[ErasureSameAsType[T]] = {
     import c.universe._
     mustBeEqualToItsErasure[T](c)

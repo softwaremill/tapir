@@ -3,8 +3,8 @@ package sttp.tapir.macros
 import sttp.tapir.{Validator, Schema, SchemaType}
 import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
-import sttp.tapir.internal.SchemaMagnoliaDerivation
 import magnolia1._
+import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
 
 import scala.quoted.*
 
@@ -18,7 +18,7 @@ trait SchemaMacros[T] { this: Schema[T] =>
   }
 }
 
-object SchemaMacros {
+private[tapir] object SchemaMacros {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
   def modifyImpl[T: Type, U: Type](
@@ -134,7 +134,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   }
 }
 
-object SchemaCompanionMacros {
+private[tapir] object SchemaCompanionMacros {
 
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
@@ -207,8 +207,8 @@ object SchemaCompanionMacros {
   }
 
   def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
+    import sttp.tapir.SchemaAnnotations
     import q.reflect.*
-    import sttp.tapir.internal.SchemaAnnotations
 
     val Enumeration = TypeTree.of[scala.Enumeration].tpe
 

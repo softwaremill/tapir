@@ -5,7 +5,8 @@ import sttp.model._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.internal._
+import sttp.tapir.macros.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.{ErasureSameAsType, MatchType}
@@ -349,9 +350,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
 
-  /** Experimental!
-    *
-    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+  /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure.
     *
@@ -360,9 +359,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantFromMatchType[T: MatchType](output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariantValueMatcher(output)(implicitly[MatchType[T]].partial)
 
-  /** Experimental!
-    *
-    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+  /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure. Adds a fixed status-code output with the given value.
     *

@@ -11,7 +11,7 @@ trait ErasureSameAsTypeMacros {
   implicit inline def instance[T]: ErasureSameAsType[T] = ${ ErasureSameAsTypeMacros.instanceImpl[T] }
 }
 
-object ErasureSameAsTypeMacros {
+private[tapir] object ErasureSameAsTypeMacros {
   def instanceImpl[T: Type](using Quotes): Expr[ErasureSameAsType[T]] = {
     import quotes.reflect._
     mustBeEqualToItsErasure[T]

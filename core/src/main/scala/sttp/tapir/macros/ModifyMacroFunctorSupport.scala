@@ -1,6 +1,4 @@
-package sttp.tapir.internal
-
-import scala.annotation.compileTimeOnly
+package sttp.tapir.macros
 
 trait ModifyMacroFunctorSupport {
   implicit class ModifyEach[F[_], T](t: F[T])(implicit f: ModifyFunctor[F, T]) {

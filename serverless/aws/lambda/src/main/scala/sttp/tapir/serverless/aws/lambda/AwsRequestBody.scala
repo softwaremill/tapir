@@ -4,7 +4,7 @@ import sttp.capabilities
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.RawBodyType
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 

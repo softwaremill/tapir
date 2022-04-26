@@ -1,16 +1,11 @@
 package sttp.tapir.internal
 
 import sttp.tapir.Schema.annotations.format
+import sttp.tapir.SchemaAnnotations
 
 import scala.quoted.*
 
-trait SchemaAnnotationsMacro {
-  implicit inline def derived[T]: SchemaAnnotations[T] = ${
-    SchemaAnnotationsMacroImpl.derived[T]
-  }
-}
-
-object SchemaAnnotationsMacroImpl {
+private[tapir] object SchemaAnnotationsMacro {
   def derived[T: Type](using q: Quotes): Expr[SchemaAnnotations[T]] = {
     import q.reflect.*
 

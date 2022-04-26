@@ -259,6 +259,13 @@ result == out
 ```
 
 ## Endpoints verification
+
+To use, add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "@VERSION@"
+```
+
 ### Shadowed endpoints
 
 It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such

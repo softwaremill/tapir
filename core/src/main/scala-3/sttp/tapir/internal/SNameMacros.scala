@@ -3,6 +3,7 @@ package sttp.tapir.internal
 import scala.quoted.*
 import sttp.tapir.SchemaType.*
 
+// TODO: make private[tapir] once Scala3 compilation is fixed
 object SNameMacros {
 
   inline def typeFullName[T] = ${ typeFullNameImpl[T] }

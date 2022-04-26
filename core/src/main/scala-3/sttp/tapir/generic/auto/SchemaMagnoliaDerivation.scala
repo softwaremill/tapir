@@ -1,13 +1,13 @@
-package sttp.tapir.internal
+package sttp.tapir.generic.auto
 
-import sttp.tapir.SchemaType._
+import magnolia1.*
+import sttp.tapir.SchemaType.*
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType}
-import SchemaMagnoliaDerivation.deriveCache
+import sttp.tapir.generic.auto.SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.collection.mutable
-import magnolia1._
 import scala.deriving.Mirror
 
 trait SchemaMagnoliaDerivation {
@@ -143,5 +143,5 @@ trait SchemaMagnoliaDerivation {
 }
 
 object SchemaMagnoliaDerivation {
-  private[internal] val deriveCache: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
+  private[auto] val deriveCache: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.lambda
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor

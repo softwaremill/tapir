@@ -1,14 +1,13 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.model._
-import sttp.tapir.EndpointInput
 import sttp.tapir.EndpointIO.annotations._
-import sttp.tapir.internal.CaseClassUtil
+import sttp.tapir.EndpointInput
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
+private[tapir] class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
   import c.universe._
 
   private val endpointInput = c.weakTypeOf[endpointInput]

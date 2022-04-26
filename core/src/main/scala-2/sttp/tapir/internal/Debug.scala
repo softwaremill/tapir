@@ -1,6 +1,6 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
-private[internal] object Debug {
+private[tapir] object Debug {
   import scala.reflect.macros.blackbox
 
   private val macroDebugEnabled = System.getenv("TAPIR_LOG_GENERATED_CODE") == "true"

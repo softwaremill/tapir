@@ -1,12 +1,11 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.tapir.generic.Configuration
-import sttp.tapir.internal.CaseClassUtil
 import sttp.tapir.{Codec, CodecFormat, Schema}
 
 import scala.reflect.macros.blackbox
 
-object FormCodecMacro {
+private[tapir] object FormCodecMacro {
   // http://blog.echo.sh/2013/11/04/exploring-scala-macros-map-to-case-class-conversion.html
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context

@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import scala.reflect.macros.blackbox
 
-object MapToMacro {
+private[tapir] object MapToMacro {
   def generateMapTo[THIS_TYPE[_], T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Expr[THIS_TYPE[CASE_CLASS]] =
     c.Expr[THIS_TYPE[CASE_CLASS]](generateDelegateMap[T, CASE_CLASS](c)("map"))
 

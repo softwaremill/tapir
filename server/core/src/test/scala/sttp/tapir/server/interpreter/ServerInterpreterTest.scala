@@ -7,7 +7,7 @@ import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.RequestResult.Response

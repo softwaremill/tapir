@@ -6,7 +6,6 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.SchemaAnnotations
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.D
 import sttp.tapir.generic.auto._
@@ -43,7 +42,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(10)))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(10))
+        )
       ),
       Some(name1)
     )
@@ -56,7 +58,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     val expectedNestedProduct =
       Schema(
         SProduct[Person](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(11)))
+          List(
+            field(FieldName("name"), Schema(SString())),
+            field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(11))
+          )
         ),
         Some(name2)
       )
@@ -293,7 +298,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "add example to product" in {
     val expected = Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger(), format = Some("int32")).encodedExample(18)))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).encodedExample(18))
+        )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
@@ -306,7 +314,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "add description to product" in {
     val expected = Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test")))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test"))
+        )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )

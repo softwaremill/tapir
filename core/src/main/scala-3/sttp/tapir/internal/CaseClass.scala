@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import scala.quoted.*
 
-class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
+private[tapir] class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   import q.reflect.*
 
   val tpe = TypeRepr.of[T]
@@ -58,7 +58,7 @@ class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
 
 // The `symbol` is needed to get the field type and generate instance selects. The `constructorField` symbol is needed
 // to read annotations.
-class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
+private[tapir] class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
     val symbol: q.reflect.Symbol,
     constructorField: q.reflect.Symbol,
     val tpe: q.reflect.TypeRepr

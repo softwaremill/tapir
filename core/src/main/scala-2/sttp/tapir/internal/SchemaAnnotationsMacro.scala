@@ -1,12 +1,10 @@
 package sttp.tapir.internal
 
+import sttp.tapir.SchemaAnnotations
+
 import scala.reflect.macros.blackbox
 
-trait SchemaAnnotationsMacro {
-  implicit def derived[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacroImpl.derived[T]
-}
-
-object SchemaAnnotationsMacroImpl {
+private[tapir] object SchemaAnnotationsMacro {
   def derived[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[SchemaAnnotations[T]] = {
     import c.universe._
 
@@ -43,7 +41,7 @@ object SchemaAnnotationsMacroImpl {
     val validator = annotations.collectFirst { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
 
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.internal.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, $validator)"""
+      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, $validator)"""
     )
   }
 }

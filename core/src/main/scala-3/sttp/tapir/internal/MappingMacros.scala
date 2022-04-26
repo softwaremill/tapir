@@ -5,7 +5,7 @@ import sttp.tapir.Mapping
 import scala.compiletime.erasedValue
 import scala.deriving.Mirror
 
-object MappingMacros {
+private[tapir] object MappingMacros {
   inline def mappingImpl[In, Out <: Product](using mc: Mirror.ProductOf[Out]): Mapping[In, Out] = {
     checkFields[Out, In]
 

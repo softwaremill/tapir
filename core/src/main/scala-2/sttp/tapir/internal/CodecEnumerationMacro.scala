@@ -4,7 +4,7 @@ import sttp.tapir.macros.CreateDerivedEnumerationCodec
 
 import scala.reflect.macros.blackbox
 
-object CodecEnumerationMacro {
+private[tapir] object CodecEnumerationMacro {
   def derivedEnumeration[L, T: c.WeakTypeTag](c: blackbox.Context): c.Expr[CreateDerivedEnumerationCodec[L, T]] = {
     import c.universe._
 

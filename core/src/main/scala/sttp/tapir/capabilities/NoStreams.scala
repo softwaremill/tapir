@@ -1,4 +1,4 @@
-package sttp.tapir.internal
+package sttp.tapir.capabilities
 
 import sttp.capabilities.Streams
 

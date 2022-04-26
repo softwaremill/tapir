@@ -1,7 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.internal.FormCodecMacro
+import sttp.tapir.internal.FormCodecMacro
 import sttp.tapir.{Codec, CodecFormat}
 
 trait FormCodecMacros {

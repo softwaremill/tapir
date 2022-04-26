@@ -3,7 +3,7 @@ package sttp.tapir.generic.internal
 import magnolia1.Magnolia
 import sttp.tapir.generic.Derived
 
-object MagnoliaDerivedMacro {
+private[tapir] object MagnoliaDerivedMacro {
   import scala.reflect.macros.whitebox
 
   def generateDerivedGen[T: c.WeakTypeTag](c: whitebox.Context): c.Expr[Derived[T]] = {

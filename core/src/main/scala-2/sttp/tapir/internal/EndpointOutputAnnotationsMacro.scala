@@ -1,15 +1,14 @@
-package sttp.tapir.generic.internal
+package sttp.tapir.internal
 
 import sttp.model.StatusCode
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
-import sttp.tapir.EndpointOutput
 import sttp.tapir.EndpointIO.annotations._
-import sttp.tapir.internal.CaseClassUtil
+import sttp.tapir.EndpointOutput
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
+private[tapir] class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
   import c.universe._
 
   private val setCookieType = c.weakTypeOf[setCookie]

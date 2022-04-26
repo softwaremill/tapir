@@ -16,7 +16,7 @@ trait ValidatorMacros {
   inline def derivedEnumeration[T]: Validator.Enumeration[T] = ${ ValidatorMacros.derivedEnumerationImpl[T] }
 }
 
-object ValidatorMacros {
+private[tapir] object ValidatorMacros {
   def derivedEnumerationImpl[T: Type](using q: Quotes): Expr[Validator.Enumeration[T]] = {
     import quotes.reflect.*
 
