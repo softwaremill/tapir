@@ -1,4 +1,4 @@
-package sttp.tapir.internal
+package sttp.tapir.macros
 
 import scala.annotation.compileTimeOnly
 import scala.collection.Factory

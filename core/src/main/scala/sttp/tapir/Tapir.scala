@@ -5,7 +5,8 @@ import sttp.model._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.internal._
+import sttp.tapir.macros.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.{ErasureSameAsType, MatchType}
