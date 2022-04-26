@@ -5,7 +5,7 @@ import sttp.tapir.macros.CreateDerivedEnumerationSchema
 
 import scala.reflect.macros.blackbox
 
-object SchemaEnumerationMacro {
+private[tapir] object SchemaEnumerationMacro {
   def derivedEnumeration[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[CreateDerivedEnumerationSchema[T]] = {
     import c.universe._
 

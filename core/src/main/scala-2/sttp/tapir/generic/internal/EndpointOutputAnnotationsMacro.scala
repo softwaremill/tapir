@@ -9,7 +9,7 @@ import sttp.tapir.internal.CaseClassUtil
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
+private[tapir] class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
   import c.universe._
 
   private val setCookieType = c.weakTypeOf[setCookie]

@@ -4,7 +4,7 @@ import sttp.tapir.AttributeKey
 
 import scala.reflect.macros.blackbox
 
-object AttributeKeyMacro {
+private[tapir] object AttributeKeyMacro {
   def apply[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[AttributeKey[T]] = {
     import c.universe._
     c.Expr[AttributeKey[T]](

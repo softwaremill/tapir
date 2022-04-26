@@ -7,7 +7,7 @@ import sttp.tapir.internal.CaseClassUtil
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
-object MultipartCodecMacro {
+private[tapir] object MultipartCodecMacro {
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
   )(conf: c.Expr[Configuration]): c.Expr[MultipartCodec[T]] = {

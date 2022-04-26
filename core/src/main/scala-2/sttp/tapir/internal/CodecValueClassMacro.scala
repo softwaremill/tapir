@@ -5,7 +5,7 @@ import sttp.tapir.CodecFormat.TextPlain
 
 import scala.reflect.macros.blackbox
 
-object CodecValueClassMacro {
+private[tapir] object CodecValueClassMacro {
 
   def derivedValueClass[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Codec[String, T, TextPlain]] = {
     import c.universe._
