@@ -231,7 +231,7 @@ package object internal {
     case Some(sv) => s"$s($sv)"
   }
 
-  def showMultiple(et: Vector[EndpointTransput[_]]): String = {
+  private[tapir] def showMultiple(et: Vector[EndpointTransput[_]]): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[_] => false
       case _                      => true
@@ -239,24 +239,24 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: List[String]): String = mappings.distinct match {
+  private[tapir] def showOneOf(mappings: List[String]): String = mappings.distinct match {
     case Nil     => ""
     case List(o) => o
     case l       => s"one of(${l.mkString("|")})"
   }
 
-  def charset(bodyType: RawBodyType[_]): Option[Charset] = {
+  private[tapir] def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
     }
   }
 
-  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
+  private[tapir] def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
     exactValues.contains(v)
   }
 
-  def recoverErrors2[T, U, E, O, F[_]](
+  private[tapir] def recoverErrors2[T, U, E, O, F[_]](
       f: T => U => F[O]
   )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => U => F[Either[E, O]] = {
     implicit monad => t => u =>
@@ -271,14 +271,14 @@ package object internal {
       }
   }
 
-  def recoverErrors1[T, E, O, F[_]](
+  private[tapir] def recoverErrors1[T, E, O, F[_]](
       f: T => F[O]
   )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => F[Either[E, O]] = { m =>
     val result = recoverErrors2((_: Unit) => f)
     result(m)(())
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  private[tapir] def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
     e.output
       .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
         Vector(ws)
@@ -325,9 +325,6 @@ package object internal {
       }
       toPrimitives(v)
     }
-
-    def traversePrimitives[U](handle: PartialFunction[Validator.Primitive[_], Vector[U]]): Vector[U] =
-      asPrimitiveValidators.collect(handle).flatten.toVector
 
     def inferEnumerationEncode: Validator[T] = {
       v match {
