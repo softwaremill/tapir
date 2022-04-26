@@ -40,7 +40,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   )(implicit
       mat: Materializer
   ): Future[RawValue[R]] = {
-    //playBodyParsers is used, so that the maxLength limits from Play configuration are applied
+    // playBodyParsers is used, so that the maxLength limits from Play configuration are applied
     def bodyAsByteString(): Future[ByteString] = {
       serverOptions.playBodyParsers.byteString.apply(request).run(body()).flatMap {
         case Left(result) => Future.failed(new PlayBodyParserException(result))
@@ -62,7 +62,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
             val file = FileRange(serverOptions.temporaryFileCreator.create().toFile)
             serverOptions.playBodyParsers.file(file.file).apply(request).run(body()).flatMap {
               case Left(result) => Future.failed(new PlayBodyParserException(result))
-              case Right(_) => Future.successful(RawValue(file, Seq(file)))
+              case Right(_)     => Future.successful(RawValue(file, Seq(file)))
             }
         }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)

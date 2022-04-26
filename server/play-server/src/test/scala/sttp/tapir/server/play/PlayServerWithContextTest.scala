@@ -36,7 +36,6 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Any])(implicit _actorSy
       r.onComplete(_ => s.stop())
       r
     },
-
     Test("reject big body in multipart request") {
       import sttp.tapir.generic.auto._
       case class A(part1: Part[String])
@@ -50,7 +49,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Any])(implicit _actorSy
       val r = Future.successful(()).flatMap { _ =>
         basicRequest
           .post(uri"http://localhost:${s.mainAddress.getPort}/test/hello")
-          .body(Array.ofDim[Byte](1024*15000)) //15M
+          .body(Array.ofDim[Byte](1024 * 15000)) // 15M
           .send(backend)
           .map(_.code shouldBe StatusCode.PayloadTooLarge)
           .unsafeToFuture()
@@ -58,7 +57,6 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Any])(implicit _actorSy
       r.onComplete(_ => s.stop())
       r
     },
-
     Test("reject big body in normal request") {
       import sttp.tapir.generic.auto._
       case class A(part1: Part[String])
@@ -72,7 +70,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Any])(implicit _actorSy
       val r = Future.successful(()).flatMap { _ =>
         basicRequest
           .post(uri"http://localhost:${s.mainAddress.getPort}/test/hello")
-          .body(Array.ofDim[Byte](1024*15000)) //15M
+          .body(Array.ofDim[Byte](1024 * 15000)) // 15M
           .send(backend)
           .map(_.code shouldBe StatusCode.PayloadTooLarge)
           .unsafeToFuture()
