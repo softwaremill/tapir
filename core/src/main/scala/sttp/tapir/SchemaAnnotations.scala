@@ -1,7 +1,7 @@
-package sttp.tapir.internal
+package sttp.tapir
 
 import sttp.tapir.Schema.SName
-import sttp.tapir.{Schema, Validator}
+import sttp.tapir.macros.SchemaAnnotationsMacros
 
 import scala.Function.tupled
 
@@ -33,4 +33,4 @@ final case class SchemaAnnotations[T](
   }
 }
 
-object SchemaAnnotations extends SchemaAnnotationsMacro
+object SchemaAnnotations extends SchemaAnnotationsMacros

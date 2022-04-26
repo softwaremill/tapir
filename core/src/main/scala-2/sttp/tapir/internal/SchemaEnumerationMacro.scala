@@ -1,6 +1,6 @@
 package sttp.tapir.internal
 
-import sttp.tapir.Schema
+import sttp.tapir.{Schema, SchemaAnnotations}
 import sttp.tapir.macros.CreateDerivedEnumerationSchema
 
 import scala.reflect.macros.blackbox
@@ -19,7 +19,7 @@ private[tapir] object SchemaEnumerationMacro {
     import c.universe._
 
     val Enumeration = typeOf[scala.Enumeration]
-    val SchemaAnnotations = typeOf[sttp.tapir.internal.SchemaAnnotations[_]]
+    val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
 
     val weakTypeT = weakTypeOf[T]
     val owner = weakTypeT.typeSymbol.owner

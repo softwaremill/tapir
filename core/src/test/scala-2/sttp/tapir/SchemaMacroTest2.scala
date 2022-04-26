@@ -8,7 +8,6 @@ import sttp.tapir.SchemaMacroTestData2.{Type, ValueClasses}
 import sttp.tapir.SchemaType.{SArray, SProduct, SString}
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
-import sttp.tapir.internal.SchemaAnnotations
 
 // tests which pass only on Scala2
 class SchemaMacroTest2 extends AnyFlatSpec with Matchers {

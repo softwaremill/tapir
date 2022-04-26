@@ -207,8 +207,8 @@ object SchemaCompanionMacros {
   }
 
   def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
+    import sttp.tapir.SchemaAnnotations
     import q.reflect.*
-    import sttp.tapir.internal.SchemaAnnotations
 
     val Enumeration = TypeTree.of[scala.Enumeration].tpe
 
