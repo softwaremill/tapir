@@ -10,7 +10,7 @@ import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
-import zio.test.DefaultRunnableSpec
+import zio.test.ZSpec
 import zio.test._
 import zio.test.Assertion._
 
@@ -18,7 +18,7 @@ import java.nio.charset.Charset
 import scala.util.{Success, Try}
 import scala.collection.immutable.Seq
 
-object ZTapirTest extends DefaultRunnableSpec with ZTapir {
+object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
   def spec: ZSpec[TestEnvironment, Any] =
     suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling)
@@ -69,17 +69,17 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
+    UIO.succeed(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 
-  private def failedAutLogic(userName: String): UIO[User] = ZIO(10 / 0).orDie.as(User(userName))
+  private def failedAutLogic(userName: String): UIO[User] = ZIO.attempt(10 / 0).orDie.as(User(userName))
 
   private val testZServerLogicErrorHandling = test("zServerLogic error handling") {
     val testEndpoint: PublicEndpoint[Unit, TestError, String, Any] =
       endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
 
-    def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
+    def logic(input: Unit): ZIO[Any, TestError, String] = ZIO.attempt(10 / 0).orDie.map(_.toString)
     val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](

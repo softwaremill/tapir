@@ -11,9 +11,8 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.Clock
+import zio.{ExitCode, IO, Task, UIO, URIO, ZIOAppDefault}
 import zio.interop.catz._
-import zio.{IO, RIO, UIO, ZEnv, ZIO, ZIOAppDefault}
 
 object ZioExampleHttp4sServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -22,10 +21,10 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter()
+  val petRoutes: HttpRoutes[Task] = ZHttp4sServerInterpreter()
     .from(petEndpoint.zServerLogic { petId =>
       if (petId == 35) {
-        UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+        UIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
       } else {
         IO.fail("Unknown pet id")
       }
@@ -35,31 +34,29 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[Any, Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
-      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      UIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
+  val petServerRoutes: HttpRoutes[Task] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
 
   //
 
-  val swaggerRoutes: HttpRoutes[RIO[Clock, *]] =
+  val swaggerRoutes: HttpRoutes[Task] =
     ZHttp4sServerInterpreter()
-      .from(SwaggerInterpreter().fromEndpoints[RIO[Clock, *]](List(petEndpoint), "Our pets", "1.0"))
+      .from(SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
       .toRoutes
 
   // Starting the server
-  val serve: ZIO[ZEnv, Throwable, Unit] =
-    ZIO.runtime[ZEnv].flatMap { implicit runtime => // This is needed to derive cats-effect instances for that are needed by http4s
-      BlazeServerBuilder[RIO[Clock, *]]
-        .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
-        .serve
-        .compile
-        .drain
-    }
+  val serve: Task[Unit] =
+    BlazeServerBuilder[Task]
+      .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
+      .bindHttp(8080, "localhost")
+      .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
+      .serve
+      .compile
+      .drain
 
-  override def run = serve.exitCode
+  override def run: URIO[Any, ExitCode] = serve.exitCode
 }

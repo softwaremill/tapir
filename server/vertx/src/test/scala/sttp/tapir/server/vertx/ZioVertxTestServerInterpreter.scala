@@ -30,5 +30,5 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
 }
 
 object ZioVertxTestServerInterpreter {
-  implicit val runtime: Runtime[zio.ZEnv] = Runtime.default
+  implicit val runtime: Runtime[Any] = Runtime.default
 }

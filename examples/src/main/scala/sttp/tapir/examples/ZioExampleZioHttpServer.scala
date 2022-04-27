@@ -29,7 +29,7 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[Any, Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
-      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      UIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
       IO.fail("Unknown pet id")
     }

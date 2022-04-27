@@ -11,7 +11,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.{Clock, Console, IO, RIO, UIO, ZEnv, ZIO, ZIOAppDefault, ZLayer}
+import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
 import zio.interop.catz._
 
 object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
@@ -25,13 +25,12 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
   object PetService {
     def find(id: Int): ZIO[PetService, String, Pet] = ZIO.environmentWithZIO(_.get.find(id))
 
-    val live: ZLayer[Console, String, PetService] = ZLayer.fromFunction { env =>
-      val console = env.get[Console]
+    val live: Layer[String, PetService] = ZLayer.succeed {
       new PetService {
         override def find(petId: Int): IO[String, Pet] = {
-          console.printLine(s"Got request for pet: $petId").mapError(_.getMessage) *> {
+          Console.printLine(s"Got request for pet: $petId").mapError(_.getMessage) zipRight {
             if (petId == 35) {
-              UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+              IO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
             } else {
               IO.fail("Unknown pet id")
             }
@@ -45,24 +44,24 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
+  val petRoutes: HttpRoutes[RIO[PetService, *]] =
     ZHttp4sServerInterpreter().from(petEndpoint.zServerLogic(petId => PetService.find(petId))).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[PetService, Any] =
     petEndpoint.zServerLogic(petId => PetService.find(petId))
-  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
+  val petServerRoutes: HttpRoutes[RIO[PetService, *]] =
     ZHttp4sServerInterpreter().from(List(petServerEndpoint)).toRoutes
 
   // Documentation
-  val swaggerRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
+  val swaggerRoutes: HttpRoutes[RIO[PetService, *]] =
     ZHttp4sServerInterpreter()
-      .from(SwaggerInterpreter().fromEndpoints[RIO[PetService with Clock, *]](List(petEndpoint), "Our pets", "1.0"))
+      .from(SwaggerInterpreter().fromEndpoints[RIO[PetService, *]](List(petEndpoint), "Our pets", "1.0"))
       .toRoutes
 
   // Starting the server
-  val serve: ZIO[ZEnv with PetService, Throwable, Unit] = ZIO.runtime[ZEnv with PetService].flatMap { implicit runtime =>
-    BlazeServerBuilder[RIO[PetService with Clock, *]]
+  val serve: ZIO[PetService, Throwable, Unit] = {
+    BlazeServerBuilder[RIO[PetService, *]]
       .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
@@ -72,5 +71,5 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
   }
 
   override def run =
-    serve.provideCustomLayer(PetService.live).exitCode
+    serve.provide(PetService.live).exitCode
 }

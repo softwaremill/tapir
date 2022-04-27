@@ -26,7 +26,7 @@ object VertxZioServerOptions {
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
           VertxServerOptions.uploadDirectory(),
-          file => Task[Unit](Defaults.deleteFile()(file)),
+          file => Task.attemptBlocking(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors
         )

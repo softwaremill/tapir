@@ -174,25 +174,25 @@ import sttp.tapir.ztapir._
 import zio._
 import com.linecorp.armeria.server.Server
 
-object Main extends zio.App {
+object Main extends zio.ZIODefaultApp {
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
     implicit val runtime = Runtime.default
     
     val tapirEndpoint: PublicEndpoint[String, Unit, String, Any] = ???
     def logic(key: String): UIO[String] = ???
-     
-    ZManaged
-      .make(ZIO.fromCompletableFuture {
-        val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
-
-        val server = Server
-          .builder()
-          .service(tapirService)
-          .build()
-        server.start().thenApply[Server](_ => server)
-      }) { server =>
-        ZIO.fromCompletableFuture(server.closeAsync()).orDie
-      }.useForever.as(ExitCode.success).orDie 
+    
+    val server = ZIO.fromCompletableFuture {
+      val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
+      val server = Server
+        .builder()
+        .service(tapirService)
+        .build()
+      server.start().thenApply[Server](_ => server)
+      server
+    } 
+    ZIO.acquireRelease(server)(ZIO.fromCompletableFuture(server.closeAsync()).orDie)
+      .useForever.as(ExitCode.success).orDie 
+  
   }
 }
 ```
