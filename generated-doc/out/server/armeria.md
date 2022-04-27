@@ -8,7 +8,7 @@ Armeria interpreter can be used with different effect systems (cats-effect, ZIO)
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.0.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.0.0-M8"
 ```
 
 and import the object:
@@ -75,7 +75,7 @@ Note that Armeria automatically injects an `ExecutionContext` on top of Armeria'
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.0.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.0.0-M8"
 ```
 to use this interpreter with Cats Effect typeclasses.
 
@@ -154,7 +154,7 @@ val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toService(streamingR
 Add the following dependency
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.0.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.0.0-M8"
 ```
 
 to use this interpreter with ZIO.
@@ -168,31 +168,29 @@ This object contains `toService(e: ServerEndpoint[ZioStreams, RIO[R, *]])` metho
 An HTTP server can then be started as in the following example:
 
 ```scala
+import com.linecorp.armeria.server.Server
 import sttp.tapir._
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 import sttp.tapir.ztapir._
-import zio._
-import com.linecorp.armeria.server.Server
+import zio.{ExitCode, Runtime, UIO, URIO, ZIO, ZIOAppDefault}
 
-object Main extends zio.ZIODefaultApp {
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
+object Main extends ZIOAppDefault {
+  override def run: URIO[Any, ExitCode] = {
     implicit val runtime = Runtime.default
-    
+
     val tapirEndpoint: PublicEndpoint[String, Unit, String, Any] = ???
     def logic(key: String): UIO[String] = ???
-    
-    val server = ZIO.fromCompletableFuture {
+
+    val s = ZIO.fromCompletableFuture {
       val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
       val server = Server
         .builder()
         .service(tapirService)
         .build()
       server.start().thenApply[Server](_ => server)
-      server
-    } 
-    ZIO.acquireRelease(server)(ZIO.fromCompletableFuture(server.closeAsync()).orDie)
-      .useForever.as(ExitCode.success).orDie 
-  
+    }
+
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever).exitCode
   }
 }
 ```
