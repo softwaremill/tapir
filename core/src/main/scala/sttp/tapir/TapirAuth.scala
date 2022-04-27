@@ -36,11 +36,16 @@ object TapirAuth {
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
 
+    def filterHeaders[T: Codec[List[String], *, TextPlain]](headers: List[String]) =
+      headers.filter(_.toLowerCase.startsWith(authScheme.toLowerCase))
+
+    def stringPrefixWithSpace: Mapping[List[String], List[String]] =
+      Mapping.stringPrefixCaseInsensitiveForList(authScheme + " ")
+
     val authCodec = Codec
-      .listFiltered[String, String, TextPlain](
-        Codec.string.map(stringPrefixWithSpace(authScheme)),
-        _.toLowerCase.startsWith(authScheme.toLowerCase())
-      )
+      .id[List[String], CodecFormat.TextPlain](codec.format, Schema.binary)
+      .map(filterHeaders(_))(identity)
+      .map(stringPrefixWithSpace)
       .mapDecode(codec.decode)(codec.encode)
       .schema(codec.schema)
 
@@ -67,7 +72,8 @@ object TapirAuth {
         EndpointInput.AuthInfo.Empty
       )
     }
+
+    private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
   }
 
-  private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
 }

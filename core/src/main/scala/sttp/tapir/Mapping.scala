@@ -65,12 +65,26 @@ object Mapping {
     * otherwise an error is reported.
     */
   def stringPrefixCaseInsensitive(prefix: String): Mapping[String, String] = {
+    def removePrefix(v: String): DecodeResult[String] = cropPrefix(v, prefix)
+
+    Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
+  }
+
+  def stringPrefixCaseInsensitiveForList(prefix: String): Mapping[List[String], List[String]] = {
+    def removePrefix(v: List[String]): DecodeResult[List[String]] = {
+      DecodeResult
+        .sequence(v.map { s => cropPrefix(s, prefix) })
+        .map(_.toList)
+    }
+
+    Mapping.fromDecode[List[String], List[String]](removePrefix)(v => v.map(d => s"$prefix$d"))
+  }
+
+  private def cropPrefix(s: String, prefix: String) = {
     val prefixLength = prefix.length
     val prefixLower = prefix.toLowerCase
-    def removePrefix(v: String): DecodeResult[String] =
-      if (v.toLowerCase.startsWith(prefixLower)) DecodeResult.Value(v.substring(prefixLength))
-      else DecodeResult.Error(v, new IllegalArgumentException(s"The given value doesn't start with $prefix"))
-    Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
+    if (s.toLowerCase.startsWith(prefixLower)) DecodeResult.Value(s.substring(prefixLength))
+    else DecodeResult.Error(s, new IllegalArgumentException(s"The given value doesn't start with $prefix"))
   }
 
   private[tapir] def decode[L, H](
