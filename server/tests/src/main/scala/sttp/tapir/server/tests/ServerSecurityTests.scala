@@ -120,10 +120,8 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
       (for {
         basicAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.basic("a", "b").send(backend)
         withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
-      } yield (basicAuth, withoutAuth)).map {
-        case (basic, without) => {
-          (basic.code.code, without.code.code) shouldBe (200, 200)
-        }
+      } yield (basicAuth, withoutAuth)).map { case (basic, without) =>
+        (basic.code.code -> without.code.code) shouldBe ((200, 200))
 
       }
     },
@@ -140,7 +138,7 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         bearerAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend)
         withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
       } yield (basicAuth, bearerAuth, withoutAuth)).map { case (basic, bearer, without) =>
-        (basic.code.code, bearer.code.code, without.code.code) shouldBe (200, 200, 200)
+        (basic.code.code, bearer.code.code, without.code.code) shouldBe ((200, 200, 200))
       }
     }
   ) ++
