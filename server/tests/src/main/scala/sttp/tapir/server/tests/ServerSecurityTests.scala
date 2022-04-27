@@ -113,32 +113,34 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
     },
     testServerLogic(
       in_security_option_basic_out_string
-        .serverSecurityLogic((u: Option[UsernamePassword]) => pureResult(u.map(_.username).asRight[Unit]))
-        .serverLogic(s => _ => pureResult(s.toRight[Unit](()))),
-      "In security Option[UsernamePassword] should let in basic auth"
+        .serverSecurityLogic((u: Option[UsernamePassword]) => pureResult(u.map(_.username).getOrElse("noauth").asRight[Unit]))
+        .serverLogic(s => _ => pureResult(Right(s))),
+      "In security Option[UsernamePassword] should let in basic auth as well as request without auth"
     ) { (backend, baseUri) =>
-      basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").auth.basic("a", "b").send(backend).map { a =>
-        a.code.code shouldBe 200
+      (for {
+        basicAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.basic("a", "b").send(backend)
+        withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
+      } yield (basicAuth, withoutAuth)).map {
+        case (basic, without) => {
+          (basic.code.code, without.code.code) shouldBe (200, 200)
+        }
+
       }
     },
     testServerLogic(
       in_security_option_basic_option_bearer_out_string
-        .serverSecurityLogic((u: (Option[UsernamePassword], Option[String])) => pureResult(u._1.map(_.username).orElse(u._2).asRight[Unit]))
-        .serverLogic(s => _ => pureResult(s.toRight[Unit](()))),
-      "In security (Option[UsernamePassword], Option[String]) should pass bearer auth"
+        .serverSecurityLogic((u: (Option[UsernamePassword], Option[String])) =>
+          pureResult(u._1.map(_.username).orElse(u._2).getOrElse("noauth").asRight[Unit])
+        )
+        .serverLogic(s => _ => pureResult(Right(s))),
+      "In security (Option[UsernamePassword], Option[String]) should pass bearer auth, basic auth, and also request without auth"
     ) { (backend, baseUri) =>
-      basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map { a =>
-        a.code.code shouldBe 200
-      }
-    },
-    testServerLogic(
-      in_security_option_basic_option_bearer_out_string
-        .serverSecurityLogic((u: (Option[UsernamePassword], Option[String])) => pureResult(u._1.map(_.username).orElse(u._2).asRight[Unit]))
-        .serverLogic(s => _ => pureResult(s.toRight[Unit](()))),
-      "In security (Option[UsernamePassword], Option[String]) should pass basic auth"
-    ) { (backend, baseUri) =>
-      basicStringRequest.get(uri"$baseUri/auth").auth.basic("12345", "pwd").send(backend).map { a =>
-        a.code.code shouldBe 200
+      (for {
+        basicAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.basic("a", "b").send(backend)
+        bearerAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend)
+        withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
+      } yield (basicAuth, bearerAuth, withoutAuth)).map { case (basic, bearer, without) =>
+        (basic.code.code, bearer.code.code, without.code.code) shouldBe (200, 200, 200)
       }
     }
   ) ++

@@ -16,8 +16,8 @@ object TapirAuth {
   ): EndpointInput.Auth[T, EndpointInput.AuthType.ApiKey] =
     EndpointInput.Auth(input, challenge, EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a base64-encoded
-    * username/password combination, use: `basic[UsernamePassword]`
+  /** Reads authorization data from the `Authorization` headers starting with `Basic `, removing the prefix. To parse the data as a
+    * base64-encoded username/password combination, use: `basic[UsernamePassword]`
     * @see
     *   UsernamePassword
     */
@@ -25,7 +25,7 @@ object TapirAuth {
       challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = http(AuthenticationScheme.Basic.name, challenge)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix. */
+  /** Reads authorization data from the `Authorization` headers starting with `Bearer `, removing the prefix. */
   def bearer[T: Codec[List[String], *, CodecFormat.TextPlain]](
       challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = http(AuthenticationScheme.Bearer.name, challenge)
@@ -35,6 +35,7 @@ object TapirAuth {
       challenge: WWWAuthenticateChallenge
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
+
     val authCodec = Codec
       .listFiltered[String, String, TextPlain](
         Codec.string.map(stringPrefixWithSpace(authScheme)),
