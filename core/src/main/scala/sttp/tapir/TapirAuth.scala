@@ -2,6 +2,7 @@ package sttp.tapir
 
 import sttp.model.HeaderNames
 import sttp.model.headers.{AuthenticationScheme, WWWAuthenticateChallenge}
+import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.Auth
 
 import scala.collection.immutable.ListMap
@@ -15,8 +16,8 @@ object TapirAuth {
   ): EndpointInput.Auth[T, EndpointInput.AuthType.ApiKey] =
     EndpointInput.Auth(input, challenge, EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a base64-encoded
-    * username/password combination, use: `basic[UsernamePassword]`
+  /** Reads authorization data from the `Authorization` headers starting with `Basic `, removing the prefix. To parse the data as a
+    * base64-encoded username/password combination, use: `basic[UsernamePassword]`
     * @see
     *   UsernamePassword
     */
@@ -24,7 +25,7 @@ object TapirAuth {
       challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = http(AuthenticationScheme.Basic.name, challenge)
 
-  /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix. */
+  /** Reads authorization data from the `Authorization` headers starting with `Bearer `, removing the prefix. */
   def bearer[T: Codec[List[String], *, CodecFormat.TextPlain]](
       challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = http(AuthenticationScheme.Bearer.name, challenge)
@@ -34,8 +35,20 @@ object TapirAuth {
       challenge: WWWAuthenticateChallenge
   ): EndpointInput.Auth[T, EndpointInput.AuthType.Http] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
-    val authCodec =
-      Codec.list(Codec.string.map(stringPrefixWithSpace(authScheme))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
+
+    def filterHeaders[T: Codec[List[String], *, TextPlain]](headers: List[String]) =
+      headers.filter(_.toLowerCase.startsWith(authScheme.toLowerCase))
+
+    def stringPrefixWithSpace: Mapping[List[String], List[String]] =
+      Mapping.stringPrefixCaseInsensitiveForList(authScheme + " ")
+
+    val authCodec = Codec
+      .id[List[String], CodecFormat.TextPlain](codec.format, Schema.binary)
+      .map(filterHeaders(_))(identity)
+      .map(stringPrefixWithSpace)
+      .mapDecode(codec.decode)(codec.encode)
+      .schema(codec.schema)
+
     EndpointInput.Auth(
       header[T](HeaderNames.Authorization)(authCodec),
       challenge,
@@ -59,7 +72,8 @@ object TapirAuth {
         EndpointInput.AuthInfo.Empty
       )
     }
+
+    private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
   }
 
-  private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
 }

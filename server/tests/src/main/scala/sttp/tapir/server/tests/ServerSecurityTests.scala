@@ -15,7 +15,9 @@ import sttp.tapir.tests.Security.{
   in_security_apikey_header_out_string,
   in_security_apikey_query_out_string,
   in_security_basic_out_string,
-  in_security_bearer_out_string
+  in_security_bearer_out_string,
+  in_security_option_basic_option_bearer_out_string,
+  in_security_option_basic_out_string
 }
 import sttp.tapir.tests.Test
 
@@ -108,6 +110,38 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         .serverLogic(s => _ => pureResult(s.asRight[Unit]))
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend).map(_.body shouldBe "1234")
+    },
+    testServerLogic(
+      in_security_option_basic_out_string
+        .serverSecurityLogic((u: Option[UsernamePassword]) => pureResult(u.map(_.username).getOrElse("noauth").asRight[Unit]))
+        .serverLogic(s => _ => pureResult(Right(s))),
+      "In security Option[UsernamePassword] should let in basic auth as well as request without auth"
+    ) { (backend, baseUri) =>
+      (for {
+        basicAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.basic("a", "b").send(backend)
+        withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
+      } yield (basicAuth, withoutAuth)).map { case (basic, without) =>
+        basic.code.code shouldBe 200
+        without.code.code shouldBe 200
+      }
+    },
+    testServerLogic(
+      in_security_option_basic_option_bearer_out_string
+        .serverSecurityLogic((u: (Option[UsernamePassword], Option[String])) =>
+          pureResult(u._1.map(_.username).orElse(u._2).getOrElse("noauth").asRight[Unit])
+        )
+        .serverLogic(s => _ => pureResult(Right(s))),
+      "In security (Option[UsernamePassword], Option[String]) should pass bearer auth, basic auth, and also request without auth"
+    ) { (backend, baseUri) =>
+      (for {
+        basicAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.basic("a", "b").send(backend)
+        bearerAuth <- basicStringRequest.get(uri"$baseUri/auth").auth.bearer("1234").send(backend)
+        withoutAuth <- basicStringRequest.get(uri"$baseUri/auth").send(backend)
+      } yield (basicAuth, bearerAuth, withoutAuth)).map { case (basic, bearer, without) =>
+        basic.code.code shouldBe 200
+        bearer.code.code shouldBe 200
+        without.code.code shouldBe 200
+      }
     }
   ) ++
     correctAuthTests ++
