@@ -14,6 +14,10 @@ trait TapirJsonZio {
 
   def jsonBody[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(zioCodec[T])
 
+  def jsonBodyWithRaw[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
   implicit def zioCodec[T: JsonEncoder: JsonDecoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       zio.json.JsonDecoder.apply[T].decodeJson(s) match {
