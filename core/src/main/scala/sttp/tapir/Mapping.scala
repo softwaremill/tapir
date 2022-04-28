@@ -65,9 +65,7 @@ object Mapping {
     * otherwise an error is reported.
     */
   def stringPrefixCaseInsensitive(prefix: String): Mapping[String, String] = {
-    def removePrefix(v: String): DecodeResult[String] = cropPrefix(v, prefix)
-
-    Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
+    Mapping.fromDecode(cropPrefix(_, prefix))(v => s"$prefix$v")
   }
 
   def stringPrefixCaseInsensitiveForList(prefix: String): Mapping[List[String], List[String]] = {
