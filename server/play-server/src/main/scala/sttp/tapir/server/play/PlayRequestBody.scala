@@ -83,13 +83,13 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       case Left(r) =>
         Future.failed(new PlayBodyParserException(r))
       case Right(value) =>
-        val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value) =>
+        val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value: scala.collection.Seq[String]) =>
           m.partType(key).map { partType =>
             toRaw(
               request,
               partType,
               charset(partType),
-              () => Source(value.map(ByteString.apply)),
+              () => Source.fromIterator(() => value.map(ByteString.apply).iterator),
               None
             ).map(body => Some(Part(key, body.value)))
           }
