@@ -1074,7 +1074,8 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
       "com.typesafe.play" %% "play-server" % Versions.playServer,
       "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
       "com.typesafe.play" %% "play" % Versions.playServer,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat,
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1446,7 +1447,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
     libraryDependencies ++= Seq(
       "com.monovore" %% "decline" % Versions.decline,
       "com.monovore" %% "decline-effect" % Versions.decline,
-      "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
+      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)

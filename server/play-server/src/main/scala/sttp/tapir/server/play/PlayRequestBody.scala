@@ -16,6 +16,7 @@ import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
@@ -89,7 +90,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
               request,
               partType,
               charset(partType),
-              () => Source.fromIterator(() => value.map(ByteString.apply).iterator),
+              () => Source(value.map(ByteString.apply).to(scala.collection.immutable.Seq)),
               None
             ).map(body => Some(Part(key, body.value)))
           }
