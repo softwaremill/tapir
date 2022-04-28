@@ -76,6 +76,26 @@ No additional dependencies are needed (except for zio1, which needs the `tapir-s
 both of the above implementations are included in the main interpreter, with dependencies on akka-streams, fs2 and zio 
 being marked as optional (hence these are not transitive).
 
+## Overwriting the response specification
+
+The `Request` obtained from the `.toRequest` and `.toSecureRequest` families of methods, after being applied to the 
+input, contains both the request data (URI, headers, body), and a description of how to handle the response -
+depending on the variant used, decoding the response into one of endpoint's outputs.
+
+If you'd like to skip that step, e.g. when testing redirects, it's possible to overwrite the response handling 
+description, for example:
+
+```scala :compile-only
+import sttp.tapir._
+import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.client3._
+
+SttpClientInterpreter()
+  .toRequest(endpoint.get.in("hello").in(query[String]("name")), Some(uri"http://localhost:8080"))
+  .apply("Ann")
+  .response(asStringAlways)
+```
+
 ## Scala.JS
 
 In this case add the following dependencies (note the [`%%%`](https://www.scala-js.org/doc/project/dependencies.html) 
