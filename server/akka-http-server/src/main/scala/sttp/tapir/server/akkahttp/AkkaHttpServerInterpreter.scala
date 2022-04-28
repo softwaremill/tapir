@@ -25,11 +25,11 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait AkkaHttpServerInterpreter {
 
-  def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
+  def akkaHttpServerOptions: AkkaHttpServerOptions
 
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
@@ -99,7 +99,8 @@ trait AkkaHttpServerInterpreter {
 
 object AkkaHttpServerInterpreter {
 
-  def apply(serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default): AkkaHttpServerInterpreter = {
+  def apply()(implicit ec: ExecutionContext): AkkaHttpServerInterpreter = apply(AkkaHttpServerOptions.default)
+  def apply(serverOptions: AkkaHttpServerOptions): AkkaHttpServerInterpreter = {
     new AkkaHttpServerInterpreter {
       override def akkaHttpServerOptions: AkkaHttpServerOptions = serverOptions
     }

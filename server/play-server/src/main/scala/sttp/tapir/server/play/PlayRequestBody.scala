@@ -14,8 +14,7 @@ import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
@@ -25,6 +24,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   override val streams: AkkaStreams = AkkaStreams
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+    import mat.executionContext
     val request = playRequest(serverRequest)
     val charset = request.charset.map(Charset.forName)
     toRaw(request, bodyType, charset, () => request.body, None)
@@ -39,7 +39,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       body: () => Source[ByteString, Any],
       bodyAsFile: Option[File]
   )(implicit
-      mat: Materializer
+      mat: Materializer,
+      ec: ExecutionContext
   ): Future[RawValue[R]] = {
     // playBodyParsers is used, so that the maxLength limits from Play configuration are applied
     def bodyAsByteString(): Future[ByteString] = {
@@ -75,7 +76,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       m: RawBodyType.MultipartBody,
       body: () => Source[ByteString, Any]
   )(implicit
-      mat: Materializer
+      mat: Materializer,
+      ec: ExecutionContext
   ): Future[RawValue[Seq[RawPart]]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)

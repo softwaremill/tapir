@@ -7,7 +7,8 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.{Defaults, TapirFile}
 
-import scala.concurrent.{Future, blocking}
+import scala.annotation.nowarn
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 case class AkkaHttpServerOptions(
     createFile: ServerRequest => Future[TapirFile],
@@ -21,19 +22,19 @@ case class AkkaHttpServerOptions(
 object AkkaHttpServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customiseInterceptors: CustomiseInterceptors[Future, AkkaHttpServerOptions] =
+  def customiseInterceptors(implicit
+      ec: ExecutionContext
+  ): CustomiseInterceptors[Future, AkkaHttpServerOptions] =
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[Future, AkkaHttpServerOptions]) =>
-        AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
+        AkkaHttpServerOptions(defaultCreateFile(_), defaultDeleteFile(_), ci.interceptors)
     ).serverLog(defaultSlf4jServerLog)
 
-  val defaultCreateFile: ServerRequest => Future[TapirFile] = { _ =>
-    import scala.concurrent.ExecutionContext.Implicits.global
+  def defaultCreateFile(@nowarn r: ServerRequest)(implicit ec: ExecutionContext): Future[TapirFile] = {
     Future(blocking(Defaults.createTempFile()))
   }
 
-  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
-    import scala.concurrent.ExecutionContext.Implicits.global
+  def defaultDeleteFile(file: TapirFile)(implicit ec: ExecutionContext): Future[Unit] = {
     Future(blocking(Defaults.deleteFile()(file)))
   }
 
@@ -79,5 +80,5 @@ object AkkaHttpServerOptions {
     )
   }
 
-  val default: AkkaHttpServerOptions = customiseInterceptors.options
+  def default(implicit ec: ExecutionContext): AkkaHttpServerOptions = customiseInterceptors.options
 }
