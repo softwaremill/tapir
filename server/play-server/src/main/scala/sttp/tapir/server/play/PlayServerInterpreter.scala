@@ -24,13 +24,13 @@ import sttp.tapir.server.interpreter.{
 }
 import sttp.tapir.server.model.ServerResponse
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 trait PlayServerInterpreter {
 
   implicit def mat: Materializer
 
-  implicit def executionContext: ExecutionContextExecutor = mat.executionContext
+  implicit def executionContext: ExecutionContext = mat.executionContext
 
   def playServerOptions: PlayServerOptions = PlayServerOptions.default
 

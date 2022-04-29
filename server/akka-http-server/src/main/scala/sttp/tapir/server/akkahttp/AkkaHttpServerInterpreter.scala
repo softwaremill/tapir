@@ -29,7 +29,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AkkaHttpServerInterpreter {
 
-  def akkaHttpServerOptions: AkkaHttpServerOptions
+  implicit def executionContext: ExecutionContext
+
+  def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
@@ -98,10 +100,16 @@ trait AkkaHttpServerInterpreter {
 }
 
 object AkkaHttpServerInterpreter {
-
-  def apply()(implicit ec: ExecutionContext): AkkaHttpServerInterpreter = apply(AkkaHttpServerOptions.default)
-  def apply(serverOptions: AkkaHttpServerOptions): AkkaHttpServerInterpreter = {
+  def apply()(implicit _ec: ExecutionContext): AkkaHttpServerInterpreter = {
     new AkkaHttpServerInterpreter {
+      override implicit def executionContext: ExecutionContext = _ec
+    }
+  }
+
+  def apply(serverOptions: AkkaHttpServerOptions)(implicit _ec: ExecutionContext): AkkaHttpServerInterpreter = {
+    new AkkaHttpServerInterpreter {
+      override implicit def executionContext: ExecutionContext = _ec
+
       override def akkaHttpServerOptions: AkkaHttpServerOptions = serverOptions
     }
   }
