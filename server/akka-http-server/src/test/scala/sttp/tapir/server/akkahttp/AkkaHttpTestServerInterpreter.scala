@@ -17,6 +17,7 @@ import scala.concurrent.Future
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     extends TestServerInterpreter[Future, AkkaStreams with WebSockets, AkkaHttpServerOptions, Route] {
   override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Route = {
+    import actorSystem.dispatcher
     val serverOptions: AkkaHttpServerOptions = interceptors(AkkaHttpServerOptions.customiseInterceptors).options
     AkkaHttpServerInterpreter(serverOptions).toRoute(es)
   }
