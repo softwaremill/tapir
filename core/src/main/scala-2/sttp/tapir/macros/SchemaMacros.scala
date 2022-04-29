@@ -32,7 +32,12 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   def schemaForMap[K, V: Schema](keyToString: K => String): Schema[Map[K, V]] =
     macro SchemaMapMacro.generateSchemaForMap[K, V]
 
-  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
+  /** @param discriminatorSchema
+    *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
+    */
+  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(
+      mapping: (V, Schema[_])*
+  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] =
     macro OneOfMacro.generateOneOfUsingField[E, V]
 
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
