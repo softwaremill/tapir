@@ -115,11 +115,13 @@ println(docs.toYaml)
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
+  
 val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 

@@ -20,6 +20,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: List[AnyEndpoint] = ???
 
@@ -285,6 +286,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
