@@ -14,6 +14,10 @@ import scala.util.{Failure, Success, Try}
 trait TapirJsonSpray {
   def jsonBody[T: JsonFormat: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(jsonFormatCodec[T])
 
+  def jsonBodyWithRaw[T: JsonFormat: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
   implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>
       Try(s.parseJson.convertTo[T]) match {

@@ -11,6 +11,10 @@ import scala.util.{Failure, Success, Try}
 trait TapirJsonJsoniter {
   def jsonBody[T: JsonValueCodec: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(jsoniterCodec[T])
 
+  def jsonBodyWithRaw[T: JsonValueCodec: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
       Try(readFromString[T](s)) match {

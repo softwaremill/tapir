@@ -370,6 +370,15 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
             r.body shouldBe Right("<>")
             r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
           }
+    },
+    testServer(in_raw_with_json_out_string) { case (s: String, fa: FruitAmount) =>
+      pureResult((s.length + " " + fa.amount).asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .body("""{"fruit":"orange","amount":11}""")
+        .send(backend)
+        .map(_.body shouldBe Right("30 11"))
     }
   )
 

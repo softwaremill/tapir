@@ -187,4 +187,10 @@ object Basic {
 
   val out_custom_content_type_string_body: PublicEndpoint[Int, Unit, (String, String), Any] =
     endpoint.in(query[Int]("kind")).out(header[String](HeaderNames.ContentType)).out(stringBody)
+
+  val in_raw_with_json_out_string: PublicEndpoint[(String, FruitAmount), Unit, String, Any] =
+    endpoint.post
+      .in("api" / "echo")
+      .in(jsonBodyWithRaw[FruitAmount])
+      .out(stringBody)
 }
