@@ -111,6 +111,9 @@ object SchemaType {
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
+    /** @param discriminatorSchema
+      *   Schema used when adding the discriminator as a field to a child product schema.
+      */
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
         discriminatorSchema: Schema[D] = Schema.string,
@@ -118,7 +121,7 @@ object SchemaType {
     ): SCoproduct[T] = {
       SCoproduct(
         subtypes.map {
-          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _, _, _) =>
+          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _, _, _) if st.fields.forall(_.name != discriminatorName) =>
             s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
         },
