@@ -25,7 +25,7 @@ case class NettyServerRequest(req: FullHttpRequest, attributes: AttributeMap = A
   override lazy val method: Method = Method.unsafeApply(req.method().name())
   override lazy val uri: Uri = Uri.unsafeParse(req.uri())
   override lazy val pathSegments: List[String] = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
-  override lazy val headers: Seq[Header] = req.headers().toHeaderSeq ++ req.trailingHeaders().toHeaderSeq
+  override lazy val headers: Seq[Header] = req.headers().toHeaderSeq ::: req.trailingHeaders().toHeaderSeq
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): NettyServerRequest = copy(attributes = attributes.put(k, v))
   override def withUnderlying(underlying: Any): ServerRequest =

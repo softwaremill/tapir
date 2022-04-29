@@ -4,20 +4,50 @@ import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup, EpollServerDomainSock
 import io.netty.channel.kqueue.{KQueue, KQueueEventLoopGroup, KQueueServerDomainSocketChannel, KQueueServerSocketChannel}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, ServerChannel}
 import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 
-import java.net.SocketAddress
+import java.net.{InetSocketAddress, SocketAddress}
+import java.nio.file.Path
 
-case class NettyOptions[S <: SocketAddress](
-    socketAddress: S,
+case class NettyOptions(
+    socketAddress: SocketAddress,
     eventLoopConfig: EventLoopConfig,
     shutdownEventLoopGroupOnClose: Boolean,
     initPipeline: (ChannelPipeline, ChannelHandler) => Unit
-)
+) {
+
+  def host(hostname: String): NettyOptions = {
+    val newSocketAddress = socketAddress match {
+      case s: InetSocketAddress => new InetSocketAddress(hostname, s.getPort)
+      case other                => throw new RuntimeException(s"Socket $other is not IneSocketAddress")
+    }
+
+    copy(newSocketAddress)
+  }
+
+  def port(p: Int): NettyOptions = {
+    val newSocketAddress = socketAddress match {
+      case s: InetSocketAddress => new InetSocketAddress(s.getHostName, p)
+      case other                => throw new RuntimeException(s"Socket $other is not InetSocketAddress")
+    }
+
+    copy(newSocketAddress)
+  }
+
+  def path(path: Path): NettyOptions = {
+    val newSocketAddress = socketAddress match {
+      case s: DomainSocketAddress => new DomainSocketAddress(path.toFile)
+      case other                  => throw new RuntimeException(s"Socket $other is not DomainSocketAddress")
+    }
+
+    copy(newSocketAddress)
+  }
+}
 
 object NettyOptions {
-  case class EventLoopConfig(builder: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
+  case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 
   object EventLoopConfig {
     def unixDomainSocket: EventLoopConfig = if (Epoll.isAvailable) {

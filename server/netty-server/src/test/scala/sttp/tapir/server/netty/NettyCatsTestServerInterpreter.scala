@@ -11,9 +11,9 @@ import sttp.tapir.tests.Port
 import java.net.InetSocketAddress
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Any, NettyCatsServerOptions[IO, InetSocketAddress], Route[IO]] {
+    extends TestServerInterpreter[IO, Any, NettyCatsServerOptions[IO], Route[IO]] {
   override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): Route[IO] = {
-    val serverOptions: NettyCatsServerOptions[IO, InetSocketAddress] = interceptors(
+    val serverOptions: NettyCatsServerOptions[IO] = interceptors(
       NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
     ).options
     NettyCatsServerInterpreter(serverOptions).toRoute(es)

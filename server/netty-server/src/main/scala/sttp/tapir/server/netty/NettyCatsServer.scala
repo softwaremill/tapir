@@ -11,38 +11,30 @@ import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}
 
-case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route[F]], options: NettyCatsServerOptions[F, S]) {
+case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route[F]], options: NettyCatsServerOptions[F]) {
   def addEndpoint(se: ServerEndpoint[Any, F]): NettyCatsServer[F, S] = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Any, F], overrideOptions: NettyCatsServerOptions[F, S]): NettyCatsServer[F, S] =
+  def addEndpoint(se: ServerEndpoint[Any, F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F, S] =
     addEndpoints(List(se), overrideOptions)
   def addEndpoints(ses: List[ServerEndpoint[Any, F]]): NettyCatsServer[F, S] = addRoute(
     NettyCatsServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[Any, F]], overrideOptions: NettyCatsServerOptions[F, S]): NettyCatsServer[F, S] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Any, F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F, S] = addRoute(
     NettyCatsServerInterpreter(overrideOptions).toRoute(ses)
   )
 
   def addRoute(r: Route[F]): NettyCatsServer[F, S] = copy(routes = routes :+ r)
   def addRoutes(r: Iterable[Route[F]]): NettyCatsServer[F, S] = copy(routes = routes ++ r)
 
-  def options(o: NettyCatsServerOptions[F, S]): NettyCatsServer[F, S] = copy(options = o)
-  def host(s: String): NettyCatsServer[F, S] = copy(options = options.host(s))
-  def port(p: Int): NettyCatsServer[F, S] = copy(options = options.port(p))
-
+  def options(o: NettyCatsServerOptions[F]): NettyCatsServer[F, S] = copy(options = o)
   def start(): F[NettyCatsServerBinding[F]] = Async[F].defer {
-    val eventLoopGroup = options.nettyOptions.eventLoopConfig.builder()
-//    val eventLoopGroup = options.nettyOptions.eventLoopGroup()
+    val eventLoopGroup = options.nettyOptions.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
 
     val channelFuture = NettyBootstrap(
       options.nettyOptions,
       new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)),
-      eventLoopGroup,
-      options.nettyOptions.eventLoopConfig.serverChannel,
-      options.nettyOptions.socketAddress
-//      options.host,
-//      options.port
+      eventLoopGroup
     )
 
     nettyChannelFutureToScala(channelFuture).map(ch =>
@@ -68,7 +60,7 @@ object NettyCatsServer {
   def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, InetSocketAddress] =
     NettyCatsServer(Vector.empty, NettyCatsServerOptions.default[F](dispatcher))
 
-  def apply[F[_]: Async, S <: SocketAddress](options: NettyCatsServerOptions[F, S]): NettyCatsServer[F, S] =
+  def apply[F[_]: Async, S <: SocketAddress](options: NettyCatsServerOptions[F]): NettyCatsServer[F, S] =
     NettyCatsServer(Vector.empty, options)
 
   def io(): Resource[IO, NettyCatsServer[IO, InetSocketAddress]] = Dispatcher[IO].map(apply[IO](_))
