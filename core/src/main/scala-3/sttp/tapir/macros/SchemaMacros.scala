@@ -101,10 +101,13 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
+  /** @param discriminatorSchema
+    *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
+    */
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
       mapping: (V, Schema[_])*
-  )(implicit conf: Configuration): Schema[E] = ${
-    SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
+  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] = ${
+    SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf, 'discriminatorSchema)
   }
 
   /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
@@ -162,7 +165,7 @@ private[tapir] object SchemaCompanionMacros {
 
   def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
       mapping: Expr[Seq[(V, Schema[_])]]
-  )(conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
+  )(conf: Expr[Configuration], discriminatorSchema: Expr[Schema[V]])(using q: Quotes): Expr[Schema[E]] = {
     import q.reflect.*
 
     def resolveFunctionName(f: Statement): String = f match {
@@ -188,19 +191,21 @@ private[tapir] object SchemaCompanionMacros {
 
       val mappingAsList = $mapping.toList
       val mappingAsMap = mappingAsList.toMap
-      val discriminator = SDiscriminator(
-        _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) })),
-        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) =>
-          $asString.apply(k) -> SRef(fname)
-        }
-      )
+
+      val discriminatorName = _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) }))
+      val discriminatorMapping = mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) =>
+        $asString.apply(k) -> SRef(fname)
+      }
+
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
       Schema(
-        SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
+        (SCoproduct[E](subtypes, None) { e =>
           val ee = $extractor(e)
           mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
-        },
+        }).addDiscriminatorField(
+          discriminatorName, $discriminatorSchema, discriminatorMapping
+        ),
         Some(sname)
       )
     }

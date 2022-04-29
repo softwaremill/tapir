@@ -13,7 +13,7 @@ private[tapir] object OneOfMacro {
       c: blackbox.Context
   )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(
       mapping: c.Expr[(V, Schema[_])]*
-  )(conf: c.Expr[Configuration]): c.Expr[Schema[E]] = {
+  )(conf: c.Expr[Configuration], discriminatorSchema: c.Expr[Schema[V]]): c.Expr[Schema[E]] = {
     import c.universe._
 
     @tailrec
@@ -58,22 +58,24 @@ private[tapir] object OneOfMacro {
             import _root_.scala.collection.immutable.{List, Map}
             val mappingAsList = List(..$mapping)
             val mappingAsMap: Map[$weakTypeV, Schema[_]] = mappingAsList.toMap
-            val discriminator = SDiscriminator(
-              _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
-              // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
-              mappingAsMap.toList.flatMap { 
+            
+            val discriminatorName = _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name))
+            // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
+            val discriminatorMapping = mappingAsMap.toList.flatMap { 
                 case (k, Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
                 case _ => Nil
               }
               .toMap
-            )
+            
             val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
             // cast needed because of Scala 2.12
             val subtypes = mappingAsList.map(_._2)
-            Schema(SCoproduct(subtypes, _root_.scala.Some(discriminator)) { e => 
+            Schema((SCoproduct[$weakTypeE](subtypes, None) { e => 
               val ee: $weakTypeV = $extractor(e)
               mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], e))
-            }, Some(sname))
+            }).addDiscriminatorField(
+              discriminatorName, $discriminatorSchema, discriminatorMapping
+            ), Some(sname))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

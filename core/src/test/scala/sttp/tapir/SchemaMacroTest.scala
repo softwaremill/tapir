@@ -261,6 +261,27 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
   }
 
+  it should "add the discriminator as a field when using oneOfUsingField" in {
+    val schema =
+      Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("user" -> Schema.derived[User], "org" -> Schema.derived[Organization])
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+
+    schemaType.discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("kind"),
+        Map(
+          "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+          "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
+        )
+      )
+    )
+
+    schemaType.subtypes.foreach { childSchema =>
+      val childProduct = childSchema.schemaType.asInstanceOf[SProduct[_]]
+      childProduct.fields.find(_.name.name == "kind") shouldBe Some(SProductField(FieldName("kind"), Schema.string, (_: Any) => None))
+    }
+  }
+
   it should "create a schema using oneOfField given an enum extractor" in {
     sealed trait YEnum
     case object Y1 extends YEnum
