@@ -30,6 +30,7 @@ import scala.concurrent.{Await, Future, Promise}
   */
 object SwaggerUIOauth2AkkaServer extends App with RouteConcatenation {
   implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
 
   def authLogic(token: String): Future[Either[Int, String]] = Future.successful(Right(token))
 

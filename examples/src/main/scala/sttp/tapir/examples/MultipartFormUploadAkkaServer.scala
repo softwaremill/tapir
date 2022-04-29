@@ -13,9 +13,11 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object MultipartFormUploadAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // the class representing the multipart data
   //
   // parts can be referenced directly; if part metadata is needed, we define the type wrapped with Part[_].
@@ -39,8 +41,6 @@ object MultipartFormUploadAkkaServer extends App {
   })
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(setProfileRoute).map { _ =>
     val testFile = java.io.File.createTempFile("user-123", ".jpg")
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()

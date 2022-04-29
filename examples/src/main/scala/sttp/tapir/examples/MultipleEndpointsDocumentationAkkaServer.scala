@@ -14,6 +14,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object MultipleEndpointsDocumentationAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // endpoint descriptions
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
@@ -57,9 +60,6 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
     )
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val routes = {
     import akka.http.scaladsl.server.Directives._
     concat(booksListingRoute, addBookRoute, swaggerUIRoute)

@@ -14,6 +14,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object ErrorOutputsAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // the endpoint description
   case class Result(result: Int)
 
@@ -30,9 +33,6 @@ object ErrorOutputsAkkaServer extends App {
   })
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

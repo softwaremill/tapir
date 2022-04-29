@@ -25,7 +25,7 @@ object Vanilla {
 
 object Tapir {
   val router: Int => Route = (nRoutes: Int) =>
-    AkkaHttpServerInterpreter().toRoute(
+    AkkaHttpServerInterpreter()(AkkaHttp.executionContext).toRoute(
       (0 to nRoutes)
         .map((n: Int) =>
           perf.Common

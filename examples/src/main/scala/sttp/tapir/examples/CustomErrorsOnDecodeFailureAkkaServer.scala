@@ -12,6 +12,9 @@ import sttp.client3._
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // corresponds to: GET /?amount=...
   val amountEndpoint: PublicEndpoint[Int, String, Unit, Any] = endpoint.get.in(query[Int]("amount")).errorOut(stringBody)
 
@@ -33,9 +36,6 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
   val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

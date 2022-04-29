@@ -14,6 +14,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object BasicAuthenticationAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   val secret: Endpoint[UsernamePassword, Unit, Unit, String, Any] =
     endpoint.get.securityIn("secret").securityIn(auth.basic[UsernamePassword](WWWAuthenticateChallenge.basic("example"))).out(stringBody)
 
@@ -25,9 +28,6 @@ object BasicAuthenticationAkkaServer extends App {
     )
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

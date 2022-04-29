@@ -16,6 +16,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object PrometheusMetricsExample extends App with StrictLogging {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
 
   case class Person(name: String)
 
@@ -44,8 +46,6 @@ object PrometheusMetricsExample extends App with StrictLogging {
         prometheusMetrics.metricsEndpoint
       )
     )
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
 
   Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 

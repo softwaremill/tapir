@@ -13,6 +13,9 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
 object StaticContentFromFilesAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   val content = "f1 content"
   val exampleDirectory: Path = Files.createTempDirectory("akka-static-example")
   Files.write(exampleDirectory.resolve("f1"), content.getBytes, StandardOpenOption.CREATE_NEW)
@@ -21,9 +24,6 @@ object StaticContentFromFilesAkkaServer extends App {
   val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoints)
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

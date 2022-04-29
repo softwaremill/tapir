@@ -30,6 +30,9 @@ object WebSocketAkkaServer extends App {
   val wsEndpoint: PublicEndpoint[Unit, Unit, Flow[String, Response, Any], AkkaStreams with WebSockets] =
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // Implementation of the web socket: a flow which echoes incoming messages
   val wsRoute: Route =
     AkkaHttpServerInterpreter().toRoute(
@@ -41,9 +44,6 @@ object WebSocketAkkaServer extends App {
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
   // Starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http()
     .newServerAt("localhost", 8080)
     .bindFlow(wsRoute)
