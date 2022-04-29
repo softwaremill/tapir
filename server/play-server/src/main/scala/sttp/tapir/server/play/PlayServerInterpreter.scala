@@ -86,33 +86,40 @@ trait PlayServerInterpreter {
           playServerOptions.deleteFile
         )
 
-        interpreter(serverRequest).map {
-          case RequestResult.Failure(_) =>
-            Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
-          case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
-            val headers: Map[String, String] = response.headers
-              .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
-                if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
-              }
-              .map {
-                // See comment in play.api.mvc.CookieHeaderEncoding
-                case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
-                case (key, value)                                  => (key, value.mkString(", "))
-              }
-              .filterNot(allowToSetExplicitly)
+        interpreter(serverRequest)
+          .map {
+            case RequestResult.Failure(_) =>
+              Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
+            case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
+              val headers: Map[String, String] = response.headers
+                .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
+                  if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
+                }
+                .map {
+                  // See comment in play.api.mvc.CookieHeaderEncoding
+                  case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
+                  case (key, value)                                  => (key, value.mkString(", "))
+                }
+                .filterNot(allowToSetExplicitly)
 
-            val status = response.code.code
-            response.body match {
-              case Some(Left(flow))    => Right(flow)
-              case Some(Right(entity)) => Left(Result(ResponseHeader(status, headers), entity))
-              case None =>
-                if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
-                  Left(
-                    Result(ResponseHeader(status, headers), HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType))
-                  )
-                else Left(Result(ResponseHeader(status, headers), HttpEntity.Strict(ByteString.empty, response.contentType)))
-            }
-        }
+              val status = response.code.code
+              response.body match {
+                case Some(Left(flow))    => Right(flow)
+                case Some(Right(entity)) => Left(Result(ResponseHeader(status, headers), entity))
+                case None =>
+                  if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
+                    Left(
+                      Result(
+                        ResponseHeader(status, headers),
+                        HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType)
+                      )
+                    )
+                  else Left(Result(ResponseHeader(status, headers), HttpEntity.Strict(ByteString.empty, response.contentType)))
+              }
+          }
+          .recover { case e: PlayBodyParserException =>
+            Left(e.result)
+          }
       }
     }
   }
