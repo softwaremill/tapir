@@ -42,7 +42,7 @@ trait PlayServerInterpreter {
     toRoutes(List(e))
   }
 
-  def toRoutes[I, E, O](
+  def toRoutes(
       serverEndpoints: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
@@ -51,7 +51,7 @@ trait PlayServerInterpreter {
       override def isDefinedAt(request: RequestHeader): Boolean = {
         val serverRequest = PlayServerRequest(request, request)
         serverEndpoints.exists { se =>
-          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest), matchWholePath = true) match {
+          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest)) match {
             case (DecodeBasicInputsResult.Values(_, _), _) => true
             case (DecodeBasicInputsResult.Failure(input, failure), _) =>
               playServerOptions.decodeFailureHandler(DecodeFailureContext(se.endpoint, input, failure, serverRequest)).isDefined
@@ -123,7 +123,7 @@ trait PlayServerInterpreter {
       upgrade <- header.headers.get(sttp.model.HeaderNames.Upgrade)
     } yield connection.equalsIgnoreCase("Upgrade") && upgrade.equalsIgnoreCase("websocket")).getOrElse(false)
 
-  private def allowToSetExplicitly[O, E, I](header: (String, String)): Boolean =
+  private def allowToSetExplicitly(header: (String, String)): Boolean =
     List(HeaderNames.CONTENT_TYPE, HeaderNames.CONTENT_LENGTH, HeaderNames.TRANSFER_ENCODING).contains(header._1)
 
 }
