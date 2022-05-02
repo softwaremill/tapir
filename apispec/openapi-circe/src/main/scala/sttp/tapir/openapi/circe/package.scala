@@ -20,6 +20,7 @@ import sttp.tapir.apispec.{
   SecurityScheme,
   Tag
 }
+
 import scala.collection.immutable.ListMap
 
 package object circe extends TapirOpenAPICirceEncoders
