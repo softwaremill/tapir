@@ -32,6 +32,7 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
+import scala.concurrent.ExecutionContext.Implicits.global
 
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future.successful(Right[Unit, Int](s.length))
@@ -60,6 +61,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server._
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class Special
 def metricsDirective: Directive0 = ???
@@ -106,6 +108,7 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, serverSentEventsBody}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody)
 

@@ -131,6 +131,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =

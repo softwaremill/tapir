@@ -99,15 +99,18 @@ val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = 
+val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
+  import scala.concurrent.ExecutionContext.Implicits.global
   AkkaHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
+}    
 ```
 
 Testing such an interceptor requires simulating an exception being thrown in the server logic:
 
 ```scala mdoc:silent
 class MySpec2 extends AsyncFlatSpec with Matchers {
+
   it should "use my custom exception handler" in {
     // given
     val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)

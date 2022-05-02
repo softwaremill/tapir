@@ -25,9 +25,11 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait AkkaHttpServerInterpreter {
+
+  implicit def executionContext: ExecutionContext
 
   def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
@@ -98,9 +100,16 @@ trait AkkaHttpServerInterpreter {
 }
 
 object AkkaHttpServerInterpreter {
-
-  def apply(serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default): AkkaHttpServerInterpreter = {
+  def apply()(implicit _ec: ExecutionContext): AkkaHttpServerInterpreter = {
     new AkkaHttpServerInterpreter {
+      override implicit def executionContext: ExecutionContext = _ec
+    }
+  }
+
+  def apply(serverOptions: AkkaHttpServerOptions)(implicit _ec: ExecutionContext): AkkaHttpServerInterpreter = {
+    new AkkaHttpServerInterpreter {
+      override implicit def executionContext: ExecutionContext = _ec
+
       override def akkaHttpServerOptions: AkkaHttpServerOptions = serverOptions
     }
   }

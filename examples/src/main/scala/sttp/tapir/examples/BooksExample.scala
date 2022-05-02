@@ -138,8 +138,9 @@ object BooksExample extends App with StrictLogging {
 
     import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
-    val routes = AkkaHttpServerInterpreter().toRoute(serverEndpoints)
     implicit val actorSystem: ActorSystem = ActorSystem()
+    import actorSystem.dispatcher
+    val routes = AkkaHttpServerInterpreter().toRoute(serverEndpoints)
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")

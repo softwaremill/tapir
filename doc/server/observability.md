@@ -64,6 +64,7 @@ import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // an instance with default metrics; use PrometheusMetrics[Future]() for an empty one
 val prometheusMetrics = PrometheusMetrics.default[Future]()

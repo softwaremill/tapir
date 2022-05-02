@@ -11,6 +11,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object MultipleServerEndpointsAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // endpoint descriptions, together with the server logic
   val endpoint1 = endpoint.get.in("endpoint1").out(stringBody).serverLogicSuccess { _ => Future.successful("ok1") }
   val endpoint2 =
@@ -20,9 +23,6 @@ object MultipleServerEndpointsAkkaServer extends App {
   val route: Route = AkkaHttpServerInterpreter().toRoute(List(endpoint1, endpoint2))
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

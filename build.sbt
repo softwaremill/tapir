@@ -1077,7 +1077,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
       "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
       "com.typesafe.play" %% "play" % Versions.playServer,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
-      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat,
+      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)

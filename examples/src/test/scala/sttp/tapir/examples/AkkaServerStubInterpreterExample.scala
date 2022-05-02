@@ -13,7 +13,7 @@ import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.stub.TapirStubInterpreter
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class AkkaServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
 
@@ -62,6 +62,6 @@ object UsersApi {
   val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     Option(ValuedEndpointOutput(stringBody.and(statusCode), (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)))
   )
-  val options: CustomiseInterceptors[Future, AkkaHttpServerOptions] = AkkaHttpServerOptions.customiseInterceptors
-    .exceptionHandler(exceptionHandler)
+  def options(implicit ec: ExecutionContext): CustomiseInterceptors[Future, AkkaHttpServerOptions] =
+    AkkaHttpServerOptions.customiseInterceptors.exceptionHandler(exceptionHandler)
 }

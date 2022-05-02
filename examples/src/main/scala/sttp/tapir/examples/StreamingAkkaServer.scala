@@ -14,6 +14,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object StreamingAkkaServer extends App {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
+
   // The endpoint: corresponds to GET /receive.
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` and the media type is `text/plain`.
@@ -25,9 +28,6 @@ object StreamingAkkaServer extends App {
   val streamingRoute: Route = AkkaHttpServerInterpreter().toRoute(streamingEndpoint.serverLogicSuccess(_ => Future.successful(testStream)))
 
   // starting the server
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { _ =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

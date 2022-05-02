@@ -18,6 +18,7 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val filesRoute: Route = AkkaHttpServerInterpreter().toRoute(
   filesGetServerEndpoint[Future]("site" / "static")("/home/static/data")
