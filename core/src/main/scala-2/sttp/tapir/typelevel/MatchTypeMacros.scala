@@ -16,11 +16,11 @@ trait MatchTypeMagnoliaDerivation {
 
     { value: Any =>
       ct.runtimeClass.isInstance(value) &&
-        ctx.parameters.forall { param: ReadOnlyParam[Typeclass, T] =>
+      ctx.parameters.forall { param: ReadOnlyParam[Typeclass, T] =>
         {
           param.typeclass(param.dereference(value.asInstanceOf[T]))
         }
-        }
+      }
     }
   }
 

@@ -204,7 +204,9 @@ private[tapir] object SchemaCompanionMacros {
           val ee = $extractor(e)
           mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
         }).addDiscriminatorField(
-          discriminatorName, $discriminatorSchema, discriminatorMapping
+          discriminatorName,
+          $discriminatorSchema,
+          discriminatorMapping
         ),
         Some(sname)
       )
