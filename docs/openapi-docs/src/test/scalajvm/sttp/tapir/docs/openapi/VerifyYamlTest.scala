@@ -27,8 +27,8 @@ import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.{Basic, Multipart}
 import sttp.tapir.tests.data.{FruitAmount, Person}
 import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
-
 import java.time.{Instant, LocalDateTime}
+import scala.collection.immutable.ListMap
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[Unit, (FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -703,6 +703,39 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val expectedYaml = load("expected_enumeration_values.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should add operation callback") {
+    case class TriggerRequest(callbackUrl: String)
+    case class CallbackRequest(answer: String)
+
+    println(OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.put.in("{$request.body#/callbackUrl}").in(jsonBody[CallbackRequest]), Info("Throwaway", "1.0"))
+      .paths)
+
+    val (callbackPathItem, callbackRequest) = {
+      val throwaway = OpenAPIDocsInterpreter()
+        .toOpenAPI(endpoint.put.in("callback").in(jsonBody[CallbackRequest]), Info("Throwaway", "1.0"))
+      (throwaway.paths.pathItems("/callback"), throwaway.components.get.schemas("CallbackRequest"))
+    }
+
+    val callback = Callback(ListMap("{$request.body#/callbackUrl}" -> callbackPathItem))
+
+    val docs: OpenAPI = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.put.in("trigger").in(jsonBody[TriggerRequest]), Info("Callbacks", "1.0"))
+
+    val pathItems = {
+      val put = docs.paths.pathItems("/trigger").put.get.addCallback("my_callback", callback)
+      ListMap("/trigger" -> docs.paths.pathItems("/trigger").copy(put = Some(put)))
+    }
+    val comp = Some(docs.components.get.copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest)))
+
+    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = comp).toYaml
+
+    println(s"### actual yaml\n$actualYaml")
+    val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
