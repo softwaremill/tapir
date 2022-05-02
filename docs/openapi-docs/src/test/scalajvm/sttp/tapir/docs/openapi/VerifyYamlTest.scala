@@ -711,17 +711,13 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     case class TriggerRequest(callbackUrl: String)
     case class CallbackRequest(answer: String)
 
-    println(OpenAPIDocsInterpreter()
-      .toOpenAPI(endpoint.put.in("{$request.body#/callbackUrl}").in(jsonBody[CallbackRequest]), Info("Throwaway", "1.0"))
-      .paths)
-
-    val (callbackPathItem, callbackRequest) = {
+    val (callback, callbackRequest) = {
       val throwaway = OpenAPIDocsInterpreter()
         .toOpenAPI(endpoint.put.in("callback").in(jsonBody[CallbackRequest]), Info("Throwaway", "1.0"))
-      (throwaway.paths.pathItems("/callback"), throwaway.components.get.schemas("CallbackRequest"))
+      val callbackItem = throwaway.paths.pathItems("/callback")
+      val callback = Callback(ListMap("{$request.body#/callbackUrl}" -> callbackItem))
+      (callback, throwaway.components.get.schemas("CallbackRequest"))
     }
-
-    val callback = Callback(ListMap("{$request.body#/callbackUrl}" -> callbackPathItem))
 
     val docs: OpenAPI = OpenAPIDocsInterpreter()
       .toOpenAPI(endpoint.put.in("trigger").in(jsonBody[TriggerRequest]), Info("Callbacks", "1.0"))
@@ -730,11 +726,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       val put = docs.paths.pathItems("/trigger").put.get.addCallback("my_callback", callback)
       ListMap("/trigger" -> docs.paths.pathItems("/trigger").copy(put = Some(put)))
     }
-    val comp = Some(docs.components.get.copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest)))
+    val components = Some(docs.components.get.copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest)))
 
-    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = comp).toYaml
-
-    println(s"### actual yaml\n$actualYaml")
+    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = components).toYaml
     val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml

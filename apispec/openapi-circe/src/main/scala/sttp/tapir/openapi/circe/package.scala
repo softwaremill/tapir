@@ -4,7 +4,22 @@ import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, JsonObject}
-import sttp.tapir.apispec.{Discriminator, ExampleMultipleValue, ExampleSingleValue, ExampleValue, ExtensionValue, ExternalDocumentation, OAuthFlow, OAuthFlows, Reference, ReferenceOr, Schema, SchemaType, SecurityScheme, Tag}
+import sttp.tapir.apispec.{
+  Discriminator,
+  ExampleMultipleValue,
+  ExampleSingleValue,
+  ExampleValue,
+  ExtensionValue,
+  ExternalDocumentation,
+  OAuthFlow,
+  OAuthFlows,
+  Reference,
+  ReferenceOr,
+  Schema,
+  SchemaType,
+  SecurityScheme,
+  Tag
+}
 import scala.collection.immutable.ListMap
 
 package object circe extends TapirOpenAPICirceEncoders
@@ -45,7 +60,6 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderExample: Encoder[Example] = deriveEncoder[Example].mapJsonObject(expandExtensions)
   implicit val encoderResponse: Encoder[Response] = deriveEncoder[Response].mapJsonObject(expandExtensions)
   implicit val encoderLink: Encoder[Link] = deriveEncoder[Link].mapJsonObject(expandExtensions)
-  //implicit val encoderCallback: Encoder[Callback] = deriveEncoder[Callback].mapJsonObject(expandExtensions)
   implicit val encoderCallback: Encoder[Callback] = Encoder.instance { callback =>
     val extensions = callback.extensions.asJsonObject
     val pathItems = callback.pathItems.asJson
