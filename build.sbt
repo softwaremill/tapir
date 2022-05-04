@@ -20,6 +20,7 @@ val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
+val nativeScalaVersions = List(scala2_13)
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -95,6 +96,8 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+
+val commonNativeSettings = commonSettings
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
@@ -295,8 +298,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "com.softwaremill.sttp.shared" %%% "ws" % Versions.sttpShared,
       scalaTest.value % Test,
       scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
+      scalaTestPlusScalaCheck.value % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -331,6 +333,17 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = nativeScalaVersions,
+    settings = {
+      commonNativeSettings ++ Seq(
+        libraryDependencies ++= Seq(
+          "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime,
+          "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
+        )
+      )
+    }
+  )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
@@ -341,6 +354,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -929,14 +943,9 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
     libraryDependencies ++= Seq(scalaTest.value % Test)
   )
   .dependsOn(core % CompileAndTest)
-  .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJvmSettings
-  )
-  .jsPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJsSettings
-  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
