@@ -9,7 +9,7 @@ The easiest way to expose static content from the local filesystem is to use the
 is parametrised with the path, at which the content should be exposed, as well as the local system path, from which
 to read the data.
 
-Such an endpoint has to be interpreted using your server interpreter. For example, using the akka-http interpreter:
+Such an endpoint has to be interpreted using your server interpreter. For example, using the [akka-http](../server/akkahttp.md) interpreter:
 
 ```scala mdoc:compile-only
 import akka.http.scaladsl.server.Route
@@ -27,6 +27,24 @@ val filesRoute: Route = AkkaHttpServerInterpreter().toRoute(
 
 Using the above endpoint, a request to `/site/static/css/styles.css` will try to read the 
 `/home/static/data/css/styles.css` file.
+
+To expose files without a prefix, use `emptyInput`. For example, using the [netty](../server/netty.md) interpreter, the
+below exposes the content of `/var/www` at `http://localhost:8080`:
+
+```scala mdoc:compile-only
+import sttp.tapir.server.netty.NettyFutureServer
+import sttp.tapir.{emptyInput, filesServerEndpoints}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+NettyFutureServer()
+  .port(8080)
+  .addEndpoints(filesServerEndpoints[Future](emptyInput)("/var/www"))
+  .start()
+  .flatMap(_ => Future.never)
+```
+
 
 A single file can be exposed using `fileGetServerEndpoint`.
 
