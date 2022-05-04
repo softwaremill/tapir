@@ -4,11 +4,12 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.Uri._
 import sttp.model._
-import sttp.tapir.model._
 import sttp.tapir._
+import sttp.tapir.model._
 
 import scala.collection.immutable
 
+// TODO: move to shared sources after https://github.com/softwaremill/sttp-model/issues/188 is fixed
 class DecodeBasicInputsResultTest extends AnyFlatSpec with Matchers {
 
   def testRequest(testHeader: Header): ServerRequest = {
