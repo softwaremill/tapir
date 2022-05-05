@@ -20,6 +20,7 @@ val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
+val nativeScalaVersions = List(scala2_13)
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -95,6 +96,8 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+
+val commonNativeSettings = commonSettings
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
@@ -186,6 +189,7 @@ val testJVM_2_12 = taskKey[Unit]("Test JVM Scala 2.12 projects, without Finatra"
 val testJVM_2_13 = taskKey[Unit]("Test JVM Scala 2.13 projects, without Finatra")
 val testJVM_3 = taskKey[Unit]("Test JVM Scala 3 projects, without Finatra")
 val testJS = taskKey[Unit]("Test JS projects")
+val testNative = taskKey[Unit]("Test native projects")
 val testDocs = taskKey[Unit]("Test docs projects")
 val testServers = taskKey[Unit]("Test server projects")
 val testClients = taskKey[Unit]("Test client projects")
@@ -224,12 +228,19 @@ lazy val rootProject = (project in file("."))
   .settings(
     publishArtifact := false,
     name := "tapir",
-    testJVM_2_12 := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && p.contains("2_12"))).value,
-    testJVM_2_13 := (Test / test)
-      .all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && !p.contains("2_12") && !p.contains("3")))
+    testJVM_2_12 := (Test / test)
+      .all(filterProject(p => !p.contains("JS") && !p.contains("Native") && !p.contains("finatra") && p.contains("2_12")))
       .value,
-    testJVM_3 := (Test / test).all(filterProject(p => !p.contains("JS") && !p.contains("finatra") && p.contains("3"))).value,
+    testJVM_2_13 := (Test / test)
+      .all(
+        filterProject(p => !p.contains("JS") && !p.contains("Native") && !p.contains("finatra") && !p.contains("2_12") && !p.contains("3"))
+      )
+      .value,
+    testJVM_3 := (Test / test)
+      .all(filterProject(p => !p.contains("JS") && !p.contains("Native") && !p.contains("finatra") && p.contains("3")))
+      .value,
     testJS := (Test / test).all(filterProject(_.contains("JS"))).value,
+    testNative := (Test / test).all(filterProject(_.contains("Native"))).value,
     testDocs := (Test / test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
     testServers := (Test / test).all(filterProject(p => p.contains("Server"))).value,
     testClients := (Test / test).all(filterProject(p => p.contains("Client"))).value,
@@ -295,8 +306,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "com.softwaremill.sttp.shared" %%% "ws" % Versions.sttpShared,
       scalaTest.value % Test,
       scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
+      scalaTestPlusScalaCheck.value % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -331,6 +341,17 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = nativeScalaVersions,
+    settings = {
+      commonNativeSettings ++ Seq(
+        libraryDependencies ++= Seq(
+          "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime,
+          "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
+        )
+      )
+    }
+  )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
@@ -341,6 +362,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -654,8 +676,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.18",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.18" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.19",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.19" % Test,
       scalaTest.value % Test
     )
   )
@@ -929,14 +951,9 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
     libraryDependencies ++= Seq(scalaTest.value % Test)
   )
   .dependsOn(core % CompileAndTest)
-  .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJvmSettings
-  )
-  .jsPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJsSettings
-  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)

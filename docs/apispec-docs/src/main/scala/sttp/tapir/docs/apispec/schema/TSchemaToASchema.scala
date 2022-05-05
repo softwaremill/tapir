@@ -115,6 +115,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)                  => aschema.copy(maxItems = Some(value))
+      case Validator.Custom(_, _)                    => aschema
       case Validator.Enumeration(_, None, _)         => aschema
       case Validator.Enumeration(v, Some(encode), _) => addEnumeration(aschema, v, encode)
     }

@@ -23,6 +23,6 @@ class ValidatorCatsTest extends AnyFlatSpec with Matchers with Checkers {
   it should "fail with empty list - List" in {
     val value: List[String] = Nil
     val result: Seq[ValidationError[_]] = ValidatorCats.nonEmptyFoldable[List, String].apply(value)
-    result shouldBe List(ValidationError.Primitive(Validator.minSize[String, List](1), List(), List()))
+    result shouldBe List(ValidationError(Validator.minSize[String, List](1), List(), List()))
   }
 }

@@ -13,9 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-platform: [ "JVM", "JS" ]
-    env:
-      JAVA_OPTS: "-Xmx3500M -Xss2M -Dsbt.task.timings=false"
+        target-platform: [ "JVM", "JS", "Native" ]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -37,6 +35,11 @@ jobs:
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
+    - name: Install libidn11-dev
+      if: matrix.target-platform == 'Native'
+      run: |
+        sudo apt-get update
+        sudo apt-get install libidn11-dev
     - name: Compile
       run: sbt -v Test/compile compileDocumentation
     - name: Test JVM 2.12
@@ -57,6 +60,9 @@ jobs:
     - name: Test Scala.js
       if: matrix.target-platform == 'JS'
       run: sbt coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
+    - name: Test Native
+      if: matrix.target-platform == 'Native'
+      run: sbt -v testNative
     - name: Check MiMa # disable for major releases
       if: matrix.target-platform == 'JVM'
       run: sbt -v mimaReportBinaryIssues
@@ -72,8 +78,6 @@ jobs:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-20.04
-    env:
-      JAVA_OPTS: "-Xmx3300M -Xss2M"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -106,8 +110,6 @@ jobs:
     needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-20.04
-    env:
-      JAVA_OPTS: "-Xmx3300M -Xss2M"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -123,6 +125,11 @@ jobs:
             ~/.ivy2/cache
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-JVM-${{ hashFiles('project/build.properties') }}
+      - name: Install libidn11-dev
+        if: matrix.target-platform == 'Native'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libidn11-dev
       - name: Compile
         run: sbt compile
       - name: Publish artifacts

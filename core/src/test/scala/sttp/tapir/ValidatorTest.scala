@@ -8,7 +8,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val min = 1
     val wrong = 0
     val v = Validator.min(min)
-    v(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
+    v(wrong) shouldBe List(ValidationError(v, wrong))
     v(min) shouldBe empty
   }
 
@@ -16,8 +16,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val min = 1
     val wrong = 0
     val v = Validator.min(min, exclusive = true)
-    v(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
-    v(min) shouldBe List(ValidationError.Primitive(v, min))
+    v(wrong) shouldBe List(ValidationError(v, wrong))
+    v(min) shouldBe List(ValidationError(v, min))
     v(min + 1) shouldBe empty
   }
 
@@ -25,7 +25,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val max = 0
     val wrong = 1
     val v = Validator.max(max)
-    v(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
+    v(wrong) shouldBe List(ValidationError(v, wrong))
     v(max) shouldBe empty
   }
 
@@ -33,8 +33,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val max = 0
     val wrong = 1
     val v = Validator.max(max, exclusive = true)
-    v(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
-    v(max) shouldBe List(ValidationError.Primitive(v, max))
+    v(wrong) shouldBe List(ValidationError(v, wrong))
+    v(max) shouldBe List(ValidationError(v, max))
     v(max - 1) shouldBe empty
   }
 
@@ -43,8 +43,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val wrongNegative = -1
     val wrongZero = 0
     val v = Validator.positive[Int]
-    v(wrongNegative) shouldBe List(ValidationError.Primitive[Int](v, wrongNegative))
-    v(wrongZero) shouldBe List(ValidationError.Primitive[Int](v, wrongZero))
+    v(wrongNegative) shouldBe List(ValidationError[Int](v, wrongNegative))
+    v(wrongZero) shouldBe List(ValidationError[Int](v, wrongZero))
     v(value) shouldBe empty
   }
 
@@ -53,7 +53,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val positiveValue = 1
     val zeroValue = 0
     val v = Validator.positiveOrZero[Int]
-    v(wrongNegative) shouldBe List(ValidationError.Primitive[Int](v, wrongNegative))
+    v(wrongNegative) shouldBe List(ValidationError[Int](v, wrongNegative))
     v(zeroValue) shouldBe empty
     v(positiveValue) shouldBe empty
   }
@@ -63,8 +63,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val wrongPositive = 1
     val wrongZero = 0
     val v = Validator.negative[Int]
-    v(wrongPositive) shouldBe List(ValidationError.Primitive(v, wrongPositive))
-    v(wrongZero) shouldBe List(ValidationError.Primitive(v, wrongZero))
+    v(wrongPositive) shouldBe List(ValidationError(v, wrongPositive))
+    v(wrongZero) shouldBe List(ValidationError(v, wrongZero))
     v(value) shouldBe empty
   }
 
@@ -77,8 +77,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val wrongMinOut = -1
     val v = Validator.inRange(min, max)
 
-    v(wrongMaxOut) shouldBe List(ValidationError.Primitive(Validator.max(max), wrongMaxOut))
-    v(wrongMinOut) shouldBe List(ValidationError.Primitive(Validator.min(min), wrongMinOut))
+    v(wrongMaxOut) shouldBe List(ValidationError(Validator.max(max), wrongMaxOut))
+    v(wrongMinOut) shouldBe List(ValidationError(Validator.min(min), wrongMinOut))
     v(value1) shouldBe empty
     v(value2) shouldBe empty
   }
@@ -87,61 +87,61 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val expected = 1
     val actual = List(1, 2, 3)
     val v = Validator.maxSize[Int, List](expected)
-    v(actual) shouldBe List(ValidationError.Primitive(v, actual))
+    v(actual) shouldBe List(ValidationError(v, actual))
     v(List(1)) shouldBe empty
   }
 
   it should "validate for minSize of collection" in {
     val expected = 3
     val v = Validator.minSize[Int, List](expected)
-    v(List(1, 2)) shouldBe List(ValidationError.Primitive(v, List(1, 2)))
+    v(List(1, 2)) shouldBe List(ValidationError(v, List(1, 2)))
     v(List(1, 2, 3)) shouldBe empty
   }
 
   it should "validate for nonEmpty of collection" in {
     val v = Validator.nonEmpty[Int, List]
-    v(List()) shouldBe List(ValidationError.Primitive[List[Int]](Validator.minSize[Int, List](1), List()))
+    v(List()) shouldBe List(ValidationError[List[Int]](Validator.minSize[Int, List](1), List()))
     v(List(1)) shouldBe empty
   }
 
   it should "validate for fixedSize of collection" in {
     val v = Validator.fixedSize[Int, List](3)
-    v(List(1, 2)) shouldBe List(ValidationError.Primitive(Validator.minSize[Int, List](3), List(1, 2)))
-    v(List(1, 2, 3, 4)) shouldBe List(ValidationError.Primitive(Validator.maxSize[Int, List](3), List(1, 2, 3, 4)))
+    v(List(1, 2)) shouldBe List(ValidationError(Validator.minSize[Int, List](3), List(1, 2)))
+    v(List(1, 2, 3, 4)) shouldBe List(ValidationError(Validator.maxSize[Int, List](3), List(1, 2, 3, 4)))
     v(List(1, 2, 3)) shouldBe empty
   }
 
   it should "validate for matching regex pattern" in {
     val expected = "^apple$|^banana$"
     val wrong = "orange"
-    Validator.pattern(expected)(wrong) shouldBe List(ValidationError.Primitive(Validator.pattern(expected), wrong))
+    Validator.pattern(expected)(wrong) shouldBe List(ValidationError(Validator.pattern(expected), wrong))
     Validator.pattern(expected)("banana") shouldBe empty
   }
 
   it should "validate for minLength of string" in {
     val expected = 3
     val v = Validator.minLength[String](expected)
-    v("ab") shouldBe List(ValidationError.Primitive(v, "ab"))
+    v("ab") shouldBe List(ValidationError(v, "ab"))
     v("abc") shouldBe empty
   }
 
   it should "validate for maxLength of string" in {
     val expected = 1
     val v = Validator.maxLength[String](expected)
-    v("ab") shouldBe List(ValidationError.Primitive(v, "ab"))
+    v("ab") shouldBe List(ValidationError(v, "ab"))
     v("a") shouldBe empty
   }
 
   it should "validate for fixedLength of string" in {
     val v = Validator.fixedLength[String](3)
-    v("ab") shouldBe List(ValidationError.Primitive(Validator.minLength(3), "ab"))
-    v("abcd") shouldBe List(ValidationError.Primitive(Validator.maxLength(3), "abcd"))
+    v("ab") shouldBe List(ValidationError(Validator.minLength(3), "ab"))
+    v("abcd") shouldBe List(ValidationError(Validator.maxLength(3), "abcd"))
     v("abc") shouldBe empty
   }
 
   it should "validate for nonEmptyString of string" in {
     val v = Validator.nonEmptyString[String]
-    v("") shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
+    v("") shouldBe List(ValidationError(Validator.minLength(1), ""))
     v("abc") shouldBe empty
   }
 
@@ -150,29 +150,25 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     validator(4) shouldBe empty
     validator(7) shouldBe empty
     validator(11) shouldBe List(
-      ValidationError.Primitive(Validator.max(5), 11),
-      ValidationError.Primitive(Validator.max(10), 11)
+      ValidationError(Validator.max(5), 11),
+      ValidationError(Validator.max(10), 11)
     )
   }
 
   it should "validate with all of validators" in {
     val validator = Validator.all(Validator.min(3), Validator.max(10))
     validator(4) shouldBe empty
-    validator(2) shouldBe List(ValidationError.Primitive(Validator.min(3), 2))
-    validator(11) shouldBe List(ValidationError.Primitive(Validator.max(10), 11))
+    validator(2) shouldBe List(ValidationError(Validator.min(3), 2))
+    validator(11) shouldBe List(ValidationError(Validator.max(10), 11))
   }
 
   it should "validate with custom validator" in {
     val v = Validator.custom(
       { (x: Int) =>
-        if (x > 5) {
-          List.empty
-        } else {
-          List(ValidationError.Custom(x, "X has to be greater than 5!"))
-        }
+        if (x > 5) ValidationResult.Valid else ValidationResult.Invalid("X has to be greater than 5!")
       }
     )
-    v(0) shouldBe List(ValidationError.Custom(0, "X has to be greater than 5!"))
+    v(0) should matchPattern { case List(ValidationError(_, 0, Nil, Some("X has to be greater than 5!"))) => }
   }
 
   it should "validate coproduct enum" in {
@@ -188,7 +184,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   it should "validate closed set of ints" in {
     val v = Validator.enumeration(List(1, 2, 3, 4))
     v.apply(1) shouldBe empty
-    v.apply(0) shouldBe List(ValidationError.Primitive(v, 0))
+    v.apply(0) shouldBe List(ValidationError(v, 0))
   }
 
 }
