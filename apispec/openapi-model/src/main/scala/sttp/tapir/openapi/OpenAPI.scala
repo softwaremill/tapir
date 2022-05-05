@@ -541,14 +541,4 @@ object Link {
   val Empty: Link = Link()
 }
 
-//final case class Callback(
-//    pathItems: ListMap[String, PathItem] = ListMap.empty,
-//    extensions: ListMap[String, ExtensionValue] = ListMap.empty
-//) {
-//  def pathItems(updated: ListMap[String, PathItem]): Callback = copy(pathItems = updated)
-//  def addPathItem(key: String, value: PathItem): Callback = copy(pathItems = pathItems.updated(key, value))
-//  def extensions(updated: ListMap[String, ExtensionValue]): Callback = copy(extensions = updated)
-//  def addExtension(key: String, value: ExtensionValue): Callback = copy(extensions = extensions.updated(key, value))
-//}
-
 final case class Callback(path: String, pathItem: ReferenceOr[PathItem])
