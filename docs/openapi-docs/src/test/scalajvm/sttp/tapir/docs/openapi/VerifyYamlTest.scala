@@ -711,24 +711,36 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     case class TriggerRequest(callbackUrl: String)
     case class CallbackRequest(answer: String)
 
-    val (callback, callbackRequest) = {
+    val (callback, reusableCallback, callbackRequest) = {
       val throwaway = OpenAPIDocsInterpreter()
-        .toOpenAPI(endpoint.put.in("callback").in(jsonBody[CallbackRequest]), Info("Throwaway", "1.0"))
+        .toOpenAPI(List(
+          endpoint.put.in("callback").in(jsonBody[CallbackRequest]),
+          endpoint.delete.in("reusable_callback").in(jsonBody[CallbackRequest])
+        ), Info("Throwaway", "1.0"))
+
       val callbackItem = throwaway.paths.pathItems("/callback")
-      val callback = Callback(ListMap("{$request.body#/callbackUrl}" -> callbackItem))
-      (callback, throwaway.components.get.schemas("CallbackRequest"))
+      val reusableCallbackItem = throwaway.paths.pathItems("/reusable_callback")
+      val callback = Callback("{$request.body#/callbackUrl}", Right(callbackItem))
+      val reusableCallback = Callback("{$request.body#/callbackUrl}", Right(reusableCallbackItem))
+      (callback, reusableCallback, throwaway.components.get.schemas("CallbackRequest"))
     }
 
     val docs: OpenAPI = OpenAPIDocsInterpreter()
       .toOpenAPI(endpoint.put.in("trigger").in(jsonBody[TriggerRequest]), Info("Callbacks", "1.0"))
 
+    val reusableCallbackKey = "reusable_callback"
+
     val pathItems = {
-      val put = docs.paths.pathItems("/trigger").put.get.addCallback("my_callback", callback)
+      val put = docs.paths.pathItems("/trigger").put.get
+        .addCallback("my_callback", callback)
+        .addCallbackReference("my_reusable_callback", reusableCallbackKey)
       ListMap("/trigger" -> docs.paths.pathItems("/trigger").copy(put = Some(put)))
     }
-    val components = Some(docs.components.get.copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest)))
+    val components = docs.components.get
+      .addCallback(reusableCallbackKey, reusableCallback)
+      .copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest))
 
-    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = components).toYaml
+    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = Some(components)).toYaml
     val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml

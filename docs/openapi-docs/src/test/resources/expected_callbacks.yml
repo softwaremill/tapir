@@ -41,6 +41,8 @@ paths:
                     text/plain:
                       schema:
                         type: string
+        my_reusable_callback:
+          $ref: '#/components/callbacks/reusable_callback'
 components:
   schemas:
     TriggerRequest:
@@ -57,3 +59,23 @@ components:
       properties:
         answer:
           type: string
+  callbacks:
+    reusable_callback:
+      '{$request.body#/callbackUrl}':
+        delete:
+          operationId: deleteReusable_callback
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CallbackRequest'
+            required: true
+          responses:
+            '200':
+              description: ''
+            '400':
+              description: 'Invalid value for: body'
+              content:
+                text/plain:
+                  schema:
+                    type: string
