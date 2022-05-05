@@ -14,7 +14,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     implicit val schemaForInt: Schema[Int] = Schema.schemaForInt.validate(Validator.min(10))
     val schema = implicitly[Schema[Map[String, Int]]]
 
-    schema.applyValidation(Map("key" -> 0)).map(noPath(_)) shouldBe List(ValidationError.Primitive(Validator.min(10), 0))
+    schema.applyValidation(Map("key" -> 0)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(10), 0))
     schema.applyValidation(Map("key" -> 12)) shouldBe empty
   }
 
@@ -24,7 +24,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
     schema.applyValidation(None) shouldBe empty
     schema.applyValidation(Some(12)) shouldBe empty
-    schema.applyValidation(Some(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
+    schema.applyValidation(Some(5)) shouldBe List(ValidationError(Validator.min(10), 5))
   }
 
   it should "validate iterable" in {
@@ -33,7 +33,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
     schema.applyValidation(List.empty[Int]) shouldBe empty
     schema.applyValidation(List(11)) shouldBe empty
-    schema.applyValidation(List(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
+    schema.applyValidation(List(5)) shouldBe List(ValidationError(Validator.min(10), 5))
   }
 
   it should "validate array" in {
@@ -42,7 +42,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
     schema.applyValidation(Array.empty[Int]) shouldBe empty
     schema.applyValidation(Array(11)) shouldBe empty
-    schema.applyValidation(Array(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
+    schema.applyValidation(Array(5)) shouldBe List(ValidationError(Validator.min(10), 5))
   }
 
   it should "skip collection validation for array if element validator is passing" in {
@@ -93,13 +93,13 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(18))
     val schema = Schema.derived[Person]
     schema.applyValidation(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
-      ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantButOld")
+      ValidationError(Validator.pattern("^[A-Z].*"), "notImportantButOld")
     )
     schema.applyValidation(Person("notImportantAndYoung", 15)).map(noPath(_)) shouldBe List(
-      ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
-      ValidationError.Primitive(Validator.min(18), 15)
+      ValidationError(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
+      ValidationError(Validator.min(18), 15)
     )
-    schema.applyValidation(Person("ImportantButYoung", 15)).map(noPath(_)) shouldBe List(ValidationError.Primitive(Validator.min(18), 15))
+    schema.applyValidation(Person("ImportantButYoung", 15)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(18), 15))
     schema.applyValidation(Person("ImportantAndOld", 21)) shouldBe empty
   }
 
@@ -116,15 +116,15 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
     schema.applyValidation(RecursiveName("x", None)) shouldBe Nil
     schema.applyValidation(RecursiveName("", None)) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("name")))
+      ValidationError(Validator.minLength(1), "", List(FieldName("name")))
     )
     schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", None))))) shouldBe Nil
     schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("", None))))) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
+      ValidationError(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
     )
     schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("x", None)))))))) shouldBe Nil
     schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("", None)))))))) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
+      ValidationError(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
     )
   }
 
@@ -143,8 +143,8 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     schema.applyValidation(Left(10)) shouldBe Nil
     schema.applyValidation(Right("x")) shouldBe Nil
 
-    schema.applyValidation(Left(0)) shouldBe List(ValidationError.Primitive(Validator.min(1), 0))
-    schema.applyValidation(Right("")) shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
+    schema.applyValidation(Left(0)) shouldBe List(ValidationError(Validator.min(1), 0))
+    schema.applyValidation(Right("")) shouldBe List(ValidationError(Validator.minLength(1), ""))
   }
 
   it should "validate mapped either" in {
@@ -159,14 +159,14 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     schema.applyValidation(EitherWrapper(Left(10))) shouldBe Nil
     schema.applyValidation(EitherWrapper(Right("x"))) shouldBe Nil
 
-    schema.applyValidation(EitherWrapper(Left(0))) shouldBe List(ValidationError.Primitive(Validator.min(1), 0))
-    schema.applyValidation(EitherWrapper(Right(""))) shouldBe List(ValidationError.Primitive(Validator.minLength(1), ""))
+    schema.applyValidation(EitherWrapper(Left(0))) shouldBe List(ValidationError(Validator.min(1), 0))
+    schema.applyValidation(EitherWrapper(Right(""))) shouldBe List(ValidationError(Validator.minLength(1), ""))
   }
 
   it should "validate oneOf object" in {
     case class SomeObject(value: String)
     object SomeObject {
-      implicit def someObjectSchema: Schema[SomeObject] = Schema.derived[SomeObject].validate(Validator.custom(_ => Nil))
+      implicit def someObjectSchema: Schema[SomeObject] = Schema.derived[SomeObject].validate(Validator.custom(_ => ValidationResult.Valid))
     }
 
     sealed trait Entity {
@@ -180,12 +180,8 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
       override def kind: String = "person"
     }
 
-    Entity.entitySchema.applyValidation(Person(SomeObject("1234")))
+    Entity.entitySchema.applyValidation(Person(SomeObject("1234"))) shouldBe Nil
   }
 
-  private def noPath[T](v: ValidationError[T]): ValidationError[T] =
-    v match {
-      case p: ValidationError.Primitive[T] => p.copy(path = Nil)
-      case c: ValidationError.Custom[T]    => c.copy(path = Nil)
-    }
+  private def noPath[T](v: ValidationError[T]): ValidationError[T] = v.copy(path = Nil)
 }
