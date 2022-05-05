@@ -30,7 +30,7 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     // then
     DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
       validationErrors
-    ) shouldBe "expected value to be within List(1, 10, 11), but was 4"
+    ) shouldBe "expected value to be one of (1, 10, 11), but was 4"
   }
 
   it should "create an error message including failed json paths" in {

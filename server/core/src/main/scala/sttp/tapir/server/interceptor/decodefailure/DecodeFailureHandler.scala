@@ -252,7 +252,7 @@ object DefaultDecodeFailureHandler {
             case Validator.Enumeration(possibleValues, encode, _) =>
               val encodedPossibleValues =
                 encode.fold(possibleValues.map(_.toString))(e => possibleValues.flatMap(e(_).toList).map(_.toString))
-              s"expected $valueName to be within $encodedPossibleValues, but was ${ve.invalidValue}"
+              s"expected $valueName to be one of ${encodedPossibleValues.mkString("(", ", ", ")")}, but was ${ve.invalidValue}"
           }
       }
     }
