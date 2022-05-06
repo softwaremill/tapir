@@ -11,7 +11,7 @@ paths:
           in: query
           required: true
           schema:
-            type: string
+            type: integer
             minimum: 0
       responses:
         '200':

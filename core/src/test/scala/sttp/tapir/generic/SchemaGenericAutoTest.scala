@@ -26,8 +26,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitly[Schema[Float]].schemaType shouldBe SNumber()
     implicitly[Schema[Double]].schemaType shouldBe SNumber()
     implicitly[Schema[Boolean]].schemaType shouldBe SBoolean()
-    implicitly[Schema[BigDecimal]].schemaType shouldBe SString()
-    implicitly[Schema[JBigDecimal]].schemaType shouldBe SString()
+    implicitly[Schema[BigDecimal]].schemaType shouldBe SNumber()
+    implicitly[Schema[JBigDecimal]].schemaType shouldBe SNumber()
   }
 
   it should "find schema for optional types" in {
