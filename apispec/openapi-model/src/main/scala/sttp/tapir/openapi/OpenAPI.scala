@@ -541,4 +541,11 @@ object Link {
   val Empty: Link = Link()
 }
 
-final case class Callback(path: String, pathItem: ReferenceOr[PathItem])
+final case class Callback(pathItems: ListMap[String, ReferenceOr[PathItem]] = ListMap.empty) {
+  def paths(updated: ListMap[String, ReferenceOr[PathItem]]): Callback = copy(pathItems = updated)
+  def addPathItem(key: String, value: PathItem): Callback = copy(pathItems = pathItems.updated(key, Right(value)))
+}
+
+object Callback {
+  val Empty: Callback = Callback()
+}

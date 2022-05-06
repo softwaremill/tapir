@@ -24,11 +24,12 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
-import sttp.tapir.tests.{Basic, Multipart}
+import sttp.tapir.tests.Multipart
 import sttp.tapir.tests.data.{FruitAmount, Person}
-import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
+import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody}
+import sttp.tapir.{ModifyEach => _, _} // hiding Schema's .each so that we can use the quicklens one
+
 import java.time.{Instant, LocalDateTime}
-import scala.collection.immutable.ListMap
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[Unit, (FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -713,15 +714,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val (callback, reusableCallback, callbackRequest) = {
       val throwaway = OpenAPIDocsInterpreter()
-        .toOpenAPI(List(
-          endpoint.put.in("callback").in(jsonBody[CallbackRequest]),
-          endpoint.delete.in("reusable_callback").in(jsonBody[CallbackRequest])
-        ), Info("Throwaway", "1.0"))
+        .toOpenAPI(
+          List(
+            endpoint.put.in("callback").in(jsonBody[CallbackRequest]),
+            endpoint.delete.in("reusable_callback").in(jsonBody[CallbackRequest])
+          ),
+          Info("Throwaway", "1.0")
+        )
 
       val callbackItem = throwaway.paths.pathItems("/callback")
       val reusableCallbackItem = throwaway.paths.pathItems("/reusable_callback")
-      val callback = Callback("{$request.body#/callbackUrl}", Right(callbackItem))
-      val reusableCallback = Callback("{$request.body#/callbackUrl}", Right(reusableCallbackItem))
+      val callback = Callback().addPathItem("{$request.body#/callbackUrl}", callbackItem)
+      val reusableCallback = Callback().addPathItem("{$request.body#/callbackUrl}", reusableCallbackItem)
       (callback, reusableCallback, throwaway.components.get.schemas("CallbackRequest"))
     }
 
@@ -730,17 +734,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val reusableCallbackKey = "reusable_callback"
 
-    val pathItems = {
-      val put = docs.paths.pathItems("/trigger").put.get
-        .addCallback("my_callback", callback)
-        .addCallbackReference("my_reusable_callback", reusableCallbackKey)
-      ListMap("/trigger" -> docs.paths.pathItems("/trigger").copy(put = Some(put)))
-    }
-    val components = docs.components.get
-      .addCallback(reusableCallbackKey, reusableCallback)
-      .copy(schemas = docs.components.get.schemas + ("CallbackRequest" -> callbackRequest))
+    import com.softwaremill.quicklens._
+    val actualYaml = docs
+      .modify(_.paths.pathItems.at("/trigger").put.each)
+      .using(_.addCallback("my_callback", callback).addCallbackReference("my_reusable_callback", reusableCallbackKey))
+      .modify(_.components.each)
+      .using(_.addCallback(reusableCallbackKey, reusableCallback))
+      .modify(_.components.each.schemas)
+      .using(_ + ("CallbackRequest" -> callbackRequest))
+      .toYaml
 
-    val actualYaml = docs.copy(paths = docs.paths.copy(pathItems = pathItems), components = Some(components)).toYaml
     val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml

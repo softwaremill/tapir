@@ -62,7 +62,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderResponse: Encoder[Response] = deriveEncoder[Response].mapJsonObject(expandExtensions)
   implicit val encoderLink: Encoder[Link] = deriveEncoder[Link].mapJsonObject(expandExtensions)
   implicit val encoderCallback: Encoder[Callback] = Encoder.instance { callback =>
-    Json.obj(callback.path -> callback.pathItem.asJson)
+    Json.obj(callback.pathItems.map { case (path, pathItem) => path -> pathItem.asJson }.toList: _*)
   }
   implicit val encoderEncoding: Encoder[Encoding] = deriveEncoder[Encoding].mapJsonObject(expandExtensions)
   implicit val encoderMediaType: Encoder[MediaType] = deriveEncoder[MediaType].mapJsonObject(expandExtensions)
