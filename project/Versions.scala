@@ -42,4 +42,5 @@ object Versions {
   val scalaCollectionCompat = "2.7.0"
   val fs2 = "3.2.7"
   val decline = "2.2.0"
+  val quicklens = "1.8.8"
 }

@@ -24,9 +24,10 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
-import sttp.tapir.tests.{Basic, Multipart}
+import sttp.tapir.tests.Multipart
 import sttp.tapir.tests.data.{FruitAmount, Person}
-import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
+import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody}
+import sttp.tapir.{ModifyEach => _, _} // hiding Schema's .each so that we can use the quicklens one
 
 import java.time.{Instant, LocalDateTime}
 
@@ -703,6 +704,47 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val expectedYaml = load("expected_enumeration_values.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should add operation callback") {
+    case class TriggerRequest(callbackUrl: String)
+    case class CallbackRequest(answer: String)
+
+    val (callback, reusableCallback, callbackRequest) = {
+      val throwaway = OpenAPIDocsInterpreter()
+        .toOpenAPI(
+          List(
+            endpoint.put.in("callback").in(jsonBody[CallbackRequest]),
+            endpoint.delete.in("reusable_callback").in(jsonBody[CallbackRequest])
+          ),
+          Info("Throwaway", "1.0")
+        )
+
+      val callbackItem = throwaway.paths.pathItems("/callback")
+      val reusableCallbackItem = throwaway.paths.pathItems("/reusable_callback")
+      val callback = Callback().addPathItem("{$request.body#/callbackUrl}", callbackItem)
+      val reusableCallback = Callback().addPathItem("{$request.body#/callbackUrl}", reusableCallbackItem)
+      (callback, reusableCallback, throwaway.components.get.schemas("CallbackRequest"))
+    }
+
+    val docs: OpenAPI = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.put.in("trigger").in(jsonBody[TriggerRequest]), Info("Callbacks", "1.0"))
+
+    val reusableCallbackKey = "reusable_callback"
+
+    import com.softwaremill.quicklens._
+    val actualYaml = docs
+      .modify(_.paths.pathItems.at("/trigger").put.each)
+      .using(_.addCallback("my_callback", callback).addCallbackReference("my_reusable_callback", reusableCallbackKey))
+      .modify(_.components.each)
+      .using(_.addCallback(reusableCallbackKey, reusableCallback))
+      .modify(_.components.each.schemas)
+      .using(_ + ("CallbackRequest" -> callbackRequest))
+      .toYaml
+
+    val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }

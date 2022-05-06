@@ -867,7 +867,8 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-openapi-docs"
+    name := "tapir-openapi-docs",
+    libraryDependencies += "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,

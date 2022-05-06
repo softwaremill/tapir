@@ -299,6 +299,8 @@ final case class Operation(
   def addResponse(status: Int, updated: Response): Operation = copy(responses = responses.addResponse(status, updated))
   def addDefaultResponse(updated: Response): Operation = copy(responses = responses.addDefault(updated))
   def addCallback(key: String, callback: Callback): Operation = copy(callbacks = callbacks.updated(key, Right(callback)))
+  def addCallbackReference(key: String, referenceKey: String): Operation =
+    copy(callbacks = callbacks.updated(key, Left(Reference(s"#/components/callbacks/$referenceKey"))))
   def callbacks(updated: ListMap[String, ReferenceOr[Callback]]): Operation = copy(callbacks = updated)
   def deprecated(updated: Boolean): Operation = copy(deprecated = Some(updated))
   def security(updated: List[SecurityRequirement]): Operation = copy(security = updated)
@@ -539,14 +541,9 @@ object Link {
   val Empty: Link = Link()
 }
 
-final case class Callback(
-    pathItems: ListMap[String, PathItem] = ListMap.empty,
-    extensions: ListMap[String, ExtensionValue] = ListMap.empty
-) {
-  def pathItems(updated: ListMap[String, PathItem]): Callback = copy(pathItems = updated)
-  def addPathItem(key: String, value: PathItem): Callback = copy(pathItems = pathItems.updated(key, value))
-  def extensions(updated: ListMap[String, ExtensionValue]): Callback = copy(extensions = updated)
-  def addExtension(key: String, value: ExtensionValue): Callback = copy(extensions = extensions.updated(key, value))
+final case class Callback(pathItems: ListMap[String, ReferenceOr[PathItem]] = ListMap.empty) {
+  def paths(updated: ListMap[String, ReferenceOr[PathItem]]): Callback = copy(pathItems = updated)
+  def addPathItem(key: String, value: PathItem): Callback = copy(pathItems = pathItems.updated(key, Right(value)))
 }
 
 object Callback {
