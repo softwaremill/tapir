@@ -407,6 +407,21 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     actual.default shouldBe expected.default
     actual.name shouldBe expected.name
   }
+
+  it should "add validators for collection and option elements" in {
+    case class ValidateEachTest(
+        @validateEach(Validator.min(5))
+        ints: List[Int],
+        @validateEach[String](Validator.minLength(3))
+        maybeString: Option[String]
+    )
+
+    val schema = implicitly[Schema[ValidateEachTest]]
+    schema.applyValidation(ValidateEachTest(Nil, None)) should have size 0
+    schema.applyValidation(ValidateEachTest(List(6, 10), Some("1234"))) should have size 0
+    schema.applyValidation(ValidateEachTest(List(6, 0, 10), Some("1234"))) should have size 1
+    schema.applyValidation(ValidateEachTest(List(6, 10), Some("12"))) should have size 1
+  }
 }
 
 object SchemaGenericAutoTest {
