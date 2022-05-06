@@ -260,10 +260,10 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString())
-  implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString())
-  implicit val schemaForBigInt: Schema[BigInt] = Schema(SString())
-  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SString())
+  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
+  implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SNumber())
+  implicit val schemaForBigInt: Schema[BigInt] = Schema(SInteger())
+  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
   implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption

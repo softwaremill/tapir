@@ -50,8 +50,4 @@ trait TapirJsonCirce {
     )
 
   implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
-
-  // #321: circe encodes big decimals as numbers - adjusting the schemas (which by default are strings) to that format
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
-  implicit val schemaForJBigDecimal: Schema[java.math.BigDecimal] = Schema(SNumber())
 }
