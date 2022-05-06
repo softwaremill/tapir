@@ -42,7 +42,7 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
       case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
       case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
       case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
-      case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
+      case EndpointInput.Query(name, _, _, _)      => s"Invalid value for: query parameter $name"
       case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
       case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
       case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
