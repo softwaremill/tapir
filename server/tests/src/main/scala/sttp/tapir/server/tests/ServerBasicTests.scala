@@ -379,6 +379,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .body("""{"fruit":"orange","amount":11}""")
         .send(backend)
         .map(_.body shouldBe Right("30 11"))
+    },
+    testServer(in_flag_query_out_string) { input => pureResult(input.toString.asRight[Unit]) } { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?flag").send(backend).map(_.body shouldBe Right("Some(true)")) >>
+        basicRequest.get(uri"$baseUri?flag=false").send(backend).map(_.body shouldBe Right("Some(false)")) >>
+        basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("None"))
     }
   )
 

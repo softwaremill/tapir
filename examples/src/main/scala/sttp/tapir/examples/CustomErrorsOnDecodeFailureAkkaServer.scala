@@ -26,7 +26,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
       ctx.failingInput match {
         // when defining how a decode failure should be handled, we need to describe the output to be used, and
         // a value for this output
-        case EndpointInput.Query(_, _, _) => Some(server.model.ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
+        case EndpointInput.Query(_, _, _, _) => Some(server.model.ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
         // in other cases, using the default behavior
         case _ => DefaultDecodeFailureHandler.default(ctx)
       }

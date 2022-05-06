@@ -84,7 +84,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         val pathFragments = codec.encode(value)
         val uri = pathFragments.foldLeft(req.uri)(_.addSegment(_))
         req.withUri(uri)
-      case EndpointInput.Query(name, codec, _) =>
+      case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
+        req.withUri(req.uri.withQueryParam(name))
+      case EndpointInput.Query(name, _, codec, _) =>
         codec.encode(value) match {
           case values if values.nonEmpty => req.withUri(req.uri.withQueryParam(name, values))
           case _                         => req

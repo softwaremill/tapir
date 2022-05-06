@@ -77,7 +77,9 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
         (uri.addPath(ps), req)
-      case EndpointInput.Query(name, codec, _) =>
+      case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
+        (uri.withParams(uri.params.param(name, Nil)), req)
+      case EndpointInput.Query(name, _, codec, _) =>
         val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.addParam(name, v) }
         (uri2, req)
       case EndpointInput.Cookie(name, codec, _) =>

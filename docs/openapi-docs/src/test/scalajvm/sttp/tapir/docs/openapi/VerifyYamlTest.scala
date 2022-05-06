@@ -708,6 +708,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
+  test("should add allowEmptyValues for flag query parameters") {
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(in_flag_query_out_string, Info("Flags", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("expected_flag_query.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
   test("should add operation callback") {
     case class TriggerRequest(callbackUrl: String)
     case class CallbackRequest(answer: String)

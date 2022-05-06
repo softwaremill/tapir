@@ -103,7 +103,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
         req.withUrl(req.url + ps.map(encodePathSegment).mkString("/", "/", ""))
-      case EndpointInput.Query(name, codec, _) =>
+      case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
+        req.addQueryStringParameters(name -> "")
+      case EndpointInput.Query(name, _, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.addQueryStringParameters(name -> v) }
         req2
       case EndpointInput.Cookie(name, codec, _) =>

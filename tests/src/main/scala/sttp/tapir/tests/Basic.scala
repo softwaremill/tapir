@@ -193,4 +193,7 @@ object Basic {
       .in("api" / "echo")
       .in(jsonBodyWithRaw[FruitAmount])
       .out(stringBody)
+
+  val in_flag_query_out_string: PublicEndpoint[Option[Boolean], Unit, String, Any] =
+    endpoint.get.in(query[Option[Boolean]]("flag").flagValue(Some(true))).out(stringBody)
 }

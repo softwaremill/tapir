@@ -19,7 +19,8 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions),
+      allowEmptyValue = query.flagValue.fold(None: Option[Boolean])(_ => Some(true))
     )
   }
 
