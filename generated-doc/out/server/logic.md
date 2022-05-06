@@ -59,6 +59,7 @@ endpoints can be converted to an akka-http route:
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import akka.http.scaladsl.server.Route
 
 val endpoint1 = endpoint.in("hello").out(stringBody)

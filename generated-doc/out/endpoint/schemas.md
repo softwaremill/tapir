@@ -156,6 +156,8 @@ field of a case class. One way the automatic & semi-automatic derivation can be 
 * `@format` sets the format for a case class field
 * `@deprecated` marks a case class's field as deprecated
 * `@validate` will add the given validator to a case class field
+* `@validateEach` will add the given validator to the elements of a case class field. Useful for validating the
+  value contained in an `Option` (when it's defined), and collection elements
 
 These annotations will adjust schemas, after they are looked up using the normal implicit mechanisms.
 
@@ -168,7 +170,7 @@ When such an implicit `Schema[T]` is in scope will have higher priority than the
 from `Derived[Schema[T]]` to `Schema[T]`.
 
 Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
-`.modify` method. To traverse collections, use `.each`.
+`.modify` method. To traverse collections or options, use `.each`.
 
 For example:
 

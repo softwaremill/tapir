@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-M9"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -20,6 +20,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: List[AnyEndpoint] = ???
 
@@ -47,7 +48,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-M9"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -57,8 +58,8 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-M8"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M9"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -263,12 +264,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-M9"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-M9"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -281,6 +282,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml

@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M9"
 ```
 
 Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
@@ -99,15 +99,18 @@ val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = 
+val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
+  import scala.concurrent.ExecutionContext.Implicits.global
   AkkaHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
+}    
 ```
 
 Testing such an interceptor requires simulating an exception being thrown in the server logic:
 
 ```scala
 class MySpec2 extends AsyncFlatSpec with Matchers {
+
   it should "use my custom exception handler" in {
     // given
     val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
@@ -137,7 +140,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-M9"
 ```
 
 And the following imports:
@@ -192,7 +195,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.0.0-M9"
 ```
 
 Imports:
@@ -263,7 +266,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.0.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.0.0-M9"
 ```
 
 ### Shadowed endpoints
@@ -289,7 +292,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x, is shadowed by: GET /x/*, GET /x/y/x, is shadowed by: GET /x/*)"
+// res2: String = "Set(GET /x/y/x, is shadowed by: GET /x/*, GET /x, is shadowed by: GET /x/*)"
 ```
 
 Example 2:
