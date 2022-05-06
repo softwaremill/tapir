@@ -345,22 +345,4 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected
   }
-
-  behavior of "SchemaAnnotations enrich"
-
-  it should "derive schema annotations and enrich schema" in {
-    val baseSchema = Schema.string[MyString]
-
-    val enriched = implicitly[SchemaAnnotations[MyString]].enrich(baseSchema)
-
-    enriched shouldBe Schema
-      .string[MyString]
-      .description("my-string")
-      .encodedExample("encoded-example")
-      .default(MyString("default"), encoded = Some("encoded-default"))
-      .format("utf8")
-      .deprecated(true)
-      .name(SName("encoded-name"))
-      .validate(Validator.pass[MyString])
-  }
 }

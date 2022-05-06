@@ -173,8 +173,9 @@ case class Schema[T](
         copy(schemaType = schemaType2)
     }
 
-  /** Add a validator to this schema. If the validator contains a named enum validator: * the encode function is inferred if not yet
-    * defined, and the validators possible values are of a basic type * the name is set as the schema's name.
+  /** Add a validator to this schema. If the validator contains a named enum validator:
+    *   - the encode function is inferred if not yet defined, and the validators possible values are of a basic type
+    *   - the name is set as the schema's name.
     */
   def validate(v: Validator[T]): Schema[T] = {
     val v2 = v.inferEnumerationEncode
@@ -300,7 +301,24 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class deprecated extends StaticAnnotation
     class hidden extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
+
+    /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
+      * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or
+      * [[Option]]s, use [[validateEach]].
+      */
     class validate[T](val v: Validator[T]) extends StaticAnnotation
+
+    /** Adds the `v` validators to elements of the schema, when the annotated class or field is a collection or [[Option]]. The type of the
+      * validator must match exactly the type of the collection's elements. This is not checked at compile-time, and might cause run-time
+      * exceptions. E.g. to validate that when an `Option[Int]` is defined, the value is smaller than 5, you should use:
+      * {{{
+      * case class Payload(
+      *   @validateEach(Validator.max(4, exclusive = true))
+      *   aField: Option[Int]
+      * )
+      * }}}
+      */
+    class validateEach[T](val v: Validator[T]) extends StaticAnnotation
     class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
   }
 }
