@@ -57,7 +57,10 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     }
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
-  ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
+  ideSkipProject := (scalaVersion.value == scala2_12) ||
+    (scalaVersion.value == scala3) ||
+    thisProjectRef.value.project.contains("Native") ||
+    thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
