@@ -20,8 +20,8 @@ For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.server.netty.NettyServerType.TCP
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import java.net.InetSocketAddress
@@ -32,9 +32,36 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogic(name => Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
 
-val binding: Future[NettyFutureServerBinding[InetSocketAddress]] = 
+val binding: Future[NettyFutureServerBinding[TCP]] = 
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
+
+## Unix socket support
+There is possibility to use unix socket instead of tcp for handling traffic.
+
+
+```scala mdoc:compile-only
+import sttp.tapir.server.netty.NettyServerType.UnixSocket
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
+import sttp.tapir.{endpoint, query, stringBody}
+
+import java.nio.file.Paths
+import java.util.UUID
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
+
+val serverBinding: Future[NettyFutureServerBinding[UnixSocket]] =
+  NettyFutureServer.unixDomainSocket
+    .path(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString))
+    .addEndpoint(
+      endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
+        Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
+    )
+  .start()
+
+```
+
 
 ## Configuration
 

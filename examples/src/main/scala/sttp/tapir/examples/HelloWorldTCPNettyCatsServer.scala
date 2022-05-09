@@ -6,6 +6,7 @@ import sttp.model.StatusCode
 import sttp.tapir.server.netty.{NettyCatsServer, NettyCatsServerBinding, NettyServerType}
 import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 import cats.effect.unsafe.implicits.global
+import sttp.tapir.server.netty.NettyServerType._
 
 object HelloWorldTCPNettyCatsServer extends App {
   // One endpoint on GET /hello with query parameter `name`
@@ -25,7 +26,7 @@ object HelloWorldTCPNettyCatsServer extends App {
       .io()
       .use { server =>
 
-        val effect: IO[NettyCatsServerBinding[IO, NettyServerType.TCP]] = server
+        val effect: IO[NettyCatsServerBinding[IO, TCP]] = server
           .port(declaredPort)
           .host(declaredHost)
           .addEndpoint(helloWorldServerEndpoint)
