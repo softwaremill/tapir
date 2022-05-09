@@ -24,24 +24,35 @@ case class NettyCatsServerOptions[F[_]](
 }
 
 object NettyCatsServerOptions {
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(
-    dispatcher
+  def defaultTcp[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(
+    dispatcher,
+    NettyOptionsBuilder.make().tcp().build
   ).options
 
-  def default[F[_]: Async](interceptors: List[Interceptor[F]], dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
+  def defaultUnixSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(
+    dispatcher,
+    NettyOptionsBuilder.make().domainSocket().build
+  ).options
+
+  def default[F[_]: Async](
+      interceptors: List[Interceptor[F]],
+      dispatcher: Dispatcher[F],
+      nettyOptions: NettyOptions
+  ): NettyCatsServerOptions[F] =
     NettyCatsServerOptions(
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
       dispatcher,
-      NettyOptionsBuilder.default.build
+      nettyOptions
     )
 
   def customiseInterceptors[F[_]: Async](
-      dispatcher: Dispatcher[F]
+      dispatcher: Dispatcher[F],
+      nettyOptions: NettyOptions
   ): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
+      createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher, nettyOptions)
     ).serverLog(defaultServerLog)
 
   private val log = Logger[NettyCatsServerInterpreter[cats.Id]]

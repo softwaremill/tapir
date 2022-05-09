@@ -3,11 +3,10 @@ package sttp.tapir.server.netty
 import com.typesafe.scalalogging.Logger
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
-import scala.collection.immutable.List
 import scala.concurrent.{Future, blocking}
 
 case class NettyFutureServerOptions(
@@ -26,7 +25,8 @@ object NettyFutureServerOptions {
   val defaultUnixSocket: NettyFutureServerOptions = customiseInterceptors(unixSocket).options
 
   private[netty] def tcp(interceptors: List[Interceptor[Future]]) = default(interceptors, NettyOptionsBuilder.make().tcp().build)
-  private def unixSocket(interceptors: List[Interceptor[Future]]) = default(interceptors, NettyOptionsBuilder.make().domainSocket().build)
+  private[netty] def unixSocket(interceptors: List[Interceptor[Future]]) =
+    default(interceptors, NettyOptionsBuilder.make().domainSocket().build)
 
   private def default(interceptors: List[Interceptor[Future]], nettyOptions: NettyOptions): NettyFutureServerOptions =
     NettyFutureServerOptions(

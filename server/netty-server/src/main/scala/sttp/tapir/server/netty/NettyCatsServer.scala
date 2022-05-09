@@ -1,17 +1,19 @@
 package sttp.tapir.server.netty
 
-import cats.effect.{Async, IO, Resource}
 import cats.effect.std.Dispatcher
+import cats.effect.{Async, IO, Resource}
 import cats.syntax.all._
 import io.netty.channel._
+import io.netty.channel.unix.DomainSocketAddress
 import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.CatsUtil._
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}
+import java.nio.file.Path
 
-case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route[F]], options: NettyCatsServerOptions[F]) {
+case class NettyCatsServer[F[_]: Async, S <: NettyServerType](routes: Vector[Route[F]], options: NettyCatsServerOptions[F]) {
   def addEndpoint(se: ServerEndpoint[Any, F]): NettyCatsServer[F, S] = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[Any, F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F, S] =
     addEndpoints(List(se), overrideOptions)
@@ -26,7 +28,26 @@ case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route
   def addRoutes(r: Iterable[Route[F]]): NettyCatsServer[F, S] = copy(routes = routes ++ r)
 
   def options(o: NettyCatsServerOptions[F]): NettyCatsServer[F, S] = copy(options = o)
-  def start(): F[NettyCatsServerBinding[F]] = Async[F].defer {
+
+  def host(hostname: String)(implicit isTCP: S =:= NettyServerType.TCP): NettyCatsServer[F, S] = {
+    val nettyOptions = options.nettyOptions.host(hostname)
+
+    options(options.nettyOptions(nettyOptions))
+  }
+
+  def port(p: Int)(implicit isTCP: S =:= NettyServerType.TCP): NettyCatsServer[F, S] = {
+    val nettyOptions = options.nettyOptions.port(p)
+
+    options(options.nettyOptions(nettyOptions))
+  }
+
+  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): NettyCatsServer[F, S] = {
+    val nettyOptions = options.nettyOptions.path(path)
+
+    options(options.nettyOptions(nettyOptions))
+  }
+
+  def start(): F[NettyCatsServerBinding[F, S]] = Async[F].defer {
     val eventLoopGroup = options.nettyOptions.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
@@ -39,7 +60,7 @@ case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route
 
     nettyChannelFutureToScala(channelFuture).map(ch =>
       NettyCatsServerBinding(
-        ch.localAddress().asInstanceOf[InetSocketAddress],
+        ch.localAddress(),
         () => stop(ch, eventLoopGroup)
       )
     )
@@ -57,16 +78,34 @@ case class NettyCatsServer[F[_]: Async, S <: SocketAddress](routes: Vector[Route
 }
 
 object NettyCatsServer {
-  def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, InetSocketAddress] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default[F](dispatcher))
+  def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, NettyServerType.TCP] =
+    tcp(dispatcher)
 
-  def apply[F[_]: Async, S <: SocketAddress](options: NettyCatsServerOptions[F]): NettyCatsServer[F, S] =
+  def apply[F[_]: Async, S <: NettyServerType](options: NettyCatsServerOptions[F]): NettyCatsServer[F, S] =
     NettyCatsServer(Vector.empty, options)
 
-  def io(): Resource[IO, NettyCatsServer[IO, InetSocketAddress]] = Dispatcher[IO].map(apply[IO](_))
+  def io(): Resource[IO, NettyCatsServer[IO, NettyServerType.TCP]] = Dispatcher[IO].map(apply[IO](_))
+
+  def tcp[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, NettyServerType.TCP] = {
+    NettyCatsServer(Vector.empty, NettyCatsServerOptions.defaultTcp[F](dispatcher))
+  }
+
+  def unixDomainSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, NettyServerType.UnixSocket] = {
+    NettyCatsServer[F, NettyServerType.UnixSocket](Vector.empty, NettyCatsServerOptions.defaultUnixSocket[F](dispatcher))
+  }
+
 }
 
-case class NettyCatsServerBinding[F[_]](localSocket: InetSocketAddress, stop: () => F[Unit]) {
-  def host: String = localSocket.getHostString
-  def port: Int = localSocket.getPort
+case class NettyCatsServerBinding[F[_], S <: NettyServerType](localSocket: SocketAddress, stop: () => F[Unit]) {
+  def hostName(implicit isTCP: S =:= NettyServerType.TCP): String = {
+    localSocket.asInstanceOf[InetSocketAddress].getHostName
+  }
+
+  def port(implicit isTCP: S =:= NettyServerType.TCP): Int = {
+    localSocket.asInstanceOf[InetSocketAddress].getPort
+  }
+
+  def path(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): String = {
+    localSocket.asInstanceOf[DomainSocketAddress].path()
+  }
 }

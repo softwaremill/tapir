@@ -11,7 +11,7 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
-case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], options: NettyFutureServerOptions)(implicit
+case class NettyFutureServer[S <: NettyServerType](routes: Vector[FutureRoute], options: NettyFutureServerOptions)(implicit
     ec: ExecutionContext
 ) {
   def addEndpoint(se: ServerEndpoint[Any, Future]): NettyFutureServer[S] = addEndpoints(List(se))
@@ -30,19 +30,19 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
 
   def options(o: NettyFutureServerOptions): NettyFutureServer[S] = copy(options = o)
 
-  def host(hostname: String)(implicit isTCP: S =:= InetSocketAddress): NettyFutureServer[S] = {
+  def host(hostname: String)(implicit isTCP: S =:= NettyServerType.TCP): NettyFutureServer[S] = {
     val nettyOptions = options.nettyOptions.host(hostname)
 
     options(options.nettyOptions(nettyOptions))
   }
 
-  def port(p: Int)(implicit isTCP: S =:= InetSocketAddress): NettyFutureServer[S] = {
+  def port(p: Int)(implicit isTCP: S =:= NettyServerType.TCP): NettyFutureServer[S] = {
     val nettyOptions = options.nettyOptions.port(p)
 
     options(options.nettyOptions(nettyOptions))
   }
 
-  def path(path: Path)(implicit isDomainSocket: S <:< DomainSocketAddress): NettyFutureServer[S] = {
+  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): NettyFutureServer[S] = {
     val nettyOptions = options.nettyOptions.path(path)
 
     options(options.nettyOptions(nettyOptions))
@@ -61,7 +61,7 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
 
     nettyChannelFutureToScala(channelFuture).map(ch =>
       NettyFutureServerBinding(
-        ch.localAddress().asInstanceOf[S],
+        ch.localAddress(),
         () => stop(ch, eventLoopGroup)
       )
     )
@@ -79,17 +79,29 @@ case class NettyFutureServer[S <: SocketAddress](routes: Vector[FutureRoute], op
 object NettyFutureServer {
   def apply(
       serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.defaultTcp
-  )(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] = {
-    NettyFutureServer[InetSocketAddress](Vector.empty, serverOptions)
+  )(implicit ec: ExecutionContext): NettyFutureServer[NettyServerType.TCP] = {
+    NettyFutureServer[NettyServerType.TCP](Vector.empty, serverOptions)
   }
 
-  def tcp(implicit ec: ExecutionContext): NettyFutureServer[InetSocketAddress] = {
-    new NettyFutureServer[InetSocketAddress](Vector.empty, NettyFutureServerOptions.defaultTcp)
+  def tcp(implicit ec: ExecutionContext): NettyFutureServer[NettyServerType.TCP] = {
+    new NettyFutureServer[NettyServerType.TCP](Vector.empty, NettyFutureServerOptions.defaultTcp)
   }
 
-  def unixDomainSocket(implicit ec: ExecutionContext): NettyFutureServer[DomainSocketAddress] = {
-    new NettyFutureServer[DomainSocketAddress](Vector.empty, NettyFutureServerOptions.defaultUnixSocket)
+  def unixDomainSocket(implicit ec: ExecutionContext): NettyFutureServer[NettyServerType.UnixSocket] = {
+    new NettyFutureServer[NettyServerType.UnixSocket](Vector.empty, NettyFutureServerOptions.defaultUnixSocket)
   }
 }
 
-case class NettyFutureServerBinding[S <: SocketAddress](localSocket: S, stop: () => Future[Unit])
+case class NettyFutureServerBinding[S <: NettyServerType](localSocket: SocketAddress, stop: () => Future[Unit]) {
+  def hostName(implicit isTCP: S =:= NettyServerType.TCP): String = {
+    localSocket.asInstanceOf[InetSocketAddress].getHostName
+  }
+
+  def port(implicit isTCP: S =:= NettyServerType.TCP): Int = {
+    localSocket.asInstanceOf[InetSocketAddress].getPort
+  }
+
+  def path(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): String = {
+    localSocket.asInstanceOf[DomainSocketAddress].path()
+  }
+}

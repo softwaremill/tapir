@@ -25,7 +25,7 @@ class NettyCatsCreateServerStubTest extends CreateServerStubTest[IO, NettyCatsSe
   val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
 
   override def customiseInterceptors: CustomiseInterceptors[IO, NettyCatsServerOptions[IO]] =
-    NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
+    NettyCatsServerOptions.customiseInterceptors[IO](dispatcher, NettyOptionsBuilder.make().tcp().build)
   override def stub[R]: SttpBackendStub[IO, R] = SttpBackendStub(new CatsMonadError[IO]())
   override def asFuture[A]: IO[A] => Future[A] = io => io.unsafeToFuture()
 

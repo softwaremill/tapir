@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-object HelloWorldNettyServer extends App {
+object HelloWorldTCPNettyFutureServer extends App {
   // One endpoint on GET /hello with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
@@ -23,7 +23,7 @@ object HelloWorldNettyServer extends App {
   // Creating handler for netty bootstrap
   val serverBinding =
     Await.result(
-      NettyFutureServer.tcp
+      NettyFutureServer()
         .port(declaredPort)
         .host(declaredHost)
         .addEndpoint(helloWorldServerEndpoint)
@@ -32,9 +32,9 @@ object HelloWorldNettyServer extends App {
     )
 
   // Bind and start to accept incoming connections.
-  val port = serverBinding.localSocket.getPort
-  val host = serverBinding.localSocket.getHostName
-  println(s"Server started at port = ${serverBinding.localSocket.getPort}")
+  val port = serverBinding.port
+  val host = serverBinding.hostName
+  println(s"Server started at port = ${serverBinding.port}")
 
   val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
   val badUrl = uri"http://$host:$port/bad_url"

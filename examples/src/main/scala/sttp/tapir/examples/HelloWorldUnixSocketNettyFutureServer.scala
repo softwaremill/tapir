@@ -12,8 +12,8 @@ import scala.concurrent.{Await, Future}
 /** @deprecated
   *   \- only for purpose of manual tests will be removed from final PR
   */
-@deprecated("[DO not merge ] Only for development purpose")
-object HelloWorldFileSocketNettyServer extends App {
+@deprecated("Only for development purpose")
+object HelloWorldUnixSocketNettyFutureServer extends App {
   // One endpoint on GET /hello with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
@@ -34,7 +34,7 @@ object HelloWorldFileSocketNettyServer extends App {
     )
 
   // Bind and start to accept incoming connections.
-  val path = serverBinding.localSocket.path()
+  val path = serverBinding.path
   println(s"curl --unix-socket ${path} \"http://localhost/hello?name=John\" -vvv")
 
   assert(path == declaredPath.toString, "Paths not match")
