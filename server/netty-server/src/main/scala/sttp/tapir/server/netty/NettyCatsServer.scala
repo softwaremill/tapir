@@ -41,7 +41,7 @@ case class NettyCatsServer[F[_]: Async, S <: NettyServerType](routes: Vector[Rou
     options(options.nettyOptions(nettyOptions))
   }
 
-  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): NettyCatsServer[F, S] = {
+  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.DomainSocket): NettyCatsServer[F, S] = {
     val nettyOptions = options.nettyOptions.path(path)
 
     options(options.nettyOptions(nettyOptions))
@@ -90,8 +90,8 @@ object NettyCatsServer {
     NettyCatsServer(Vector.empty, NettyCatsServerOptions.defaultTcp[F](dispatcher))
   }
 
-  def unixDomainSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, NettyServerType.UnixSocket] = {
-    NettyCatsServer[F, NettyServerType.UnixSocket](Vector.empty, NettyCatsServerOptions.defaultUnixSocket[F](dispatcher))
+  def domainSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F, NettyServerType.DomainSocket] = {
+    NettyCatsServer[F, NettyServerType.DomainSocket](Vector.empty, NettyCatsServerOptions.defaultDomainSocket[F](dispatcher))
   }
 
 }
@@ -105,7 +105,7 @@ case class NettyCatsServerBinding[F[_], S <: NettyServerType](localSocket: Socke
     localSocket.asInstanceOf[InetSocketAddress].getPort
   }
 
-  def path(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): String = {
+  def path(implicit isDomainSocket: S =:= NettyServerType.DomainSocket): String = {
     localSocket.asInstanceOf[DomainSocketAddress].path()
   }
 }

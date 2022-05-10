@@ -37,7 +37,7 @@ object NettyOptionsBuilder {
       netty: NettyOptionsBuilder,
       path: Path,
       shutdownOnClose: Boolean = true,
-      eventLoopConfig: EventLoopConfig = EventLoopConfig.unixDomainSocket
+      eventLoopConfig: EventLoopConfig = EventLoopConfig.domainSocket
   ) {
     def path(path: Path) = copy(path = path)
     def eventLoopGroup(g: EventLoopGroup): DomainSocketOptionsBuilder =
@@ -45,7 +45,7 @@ object NettyOptionsBuilder {
     def noShutdownOnClose: DomainSocketOptionsBuilder = copy(shutdownOnClose = false)
     def build: NettyOptions = NettyOptions(
       new DomainSocketAddress(path.toFile),
-      EventLoopConfig.unixDomainSocket,
+      EventLoopConfig.domainSocket,
       shutdownOnClose,
       netty.initPipeline
     )

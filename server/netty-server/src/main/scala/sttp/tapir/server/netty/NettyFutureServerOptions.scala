@@ -22,10 +22,10 @@ case class NettyFutureServerOptions(
 
 object NettyFutureServerOptions {
   val defaultTcp: NettyFutureServerOptions = customiseInterceptors(tcp).options
-  val defaultUnixSocket: NettyFutureServerOptions = customiseInterceptors(unixSocket).options
+  val defaultDomainSocket: NettyFutureServerOptions = customiseInterceptors(domainSocket).options
 
   private[netty] def tcp(interceptors: List[Interceptor[Future]]) = default(interceptors, NettyOptionsBuilder.make().tcp().build)
-  private[netty] def unixSocket(interceptors: List[Interceptor[Future]]) =
+  private[netty] def domainSocket(interceptors: List[Interceptor[Future]]) =
     default(interceptors, NettyOptionsBuilder.make().domainSocket().build)
 
   private def default(interceptors: List[Interceptor[Future]], nettyOptions: NettyOptions): NettyFutureServerOptions =

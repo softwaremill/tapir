@@ -29,7 +29,7 @@ object NettyCatsServerOptions {
     NettyOptionsBuilder.make().tcp().build
   ).options
 
-  def defaultUnixSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(
+  def defaultDomainSocket[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] = customiseInterceptors(
     dispatcher,
     NettyOptionsBuilder.make().domainSocket().build
   ).options

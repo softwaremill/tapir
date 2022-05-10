@@ -36,12 +36,12 @@ val binding: Future[NettyFutureServerBinding[TCP]] =
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-## Unix socket support
-There is possibility to use unix socket instead of tcp for handling traffic.
+## Domain socket support
+There is possibility to use Domain socket instead of TCP for handling traffic.
 
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.netty.NettyServerType.UnixSocket
+import sttp.tapir.server.netty.NettyServerType.DomainSocket
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.{endpoint, query, stringBody}
 
@@ -51,8 +51,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-val serverBinding: Future[NettyFutureServerBinding[UnixSocket]] =
-  NettyFutureServer.unixDomainSocket
+val serverBinding: Future[NettyFutureServerBinding[DomainSocket]] =
+  NettyFutureServer.domainSocket
     .path(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString))
     .addEndpoint(
       endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>

@@ -42,7 +42,7 @@ case class NettyFutureServer[S <: NettyServerType](routes: Vector[FutureRoute], 
     options(options.nettyOptions(nettyOptions))
   }
 
-  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): NettyFutureServer[S] = {
+  def path(path: Path)(implicit isDomainSocket: S =:= NettyServerType.DomainSocket): NettyFutureServer[S] = {
     val nettyOptions = options.nettyOptions.path(path)
 
     options(options.nettyOptions(nettyOptions))
@@ -87,8 +87,8 @@ object NettyFutureServer {
     new NettyFutureServer[NettyServerType.TCP](Vector.empty, NettyFutureServerOptions.defaultTcp)
   }
 
-  def unixDomainSocket(implicit ec: ExecutionContext): NettyFutureServer[NettyServerType.UnixSocket] = {
-    new NettyFutureServer[NettyServerType.UnixSocket](Vector.empty, NettyFutureServerOptions.defaultUnixSocket)
+  def domainSocket(implicit ec: ExecutionContext): NettyFutureServer[NettyServerType.DomainSocket] = {
+    new NettyFutureServer[NettyServerType.DomainSocket](Vector.empty, NettyFutureServerOptions.defaultDomainSocket)
   }
 }
 
@@ -101,7 +101,7 @@ case class NettyFutureServerBinding[S <: NettyServerType](localSocket: SocketAdd
     localSocket.asInstanceOf[InetSocketAddress].getPort
   }
 
-  def path(implicit isDomainSocket: S =:= NettyServerType.UnixSocket): String = {
+  def path(implicit isDomainSocket: S =:= NettyServerType.DomainSocket): String = {
     localSocket.asInstanceOf[DomainSocketAddress].path()
   }
 }

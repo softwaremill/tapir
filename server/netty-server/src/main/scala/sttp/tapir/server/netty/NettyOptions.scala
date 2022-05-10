@@ -50,7 +50,7 @@ object NettyOptions {
   case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 
   object EventLoopConfig {
-    def unixDomainSocket: EventLoopConfig = if (Epoll.isAvailable) {
+    def domainSocket: EventLoopConfig = if (Epoll.isAvailable) {
       EventLoopConfig(() => new EpollEventLoopGroup(), classOf[EpollServerDomainSocketChannel])
     } else if (KQueue.isAvailable) {
       EventLoopConfig(() => new KQueueEventLoopGroup(), classOf[KQueueServerDomainSocketChannel])
