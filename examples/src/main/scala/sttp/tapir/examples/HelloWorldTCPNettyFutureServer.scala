@@ -49,8 +49,8 @@ object HelloWorldTCPNettyFutureServer extends App {
 
   println("Got result: " + body)
   assert(body == "Hello, Netty!")
-  assert(port == declaredPort, "Ports not match")
-  assert(host == declaredHost, "Hosts not match")
+  assert(port == declaredPort, "Ports don't match")
+  assert(host == declaredHost, "Hosts don't match")
 
   Await.result(serverBinding.stop(), Duration.Inf)
 }
