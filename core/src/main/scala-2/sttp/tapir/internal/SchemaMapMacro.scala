@@ -34,7 +34,7 @@ private[tapir] object SchemaMapMacro {
       q"""{
           val s = $schemaForV
           _root_.sttp.tapir.Schema(
-            _root_.sttp.tapir.SchemaType.SOpenProduct(s)(_.map { case (k, v) => ($keyToString(k), v) }),
+            _root_.sttp.tapir.SchemaType.SOpenProduct(Nil, s)(_.map { case (k, v) => ($keyToString(k), v) }),
             Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParameters))
           )
          }"""

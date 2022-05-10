@@ -157,7 +157,7 @@ private[tapir] object SchemaCompanionMacros {
 
     '{
       Schema(
-        SOpenProduct[Map[K, V], V](${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
+        SOpenProduct[Map[K, V], V](Nil, ${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
         Some(Schema.SName("Map", ${ Expr(genericTypeParameters) }))
       )
     }

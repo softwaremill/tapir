@@ -156,7 +156,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
           field(
             FieldName("v"),
             Schema(
-              SOpenProduct[Map[String, Person], Person](implicitly[Schema[Person]].description("test"))(identity),
+              SOpenProduct[Map[String, Person], Person](Nil, implicitly[Schema[Person]].description("test"))(identity),
               Some(SName("Map", List("Person")))
             )
           )
@@ -180,11 +180,11 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     // then
     schema shouldBe Schema(
-      SOpenProduct(implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
+      SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
       name = Some(SName("Map", List("V")))
     )
 
-    schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].fieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].mapFieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
   }
 
   it should "create a map schema with non-string keys" in {
@@ -197,11 +197,11 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     // then
     schema shouldBe Schema(
-      SOpenProduct(implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
+      SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
       name = Some(SName("Map", List("K", "V")))
     )
 
-    schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].fieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].mapFieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
   }
 
   it should "work with custom naming configuration" in {
