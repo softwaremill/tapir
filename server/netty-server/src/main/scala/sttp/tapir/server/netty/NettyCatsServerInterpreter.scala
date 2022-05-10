@@ -21,7 +21,7 @@ object NettyCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {
     new NettyCatsServerInterpreter[F] {
       override implicit def async: Async[F] = _fa
-      override def nettyServerOptions: NettyCatsServerOptions[F] = NettyCatsServerOptions.default[F](dispatcher)(async)
+      override def nettyServerOptions: NettyCatsServerOptions[F] = NettyCatsServerOptions.defaultTcp[F](dispatcher)(async)
     }
   }
   def apply[F[_]](options: NettyCatsServerOptions[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {

@@ -13,16 +13,18 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     extends TestServerInterpreter[Future, Any, NettyFutureServerOptions, FutureRoute] {
 
   override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FutureRoute = {
-    val serverOptions: NettyFutureServerOptions = interceptors(NettyFutureServerOptions.customiseInterceptors).options
+    val serverOptions = interceptors(NettyFutureServerOptions.customiseInterceptors(NettyFutureServerOptions.tcp)).options
     NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
 
   override def server(routes: NonEmptyList[FutureRoute]): Resource[IO, Port] = {
-    val options = NettyFutureServerOptions.default.nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup)).randomPort
+    val options = NettyFutureServerOptions.defaultTcp.nettyOptions(
+      NettyOptionsBuilder.make().tcp().eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose.build
+    )
     val bind = IO.fromFuture(IO.delay(NettyFutureServer(options).addRoutes(routes.toList).start()))
 
     Resource
       .make(bind)(binding => IO.fromFuture(IO.delay(binding.stop())))
-      .map(_.port)
+      .map(b => b.port)
   }
 }

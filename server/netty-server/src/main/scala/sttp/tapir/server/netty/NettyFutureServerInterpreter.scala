@@ -18,7 +18,7 @@ trait NettyFutureServerInterpreter {
 }
 
 object NettyFutureServerInterpreter {
-  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.default): NettyFutureServerInterpreter = {
+  def apply(serverOptions: NettyFutureServerOptions = NettyFutureServerOptions.defaultTcp): NettyFutureServerInterpreter = {
     new NettyFutureServerInterpreter {
       override def nettyServerOptions: NettyFutureServerOptions = serverOptions
     }
