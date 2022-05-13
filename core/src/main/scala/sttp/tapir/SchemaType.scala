@@ -98,10 +98,20 @@ object SchemaType {
     def empty[T]: SProduct[T] = SProduct(Nil)
   }
 
-  case class SOpenProduct[T, V](valueSchema: Schema[V])(val fieldValues: T => Map[String, V]) extends SchemaType[T] {
+  case class SOpenProduct[T, V](fields: List[SProductField[T]], valueSchema: Schema[V])(val mapFieldValues: T => Map[String, V])
+      extends SchemaType[T] {
+    def required: List[FieldName] = fields.collect { case f if !f.schema.isOptional => f.name }
     override def show: String = s"map"
-    override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(g.andThen(fieldValues))
-    override def as[TT]: SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(_ => Map.empty)
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](
+      fields.map(f => SProductField[TT, f.FieldType](f.name, f.schema, g.andThen(f.get))),
+      valueSchema
+    )(g.andThen(mapFieldValues))
+    override def as[TT]: SchemaType[TT] =
+      SOpenProduct[TT, V](fields.map(f => SProductField[TT, f.FieldType](f.name, f.schema, _ => None)), valueSchema)(_ => Map.empty)
+
+    private[tapir] val fieldsWithValidation: List[SProductField[T]] = fields.collect {
+      case f if f.schema.hasValidation => f
+    }
   }
 
   case class SchemaWithValue[T](schema: Schema[T], value: T)

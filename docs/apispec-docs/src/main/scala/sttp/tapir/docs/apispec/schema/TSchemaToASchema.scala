@@ -20,15 +20,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName),
-            properties = fields
-              .filterNot(_.schema.hidden)
-              .map { f =>
-                f.schema match {
-                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
-                  case schema                                            => f.name.encodedName -> apply(schema)
-                }
-              }
-              .toListMap
+            properties = extractProperties(fields)
           )
         )
       case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
@@ -57,10 +49,11 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
               d.map(tDiscriminatorToADiscriminator)
             )
         )
-      case TSchemaType.SOpenProduct(valueSchema) =>
+      case p @ TSchemaType.SOpenProduct(fields, valueSchema) =>
         Right(
           ASchema(SchemaType.Object).copy(
-            required = List.empty,
+            required = p.required.map(_.encodedName),
+            properties = extractProperties(fields),
             additionalProperties = Some(valueSchema.name match {
               case Some(name) => Left(nameToSchemaReference.map(name))
               case _          => apply(valueSchema)
@@ -79,6 +72,18 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       .map(s => if (nullable) s.copy(nullable = Some(true)) else s)
       .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
+  }
+
+  private def extractProperties[T](fields: List[TSchemaType.SProductField[T]]) = {
+    fields
+      .filterNot(_.schema.hidden)
+      .map { f =>
+        f.schema match {
+          case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
+          case schema                                            => f.name.encodedName -> apply(schema)
+        }
+      }
+      .toListMap
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {

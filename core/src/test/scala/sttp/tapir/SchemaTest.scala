@@ -109,12 +109,14 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify property of map value" in {
     Schema(
       SOpenProduct[Map[String, Unit], Unit](
+        Nil,
         Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X")))
       )(identity),
       Some(SName("Map", List("X")))
     )
       .modifyUnsafe[Int](Schema.ModifyCollectionElements)(_.description("test")) shouldBe Schema(
       SOpenProduct[Map[String, Unit], Unit](
+        Nil,
         Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X"))).description("test")
       )(identity),
       Some(SName("Map", List("X")))
@@ -125,6 +127,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     val openProductSchema =
       Schema(
         SOpenProduct[Map[String, Unit], Unit](
+          Nil,
           Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X")))
         )(_ => Map.empty),
         Some(SName("Map", List("X")))
