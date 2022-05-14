@@ -15,5 +15,7 @@ project/plugins/project/
 
 .bsp
 .idea*
+metals.sbt
+.vscode
 
 file-uploads

@@ -324,5 +324,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 }
 
 trait LowPrioritySchema {
-  implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
+  // implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
+  given x[T]: Conversion[Derived[Schema[T]], Schema[T]] with
+    def apply(s: Derived[Schema[T]]): Schema[T] = s.value
 }

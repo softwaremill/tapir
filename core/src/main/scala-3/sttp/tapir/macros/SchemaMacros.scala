@@ -80,7 +80,7 @@ private[tapir] object SchemaMacros {
   }
 }
 
-trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
+trait SchemaCompanionMacros extends SchemaMacroDerivation {
   implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${
     SchemaCompanionMacros.generateSchemaForMap[String, V]('{ summon[Schema[V]] }, 'identity)
   }
