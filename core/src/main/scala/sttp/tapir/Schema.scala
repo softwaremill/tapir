@@ -20,7 +20,7 @@ import scala.annotation.{StaticAnnotation, implicitNotFound}
   */
 @implicitNotFound(
   msg = """Could not find Schema for type ${T}.
-Since 0.17.0 automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
+Automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
 You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#schema-derivation
 When using datatypes integration remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
 )
