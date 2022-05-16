@@ -116,6 +116,7 @@ lazy val loggerDependencies = Seq(
 )
 
 lazy val allAggregates = core.projectRefs ++
+  newschema.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
   enumeratum.projectRefs ++
@@ -356,6 +357,23 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     }
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
+
+lazy val newschema: ProjectMatrix = (projectMatrix in file("newschema"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-newschema",
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Nil
+        case _            => List("org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided)
+      }
+    }
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .dependsOn(core)
 
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .settings(commonSettings)
