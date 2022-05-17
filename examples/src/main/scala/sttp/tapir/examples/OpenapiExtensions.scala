@@ -1,14 +1,14 @@
 package sttp.tapir.examples
 
 import io.circe.generic.auto._
+import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.Info
-import sttp.tapir.openapi.circe.yaml._
 
 object OpenapiExtensions extends App {
 

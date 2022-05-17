@@ -1,7 +1,7 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir._
-import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
 import sttp.tapir.docs.apispec._
 import sttp.tapir.internal._

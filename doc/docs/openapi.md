@@ -59,7 +59,7 @@ To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "@VERSION@"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "@VERSION@"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -69,8 +69,8 @@ An endpoint can be converted to an instance of the model by importing the `sttp.
 object:
 
 ```scala mdoc:silent
+import sttp.apispec.openapi.OpenAPI
 import sttp.tapir._
-import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
@@ -88,7 +88,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 returned `OpenAPI` case class either directly or by using a helper method:
 
 ```scala mdoc:silent
-import sttp.tapir.openapi.Server
+import sttp.apispec.openapi.Server
 
 val docsWithServers: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
@@ -108,7 +108,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
-import sttp.tapir.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml._
 
 println(docs.toYaml)
 ```
@@ -118,7 +118,7 @@ Or to JSON:
 ```scala mdoc:silent
 import io.circe.Printer
 import io.circe.syntax._
-import sttp.tapir.openapi.circe._
+import sttp.apispec.openapi.circe._
 
 println(Printer.spaces2.print(docs.asJson))
 ```
@@ -211,12 +211,12 @@ Specification extensions can be added by first importing an extension method, an
 method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala mdoc:compile-only
+import sttp.apispec.openapi._
+import sttp.apispec.openapi.circe._
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
-import sttp.tapir.openapi._
-import sttp.tapir.openapi.circe._
-import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
@@ -279,9 +279,9 @@ or `tapir-redoc`:
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala mdoc:compile-only
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 

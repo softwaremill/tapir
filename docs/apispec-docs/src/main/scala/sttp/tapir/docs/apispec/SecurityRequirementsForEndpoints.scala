@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
+import sttp.apispec.SecurityRequirement
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
-import sttp.tapir.apispec.SecurityRequirement
 import sttp.tapir.internal.{IterableToListMap, RichEndpoint, RichEndpointInput}
 
 import scala.collection.immutable.{ListMap, ListSet}

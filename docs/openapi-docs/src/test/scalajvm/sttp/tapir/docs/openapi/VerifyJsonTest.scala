@@ -4,8 +4,8 @@ import io.circe.Printer
 import io.circe.syntax.EncoderOps
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.openapi._
-import sttp.tapir.openapi.circe._
+import sttp.apispec.openapi._
+import sttp.apispec.openapi.circe._
 import sttp.tapir.tests.Basic.{delete_endpoint, in_query_query_out_string}
 
 class VerifyJsonTest extends AnyFunSuite with Matchers {

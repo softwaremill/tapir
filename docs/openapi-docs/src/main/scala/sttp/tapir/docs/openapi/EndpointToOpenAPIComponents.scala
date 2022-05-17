@@ -1,11 +1,11 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.apispec.ReferenceOr
-import sttp.tapir.apispec.{Schema => ASchema}
+import sttp.apispec.ReferenceOr
+import sttp.apispec.{Schema => ASchema}
+import sttp.apispec.openapi.Components
 import sttp.tapir.docs.apispec.SecuritySchemes
 import sttp.tapir.docs.apispec.schema.ObjectKey
 import sttp.tapir.internal.{SortListMap, IterableToListMap}
-import sttp.tapir.openapi.Components
 
 import scala.collection.immutable.ListMap
 

@@ -3,13 +3,13 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData2._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.openapi.Info
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.data.{Entity, Organization, Person}
 
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {

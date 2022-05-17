@@ -81,8 +81,8 @@ val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List
 
 // Generate OpenAPI documentation
 
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
@@ -160,6 +160,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
 * sttp tapir: this project
 * [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+* [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
 ## Contributing
 

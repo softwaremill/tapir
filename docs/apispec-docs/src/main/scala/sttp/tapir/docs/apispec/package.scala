@@ -1,7 +1,7 @@
 package sttp.tapir.docs
 
+import sttp.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.Schema.SName
-import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 package object apispec {
