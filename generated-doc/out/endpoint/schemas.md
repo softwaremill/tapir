@@ -6,17 +6,15 @@ defined out-of-the box. They don't contain any meta-data, such as descriptions o
 For case classes, `Schema[_]` values can be derived automatically using
 [Magnolia](https://github.com/softwaremill/magnolia), given that schemas are defined for all the case class's fields.
 
-There are two policies of custom type derivation are available:
+Two policies of custom type derivation are available:
 
 * automatic derivation
 * semi automatic derivation
 
 ## Automatic derivation
 
-Case classes, traits and their children are recursively derived by Magnolia.
-
-Importing `sttp.tapir.generic.auto._` (or extending the `SchemaDerivation` trait) enables fully automatic derivation
-for `Schema`:
+Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto._` 
+(or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
 
 ```scala
 import sttp.tapir.Schema
@@ -32,8 +30,8 @@ implicitly[Schema[Parent]]
 If you have a case class which contains some non-standard types (other than strings, number, other case classes,
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
-Note that when using [datatypes integrations](integrations.md), respective codecs must also be imported to enable the
-derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
+Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
+enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
@@ -58,6 +56,15 @@ implicit lazy val sParent: Schema[Parent] = Schema.derived
 
 Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
 values must be `lazy val`s.
+
+```eval_rst
+.. note::
+
+  When deriving schemas using ``Schema.derived``, the diagnostic information as to schemas for which types is
+  much richer. Hence, this method may be used when debugging the derivation of a schema which gives compilation errors,
+  even when otherwise auto derivation is used. 
+```
+
 
 ## Derivation for recursive types in Scala3
 

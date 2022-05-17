@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.0.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.0.0-RC1"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "1.0.0-RC1"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -14,9 +14,9 @@ An endpoint can be converted to an instance of the model by using the `sttp.tapi
 object:
 
 ```scala
+import sttp.apispec.asyncapi.AsyncAPI
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
-import sttp.tapir.asyncapi.AsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -39,7 +39,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 `.toAsyncAPI` invocation will be supplemented with security requirements, as specified by the endpoints:
 
 ```scala
-import sttp.tapir.asyncapi.Server
+import sttp.apispec.asyncapi.Server
 
 val docsWithServers: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(
   echoWS, 
@@ -56,7 +56,7 @@ Multiple endpoints can be converted to an `AsyncAPI` instance by calling the met
 The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import sttp.tapir.asyncapi.circe.yaml._
+import sttp.apispec.asyncapi.circe.yaml._
 
 println(docs.toYaml)
 ```

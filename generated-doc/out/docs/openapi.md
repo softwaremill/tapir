@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-RC1"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -48,7 +48,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-RC1"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -58,8 +58,8 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-RC1"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "1.0.0-RC1"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -69,8 +69,8 @@ An endpoint can be converted to an instance of the model by importing the `sttp.
 object:
 
 ```scala
+import sttp.apispec.openapi.OpenAPI
 import sttp.tapir._
-import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
@@ -88,7 +88,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 returned `OpenAPI` case class either directly or by using a helper method:
 
 ```scala
-import sttp.tapir.openapi.Server
+import sttp.apispec.openapi.Server
 
 val docsWithServers: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
@@ -104,7 +104,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import sttp.tapir.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml._
 
 println(docs.toYaml)
 ```
@@ -114,7 +114,7 @@ Or to JSON:
 ```scala
 import io.circe.Printer
 import io.circe.syntax._
-import sttp.tapir.openapi.circe._
+import sttp.apispec.openapi.circe._
 
 println(Printer.spaces2.print(docs.asJson))
 ```
@@ -207,12 +207,12 @@ Specification extensions can be added by first importing an extension method, an
 method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala
+import sttp.apispec.openapi._
+import sttp.apispec.openapi.circe._
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
-import sttp.tapir.openapi._
-import sttp.tapir.openapi.circe._
-import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
@@ -264,20 +264,20 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-RC1"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-RC1"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 
