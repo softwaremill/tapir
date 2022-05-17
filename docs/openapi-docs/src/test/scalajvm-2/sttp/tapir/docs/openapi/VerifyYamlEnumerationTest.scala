@@ -6,11 +6,11 @@ import enumeratum.{EnumEntry, _}
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.VerifyYamlEnumerationTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.{Schema, Validator, _}
 
 import scala.collection.immutable

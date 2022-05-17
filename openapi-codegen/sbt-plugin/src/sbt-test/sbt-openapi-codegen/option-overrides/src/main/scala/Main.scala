@@ -19,8 +19,8 @@ object Main extends App {
       .out(jsonBody[List[Book]])
    */
   import com.example.generated.apis._
+  import sttp.apispec.openapi.circe.yaml._
   import sttp.tapir.docs.openapi._
-  import sttp.tapir.openapi.circe.yaml._
 
   val docs = MyExampleEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 

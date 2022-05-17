@@ -4,8 +4,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.StatusCode
 import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Validation
 import sttp.tapir.{Endpoint, oneOfVariant, stringBody}
 

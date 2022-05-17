@@ -1,10 +1,10 @@
 package sttp.tapir.redoc.bundle
 
 import sttp.apispec.openapi.{Info, OpenAPI}
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.{OpenAPIDocsInterpreter, OpenAPIDocsOptions}
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.redoc.{Redoc, RedocUIOptions}
 import sttp.tapir.server.ServerEndpoint
 

@@ -3,8 +3,8 @@ package sttp.tapir.docs.openapi
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.{auth, endpoint, header, path, stringBody, _}
 
 import scala.collection.immutable.{ListMap, Seq}
