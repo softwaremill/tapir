@@ -9,6 +9,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, Method, StatusCode}
+import sttp.apispec.openapi._
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.{default, description, encodedExample}
 import sttp.tapir.SchemaType.SProductField
@@ -22,7 +23,6 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Multipart

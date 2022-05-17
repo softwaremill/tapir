@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Validator.EncodeToRaw
-import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal.{IterableToListMap, _}

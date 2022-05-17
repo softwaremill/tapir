@@ -11,8 +11,8 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
+import sttp.apispec.asyncapi.Server
 import sttp.tapir._
-import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._

@@ -4,12 +4,12 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.apispec.openapi.Info
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.data.{Entity, Organization, Person}
 import sttp.tapir.{endpoint, _}

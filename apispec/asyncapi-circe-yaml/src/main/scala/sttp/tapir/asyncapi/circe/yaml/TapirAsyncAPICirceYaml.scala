@@ -3,8 +3,8 @@ package sttp.tapir.asyncapi.circe.yaml
 import io.circe.syntax._
 import io.circe.yaml.Printer
 import io.circe.yaml.Printer.StringStyle
-import sttp.tapir.asyncapi.AsyncAPI
-import sttp.tapir.asyncapi.circe._
+import sttp.apispec.asyncapi.AsyncAPI
+import sttp.apispec.asyncapi.circe._
 
 trait TapirAsyncAPICirceYaml {
   implicit class RichAsyncAPI(asyncAPI: AsyncAPI) {

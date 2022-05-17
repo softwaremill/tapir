@@ -134,12 +134,7 @@ lazy val allAggregates = core.projectRefs ++
   tethysJson.projectRefs ++
   zio1Json.projectRefs ++
   zioJson.projectRefs ++
-  apispecModel.projectRefs ++
-  openapiModel.projectRefs ++
-  openapiCirce.projectRefs ++
   openapiCirceYaml.projectRefs ++
-  asyncapiModel.projectRefs ++
-  asyncapiCirce.projectRefs ++
   asyncapiCirceYaml.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
@@ -752,110 +747,41 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore % CompileAndTest)
 
-// apispec
-
-lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
-  .settings(commonSettings)
-  .settings(
-    name := "tapir-apispec-model"
-  )
-  .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJvmSettings
-  )
-  .jsPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJsSettings
-  )
-
 // openapi
-
-lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-model"))
-  .settings(commonSettings)
-  .settings(
-    name := "tapir-openapi-model"
-  )
-  .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJvmSettings
-  )
-  .jsPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJsSettings
-  )
-  .dependsOn(apispecModel)
-
-lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
-  .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-parser" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe
-    ),
-    name := "tapir-openapi-circe"
-  )
-  .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJvmSettings
-  )
-  .jsPlatform(
-    scalaVersions = scala2And3Versions,
-    settings = commonJsSettings
-  )
-  .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe-yaml"))
   .settings(commonJvmSettings)
   .settings(
-    libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec
+    ),
     name := "tapir-openapi-circe-yaml"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(openapiCirce)
 
 // asyncapi
-
-lazy val asyncapiModel: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-model"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-asyncapi-model"
-  )
-  .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(apispecModel)
-
-lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe"))
-  .settings(commonJvmSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-parser" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe
-    ),
-    name := "tapir-asyncapi-circe"
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(asyncapiModel)
 
 lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe-yaml"))
   .settings(commonJvmSettings)
   .settings(
-    libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "com.softwaremill.sttp.apispec" %% "asyncapi-circe" % Versions.sttpApispec
+    ),
     name := "tapir-asyncapi-circe-yaml"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(asyncapiCirce)
 
 // docs
 
 lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-apispec-docs"
+    name := "tapir-apispec-docs",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "asyncapi-model" % Versions.sttpApispec
+    )
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
@@ -865,13 +791,16 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .dependsOn(core, tests % Test, apispecModel)
+  .dependsOn(core, tests % Test)
 
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonSettings)
   .settings(
     name := "tapir-openapi-docs",
-    libraryDependencies += "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens
+    libraryDependencies ++= Seq(
+      "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
+      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec
+    )
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
@@ -881,7 +810,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .dependsOn(openapiModel, core, apispecDocs, tests % Test)
+  .dependsOn(core, apispecDocs, tests % Test)
 
 lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(openapiCirceYaml.jvm(scala3) % Test)
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13), openapiCirceYaml.jvm(scala2_13) % Test)
@@ -892,12 +821,13 @@ lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-doc
   .settings(
     name := "tapir-asyncapi-docs",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "asyncapi-model" % Versions.sttpApispec,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Test,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
+  .dependsOn(core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
 lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonJvmSettings)

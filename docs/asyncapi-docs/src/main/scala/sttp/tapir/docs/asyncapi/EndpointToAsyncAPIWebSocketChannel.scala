@@ -1,9 +1,9 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.asyncapi._
 import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
-import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.{DocsExtensions, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas

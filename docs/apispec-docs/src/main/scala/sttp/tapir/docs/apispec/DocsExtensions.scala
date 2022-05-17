@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec
 
-import sttp.tapir.apispec.ExtensionValue
+import sttp.apispec.ExtensionValue
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap

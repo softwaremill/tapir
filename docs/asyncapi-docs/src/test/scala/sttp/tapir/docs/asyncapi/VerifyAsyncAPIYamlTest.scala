@@ -3,12 +3,12 @@ package sttp.tapir.docs.asyncapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.apispec.asyncapi.{Info, Server}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.tapir.Schema.SName
 import sttp.tapir._
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
-import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._

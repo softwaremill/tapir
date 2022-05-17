@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
+import sttp.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.internal._
-import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointAuth
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 

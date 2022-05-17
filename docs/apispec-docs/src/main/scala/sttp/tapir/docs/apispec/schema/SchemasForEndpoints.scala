@@ -1,8 +1,8 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Schema.SName
 import sttp.tapir._
-import sttp.tapir.apispec.{Schema => ASchema, _}
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap

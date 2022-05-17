@@ -1,6 +1,6 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.apispec._
+import sttp.apispec._
 import sttp.tapir.{Codec, EndpointIO}
 import sttp.ws.WebSocketFrame
 

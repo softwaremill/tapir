@@ -1,9 +1,9 @@
 package sttp.tapir.swagger.bundle
 
+import sttp.apispec.openapi.{Info, OpenAPI}
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.{OpenAPIDocsInterpreter, OpenAPIDocsOptions}
-import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.swagger.{SwaggerUI, SwaggerUIOptions}

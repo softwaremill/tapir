@@ -4,11 +4,11 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.StatusCode
+import sttp.apispec.openapi.Info
 import sttp.tapir.docs.openapi.VerifyYamlOneOfTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.model.StatusCodeRange
-import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.ContentNegotiation
 import sttp.tapir.{

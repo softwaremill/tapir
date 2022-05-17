@@ -3,8 +3,8 @@ package sttp.tapir.openapi.circe.yaml
 import io.circe.syntax._
 import io.circe.yaml.Printer
 import io.circe.yaml.Printer.StringStyle
-import sttp.tapir.openapi.OpenAPI
-import sttp.tapir.openapi.circe._
+import sttp.apispec.openapi.OpenAPI
+import sttp.apispec.openapi.circe._
 
 trait TapirOpenAPICirceYaml {
   implicit class RichOpenAPI(openAPI: OpenAPI) {

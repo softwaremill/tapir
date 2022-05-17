@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.openapi.Info
+import sttp.apispec.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.OneOfBody.{
   in_one_of_json_text_range_out_string,
