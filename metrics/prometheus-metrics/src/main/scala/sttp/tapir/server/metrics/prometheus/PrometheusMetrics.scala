@@ -137,7 +137,7 @@ object PrometheusMetrics {
         .labelNames(labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)
         .register(registry),
       onRequest = { (req, histogram, m) =>
-        m.unit {
+        m.eval {
           val requestStart = clock.instant()
           def duration = Duration.between(requestStart, clock.instant()).toMillis.toDouble / 1000.0
           EndpointMetric()
