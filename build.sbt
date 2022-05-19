@@ -651,6 +651,14 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = scala2Versions,
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
+      )
+    )
+  )
   .dependsOn(core)
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
