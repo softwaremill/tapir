@@ -33,7 +33,7 @@ object Versions {
   val tethys = "0.26.0"
   val vertx = "4.2.7"
   val jsScalaJavaTime = "2.3.0"
-  val nativeScalaJavaTime = "2.4.0-M2"
+  val nativeScalaJavaTime = "2.4.0-M3"
   val jwtScala = "5.0.0"
   val derevo = "0.13.0"
   val newtype = "0.4.4"
