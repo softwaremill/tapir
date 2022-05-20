@@ -160,6 +160,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
 * sttp tapir: this project
 * [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+* [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
 * [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
 ## Contributing

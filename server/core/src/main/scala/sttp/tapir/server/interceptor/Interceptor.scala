@@ -64,7 +64,7 @@ object RequestInterceptor {
   }
 
   trait ServerEndpointFilter[F[_]] {
-    def apply[R](endpoint: List[ServerEndpoint[R, F]]): F[List[ServerEndpoint[R, F]]]
+    def apply[R](endpoints: List[ServerEndpoint[R, F]]): F[List[ServerEndpoint[R, F]]]
   }
 
   /** Filter the server endpoints for which decoding will be later attempted, in sequence. */
