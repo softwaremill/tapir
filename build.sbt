@@ -115,7 +115,7 @@ lazy val loggerDependencies = Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
-lazy val allAggregates = core.projectRefs ++
+lazy val rawAllAggregates = core.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
   enumeratum.projectRefs ++
@@ -179,6 +179,16 @@ lazy val allAggregates = core.projectRefs ++
   openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs
+
+lazy val allAggregates: Seq[ProjectReference] = {
+  if (sys.env.isDefinedAt("STTP_NATIVE")) {
+    println("[info] STTP_NATIVE defined, including native in the aggregate projects")
+    rawAllAggregates
+  } else {
+    println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
+    rawAllAggregates.filterNot(_.toString.contains("Native"))
+  }
+}
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
 val testJVM_2_12 = taskKey[Unit]("Test JVM Scala 2.12 projects, without Finatra")
@@ -648,6 +658,14 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
+  .nativePlatform(
+    scalaVersions = nativeScalaVersions,
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
       )
     )
   )
