@@ -13,7 +13,7 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
   def awsServerOptions: AwsServerOptions[F]
 
-  def toRoute[I, E, O](se: ServerEndpoint[Any, F]): Route[F] =
+  def toRoute(se: ServerEndpoint[Any, F]): Route[F] =
     toRoute(List(se))
 
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
