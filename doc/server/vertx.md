@@ -147,7 +147,7 @@ Add the following dependency
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
-"com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "@VERSION@"
 ```
 
 to use this interpreter with ZIO.
@@ -196,8 +196,7 @@ object Short extends ZIOAppDefault {
             .flatMap(_.asRIO)
         ) { server =>
           ZIO.attempt(server.close()).flatMap(_.asRIO).orDie
-        }
-        .forever
+        } *> ZIO.never
     )
   }
 }
