@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.openapi.Info
+import sttp.apispec.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers

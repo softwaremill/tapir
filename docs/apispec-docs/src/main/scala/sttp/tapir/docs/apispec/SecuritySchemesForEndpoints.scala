@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
+import sttp.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.internal._
-import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointAuth
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
@@ -80,9 +80,9 @@ private[docs] object SecuritySchemesForEndpoints {
 
   private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =
     input match {
-      case Vector(EndpointIO.Header(name, _, _))    => (name, "header")
-      case Vector(EndpointInput.Query(name, _, _))  => (name, "query")
-      case Vector(EndpointInput.Cookie(name, _, _)) => (name, "cookie")
+      case Vector(EndpointIO.Header(name, _, _))      => (name, "header")
+      case Vector(EndpointInput.Query(name, _, _, _)) => (name, "query")
+      case Vector(EndpointInput.Cookie(name, _, _))   => (name, "cookie")
       case _ => throw new IllegalArgumentException(s"Api key authentication can only be read from headers, queries or cookies, not: $input")
     }
 }

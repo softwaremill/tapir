@@ -9,24 +9,25 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, Method, StatusCode}
+import sttp.apispec.openapi._
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.{default, description, encodedExample}
+import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.openapi.VerifyYamlTest._
+import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
-import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi._
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.Basic._
-import sttp.tapir.tests.{Basic, Multipart}
+import sttp.tapir.tests.Multipart
 import sttp.tapir.tests.data.{FruitAmount, Person}
-import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
+import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, ModifyEach => _, _}
 
 import java.time.{Instant, LocalDateTime}
 
@@ -322,10 +323,33 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render fields with additional properties for map for manually provided schema") {
+    val expectedYaml = load("expected_fields_with_additional_properties.yml")
+    case class FailureInput(status: Int, message: String, additionalMap: Map[String, String])
+
+    implicit val schemaProviderForFailureInput: Schema[FailureInput] = Schema(
+      SchemaType.SOpenProduct(
+        List(
+          SProductField[FailureInput, Int](FieldName("status"), Schema.schemaForInt, x => Some(x.status)),
+          SProductField[FailureInput, String](FieldName("message"), Schema.schemaForString, x => Some(x.message))
+        ),
+        Schema.string
+      )(_.additionalMap),
+      Some(Schema.SName("FailureInput"))
+    )
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.out(jsonBody[FailureInput]), Info("Entities", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("render map with plain values") {
     val expectedYaml = load("expected_map_with_plain_values.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.out(jsonBody[Map[String, String]]), Info("Entities", "1.0")).toYaml
+    val openApi = OpenAPIDocsInterpreter().toOpenAPI(endpoint.out(jsonBody[Map[String, String]]), Info("Entities", "1.0"))
+
+    val actualYaml = openApi.toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -703,6 +727,57 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val expectedYaml = load("expected_enumeration_values.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should add allowEmptyValues for flag query parameters") {
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(in_flag_query_out_string, Info("Flags", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("expected_flag_query.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should add operation callback") {
+    case class TriggerRequest(callbackUrl: String)
+    case class CallbackRequest(answer: String)
+
+    val (callback, reusableCallback, callbackRequest) = {
+      val throwaway = OpenAPIDocsInterpreter()
+        .toOpenAPI(
+          List(
+            endpoint.put.in("callback").in(jsonBody[CallbackRequest]),
+            endpoint.delete.in("reusable_callback").in(jsonBody[CallbackRequest])
+          ),
+          Info("Throwaway", "1.0")
+        )
+
+      val callbackItem = throwaway.paths.pathItems("/callback")
+      val reusableCallbackItem = throwaway.paths.pathItems("/reusable_callback")
+      val callback = Callback().addPathItem("{$request.body#/callbackUrl}", callbackItem)
+      val reusableCallback = Callback().addPathItem("{$request.body#/callbackUrl}", reusableCallbackItem)
+      (callback, reusableCallback, throwaway.components.get.schemas("CallbackRequest"))
+    }
+
+    val docs: OpenAPI = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.put.in("trigger").in(jsonBody[TriggerRequest]), Info("Callbacks", "1.0"))
+
+    val reusableCallbackKey = "reusable_callback"
+
+    import com.softwaremill.quicklens._
+    val actualYaml = docs
+      .modify(_.paths.pathItems.at("/trigger").put.each)
+      .using(_.addCallback("my_callback", callback).addCallbackReference("my_reusable_callback", reusableCallbackKey))
+      .modify(_.components.each)
+      .using(_.addCallback(reusableCallbackKey, reusableCallback))
+      .modify(_.components.each.schemas)
+      .using(_ + ("CallbackRequest" -> callbackRequest))
+      .toYaml
+
+    val expectedYaml = load("expected_callbacks.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }

@@ -199,7 +199,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
     compareTransputs(EndpointInput.derived[TapirRequestTest1], expectedInput) shouldBe true
   }
 
-  it should "derive correct input for dealised bodies" in {
+  it should "derive correct input for dealiased bodies" in {
     import JsonCodecs._
 
     val expectedInput = customCodecJsonBody[Boolean].mapTo[TapirRequestTest2]
@@ -504,8 +504,8 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
         name1 == name2 && info1 == info2
       case (PathsCapture(_, info1), PathsCapture(_, info2)) =>
         info1 == info2
-      case (Query(name1, _, info1), Query(name2, _, info2)) =>
-        name1 == name2 && info1 == info2
+      case (Query(name1, flagValue1, _, info1), Query(name2, flagValue2, _, info2)) =>
+        name1 == name2 && flagValue1 == flagValue2 && info1 == info2
       case (QueryParams(_, info1), QueryParams(_, info2)) =>
         info1 == info2
       case (Cookie(name1, _, info1), Cookie(name2, _, info2)) =>

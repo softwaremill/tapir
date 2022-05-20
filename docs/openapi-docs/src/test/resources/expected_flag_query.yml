@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: Flags
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: flag
+          in: query
+          required: false
+          allowEmptyValue: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: query parameter flag'
+          content:
+            text/plain:
+              schema:
+                type: string

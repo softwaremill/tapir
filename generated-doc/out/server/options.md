@@ -16,6 +16,7 @@ For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val customDecodeFailureHandler: DecodeFailureHandler = ???
 
@@ -39,6 +40,7 @@ returned instead by using a different decode failure handler. For example, using
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customiseInterceptors

@@ -4,7 +4,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType.{SCoproduct, SNumber, SProduct}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 import sttp.tapir.{EndpointIO, FieldName, Schema, stringBodyUtf8AnyFormat}
 import zio.json.ast.Json
 import zio.json.ast.Json.Obj
@@ -48,9 +48,4 @@ trait TapirJsonZio {
 
   implicit val schemaForZioJsonObject: Schema[Obj] =
     Schema(SProduct(Nil), Some(SName("zio.json.ast.Json.Obj")))
-
-  // zio-json encodes big decimals as numbers - adjusting the schemas (which by default are strings) to that format
-  // refer to #321 (circe case)
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
-  implicit val schemaForJBigDecimal: Schema[java.math.BigDecimal] = Schema(SNumber())
 }

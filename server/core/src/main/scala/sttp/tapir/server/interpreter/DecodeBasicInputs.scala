@@ -273,8 +273,14 @@ object DecodeBasicInputs {
           else (DecodeResult.Mismatch(reqMedia.toString, inMedia.toString), ctx)
         } else (DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString), ctx)
 
-      case EndpointInput.Query(name, codec, _) =>
+      case EndpointInput.Query(name, None, codec, _) =>
         (codec.decode(ctx.queryParameter(name).toList), ctx)
+
+      case EndpointInput.Query(name, Some(flagValue), codec, _) =>
+        ctx.queryParameters.getMulti(name) match {
+          case Some(Seq()) | Some(Seq("")) => (DecodeResult.Value(flagValue), ctx)
+          case values                      => (codec.decode(values.getOrElse(Nil).toList), ctx)
+        }
 
       case EndpointInput.QueryParams(codec, _) =>
         (codec.decode(ctx.queryParameters), ctx)

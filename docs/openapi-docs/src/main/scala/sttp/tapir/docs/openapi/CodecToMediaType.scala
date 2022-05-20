@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
+import sttp.apispec.openapi.{MediaType => OMediaType}
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.openapi.{MediaType => OMediaType}
 import sttp.tapir.{CodecFormat, _}
 
 import scala.collection.immutable.ListMap

@@ -240,6 +240,17 @@ A fixed status code can be specified using the `statusCode(code)` output.
 Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with
 `400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
 
+## Selected inputs/outputs for non-standard types
+
+* some header values can be decoded into a more structured representation, e.g. `header[MediaType]`, `header[ETag]`, 
+  `header[Range]`, `header[List[CacheDirective]]`, `header[List[Cookie]]`, `header[CookieWithMeta]`
+* the low-level body value can be tupled with the decoded high-level representation. This is useful e.g. if the
+  hash of the body is required for security. A dedicated `jsonBodyWithRaw` description is available, but this
+  can be used for any body e.g. `plainBody[(String, Int)]`
+* an input can be decoded into either one of two high-level values, e.g. `query[Either[String, Int]]("param")`. By 
+  default, such decoding is right-biased, so the right-hand codec is attempted fails, and only if it fails, the 
+  left-hand side codec is used
+
 ## Next
 
 Read on about [one-of mappings](oneof.md).

@@ -1,8 +1,8 @@
 package sttp.tapir.docs.openapi
 
+import sttp.apispec.openapi.{Info, OpenAPI}
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.{AnyEndpoint, Endpoint}
-import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.server.ServerEndpoint
 
 trait OpenAPIDocsInterpreter {

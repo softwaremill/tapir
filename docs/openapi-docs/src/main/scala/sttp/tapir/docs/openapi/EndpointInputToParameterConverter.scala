@@ -1,9 +1,9 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.apispec.{ReferenceOr, Schema}
+import sttp.apispec.{ReferenceOr, Schema}
+import sttp.apispec.openapi.{Parameter, ParameterIn}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
 import sttp.tapir.docs.apispec.DocsExtensions
-import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
 private[openapi] object EndpointInputToParameterConverter {
@@ -19,7 +19,8 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions),
+      allowEmptyValue = query.flagValue.fold(None: Option[Boolean])(_ => Some(true))
     )
   }
 

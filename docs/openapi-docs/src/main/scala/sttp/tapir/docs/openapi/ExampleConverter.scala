@@ -1,9 +1,9 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.apispec._
+import sttp.apispec._
+import sttp.apispec.openapi.Example
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.IterableToListMap
-import sttp.tapir.openapi.Example
 import sttp.tapir.{Codec, EndpointIO, Schema => TSchema}
 
 import scala.collection.immutable.ListMap

@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.apispec.{ReferenceOr, SchemaType, Schema => ASchema}
+import sttp.apispec.{ReferenceOr, SchemaType, Schema => ASchema}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI reference (if the schema is named), or to the appropriate schema. */

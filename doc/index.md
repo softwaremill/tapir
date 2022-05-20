@@ -69,7 +69,7 @@ We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, t
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
-<span></span>
+<a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
 </div>
 
@@ -101,8 +101,8 @@ val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List
 
 // Generate OpenAPI documentation
 
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)

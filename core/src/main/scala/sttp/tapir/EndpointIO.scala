@@ -155,12 +155,18 @@ object EndpointInput extends EndpointInputMacros {
     override def show = s"/*"
   }
 
-  case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
+  case class Query[T](name: String, flagValue: Option[T], codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Query[X]
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
-    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] = copy(codec = c, info = i)
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] =
+      copy(flagValue = flagValue.map(t => c.decode(codec.encode(t))).collect { case DecodeResult.Value(u) => u }, codec = c, info = i)
     override def show: String = addValidatorShow(s"?$name", codec.schema)
+
+    /** Indicates that this query parameter can be used as a flag in the URI (that is, the query string will contain just the name, without
+      * a value). When used as a flag, its decoded value is `v`.
+      */
+    def flagValue(v: T): Query[T] = copy(flagValue = Some(v))
   }
 
   case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Atom[T] {

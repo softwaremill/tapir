@@ -26,8 +26,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitly[Schema[Float]].schemaType shouldBe SNumber()
     implicitly[Schema[Double]].schemaType shouldBe SNumber()
     implicitly[Schema[Boolean]].schemaType shouldBe SBoolean()
-    implicitly[Schema[BigDecimal]].schemaType shouldBe SString()
-    implicitly[Schema[JBigDecimal]].schemaType shouldBe SString()
+    implicitly[Schema[BigDecimal]].schemaType shouldBe SNumber()
+    implicitly[Schema[JBigDecimal]].schemaType shouldBe SNumber()
   }
 
   it should "find schema for optional types" in {
@@ -100,13 +100,14 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for map" in {
     val schema = implicitly[Schema[Map[String, Int]]]
     schema.name shouldBe Some(SName("Map", List("Int")))
-    schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](intSchema)(identity)
+    schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](Nil, intSchema)(identity)
   }
 
   it should "find schema for map of products" in {
     val schema = implicitly[Schema[Map[String, D]]]
     schema.name shouldBe Some(SName("Map", List("D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
+      Nil,
       Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.generic.D")))
     )(identity)
   }
@@ -115,6 +116,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitly[Schema[Map[String, H[D]]]]
     schema.name shouldBe Some(SName("Map", List("H", "D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, H[D]], H[D]](
+      Nil,
       Schema(
         SProduct[H[D]](
           List(
@@ -407,6 +409,21 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     actual.default shouldBe expected.default
     actual.name shouldBe expected.name
   }
+
+  it should "add validators for collection and option elements" in {
+    case class ValidateEachTest(
+        @validateEach(Validator.min(5))
+        ints: List[Int],
+        @validateEach[String](Validator.minLength(3))
+        maybeString: Option[String]
+    )
+
+    val schema = implicitly[Schema[ValidateEachTest]]
+    schema.applyValidation(ValidateEachTest(Nil, None)) should have size 0
+    schema.applyValidation(ValidateEachTest(List(6, 10), Some("1234"))) should have size 0
+    schema.applyValidation(ValidateEachTest(List(6, 0, 10), Some("1234"))) should have size 1
+    schema.applyValidation(ValidateEachTest(List(6, 10), Some("12"))) should have size 1
+  }
 }
 
 object SchemaGenericAutoTest {
@@ -420,12 +437,7 @@ object SchemaGenericAutoTest {
 
   // comparing recursive schemas without validators
   private[generic] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
-    case SProduct(fields) =>
-      s.copy(schemaType =
-        SProduct(
-          fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
-        )
-      )
+    case SProduct(fields) => s.copy(schemaType = SProduct(convertToSProductField(fields)))
     case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(
@@ -433,11 +445,21 @@ object SchemaGenericAutoTest {
           discriminator
         )(st.subtypeSchema)
       )
-    case st @ SOpenProduct(valueSchema) => s.copy(schemaType = SOpenProduct(removeValidators(valueSchema))(st.fieldValues))
-    case st @ SArray(element)           => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
-    case st @ SOption(element)          => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
-    case _                              => s
+    case st @ SOpenProduct(fields, valueSchema) =>
+      s.copy(schemaType =
+        SOpenProduct(
+          fields = convertToSProductField(fields),
+          valueSchema = removeValidators(valueSchema)
+        )(st.mapFieldValues)
+      )
+    case st @ SArray(element)  => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
+    case st @ SOption(element) => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
+    case _                     => s
   }).copy(validator = Validator.pass)
+
+  private def convertToSProductField[T](fields: List[SProductField[T]]) = {
+    fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
+  }
 }
 
 case class StringValueClass(value: String) extends AnyVal

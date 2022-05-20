@@ -169,7 +169,7 @@ object DefaultDecodeFailureHandler {
         case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
         case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
         case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
-        case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
+        case EndpointInput.Query(name, _, _, _)      => s"Invalid value for: query parameter $name"
         case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
         case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
         case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
@@ -229,16 +229,17 @@ object DefaultDecodeFailureHandler {
       * @param valueName
       *   Name of the validated value to be used in error messages
       */
-    def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String =
-      ve match {
-        case p: ValidationError.Primitive[T] =>
-          p.validator match {
+    def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String = {
+      ve.customMessage match {
+        case Some(message) => s"expected $valueName to pass validation: $message, but was: ${ve.invalidValue}"
+        case None =>
+          ve.validator match {
             case Validator.Min(value, exclusive) =>
               s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
             case Validator.Max(value, exclusive) =>
               s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
             // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
-            case p: Validator.Pattern[T] => s"expected $valueName to match '${p.value}', but was '${ve.invalidValue}'"
+            case p: Validator.Pattern[T] => s"expected $valueName to match: ${p.value}, but was: ${ve.invalidValue}"
             case m: Validator.MinLength[T] =>
               s"expected $valueName to have length greater than or equal to ${m.value}, but was ${ve.invalidValue}"
             case m: Validator.MaxLength[T] =>
@@ -247,14 +248,14 @@ object DefaultDecodeFailureHandler {
               s"expected size of $valueName to be greater than or equal to ${m.value}, but was ${ve.invalidValue.size}"
             case m: Validator.MaxSize[T, Iterable] =>
               s"expected size of $valueName to be less than or equal to ${m.value}, but was ${ve.invalidValue.size}"
+            case Validator.Custom(_, _) => s"expected $valueName to pass validation, but was: ${ve.invalidValue}"
             case Validator.Enumeration(possibleValues, encode, _) =>
               val encodedPossibleValues =
                 encode.fold(possibleValues.map(_.toString))(e => possibleValues.flatMap(e(_).toList).map(_.toString))
-              s"expected $valueName to be within $encodedPossibleValues, but was '${ve.invalidValue}'"
+              s"expected $valueName to be one of ${encodedPossibleValues.mkString("(", ", ", ")")}, but was ${ve.invalidValue}"
           }
-        case c: ValidationError.Custom[T] =>
-          s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"
       }
+    }
 
     /** Default message describing the path to an invalid value. This is the path inside the validated object, e.g.
       * `user.address.street.name`.

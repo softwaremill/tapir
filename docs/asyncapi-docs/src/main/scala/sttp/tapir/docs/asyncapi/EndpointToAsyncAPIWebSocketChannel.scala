@@ -1,9 +1,9 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.asyncapi._
 import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
-import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.{DocsExtensions, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
@@ -26,7 +26,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val method = e.method.getOrElse(Method.GET)
 
     val queryInputs = inputs.collect {
-      case EndpointInput.Query(name, codec, info) if !codec.schema.hidden => addMetaDataFromInfo(name, codec, info)
+      case EndpointInput.Query(name, _, codec, info) if !codec.schema.hidden => addMetaDataFromInfo(name, codec, info)
     }
     val headerInputs = inputs.collect {
       case EndpointIO.Header(name, codec, info) if !codec.schema.hidden => addMetaDataFromInfo(name, codec, info)
