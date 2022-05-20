@@ -131,8 +131,9 @@ object SchemaType {
     ): SCoproduct[T] = {
       SCoproduct(
         subtypes.map {
-          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _, _, _) if st.fields.forall(_.name != discriminatorName) =>
-            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
+          case s @ Schema(st: SchemaType.SProduct[Any @unchecked], _, _, _, _, _, _, _, _, _, _)
+              if st.fields.forall(_.name != discriminatorName) =>
+            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[Any, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
         },
         Some(SDiscriminator(discriminatorName, discriminatorMapping))
