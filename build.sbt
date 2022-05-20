@@ -1442,7 +1442,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     opentelemetryMetrics,
     sttpMockServer,
-    zioJson
+    zioJson,
+    vertxServer
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))

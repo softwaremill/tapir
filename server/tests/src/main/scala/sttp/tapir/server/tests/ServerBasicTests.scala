@@ -384,6 +384,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       basicRequest.get(uri"$baseUri?flag").send(backend).map(_.body shouldBe Right("Some(true)")) >>
         basicRequest.get(uri"$baseUri?flag=false").send(backend).map(_.body shouldBe Right("Some(false)")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("None"))
+    },
+    testServer(in_query_out_string, "should contain the content-length header")((fruit: String) =>
+      pureResult(s"fruit: $fruit".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.contentLength shouldBe Some(13))
     }
   )
 
