@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.lambda
 
-import sttp.model.StatusCode
+import sttp.model.{HeaderNames, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
@@ -17,9 +17,9 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
     toRoute(List(se))
 
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
-    implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
+    implicit val bodyListener: BodyListener[F, LambdaResponseBody] = new AwsBodyListener[F]
 
-    val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
+    val interpreter = new ServerInterpreter[Any, F, LambdaResponseBody, NoStreams](
       FilterServerEndpoints(ses),
       new AwsRequestBody[F](),
       new AwsToResponseBody(awsServerOptions),
@@ -35,8 +35,19 @@ private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
           AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
         case RequestResult.Response(res) =>
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
-          val headers = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
-          AwsResponse(cookies, isBase64Encoded = awsServerOptions.encodeResponseBody, res.code.code, headers, res.body.getOrElse(""))
+          val baseHeaders = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
+          val allHeaders = res.body match {
+            case Some((_, Some(contentLength))) if res.contentLength.isEmpty =>
+              baseHeaders + (HeaderNames.ContentLength -> contentLength.toString)
+            case _ => baseHeaders
+          }
+          AwsResponse(
+            cookies,
+            isBase64Encoded = awsServerOptions.encodeResponseBody,
+            res.code.code,
+            allHeaders,
+            res.body.map(_._1).getOrElse("")
+          )
       }
     }
   }
