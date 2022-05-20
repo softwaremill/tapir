@@ -64,7 +64,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 Add the following dependency
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
-"com.softwaremill.sttp.shared" %% "fs2" % "LatestVersion"
+"com.softwaremill.sttp.shared" %% "fs2" % "MatchingSharedVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
 
@@ -147,7 +147,7 @@ Add the following dependency
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
-"com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
+"com.softwaremill.sttp.shared" %% "zio" % "MatchingSharedVersion"
 ```
 
 to use this interpreter with ZIO.
