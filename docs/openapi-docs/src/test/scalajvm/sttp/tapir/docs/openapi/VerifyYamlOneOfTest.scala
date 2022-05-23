@@ -14,8 +14,6 @@ import sttp.tapir.tests.ContentNegotiation
 import sttp.tapir.{
   Codec,
   CodecFormat,
-  Schema,
-  SchemaType,
   emptyOutput,
   endpoint,
   header,
