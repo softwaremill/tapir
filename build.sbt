@@ -106,7 +106,10 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
 
 val scalaTest = Def.setting("org.scalatest" %%% "scalatest" % Versions.scalaTest)
 val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaCheck)
-val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
+val scalaTestPlusScalaCheck = {
+  val scalaCheckSuffix = Versions.scalaCheck.split('.').take(2).mkString("-")
+  Def.setting("org.scalatestplus" %%% s"scalacheck-$scalaCheckSuffix" % Versions.scalaTestPlusScalaCheck)
+}
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.11",
