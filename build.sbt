@@ -147,6 +147,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
+  armeriaServerZio1.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
   sttpMockServer.projectRefs ++
@@ -947,6 +948,18 @@ lazy val armeriaServerZio: ProjectMatrix =
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(armeriaServer % CompileAndTest, zio, serverTests % Test)
 
+lazy val armeriaServerZio1: ProjectMatrix =
+  (projectMatrix in file("server/armeria-server/zio1"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-armeria-server-zio1",
+      libraryDependencies ++= Seq(
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zio1InteropReactiveStreams
+      )
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(armeriaServer % CompileAndTest, zio1, serverTests % Test)
+
 lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1503,6 +1516,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     armeriaServer,
     armeriaServerCats,
     armeriaServerZio,
+    armeriaServerZio1,
     circeJson,
     enumeratum,
     finatraServer,
