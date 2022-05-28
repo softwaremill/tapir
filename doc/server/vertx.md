@@ -146,7 +146,7 @@ val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse.serve
 Add the following dependency
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-vertx-server" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-zio" % "@VERSION@"
 ```
 
