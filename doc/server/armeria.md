@@ -191,7 +191,7 @@ object Main extends ZIOAppDefault {
       server.start().thenApply[Server](_ => server)
     }
 
-    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever).exitCode
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie) *> ZIO.never).exitCode
   }
 }
 ```
