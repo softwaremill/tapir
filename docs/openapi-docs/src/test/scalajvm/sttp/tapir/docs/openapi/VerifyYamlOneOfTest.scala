@@ -14,8 +14,6 @@ import sttp.tapir.tests.ContentNegotiation
 import sttp.tapir.{
   Codec,
   CodecFormat,
-  Schema,
-  SchemaType,
   emptyOutput,
   endpoint,
   header,
@@ -148,7 +146,4 @@ object VerifyYamlOneOfTest {
   case class NotFound(what: String) extends ErrorInfo
   case class Unauthorized(realm: String) extends ErrorInfo
   case class Unknown(code: Int, msg: String) extends ErrorInfo
-
-  // work-around for #10: unsupported sealed trait families
-  implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(Nil), Some(Schema.SName("ErrorInfo")))
 }
