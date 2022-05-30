@@ -20,7 +20,6 @@ val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
-val nativeScalaVersions = List(scala2_13)
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -107,7 +106,10 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
 
 val scalaTest = Def.setting("org.scalatest" %%% "scalatest" % Versions.scalaTest)
 val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaCheck)
-val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
+val scalaTestPlusScalaCheck = {
+  val scalaCheckSuffix = Versions.scalaCheck.split('.').take(2).mkString("-")
+  Def.setting("org.scalatestplus" %%% s"scalacheck-$scalaCheckSuffix" % Versions.scalaTestPlusScalaCheck)
+}
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.11",
@@ -317,7 +319,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.0")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.2")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -348,7 +350,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     )
   )
   .nativePlatform(
-    scalaVersions = nativeScalaVersions,
+    scalaVersions = scala2And3Versions,
     settings = {
       commonNativeSettings ++ Seq(
         libraryDependencies ++= Seq(
@@ -368,7 +370,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -662,7 +664,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     )
   )
   .nativePlatform(
-    scalaVersions = nativeScalaVersions,
+    scalaVersions = scala2And3Versions,
     settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
@@ -881,7 +883,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .dependsOn(core % CompileAndTest)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = nativeScalaVersions, settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
