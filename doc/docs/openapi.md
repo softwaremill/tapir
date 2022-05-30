@@ -59,7 +59,7 @@ To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
-"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "@VERSION@"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
