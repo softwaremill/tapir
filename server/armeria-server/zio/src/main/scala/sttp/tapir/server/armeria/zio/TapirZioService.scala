@@ -40,7 +40,7 @@ private[zio] final case class TapirZioService[R](
         armeriaServerOptions.deleteFile
       )
 
-    val serverRequest = new ArmeriaServerRequest(ctx)
+    val serverRequest = ArmeriaServerRequest(ctx)
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest).map(ResultMapping.toArmeria)
 
@@ -73,17 +73,17 @@ private object ZioStreamCompatible {
         runtime.unsafeRun(stream.mapChunks(c => Chunk.single(HttpData.wrap(c.toArray))).toPublisher)
 
       override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[Throwable, Byte] =
-        publisher.toStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
+        publisher.toZIOStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
     }
   }
 }
 
 private class RioFutureConversion[R](implicit ec: ExecutionContext, runtime: Runtime[R]) extends FutureConversion[RIO[R, *]] {
   def from[T](f: => Future[T]): RIO[R, T] = {
-    RIO.async { cb =>
+    ZIO.async { cb =>
       f.onComplete {
-        case Failure(exception) => cb(Task.fail(exception))
-        case Success(value)     => cb(Task.succeed(value))
+        case Failure(exception) => cb(ZIO.fail(exception))
+        case Success(value)     => cb(ZIO.succeed(value))
       }
     }
   }

@@ -10,7 +10,6 @@ import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
-import zio.test.ZSpec
 import zio.test._
 import zio.test.Assertion._
 
@@ -20,7 +19,7 @@ import scala.collection.immutable.Seq
 
 object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
-  def spec: ZSpec[TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Any] =
     suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling)
 
   type ResponseBodyType = String
@@ -69,7 +68,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO.succeed(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
+    ZIO.succeed(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 

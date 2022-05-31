@@ -61,24 +61,24 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .unsafeRunToFuture(for {
         ref <- Ref.make[List[Int]](Nil)
         completed <- Ref.make[Boolean](false)
-        _ <- Task.attempt {
+        _ <- ZIO.attempt {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- ZIO.attempt {
           readStream.endHandler { _ =>
             runtime.unsafeRunSync(completed.set(true))
             ()
           }
         }
-        _ <- Task.attempt(readStream.resume())
+        _ <- ZIO.attempt(readStream.resume())
         _ <- eventually(ref.get)({ case _ :: _ => () })
-        _ <- Task.attempt(readStream.pause())
+        _ <- ZIO.attempt(readStream.pause())
         _ <- ZIO.sleep(1.seconds)
         snapshot2 <- ref.get
-        _ <- Task.attempt(readStream.resume())
+        _ <- ZIO.attempt(readStream.resume())
         snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
         _ = shouldIncreaseMonotonously(snapshot3)
         _ <- eventually(completed.get)({ case true => () })
@@ -99,25 +99,25 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
         ref <- Ref.make[List[Int]](Nil)
         completedRef <- Ref.make[Boolean](false)
         interruptedRef <- Ref.make[Option[Throwable]](None)
-        _ <- Task.attempt {
+        _ <- ZIO.attempt {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- ZIO.attempt {
           readStream.endHandler { _ =>
             runtime.unsafeRunSync(completedRef.set(true))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- ZIO.attempt {
           readStream.exceptionHandler { cause =>
             runtime.unsafeRunSync(interruptedRef.set(Some(cause)))
             ()
           }
         }
-        _ <- Task.attempt(readStream.resume())
+        _ <- ZIO.attempt(readStream.resume())
         snapshot <- eventually(ref.get)({ case list => list.length should be > 3 })
         _ = shouldIncreaseMonotonously(snapshot)
         _ <- eventually(completedRef.get zip interruptedRef.get)({ case (false, Some(_)) =>

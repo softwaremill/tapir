@@ -14,7 +14,8 @@ import sttp.tapir.server.http4s.Http4sServerSentEvents
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.interop.catz._
-import zio.{Task, UIO}
+import zio.stream.ZStream
+import zio.{Task, ZIO}
 
 import java.util.UUID
 import scala.util.Random
@@ -35,7 +36,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       createServerTest.testServer(
         endpoint.out(serverSentEventsBody),
         "Send and receive SSE"
-      )((_: Unit) => UIO.right(zio.stream.Stream(sse1, sse2))) { (backend, baseUri) =>
+      )((_: Unit) => ZIO.right(ZStream(sse1, sse2))) { (backend, baseUri) =>
         basicRequest
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
@@ -54,7 +55,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
       new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
       new ServerWebSocketTests(createServerTest, ZioStreams) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
-        override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => zio.stream.Stream.empty
+        override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
       }.tests() ++
       additionalTests()
   }
