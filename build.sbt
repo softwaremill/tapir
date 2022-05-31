@@ -1123,7 +1123,7 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
@@ -1135,7 +1135,7 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
 lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio1"))
   .settings(commonJvmSettings)
@@ -1147,7 +1147,7 @@ lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
 lazy val zio1HttpServer: ProjectMatrix = (projectMatrix in file("server/zio1-http-server"))
   .settings(commonJvmSettings)

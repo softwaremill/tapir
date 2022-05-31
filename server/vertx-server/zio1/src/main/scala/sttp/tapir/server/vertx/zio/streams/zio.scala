@@ -1,18 +1,18 @@
-package sttp.tapir.server.vertx.zio.streams
+package sttp.tapir.server.vertx.zio
 
-import io.vertx.core.buffer.Buffer
-import io.vertx.core.streams.ReadStream
-import io.vertx.core.Handler
-import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.vertx.zio.streams.ReadStreamState._
 import _root_.zio._
 import _root_.zio.stream.{Stream, ZStream}
-import sttp.tapir.server.vertx.zio.VertxZioServerOptions
+import io.vertx.core.Handler
+import io.vertx.core.buffer.Buffer
+import io.vertx.core.streams.ReadStream
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.server.vertx.streams.ReadStreamState._
+import sttp.tapir.server.vertx.streams.{Queue, _}
 
 import scala.collection.immutable.{Queue => SQueue}
 import scala.language.postfixOps
 
-object zio {
+package object streams {
 
   implicit class DeferredOps[A](dfd: Promise[Nothing, A]) extends DeferredLike[UIO, A] {
     override def complete(a: A): UIO[Unit] =

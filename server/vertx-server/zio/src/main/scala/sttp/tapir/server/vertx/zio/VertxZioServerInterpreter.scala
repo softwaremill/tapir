@@ -14,7 +14,7 @@ import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBod
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, monadError}
-import sttp.tapir.server.vertx.zio.streams.zio._
+import sttp.tapir.server.vertx.zio.streams._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference

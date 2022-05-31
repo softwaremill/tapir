@@ -13,7 +13,7 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.zio.streams.zio._
+import sttp.tapir.server.vertx.zio.streams._
 import _root_.zio._
 import _root_.zio.blocking.Blocking
 import sttp.tapir.server.vertx.VertxBodyListener

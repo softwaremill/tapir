@@ -10,6 +10,7 @@ import _root_.zio.stream.ZStream
 import _root_.zio.Clock
 import sttp.capabilities.zio.ZioStreams
 import _root_.zio.{Runtime => ZIORuntime}
+import sttp.tapir.server.vertx.streams.FakeStream
 import sttp.tapir.server.vertx.zio.VertxZioServerOptions
 
 class ZStreamTest extends AsyncFlatSpec with Matchers {
@@ -56,7 +57,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .map(intAsBuffer)
       .flattenChunks
       .provideLayer(Clock.live)
-    val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
+    val readStream = zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunToFuture(for {
         ref <- Ref.make[List[Int]](Nil)
@@ -93,7 +94,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .map(intAsBuffer)
       .flattenChunks
       .provideLayer(Clock.live) ++ ZStream.fail(new Exception("!"))
-    val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
+    val readStream = zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunToFuture(for {
         ref <- Ref.make[List[Int]](Nil)
@@ -129,7 +130,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
+    val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
         resultFiber <- ZIO
@@ -160,7 +161,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 4)
     val count = 100
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
+    val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
         resultFiber <- ZIO
@@ -195,7 +196,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 4)
     val count = 50
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
+    val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
         resultFiber <- ZIO
