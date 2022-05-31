@@ -63,7 +63,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-cats-vertx-server" % "@VERSION@"
 "com.softwaremill.sttp.shared" %% "fs2" % "MatchingSharedVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
@@ -146,7 +146,7 @@ val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse.serve
 Add the following dependency
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-vertx-server" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-zio" % "@VERSION@"
 ```
 

@@ -26,6 +26,7 @@ interpreted as:
   * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
+  * [Vert.X](https://tapir.softwaremill.com/en/latest/server/vertx.html) `Router => Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
   * [Armeria](https://tapir.softwaremill.com/en/latest/server/armeria.html) `HttpServiceWithRoutes`
   * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
