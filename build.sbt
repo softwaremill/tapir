@@ -155,6 +155,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
+  vertxServerCats.projectRefs ++
   vertxServerZio.projectRefs ++
   vertxServerZio1.projectRefs ++
   nettyServer.projectRefs ++
@@ -1062,12 +1063,23 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
-      "io.vertx" % "vertx-web" % Versions.vertx,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+      "io.vertx" % "vertx-web" % Versions.vertx
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
+
+lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/cats-vertx"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-cats-vertx-server",
+    libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/zio-vertx"))
   .settings(commonJvmSettings)
@@ -1481,6 +1493,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpMockServer,
     zioJson,
     vertxServer,
+    vertxServerCats,
     vertxServerZio,
     vertxServerZio1
   )
@@ -1561,6 +1574,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     tethysJson,
     uPickleJson,
     vertxServer,
+    vertxServerCats,
     vertxServerZio,
     vertxServerZio1,
     zio,
