@@ -17,12 +17,13 @@ input and output parameters. An endpoint specification can be interpreted as:
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
-  * [Http4s](server/http4s.md) `HttpRoutes[F]`
-  * [Netty](server/netty.md)
+  * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
+  * [Netty](server/netty.md) (using `Future`s or cats-effect)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
-  * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
+  * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:

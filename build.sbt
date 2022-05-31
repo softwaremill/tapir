@@ -151,6 +151,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   armeriaServerZio.projectRefs ++
   armeriaServerZio1.projectRefs ++
   http4sServer.projectRefs ++
+  http4sServerZio1.projectRefs ++
+  http4sServerZio.projectRefs ++
   sttpStubServer.projectRefs ++
   sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
@@ -161,8 +163,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio.projectRefs ++
   vertxServerZio1.projectRefs ++
   nettyServer.projectRefs ++
-  zio1Http4sServer.projectRefs ++
-  zioHttp4sServer.projectRefs ++
+  nettyServerCats.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -982,6 +983,30 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, cats, serverTests % Test)
 
+lazy val http4sServerZio1: ProjectMatrix = (projectMatrix in file("server/http4s-server/zio1"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-http4s-server-zio1",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(zio1, http4sServer, serverTests % Test)
+
+lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-server/zio"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-http4s-server-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(zio, http4sServer, serverTests % Test)
+
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1029,7 +1054,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val finatraServerCats: ProjectMatrix =
-  (projectMatrix in file("server/finatra-server/finatra-server-cats"))
+  (projectMatrix in file("server/finatra-server/cats"))
     .settings(commonJvmSettings)
     .settings(name := "tapir-finatra-server-cats")
     .jvmPlatform(scalaVersions = scala2Versions)
@@ -1055,8 +1080,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.77.Final",
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+      "io.netty" % "netty-all" % "4.1.77.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1064,7 +1088,21 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
+lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-server/cats"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-netty-server-cats",
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % "4.1.77.Final",
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+    ) ++ loggerDependencies,
+    // needed because of https://github.com/coursier/coursier/issues/2016
+    useCoursier := false
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, nettyServer, cats, serverTests % Test)
+
+lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-vertx-server",
@@ -1075,65 +1113,41 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/cats-vertx"))
+lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-server/cats"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-cats-vertx-server",
+    name := "tapir-vertx-server-cats",
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
-lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/zio-vertx"))
+lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-vertx-server",
+    name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
-lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/zio1-vertx"))
+lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio1"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio1-vertx-server",
+    name := "tapir-vertx-server-zio1",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
-
-lazy val zio1Http4sServer: ProjectMatrix = (projectMatrix in file("server/zio1-http4s-server"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-zio1-http4s-server",
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(zio1, http4sServer, serverTests % Test)
-
-lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-zio-http4s-server",
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(zio, http4sServer, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
 
 lazy val zio1HttpServer: ProjectMatrix = (projectMatrix in file("server/zio1-http-server"))
   .settings(commonJvmSettings)
@@ -1482,6 +1496,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     akkaHttpServer,
     armeriaServer,
     http4sServer,
+    http4sServerZio,
     http4sClient,
     sttpClient,
     openapiDocs,
@@ -1489,9 +1504,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiBundle,
     redocBundle,
-    zioHttp4sServer,
     zioHttpServer,
     nettyServer,
+    nettyServerCats,
     sttpStubServer,
     playJson,
     prometheusMetrics,
@@ -1500,8 +1515,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioJson,
     vertxServer,
     vertxServerCats,
-    vertxServerZio,
-    vertxServerZio1
+    vertxServerZio
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
@@ -1574,6 +1588,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     playServer,
     sprayJson,
     http4sClient,
+    http4sServerZio,
     sttpClient,
     playClient,
     sttpStubServer,
@@ -1582,9 +1597,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     vertxServerCats,
     vertxServerZio,
-    vertxServerZio1,
     zio,
-    zioHttp4sServer,
     zioHttpServer,
     derevo,
     zioJson,

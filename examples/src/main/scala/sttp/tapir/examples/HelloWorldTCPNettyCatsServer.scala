@@ -3,10 +3,11 @@ package sttp.tapir.examples
 import cats.effect.IO
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.{NettyCatsServer, NettyCatsServerBinding, NettyServerType}
+import sttp.tapir.server.netty.NettyServerType
 import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 import cats.effect.unsafe.implicits.global
 import sttp.tapir.server.netty.NettyServerType._
+import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
 
 object HelloWorldTCPNettyCatsServer extends App {
   // One endpoint on GET /hello with query parameter `name`
