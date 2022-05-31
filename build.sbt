@@ -1506,6 +1506,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     redocBundle,
     zioHttpServer,
     nettyServer,
+    nettyServerCats,
     sttpStubServer,
     playJson,
     prometheusMetrics,
