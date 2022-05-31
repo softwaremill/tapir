@@ -1030,7 +1030,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val finatraServerCats: ProjectMatrix =
-  (projectMatrix in file("server/finatra-server/finatra-server-cats"))
+  (projectMatrix in file("server/finatra-server/cats"))
     .settings(commonJvmSettings)
     .settings(name := "tapir-finatra-server-cats")
     .jvmPlatform(scalaVersions = scala2Versions)
