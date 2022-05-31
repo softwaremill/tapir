@@ -1111,10 +1111,10 @@ lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-s
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
 
-lazy val zio1Http4sServer: ProjectMatrix = (projectMatrix in file("server/zio1-http4s-server"))
+lazy val zio1Http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server/zio1"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio1-http4s-server",
+    name := "tapir-http4s-server-zio1",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
@@ -1123,10 +1123,10 @@ lazy val zio1Http4sServer: ProjectMatrix = (projectMatrix in file("server/zio1-h
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio1, http4sServer, serverTests % Test)
 
-lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
+lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server/zio"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-http4s-server",
+    name := "tapir-http4s-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
