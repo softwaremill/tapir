@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.cats
 
 import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher

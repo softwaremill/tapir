@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.cats
 
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup

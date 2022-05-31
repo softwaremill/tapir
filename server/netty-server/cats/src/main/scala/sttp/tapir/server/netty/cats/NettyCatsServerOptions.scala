@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty
+package sttp.tapir.server.netty.cats
 
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
