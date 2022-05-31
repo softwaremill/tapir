@@ -13,7 +13,7 @@ package object handlers {
 
   private[vertx] lazy val multipartHandler: Handler[RoutingContext] = { rc =>
     rc.request.setExpectMultipart(true)
-    rc.next()
+    bodyHandler.handle(rc)
   }
 
   private[vertx] lazy val streamPauseHandler: Handler[RoutingContext] = { rc =>
@@ -30,9 +30,7 @@ package object handlers {
     }
 
     bodyType.headOption match {
-      case Some(MultipartBody(_, _)) =>
-        route.handler(multipartHandler)
-        route.handler(bodyHandler)
+      case Some(MultipartBody(_, _))                   => route.handler(multipartHandler)
       case Some(_: EndpointIO.StreamBodyWrapper[_, _]) => route.handler(streamPauseHandler)
       case Some(_)                                     => route.handler(bodyHandler)
       case None                                        => ()
