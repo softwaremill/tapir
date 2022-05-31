@@ -15,6 +15,7 @@
 * the http4s server interpreters have only one effect parameter, instead of two (`F` for the general effect and `G` for the body effect). This separation stopped making sense with the introduction of `BodyListener` some time ago and keeping `ServerInterpreter` using a single effect.
 * the Swagger and Redoc UIs by default use relative paths for yaml/json documentation references and for redirects. This can be changed by passing appropriate options.
 * OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.tapir.apispec.(...)`
+* The `streamBinaryBody` method now has a mandatory `format` parameter, which previously was fixed to be `CodecFormat.OctetStream()`
 
 ### Moved traits, classes, objects
 

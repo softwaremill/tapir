@@ -49,9 +49,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBinaryBody(TestStreams)): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBinaryBody(TestStreams))
+      .in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .in(path[Int]): PublicEndpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -64,9 +64,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBinaryBody(TestStreams)): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBinaryBody(TestStreams))
+      .out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .out(header[Int]("h1")): PublicEndpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 

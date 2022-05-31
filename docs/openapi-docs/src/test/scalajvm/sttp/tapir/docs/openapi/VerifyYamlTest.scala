@@ -104,7 +104,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
   val streaming_endpoint: Endpoint[Unit, Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
     .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
-    .out(streamBinaryBody(TestStreams))
+    .out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = load("expected_streaming.yml")

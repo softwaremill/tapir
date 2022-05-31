@@ -115,15 +115,16 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default, but can be later
-    * overridden by providing a custom `Content-Type` header value.
+  /** Creates a stream body with a binary schema.
+    * @param format
+    *   The media type to use by default. Can be later overridden by providing a custom `Content-Type` header.
     * @param s
     *   A supported streams implementation.
     */
   def streamBinaryBody[S](
       s: Streams[S]
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None, Nil)
+  )(format: CodecFormat): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, Schema.binary), EndpointIO.Info.empty, None, Nil)
 
   /** Creates a stream body with a text schema.
     * @param s
