@@ -154,8 +154,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset, Nil)
 
-  // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
-  // while the third one (S) can be inferred.
+  // the intermediate class is needed so that the S type parameter can be inferred
   final class WebSocketBodyBuilder[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat] {
     def apply[S](
         s: Streams[S]
