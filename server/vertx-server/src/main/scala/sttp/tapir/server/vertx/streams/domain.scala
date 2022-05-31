@@ -5,14 +5,14 @@ import io.vertx.core.Handler
 
 import scala.collection.immutable.{Queue => SQueue}
 
-private[streams] trait DeferredLike[F[_], A] {
+private[vertx] trait DeferredLike[F[_], A] {
 
   def complete(a: A): F[Unit]
 
   def get: F[A]
 }
 
-private[streams] sealed trait Queue[F[_], A] {
+private[vertx] sealed trait Queue[F[_], A] {
   def size: Int
 
   def enqueue(a: A): (Queue[F, A], Option[F[Unit]])
@@ -20,7 +20,7 @@ private[streams] sealed trait Queue[F[_], A] {
   def dequeue(dfd: DeferredLike[F, A]): (Queue[F, A], Either[DeferredLike[F, A], A])
 }
 
-private[streams] final case class Queued[F[_], A](queue: SQueue[A]) extends Queue[F, A] {
+private[vertx] final case class Queued[F[_], A](queue: SQueue[A]) extends Queue[F, A] {
   override def size: Int =
     queue.size
 
@@ -36,7 +36,7 @@ private[streams] final case class Queued[F[_], A](queue: SQueue[A]) extends Queu
     }
 }
 
-private[streams] final case class Empty[F[_], A](dfd: DeferredLike[F, A]) extends Queue[F, A] {
+private[vertx] final case class Empty[F[_], A](dfd: DeferredLike[F, A]) extends Queue[F, A] {
   override def size: Int =
     -1
 
@@ -47,18 +47,18 @@ private[streams] final case class Empty[F[_], A](dfd: DeferredLike[F, A]) extend
     (this, Left(dfd))
 }
 
-private[streams] sealed trait ActivationEvent
-private[streams] case object Pause extends ActivationEvent
-private[streams] case object Resume extends ActivationEvent
+private[vertx] sealed trait ActivationEvent
+private[vertx] case object Pause extends ActivationEvent
+private[vertx] case object Resume extends ActivationEvent
 
-private[streams] object ReadStreamState {
+private[vertx] object ReadStreamState {
   type WrappedBuffer[C] = Either[Option[Throwable], C]
   type WrappedEvent = Option[ActivationEvent]
 }
 
 import ReadStreamState._
 
-private[streams] final case class ReadStreamState[F[_], C](
+private[vertx] final case class ReadStreamState[F[_], C](
     buffers: Queue[F, WrappedBuffer[C]],
     activationEvents: Queue[F, WrappedEvent]
 ) { self =>
@@ -104,14 +104,14 @@ private[streams] final case class ReadStreamState[F[_], C](
   }
 }
 
-private[streams] final case class StreamState[F[_]](
+private[vertx] final case class StreamState[F[_]](
     paused: Option[DeferredLike[F, Unit]],
     handler: Handler[Buffer],
     errorHandler: Handler[Throwable],
     endHandler: Handler[Void]
 )
 
-private[streams] object StreamState {
+private[vertx] object StreamState {
   def empty[F[_]](promise: DeferredLike[F, Unit]) = StreamState(
     Some(promise),
     (_: Buffer) => (),

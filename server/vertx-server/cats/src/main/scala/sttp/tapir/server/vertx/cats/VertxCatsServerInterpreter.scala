@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.cats
 
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
@@ -12,13 +12,14 @@ import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
+import sttp.tapir.server.vertx.VertxBodyListener
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
+import sttp.tapir.server.vertx.cats.streams.fs2.fs2ReadStreamCompatible
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -108,7 +109,7 @@ object VertxCatsServerInterpreter {
     }
   }
 
-  private[vertx] def monadError[F[_]](implicit F: Sync[F]): MonadError[F] = new MonadError[F] {
+  private[cats] def monadError[F[_]](implicit F: Sync[F]): MonadError[F] = new MonadError[F] {
     override def unit[T](t: T): F[T] = F.pure(t)
     override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
     override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
@@ -120,7 +121,7 @@ object VertxCatsServerInterpreter {
     override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guaranteeCase(f)(_ => e)
   }
 
-  private[vertx] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
+  private[cats] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
     def apply[T](f: => Future[T]): F[T] = f.asF
   }
 

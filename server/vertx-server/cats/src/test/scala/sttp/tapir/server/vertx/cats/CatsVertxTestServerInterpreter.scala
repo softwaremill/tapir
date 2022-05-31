@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.cats
 
 import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher
@@ -9,7 +9,7 @@ import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.Port
 
 class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])

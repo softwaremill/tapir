@@ -69,7 +69,7 @@ to use this interpreter with Cats Effect typeclasses.
 
 Then import the object:
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter._
 ```
 
 This object contains the `route[F[_]](e: ServerEndpoint[Fs2Streams[F], F])` method, which returns a function `Router => Route` that will create a route, with a handler attached, matching the endpoint definition. Errors will be recovered automatically.
@@ -82,8 +82,8 @@ import cats.effect.std.Dispatcher
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter._
 
 object App extends IOApp {
   val responseEndpoint: PublicEndpoint[String, Unit, String, Any] =
@@ -125,7 +125,7 @@ import cats.effect.std.Dispatcher
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter
 
 val streamedResponse =
   endpoint

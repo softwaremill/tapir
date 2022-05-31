@@ -1,12 +1,13 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.cats
 
 import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
 import io.vertx.core.logging.{Logger, LoggerFactory}
-import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.vertx.VertxServerOptions
+import sttp.tapir.{Defaults, TapirFile}
 
 final case class VertxCatsServerOptions[F[_]](
     dispatcher: Dispatcher[F],

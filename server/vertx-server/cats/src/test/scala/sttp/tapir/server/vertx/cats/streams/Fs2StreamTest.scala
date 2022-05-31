@@ -1,18 +1,17 @@
-package sttp.tapir.server.vertx.streams
+package sttp.tapir.server.vertx.cats.streams
 
 import _root_.fs2.{Chunk, Stream}
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.implicits.global
-import cats.effect.{Deferred, IO, Outcome, Ref, Temporal}
-import cats.syntax.flatMap._
+import cats.effect._
 import cats.syntax.option._
 import io.vertx.core.buffer.Buffer
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.Retries
-import org.scalatest.flatspec.{AnyFlatSpec, AsyncFlatSpec}
+import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.tagobjects.Retryable
-import sttp.tapir.server.vertx.VertxCatsServerOptions
+import sttp.tapir.server.vertx.cats.{VertxCatsServerOptions, streams}
+import sttp.tapir.server.vertx.streams.FakeStream
 
 import java.nio.ByteBuffer
 import scala.concurrent.duration._
@@ -81,7 +80,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
       dfd <- Deferred[IO, Either[Throwable, Unit]]
-      readStream = fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream.interruptWhen(dfd))
+      readStream = streams.fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream.interruptWhen(dfd))
       completed <- Ref[IO].of(false)
       _ <- IO.delay {
         readStream.handler { buffer =>
@@ -114,7 +113,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
         Temporal[IO].sleep(100.millis).as(((intAsBuffer(num), num + 1)).some)
       }
     }) // .interruptAfter(2.seconds)
-    val readStream = fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream)
+    val readStream = streams.fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream)
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
       completedRef <- Ref[IO].of(false)
@@ -149,7 +148,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO](opts)(implicitly).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](opts)(implicitly).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -175,7 +174,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
   it should "drain read stream with small buffer" in {
     val count = 100
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -206,7 +205,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     val ex = new Exception("!")
     val count = 50
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)

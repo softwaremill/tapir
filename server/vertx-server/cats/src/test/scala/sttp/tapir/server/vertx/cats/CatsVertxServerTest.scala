@@ -1,11 +1,11 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.cats
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
-import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 
 class CatsVertxServerTest extends TestSuite {

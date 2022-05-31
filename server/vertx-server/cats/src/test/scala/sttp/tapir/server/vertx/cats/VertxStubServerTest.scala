@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.cats
 
 import cats.effect.IO
 import cats.effect.std.Dispatcher

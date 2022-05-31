@@ -1,16 +1,17 @@
-package sttp.tapir.server.vertx.streams
+package sttp.tapir.server.vertx.cats.streams
 
 import _root_.fs2.{Chunk, Stream}
 import cats.effect.kernel.Async
-import cats.effect.kernel.Resource.ExitCase._
+import cats.effect.kernel.Resource.ExitCase.{Canceled, Errored, Succeeded}
 import cats.effect.{Deferred, Ref}
 import cats.syntax.all._
 import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.server.vertx.VertxCatsServerOptions
-import sttp.tapir.server.vertx.streams.ReadStreamState._
+import sttp.tapir.server.vertx.cats.VertxCatsServerOptions
+import sttp.tapir.server.vertx.streams.ReadStreamState.{WrappedBuffer, WrappedEvent}
+import sttp.tapir.server.vertx.streams._
 
 import scala.collection.immutable.{Queue => SQueue}
 
