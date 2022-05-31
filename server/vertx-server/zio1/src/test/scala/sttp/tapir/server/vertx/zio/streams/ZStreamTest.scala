@@ -1,16 +1,16 @@
-package sttp.tapir.server.vertx.streams
+package sttp.tapir.server.vertx.zio.streams
 
 import java.nio.ByteBuffer
 import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import _root_.zio._
-import _root_.zio.durationInt
+import _root_.zio.duration._
 import _root_.zio.stream.ZStream
-import _root_.zio.Clock
+import _root_.zio.clock.Clock
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.vertx.VertxZioServerOptions
 import _root_.zio.{Runtime => ZIORuntime}
+import sttp.tapir.server.vertx.zio.VertxZioServerOptions
 
 class ZStreamTest extends AsyncFlatSpec with Matchers {
 
@@ -46,7 +46,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
   val schedule = (Schedule.spaced(50.millis) >>> Schedule.elapsed).whileOutput(_ < 15.seconds)
 
   def eventually[A](task: Task[A])(cond: PartialFunction[A, Unit]): Task[A] =
-    task.tap(a => ZIO.attempt(cond(a))).retry(schedule).provideSomeLayer(Clock.live)
+    task.tap(a => ZIO.effect(cond(a))).retry(schedule).provideLayer(Clock.live)
 
   "ZioReadStreamCompatible" should "convert zio stream to read stream" in {
     val stream: ZioStreams.BinaryStream = ZStream
@@ -61,24 +61,24 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .unsafeRunToFuture(for {
         ref <- Ref.make[List[Int]](Nil)
         completed <- Ref.make[Boolean](false)
-        _ <- Task.attempt {
+        _ <- Task.effect {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- Task.effect {
           readStream.endHandler { _ =>
             runtime.unsafeRunSync(completed.set(true))
             ()
           }
         }
-        _ <- Task.attempt(readStream.resume())
+        _ <- Task.effect(readStream.resume())
         _ <- eventually(ref.get)({ case _ :: _ => () })
-        _ <- Task.attempt(readStream.pause())
+        _ <- Task.effect(readStream.pause())
         _ <- ZIO.sleep(1.seconds)
         snapshot2 <- ref.get
-        _ <- Task.attempt(readStream.resume())
+        _ <- Task.effect(readStream.resume())
         snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
         _ = shouldIncreaseMonotonously(snapshot3)
         _ <- eventually(completed.get)({ case true => () })
@@ -99,25 +99,25 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
         ref <- Ref.make[List[Int]](Nil)
         completedRef <- Ref.make[Boolean](false)
         interruptedRef <- Ref.make[Option[Throwable]](None)
-        _ <- Task.attempt {
+        _ <- Task.effect {
           readStream.handler { buffer =>
             runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- Task.effect {
           readStream.endHandler { _ =>
             runtime.unsafeRunSync(completedRef.set(true))
             ()
           }
         }
-        _ <- Task.attempt {
+        _ <- Task.effect {
           readStream.exceptionHandler { cause =>
             runtime.unsafeRunSync(interruptedRef.set(Some(cause)))
             ()
           }
         }
-        _ <- Task.attempt(readStream.resume())
+        _ <- Task.effect(readStream.resume())
         snapshot <- eventually(ref.get)({ case list => list.length should be > 3 })
         _ = shouldIncreaseMonotonously(snapshot)
         _ <- eventually(completedRef.get zip interruptedRef.get)({ case (false, Some(_)) =>
@@ -132,15 +132,13 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .toIterator
-              .map(_.toList)
-          )
+        resultFiber <- stream
+          .mapChunks((chunkAsInt _).andThen(Chunk.single))
+          .toIterator
+          .map(_.toList)
+          .useNow
           .fork
-        _ <- ZIO.attempt {
+        _ <- ZIO.effect {
           (1 to count).foreach { i =>
             readStream.handle(intAsVertxBuffer(i))
           }
@@ -163,17 +161,15 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .mapZIO(i => ZIO.sleep(50.millis).as(i))
-              .toIterator
-              .map(_.toList)
-          )
+        resultFiber <- stream
+          .mapChunks((chunkAsInt _).andThen(Chunk.single))
+          .mapM(i => ZIO.sleep(50.millis).as(i))
+          .toIterator
+          .map(_.toList)
+          .useNow
           .fork
         _ <- ZIO
-          .attempt({
+          .effect({
             (1 to count).foreach { i =>
               Thread.sleep(25)
               readStream.handle(intAsVertxBuffer(i))
@@ -198,17 +194,15 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .mapZIO(i => ZIO.sleep(50.millis).as(i))
-              .toIterator
-              .map(_.toList)
-          )
+        resultFiber <- stream
+          .mapChunks((chunkAsInt _).andThen(Chunk.single))
+          .mapM(i => ZIO.sleep(50.millis).as(i))
+          .toIterator
+          .map(_.toList)
+          .useNow
           .fork
         _ <- ZIO
-          .attempt({
+          .effect({
             (1 to count).foreach { i =>
               Thread.sleep(25)
               readStream.handle(intAsVertxBuffer(i))

@@ -1,11 +1,12 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
-import zio.{RIO, URIO}
-import zio.blocking._
+import _root_.zio.{RIO, URIO}
+import _root_.zio.blocking._
+import sttp.tapir.server.vertx.VertxServerOptions
 
 final case class VertxZioServerOptions[F[_]](
     uploadDirectory: TapirFile,

@@ -1,8 +1,9 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task, URIO}
 

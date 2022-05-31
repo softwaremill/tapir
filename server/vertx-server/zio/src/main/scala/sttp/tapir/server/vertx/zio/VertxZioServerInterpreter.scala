@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler, Promise}
@@ -8,12 +8,13 @@ import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxZioServerInterpreter.{RioFromVFuture, monadError}
+import sttp.tapir.server.vertx.VertxBodyListener
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.zio._
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, monadError}
+import sttp.tapir.server.vertx.zio.streams.zio._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference

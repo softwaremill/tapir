@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -9,14 +9,16 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
-import zio.{Runtime, Task}
+import _root_.zio.{Has, RIO, Runtime}
+import _root_.zio.blocking.Blocking
+import sttp.tapir.server.vertx.VertxTestServerInterpreter
 
 class ZioVertxTestServerInterpreter(vertx: Vertx)
-    extends TestServerInterpreter[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route] {
+    extends TestServerInterpreter[RIO[Blocking, *], ZioStreams, VertxZioServerOptions[RIO[Blocking, *]], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = { router =>
-    val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customiseInterceptors).options
+  override def route(es: List[ServerEndpoint[ZioStreams, RIO[Blocking, *]]], interceptors: Interceptors): Router => Route = { router =>
+    val options: VertxZioServerOptions[RIO[Blocking, *]] = interceptors(VertxZioServerOptions.customiseInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
     es.map(interpreter.route(_)(runtime)(router)).last
   }
@@ -30,5 +32,5 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
 }
 
 object ZioVertxTestServerInterpreter {
-  implicit val runtime: Runtime[Any] = Runtime.default
+  implicit val runtime: Runtime[Blocking] = Runtime.default.as(Has(Blocking.Service.live))
 }

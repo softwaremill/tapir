@@ -155,7 +155,7 @@ to use this interpreter with ZIO.
 
 Then import the object:
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx.VertxZioServerInterpreter._
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter._
 ```
 
 This object contains method `def route(e: ServerEndpoint[ZioStreams, RIO[R, *]])` which returns a function `Router => Route` that will create a route matching the endpoint definition, and with the logic attached as a handler.
@@ -167,8 +167,8 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir.{plainBody, query}
 import sttp.tapir.ztapir._
-import sttp.tapir.server.vertx.VertxZioServerInterpreter
-import sttp.tapir.server.vertx.VertxZioServerInterpreter._
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter._
 import zio._
 
 object Short extends ZIOAppDefault {

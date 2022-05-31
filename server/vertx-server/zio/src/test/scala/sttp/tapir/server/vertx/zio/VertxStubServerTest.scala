@@ -1,11 +1,12 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
-import zio.stream.ZStream
-import zio.{Runtime, Task}
+import _root_.zio.stream.ZStream
+import _root_.zio.{Runtime, Task}
+import sttp.tapir.server.vertx.zio.{VertxZioServerInterpreter, VertxZioServerOptions}
 
 import scala.concurrent.Future
 

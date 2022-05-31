@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.zio
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
@@ -7,7 +7,8 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
-import zio.Task
+import _root_.zio.RIO
+import _root_.zio.blocking.Blocking
 
 class ZioVertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
@@ -15,11 +16,11 @@ class ZioVertxServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>
-      implicit val m: MonadError[Task] = VertxZioServerInterpreter.monadError
+      implicit val m: MonadError[RIO[Blocking, *]] = VertxZioServerInterpreter.monadError
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest =
         new DefaultCreateServerTest(backend, interpreter)
-          .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route]]
+          .asInstanceOf[DefaultCreateServerTest[RIO[Blocking, *], ZioStreams, VertxZioServerOptions[RIO[Blocking, *]], Router => Route]]
 
       new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false).tests() ++
         new ServerMultipartTests(
