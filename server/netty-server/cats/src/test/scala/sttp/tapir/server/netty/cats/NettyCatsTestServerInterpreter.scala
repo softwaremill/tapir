@@ -5,6 +5,7 @@ import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.netty.{NettyOptions, NettyOptionsBuilder, NettyServerType, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 

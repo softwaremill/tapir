@@ -4,7 +4,8 @@ import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
 import sttp.monad.MonadError
-import sttp.tapir.server.netty.internal.{CatsUtil, FutureUtil}
+import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.server.netty.internal.FutureUtil
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -13,7 +14,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
     backendResource.flatMap { backend =>
       Resource
         .make {
-          implicit val m: MonadError[IO] = new CatsUtil.CatsMonadError[IO]()
+          implicit val m: MonadError[IO] = new CatsMonadError[IO]()
           val eventLoopGroup = new NioEventLoopGroup()
 
           val interpreter = new NettyCatsTestServerInterpreter(eventLoopGroup, dispatcher)

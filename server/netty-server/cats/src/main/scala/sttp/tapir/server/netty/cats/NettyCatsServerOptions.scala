@@ -3,11 +3,10 @@ package sttp.tapir.server.netty.cats
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import com.typesafe.scalalogging.Logger
-import sttp.monad.MonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.server.netty.internal.CatsUtil.CatsMonadError
+import sttp.tapir.server.netty.{NettyDefaults, NettyOptions, NettyOptionsBuilder}
 import sttp.tapir.{Defaults, TapirFile}
 
 case class NettyCatsServerOptions[F[_]](
@@ -57,17 +56,13 @@ object NettyCatsServerOptions {
 
   private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
 
-  def defaultServerLog[F[_]: Async]: ServerLog[F] = {
-    implicit val monadError: MonadError[F] = new CatsMonadError[F]
-
-    DefaultServerLog(
-      doLogWhenReceived = debugLog(_, None),
-      doLogWhenHandled = debugLog[F],
-      doLogAllDecodeFailures = debugLog[F],
-      doLogExceptions = errorLog[F],
-      noLog = Async[F].pure(())
-    )
-  }
+  def defaultServerLog[F[_]: Async]: ServerLog[F] = DefaultServerLog(
+    doLogWhenReceived = debugLog(_, None),
+    doLogWhenHandled = debugLog[F],
+    doLogAllDecodeFailures = debugLog[F],
+    doLogExceptions = errorLog[F],
+    noLog = Async[F].pure(())
+  )
 
   private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): F[Unit] = Sync[F].delay {
     NettyDefaults.debugLog(log, msg, exOpt)
