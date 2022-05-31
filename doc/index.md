@@ -21,6 +21,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Netty](server/netty.md)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [Vert.X](server/vertx.md) `Router => Route`
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
   * [aws](server/aws.md) through Lambda/SAM/Terraform

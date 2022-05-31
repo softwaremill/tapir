@@ -16,6 +16,7 @@
 * the Swagger and Redoc UIs by default use relative paths for yaml/json documentation references and for redirects. This can be changed by passing appropriate options.
 * OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.tapir.apispec.(...)`
 * The `streamBinaryBody` method now has a mandatory `format` parameter, which previously was fixed to be `CodecFormat.OctetStream()`
+* server interpreters sources are now grouped based on the underlying server implementation (e.g. http4s, vertx), and then sub-directories contain effect integrations (e.g. cats, zio). The template for artifact naming is `tapir-<server>-server-<effect>`. E.g. `tapir-zio-http4s-server` became `tapir-http4s-server-zio1`
 
 ### Moved traits, classes, objects
 

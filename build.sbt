@@ -1064,7 +1064,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
+lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-vertx-server",
@@ -1075,36 +1075,36 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/cats-vertx"))
+lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-server/cats"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-cats-vertx-server",
+    name := "tapir-vertx-server-cats",
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
 
-lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/zio-vertx"))
+lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-vertx-server",
+    name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % "test->test;compile->compile", serverTests % Test)
 
-lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/zio1-vertx"))
+lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio1"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio1-vertx-server",
+    name := "tapir-vertx-server-zio1",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test
     )
   )
@@ -1500,8 +1500,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioJson,
     vertxServer,
     vertxServerCats,
-    vertxServerZio,
-    vertxServerZio1
+    vertxServerZio
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
@@ -1582,7 +1581,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     vertxServerCats,
     vertxServerZio,
-    vertxServerZio1,
     zio,
     zioHttp4sServer,
     zioHttpServer,
