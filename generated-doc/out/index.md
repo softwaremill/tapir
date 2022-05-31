@@ -17,12 +17,13 @@ input and output parameters. An endpoint specification can be interpreted as:
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
-  * [Http4s](server/http4s.md) `HttpRoutes[F]`
-  * [Netty](server/netty.md)
+  * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
+  * [Netty](server/netty.md) (using `Future`s or cats-effect)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
-  * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
+  * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
@@ -69,7 +70,7 @@ We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, t
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
-<span></span>
+<a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
 </div>
 
