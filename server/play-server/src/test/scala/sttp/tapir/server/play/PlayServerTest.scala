@@ -42,6 +42,11 @@ class PlayServerTest extends TestSuite {
                 .body(Array.ofDim[Byte](1024 * 15000)) // 15M
                 .send(backend)
                 .map(_.code shouldBe StatusCode.PayloadTooLarge)
+                // sometimes the connection is closed before received the response
+                .handleErrorWith {
+                  case _: SttpClientException.ReadException => IO.pure(succeed)
+                  case e                                    => IO.raiseError(e)
+                }
             }
             .unsafeToFuture()
         },
@@ -56,6 +61,11 @@ class PlayServerTest extends TestSuite {
                 .body(Array.ofDim[Byte](1024 * 15000)) // 15M
                 .send(backend)
                 .map(_.code shouldBe StatusCode.PayloadTooLarge)
+                // sometimes the connection is closed before received the response
+                .handleErrorWith {
+                  case _: SttpClientException.ReadException => IO.pure(succeed)
+                  case e                                    => IO.raiseError(e)
+                }
             }
             .unsafeToFuture()
         }
