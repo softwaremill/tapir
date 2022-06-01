@@ -1513,7 +1513,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioJson,
     vertxServer,
     vertxServerCats,
-    vertxServerZio
+    vertxServerZio,
+    finatraServer
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
