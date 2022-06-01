@@ -1,13 +1,4 @@
-# tapir, or Typed API descRiptions
-
-## Why tapir?
-
-* **type-safety**: compile-time guarantees, develop-time completions, read-time information
-* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
-* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
-* **observability**: leverage the metadata to report rich metrics and tracing information
-* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
-* **library, not a framework**: integrates with your stack
+# tapir: declarative, type-safe web endpoints library
 
 ## Intro
 
@@ -34,16 +25,28 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [OpenAPI](docs/openapi.md)
   * [AsyncAPI](docs/asyncapi.md)
 
-Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
-
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
+
+## Why tapir?
+
+* **type-safety**: compile-time guarantees, develop-time completions, read-time information
+* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
+* **observability**: leverage the metadata to report rich metrics and tracing information
+* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
+* **library, not a framework**: integrates with your stack
+
+## Availability
 
 Tapir is available:
 
 * all modules - Scala 2.12 and 2.13 on the JVM
-* selected modules (core; http4s, vertx, netty, aws servers; sttp and http4s clients; openapi; some js and datatype integrations) - Scala 3 on the JVM  
-* selected modules (aws server; sttp client; some js and datatype integrations) - Scala 2.12, 2.13 and 3 using Scala.JS.
+* selected modules - Scala 3 on the JVM  
+* selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
+* selected modules - Scala 2.12, 2.13 and 3 using Scala Native
+
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 ## Adopters
 
@@ -51,7 +54,7 @@ Is your company already using tapir? We're continually expanding the "adopters" 
 
 Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest.
 
-We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
+Thank you!
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.adobe.com" title="Adobe"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/adobe.png" alt="Adobe" width="160"/></a>
@@ -84,16 +87,16 @@ import io.circe.generic.auto._
 
 type Limit = Int
 type AuthToken = String
-case class BooksFromYear(genre: String, year: Int)
+case class BooksQuery(genre: String, year: Int)
 case class Book(title: String)
 
 
 // Define an endpoint
 
-val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksQuery])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -116,7 +119,7 @@ import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-def bookListingLogic(bfy: BooksFromYear,
+def bookListingLogic(bfy: BooksQuery,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
@@ -133,7 +136,7 @@ import sttp.client3._
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
-    .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
+    .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Other sttp projects
@@ -143,6 +146,8 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
 * sttp tapir: this project
 * [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+* [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
+* [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
 ## Sponsors
 
@@ -160,6 +165,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    quickstart
    examples
    goals
+   stability
 
 .. toctree::
    :maxdepth: 2

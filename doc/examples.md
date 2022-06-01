@@ -1,8 +1,8 @@
 # Examples
 
-The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) and [`examples3`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples3) sub-projects (the latter containing Scala 3-only code) contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
+The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) and [examples3](https://github.com/softwaremill/tapir/tree/master/examples3/src/main/scala/sttp/tapir/examples3) sub-projects (the latter containing Scala 3-only code) contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
 
-## Other examples
+## Third-party examples
 
 To see an example project using tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
 using tapir and http4s.
