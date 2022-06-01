@@ -5,7 +5,6 @@ import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, monadError}
@@ -14,9 +13,10 @@ import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBod
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.streams._
+import sttp.tapir.server.vertx.VertxBodyListener
+import sttp.tapir.ztapir.ZServerEndpoint
 import _root_.zio._
 import _root_.zio.blocking.Blocking
-import sttp.tapir.server.vertx.VertxBodyListener
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -26,7 +26,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
 
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
-  def route(e: ServerEndpoint[ZioStreams, RIO[R, *]])(implicit
+  def route(e: ZServerEndpoint[R, ZioStreams])(implicit
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
@@ -34,7 +34,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
   }
 
   private def endpointHandler(
-      e: ServerEndpoint[ZioStreams, RIO[R, *]]
+      e: ZServerEndpoint[R, ZioStreams]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]

@@ -1130,24 +1130,22 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
   .settings(
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, zio, serverTests % Test)
 
 lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio1"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-vertx-server-zio1",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared,
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, zio1, serverTests % Test)
 
 lazy val zio1HttpServer: ProjectMatrix = (projectMatrix in file("server/zio1-http-server"))
   .settings(commonJvmSettings)
