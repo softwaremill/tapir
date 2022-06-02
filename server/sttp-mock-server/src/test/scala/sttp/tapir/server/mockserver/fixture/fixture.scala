@@ -1,7 +1,9 @@
 package sttp.tapir.server.mockserver.fixture
 
-import io.circe.Codec
+import io.circe.{Codec, Printer}
 import io.circe.generic.semiauto.deriveCodec
+import sttp.tapir.json.circe.TapirJsonCirce
+
 import java.util.UUID
 
 case class CreatePersonCommand(name: String, age: Int)
@@ -32,4 +34,12 @@ case class OrderCreatedEvent(id: UUID)
 
 object OrderCreatedEvent {
   implicit val codec: Codec.AsObject[OrderCreatedEvent] = deriveCodec[OrderCreatedEvent]
+}
+
+object TapirJsonCirceWithoutDropNull extends TapirJsonCirce {
+  override def jsonPrinter: Printer = Printer.noSpaces.copy(dropNullValues = false)
+}
+
+object TapirJsonCirceWithDropNull extends TapirJsonCirce {
+  override def jsonPrinter: Printer = Printer.noSpaces.copy(dropNullValues = true)
 }

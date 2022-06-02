@@ -544,9 +544,134 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  it should "create expectation with explicit null" in {
+  it should "match json body without drop null" in {
+    import TapirJsonCirceWithoutDropNull._
+
     val sampleIn = CreateOrderCommand(name = "John", total = None)
-    val sampleErrorOut = ApiError(code = 1, message = "Invalid age")
+    val sampleErrorOut = ApiError(code = 1, message = "Invalid order")
+
+    val mockServerClient = mkMockServerClient {
+      SttpBackendStub.synchronous.whenRequestMatches { req =>
+        req.method == Method.PUT &&
+          req.uri == uri"$baseUri/mockserver/expectation" &&
+          requestBodyMatch(req) {
+            json"""{
+                    "httpRequest" : {
+                      "method": "PUT",
+                      "path": "/api/v1/order",
+                      "body" : {
+                        "json" : $sampleIn,
+                        "matchType": "STRICT",
+                        "type" : "JSON"
+                      },
+                      "headers": {
+                        "Content-Length": ["28"],
+                        "Content-Type": ["application/json"],
+                        "Accept-Encoding": ["gzip, deflate"]
+                      }
+                    },
+                    "httpResponse" : {
+                      "statusCode": 400,
+                      "headers": {
+                        "Content-Type": ["application/json"]
+                      },
+                      "body" : {
+                        "json" : $sampleErrorOut,
+                        "matchType": "STRICT",
+                        "type" : "JSON"
+                      }
+                    }
+                  }"""
+          }
+      } thenRespond {
+        Right(
+          json"""[
+                  {
+                    "id": "5d122dd6-ce49-4508-b045-a76d9887aec4",
+                    "priority": 0,
+                    "httpRequest" : {
+                      "method": "PUT",
+                      "path": "/api/v1/order",
+                      "body" : {
+                        "json" : $sampleIn,
+                        "matchType": "STRICT",
+                        "type" : "JSON"
+                      },
+                      "headers": {
+                        "Content-Length": ["28"],
+                        "Content-Type": ["application/json"],
+                        "Accept-Encoding": ["gzip, deflate"]
+                      }
+                    },
+                    "httpResponse" : {
+                      "statusCode": 400,
+                      "headers": {
+                        "Content-Type": ["application/json"]
+                      },
+                      "body" : $sampleErrorOut
+                    },
+                    "times": {
+                      "remainingTimes": 0,
+                      "unlimited": true
+                    },
+                    "timeToLive": {
+                      "timeUnit": "DAYS",
+                      "timeToLive": 0,
+                      "unlimited": true
+                    }
+                  }
+                ]""".noSpaces
+        )
+      }
+    }
+
+    val expectations = mockServerClient
+      .whenInputMatches(orderEndpoint)((), sampleIn)
+      .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
+
+    expectations should have size 1
+    println(expectations.head.httpRequest.path)
+    expectations.head shouldEqual Expectation(
+      id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
+      priority = 0,
+      httpRequest = ExpectationRequestDefinition(
+        method = Method.PUT,
+        path = Uri.unsafeParse(
+          "/api/v1/order"
+        ), // NOTE: uri interpolator produces different case class instance having the same string representation =(
+        body = Some(
+          ExpectationBodyDefinition.JsonBodyDefinition(
+            json = sampleIn.asJsonObject,
+            matchType = ExpectationBodyDefinition.JsonMatchType.Strict
+          )
+        ),
+        headers = Some(
+          Map(
+            HeaderNames.ContentLength -> List("28"),
+            HeaderNames.ContentType -> List("application/json"),
+            HeaderNames.AcceptEncoding -> List("gzip, deflate")
+          )
+        )
+      ),
+      httpResponse = ExpectationResponseDefinition(
+        statusCode = StatusCode.BadRequest,
+        body = Some(ExpectationBodyDefinition.RawJson(sampleErrorOut.asJsonObject)),
+        headers = Some(
+          Map(
+            HeaderNames.ContentType -> List("application/json")
+          )
+        )
+      ),
+      times = ExpectationTimes(unlimited = true, remainingTimes = Some(0)),
+      timeToLive = ExpectationTimeToLive(unlimited = true, timeToLive = Some(0), timeUnit = Some("DAYS"))
+    )
+  }
+
+  it should "match json body with drop null" in {
+    import TapirJsonCirceWithDropNull._
+
+    val sampleIn = CreateOrderCommand(name = "John", total = None)
+    val sampleErrorOut = ApiError(code = 1, message = "Invalid order")
 
     val mockServerClient = mkMockServerClient {
       SttpBackendStub.synchronous.whenRequestMatches { req =>
