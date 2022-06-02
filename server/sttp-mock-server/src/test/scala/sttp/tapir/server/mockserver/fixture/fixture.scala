@@ -21,3 +21,15 @@ case class ApiError(code: Int, message: String)
 object ApiError {
   implicit val codec: Codec.AsObject[ApiError] = deriveCodec[ApiError]
 }
+
+case class CreateOrderCommand(name: String, total: Option[Int])
+
+object CreateOrderCommand {
+  implicit val codec: Codec.AsObject[CreateOrderCommand] = deriveCodec[CreateOrderCommand]
+}
+
+case class OrderCreatedEvent(id: UUID)
+
+object OrderCreatedEvent {
+  implicit val codec: Codec.AsObject[OrderCreatedEvent] = deriveCodec[OrderCreatedEvent]
+}
