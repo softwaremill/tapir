@@ -1,4 +1,6 @@
-# tapir: declarative, type-safe web endpoints library
+# tapir
+
+Declarative, type-safe web endpoints library.
 
 ## Intro
 
@@ -155,7 +157,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
 [![](https://files.softwaremill.com/logo/logo.png "SoftwareMill")](https://softwaremill.com)
 
-# Table of contents
+## Table of contents
 
 ```eval_rst
 .. toctree::
@@ -164,7 +166,6 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    quickstart
    examples
-   goals
    stability
 
 .. toctree::
@@ -243,5 +244,6 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    mytapir
    troubleshooting
    migrating
+   goals
    contributing
 
