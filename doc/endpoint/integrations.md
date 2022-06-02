@@ -1,5 +1,13 @@
 # Datatypes integrations
 
+```eval_rst
+.. note::
+
+  Note that the codecs defined by the tapir integrations are used only when the specific types (e.g. enumerations0 are 
+  used at the top level. Any nested usages (e.g. as part of a json body), need to be separately configured to work with 
+  the used json library.
+```
+
 ## Cats datatypes integration
 
 The `tapir-cats` module contains additional instances for some [cats](https://typelevel.org/cats/)

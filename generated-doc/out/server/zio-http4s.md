@@ -9,13 +9,16 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.0.0-RC1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.0.0-RC2"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "1.0.0-RC1"
+// for zio 2:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.0.0-RC2"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "1.0.0-RC2"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):

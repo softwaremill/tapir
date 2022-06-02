@@ -4,20 +4,10 @@
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
-## Why tapir?
-
-* **type-safety**: compile-time guarantees, develop-time completions, read-time information
-* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
-* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
-* **observability**: leverage the metadata to report rich metrics and tracing information
-* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
-* **library, not a framework**: integrates with your stack
-
 ## Intro
 
-With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
-input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
-interpreted as:
+With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of
+input and output parameters. An endpoint specification can be interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
@@ -26,6 +16,7 @@ interpreted as:
   * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
+  * [Vert.X](https://tapir.softwaremill.com/en/latest/server/vertx.html) `Router => Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
   * [Armeria](https://tapir.softwaremill.com/en/latest/server/armeria.html) `HttpServiceWithRoutes`
   * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
@@ -38,13 +29,23 @@ interpreted as:
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
+Depending on how you prefer to explore the library, take a look at one of the [examples](https://tapir.softwaremill.com/en/latest/examples.html) 
+or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works!
+
+## Why tapir?
+
+* **type-safety**: compile-time guarantees, develop-time completions, read-time information
+* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
+* **observability**: leverage the metadata to report rich metrics and tracing information
+* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
+* **library, not a framework**: integrates with your stack
+
 ## Adopters
 
 Is your company already using tapir? We're continually expanding the "adopters" section in the documentation; the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
 
 Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest.
-
-We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
 
 ||||
 | :---: | :---: | :---: |       
@@ -63,16 +64,16 @@ import io.circe.generic.auto._
 
 type Limit = Int
 type AuthToken = String
-case class BooksFromYear(genre: String, year: Int)
+case class BooksQuery(genre: String, year: Int)
 case class Book(title: String)
 
 
 // Define an endpoint
 
-val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksQuery])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -95,7 +96,7 @@ import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-def bookListingLogic(bfy: BooksFromYear,
+def bookListingLogic(bfy: BooksQuery,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
@@ -112,7 +113,7 @@ import sttp.client3._
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
-    .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
+    .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Documentation
@@ -124,15 +125,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.0-RC1"
-```
-
-Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then 
-you'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type 
-arguments in some cases):
-
-```sbt
-scalacOptions += "-Ypartial-unification"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.0-RC2"
 ```
 
 Then, import:
@@ -143,7 +136,15 @@ import sttp.tapir._
 
 And finally, type `endpoint.` and see where auto-complete gets you!
 
----
+### Scala 2.12
+
+Partial unification is now enabled by default from Scala 2.13. However, if you're using Scala 2.12 or older, then
+you'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type
+arguments in some cases):
+
+```sbt
+scalacOptions += "-Ypartial-unification"
+```
 
 Sidenote for scala 2.12.4 and higher: if you encounter an issue with compiling your project because of 
 a `StackOverflowException` related to [this](https://github.com/scala/bug/issues/10604) scala bug, 
@@ -165,7 +166,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 
 ## Contributing
 
-Tapir is an early stage project. Everything might change. All suggestions welcome :)
+All suggestions welcome :)
 
 See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! Or report your own.
 

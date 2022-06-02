@@ -29,6 +29,7 @@ The following interceptors are used by default, and if enabled, called in this o
 
 * exception interceptor 
 * logging interceptor
+* unsupported media type interceptor
 * decode failure handler interceptor
 
 Note that while the request will be passed top-to-bottom, handling of the result will be done in opposite order. 
@@ -39,3 +40,10 @@ Using `customiseInterceptors` on the options companion object, it is possible to
 ones can be prepended to the interceptor stack using `.prependInterceptor`, added before the decode failure interceptor
 using `.addInterceptor`, or appended using `.appendInterceptor`. Customisation can include removing the interceptor 
 altogether.
+
+## Attributes
+
+When implementing interceptors, it might be useful to take advantage of attributes, which can be attached both to
+requests, as well as endpoint descriptions. Attributes are keyed using an `AttributeKey`. Typically, each attribute 
+corresponds to a unique type, and the key instance for that type can be created using `AttributeKey[T]`. The attribute 
+values then have to be of the given type `T`.

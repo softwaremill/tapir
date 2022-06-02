@@ -8,7 +8,7 @@ Armeria interpreter can be used with different effect systems (cats-effect, ZIO)
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.0.0-RC1"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.0.0-RC2"
 ```
 
 and import the object:
@@ -75,7 +75,7 @@ Note that Armeria automatically injects an `ExecutionContext` on top of Armeria'
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.0.0-RC1"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.0.0-RC2"
 ```
 to use this interpreter with Cats Effect typeclasses.
 
@@ -154,7 +154,10 @@ val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toService(streamingR
 Add the following dependency
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.0.0-RC1"
+// for zio 2:
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.0.0-RC2"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio1" % "1.0.0-RC2"
 ```
 
 to use this interpreter with ZIO.
@@ -190,7 +193,7 @@ object Main extends ZIOAppDefault {
       server.start().thenApply[Server](_ => server)
     }
 
-    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever).exitCode
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie) *> ZIO.never).exitCode
   }
 }
 ```

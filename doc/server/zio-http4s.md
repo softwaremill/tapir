@@ -15,7 +15,10 @@ You'll need the following dependency for the `ZServerEndpoint` type alias and he
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "@VERSION@"
+// for zio 2:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "@VERSION@"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "@VERSION@"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):

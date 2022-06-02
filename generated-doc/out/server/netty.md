@@ -1,11 +1,11 @@
 # Running as a Netty-based server
 
-*Warning! This is an early development module, with important features missing.*
+## Using `Future`
 
 To expose an endpoint using a [Netty](https://netty.io)-based server, first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.0-RC1"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.0-RC2"
 ```
 
 Then, use:
@@ -36,7 +36,7 @@ val binding: Future[NettyFutureServerBinding[TCP]] =
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-## Domain socket support
+### Domain socket support
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 
@@ -62,7 +62,7 @@ val serverBinding: Future[NettyFutureServerBinding[DomainSocket]] =
 ```
 
 
-## Configuration
+### Configuration
 
 The interpreter can be configured by providing an `NettyFutureServerOptions` value, see [server options](options.md) for 
 details.
@@ -70,3 +70,10 @@ details.
 Some options can be configured directly using a `NettyFutureServer` instance, such as the host and port. Others
 can be passed using the `NettyFutureServer(options)` methods. Options may also be overridden when adding endpoints.
 
+## Using cats-effect
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.0.0-RC2"
+```

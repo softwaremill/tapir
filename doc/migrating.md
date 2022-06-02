@@ -14,7 +14,6 @@
 * `RequestHandler`, returned by `RequestInterceptor`, now also accepts a list of server endpoints. This allows to dynamically filter the endpoints. Moreover, there's a new type parameter in `RequestInterceptor` and `RequestHandler`, `R`, specifying the capabilities required by the given server endpoints.
 * the http4s server interpreters have only one effect parameter, instead of two (`F` for the general effect and `G` for the body effect). This separation stopped making sense with the introduction of `BodyListener` some time ago and keeping `ServerInterpreter` using a single effect.
 * the Swagger and Redoc UIs by default use relative paths for yaml/json documentation references and for redirects. This can be changed by passing appropriate options.
-* OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.tapir.apispec.(...)`
 * The `streamBinaryBody` method now has a mandatory `format` parameter, which previously was fixed to be `CodecFormat.OctetStream()`
 
 ### Moved traits, classes, objects
@@ -24,6 +23,11 @@
 * metrics classes and interceptors have moved to the `sttp.tapir.server.metrics` package
 * `Endpoint.renderPathTemplate` is renamed to `Endpoint.showPathTemplate`
 * web socket exceptions `UnsupportedWebSocketFrameException` and `WebSocketFrameDecodeFailure` are now in the `sttp.tapir.model` package
+* OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.tapir.apispec.(...)`
+* server interpreters sources are now grouped based on the underlying server implementation (e.g. http4s, vertx), and then sub-directories contain effect integrations (e.g. cats, zio). Name templates:
+  * for artifacts: `tapir-<server>-server-<effect>`. E.g. `tapir-zio-http4s-server` became `tapir-http4s-server-zio1`
+  * for package names: `sttp.tapir.server.<server>.<effect>`
+  * for interpreters: `<server><effect>ServerInterpreter`
 
 ## From 0.19 to 0.20
 

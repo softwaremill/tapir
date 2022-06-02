@@ -11,7 +11,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.{AnyEndpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, noTrailingSlash}
 
 trait FinatraServerInterpreter extends Logging {
 
@@ -69,7 +69,14 @@ trait FinatraServerInterpreter extends Logging {
         case EndpointInput.PathsCapture(_, _)    => "/:*"
       }
       .mkString
-    if (p.isEmpty) "/:*" else p
+    if (p.isEmpty) "/:*"
+    // checking if there's an input which rejects trailing slashes; otherwise the default behavior is to accept them
+    else if (
+      input.traverseInputs {
+        case i if i == noTrailingSlash => Vector(())
+      }.isEmpty
+    ) p + "/?"
+    else p
   }
 
   private[finatra] def httpMethod(endpoint: AnyEndpoint): Method = endpoint.method.map(m => Method(m.method)).getOrElse(Method("ANY"))
