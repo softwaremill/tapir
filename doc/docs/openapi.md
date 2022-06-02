@@ -1,5 +1,11 @@
 # Generating OpenAPI documentation
 
+To expose documentation, endpoints first need to be interpreted into an OpenAPI yaml or json. Then, the generated
+description of our API can be exposed using a UI such as Swagger or Redoc.
+
+These two operations can be done in a single step, using the `SwaggerInterpreter` or `RedocInterpreter`. Or, if needed,
+these steps can be done separately, giving you complete control over the process.
+
 ## Generating and exposing documentation in a single step
 
 ### Using Swagger
@@ -10,9 +16,10 @@ To generate OpenAPI documentation and expose it using the Swagger UI in a single
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-RC2"
 ```
 
-Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
-The result - a list of file-serving endpoints - will be configured to use the yaml corresponding to the passed 
-endpoints. The swagger endpoints will need in turn to be interpreted using your server interpreter. For example:
+Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
+server endpoints, which use the yaml corresponding to the endpoints passed originally. These swagger endpoints, together
+with the endpoints for which the documentation is generated, will need in turn to be interpreted using your server 
+interpreter. For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -53,7 +60,7 @@ Similarly as above, you'll need the following dependency:
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
 
-## Generating OpenAPI documentation
+## Generating OpenAPI documentation separately
 
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
@@ -62,8 +69,8 @@ To generate the docs in the OpenAPI yaml format, add the following dependencies:
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
-Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
-model is independent from all other tapir modules and can be used stand-alone).
+The case-class based model of the openapi data structures is present in the [sttp-apispec](https://github.com/softwaremill/sttp-apispec) 
+project.
  
 An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.openapi.OpenAPIDocsInterpreter` 
 object:
@@ -121,6 +128,43 @@ import io.circe.syntax._
 import sttp.apispec.openapi.circe._
 
 println(Printer.spaces2.print(docs.asJson))
+```
+
+## Exposing generated OpenAPI documentation
+
+Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or
+[Redoc](https://github.com/Redocly/redoc). You can either both interpret endpoints to OpenAPI's yaml and expose
+them in a single step (see above), or you can do that separately.
+
+The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definitions, which given the documentation in
+yaml format, will expose it using the given context path. To use, add as a dependency either
+`tapir-swagger-ui`:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "@VERSION@"
+```
+
+or `tapir-redoc`:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "@VERSION@"
+```
+
+Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
+
+```scala mdoc:compile-only
+import sttp.apispec.openapi.circe.yaml._
+import sttp.tapir._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.swagger.SwaggerUI
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val myEndpoints: Seq[AnyEndpoint] = ???
+val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
+
+// add to your akka routes
+val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 
 ## Options
@@ -256,43 +300,6 @@ It's possible to hide an input/output from the OpenAPI description using followi
 import sttp.tapir._
 
 val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.hidden(true))
-```
-
-## Exposing generated OpenAPI documentation
-
-Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
-[Redoc](https://github.com/Redocly/redoc). You can either both interpret endpoints to OpenAPI's yaml and expose
-them in a single step (see above), or you can do that separately.
-
-The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definitions, which given the documentation in 
-yaml format, will expose it using the given context path. To use, add as a dependency either 
-`tapir-swagger-ui`:
-```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "@VERSION@"
-```
-
-or `tapir-redoc`:
-```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "@VERSION@"
-```
-
-Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
-
-```scala mdoc:compile-only
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir._
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import sttp.tapir.swagger.SwaggerUI
-
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-
-val myEndpoints: Seq[AnyEndpoint] = ???
-val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
-
-// add to your akka routes
-val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 
 ## Using SwaggerUI with sbt-assembly
