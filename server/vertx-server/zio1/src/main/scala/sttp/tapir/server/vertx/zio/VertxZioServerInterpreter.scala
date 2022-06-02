@@ -4,10 +4,9 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
-import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, monadError}
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}

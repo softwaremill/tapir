@@ -14,7 +14,7 @@ import scala.concurrent.Future
 object VertxZioCreateServerStubTest extends CreateServerStubTest[RIO[Blocking, *], VertxZioServerOptions[RIO[Blocking, *]]] {
   override def customiseInterceptors: CustomiseInterceptors[RIO[Blocking, *], VertxZioServerOptions[RIO[Blocking, *]]] =
     VertxZioServerOptions.customiseInterceptors
-  override def stub[R]: SttpBackendStub[RIO[Blocking, *], R] = SttpBackendStub(new RIOMonadError[R])
+  override def stub[R]: SttpBackendStub[RIO[Blocking, *], R] = SttpBackendStub(new RIOMonadError[Blocking])
   override def asFuture[A]: RIO[Blocking, A] => Future[A] = task => Runtime.default.unsafeRunToFuture(task)
 }
 
