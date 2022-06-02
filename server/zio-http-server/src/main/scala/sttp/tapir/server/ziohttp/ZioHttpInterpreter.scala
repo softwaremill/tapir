@@ -29,7 +29,7 @@ trait ZioHttpInterpreter[R] {
       zioHttpServerOptions.deleteFile
     )
 
-    Http.route[Request] { case req =>
+    Http.collectHttp[Request] { case req =>
       Http.fromZIO {
         interpreter
           .apply(ZioHttpServerRequest(req))
