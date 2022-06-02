@@ -180,7 +180,7 @@ object Short extends ZIOAppDefault {
       .in(query[String]("key"))
       .out(plainBody[String])
 
-  val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
+  val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => ZIO.succeed(key) })
 
   override def run = {
     ZIO.scoped(
