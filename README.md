@@ -40,7 +40,7 @@ or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) 
 * **observability**: leverage the metadata to report rich metrics and tracing information
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
 * **library, not a framework**: integrates with your stack
-* 
+
 ## Adopters
 
 Is your company already using tapir? We're continually expanding the "adopters" section in the documentation; the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
