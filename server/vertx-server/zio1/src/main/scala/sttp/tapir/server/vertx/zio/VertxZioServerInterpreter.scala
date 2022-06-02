@@ -14,7 +14,7 @@ import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFutur
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.streams._
 import sttp.tapir.server.vertx.VertxBodyListener
-import sttp.tapir.ztapir.ZServerEndpoint
+import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import _root_.zio._
 import _root_.zio.blocking.Blocking
 
@@ -37,6 +37,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
       e: ZServerEndpoint[R, ZioStreams]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
+    implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
@@ -114,18 +115,6 @@ object VertxZioServerInterpreter {
     new VertxZioServerInterpreter[R] {
       override def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = serverOptions
     }
-  }
-
-  private[vertx] implicit def monadError[R]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
-    override def unit[T](t: T): RIO[R, T] = Task.succeed(t)
-    override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
-    override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
-    override def error[T](t: Throwable): RIO[R, T] = Task.fail(t)
-    override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
-    override def eval[T](t: => T): RIO[R, T] = Task.effect(t)
-    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.effectSuspend(t)
-    override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
-    override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
   }
 
   private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {

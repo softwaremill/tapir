@@ -9,6 +9,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import _root_.zio.RIO
 import _root_.zio.blocking.Blocking
+import sttp.tapir.ztapir.RIOMonadError
 
 class ZioVertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
@@ -16,7 +17,7 @@ class ZioVertxServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>
-      implicit val m: MonadError[RIO[Blocking, *]] = VertxZioServerInterpreter.monadError
+      implicit val m: MonadError[RIO[Blocking, *]] = new RIOMonadError[Blocking]
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest =
         new DefaultCreateServerTest(backend, interpreter)
