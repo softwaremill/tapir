@@ -318,19 +318,19 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 
   /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]]. */
   object annotations {
-    class description(val text: String) extends StaticAnnotation
-    class encodedExample(val example: Any) extends StaticAnnotation
-    class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
-    class format(val format: String) extends StaticAnnotation
-    class deprecated extends StaticAnnotation
-    class hidden extends StaticAnnotation
-    class encodedName(val name: String) extends StaticAnnotation
+    class description(val text: String) extends StaticAnnotation with Serializable
+    class encodedExample(val example: Any) extends StaticAnnotation with Serializable
+    class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation with Serializable
+    class format(val format: String) extends StaticAnnotation with Serializable
+    class deprecated extends StaticAnnotation with Serializable
+    class hidden extends StaticAnnotation with Serializable
+    class encodedName(val name: String) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
       * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or
       * [[Option]]s, use [[validateEach]].
       */
-    class validate[T](val v: Validator[T]) extends StaticAnnotation
+    class validate[T](val v: Validator[T]) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validators to elements of the schema, when the annotated class or field is a collection or [[Option]]. The type of the
       * validator must match exactly the type of the collection's elements. This is not checked at compile-time, and might cause run-time
@@ -342,8 +342,8 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * )
       * }}}
       */
-    class validateEach[T](val v: Validator[T]) extends StaticAnnotation
-    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
+    class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
   }
 }
 
