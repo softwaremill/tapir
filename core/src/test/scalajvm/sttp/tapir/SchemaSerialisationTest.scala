@@ -6,7 +6,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.{validate, validateEach}
 import sttp.tapir.generic.auto._
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream}
+import java.io._
 
 class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
 
