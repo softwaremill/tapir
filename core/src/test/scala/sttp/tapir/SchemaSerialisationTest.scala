@@ -10,7 +10,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, 
 
 class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
 
-  case class Person(@validate(Validator.minLength(3)) name: String, @validateEach(Validator.min(18)) age: Option[Int])
+  case class Person(@validate(Validator.minLength(3): Validator[String]) name: String, @validateEach(Validator.min(18)) age: Option[Int])
   case class Family(person1: Person, person2: Person, others: List[Person])
 
   sealed trait Entity {
