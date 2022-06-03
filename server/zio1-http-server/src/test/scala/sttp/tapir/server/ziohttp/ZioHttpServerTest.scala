@@ -31,7 +31,7 @@ class ZioHttpServerTest extends TestSuite {
           Test("zio http route can be used as a function") {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
             val route = ZioHttpInterpreter().toHttp(ep)
-            val test: UIO[Assertion] = route(Request(url = URL.apply(Path.apply("p1"))))
+            val test: UIO[Assertion] = route(Request(url = URL.apply(Path.empty / "p1")))
               .flatMap(response => response.data.toByteBuf.map(_.toString(CharsetUtil.UTF_8)))
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
