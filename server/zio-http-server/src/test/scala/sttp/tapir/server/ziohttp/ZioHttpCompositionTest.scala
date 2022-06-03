@@ -1,13 +1,14 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
+import org.scalactic.source.Position.here
+import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
 import zhttp.http._
 import zio.{Task, ZIO}
-import org.scalatest.matchers.should.Matchers._
 
 class ZioHttpCompositionTest(
     createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
