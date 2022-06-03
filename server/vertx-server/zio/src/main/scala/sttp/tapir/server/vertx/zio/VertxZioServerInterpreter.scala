@@ -4,7 +4,6 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
-import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxBodyListener
@@ -12,9 +11,9 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, monadError}
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.server.vertx.zio.streams._
-import sttp.tapir.ztapir.ZServerEndpoint
+import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference
@@ -36,6 +35,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       e: ZServerEndpoint[R, ZioStreams]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
+    implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
@@ -54,16 +54,16 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
           .flatMap {
             case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
             case RequestResult.Response(response) =>
-              Task.async((k: Task[Unit] => Unit) => {
+              ZIO.async((k: Task[Unit] => Unit) => {
                 VertxOutputEncoders(response)
                   .apply(rc)
                   .onComplete(d => {
-                    if (d.succeeded()) k(Task.unit) else k(Task.fail(d.cause()))
+                    if (d.succeeded()) k(ZIO.unit) else k(ZIO.fail(d.cause()))
                   })
               })
           }
           .catchAll { ex =>
-            RIO.attempt({
+            ZIO.attempt({
               logger.error("Error while processing the request", ex)
               if (rc.response().bytesWritten() > 0) rc.response().end()
               rc.fail(ex)
@@ -113,30 +113,18 @@ object VertxZioServerInterpreter {
     }
   }
 
-  private[vertx] implicit def monadError[R]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
-    override def unit[T](t: T): RIO[R, T] = Task.succeed(t)
-    override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
-    override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
-    override def error[T](t: Throwable): RIO[R, T] = Task.fail(t)
-    override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
-    override def eval[T](t: => T): RIO[R, T] = Task.attempt(t)
-    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.suspend(t)
-    override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
-    override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
-  }
-
   private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {
     def apply[T](f: => Future[T]): RIO[R, T] = f.asRIO
   }
 
   implicit class VertxFutureToRIO[A](f: => Future[A]) {
     def asRIO[R]: RIO[R, A] = {
-      RIO.async { cb =>
+      ZIO.async { cb =>
         f.onComplete { handler =>
           if (handler.succeeded()) {
-            cb(Task.succeed(handler.result()))
+            cb(ZIO.succeed(handler.result()))
           } else {
-            cb(Task.fail(handler.cause()))
+            cb(ZIO.fail(handler.cause()))
           }
         }
       }

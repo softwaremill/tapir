@@ -9,10 +9,10 @@ import zio.stream._
 import java.nio.charset.Charset
 
 object ZioServerSentEventsTest extends ZIOSpecDefault {
-  def spec: ZSpec[TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Any] =
     suite("ZioServerSentEvents tests")(
       test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
-        val sse: Stream[Nothing, ServerSentEvent] = Stream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
+        val sse: Stream[Nothing, ServerSentEvent] = ZStream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
         val serialised = ZioServerSentEvents.serialiseSSEToBytes(sse)
         serialised.runCollect.map { sseEvents =>
           assert(sseEvents.toList)(equalTo(s"""data: data
@@ -24,7 +24,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
         }
       },
       test("serialiseSSEToBytes should omit fields that are not set") {
-        val sse = Stream(ServerSentEvent(Some("data"), None, Some("id1"), None))
+        val sse = ZStream(ServerSentEvent(Some("data"), None, Some("id1"), None))
         val serialised = ZioServerSentEvents.serialiseSSEToBytes(sse)
         serialised.runCollect.map { sseEvents =>
           assert(sseEvents.toList)(equalTo(s"""data: data
@@ -34,7 +34,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
         }
       },
       test("serialiseSSEToBytes should successfully serialise multiline data event") {
-        val sse = Stream(
+        val sse = ZStream(
           ServerSentEvent(
             Some("""some data info 1
                |some data info 2
@@ -54,7 +54,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
         }
       },
       test("parseBytesToSSE should successfully parse SSE bytes to SSE structure") {
-        val sseBytes = Stream.fromChunk(
+        val sseBytes = ZStream.fromChunk(
           Chunk.fromArray(
             """data: event1 data
           |event: event1

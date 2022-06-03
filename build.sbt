@@ -899,7 +899,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
     )
   )
   .dependsOn(tests, sttpStubServer)
@@ -1160,7 +1160,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC7")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC9")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1173,7 +1173,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1350,8 +1350,8 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %% "zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
       ),
@@ -1387,7 +1387,7 @@ lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-c
     scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "httpclient-backend-zio1" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %% "zio1" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
       )
     )

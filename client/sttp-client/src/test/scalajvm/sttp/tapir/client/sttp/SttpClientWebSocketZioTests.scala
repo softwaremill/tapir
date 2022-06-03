@@ -5,7 +5,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.client.sttp.ws.zio._
 import sttp.tapir.client.tests.ClientWebSocketTests
-import zio.stream.Stream
+import zio.stream.{Stream, ZStream}
 
 class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with ZioStreams] with ClientWebSocketTests[ZioStreams] {
   override val streams: ZioStreams = ZioStreams
@@ -19,7 +19,7 @@ class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with Zio
     IO.delay {
       zio.Runtime.default
         .unsafeRunToFuture(
-          Stream(as: _*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
+          ZStream(as: _*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
         )
         .future
     }

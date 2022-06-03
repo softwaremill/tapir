@@ -142,7 +142,7 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
 
 val serve: Task[Unit] =
   BlazeServerBuilder[Task]
-    .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
+    .withExecutionContext(runtime.executor.asExecutionContext)
     .bindHttp(8080, "localhost")
     .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
     .serve
@@ -164,14 +164,14 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
 import zio.{Task, ZIO}
-import zio.stream.Stream
+import zio.stream.{Stream, ZStream}
 
 val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] =
   endpoint.get.out(serverSentEventsBody)
 
 val routes: HttpRoutes[Task] =
   ZHttp4sServerInterpreter()
-    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(ZStream(ServerSentEvent(Some("data"), None, None, None)))))
     .toRoutes
 ```
 

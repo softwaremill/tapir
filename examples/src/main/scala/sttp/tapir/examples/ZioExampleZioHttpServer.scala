@@ -9,7 +9,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.{IO, Task, UIO, ZIO, ZIOAppDefault}
+import zio.{Task, ZIO, ZIOAppDefault}
 
 object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -29,9 +29,9 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[Any, Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
-      UIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
-      IO.fail("Unknown pet id")
+      ZIO.fail("Unknown pet id")
     }
   }
   val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))

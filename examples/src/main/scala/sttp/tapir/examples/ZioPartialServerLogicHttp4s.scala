@@ -54,7 +54,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 
       def assertEquals(at: Task[String], b: String): Task[Unit] =
         at.flatMap { a =>
-          if (a == b) Task.succeed(()) else Task.fail(new IllegalArgumentException(s"$a was not equal to $b"))
+          if (a == b) ZIO.succeed(()) else ZIO.fail(new IllegalArgumentException(s"$a was not equal to $b"))
         }
 
       assertEquals(testWith("hello1", "Hello", "secret"), "Hello, Spock!") *>
@@ -70,7 +70,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 
   override def run: URIO[Any, ExitCode] =
     BlazeServerBuilder[RIO[UserService, *]]
-      .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
+      .withExecutionContext(runtime.executor.asExecutionContext)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
       .resource
@@ -92,8 +92,8 @@ object UserAuthenticationLayer {
 
     val live: ZLayer[Any, Nothing, Service] = ZLayer.succeed(new Service {
       def auth(token: String): IO[Int, User] = {
-        if (token == "secret") IO.succeed(User("Spock"))
-        else IO.fail(AuthenticationErrorCode)
+        if (token == "secret") ZIO.succeed(User("Spock"))
+        else ZIO.fail(AuthenticationErrorCode)
       }
     })
 
