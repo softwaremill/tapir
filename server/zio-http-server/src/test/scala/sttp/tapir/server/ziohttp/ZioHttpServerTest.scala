@@ -16,8 +16,9 @@ class ZioHttpServerTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
-    (EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build.toResource[IO].map {
-      (nettyDeps: ZEnvironment[EventLoopGroup with ServerChannelFactory]) =>
+    Resource
+      .scoped[IO, Any, ZEnvironment[EventLoopGroup with ServerChannelFactory]]((EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build)
+      .map { nettyDeps =>
         val eventLoopGroup = nettyDeps.get[EventLoopGroup]
         val channelFactory = nettyDeps.get[ServerChannelFactory]
         val interpreter = new ZioHttpTestServerInterpreter(eventLoopGroup, channelFactory)
@@ -29,7 +30,6 @@ class ZioHttpServerTest extends TestSuite {
           createServerTest,
           interpreter,
           multipleValueHeaderSupport = false,
-          inputStreamSupport = true,
           supportsUrlEncodedPathSegments = false,
           supportsMultipleSetCookieHeaders = false,
           invulnerableToUnsanitizedHeaders = false
@@ -40,6 +40,6 @@ class ZioHttpServerTest extends TestSuite {
             .tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ZioHttpCompositionTest(createServerTest).tests()
-    }
+      }
   }
 }

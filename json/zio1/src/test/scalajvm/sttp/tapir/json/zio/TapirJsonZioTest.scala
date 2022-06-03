@@ -1,16 +1,15 @@
 package sttp.tapir.json.zio
 
-import sttp.tapir.generic.auto._
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
-import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
-import zio.json.{DeriveJsonCodec, JsonEncoder}
-import zio.json.ast.Json
+import sttp.tapir.generic.auto._
+import sttp.tapir.{DecodeResult, FieldName, Schema}
+import zio.json.DeriveJsonCodec
 
 class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
 
@@ -92,11 +91,5 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
 
   it should "return a coproduct schema for a JsonObject" in {
     schemaForZioJsonObject.schemaType shouldBe a[SProduct[_]]
-  }
-
-  it should "represent big decimals as numbers" in {
-    val n = BigDecimal(10)
-    implicitly[JsonEncoder[BigDecimal]].toJsonAST(n) shouldBe Right(Json.Num(10))
-    implicitly[Schema[BigDecimal]] shouldBe Schema(SchemaType.SNumber())
   }
 }

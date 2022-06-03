@@ -2,15 +2,17 @@ package sttp.tapir.server.stub
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.client3._
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
-import sttp.client3.{Identity, _}
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.interceptor.exception.ExceptionContext
-import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.exception.ExceptionHandler
+import sttp.tapir.server.interceptor.reject.RejectHandler
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.model.ValuedEndpointOutput
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -18,11 +20,11 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
   case class ServerOptions(interceptors: List[Interceptor[Identity]])
   object ServerOptions {
-    def customInterceptors: CustomInterceptors[Identity, ServerOptions] =
-      CustomInterceptors(createOptions = (ci: CustomInterceptors[Identity, ServerOptions]) => ServerOptions(ci.interceptors))
+    def customiseInterceptors: CustomiseInterceptors[Identity, ServerOptions] =
+      CustomiseInterceptors(createOptions = (ci: CustomiseInterceptors[Identity, ServerOptions]) => ServerOptions(ci.interceptors))
   }
 
-  val options: CustomInterceptors[Identity, ServerOptions] = ServerOptions.customInterceptors
+  val options: CustomiseInterceptors[Identity, ServerOptions] = ServerOptions.customiseInterceptors
 
   behavior of "TapirStubInterpreter"
 
@@ -108,11 +110,16 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
   }
 
   it should "use interceptors from server options" in {
+    val exceptionHandler =
+      ExceptionHandler.pure[Identity](_ => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
+
+    val rejectHandler =
+      RejectHandler.pure[Identity](_ => Some(ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
     // given
     val opts = options
       .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
-      .exceptionHandler((_: ExceptionContext) => Some(ValuedEndpointOutput(stringBody, "failed due to exception")))
-      .rejectHandler(DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
+      .exceptionHandler(exceptionHandler)
+      .rejectHandler(rejectHandler)
 
     val server = TapirStubInterpreter(opts, SttpBackendStub(IdMonad))
       .whenEndpoint(getProduct.in(query[Int]("id").validate(Validator.min(10))))
@@ -157,6 +164,26 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
       .send(server)
 
     ex.getMessage shouldBe "Stream body provided while endpoint accepts raw body type"
+  }
+
+  it should "allow overriding response parsing description created by sttp client interpreter to test exception handling" in {
+    // given
+    val se = endpoint.get.in("test").serverLogicSuccess[Identity](_ => throw new RuntimeException("Error"))
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenServerEndpoint(se)
+      .thenRunLogic()
+      .backend()
+
+    // when
+    val request = SttpClientInterpreter()
+      .toRequest(se.endpoint, None)
+      .apply(())
+      .response(asString)
+    val response = request.send(server)
+
+    // then
+    response.body shouldBe Left("Internal server error")
+    response.code shouldBe StatusCode.InternalServerError
   }
 }
 

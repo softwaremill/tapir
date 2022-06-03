@@ -109,12 +109,14 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify property of map value" in {
     Schema(
       SOpenProduct[Map[String, Unit], Unit](
+        Nil,
         Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X")))
       )(identity),
       Some(SName("Map", List("X")))
     )
       .modifyUnsafe[Int](Schema.ModifyCollectionElements)(_.description("test")) shouldBe Schema(
       SOpenProduct[Map[String, Unit], Unit](
+        Nil,
         Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X"))).description("test")
       )(identity),
       Some(SName("Map", List("X")))
@@ -125,6 +127,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     val openProductSchema =
       Schema(
         SOpenProduct[Map[String, Unit], Unit](
+          Nil,
           Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("X")))
         )(_ => Map.empty),
         Some(SName("Map", List("X")))
@@ -167,6 +170,33 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     )
 
     coproduct2.discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
+  }
+
+  it should "addDiscriminatorField should only add discriminator field to child schemas if not yet present" in {
+    val coproduct = SCoproduct[Unit](
+      List(
+        Schema(SProduct[Unit](List(field(FieldName("f0"), Schema(SString())))), Some(SName("H"))),
+        Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SString())))), Some(SName("G")))
+      ),
+      None
+    )(_ => None)
+
+    val coproduct2 = coproduct.addDiscriminatorField(FieldName("f0"))
+
+    coproduct2.subtypes shouldBe List(
+      Schema(SProduct[Unit](List(field(FieldName("f0"), Schema(SString())))), Some(SName("H"))),
+      Schema(
+        SProduct[Unit](
+          List(
+            field(FieldName("f1"), Schema(SString())),
+            field(FieldName("f0"), Schema(SString()))
+          )
+        ),
+        Some(SName("G"))
+      )
+    )
+
+    coproduct2.discriminator shouldBe Some(SDiscriminator(FieldName("f0"), Map.empty))
   }
 
   it should "propagate format for optional schemas" in {

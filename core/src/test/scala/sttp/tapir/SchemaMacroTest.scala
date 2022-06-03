@@ -6,7 +6,6 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.SchemaAnnotations
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.D
 import sttp.tapir.generic.auto._
@@ -43,7 +42,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(10))
+        )
       ),
       Some(name1)
     )
@@ -56,7 +58,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     val expectedNestedProduct =
       Schema(
         SProduct[Person](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(11)))
+          List(
+            field(FieldName("name"), Schema(SString())),
+            field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test").default(11))
+          )
         ),
         Some(name2)
       )
@@ -151,7 +156,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
           field(
             FieldName("v"),
             Schema(
-              SOpenProduct[Map[String, Person], Person](implicitly[Schema[Person]].description("test"))(identity),
+              SOpenProduct[Map[String, Person], Person](Nil, implicitly[Schema[Person]].description("test"))(identity),
               Some(SName("Map", List("Person")))
             )
           )
@@ -175,11 +180,11 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     // then
     schema shouldBe Schema(
-      SOpenProduct(implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
+      SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
       name = Some(SName("Map", List("V")))
     )
 
-    schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].fieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].mapFieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
   }
 
   it should "create a map schema with non-string keys" in {
@@ -192,11 +197,11 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     // then
     schema shouldBe Schema(
-      SOpenProduct(implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
+      SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
       name = Some(SName("Map", List("K", "V")))
     )
 
-    schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].fieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].mapFieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
   }
 
   it should "work with custom naming configuration" in {
@@ -256,12 +261,52 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
   }
 
+  it should "add the discriminator as a field when using oneOfUsingField" in {
+    val schema =
+      Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("user" -> Schema.derived[User], "org" -> Schema.derived[Organization])
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+
+    schemaType.discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("kind"),
+        Map(
+          "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+          "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
+        )
+      )
+    )
+
+    schemaType.subtypes.foreach { childSchema =>
+      val childProduct = childSchema.schemaType.asInstanceOf[SProduct[_]]
+      childProduct.fields.find(_.name.name == "kind") shouldBe Some(SProductField(FieldName("kind"), Schema.string, (_: Any) => None))
+    }
+  }
+
+  it should "create a schema using oneOfField given an enum extractor" in {
+    sealed trait YEnum
+    case object Y1 extends YEnum
+
+    sealed trait YConf {
+      def kind: YEnum
+    }
+    final case class Y1Conf(size: Int) extends YConf {
+      override def kind: YEnum = Y1
+    }
+
+    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum](encode = Some(_.toString))
+
+    implicit val yConfSchema: Schema[YConf] = {
+      val y1ConfSchema: Schema[Y1Conf] = Schema.derived[Y1Conf]
+      Schema.oneOfUsingField[YConf, YEnum](_.kind, _.toString)((Y1: YEnum) -> y1ConfSchema)
+    }
+  }
+
   behavior of "apply default"
 
   it should "add default to product" in {
     val expected = Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).default(34)))
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger(), format = Some("int32")).default(34)))
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
@@ -274,7 +319,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "add example to product" in {
     val expected = Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).encodedExample(18)))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).encodedExample(18))
+        )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
@@ -287,29 +335,14 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "add description to product" in {
     val expected = Schema(
       SProduct[Person](
-        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test")))
+        List(
+          field(FieldName("name"), Schema(SString())),
+          field(FieldName("age"), Schema(SInteger(), format = Some("int32")).description("test"))
+        )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
 
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected
-  }
-
-  behavior of "SchemaAnnotations enrich"
-
-  it should "derive schema annotations and enrich schema" in {
-    val baseSchema = Schema.string[MyString]
-
-    val enriched = implicitly[SchemaAnnotations[MyString]].enrich(baseSchema)
-
-    enriched shouldBe Schema
-      .string[MyString]
-      .description("my-string")
-      .encodedExample("encoded-example")
-      .default(MyString("default"), encoded = Some("encoded-default"))
-      .format("utf8")
-      .deprecated(true)
-      .name(SName("encoded-name"))
-      .validate(Validator.pass[MyString])
   }
 }

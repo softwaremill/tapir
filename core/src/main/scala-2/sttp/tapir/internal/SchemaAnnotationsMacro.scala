@@ -1,12 +1,10 @@
 package sttp.tapir.internal
 
+import sttp.tapir.SchemaAnnotations
+
 import scala.reflect.macros.blackbox
 
-trait SchemaAnnotationsMacro {
-  implicit def derived[T]: SchemaAnnotations[T] = macro SchemaAnnotationsMacroImpl.derived[T]
-}
-
-object SchemaAnnotationsMacroImpl {
+private[tapir] object SchemaAnnotationsMacro {
   def derived[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[SchemaAnnotations[T]] = {
     import c.universe._
 
@@ -16,8 +14,10 @@ object SchemaAnnotationsMacroImpl {
     val DefaultAnn = typeOf[sttp.tapir.Schema.annotations.default[_]]
     val FormatAnn = typeOf[sttp.tapir.Schema.annotations.format]
     val DeprecatedAnn = typeOf[sttp.tapir.Schema.annotations.deprecated]
+    val HiddenAnn = typeOf[sttp.tapir.Schema.annotations.hidden]
     val EncodedNameAnn = typeOf[sttp.tapir.Schema.annotations.encodedName]
     val ValidateAnn = typeOf[sttp.tapir.Schema.annotations.validate[_]]
+    val ValidateEachAnn = typeOf[sttp.tapir.Schema.annotations.validateEach[_]]
 
     val weakType = weakTypeOf[T]
 
@@ -37,11 +37,13 @@ object SchemaAnnotationsMacroImpl {
     val default = annotations.collectFirst { case ann if ann.tree.tpe <:< DefaultAnn => firstTwoArgs(ann) }
     val format = annotations.collectFirst { case ann if ann.tree.tpe <:< FormatAnn => firstArg(ann) }
     val deprecated = annotations.collectFirst { case ann if ann.tree.tpe <:< DeprecatedAnn => q"""true""" }
+    val hidden = annotations.collectFirst { case ann if ann.tree.tpe <:< HiddenAnn => q"""true""" }
     val encodedName = annotations.collectFirst { case ann if ann.tree.tpe <:< EncodedNameAnn => firstArg(ann) }
-    val validator = annotations.collectFirst { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
+    val validate = annotations.collect { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
+    val validateEach = annotations.collect { case ann if ann.tree.tpe <:< ValidateEachAnn => firstArg(ann) }
 
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.internal.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $encodedName, $validator)"""
+      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, List(..$validate), List(..$validateEach))"""
     )
   }
 }

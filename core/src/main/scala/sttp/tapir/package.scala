@@ -10,5 +10,5 @@ package object tapir extends Tapir {
   type AnyListCodec = Codec[_ <: List[_], _, _ <: CodecFormat]
 
   type AnyEndpoint = Endpoint[_, _, _, _, _]
-  type PublicEndpoint[INPUT, ERROR_INPUT, OUTPUT, -R] = Endpoint[Unit, INPUT, ERROR_INPUT, OUTPUT, R]
+  type PublicEndpoint[INPUT, ERROR_OUTPUT, OUTPUT, -R] = Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, R]
 }

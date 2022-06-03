@@ -1,13 +1,10 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.apispec.SecurityRequirement
-import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
+import sttp.apispec.asyncapi.{AsyncAPI, Info, Server}
+import sttp.tapir._
 import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
-import sttp.tapir.docs.apispec.{DocsExtension, SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
+import sttp.tapir.docs.apispec._
 import sttp.tapir.internal._
-import sttp.tapir.{EndpointInput, _}
-
-import scala.collection.immutable.{ListMap, ListSet}
 
 private[asyncapi] object EndpointToAsyncAPIDocs {
   def toAsyncAPI(
@@ -28,7 +25,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints, apiKeyAuthTypeName = "httpApiKey")
     val channelCreator = new EndpointToAsyncAPIWebSocketChannel(schemas, codecToMessageKey, options)
     val componentsCreator = new EndpointToAsyncAPIComponents(keyToSchema, keyToMessage, securitySchemes)
-    val allSecurityRequirements = securityRequirements(securitySchemes, es)
+    val securityRequirementsForEndpoints = new SecurityRequirementsForEndpoints(securitySchemes)
+    val allSecurityRequirements = securityRequirementsForEndpoints(es)
 
     val channels = wsEndpointsWithWrapper.map { case (e, ws) => channelCreator(e, ws) }
 
@@ -42,32 +40,5 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
       externalDocs = None,
       extensions = DocsExtensions.fromIterable(docsExtensions)
     )
-  }
-
-  private def securityRequirements(securitySchemes: SecuritySchemes, es: Iterable[AnyEndpoint]): List[SecurityRequirement] = {
-    ListSet(es.toList.flatMap(securityRequirements(securitySchemes, _)): _*).toList
-  }
-
-  private def securityRequirements(securitySchemes: SecuritySchemes, e: AnyEndpoint): List[SecurityRequirement] = {
-    val auths = e.auths
-    val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
-        securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
-      case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
-    }.toListMap
-
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
-      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
-    }
-
-    if (securityRequirement.isEmpty) List.empty
-    else {
-      if (securityOptional) {
-        List(ListMap.empty: SecurityRequirement, securityRequirement)
-      } else {
-        List(securityRequirement)
-      }
-    }
   }
 }

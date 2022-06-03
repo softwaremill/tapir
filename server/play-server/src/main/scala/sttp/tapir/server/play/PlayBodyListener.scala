@@ -4,11 +4,10 @@ import akka.Done
 import play.api.http.HttpEntity
 import sttp.tapir.server.interpreter.BodyListener
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class PlayBodyListener extends BodyListener[Future, PlayResponseBody] {
+class PlayBodyListener(implicit ec: ExecutionContext) extends BodyListener[Future, PlayResponseBody] {
   override def onComplete(body: PlayResponseBody)(cb: Try[Unit] => Future[Unit]): Future[PlayResponseBody] = {
 
     def onDone(f: Future[Done]): Unit = f.onComplete {

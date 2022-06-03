@@ -12,8 +12,9 @@ The `tapir` package contains a number of convenience methods to define an input 
 For inputs, these are:
 
 * `path[T]`, which captures a path segment as an input parameter of type `T`
-* any string, which will be implicitly converted to a fixed path segment. Path segments can be combined with the `/` 
-  method, and don't map to any values (have type `EndpointInput[Unit]`)
+* any string, which will be implicitly converted to a fixed path segment. Constant path segments can be combined with 
+  the `/` method, and don't map to any values (they have type `EndpointInput[Unit]`, but they still modify the 
+  endpoint's behavior)
 * `paths`, which maps to the whole remaining path as a `List[String]`
 * `query[T](name)` captures a query parameter with the given name
 * `queryParams` captures all query parameters, represented as `QueryParams`
@@ -94,7 +95,7 @@ val statusEndpoint: PublicEndpoint[Unit, ErrorInfo, Status, Any] =
   baseEndpoint.in("status").out(jsonBody[Status])
 ```
 
-The above endpoint will correspond to the `api/v1.0/status` path.
+The above endpoint will correspond to the `/api/v1.0/status` path.
 
 ## Mapping over input/output values
 
@@ -119,7 +120,7 @@ Next, you can use `mapDecode[II](f: I => DecodeResult[II])(g: II => I)`, to hand
 low-level value to a higher-value one) can fail. There's a couple of failure reasons, captured by the alternatives
 of the `DecodeResult` trait.
 
-Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.md).
+Mappings can also be done given a `Mapping[I, II]` instance. More on that in the section on [codecs](codecs.md).
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
 `mapTo[CaseClass]` method, which automatically provides the functions to construct/deconstruct the case class:
@@ -226,7 +227,8 @@ To match a path prefix, first define inputs which match the path prefix, and the
 ### Arbitrary status codes
 
 To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
-`sttp.model.StatusCode`. The companion object contains known status codes as constants. This type of output is used only 
+`sttp.model.StatusCode`. In a server setting, the specific status code will then have to be provided dynamically by the 
+server logic. The companion object contains known status codes as constants. This type of output is used only 
 when interpreting the endpoint as a server. If your endpoint returns varying status codes which you would like to have 
 listed in documentation use `statusCode.description(code1, "code1 description").description(code2, "code2 description")` 
 output.
@@ -239,6 +241,23 @@ A fixed status code can be specified using the `statusCode(code)` output.
 
 Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with
 `400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
+
+### Different outputs with different status codes
+
+If you'd like to return different content together with a varying status code, use a [oneOf](oneof.md) output.
+Each output variant can be paired with a fixed status code output (`statusCode(code)`), or a varying one, which will
+be determined dynamically by the server logic.
+
+## Selected inputs/outputs for non-standard types
+
+* some header values can be decoded into a more structured representation, e.g. `header[MediaType]`, `header[ETag]`, 
+  `header[Range]`, `header[List[CacheDirective]]`, `header[List[Cookie]]`, `header[CookieWithMeta]`
+* the low-level body value can be tupled with the decoded high-level representation. This is useful e.g. if the
+  hash of the body is required for security. A dedicated `jsonBodyWithRaw` description is available, but this
+  can be used for any body e.g. `plainBody[(String, Int)]`
+* an input can be decoded into either one of two high-level values, e.g. `query[Either[String, Int]]("param")`. By 
+  default, such decoding is right-biased, so the right-hand codec is attempted fails, and only if it fails, the 
+  left-hand side codec is used
 
 ## Next
 

@@ -25,6 +25,7 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
     ObjectWithList:
       type: object
       properties:

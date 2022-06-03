@@ -3,7 +3,7 @@ package sttp.tapir
 import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat}
+import sttp.tapir.typelevel.BinaryTupleOp
 
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
@@ -11,6 +11,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 package object internal {
+  // some definitions are intentionally left public as they are used in server/client interpreters
 
   /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output: no parameters, a single
     * parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
@@ -32,7 +33,7 @@ package object internal {
   type CombineParams = (Params, Params) => Params
   type SplitParams = Params => (Params, Params)
 
-  def mkCombine(op: BinaryTupleOp): CombineParams =
+  private[tapir] def mkCombine(op: BinaryTupleOp): CombineParams =
     (op.leftArity, op.rightArity) match {
       case (0, _) => (_, p2) => p2
       case (_, 0) => (p1, _) => p1
@@ -42,7 +43,7 @@ package object internal {
       case _      => (p1, p2) => ParamsAsVector(p1.asVector ++ p2.asVector)
     }
 
-  def mkSplit(op: BinaryTupleOp): SplitParams =
+  private[tapir] def mkSplit(op: BinaryTupleOp): SplitParams =
     (op.leftArity, op.rightArity) match {
       case (0, _) => p => (ParamsAsAny(()), p)
       case (_, 0) => p => (p, ParamsAsAny(()))
@@ -52,15 +53,12 @@ package object internal {
       case (a, b) => p => (ParamsAsVector(p.asVector.take(a)), ParamsAsVector(p.asVector.takeRight(b)))
     }
 
-  def combine[T, U, TU](t: T, u: U)(concat: ParamConcat.Aux[T, U, TU]): TU =
-    mkCombine(concat).apply(ParamsAsAny(t), ParamsAsAny(u)).asAny.asInstanceOf[TU]
-
   //
 
   implicit class RichEndpoint[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R]) {
     private def allInputs = endpoint.securityInput.and(endpoint.input)
 
-    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthInfo]] =
+    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]] =
       allInputs.traverseInputs { case a: EndpointInput.Auth[_, _] =>
         Vector(a)
       }
@@ -145,7 +143,7 @@ package object internal {
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
         case _: EndpointOutput.Void[_]              => List(Vector.empty)
         case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
-        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.asBasicOutputsList)
+        case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.fold(_.asBasicOutputsList, _.asBasicOutputsList))
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
       }
@@ -169,13 +167,13 @@ package object internal {
     def bodyType: Option[RawBodyType[_]] = {
       traverseOutputs[RawBodyType[_]] {
         case b: EndpointIO.Body[_, _]          => Vector(b.bodyType)
-        case EndpointIO.OneOfBody(variants, _) => variants.map(_.body.bodyType).toVector
+        case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
       }.headOption
     }
 
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
       case b: EndpointIO.Body[_, _]              => Vector(b.mediaTypeWithCharset)
-      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.body.mediaTypeWithCharset).toVector
+      case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
       case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
     }
 
@@ -193,7 +191,7 @@ package object internal {
     }
   }
 
-  implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
+  private[tapir] implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] =
       outputs.sortBy {
         case _: EndpointIO.Empty[_]                       => 0
@@ -209,12 +207,12 @@ package object internal {
       }
   }
 
-  implicit class RichBody[R, T](body: EndpointIO.Body[R, T]) {
+  private[tapir] implicit class RichBody[R, T](body: EndpointIO.Body[R, T]) {
     def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = charset(body.bodyType).map(_.name()))
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
-    def chooseBodyToDecode(contentType: Option[MediaType]): Option[EndpointIO.Body[_, O]] = {
+    def chooseBodyToDecode(contentType: Option[MediaType]): Option[Either[EndpointIO.Body[_, O], EndpointIO.StreamBodyWrapper[_, O]]] = {
       contentType match {
         case Some(ct) => body.variants.find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
         case None     => Some(body.variants.head)
@@ -222,16 +220,16 @@ package object internal {
     }.map(_.body)
   }
 
-  implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {
+  private[tapir] implicit class RichStreamBody[BS, T](body: EndpointIO.StreamBodyWrapper[BS, T]) {
     def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = body.wrapped.charset.map(_.name()))
   }
 
-  def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+  private[tapir] def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
     case None     => s
     case Some(sv) => s"$s($sv)"
   }
 
-  def showMultiple(et: Vector[EndpointTransput[_]]): String = {
+  private[tapir] def showMultiple(et: Vector[EndpointTransput[_]]): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[_] => false
       case _                      => true
@@ -239,24 +237,24 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: List[String]): String = mappings.distinct match {
+  private[tapir] def showOneOf(mappings: List[String]): String = mappings.distinct match {
     case Nil     => ""
     case List(o) => o
     case l       => s"one of(${l.mkString("|")})"
   }
 
-  def charset(bodyType: RawBodyType[_]): Option[Charset] = {
+  private[tapir] def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
     }
   }
 
-  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
+  private[tapir] def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
     exactValues.contains(v)
   }
 
-  def recoverErrors2[T, U, E, O, F[_]](
+  private[tapir] def recoverErrors2[T, U, E, O, F[_]](
       f: T => U => F[O]
   )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => U => F[Either[E, O]] = {
     implicit monad => t => u =>
@@ -271,14 +269,14 @@ package object internal {
       }
   }
 
-  def recoverErrors1[T, E, O, F[_]](
+  private[tapir] def recoverErrors1[T, E, O, F[_]](
       f: T => F[O]
   )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => T => F[Either[E, O]] = { m =>
     val result = recoverErrors2((_: Unit) => f)
     result(m)(())
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  private[tapir] def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
     e.output
       .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
         Vector(ws)
@@ -290,11 +288,12 @@ package object internal {
   }
 
   // see https://github.com/scala/bug/issues/12186
-  implicit class RichVector[T](c: Vector[T]) {
+  private[tapir] implicit class RichVector[T](c: Vector[T]) {
     def headAndTail: Option[(T, Vector[T])] = if (c.isEmpty) None else Some((c.head, c.tail))
     def initAndLast: Option[(Vector[T], T)] = if (c.isEmpty) None else Some((c.init, c.last))
   }
 
+  // TODO: make private[tapir] once Scala3/JS compilation is fixed
   implicit class IterableToListMap[A](xs: Iterable[A]) {
     def toListMap[T, U](implicit ev: A <:< (T, U)): immutable.ListMap[T, U] = {
       val b = immutable.ListMap.newBuilder[T, U]
@@ -305,6 +304,7 @@ package object internal {
     }
   }
 
+  // TODO: make private[tapir] once Scala3/JS compilation is fixed
   implicit class SortListMap[K, V](m: immutable.ListMap[K, V]) {
     def sortByKey(implicit ko: Ordering[K]): immutable.ListMap[K, V] = sortBy(_._1)
     def sortBy[B: Ordering](f: ((K, V)) => B): immutable.ListMap[K, V] = {
@@ -312,7 +312,7 @@ package object internal {
     }
   }
 
-  implicit class ValidatorSyntax[T](v: Validator[T]) {
+  private[tapir] implicit class ValidatorSyntax[T](v: Validator[T]) {
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
       def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
         v match {
@@ -326,9 +326,6 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[U](handle: PartialFunction[Validator.Primitive[_], Vector[U]]): Vector[U] =
-      asPrimitiveValidators.collect(handle).flatten.toVector
-
     def inferEnumerationEncode: Validator[T] = {
       v match {
         case Validator.Enumeration(possibleValues, None, name) =>
@@ -341,7 +338,7 @@ package object internal {
     }
   }
 
-  def isBasicValue(v: Any): Boolean = v match {
+  private[tapir] def isBasicValue(v: Any): Boolean = v match {
     case _: String     => true
     case _: Int        => true
     case _: Long       => true

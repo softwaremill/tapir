@@ -35,9 +35,8 @@ as a token, use: `bearer[String]`.
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
 the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../openapi.md))
 
-Multiple authentication inputs indicate that all of the given authentication values should be provided. Specifying
-alternative authentication methods (where only one value out of many needs to be provided) is currently not supported.
-However, optional authentication can be described by mapping to optional types, e.g. `bearer[Option[String]]`.
+Optional and multiple authentication inputs have some additional rules as to how hey map to documentation, see the 
+[OpenAPI](../docs/openapi.md) page for details.
 
 ## Authentication challenges
 

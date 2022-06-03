@@ -1,12 +1,13 @@
 package sttp.tapir.server.stub
 
+import sttp.client3.SttpBackend
 import sttp.client3.testing.SttpBackendStub
-import sttp.client3.{Request, Response, SttpBackend}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 class TapirStubInterpreter[F[_], R, OPTIONS](
     private val endpoints: List[ServerEndpoint[R, F]],
@@ -27,7 +28,9 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 
   /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
   def backend(): SttpBackend[F, R] =
-    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
+    stub.whenAnyRequest.thenRespondF(req =>
+      StubServerInterpreter(req, endpoints, RejectInterceptor.disableWhenSingleEndpoint(interceptors, endpoints))
+    )
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
@@ -80,9 +83,9 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 
 object TapirStubInterpreter {
   def apply[F[_], R](stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, Unit] =
-    new TapirStubInterpreter[F, R, Unit](endpoints = List.empty, new CustomInterceptors[F, Any](_ => ()).interceptors, stub)
+    new TapirStubInterpreter[F, R, Unit](endpoints = List.empty, new CustomiseInterceptors[F, Any](_ => ()).interceptors, stub)
 
-  def apply[F[_], R, O](options: CustomInterceptors[F, O], stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, O] =
+  def apply[F[_], R, O](options: CustomiseInterceptors[F, O], stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, O] =
     new TapirStubInterpreter[F, R, O](endpoints = List.empty, options.interceptors, stub)
 
   def apply[F[_], R](interceptors: List[Interceptor[F]], stub: SttpBackendStub[F, R]): TapirStubInterpreter[F, R, Any] =

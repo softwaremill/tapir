@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /api1:
+    get:
+      operationId: getApi1
+      responses:
+        '200':
+          description: ''
+      security:
+        - sec1: []
+        - sec2: []
+  /api2:
+    get:
+      operationId: getApi2
+      responses:
+        '200':
+          description: ''
+      security:
+        - {}
+        - sec1: []
+        - sec2: []
+components:
+  securitySchemes:
+    sec1:
+      type: apiKey
+      name: apikey1
+      in: header
+    sec2:
+      type: apiKey
+      name: apikey2
+      in: header

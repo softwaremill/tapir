@@ -5,16 +5,16 @@ import _root_.zio.interop.reactivestreams._
 import _root_.zio.stream.Stream
 import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.ServiceRequestContext
-import java.util.concurrent.CompletableFuture
 import org.reactivestreams.Publisher
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 import sttp.capabilities.zio.ZioStreams
-import sttp.monad.{Canceler, MonadAsyncError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.ztapir.RIOMonadError
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+
+import java.util.concurrent.CompletableFuture
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 private[zio] final case class TapirZioService[R](
     serverEndpoints: List[ServerEndpoint[ZioStreams, RIO[R, *]]],
@@ -26,22 +26,23 @@ private[zio] final case class TapirZioService[R](
   private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
 
   private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
-  private[this] val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
-    new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
-      serverEndpoints,
-      new ArmeriaToResponseBody(zioStreamCompatible),
-      armeriaServerOptions.interceptors,
-      armeriaServerOptions.deleteFile
-    )
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
     implicit val rioFutureConversion: RioFutureConversion[R] = new RioFutureConversion[R]
 
-    val serverRequest = new ArmeriaServerRequest(ctx)
-    val requestBody = new ArmeriaRequestBody(ctx, armeriaServerOptions, zioStreamCompatible)
+    val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
+      new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
+        FilterServerEndpoints(serverEndpoints),
+        new ArmeriaRequestBody(armeriaServerOptions, zioStreamCompatible),
+        new ArmeriaToResponseBody(zioStreamCompatible),
+        RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
+        armeriaServerOptions.deleteFile
+      )
+
+    val serverRequest = ArmeriaServerRequest(ctx)
     val future = new CompletableFuture[HttpResponse]()
-    val result = interpreter(serverRequest, requestBody).map(ResultMapping.toArmeria)
+    val result = interpreter(serverRequest).map(ResultMapping.toArmeria)
 
     val cancellable = runtime.unsafeRunToFuture(result)
     cancellable.future.onComplete {
@@ -72,17 +73,17 @@ private object ZioStreamCompatible {
         runtime.unsafeRun(stream.mapChunks(c => Chunk.single(HttpData.wrap(c.toArray))).toPublisher)
 
       override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[Throwable, Byte] =
-        publisher.toStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
+        publisher.toZIOStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
     }
   }
 }
 
 private class RioFutureConversion[R](implicit ec: ExecutionContext, runtime: Runtime[R]) extends FutureConversion[RIO[R, *]] {
   def from[T](f: => Future[T]): RIO[R, T] = {
-    RIO.effectAsync { cb =>
+    ZIO.async { cb =>
       f.onComplete {
-        case Failure(exception) => cb(Task.fail(exception))
-        case Success(value)     => cb(Task.succeed(value))
+        case Failure(exception) => cb(ZIO.fail(exception))
+        case Success(value)     => cb(ZIO.succeed(value))
       }
     }
   }

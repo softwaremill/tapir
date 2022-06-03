@@ -1,8 +1,9 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Validator.EncodeToRaw
-import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.exampleValue
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
+import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
@@ -19,19 +20,14 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
         Right(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName),
-            properties = fields.map { f =>
-              f.schema match {
-                case TSchema(_, Some(name), _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
-                case schema                                      => f.name.encodedName -> apply(schema)
-              }
-            }.toListMap
+            properties = extractProperties(fields)
           )
         )
-      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(nameToSchemaReference.map(name)))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
-      case TSchemaType.SOption(el)                                          => apply(el, isOptionElement = true)
+      case TSchemaType.SOption(TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) => Left(nameToSchemaReference.map(name))
+      case TSchemaType.SOption(el)                                                => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
@@ -41,9 +37,10 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
           ASchema
             .apply(
               schemas
+                .filterNot(_.hidden)
                 .map {
-                  case TSchema(_, Some(name), _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
-                  case t                                           => apply(t)
+                  case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
+                  case t                                                 => apply(t)
                 }
                 .sortBy {
                   case Left(Reference(ref)) => ref
@@ -52,14 +49,15 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
               d.map(tDiscriminatorToADiscriminator)
             )
         )
-      case TSchemaType.SOpenProduct(valueSchema) =>
+      case p @ TSchemaType.SOpenProduct(fields, valueSchema) =>
         Right(
           ASchema(SchemaType.Object).copy(
-            required = List.empty,
+            required = p.required.map(_.encodedName),
+            properties = extractProperties(fields),
             additionalProperties = Some(valueSchema.name match {
               case Some(name) => Left(nameToSchemaReference.map(name))
               case _          => apply(valueSchema)
-            })
+            }).filterNot(_ => valueSchema.hidden)
           )
         )
     }
@@ -76,13 +74,26 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }
 
+  private def extractProperties[T](fields: List[TSchemaType.SProductField[T]]) = {
+    fields
+      .filterNot(_.schema.hidden)
+      .map { f =>
+        f.schema match {
+          case TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => f.name.encodedName -> Left(nameToSchemaReference.map(name))
+          case schema                                            => f.name.encodedName -> apply(schema)
+        }
+      }
+      .toListMap
+  }
+
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
       default = tschema.default.flatMap { case (_, raw) => raw.flatMap(r => exampleValue(tschema, r)) }.orElse(oschema.default),
       example = tschema.encodedExample.flatMap(exampleValue(tschema, _)).orElse(oschema.example),
       format = tschema.format.orElse(oschema.format),
-      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
+      extensions = DocsExtensions.fromIterable(tschema.docsExtensions)
     )
   }
 
@@ -109,6 +120,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)                  => aschema.copy(maxItems = Some(value))
+      case Validator.Custom(_, _)                    => aschema
       case Validator.Enumeration(_, None, _)         => aschema
       case Validator.Enumeration(v, Some(encode), _) => addEnumeration(aschema, v, encode)
     }

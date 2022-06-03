@@ -1,17 +1,17 @@
 package sttp.tapir.internal
 
-import sttp.tapir.Schema
+import sttp.tapir.{Schema, SchemaAnnotations}
 import sttp.tapir.macros.CreateDerivedEnumerationSchema
 
 import scala.reflect.macros.blackbox
 
-object SchemaEnumerationMacro {
+private[tapir] object SchemaEnumerationMacro {
   def derivedEnumeration[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[CreateDerivedEnumerationSchema[T]] = {
     import c.universe._
 
     // this needs to be a macro so that we can call another macro - Validator.derivedEnumeration
     c.Expr[CreateDerivedEnumerationSchema[T]](q"""
-      new sttp.tapir.macros.CreateDerivedEnumerationSchema(Validator.derivedEnumeration)
+      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema(_root_.sttp.tapir.Validator.derivedEnumeration)
     """)
   }
 
@@ -19,7 +19,7 @@ object SchemaEnumerationMacro {
     import c.universe._
 
     val Enumeration = typeOf[scala.Enumeration]
-    val SchemaAnnotations = typeOf[sttp.tapir.internal.SchemaAnnotations[_]]
+    val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
 
     val weakTypeT = weakTypeOf[T]
     val owner = weakTypeT.typeSymbol.owner
@@ -33,7 +33,9 @@ object SchemaEnumerationMacro {
         case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      val validator = q"sttp.tapir.Validator.enumeration($enumeration.values.toList)"
+      val validator =
+        q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
+            .mkString(".")})))"
       val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
 
       c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")

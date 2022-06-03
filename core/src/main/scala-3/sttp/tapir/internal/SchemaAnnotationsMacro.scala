@@ -1,16 +1,11 @@
 package sttp.tapir.internal
 
 import sttp.tapir.Schema.annotations.format
+import sttp.tapir.SchemaAnnotations
 
 import scala.quoted.*
 
-trait SchemaAnnotationsMacro {
-  implicit inline def derived[T]: SchemaAnnotations[T] = ${
-    SchemaAnnotationsMacroImpl.derived[T]
-  }
-}
-
-object SchemaAnnotationsMacroImpl {
+private[tapir] object SchemaAnnotationsMacro {
   def derived[T: Type](using q: Quotes): Expr[SchemaAnnotations[T]] = {
     import q.reflect.*
 
@@ -20,8 +15,10 @@ object SchemaAnnotationsMacroImpl {
     val DefaultAnn = TypeTree.of[sttp.tapir.Schema.annotations.default[_]].tpe
     val FormatAnn = TypeTree.of[sttp.tapir.Schema.annotations.format].tpe
     val DeprecatedAnn = TypeTree.of[sttp.tapir.Schema.annotations.deprecated].tpe
+    val HiddenAnn = TypeTree.of[sttp.tapir.Schema.annotations.hidden].tpe
     val EncodedNameAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedName].tpe
     val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
+    val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[_]].tpe
 
     val tpe = TypeRepr.of[T]
 
@@ -34,6 +31,16 @@ object SchemaAnnotationsMacroImpl {
     def firstAnnArg(tpe: TypeRepr): Option[Tree] = {
       annotations
         .collectFirst {
+          case ann if ann.tpe <:< tpe =>
+            ann match {
+              case Apply(_, List(tree)) => tree
+            }
+        }
+    }
+
+    def allAnnArg(tpe: TypeRepr): List[Tree] = {
+      annotations
+        .collect {
           case ann if ann.tpe <:< tpe =>
             ann match {
               case Apply(_, List(tree)) => tree
@@ -62,10 +69,10 @@ object SchemaAnnotationsMacroImpl {
         sa => firstAnnArg(FormatAnn).map(arg => '{ ${ sa }.copy(format = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => annotations.find { _.tpe <:< DeprecatedAnn }.map(_ => '{ ${ sa }.copy(deprecated = Some(true)) }).getOrElse(sa),
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
-        sa =>
-          firstAnnArg(ValidateAnn).map(arg => '{ ${ sa }.copy(validate = Some(${ arg.asExprOf[sttp.tapir.Validator[T]] })) }).getOrElse(sa)
+        sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
+        sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) }
       )
 
-    transformations.foldLeft('{ SchemaAnnotations[T](None, None, None, None, None, None, None) })((sa, t) => t(sa))
+    transformations.foldLeft('{ SchemaAnnotations[T](None, None, None, None, None, None, None, Nil, Nil) })((sa, t) => t(sa))
   }
 }

@@ -3,8 +3,8 @@ package sttp.tapir.macros
 import sttp.tapir.{Validator, Schema, SchemaType}
 import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
-import sttp.tapir.internal.SchemaMagnoliaDerivation
 import magnolia1._
+import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
 
 import scala.quoted.*
 
@@ -18,7 +18,7 @@ trait SchemaMacros[T] { this: Schema[T] =>
   }
 }
 
-object SchemaMacros {
+private[tapir] object SchemaMacros {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
   def modifyImpl[T: Type, U: Type](
@@ -101,10 +101,13 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
+  /** @param discriminatorSchema
+    *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
+    */
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
       mapping: (V, Schema[_])*
-  )(implicit conf: Configuration): Schema[E] = ${
-    SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
+  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] = ${
+    SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf, 'discriminatorSchema)
   }
 
   /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
@@ -134,7 +137,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   }
 }
 
-object SchemaCompanionMacros {
+private[tapir] object SchemaCompanionMacros {
 
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
@@ -154,7 +157,7 @@ object SchemaCompanionMacros {
 
     '{
       Schema(
-        SOpenProduct[Map[K, V], V](${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
+        SOpenProduct[Map[K, V], V](Nil, ${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
         Some(Schema.SName("Map", ${ Expr(genericTypeParameters) }))
       )
     }
@@ -162,7 +165,7 @@ object SchemaCompanionMacros {
 
   def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
       mapping: Expr[Seq[(V, Schema[_])]]
-  )(conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
+  )(conf: Expr[Configuration], discriminatorSchema: Expr[Schema[V]])(using q: Quotes): Expr[Schema[E]] = {
     import q.reflect.*
 
     def resolveFunctionName(f: Statement): String = f match {
@@ -188,24 +191,31 @@ object SchemaCompanionMacros {
 
       val mappingAsList = $mapping.toList
       val mappingAsMap = mappingAsList.toMap
-      val discriminator = SDiscriminator(
-        _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) })),
-        mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
-          $asString.apply(k) -> SRef(fname)
-        }
-      )
+
+      val discriminatorName = _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) }))
+      val discriminatorMapping = mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) =>
+        $asString.apply(k) -> SRef(fname)
+      }
+
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
       val subtypes = mappingAsList.map(_._2)
-      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator)) { e =>
-        val ee = $extractor(e)
-        mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], ee))
-      }, Some(sname))
+      Schema(
+        (SCoproduct[E](subtypes, None) { e =>
+          val ee = $extractor(e)
+          mappingAsMap.get(ee).map(s => SchemaWithValue(s.asInstanceOf[Schema[Any]], e))
+        }).addDiscriminatorField(
+          discriminatorName,
+          $discriminatorSchema,
+          discriminatorMapping
+        ),
+        Some(sname)
+      )
     }
   }
 
   def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
+    import sttp.tapir.SchemaAnnotations
     import q.reflect.*
-    import sttp.tapir.internal.SchemaAnnotations
 
     val Enumeration = TypeTree.of[scala.Enumeration].tpe
 
@@ -220,16 +230,23 @@ object SchemaCompanionMacros {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
       val enumeration = Symbol.requiredModule(enumerationPath)
 
+      val sName = '{ Some(Schema.SName(${ Expr(enumerationPath) })) }
+
       '{
         SchemaAnnotations
           .derived[T]
           .enrich(
             Schema
               .string[T]
-              .validate(Validator.enumeration(${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]]))
+              .validate(
+                Validator.enumeration(
+                  ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
+                  v => Option(v),
+                  $sName
+                )
+              )
           )
       }
     }
   }
-
 }

@@ -51,5 +51,6 @@ components:
       properties:
         code:
           type: integer
+          format: int32
         msg:
           type: string

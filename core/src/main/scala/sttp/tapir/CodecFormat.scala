@@ -45,4 +45,8 @@ object CodecFormat {
   case class TextEventStream() extends CodecFormat {
     override val mediaType: MediaType = MediaType.TextEventStream
   }
+
+  case class TextJavascript() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.TextJavascript
+  }
 }

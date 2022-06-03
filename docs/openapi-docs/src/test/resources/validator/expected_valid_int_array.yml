@@ -13,6 +13,7 @@ paths:
                 type: array
                 items:
                   type: integer
+                  format: int32
                   minimum: 1
                   maximum: 10
         required: false

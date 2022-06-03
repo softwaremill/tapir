@@ -88,9 +88,9 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
   ): Source[ByteString, Future[IOResult]] =
     FileIO
       .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)
-      .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
+      .scan((0L, ByteString.empty)) { case ((bytesConsumed, _), next) =>
         val bytesInNext = next.length
-        val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext))
+        val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext.toLong))
         (bytesConsumed + bytesInNext, next.take(bytesFromNext.toInt))
       }
       .takeWhile(_._1 < bytesTotal, inclusive = true)
@@ -102,7 +102,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       format: CodecFormat,
       charset: Option[Charset]
   ): PlayResponseBody = {
-    Right(streamOrChunk(v, headers.contentLength, Option(formatToContentType(format, charset))))
+    Right(streamOrChunk(v, headers.contentLength, Option(headers.contentType.getOrElse(formatToContentType(format, charset)))))
   }
 
   private def streamOrChunk(stream: streams.BinaryStream, contentLength: Option[Long], contentType: Option[String]): HttpEntity = {

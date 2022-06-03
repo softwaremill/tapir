@@ -1,11 +1,11 @@
 package sttp.tapir.server.armeria.zio
 
-import _root_.zio.{RIO, Task, URIO}
+import _root_.zio.{RIO, ZIO}
 import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir.server.armeria.ArmeriaServerOptions
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.util.control.NonFatal
@@ -24,9 +24,9 @@ final case class ArmeriaZioServerOptions[F[_]](
 object ArmeriaZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[R]: CustomInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]]) => {
+  def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]]) => {
         ArmeriaZioServerOptions(
           defaultCreateFile,
           defaultDeleteFile,
@@ -37,35 +37,36 @@ object ArmeriaZioServerOptions {
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 
-  implicit def default[R]: ArmeriaZioServerOptions[RIO[R, *]] = customInterceptors.options
+  implicit def default[R]: ArmeriaZioServerOptions[RIO[R, *]] = customiseInterceptors.options
 
   def defaultCreateFile[R](): RIO[R, TapirFile] = blocking(Defaults.createTempFile())
 
   def defaultDeleteFile[R](file: TapirFile): RIO[R, Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[R]: ServerLog[RIO[R, *]] = DefaultServerLog(
+    doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[R],
     doLogAllDecodeFailures = debugLog[R],
-    doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { logger.warn(msg, ex) },
-    noLog = URIO.unit
+    doLogExceptions = (msg: String, ex: Throwable) => ZIO.succeed { logger.warn(msg, ex) },
+    noLog = ZIO.unit
   )
 
   private def debugLog[R](msg: String, exOpt: Option[Throwable]): RIO[R, Unit] =
-    URIO.succeed(exOpt match {
+    ZIO.succeed(exOpt match {
       case None     => logger.debug(msg)
       case Some(ex) => logger.debug(msg, ex)
     })
 
   private def blocking[R, T](body: => T): RIO[R, T] = {
-    Task.async { cb =>
+    ZIO.async { cb =>
       CommonPools
         .blockingTaskExecutor()
         .execute(() => {
           try {
-            cb(Task.succeed(body))
+            cb(ZIO.succeed(body))
           } catch {
             case NonFatal(ex) =>
-              cb(Task.fail(ex))
+              cb(ZIO.fail(ex))
           }
         })
     }

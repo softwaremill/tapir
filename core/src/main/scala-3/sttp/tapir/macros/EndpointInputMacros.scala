@@ -15,6 +15,6 @@ trait EndpointInputMacros {
   inline def derived[T <: Product]: EndpointInput[T] = ${ EndpointInputMacros.derivedImpl[T] }
 }
 
-object EndpointInputMacros {
+private[tapir] object EndpointInputMacros {
   def derivedImpl[T <: Product: Type](using q: Quotes): Expr[EndpointInput[T]] = new AnnotationsMacros[T].deriveEndpointInputImpl
 }

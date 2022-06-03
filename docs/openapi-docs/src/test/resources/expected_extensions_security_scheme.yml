@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: title
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      responses:
+        '200':
+          description: ''
+      security:
+        - apiKeyAuth: []
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-schema:
+        string: a
+        int: 1

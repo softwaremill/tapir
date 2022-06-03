@@ -6,9 +6,15 @@ import zio.stream.ZStream
 
 import scala.util.{Failure, Success, Try}
 
-class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZStream[Any, Throwable, Byte]] {
-  override def onComplete(body: ZStream[Any, Throwable, Byte])(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZStream[Any, Throwable, Byte]] =
+class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZioHttpResponseBody] {
+  override def onComplete(body: ZioHttpResponseBody)(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZioHttpResponseBody] =
     RIO
       .access[R]
-      .apply(r => body.onError(cause => cb(Failure(cause.squash)).orDie.provide(r)) ++ ZStream.fromEffect(cb(Success(()))).provide(r).drain)
+      .apply { r =>
+        val (stream, contentLength) = body
+        (
+          stream.onError(cause => cb(Failure(cause.squash)).orDie.provide(r)) ++ ZStream.fromEffect(cb(Success(()))).provide(r).drain,
+          contentLength
+        )
+      }
 }

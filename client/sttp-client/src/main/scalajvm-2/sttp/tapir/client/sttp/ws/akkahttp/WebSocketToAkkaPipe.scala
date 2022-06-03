@@ -3,7 +3,8 @@ package sttp.tapir.client.sttp.ws.akkahttp
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.client.sttp.WebSocketToPipe
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.{ExecutionContext, Future}

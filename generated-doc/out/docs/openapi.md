@@ -7,7 +7,7 @@
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.0.0-RC2"
 ```
 
 Then, you can interpret a list of endpoints, as server endpoints exposing the Swagger UI, using `SwaggerInterpreter`. 
@@ -20,6 +20,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: List[AnyEndpoint] = ???
 
@@ -31,8 +32,9 @@ val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
 By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
-changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the swagger endpoints are deployed 
-within a context, this information needs to be passed to the interpreter, to create proper redirects. 
+changed when creating the `SwaggerInterpreter` and invoking `fromEndpoints`. If the Swagger UI endpoints are deployed 
+within a context, and you don't want Swagger to use relative paths, you'll need to set the `useRelativePaths` options
+to `false`, and specify the `contextPath` one.
 
 Moreover, model generation can be configured - see below for more details on `OpenAPIDocsOptions` and the method
 parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
@@ -46,7 +48,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.0.0-RC2"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -56,8 +58,8 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.20.1"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.0.0-RC2"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -67,8 +69,8 @@ An endpoint can be converted to an instance of the model by importing the `sttp.
 object:
 
 ```scala
+import sttp.apispec.openapi.OpenAPI
 import sttp.tapir._
-import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
@@ -86,7 +88,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 returned `OpenAPI` case class either directly or by using a helper method:
 
 ```scala
-import sttp.tapir.openapi.Server
+import sttp.apispec.openapi.Server
 
 val docsWithServers: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
@@ -102,7 +104,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import sttp.tapir.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml._
 
 println(docs.toYaml)
 ```
@@ -112,7 +114,7 @@ Or to JSON:
 ```scala
 import io.circe.Printer
 import io.circe.syntax._
-import sttp.tapir.openapi.circe._
+import sttp.apispec.openapi.circe._
 
 println(Printer.spaces2.print(docs.asJson))
 ```
@@ -138,20 +140,79 @@ All named schemas (that is, schemas which have the `Schema.name` property define
 use, and their definitions will be part of the `components` section. If you'd like a schema to be inlined, instead
 of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 
+## Authentication inputs and security requirements
+
+Multiple non-optional authentication inputs indicate that all the given authentication values should be provided,
+that is they will form a single security requirement, with multiple schemes, e.g.:
+
+```scala
+import sttp.model.headers.WWWAuthenticateChallenge
+import sttp.tapir._
+
+val multiAuthEndpoint =
+  endpoint.post
+    .securityIn(auth.apiKey(header[String]("token"), WWWAuthenticateChallenge("ApiKey").realm("realm")))
+    .securityIn(auth.apiKey(header[String]("signature"), WWWAuthenticateChallenge("ApiKey").realm("realm")))
+```
+
+A single optional authentication method can be described by mapping to optional types, e.g. `bearer[Option[String]]`.
+Hence, two security requirements will be created: an empty one, and one corresponding to the given authentication input.
+
+If there are multiple **optional** authentication methods, they will be treated as alternatives, and separate alternative
+security requirements will be created for them. However, this will not include the empty requirement, making authentication
+mandatory. If authentication should be optional, an empty security requirement will be added if an `emptyAuth` input
+is added (which doesn't map to any values in the request, but only serves as a marker).
+
+```eval_rst
+.. note::
+
+  Note that even though multiple optional authentication methods might be rendered as alternatives in the documentation,
+  when running the server, you'll need to additionally check that at least one authentication input is provided. This 
+  can be done in the security logic, server logic, or by mapping the inputs using .mapDecode, as in the below example: 
+```
+
+```scala
+import sttp.model.headers.WWWAuthenticateChallenge
+import sttp.tapir._
+
+val alternativeAuthEndpoint = endpoint.securityIn(
+  // auth.apiKey(...).and(auth.apiKey(..)) will map the request headers to a tuple (Option[String], Option[String])
+  auth.apiKey(header[Option[String]]("token-old"), WWWAuthenticateChallenge("ApiKey").realm("realm"))
+    .and(auth.apiKey(header[Option[String]]("token-new"), WWWAuthenticateChallenge("ApiKey").realm("realm")))
+    // mapping this tuple to an Either[String, String], and reporting a decode error if both values are missing
+    .mapDecode {
+      case (Some(oldToken), _) => DecodeResult.Value(Left(oldToken))
+      case (_, Some(newToken)) => DecodeResult.Value(Right(newToken))
+      case (None, None)        => DecodeResult.Missing
+    } {
+      case Left(oldToken)  => (Some(oldToken), None)
+      case Right(newToken) => (None, Some(newToken))
+    }
+ )        
+   
+val alternativeOptionalAuthEndpoint = alternativeAuthEndpoint.securityIn(emptyAuth)
+```
+
+Finally, optional authentication inputs can be grouped into security requirements using `EndpointInput.Auth.group(String)`.
+Group names are arbitrary (and aren't rendered in the documentation), but they need to be the same for a single group.
+Groups should only be used on optional authentication inputs. All such inputs in a single group will become a single
+security requirement when rendered in OpenAPI. As before, the fact that values for all inputs in a group are provided,
+needs to be checked on the server-side, either through decoding or server logic.
+
 ## OpenAPI Specification Extensions
 
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
 
 Specification extensions can be added by first importing an extension method, and then calling the `docsExtension`
-method which manipulates the appropriate attribute on the endpoint / endpoint input/output:
+method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala
+import sttp.apispec.openapi._
+import sttp.apispec.openapi.circe._
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
-import sttp.tapir.openapi._
-import sttp.tapir.openapi.circe._
-import sttp.tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
@@ -181,7 +242,17 @@ val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title
 ```
 
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
-object manually or using f.e. [Quicklens](https://github.com/softwaremill/quicklens)
+object manually or using a tool such as [quicklens](https://github.com/softwaremill/quicklens).
+
+## Hiding inputs/outputs
+
+It's possible to hide an input/output from the OpenAPI description using following syntax:
+
+```scala
+import sttp.tapir._
+
+val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.hidden(true))
+```
 
 ## Exposing generated OpenAPI documentation
 
@@ -193,24 +264,25 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either 
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.0.0-RC2"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.0.0-RC2"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml

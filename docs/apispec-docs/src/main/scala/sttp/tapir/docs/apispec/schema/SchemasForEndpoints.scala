@@ -1,8 +1,8 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Schema.SName
 import sttp.tapir._
-import sttp.tapir.apispec.{Schema => ASchema, _}
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap
@@ -35,7 +35,7 @@ class SchemasForEndpoints(
       case EndpointInput.FixedPath(_, _, _)       => List.empty
       case EndpointInput.PathCapture(_, codec, _) => toNamedSchemas(codec)
       case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, codec, _)       => toNamedSchemas(codec)
+      case EndpointInput.Query(_, _, codec, _)    => toNamedSchemas(codec)
       case EndpointInput.Cookie(_, codec, _)      => toNamedSchemas(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_, _]            => List.empty
@@ -65,7 +65,7 @@ class SchemasForEndpoints(
       case EndpointIO.Header(_, codec, _)                                => toNamedSchemas(codec)
       case EndpointIO.Headers(_, _)                                      => List.empty
       case EndpointIO.Body(_, codec, _)                                  => toNamedSchemas(codec)
-      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.body))
+      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => toNamedSchemas(codec.schema)
       case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                               => List.empty

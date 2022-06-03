@@ -2,14 +2,14 @@ package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{Header => SttpHeader}
+import sttp.model.{HeaderNames, Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
 import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
-import zio.stream.Stream
 
 trait ZioHttpInterpreter[R] {
 
@@ -21,10 +21,11 @@ trait ZioHttpInterpreter[R] {
   def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response] = {
     implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
     implicit val monadError: MonadError[RIO[R, *]] = new RIOMonadError[R]
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
-      ses,
+    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZioHttpResponseBody, ZioStreams](
+      FilterServerEndpoints(ses),
+      new ZioHttpRequestBody(zioHttpServerOptions),
       new ZioHttpToResponseBody,
-      zioHttpServerOptions.interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(zioHttpServerOptions.interceptors, ses),
       zioHttpServerOptions.deleteFile
     )
 
@@ -32,14 +33,21 @@ trait ZioHttpInterpreter[R] {
       Http
         .fromZIO(
           interpreter
-            .apply(new ZioHttpServerRequest(req), new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions))
+            .apply(ZioHttpServerRequest(req))
             .map {
               case RequestResult.Response(resp) =>
+                val baseHeaders = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList
+                val allHeaders = resp.body match {
+                  case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
+                    (HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
+                  case _ => baseHeaders
+                }
+
                 Http.succeed(
                   Response(
                     status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                    headers = ZioHttpHeaders(resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList),
-                    data = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
+                    headers = ZioHttpHeaders(allHeaders),
+                    data = resp.body.map { case (stream, _) => HttpData.fromStream(stream) }.getOrElse(HttpData.empty)
                   )
                 )
               case RequestResult.Failure(_) => Http.empty

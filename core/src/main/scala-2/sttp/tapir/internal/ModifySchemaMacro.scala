@@ -5,7 +5,7 @@ import sttp.tapir.Schema
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
-object ModifySchemaMacro {
+private[tapir] object ModifySchemaMacro {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
   def generateModify[T: c.WeakTypeTag, U: c.WeakTypeTag](

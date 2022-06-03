@@ -1,9 +1,9 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.asyncapi.{Message, SingleMessage}
 import sttp.model.MediaType
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.Schema.SName
-import sttp.tapir.asyncapi.{Message, SingleMessage}
 import sttp.tapir.docs.apispec.schema.{Schemas, ToNamedSchemas, calculateUniqueKeys}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema}

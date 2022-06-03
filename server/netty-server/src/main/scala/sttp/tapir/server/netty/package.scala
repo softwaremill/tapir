@@ -3,7 +3,7 @@ package sttp.tapir.server
 import io.netty.buffer.ByteBuf
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.Future
 

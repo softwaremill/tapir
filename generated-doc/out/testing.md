@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-RC2"
 ```
 
 Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
@@ -86,25 +86,31 @@ Custom interpreters can be provided to the stub. For example, to test custom exc
 following customised akka http options:
 
 ```scala
-import sttp.tapir.server.interceptor.exception.ExceptionContext
-import sttp.tapir.server.interceptor.{CustomInterceptors, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.exception.ExceptionHandler
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
-val customOptions: CustomInterceptors[Future, AkkaHttpServerOptions] = 
-  AkkaHttpServerOptions.customInterceptors
-    .exceptionHandler((ctx: ExceptionContext) =>
-      Some(ValuedEndpointOutput(
-        stringBody.and(statusCode), 
-        (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError))
-      )  
-    )
+val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
+    Some(ValuedEndpointOutput(
+      stringBody.and(statusCode),
+      (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
+    ))
+)
+
+val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
+  import scala.concurrent.ExecutionContext.Implicits.global
+  AkkaHttpServerOptions.customiseInterceptors
+    .exceptionHandler(exceptionHandler)
+}    
 ```
 
 Testing such an interceptor requires simulating an exception being thrown in the server logic:
 
 ```scala
 class MySpec2 extends AsyncFlatSpec with Matchers {
+
   it should "use my custom exception handler" in {
     // given
     val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
@@ -134,7 +140,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.0.0-RC2"
 ```
 
 And the following imports:
@@ -189,7 +195,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.0.0-RC2"
 ```
 
 Imports:
@@ -255,49 +261,101 @@ val result = SttpClientInterpreter()
 result == out
 ```
 
-## Shadowed endpoints
+## Endpoints verification
+
+To use, add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.0.0-RC2"
+```
+
+### Shadowed endpoints
 
 It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such
 case when all matching requests will be handled by the first endpoint; the second endpoint will always be omitted. 
-To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
-type `List[AnyEndpoint]` an outputs `Set[ShadowedEndpoint]`.
+To detect such cases one can use `EndpointVerifier` util class which takes an input of
+type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
 
 Example 1:
 
 ```scala
-import sttp.tapir.testing.FindShadowedEndpoints
+import sttp.tapir.testing.EndpointVerifier
 
 val e1 = endpoint.get.in("x" / paths)
 val e2 = endpoint.get.in("x" / "y" / "x")
 val e3 = endpoint.get.in("x")
 val e4 = endpoint.get.in("y" / "x")
-val res = FindShadowedEndpoints(List(e1, e2, e3, e4)) 
+val res = EndpointVerifier(List(e1, e2, e3, e4)) 
 ```
 
 Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x, is shadowed by: GET /x/*, GET /x/y/x, is shadowed by: GET /x/*)"
 ```
 
 Example 2:
 
 ```scala
-import sttp.tapir.testing.FindShadowedEndpoints
+import sttp.tapir.testing.EndpointVerifier
 
 val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
 val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
-val res = FindShadowedEndpoints(List(e1, e2))
+val res = EndpointVerifier(List(e1, e2))
 ```
 
 Results in:
 
 ```scala
 res.toString
-// res3: String = "Set(GET /[y_3] /[y_4], is shadowed by: GET /[y_1] /[y_2])"
+// res3: String = "Set(GET /{y_3}/{y_4}, is shadowed by: GET /{y_1}/{y_2})"
 ```
 
 Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
 decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
 [`DecodeFailureHandler`](server/errors.md#decode-failures) used.
+
+### Incorrect path at endpoint
+
+It is possible to define an endpoint where some part of an input will consume whole remaining path. That case can 
+lead to situation where all other inputs defined after `paths` wildcard segment are omitted. To detect such cases one
+can use `EndpointVerifier` util class which takes an input of
+type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
+
+Example 1:
+
+```scala
+import sttp.tapir.testing.EndpointVerifier
+
+val e = endpoint.options.in("a" / "b" / "c").securityIn("x" / "y" / paths)
+val result = EndpointVerifier(List(e))
+```
+
+Results in:
+
+```scala
+result.toString
+// res4: String = "Set(A wildcard pattern in OPTIONS /x/y/*/a/b/c shadows the rest of the paths at index 2)"
+```
+
+### Duplicated method definitions at endpoint
+
+It is possible to define an endpoint where there are methods multiple times defined. To detect such cases one can use 
+`EndpointVerifier` util class which takes an input of type `List[AnyEndpoint]` an outputs `Set[EndpointVerificationError]`.
+
+Example 1:
+
+```scala
+import sttp.tapir.testing.EndpointVerifier
+
+val ep = endpoint.options.in("a" / "b" / "c").get
+val result2 = EndpointVerifier(List(ep))
+```
+
+Results in:
+
+```scala
+result2.toString
+// res5: String = "Set(An endpoint OPTIONS GET /a /b /c -> -/- have multiple method definitions: List(OPTIONS, GET))"
+```

@@ -15,7 +15,7 @@ import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
 import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
-import sttp.tapir.model.UsernamePassword
+import sttp.tapir.model.{UnsupportedWebSocketFrameException, UsernamePassword}
 import sttp.ws.WebSocketFrame
 
 import scala.annotation.{implicitNotFound, tailrec}
@@ -549,6 +549,14 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     id[Part[T], CF](c.format, Schema.binary)
       .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
   }
+
+  implicit def tupledWithRaw[L, H, CF <: CodecFormat](implicit codec: Codec[L, H, CF]): Codec[L, (L, H), CF] =
+    new Codec[L, (L, H), CF] {
+      override def schema: Schema[(L, H)] = codec.schema.map(h => Some(codec.encode(h) -> h))(_._2)
+      override def format: CF = codec.format
+      override def rawDecode(l: L): DecodeResult[(L, H)] = codec.rawDecode(l).map(l -> _)
+      override def encode(h: (L, H)): L = codec.encode(h._2)
+    }
 }
 
 /** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec `List[T] <-> Either[A, B]`, given

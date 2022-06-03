@@ -1,7 +1,7 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema}
-import sttp.tapir.asyncapi.{Components, Message}
+import sttp.apispec.{ReferenceOr, Schema => ASchema}
+import sttp.apispec.asyncapi.{Components, Message}
 import sttp.tapir.docs.apispec.SecuritySchemes
 import sttp.tapir.docs.apispec.schema.ObjectKey
 import sttp.tapir.internal.IterableToListMap

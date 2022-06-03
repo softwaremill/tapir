@@ -4,15 +4,19 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType.{SCoproduct, SNumber, SProduct}
-import sttp.tapir.{EndpointIO, FieldName, Schema, anyFromUtf8StringBody}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
+import sttp.tapir.{EndpointIO, FieldName, Schema, stringBodyUtf8AnyFormat}
 import zio.json.ast.Json
 import zio.json.ast.Json.Obj
 import zio.json.{JsonDecoder, JsonEncoder, _}
 
 trait TapirJsonZio {
 
-  def jsonBody[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(zioCodec[T])
+  def jsonBody[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(zioCodec[T])
+
+  def jsonBodyWithRaw[T: JsonEncoder: JsonDecoder: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
 
   implicit def zioCodec[T: JsonEncoder: JsonDecoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
@@ -44,9 +48,4 @@ trait TapirJsonZio {
 
   implicit val schemaForZioJsonObject: Schema[Obj] =
     Schema(SProduct(Nil), Some(SName("zio.json.ast.Json.Obj")))
-
-  // zio-json encodes big decimals as numbers - adjusting the schemas (which by default are strings) to that format
-  // refer to #321 (circe case)
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
-  implicit val schemaForJBigDecimal: Schema[java.math.BigDecimal] = Schema(SNumber())
 }

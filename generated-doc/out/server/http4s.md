@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.20.1"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.0.0-RC2"
 ```
 
 and import the object:

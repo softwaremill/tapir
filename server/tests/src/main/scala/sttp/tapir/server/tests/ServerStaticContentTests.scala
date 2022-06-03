@@ -11,7 +11,7 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.static.{FilesOptions, ResourcesOptions}
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests._
 
@@ -425,7 +425,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
           .unsafeToFuture()
       },
       Test("should return 404 when a resource is not found") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("r3")).map(_.code shouldBe StatusCode.NotFound) }
           .unsafeToFuture()
       },
@@ -447,7 +447,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
         }
       },
       Test("if an etag is present, should only return the resource if it doesn't match the etag") {
-        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port =>
             def get(etag: Option[String]) = basicRequest
               .get(uri"http://localhost:$port/r1.txt")
@@ -465,6 +465,27 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
                 r2.code shouldBe StatusCode.Ok
               }
             }
+          }
+          .unsafeToFuture()
+      },
+      Test("should serve index.html when a resource directory is requested (from file)") {
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
+          .use { port =>
+            get(port, List("d1")).map(_.body shouldBe "Index resource")
+          }
+          .unsafeToFuture()
+      },
+      Test("should serve a resource from a jar") {
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "META-INF/maven/org.slf4j/slf4j-api"))
+          .use { port =>
+            get(port, List("pom.properties")).map(_.body should include("groupId=org.slf4j"))
+          }
+          .unsafeToFuture()
+      },
+      Test("should return 404 when a resource directory is requested from jar and index.html does not exist") {
+        serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classLoader, "META-INF/maven/org.slf4j/slf4j-api"))
+          .use { port =>
+            get(port, Nil).map(_.code shouldBe StatusCode.NotFound)
           }
           .unsafeToFuture()
       }
@@ -491,7 +512,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
       NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
+        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
       )
     )
 

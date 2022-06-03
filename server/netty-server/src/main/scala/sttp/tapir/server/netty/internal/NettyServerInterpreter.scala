@@ -4,11 +4,12 @@ import io.netty.buffer.ByteBuf
 import sttp.monad.syntax._
 import sttp.monad.MonadError
 import sttp.tapir.TapirFile
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 object NettyServerInterpreter {
@@ -20,14 +21,15 @@ object NettyServerInterpreter {
   ): Route[F] = {
     implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener
     val serverInterpreter = new ServerInterpreter[Any, F, ByteBuf, NoStreams](
-      ses,
+      FilterServerEndpoints(ses),
+      new NettyRequestBody(createFile),
       new NettyToResponseBody,
-      interceptors,
+      RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
       deleteFile
     )
 
     val handler: Route[F] = { (request: NettyServerRequest) =>
-      serverInterpreter(request, new NettyRequestBody(request, request, createFile))
+      serverInterpreter(request)
         .map {
           case RequestResult.Response(response) => Some(response)
           case RequestResult.Failure(_)         => None

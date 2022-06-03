@@ -20,7 +20,7 @@ import scala.annotation.{StaticAnnotation, implicitNotFound}
   */
 @implicitNotFound(
   msg = """Could not find Schema for type ${T}.
-Since 0.17.0 automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
+Automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
 You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#schema-derivation
 When using datatypes integration remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
 )
@@ -35,7 +35,9 @@ case class Schema[T](
     format: Option[String] = None,
     encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
-    validator: Validator[T] = Validator.pass[T]
+    hidden: Boolean = false,
+    validator: Validator[T] = Validator.pass[T],
+    attributes: AttributeMap = AttributeMap.Empty
 ) extends SchemaMacros[T] {
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
@@ -63,7 +65,9 @@ case class Schema[T](
       schemaType = SOption(this)(identity),
       isOptional = true,
       format = format,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden,
+      attributes = attributes
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -73,7 +77,9 @@ case class Schema[T](
     Schema(
       schemaType = SArray(this)(_.toIterable),
       isOptional = true,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden,
+      attributes = attributes
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -83,7 +89,9 @@ case class Schema[T](
     Schema(
       schemaType = SArray(this)(identity),
       isOptional = true,
-      deprecated = deprecated
+      deprecated = deprecated,
+      hidden = hidden,
+      attributes = attributes
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
@@ -110,20 +118,35 @@ case class Schema[T](
 
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
+  def hidden(h: Boolean): Schema[T] = copy(hidden = h)
+
   def show: String = s"schema is $schemaType"
 
   def showValidators: Option[String] = {
+    def showFieldValidators(fields: List[SProductField[T]]) = {
+      fields.map(f => f.schema.showValidators.map(fvs => s"${f.name.name}->($fvs)")).collect { case Some(s) => s } match {
+        case Nil => None
+        case l   => Some(l.mkString(","))
+      }
+    }
+
     if (hasValidation) {
       val thisValidator = validator.show
       val childValidators = schemaType match {
         case SOption(element) => element.showValidators.map(esv => s"elements($esv)")
         case SArray(element)  => element.showValidators.map(esv => s"elements($esv)")
-        case SProduct(fields) =>
-          fields.map(f => f.schema.showValidators.map(fvs => s"${f.name.name}->($fvs)")).collect { case Some(s) => s } match {
-            case Nil => None
-            case l   => Some(l.mkString(","))
+        case SProduct(fields) => showFieldValidators(fields)
+        case SOpenProduct(fields, valueSchema) =>
+          val fieldValidators = showFieldValidators(fields)
+          val elementsValidators = valueSchema.showValidators.map(esv => s"elements($esv)")
+
+          (fieldValidators, elementsValidators) match {
+            case (None, None)       => None
+            case (None, Some(_))    => elementsValidators
+            case (Some(_), None)    => fieldValidators
+            case (Some(f), Some(e)) => Some(f + " " + e)
           }
-        case SOpenProduct(valueSchema) => valueSchema.showValidators.map(esv => s"elements($esv)")
+
         case SCoproduct(subtypes, _) =>
           subtypes.map(s => s.showValidators.map(svs => s.name.fold(svs)(n => s"${n.show}->($svs)"))) match {
             case Nil => None
@@ -146,16 +169,23 @@ case class Schema[T](
     fieldPath match {
       case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
       case f :: fs =>
+        def modifyFieldsAtPath(fields: List[SProductField[T]]) = {
+          fields.map { field =>
+            if (field.name.name == f) SProductField[T, field.FieldType](field.name, field.schema.modifyAtPath(fs, modify), field.get)
+            else field
+          }
+        }
+
         val schemaType2 = schemaType match {
           case s @ SArray(element) if f == Schema.ModifyCollectionElements  => SArray(element.modifyAtPath(fs, modify))(s.toIterable)
           case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toOption)
           case s @ SProduct(fields) =>
-            s.copy(fields = fields.map { field =>
-              if (field.name.name == f) SProductField[T, field.FieldType](field.name, field.schema.modifyAtPath(fs, modify), field.get)
-              else field
-            })
-          case s @ SOpenProduct(valueSchema) if f == Schema.ModifyCollectionElements =>
-            s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))(s.fieldValues)
+            s.copy(fields = modifyFieldsAtPath(fields))
+          case s @ SOpenProduct(fields, valueSchema) if f == Schema.ModifyCollectionElements =>
+            s.copy(
+              fields = modifyFieldsAtPath(fields),
+              valueSchema = valueSchema.modifyAtPath(fs, modify)
+            )(s.mapFieldValues)
           case s @ SCoproduct(subtypes, _) =>
             s.copy(subtypes = subtypes.map(_.modifyAtPath(fieldPath, modify)))(s.subtypeSchema)
           case _ => schemaType
@@ -163,8 +193,9 @@ case class Schema[T](
         copy(schemaType = schemaType2)
     }
 
-  /** Add a validator to this schema. If the validator contains a named enum validator: * the encode function is inferred if not yet
-    * defined, and the validators possible values are of a basic type * the name is set as the schema's name.
+  /** Add a validator to this schema. If the validator contains a named enum validator:
+    *   - the encode function is inferred if not yet defined, and the validators possible values are of a basic type
+    *   - the name is set as the schema's name.
     */
   def validate(v: Validator[T]): Schema[T] = {
     val v2 = v.inferEnumerationEncode
@@ -181,15 +212,19 @@ case class Schema[T](
   private def applyValidation(t: T, objects: Map[SName, Schema[_]]): List[ValidationError[_]] = {
     val objects2 = name.fold(objects)(n => objects + (n -> this))
 
+    def applyFieldsValidation(fields: List[SProductField[T]]) = {
+      fields.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
+    }
+
     // we avoid running validation for structures where there are no validation rules applied (recursively)
     if (hasValidation) {
       validator(t) ++ (schemaType match {
         case s @ SOption(element) => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
         case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
-        case s @ SProduct(_) =>
-          s.fieldsWithValidation.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
-        case s @ SOpenProduct(valueSchema) =>
-          s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
+        case s @ SProduct(_)      => applyFieldsValidation(s.fieldsWithValidation)
+        case s @ SOpenProduct(_, valueSchema) =>
+          applyFieldsValidation(s.fieldsWithValidation) ++
+            s.mapFieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
         case s @ SCoproduct(_, _) =>
           s.subtypeSchema(t)
             .map { case SchemaWithValue(s, v) => s.applyValidation(v, objects2) }
@@ -202,15 +237,18 @@ case class Schema[T](
 
   private[tapir] def hasValidation: Boolean = {
     (validator != Validator.pass) || (schemaType match {
-      case SOption(element)          => element.hasValidation
-      case SArray(element)           => element.hasValidation
-      case s: SProduct[T]            => s.fieldsWithValidation.nonEmpty
-      case SOpenProduct(valueSchema) => valueSchema.hasValidation
-      case SCoproduct(subtypes, _)   => subtypes.exists(_.hasValidation)
-      case SRef(_)                   => true
-      case _                         => false
+      case SOption(element)                 => element.hasValidation
+      case SArray(element)                  => element.hasValidation
+      case s: SProduct[T]                   => s.fieldsWithValidation.nonEmpty
+      case s @ SOpenProduct(_, valueSchema) => s.fieldsWithValidation.nonEmpty || valueSchema.hasValidation
+      case SCoproduct(subtypes, _)          => subtypes.exists(_.hasValidation)
+      case SRef(_)                          => true
+      case _                                => false
     })
   }
+
+  def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+  def attribute[A](k: AttributeKey[A], v: A): Schema[T] = copy(attributes = attributes.put(k, v))
 }
 
 object Schema extends LowPrioritySchema with SchemaCompanionMacros {
@@ -225,7 +263,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForString: Schema[String] = Schema(SString())
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger())
   implicit val schemaForShort: Schema[Short] = Schema(SInteger())
-  implicit val schemaForInt: Schema[Int] = Schema(SInteger())
+  implicit val schemaForInt: Schema[Int] = Schema(SInteger[Int]()).format("int32")
   implicit val schemaForLong: Schema[Long] = Schema(SInteger[Long]()).format("int64")
   implicit val schemaForFloat: Schema[Float] = Schema(SNumber[Float]()).format("float")
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber[Double]()).format("double")
@@ -247,10 +285,10 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString())
-  implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString())
-  implicit val schemaForBigInt: Schema[BigInt] = Schema(SString())
-  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SString())
+  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
+  implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SNumber())
+  implicit val schemaForBigInt: Schema[BigInt] = Schema(SInteger())
+  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
   implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
@@ -278,16 +316,34 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Unit: SName = SName(fullName = "Unit")
   }
 
-  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]].
-    */
+  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]]. */
   object annotations {
     class description(val text: String) extends StaticAnnotation
     class encodedExample(val example: Any) extends StaticAnnotation
     class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
     class format(val format: String) extends StaticAnnotation
     class deprecated extends StaticAnnotation
+    class hidden extends StaticAnnotation
     class encodedName(val name: String) extends StaticAnnotation
+
+    /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
+      * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or
+      * [[Option]]s, use [[validateEach]].
+      */
     class validate[T](val v: Validator[T]) extends StaticAnnotation
+
+    /** Adds the `v` validators to elements of the schema, when the annotated class or field is a collection or [[Option]]. The type of the
+      * validator must match exactly the type of the collection's elements. This is not checked at compile-time, and might cause run-time
+      * exceptions. E.g. to validate that when an `Option[Int]` is defined, the value is smaller than 5, you should use:
+      * {{{
+      * case class Payload(
+      *   @validateEach(Validator.max(4, exclusive = true))
+      *   aField: Option[Int]
+      * )
+      * }}}
+      */
+    class validateEach[T](val v: Validator[T]) extends StaticAnnotation
+    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
   }
 }
 

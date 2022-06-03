@@ -31,4 +31,5 @@ components:
           default: foo
         count:
           type: integer
+          format: int32
           default: 12

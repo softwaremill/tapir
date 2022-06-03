@@ -158,6 +158,14 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
+    testServer(endpoint.get.in(path[String]("pathParam")).in(queryParams).out(stringBody)) { case (pathParam: String, mqp: QueryParams) =>
+      pureResult(s"pathParam:$pathParam queryParams:${mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&")}".asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri/abc?xyz=123")
+        .send(backend)
+        .map(_.body shouldBe Right("pathParam:abc queryParams:xyz=123"))
+    },
     testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
       pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2.toList}").mkString("&").asRight[Unit])
     ) { (backend, baseUri) =>
@@ -237,7 +245,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(in_string_out_content_type_string, "dynamic content type")((b: String) => pureResult((b, "image/png").asRight[Unit])) {
       (backend, baseUri) =>
-        basicStringRequest.get(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
+        basicStringRequest.post(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
           r.contentType shouldBe Some("image/png")
           r.body shouldBe "test"
         }
@@ -332,6 +340,55 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .headers(Header(HeaderNames.ContentType, "multipart/form-data; boundary=abc"))
         .send(backend)
         .map(_.body shouldBe Right("x"))
+    },
+    testServer(out_custom_content_type_empty_body)(k =>
+      pureResult((if (k < 0) MediaType.ApplicationJson.toString() else MediaType.ApplicationXml.toString()).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map(_.contentType shouldBe Some(MediaType.ApplicationJson.toString())) >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map(_.contentType shouldBe Some(MediaType.ApplicationXml.toString()))
+    },
+    testServer(out_custom_content_type_string_body)(k =>
+      pureResult((if (k < 0) (MediaType.ApplicationJson.toString(), "{}") else (MediaType.ApplicationXml.toString(), "<>")).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("{}")
+          r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+        } >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("<>")
+            r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+          }
+    },
+    testServer(in_raw_with_json_out_string) { case (s: String, fa: FruitAmount) =>
+      pureResult((s.length + " " + fa.amount).asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .body("""{"fruit":"orange","amount":11}""")
+        .send(backend)
+        .map(_.body shouldBe Right("30 11"))
+    },
+    testServer(in_flag_query_out_string) { input => pureResult(input.toString.asRight[Unit]) } { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?flag").send(backend).map(_.body shouldBe Right("Some(true)")) >>
+        basicRequest.get(uri"$baseUri?flag=false").send(backend).map(_.body shouldBe Right("Some(false)")) >>
+        basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("None"))
+    },
+    testServer(in_query_out_string, "should contain the content-length header")((fruit: String) =>
+      pureResult(s"fruit: $fruit".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.contentLength shouldBe Some(13))
     }
   )
 

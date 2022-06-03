@@ -3,7 +3,7 @@ package sttp.tapir.server.finatra
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
@@ -17,13 +17,13 @@ case class FinatraServerOptions(
 object FinatraServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, FinatraServerOptions] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[Future, FinatraServerOptions]) =>
+  def customiseInterceptors: CustomiseInterceptors[Future, FinatraServerOptions] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[Future, FinatraServerOptions]) =>
         FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(None)
 
-  val default: FinatraServerOptions = customInterceptors.options
+  val default: FinatraServerOptions = customiseInterceptors.options
 
   def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[TapirFile] = {
     // TODO: Make this streaming
@@ -41,6 +41,7 @@ object FinatraServerOptions extends Logging {
   private[finatra] lazy val futurePool = FuturePool.unboundedPool
 
   lazy val defaultServerLog: DefaultServerLog[Future] = DefaultServerLog(
+    doLogWhenReceived = msg => futurePool(debug(msg)),
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,
     doLogExceptions = (msg: String, ex: Throwable) => futurePool { error(msg, ex) },

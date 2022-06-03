@@ -25,7 +25,9 @@ package object schema {
       element = opt.element.copy(
         description = schema.description.orElse(opt.element.description),
         format = schema.format.orElse(opt.element.format),
-        deprecated = schema.deprecated || opt.element.deprecated
+        deprecated = schema.deprecated || opt.element.deprecated,
+        encodedExample = schema.encodedExample.orElse(opt.element.encodedExample),
+        default = schema.default.flatMap { case (t, raw) => opt.toOption(t).map((_, raw)) }.orElse(opt.element.default)
       )
     )(opt.toOption)
   }

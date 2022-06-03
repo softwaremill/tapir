@@ -113,7 +113,7 @@ val baseEndpoint = endpoint.errorOut(
 Of course, you could use `oneOfVariantValueMatcher` to do runtime filtering for other purpose than solving type erasure.
 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
-To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
+To make that more easy, we provide the `MatchType` typeclass, so you can automatically derive that partial function:
 
 ```scala
 import sttp.tapir.typelevel.MatchType
@@ -163,6 +163,31 @@ oneOfBody(
   xmlBody[User],
   stringBody.map(User(_))(_.name)
 )
+```
+
+## oneOf and non-blocking streaming
+
+[Streaming bodies](streaming.md) can't be used as normal inputs/outputs, as the streaming requirement needs to be 
+propagated to the `Endpoint` type. This way, we assure at compile-time that only interpreters supporting the given 
+streaming type can be used to interpret an endpoint.
+
+However, this makes it impossible to use streaming bodies in `oneOf` (via `oneOfVariant`) and `oneOfBody`, as both
+require normal input/outputs as parameters. To bypass this limitation, a `.toEndpointIO` method is available
+on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the streaming requirement. This decreases
+type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
+endpoints, which require including streaming bodies in output variants.
+
+```eval_rst
+.. note::
+
+  If the same streaming body description is used in all branches of a ``oneOf``, this can be refactored into
+  a regular streaming body output + a varying set of output headers, expressed using ``oneOf``.
+```
+
+```eval_rst
+.. warning::
+
+  Mixed streaming and non-streaming bodies defined as ``oneOf`` variants currently won't work with client interpreters.
 ```
 
 ## Next

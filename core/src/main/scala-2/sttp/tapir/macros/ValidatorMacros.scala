@@ -1,7 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.Validator
-import sttp.tapir.generic.internal.ValidatorEnumerationMacro
+import sttp.tapir.internal.ValidatorEnumerationMacro
 
 trait ValidatorMacros {
 

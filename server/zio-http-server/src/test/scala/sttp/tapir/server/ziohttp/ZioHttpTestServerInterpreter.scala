@@ -15,18 +15,21 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactor
     extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
-    val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customInterceptors).options
+    val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-    val env = ZEnvironment(eventLoopGroup).add(channelFactory)
-    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _)) ++ Server.maxRequestSize(10000000)
-    Server
-      .make(server ++ Server.port(0))
-      .provideEnvironment(env)
-      .map(_.port)
-      .toResource[IO]
+    val layers: ZLayer[Any, Nothing, EventLoopGroup with ServerChannelFactory] =
+      ZLayer.succeed(eventLoopGroup) ++ ZLayer.succeed(channelFactory)
+
+    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _))
+
+    val io: ZIO[Scope, Throwable, Server.Start] = ZIO
+      .scoped(Server.make(server ++ Server.port(0)))
+      .provide(layers)
+
+    Resource.scoped[IO, Any, Int](io.map(_.port))
   }
 }

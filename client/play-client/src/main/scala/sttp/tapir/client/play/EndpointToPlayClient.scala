@@ -103,7 +103,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
         req.withUrl(req.url + ps.map(encodePathSegment).mkString("/", "/", ""))
-      case EndpointInput.Query(name, codec, _) =>
+      case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
+        req.addQueryStringParameters(name -> "")
+      case EndpointInput.Query(name, _, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.addQueryStringParameters(name -> v) }
         req2
       case EndpointInput.Cookie(name, codec, _) =>
@@ -116,10 +118,15 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case EndpointIO.OneOfBody(variants, _) => setInputParams(variants.head.body, params, req)
+      case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, req)
+      case EndpointIO.OneOfBody(
+            EndpointIO.OneOfBodyVariant(_, Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)))) :: _,
+            _
+          ) =>
+        setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
+      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
-        val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
-        req2
+        setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
           .encode(value)

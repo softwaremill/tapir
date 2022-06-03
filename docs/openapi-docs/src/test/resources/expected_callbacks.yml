@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: Callbacks
+  version: '1.0'
+paths:
+  /trigger:
+    put:
+      operationId: putTrigger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerRequest'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+      callbacks:
+        my_callback:
+          '{$request.body#/callbackUrl}':
+            put:
+              operationId: putCallback
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/CallbackRequest'
+                required: true
+              responses:
+                '200':
+                  description: ''
+                '400':
+                  description: 'Invalid value for: body'
+                  content:
+                    text/plain:
+                      schema:
+                        type: string
+        my_reusable_callback:
+          $ref: '#/components/callbacks/reusable_callback'
+components:
+  schemas:
+    TriggerRequest:
+      required:
+      - callbackUrl
+      type: object
+      properties:
+        callbackUrl:
+          type: string
+    CallbackRequest:
+      required:
+      - answer
+      type: object
+      properties:
+        answer:
+          type: string
+  callbacks:
+    reusable_callback:
+      '{$request.body#/callbackUrl}':
+        delete:
+          operationId: deleteReusable_callback
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CallbackRequest'
+            required: true
+          responses:
+            '200':
+              description: ''
+            '400':
+              description: 'Invalid value for: body'
+              content:
+                text/plain:
+                  schema:
+                    type: string

@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.{ByteBuf, Unpooled}
 import sttp.capabilities
 import sttp.model.HasHeaders
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 

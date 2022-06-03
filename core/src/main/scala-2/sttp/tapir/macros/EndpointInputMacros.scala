@@ -1,7 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.EndpointInput
-import sttp.tapir.generic.internal.EndpointInputAnnotationsMacro
+import sttp.tapir.internal.EndpointInputAnnotationsMacro
 
 trait EndpointInputMacros {
 

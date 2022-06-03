@@ -1,17 +1,29 @@
 # tapir, or Typed API descRiptions
 
+## Why tapir?
+
+* **type-safety**: compile-time guarantees, develop-time completions, read-time information
+* **declarative**: separate the shape of the endpoint (the "what"), from the server logic (the "how")
+* **OpenAPI / Swagger integration**: generate documentation from endpoint descriptions
+* **observability**: leverage the metadata to report rich metrics and tracing information
+* **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
+* **library, not a framework**: integrates with your stack
+
+## Intro
+
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input and output parameters. An endpoint specification can be interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
-  * [Http4s](server/http4s.md) `HttpRoutes[F]`
-  * [Netty](server/netty.md)
+  * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
+  * [Netty](server/netty.md) (using `Future`s or cats-effect)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
-  * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
+  * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
@@ -32,6 +44,35 @@ Tapir is available:
 * all modules - Scala 2.12 and 2.13 on the JVM
 * selected modules (core; http4s, vertx, netty, aws servers; sttp and http4s clients; openapi; some js and datatype integrations) - Scala 3 on the JVM  
 * selected modules (aws server; sttp client; some js and datatype integrations) - Scala 2.12, 2.13 and 3 using Scala.JS.
+
+## Adopters
+
+Is your company already using tapir? We're continually expanding the "adopters" section in the documentation; the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
+
+Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest.
+
+We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="https://www.adobe.com" title="Adobe"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/adobe.png" alt="Adobe" width="160"/></a>
+<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
+<a href="https://swissborg.com" title="Swissborg"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swissborg.png" alt="Swissborg" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="https://kaizo.com" title="Kaizo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kaizo.png" alt="Kaizo" width="160"/></a>
+<a href="https://www.process.st/" title="Process Street"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/process_street.png" alt="Process Street" width="100"/></a>
+<a href="https://tranzzo.com" title="Tranzzo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/tranzzo.svg" alt="Tranzzo" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top:10px;">
+<a href="https://www.kelkoogroup.com" title="Kelkoo group"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kelkoogroup.png" alt="Kelkoo group" width="160"/></a>
+<a href="https://www.softwaremill.com/" title="SoftwareMill"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="SoftwareMill" width="160"/></a>
+<a href="https://www.carvana.com" title="Carvana"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/carvana.svg" alt="Carvana" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
+<a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
+<a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
+</div>
 
 ## Code teaser
 
@@ -61,8 +102,8 @@ val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List
 
 // Generate OpenAPI documentation
 
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
@@ -73,11 +114,13 @@ println(docs.toYaml)
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
+  
 val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
@@ -193,5 +236,6 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    other_interpreters
    mytapir
    troubleshooting
+   migrating
    contributing
 

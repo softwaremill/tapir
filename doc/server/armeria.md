@@ -155,7 +155,10 @@ val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toService(streamingR
 Add the following dependency
 
 ```scala
+// for zio 2:
 "com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "@VERSION@"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio1" % "@VERSION@"
 ```
 
 to use this interpreter with ZIO.
@@ -169,31 +172,29 @@ This object contains `toService(e: ServerEndpoint[ZioStreams, RIO[R, *]])` metho
 An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
+import com.linecorp.armeria.server.Server
 import sttp.tapir._
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 import sttp.tapir.ztapir._
-import zio._
-import com.linecorp.armeria.server.Server
+import zio.{ExitCode, Runtime, UIO, URIO, ZIO, ZIOAppDefault}
 
-object Main extends zio.App {
-  override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
+object Main extends ZIOAppDefault {
+  override def run: URIO[Any, ExitCode] = {
     implicit val runtime = Runtime.default
-    
+
     val tapirEndpoint: PublicEndpoint[String, Unit, String, Any] = ???
     def logic(key: String): UIO[String] = ???
-     
-    ZManaged
-      .make(ZIO.fromCompletableFuture {
-        val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
 
-        val server = Server
-          .builder()
-          .service(tapirService)
-          .build()
-        server.start().thenApply[Server](_ => server)
-      }) { server =>
-        ZIO.fromCompletableFuture(server.closeAsync()).orDie
-      }.useForever.as(ExitCode.success).orDie 
+    val s = ZIO.fromCompletableFuture {
+      val tapirService = ArmeriaZioServerInterpreter().toService(tapirEndpoint.zServerLogic(logic))
+      val server = Server
+        .builder()
+        .service(tapirService)
+        .build()
+      server.start().thenApply[Server](_ => server)
+    }
+
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie) *> ZIO.never).exitCode
   }
 }
 ```

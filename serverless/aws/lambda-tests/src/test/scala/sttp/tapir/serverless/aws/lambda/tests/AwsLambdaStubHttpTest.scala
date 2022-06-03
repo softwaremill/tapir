@@ -23,7 +23,7 @@ object AwsLambdaStubHttpTest {
 
     override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): Route[IO] = {
       val serverOptions: AwsServerOptions[IO] =
-        interceptors(AwsCatsEffectServerOptions.customInterceptors[IO]).options.copy(encodeResponseBody = false)
+        interceptors(AwsCatsEffectServerOptions.customiseInterceptors[IO]).options.copy(encodeResponseBody = false)
       AwsCatsEffectServerInterpreter(serverOptions).toRoute(es)
     }
 

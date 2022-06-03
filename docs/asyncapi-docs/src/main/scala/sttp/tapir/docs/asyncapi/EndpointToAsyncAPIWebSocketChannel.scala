@@ -1,11 +1,11 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.asyncapi._
 import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
-import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.namedPathComponents
+import sttp.tapir.docs.apispec.{DocsExtensions, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal.{IterableToListMap, RichEndpoint}
 import sttp.tapir.{AnyEndpoint, Codec, CodecFormat, EndpointIO, EndpointInput}
@@ -25,8 +25,12 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
-    val queryInputs = inputs.collect { case EndpointInput.Query(name, codec, info) => addMetaDataFromInfo(name, codec, info) }
-    val headerInputs = inputs.collect { case EndpointIO.Header(name, codec, info) => addMetaDataFromInfo(name, codec, info) }
+    val queryInputs = inputs.collect {
+      case EndpointInput.Query(name, _, codec, info) if !codec.schema.hidden => addMetaDataFromInfo(name, codec, info)
+    }
+    val headerInputs = inputs.collect {
+      case EndpointIO.Header(name, codec, info) if !codec.schema.hidden => addMetaDataFromInfo(name, codec, info)
+    }
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
@@ -37,7 +41,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       DocsExtensions.fromIterable(e.info.docsExtensions)
     )
 
-    (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
+    (e.showPathTemplate(showQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), channelItem)
   }
 
   private def addMetaDataFromInfo(

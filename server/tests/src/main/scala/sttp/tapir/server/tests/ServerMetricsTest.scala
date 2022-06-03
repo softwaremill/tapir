@@ -6,9 +6,9 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.metrics.{EndpointMetric, Metric}
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Basic.{in_input_stream_out_input_stream, in_json_out_json, in_root_path}
 import sttp.tapir.tests.Test
@@ -26,9 +26,10 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
       val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
-      testServer(in_json_out_json.name("metrics"), interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics))(
-        f => (if (f.fruit == "apple") Right(f) else Left(())).unit
-      ) { (backend, baseUri) =>
+      testServer(
+        in_json_out_json.name("metrics"),
+        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+      )(f => (if (f.fruit == "apple") Right(f) else Left(())).unit) { (backend, baseUri) =>
         basicRequest // onDecodeSuccess path
           .post(uri"$baseUri/api/echo")
           .body("""{"fruit":"apple","amount":1}""")
@@ -56,7 +57,7 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
 
       testServer(
         in_input_stream_out_input_stream.name("metrics"),
-        interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
       )(is => (new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit].unit) { (backend, baseUri) =>
         basicRequest
           .post(uri"$baseUri/api/echo")
@@ -73,8 +74,8 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
       val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F](List(resCounter), Seq.empty)
 
-      testServer(in_root_path.name("metrics"), interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics))(_ =>
-        ().asRight[Unit].unit
+      testServer(in_root_path.name("metrics"), interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics))(
+        _ => ().asRight[Unit].unit
       ) { (backend, baseUri) =>
         basicRequest
           .get(uri"$baseUri")
@@ -93,7 +94,7 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
 
       testServer(
         in_root_path.name("metrics on exception"),
-        interceptors = (ci: CustomInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
       ) { _ =>
         Thread.sleep(100)
         throw new RuntimeException("Ups")
@@ -118,8 +119,8 @@ object ServerMetricsTest {
   }
 
   def newRequestCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](new Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.unit(c.++()) }) })
 
   def newResponseCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](new Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponse { (_, _) => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponseBody { (_, _) => m.unit(c.++()) }) })
 }

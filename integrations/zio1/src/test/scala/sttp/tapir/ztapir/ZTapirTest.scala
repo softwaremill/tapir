@@ -5,8 +5,9 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
-import sttp.tapir.{CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.{AttributeKey, CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.model.ServerResponse
 import zio.{UIO, ZIO}
 import sttp.tapir.ztapir.instances.TestMonadError._
 import zio.test.DefaultRunnableSpec
@@ -29,8 +30,8 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private val exampleRequestBody = new RequestBody[TestEffect, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-    override def toRaw[R](bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
-    override def toStream(): streams.BinaryStream = ???
+    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
+    override def toStream(serverRequest: ServerRequest): streams.BinaryStream = ???
   }
 
   private val exampleToResponse: ToResponseBody[ResponseBodyType, RequestBodyType] = new ToResponseBody[ResponseBodyType, RequestBodyType] {
@@ -57,6 +58,9 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     override def method: Method = ???
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
+    override def attribute[T](k: AttributeKey[T]): Option[T] = None
+    override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
+    override def withUnderlying(underlying: Any): ServerRequest = this
   }
 
   implicit val bodyListener: BodyListener[TestEffect, ResponseBodyType] = new BodyListener[TestEffect, ResponseBodyType] {
@@ -66,15 +70,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    UIO(
-      RequestResult.Response(
-        new ServerResponse[ResponseBodyType] {
-          override def code: StatusCode = StatusCode.InternalServerError
-          override def headers: Seq[Header] = scala.collection.immutable.Seq.empty[Header]
-          override def body: Option[ResponseBodyType] = Some(error.getMessage)
-        }
-      )
-    )
+    UIO(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
 
   final case class User(name: String)
 
@@ -88,13 +84,14 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
-      List(serverEndpoint),
+      _ => List(serverEndpoint),
+      exampleRequestBody,
       exampleToResponse,
       List.empty,
       _ => ZIO.unit
     )
 
-    interpreter(testRequest, exampleRequestBody)
+    interpreter(testRequest)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
@@ -116,13 +113,14 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
     val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
-      List(serverEndpoint),
+      _ => List(serverEndpoint),
+      exampleRequestBody,
       exampleToResponse,
       List.empty,
       _ => ZIO.unit
     )
 
-    interpreter(testRequest, exampleRequestBody)
+    interpreter(testRequest)
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(

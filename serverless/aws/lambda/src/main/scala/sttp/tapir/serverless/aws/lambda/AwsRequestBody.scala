@@ -4,17 +4,19 @@ import sttp.capabilities
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.RawBodyType
-import sttp.tapir.internal.NoStreams
+import sttp.tapir.capabilities.NoStreams
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.util.Base64
 
-private[lambda] class AwsRequestBody[F[_]: MonadError](request: AwsRequest) extends RequestBody[F, NoStreams] {
+private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+    val request = awsRequest(serverRequest)
     val decoded =
       if (request.isBase64Encoded) Left(Base64.getDecoder.decode(request.body.getOrElse(""))) else Right(request.body.getOrElse(""))
 
@@ -30,5 +32,7 @@ private[lambda] class AwsRequestBody[F[_]: MonadError](request: AwsRequest) exte
     }).asInstanceOf[RawValue[R]].unit
   }
 
-  override def toStream(): streams.BinaryStream = throw new UnsupportedOperationException
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException
+
+  private def awsRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[AwsRequest]
 }

@@ -4,7 +4,7 @@ import scala.quoted.*
 
 import scala.deriving.Mirror
 
-object ComplietimeErrors {
+private[tapir] object ComplietimeErrors {
   inline def reportIncorrectMapping[SOURCE, TARGET] = ${ reportIncorrectMappingImpl[SOURCE, TARGET] }
 
   private def reportIncorrectMappingImpl[SOURCE: Type, TARGET: Type](using Quotes): Expr[Unit] = {

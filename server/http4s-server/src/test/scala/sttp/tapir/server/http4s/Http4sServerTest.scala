@@ -1,31 +1,20 @@
 package sttp.tapir.server.http4s
 
 import cats.effect._
-import cats.syntax.all._
 import cats.effect.unsafe.implicits.global
-import org.http4s.server.Router
+import cats.syntax.all._
+import fs2.Pipe
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.scalatest.matchers.should.Matchers._
+import org.http4s.server.Router
 import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.server.tests.{
-  AllServerTests,
-  DefaultCreateServerTest,
-  ServerSecurityTests,
-  ServerBasicTests,
-  ServerMetricsTest,
-  ServerMultipartTests,
-  ServerRejectTests,
-  ServerStaticContentTests,
-  ServerStreamingTests,
-  ServerWebSocketTests,
-  backendResource
-}
+import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -78,7 +67,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
       createServerTest.testServer(
-        endpoint.out(streamBinaryBody(Fs2Streams[IO])),
+        endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
         IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(10.seconds)))
@@ -118,6 +107,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
       new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+        override def emptyPipe[A, B]: Pipe[IO, A, B] = _ => fs2.Stream.empty
       }.tests() ++
       additionalTests()
   }

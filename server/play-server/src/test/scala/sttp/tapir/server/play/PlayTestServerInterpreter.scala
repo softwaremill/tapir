@@ -4,7 +4,8 @@ import akka.actor.ActorSystem
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import play.api.Mode
-import play.api.mvc.{Handler, RequestHeader}
+import play.api.http.ParserConfiguration
+import play.api.mvc.{Handler, PlayBodyParsers, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
@@ -21,7 +22,9 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
   import actorSystem.dispatcher
 
   override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
-    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customInterceptors).options
+    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors).options
+      // increase the default maxMemoryBuffer to 10M so that tests pass
+      .copy(playBodyParsers = PlayBodyParsers(conf = ParserConfiguration(maxMemoryBuffer = 1024000)))
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 

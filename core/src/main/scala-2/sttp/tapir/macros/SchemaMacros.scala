@@ -2,8 +2,8 @@ package sttp.tapir.macros
 
 import magnolia1.Magnolia
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, SchemaMapMacro}
-import sttp.tapir.internal.{ModifySchemaMacro, SchemaEnumerationMacro}
+import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
+import sttp.tapir.internal.{ModifySchemaMacro, OneOfMacro, SchemaEnumerationMacro, SchemaMapMacro}
 import sttp.tapir.{Schema, SchemaType, Validator}
 
 trait SchemaMacros[T] {
@@ -32,8 +32,14 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   def schemaForMap[K, V: Schema](keyToString: K => String): Schema[Map[K, V]] =
     macro SchemaMapMacro.generateSchemaForMap[K, V]
 
-  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
+  /** @param discriminatorSchema
+    *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
+    */
+  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(
+      mapping: (V, Schema[_])*
+  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] =
     macro OneOfMacro.generateOneOfUsingField[E, V]
+
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
@@ -63,7 +69,7 @@ class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {
   ): Schema[T] = {
     val v = encode.fold(validator)(e => validator.encode(e))
 
-    val s0 = Schema.string.validate(v)
+    val s0 = Schema(schemaType).validate(v)
     default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
   }
 }

@@ -44,4 +44,5 @@ components:
           type: string
         age:
           type: integer
+          format: int32
           minimum: 11

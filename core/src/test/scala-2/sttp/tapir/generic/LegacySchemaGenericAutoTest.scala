@@ -6,7 +6,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.concurrent.Future
 
@@ -23,7 +23,7 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       _.toIterable
     )
     implicitly[Schema[Array[IntegerValueClass]]].schemaType shouldBe SArray[Array[IntegerValueClass], IntegerValueClass](
-      Schema(SInteger())
+      Schema(SInteger(), format = Some("int32"))
     )(
       _.toIterable
     )
@@ -32,7 +32,12 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for map of value classes" in {
     val schema = implicitly[Schema[Map[String, IntegerValueClass]]]
     schema.name shouldBe Some(SName("Map", List("IntegerValueClass")))
-    schema.schemaType shouldBe SOpenProduct[Map[String, IntegerValueClass], IntegerValueClass](Schema(SInteger()))(identity)
+    schema.schemaType shouldBe SOpenProduct[Map[String, IntegerValueClass], IntegerValueClass](
+      Nil,
+      Schema(SInteger(), format = Some("int32"))
+    )(
+      identity
+    )
   }
 
   it should "find schema for recursive data structure" in {

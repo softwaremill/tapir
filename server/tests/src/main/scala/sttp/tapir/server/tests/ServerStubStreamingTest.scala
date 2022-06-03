@@ -22,7 +22,7 @@ abstract class ServerStubStreamingTest[F[_], S, OPTIONS](
   override protected def afterAll(): Unit = createStubServerTest.cleanUp()
 
   it should "accept stream input and stub stream output" in {
-    val server: SttpBackend[F, S] = TapirStubInterpreter(createStubServerTest.customInterceptors, createStubServerTest.stub)
+    val server: SttpBackend[F, S] = TapirStubInterpreter(createStubServerTest.customiseInterceptors, createStubServerTest.stub)
       .whenEndpoint(in_stream_out_stream(streams))
       .thenRespond(sampleStream.asInstanceOf[streams.BinaryStream])
       .backend()

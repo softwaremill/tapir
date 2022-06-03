@@ -44,6 +44,7 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
         fruitType:
           type: array
           items:

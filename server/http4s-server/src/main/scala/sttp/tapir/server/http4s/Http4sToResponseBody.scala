@@ -16,8 +16,8 @@ import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOu
 
 import java.nio.charset.Charset
 
-private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
-    serverOptions: Http4sServerOptions[F, G]
+private[http4s] class Http4sToResponseBody[F[_]: Async](
+    serverOptions: Http4sServerOptions[F]
 ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 

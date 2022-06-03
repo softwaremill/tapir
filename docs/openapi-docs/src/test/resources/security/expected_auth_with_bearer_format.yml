@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /secure/bearer:
+    get:
+      operationId: getSecureBearer
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - httpAuth: []
+components:
+  securitySchemes:
+    httpAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

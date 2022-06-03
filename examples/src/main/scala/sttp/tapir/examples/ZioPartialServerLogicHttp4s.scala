@@ -14,7 +14,7 @@ import zio.interop.catz._
 
 object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 
-  def greet(user: User, salutation: String): ZIO[Console, Nothing, String] = {
+  def greet(user: User, salutation: String): ZIO[Any, Nothing, String] = {
     val greeting = s"$salutation, ${user.name}!"
     printLine(greeting).as(greeting).orDie
   }
@@ -26,7 +26,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
     .zServerSecurityLogic(UserService.auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  val secureHelloWorld1WithLogic = secureEndpoint.get
+  val secureHelloWorld1WithLogic: ZServerEndpoint[UserService, Any] = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
@@ -35,51 +35,47 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
+  val helloWorldRoutes: HttpRoutes[RIO[UserService, *]] =
     ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic)).toRoutes
 
   // testing
-  val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>
-    def testWith(path: String, salutation: String, token: String): Task[String] =
-      backend
-        .send(
-          basicRequest
-            .response(asStringAlways)
-            .get(uri"http://localhost:8080/$path?salutation=$salutation")
-            .header("X-AUTH-TOKEN", token)
-        )
-        .map(_.body)
-        .tap { result => Task(println(s"For path: $path, salutation: $salutation, token: $token, got result: $result")) }
+  val test: Task[Unit] = ZIO.scoped {
+    AsyncHttpClientZioBackend.scoped().flatMap { backend =>
+      def testWith(path: String, salutation: String, token: String): Task[String] =
+        backend
+          .send(
+            basicRequest
+              .response(asStringAlways)
+              .get(uri"http://localhost:8080/$path?salutation=$salutation")
+              .header("X-AUTH-TOKEN", token)
+          )
+          .map(_.body)
+          .tap { result => Console.printLine(s"For path: $path, salutation: $salutation, token: $token, got result: $result") }
 
-    def assertEquals(at: Task[String], b: String): Task[Unit] =
-      at.flatMap { a =>
-        if (a == b) Task.succeed(()) else Task.fail(new IllegalArgumentException(s"$a was not equal to $b"))
-      }
+      def assertEquals(at: Task[String], b: String): Task[Unit] =
+        at.flatMap { a =>
+          if (a == b) ZIO.succeed(()) else ZIO.fail(new IllegalArgumentException(s"$a was not equal to $b"))
+        }
 
-    assertEquals(testWith("hello1", "Hello", "secret"), "Hello, Spock!") *>
-      assertEquals(testWith("hello2", "Hello", "secret"), "Hello, Spock!") *>
-      assertEquals(testWith("hello1", "Cześć", "secret"), "Cześć, Spock!") *>
-      assertEquals(testWith("hello2", "Cześć", "secret"), "Cześć, Spock!") *>
-      assertEquals(testWith("hello1", "Hello", "1234"), AuthenticationErrorCode.toString) *>
-      assertEquals(testWith("hello2", "Hello", "1234"), AuthenticationErrorCode.toString)
+      assertEquals(testWith("hello1", "Hello", "secret"), "Hello, Spock!") *>
+        assertEquals(testWith("hello2", "Hello", "secret"), "Hello, Spock!") *>
+        assertEquals(testWith("hello1", "Cześć", "secret"), "Cześć, Spock!") *>
+        assertEquals(testWith("hello2", "Cześć", "secret"), "Cześć, Spock!") *>
+        assertEquals(testWith("hello1", "Hello", "1234"), AuthenticationErrorCode.toString) *>
+        assertEquals(testWith("hello2", "Hello", "1234"), AuthenticationErrorCode.toString)
+    }
   }
 
   //
 
-  override def run =
-    ZIO.runtime
-      .flatMap { implicit runtime: Runtime[ZEnv & UserService & Console] =>
-        BlazeServerBuilder[RIO[UserService & Console & Clock, *]]
-          .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
-          .bindHttp(8080, "localhost")
-          .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-          .resource
-          .use { _ =>
-            test
-          }
-      // starting
-      }
-      .provideCustomLayer(UserService.live)
+  override def run: URIO[Any, ExitCode] =
+    BlazeServerBuilder[RIO[UserService, *]]
+      .withExecutionContext(runtime.executor.asExecutionContext)
+      .bindHttp(8080, "localhost")
+      .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+      .resource
+      .use(_ => test)
+      .provide(UserService.live)
       .exitCode
 }
 
@@ -96,8 +92,8 @@ object UserAuthenticationLayer {
 
     val live: ZLayer[Any, Nothing, Service] = ZLayer.succeed(new Service {
       def auth(token: String): IO[Int, User] = {
-        if (token == "secret") IO.succeed(User("Spock"))
-        else IO.fail(AuthenticationErrorCode)
+        if (token == "secret") ZIO.succeed(User("Spock"))
+        else ZIO.fail(AuthenticationErrorCode)
       }
     })
 

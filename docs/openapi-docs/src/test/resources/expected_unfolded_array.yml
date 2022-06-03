@@ -39,3 +39,4 @@ components:
           type: string
         amount:
           type: integer
+          format: int32

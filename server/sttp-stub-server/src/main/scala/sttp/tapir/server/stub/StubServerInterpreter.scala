@@ -1,13 +1,14 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.{Request, Response}
-import sttp.model.{Header, RequestMetadata, StatusCode}
+import sttp.model.RequestMetadata
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter._
+import sttp.tapir.server.model.ServerResponse
 
 import scala.util.{Success, Try}
 
@@ -23,11 +24,17 @@ private[stub] object StubServerInterpreter {
     }
 
     val interpreter =
-      new ServerInterpreter[R, F, Any, AnyStreams](endpoints, SttpResponseEncoder.toResponseBody, interceptors, _ => ().unit)
+      new ServerInterpreter[R, F, Any, AnyStreams](
+        FilterServerEndpoints(endpoints),
+        new SttpRequestBody[F],
+        SttpResponseEncoder.toResponseBody,
+        interceptors,
+        _ => ().unit
+      )
 
     val sRequest = new SttpRequest(req)
 
-    interpreter.apply(sRequest, new SttpRequestBody[F](req)).map {
+    interpreter.apply(sRequest).map {
       case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
       case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse.notFound)
     }

@@ -1,15 +1,15 @@
 package sttp.tapir.serverless.aws.lambda
 
 import cats.Monad
-import sttp.tapir.server.interceptor.CustomInterceptors
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 
 object AwsCatsEffectServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_]: Monad]: CustomInterceptors[F, AwsServerOptions[F]] =
-    CustomInterceptors(
-      createOptions = (ci: CustomInterceptors[F, AwsServerOptions[F]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
+  def customiseInterceptors[F[_]: Monad]: CustomiseInterceptors[F, AwsServerOptions[F]] =
+    CustomiseInterceptors(
+      createOptions = (ci: CustomiseInterceptors[F, AwsServerOptions[F]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )
 
-  def default[F[_]: Monad]: AwsServerOptions[F] = customInterceptors.options
+  def default[F[_]: Monad]: AwsServerOptions[F] = customiseInterceptors.options
 }
