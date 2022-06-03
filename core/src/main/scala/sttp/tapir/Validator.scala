@@ -90,8 +90,12 @@ object Validator extends ValidatorMacros {
   sealed trait Primitive[T] extends Validator[T] {
     def doValidate(t: T): ValidationResult
     override def apply(t: T): List[ValidationError[T]] = doValidate(t) match {
-      case ValidationResult.Valid                  => Nil
-      case ValidationResult.Invalid(customMessage) => List(ValidationError(this, t, Nil, customMessage))
+      case ValidationResult.Valid => Nil
+      case ValidationResult.Invalid(customMessages) =>
+        customMessages match {
+          case Nil => List(ValidationError(this, t, Nil, None))
+          case l   => l.map(m => ValidationError(this, t, Nil, Some(m)))
+        }
     }
   }
   case class Min[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
@@ -199,9 +203,10 @@ object Validator extends ValidatorMacros {
 sealed trait ValidationResult
 object ValidationResult {
   case object Valid extends ValidationResult
-  case class Invalid(customMessage: Option[String] = None) extends ValidationResult
+  case class Invalid(customMessage: List[String] = Nil) extends ValidationResult
   object Invalid {
-    def apply(customMessage: String): Invalid = Invalid(Some(customMessage))
+    def apply(customMessage: String): Invalid = Invalid(List(customMessage))
+    def apply(customMessage: String, customMessages: String*): Invalid = Invalid(customMessage :: customMessages.toList)
   }
 
   def validWhen(condition: Boolean): ValidationResult = if (condition) Valid else Invalid()
