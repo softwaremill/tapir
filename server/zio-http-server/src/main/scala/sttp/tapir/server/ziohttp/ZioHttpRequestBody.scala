@@ -8,8 +8,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.interpreter.RequestBody
 import zhttp.http.Request
-import zio.RIO
-import zio.Task
+import zio.{RIO, Task, ZIO}
 import zio.stream.Stream
 import zio.stream.ZStream
 
@@ -25,8 +24,8 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
     case RawBodyType.ByteBufferBody             => asByteArray(serverRequest).map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
     case RawBodyType.InputStreamBody            => asByteArray(serverRequest).map(new ByteArrayInputStream(_)).map(RawValue(_))
     case RawBodyType.FileBody =>
-      serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
-    case RawBodyType.MultipartBody(_, _) => Task.never
+      serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => ZIO.succeed(RawValue(file, Seq(file))))
+    case RawBodyType.MultipartBody(_, _) => ZIO.never
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = stream(serverRequest).asInstanceOf[streams.BinaryStream]

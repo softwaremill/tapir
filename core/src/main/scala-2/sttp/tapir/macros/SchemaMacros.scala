@@ -69,7 +69,7 @@ class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {
   ): Schema[T] = {
     val v = encode.fold(validator)(e => validator.encode(e))
 
-    val s0 = Schema.string.validate(v)
+    val s0 = Schema(schemaType).validate(v)
     default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
   }
 }

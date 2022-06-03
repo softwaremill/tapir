@@ -96,7 +96,7 @@ package object streams {
             runtime
               .unsafeRunSync(for {
                 oldState <- state.getAndUpdate(_.copy(paused = None))
-                _ <- oldState.paused.fold[UIO[Any]](UIO.unit)(_.complete(()))
+                _ <- oldState.paused.fold[UIO[Any]](ZIO.unit)(_.complete(()))
               } yield self)
               .toEither
               .fold(throw _, identity)
@@ -122,12 +122,12 @@ package object streams {
                 case Left(deferred) =>
                   deferred.get
                 case Right(buffer) =>
-                  UIO.succeed(buffer)
+                  ZIO.succeed(buffer)
               }
               result <- wrappedBuffer match {
-                case Right(buffer)     => UIO.some((buffer, ()))
-                case Left(None)        => UIO.none
-                case Left(Some(cause)) => IO.fail(cause)
+                case Right(buffer)     => ZIO.some((buffer, ()))
+                case Left(None)        => ZIO.none
+                case Left(Some(cause)) => ZIO.fail(cause)
               }
             } yield result
           }
@@ -140,15 +140,15 @@ package object streams {
                   case Left(deferred) =>
                     deferred.get
                   case Right(event) =>
-                    UIO.succeed(event)
+                    ZIO.succeed(event)
                 }
               } yield result.map((_, ()))
             })
             .mapZIO({
               case Pause =>
-                IO.attempt(readStream.pause())
+                ZIO.attempt(readStream.pause())
               case Resume =>
-                IO.attempt(readStream.resume())
+                ZIO.attempt(readStream.resume())
             })
             .runDrain
             .forkDaemon

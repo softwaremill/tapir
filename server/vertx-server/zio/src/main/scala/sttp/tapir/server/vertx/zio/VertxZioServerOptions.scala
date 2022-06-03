@@ -5,7 +5,7 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.{Defaults, TapirFile}
-import zio.{RIO, Task, URIO}
+import zio.{RIO, ZIO}
 
 final case class VertxZioServerOptions[F[_]](
     uploadDirectory: TapirFile,
@@ -27,7 +27,7 @@ object VertxZioServerOptions {
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
         VertxZioServerOptions(
           VertxServerOptions.uploadDirectory(),
-          file => Task.attemptBlocking(Defaults.deleteFile()(file)),
+          file => ZIO.attemptBlocking(Defaults.deleteFile()(file)),
           maxQueueSizeForReadStream = 16,
           ci.interceptors
         )
@@ -40,16 +40,16 @@ object VertxZioServerOptions {
       doLogWhenReceived = debugLog(log)(_, None),
       doLogWhenHandled = debugLog(log),
       doLogAllDecodeFailures = infoLog(log),
-      doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { log.error(msg, ex) },
-      noLog = URIO.unit
+      doLogExceptions = (msg: String, ex: Throwable) => ZIO.succeed { log.error(msg, ex) },
+      noLog = ZIO.unit
     )
   }
 
-  private def debugLog[R](log: Logger)(msg: String, exOpt: Option[Throwable]): RIO[R, Unit] = URIO.succeed {
+  private def debugLog[R](log: Logger)(msg: String, exOpt: Option[Throwable]): RIO[R, Unit] = ZIO.succeed {
     VertxServerOptions.debugLog(log)(msg, exOpt)
   }
 
-  private def infoLog[R](log: Logger)(msg: String, exOpt: Option[Throwable]): RIO[R, Unit] = URIO.succeed {
+  private def infoLog[R](log: Logger)(msg: String, exOpt: Option[Throwable]): RIO[R, Unit] = ZIO.succeed {
     VertxServerOptions.infoLog(log)(msg, exOpt)
   }
 }

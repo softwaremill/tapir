@@ -3,7 +3,7 @@ package sttp.tapir.server.ziohttp
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
-import zio.{RIO, Task}
+import zio.{RIO, Task, ZIO}
 
 case class ZioHttpServerOptions[R](
     createFile: ServerRequest => Task[TapirFile],
@@ -29,9 +29,9 @@ object ZioHttpServerOptions {
         )
     )
 
-  def defaultCreateFile: ServerRequest => Task[TapirFile] = _ => Task.attempt(Defaults.createTempFile())
+  def defaultCreateFile: ServerRequest => Task[TapirFile] = _ => ZIO.attempt(Defaults.createTempFile())
 
-  def defaultDeleteFile[R]: TapirFile => Task[Unit] = file => Task.attempt(Defaults.deleteFile()(file))
+  def defaultDeleteFile[R]: TapirFile => Task[Unit] = file => ZIO.attempt(Defaults.deleteFile()(file))
 
   def default[R]: ZioHttpServerOptions[R] = customiseInterceptors.options
 }

@@ -6,13 +6,13 @@ import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import _root_.zio.stream.ZStream
 import _root_.zio.{Runtime, Task}
-import sttp.tapir.server.vertx.zio.{VertxZioServerInterpreter, VertxZioServerOptions}
+import sttp.tapir.ztapir.RIOMonadError
 
 import scala.concurrent.Future
 
 object VertxZioCreateServerStubTest extends CreateServerStubTest[Task, VertxZioServerOptions[Task]] {
   override def customiseInterceptors: CustomiseInterceptors[Task, VertxZioServerOptions[Task]] = VertxZioServerOptions.customiseInterceptors
-  override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(VertxZioServerInterpreter.monadError)
+  override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(new RIOMonadError[Any])
   override def asFuture[A]: Task[A] => Future[A] = task => Runtime.default.unsafeRunToFuture(task)
 }
 

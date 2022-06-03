@@ -3,7 +3,7 @@ package sttp.tapir
 import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat}
+import sttp.tapir.typelevel.BinaryTupleOp
 
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
