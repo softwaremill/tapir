@@ -6,7 +6,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.Schema.annotations.{validate, validateEach}
 import sttp.tapir.generic.auto._
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, ObjectInputStream, ObjectOutputStream}
 
 class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
 
@@ -50,7 +50,7 @@ class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
       objectOutput.writeObject(schema)
       objectOutput.close()
 
-      val input = new ObjectInputStream(new ByteArrayInputStream(output.toByteArray))
+      val input = new ObjectInputStreamWithCustomClassLoader(new ByteArrayInputStream(output.toByteArray))
       val deserialized = input.readObject.asInstanceOf[Schema[Any]]
       deserialized shouldBe schema
     }
@@ -63,11 +63,20 @@ class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
     objectOutput.writeObject(schema)
     objectOutput.close()
 
-    val input = new ObjectInputStream(new ByteArrayInputStream(output.toByteArray))
+    val input = new ObjectInputStreamWithCustomClassLoader(new ByteArrayInputStream(output.toByteArray))
     val deserialized = input.readObject.asInstanceOf[Schema[Any]]
     deserialized shouldBe schema
 
     val p = Person("x", Some(10))
     schema.applyValidation(p) shouldBe deserialized.applyValidation(p)
+  }
+
+  // needed so that tests pass also when run from sbt
+  // see https://stackoverflow.com/questions/60750717/spark-java-lang-classcastexception-cannot-assign-instance-of-scala-collection
+  class ObjectInputStreamWithCustomClassLoader(input: InputStream) extends ObjectInputStream(input) {
+    override def resolveClass(desc: java.io.ObjectStreamClass): Class[_] = {
+      try { Class.forName(desc.getName, false, getClass.getClassLoader) }
+      catch { case _: ClassNotFoundException => super.resolveClass(desc) }
+    }
   }
 }
