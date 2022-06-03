@@ -60,7 +60,7 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SDateTime()
   }
 
-  trait SProductField[T] {
+  trait SProductField[T] extends Serializable {
     type FieldType
     def name: FieldName
     def schema: Schema[FieldType]
@@ -75,11 +75,12 @@ object SchemaType {
     override def toString: String = s"SProductField($name,$schema)"
   }
   object SProductField {
-    // needed so that it's serializable; we also need the trait to represent `FieldType` as a type member, not a type parameter
-    case class SProductFieldImpl[T, FT](name: FieldName, schema: Schema[FT], get: T => Option[FT]) extends SProductField[T] {
-      type FieldType = FT
+    def apply[T, F](_name: FieldName, _schema: Schema[F], _get: T => Option[F]): SProductField[T] = new SProductField[T] {
+      override type FieldType = F
+      override val name: FieldName = _name
+      override val schema: Schema[F] = _schema
+      override val get: T => Option[F] = _get
     }
-    def apply[T, F](_name: FieldName, _schema: Schema[F], _get: T => Option[F]): SProductField[T] = SProductFieldImpl(_name, _schema, _get)
   }
   case class SProduct[T](fields: List[SProductField[T]]) extends SchemaType[T] {
     def required: List[FieldName] = fields.collect { case f if !f.schema.isOptional => f.name }
