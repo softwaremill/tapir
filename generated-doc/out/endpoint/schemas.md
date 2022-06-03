@@ -1,5 +1,7 @@
 # Schema derivation
 
+A schema describes the shape of a value, how the low-level representation should be structured.
+
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
@@ -64,7 +66,6 @@ values must be `lazy val`s.
   much richer. Hence, this method may be used when debugging the derivation of a schema which gives compilation errors,
   even when otherwise auto derivation is used. 
 ```
-
 
 ## Derivation for recursive types in Scala3
 

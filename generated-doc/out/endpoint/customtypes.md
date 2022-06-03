@@ -1,8 +1,10 @@
 # Custom types
 
-To support a custom type, you'll need to provide an implicit `Codec` for that type.
+To support a custom type, you'll need to provide an implicit `Codec` for that type, or the components to create such
+a codec. The below mostly applies to wrapper types for inputs/outputs such as query parameters, path segments or 
+headers. For custom types used in [json](json.md) or [forms](forms.md) bodies, see the dedicated sections. 
 
-This can be done by writing a codec from scratch, mapping over an existing codec, or automatically deriving one.
+A custom codec can be created by writing one from scratch, mapping over an existing codec, or automatically deriving one.
 Which of these approaches can be taken, depends on the context in which the codec will be used.
 
 ## Creating an implicit codec by hand

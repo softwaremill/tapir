@@ -9,16 +9,16 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.0.0-RC3"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
 // for zio 2:
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.0.0-RC3"
 // for zio 1:
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "1.0.0-RC3"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -142,7 +142,7 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
 
 val serve: Task[Unit] =
   BlazeServerBuilder[Task]
-    .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
+    .withExecutionContext(runtime.executor.asExecutionContext)
     .bindHttp(8080, "localhost")
     .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
     .serve
@@ -164,14 +164,14 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
 import zio.{Task, ZIO}
-import zio.stream.Stream
+import zio.stream.{Stream, ZStream}
 
 val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] =
   endpoint.get.out(serverSentEventsBody)
 
 val routes: HttpRoutes[Task] =
   ZHttp4sServerInterpreter()
-    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(ZStream(ServerSentEvent(Some("data"), None, None, None)))))
     .toRoutes
 ```
 

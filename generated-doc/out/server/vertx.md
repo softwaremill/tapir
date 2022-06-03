@@ -8,7 +8,7 @@ Vert.x interpreter can be used with different effect systems (cats-effect, ZIO) 
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "1.0.0-RC3"
 ```
 to use this interpreter with `Future`.
 
@@ -63,7 +63,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-cats" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-cats" % "1.0.0-RC3"
 ```
 to use this interpreter with Cats Effect typeclasses.
 
@@ -146,9 +146,9 @@ Add the following dependency
 
 ```scala
 // for zio2:
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio" % "1.0.0-RC3"
 // for zio1:
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio1" % "1.0.0-RC2"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio1" % "1.0.0-RC3"
 ```
 
 to use this interpreter with ZIO.
@@ -180,7 +180,7 @@ object Short extends ZIOAppDefault {
       .in(query[String]("key"))
       .out(plainBody[String])
 
-  val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => UIO.succeed(key) })
+  val attach = VertxZioServerInterpreter().route(responseEndpoint.zServerLogic { key => ZIO.succeed(key) })
 
   override def run = {
     ZIO.scoped(

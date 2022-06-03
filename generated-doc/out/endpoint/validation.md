@@ -2,7 +2,11 @@
 
 Tapir supports validation for primitive types. Validation of composite values, whole data structures, business 
 rules enforcement etc. should be done as part of the [server logic](../server/logic.md) of the endpoint, using the 
-dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors. 
+dedicated error output (the `E` in `Endpoint[A, I, E, O, S]`) to report errors.
+
+For some guidelines as to where to perform a specific type of validation, see the ["Validation analysis paralysis"](https://blog.softwaremill.com/validation-analysis-paralysis-ca9bdef0a6d7) article. A good indicator as to where to place particular validation
+logic might be if the property that we are checking is a format error, or a business-level error? The validation
+capabilities described in this section are intended only for format errors.
 
 ## Single type validation
 

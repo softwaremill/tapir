@@ -10,12 +10,11 @@ An endpoint is represented as a value of type `Endpoint[A, I, E, O, R]`, where:
 
 Input/output parameters (`A`, `I`, `E` and `O`) can be:
 
-* of type `Unit`, when there's no input/ouput of the given type
+* of type `Unit`, when there's no input/output
 * a single type
 * a tuple of types
 
-Hence, an empty, initial endpoint (`tapir.endpoint`), with no inputs and no outputs, from which all other endpoints are 
-derived has the type:
+Hence, an empty, initial endpoint, with no inputs and no outputs, from which all other endpoints are  derived has the type:
 
 ```scala
 import sttp.tapir._
@@ -31,7 +30,7 @@ import sttp.tapir._
 type PublicEndpoint[I, E, O, -R] = Endpoint[Unit, I, E, O, R]
 ```
 
-A public endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
+A public endpoint has two inputs of types `UUID` and `Int`, upon error returns a `String`, and on normal 
 completion returns a `User`, would have the type:
 
  
@@ -42,13 +41,16 @@ val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 ```
 
 You can think of an endpoint as a function, which takes input parameters of type `A` & `I` and returns a result of type 
-`Either[E, O]`, where inputs or outputs can contain streaming bodies of type `S`.
+`Either[E, O]`.
 
 ### Infallible endpoints
 
 Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
-are still represented and allowed to occur. If you preferred to use an endpoint description, where
-errors can not happen, use `infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
+are still represented and allowed to occur. In case of the error output, the single member of the unit type, `(): Unit`, 
+maps to an empty-body `400 Bad Request`.
+
+If you prefer to use an endpoint description, where errors cannot happen, use 
+`infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any]`. This might be useful when
 interpreting endpoints [as a client](../client/sttp.md).
 
 ## Defining an endpoint
