@@ -60,7 +60,7 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SDateTime()
   }
 
-  trait SProductField[T] {
+  trait SProductField[T] extends Serializable {
     type FieldType
     def name: FieldName
     def schema: Schema[FieldType]
