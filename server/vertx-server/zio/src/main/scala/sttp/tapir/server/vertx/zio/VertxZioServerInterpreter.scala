@@ -52,7 +52,8 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       val result: ZIO[R, Throwable, Any] =
         interpreter(serverRequest)
           .flatMap {
-            case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
+            // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
+            case RequestResult.Failure(_) => ZIO.succeed(rc.next())
             case RequestResult.Response(response) =>
               ZIO.async((k: Task[Unit] => Unit) => {
                 VertxOutputEncoders(response)

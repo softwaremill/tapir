@@ -579,6 +579,17 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.code shouldBe StatusCode.Ok
           r.body shouldBe Right("ok1")
         }
+    },
+    testServer(
+      "two endpoints, same path prefix, one without trailing slashes, second accepting trailing slashes",
+      NonEmptyList.of(
+        route(endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
+        route(endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit])))
+      )
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e1") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2/").send(backend).map(_.body shouldBe "e2") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2/p3").send(backend).map(_.body shouldBe "e2")
     }
   )
 

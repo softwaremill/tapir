@@ -4,8 +4,8 @@ import com.linecorp.armeria.server.Route
 import sttp.tapir.EndpointIO.{Body, StreamBodyWrapper}
 import sttp.tapir.EndpointInput.{FixedPath, PathCapture, PathsCapture}
 import sttp.tapir.RawBodyType.FileBody
-import sttp.tapir.internal.{RichEndpoint, RichEndpointOutput}
-import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType}
+import sttp.tapir.internal.{RichEndpoint, RichEndpointInput, RichEndpointOutput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType, noTrailingSlash}
 
 private[armeria] object RouteMapping {
 
@@ -22,7 +22,14 @@ private[armeria] object RouteMapping {
       case (true, true)   => ExchangeType.BidiStreaming
     }
 
-    toPathPatterns(inputs).map { path =>
+    val hasNoTrailingSlash = e.securityInput
+      .and(e.input)
+      .traverseInputs {
+        case i if i == noTrailingSlash => Vector(())
+      }
+      .nonEmpty
+
+    toPathPatterns(inputs, hasNoTrailingSlash).map { path =>
       // Allows all HTTP method to handle invalid requests by RejectInterceptor
       val routeBuilder =
         Route
@@ -44,7 +51,7 @@ private[armeria] object RouteMapping {
     case _ => false
   }
 
-  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]]): List[String] = {
+  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]], hasNoTrailingSlash: Boolean): List[String] = {
     var idxUsed = 0
     var capturePaths = false
     val fragments = inputs.collect {
@@ -68,8 +75,11 @@ private[armeria] object RouteMapping {
       if (capturePaths) {
         List(pathPattern)
       } else {
-        // endpoint.in("api") should match both '/api', '/api/'
-        List(pathPattern, s"$pathPattern/")
+        if (hasNoTrailingSlash) List(pathPattern)
+        else {
+          // endpoint.in("api") should match both '/api', '/api/'
+          List(pathPattern, s"$pathPattern/")
+        }
       }
     }
   }
