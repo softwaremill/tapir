@@ -159,7 +159,7 @@ trait LowPriorityValidatorForPredicate {
       override val validator: Validator.Custom[V] = Validator.Custom(
         { v =>
           if (refinedValidator.isValid(v)) ValidationResult.Valid
-          else ValidationResult.Invalid(Some(implicitly[ClassTag[P]].runtimeClass.toString))
+          else ValidationResult.Invalid(implicitly[ClassTag[P]].runtimeClass.toString)
         }
       ) // for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
