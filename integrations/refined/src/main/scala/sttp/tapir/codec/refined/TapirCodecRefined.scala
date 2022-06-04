@@ -7,7 +7,6 @@ import eu.timepit.refined.internal.WitnessAs
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
 import eu.timepit.refined.string.{MatchesRegex, Uuid}
-import shapeless.Witness
 import sttp.tapir._
 
 import scala.reflect.ClassTag
@@ -48,10 +47,10 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   implicit val validatorForNonEmptyString: PrimitiveValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
-  implicit def validatorForMatchesRegexp[S <: String](implicit
-      ws: Witness.Aux[S]
+  implicit def validatorForMatchesRegexpString[S <: String](implicit
+      ws: WitnessAs[S, String]
   ): PrimitiveValidatorForPredicate[String, MatchesRegex[S]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.value))
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.snd))
 
   implicit def validatorForMaxSizeOnString[T <: String, NM](implicit
       ws: WitnessAs[NM, Int]

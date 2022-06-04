@@ -6,13 +6,15 @@ import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual, Negative, NonNegative, NonPositive, Positive}
 import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
-import eu.timepit.refined.{W, refineMV, refineV}
+import eu.timepit.refined.W
+import eu.timepit.refined.refineMV
+import eu.timepit.refined.refineV
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 
-class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRefined {
+class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCodecRefined {
 
   val nonEmptyStringCodec: PlainCodec[NonEmptyString] = implicitly[PlainCodec[NonEmptyString]]
 
@@ -46,6 +48,13 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     identifierCodec.decode("-bad") should matchPattern {
       case DecodeResult.InvalidValue(List(ValidationError(validator, "-bad", _, _))) if validator == expectedValidator =>
     }
+  }
+
+  it should "decode value matching pattern" in {
+    type VariableConstraint = MatchesRegex[W.`"[a-zA-Z][-a-zA-Z0-9_]*"`.T]
+    type VariableString = String Refined VariableConstraint
+    val identifierCodec = implicitly[PlainCodec[VariableString]]
+    identifierCodec.decode("ok") shouldBe DecodeResult.Value(refineMV[VariableConstraint]("ok"))
   }
 
   "Generated codec for MaxSize on string" should "use tapir Validator.maxLength" in {
