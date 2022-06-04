@@ -3,40 +3,24 @@ package sttp.tapir.codec.refined
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.boolean.Or
 import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
-import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual, Negative, NonNegative, NonPositive, Positive}
-import eu.timepit.refined.string.{IPv4, MatchesRegex}
+import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual}
+import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.W
 import eu.timepit.refined.refineMV
-import eu.timepit.refined.refineV
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 
+import scala.annotation.nowarn
+
 class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCodecRefined {
 
   val nonEmptyStringCodec: PlainCodec[NonEmptyString] = implicitly[PlainCodec[NonEmptyString]]
 
-  "Generated codec" should "return DecodeResult.Invalid if subtype can't be refined with correct tapir validator if available" in {
-    val expectedValidator: Validator[String] = Validator.minLength(1)
-    nonEmptyStringCodec.decode("") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, "", _, _))) if validator == expectedValidator =>
-    }
-  }
-
-  it should "correctly delegate to raw parser and refine it" in {
+  "Generated codec" should "correctly delegate to raw parser and refine it" in {
     nonEmptyStringCodec.decode("vive le fromage") shouldBe DecodeResult.Value(refineMV[NonEmpty]("vive le fromage"))
-  }
-
-  it should "return DecodeResult.Invalid if subtype can't be refined with derived tapir validator if non tapir validator available" in {
-    type IPString = String Refined IPv4
-    val IPStringCodec = implicitly[PlainCodec[IPString]]
-
-    val expectedMsg = refineV[IPv4]("192.168.0.1000").left.get
-    IPStringCodec.decode("192.168.0.1000") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(_, "192.168.0.1000", _, Some(`expectedMsg`)))) =>
-    }
   }
 
   "Generated codec for MatchesRegex" should "use tapir Validator.Pattern" in {
@@ -131,34 +115,6 @@ class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCo
     }
   }
 
-  "Generated validator for Positive" should "use tapir Validator.min" in {
-    type IntConstraint = Positive
-    type LimitedInt = Int Refined IntConstraint
-
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(0, true), _) => }
-  }
-
-  "Generated validator for NonNegative" should "use tapir Validator.min" in {
-    type IntConstraint = NonNegative
-    type LimitedInt = Int Refined IntConstraint
-
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(0, false), _) => }
-  }
-
-  "Generated validator for NonPositive" should "use tapir Validator.max" in {
-    type IntConstraint = NonPositive
-    type LimitedInt = Int Refined IntConstraint
-
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(0, false), _) => }
-  }
-
-  "Generated validator for Negative" should "use tapir Validator.max" in {
-    type IntConstraint = Negative
-    type LimitedInt = Int Refined IntConstraint
-
-    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(0, true), _) => }
-  }
-
   "Generated validator for Interval.Open" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = Interval.Open[W.`1`.T, W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
@@ -209,6 +165,7 @@ class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCo
     import sttp.tapir._
     import sttp.tapir.json.circe._
 
+    @nowarn // we only want to ensure it compiles but it warns because it is not used
     object TapirCodecRefinedDeepImplicitSearch extends TapirCodecRefined with TapirJsonCirce {
       type StringConstraint = MatchesRegex[W.`"[^\u0000-\u001f]{1,29}"`.T]
       type LimitedString = String Refined StringConstraint
@@ -220,13 +177,4 @@ class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCo
     }
   }
 
-  "Using refined" should "compile when using tapir endpoints" in {
-    // this used to cause a:
-    // [error] java.lang.StackOverflowError
-    // [error] scala.reflect.internal.Types$TypeRef.foldOver(Types.scala:2376)
-    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1272)
-    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1267)
-    import sttp.tapir._
-    endpoint.in("x")
-  }
 }
