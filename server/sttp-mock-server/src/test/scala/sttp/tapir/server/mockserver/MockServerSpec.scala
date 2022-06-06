@@ -131,7 +131,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenSuccess(sampleOut)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
@@ -260,7 +259,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenError(sampleOut, statusCode = StatusCode.InternalServerError)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
@@ -386,7 +384,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenSuccess(sampleOut)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
@@ -507,7 +504,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
@@ -630,7 +626,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
@@ -753,7 +748,6 @@ class MockServerSpec extends AnyFlatSpec with Matchers {
       .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
 
     expectations should have size 1
-    println(expectations.head.httpRequest.path)
     expectations.head shouldEqual Expectation(
       id = "5d122dd6-ce49-4508-b045-a76d9887aec4",
       priority = 0,
