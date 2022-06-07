@@ -11,7 +11,7 @@ import sttp.tapir.DecodeResult.Value
 import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.json.circe
 import sttp.tapir.server.mockserver.fixture._
 
 import java.util.UUID
@@ -42,16 +42,9 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
   private val jsonEndpoint = endpoint
     .in("api" / "v1" / "person")
     .put
-    .in(jsonBody[CreatePersonCommand])
-    .errorOut(jsonBody[ApiError])
-    .out(jsonBody[PersonView])
-
-  private val orderEndpoint = endpoint
-    .in("api" / "v1" / "order")
-    .put
-    .in(jsonBody[CreateOrderCommand])
-    .errorOut(jsonBody[ApiError])
-    .out(jsonBody[OrderCreatedEvent])
+    .in(circe.jsonBody[CreatePersonCommand])
+    .errorOut(circe.jsonBody[ApiError])
+    .out(circe.jsonBody[PersonView])
 
   it should "create plain text expectation correctly" in {
     val sampleIn = "Hello, world!"
@@ -138,15 +131,22 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
   }
 
   it should "match json body with drop null disabled" in {
-    import TapirJsonCirceWithDropNullDisabled.jsonPrinter
+    import TapirJsonCirceWithDropNullDisabled.jsonBody
+
+    val orderEndpoint = endpoint
+      .in("api" / "v1" / "order")
+      .put
+      .in(jsonBody[CreateOrderCommand])
+      .errorOut(jsonBody[ApiError])
+      .out(jsonBody[OrderCreatedEvent])
 
     val sampleIn = CreateOrderCommand(name = "John", total = None)
-    val sampleErrorOut = ApiError(code = 1, message = "Invalid order")
+    val sampleOut = OrderCreatedEvent(id = uuid(), name = "John", total = None)
 
     val actual = for {
       _ <- mockServerClient
         .whenInputMatches(orderEndpoint)((), sampleIn)
-        .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
+        .thenSuccess(sampleOut)
 
       resp <- SttpClientInterpreter()
         .toRequest(orderEndpoint, baseUri = Some(baseUri))
@@ -157,19 +157,26 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
         .verifyRequest(orderEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
     } yield resp.body
 
-    actual shouldEqual Success(Value(Left(sampleErrorOut)))
+    actual shouldEqual Success(Value(Right(sampleOut)))
   }
 
   it should "match json body with drop null enabled" in {
-    import TapirJsonCirceWithDropNullEnabled.jsonPrinter
+    import TapirJsonCirceWithDropNullEnabled.jsonBody
+
+    val orderEndpoint = endpoint
+      .in("api" / "v1" / "order")
+      .put
+      .in(jsonBody[CreateOrderCommand])
+      .errorOut(jsonBody[ApiError])
+      .out(jsonBody[OrderCreatedEvent])
 
     val sampleIn = CreateOrderCommand(name = "John", total = None)
-    val sampleErrorOut = ApiError(code = 1, message = "Invalid order")
+    val sampleOut = OrderCreatedEvent(id = uuid(), name = "John", total = None)
 
     val actual = for {
       _ <- mockServerClient
         .whenInputMatches(orderEndpoint)((), sampleIn)
-        .thenError(sampleErrorOut, statusCode = StatusCode.BadRequest)
+        .thenSuccess(sampleOut)
 
       resp <- SttpClientInterpreter()
         .toRequest(orderEndpoint, baseUri = Some(baseUri))
@@ -180,7 +187,7 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
         .verifyRequest(orderEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
     } yield resp.body
 
-    actual shouldEqual Success(Value(Left(sampleErrorOut)))
+    actual shouldEqual Success(Value(Right(sampleOut)))
   }
 
   private def uuid(): String = UUID.randomUUID().toString

@@ -30,7 +30,7 @@ object CreateOrderCommand {
   implicit val codec: Codec.AsObject[CreateOrderCommand] = deriveCodec[CreateOrderCommand]
 }
 
-case class OrderCreatedEvent(id: UUID)
+case class OrderCreatedEvent(id: String, name: String, total: Option[Int])
 
 object OrderCreatedEvent {
   implicit val codec: Codec.AsObject[OrderCreatedEvent] = deriveCodec[OrderCreatedEvent]
