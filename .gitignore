@@ -12,8 +12,10 @@ project/boot/
 project/plugins/project/
 .bloop
 .metals
+template.yaml
 
 .bsp
 .idea*
+.java-version
 
 file-uploads

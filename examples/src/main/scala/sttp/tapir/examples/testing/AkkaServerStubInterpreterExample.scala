@@ -1,4 +1,4 @@
-package sttp.tapir.examples
+package sttp.tapir.examples.testing
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
