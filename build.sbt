@@ -1025,7 +1025,8 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
       "io.circe" %% "circe-parser" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
       // test libs
-      "io.circe" %% "circe-literal" % Versions.circe % Test
+      "io.circe" %% "circe-literal" % Versions.circe % Test,
+      "org.mock-server" % "mockserver-netty-no-dependencies" % Versions.mockServer % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)

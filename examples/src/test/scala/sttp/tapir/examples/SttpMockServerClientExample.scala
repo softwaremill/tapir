@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import io.circe.generic.auto._
 import org.mockserver.integration.ClientAndServer.startClientAndServer
 import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
-import sttp.model.StatusCode
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter

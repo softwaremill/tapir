@@ -12,7 +12,7 @@ object CreatePersonCommand {
   implicit val codec: Codec.AsObject[CreatePersonCommand] = deriveCodec[CreatePersonCommand]
 }
 
-case class PersonView(id: UUID, name: String, age: Int)
+case class PersonView(id: String, name: String, age: Int)
 
 object PersonView {
   implicit val codec: Codec.AsObject[PersonView] = deriveCodec[PersonView]
@@ -36,10 +36,10 @@ object OrderCreatedEvent {
   implicit val codec: Codec.AsObject[OrderCreatedEvent] = deriveCodec[OrderCreatedEvent]
 }
 
-object TapirJsonCirceWithoutDropNull extends TapirJsonCirce {
+object TapirJsonCirceWithDropNullDisabled extends TapirJsonCirce {
   override def jsonPrinter: Printer = Printer.noSpaces.copy(dropNullValues = false)
 }
 
-object TapirJsonCirceWithDropNull extends TapirJsonCirce {
+object TapirJsonCirceWithDropNullEnabled extends TapirJsonCirce {
   override def jsonPrinter: Printer = Printer.noSpaces.copy(dropNullValues = true)
 }
