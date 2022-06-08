@@ -124,12 +124,43 @@ implicit val customConfiguration: Configuration =
   Configuration.default.withDiscriminator("who_am_i")
 ```
 
+The discriminator will be added as a field to all coproduct child schemas, if it's not yet present. The schema of
+the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and
+the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
+
 Alternatively, derived schemas can be customised (see below), and a discriminator can be added by calling
-the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, maping)` method.
+the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, maping)` method. This method is useful when using
+semi-automatic or automatic derivation; in both cases a custom implicit has to be defined, basing on the derived
+one:
+
+```scala mdoc:silent:reset
+import sttp.tapir._
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
+
+sealed trait MyCoproduct 
+case class Child1(s: String) extends MyCoproduct
+// ... implementations of MyCoproduct ...
+
+implicit val myCoproductSchema: Schema[MyCoproduct] = {
+  val derived = implicitly[Derived[Schema[MyCoproduct]]].value
+  derived.schemaType match {
+    case s: SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
+      FieldName("myField"),
+      Schema.string,
+      Map(
+        "value1" -> SchemaType.SRef(Schema.SName("com.myproject.Child1")),
+        // ... other mappings ...
+      )
+    ))
+    case _ => ???
+  }
+}
+```
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
-schemas can be specified using `Schema.oneOfUsingField`, for example (this will also generate the appropriate
-mappings):
+schemas can be specified as a custom implicit value using the `Schema.oneOfUsingField` macro, 
+for example (this will also generate the appropriate mappings):
 
 ```scala mdoc:silent:reset
 sealed trait Entity {
@@ -149,6 +180,15 @@ val sOrganization = Schema.derived[Organization]
 implicit val sEntity: Schema[Entity] = 
     Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
+
+```eval_rst
+.. note::
+
+  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
+  encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
+  configured in the json library, matching the configuration of the schema.  
+```
+
 
 ## Customising derived schemas
 
