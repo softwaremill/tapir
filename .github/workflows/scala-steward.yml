@@ -1,12 +1,12 @@
 # This workflow will launch at 00:00 every day
 # It can be also triggered manually using the workflow_dispatch event
 on:
-# TODO: uncomment
+# TODO: move cron to the "CI" workflow
 #  schedule:
 #    - cron: '0 0 * * *'
-#  workflow_dispatch:
 # TODO: remove
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches:
       - 2183-add-scala-steward-action
 
@@ -14,12 +14,8 @@ name: Launch Scala Steward
 
 jobs:
   scala-steward:
+    needs: [ci, mima]
     runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        target-platform: [ "JVM" ]
-    name: Launch Scala Steward
     steps:
       - name: Checkout
         uses: actions/checkout@v2
