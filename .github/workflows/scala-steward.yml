@@ -38,6 +38,7 @@ jobs:
       - name: Launch Scala Steward
         uses: scala-steward-org/scala-steward-action@v2
         with:
+          author-name: scala-steward
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repo-config: .scala-steward.conf
           ignore-opts-files: false
