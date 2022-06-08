@@ -37,6 +37,7 @@ jobs:
         uses: scala-steward-org/scala-steward-action@v2
         with:
           author-name: scala-steward
+          author-email: scala-steward
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repo-config: .scala-steward.conf
           ignore-opts-files: false
