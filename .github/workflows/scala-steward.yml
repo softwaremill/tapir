@@ -15,11 +15,9 @@ jobs:
   scala-steward:
     runs-on: ubuntu-20.04
     steps:
-      - uses: ./github/workflows/ci.yml
-
-      # TODO: verify if this second checkout is required
       - name: Checkout
         uses: actions/checkout@v2
+      - uses: ./github/workflows/ci.yml
       - name: Set up JDK 11
         uses: actions/setup-java@v1
         with:
@@ -32,7 +30,6 @@ jobs:
             ~/.ivy2/cache
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
-
       - name: Launch Scala Steward
         uses: scala-steward-org/scala-steward-action@v2
         with:
@@ -42,7 +39,6 @@ jobs:
           ignore-opts-files: false
 # TODO: remove after test
           branches: 2183-add-scala-steward-action
-
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
