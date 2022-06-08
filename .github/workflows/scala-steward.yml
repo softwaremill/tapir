@@ -1,12 +1,11 @@
 # This workflow will launch at 00:00 every day
 # It can be also triggered manually using the workflow_dispatch event
 on:
-# TODO: move cron to the "CI" workflow
+# TODO: uncomment after test
 #  schedule:
 #    - cron: '0 0 * * *'
-# TODO: remove
-  workflow_run:
-    workflows: ["CI"]
+# TODO: remove after test
+  push:
     branches:
       - 2183-add-scala-steward-action
 
@@ -14,9 +13,11 @@ name: Launch Scala Steward
 
 jobs:
   scala-steward:
-    needs: [ci, mima]
     runs-on: ubuntu-20.04
     steps:
+      - uses: ./github/workflows/ci.yml
+
+      # TODO: verify if this second checkout is required
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up JDK 11
@@ -31,6 +32,7 @@ jobs:
             ~/.ivy2/cache
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
+
       - name: Launch Scala Steward
         uses: scala-steward-org/scala-steward-action@v2
         with:
@@ -38,5 +40,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repo-config: .scala-steward.conf
           ignore-opts-files: false
-# TODO: remove
+# TODO: remove after test
           branches: 2183-add-scala-steward-action
+
+      - name: Cleanup
+        run: |
+          rm -rf "$HOME/.ivy2/local" || true
+          find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+          find $HOME/.ivy2/cache                       -name "*-LM-SNAPSHOT*"       -delete || true
+          find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
+          find $HOME/.sbt                              -name "*.lock"               -delete || true
