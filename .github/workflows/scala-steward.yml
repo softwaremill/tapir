@@ -12,12 +12,15 @@ on:
 name: Launch Scala Steward
 
 jobs:
+  ci-and-mima:
+    uses: ./.github/workflows/ci.yml
+
   scala-steward:
+    needs: [ci-and-mima]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: ./.github/workflows/ci.yml
       - name: Set up JDK 11
         uses: actions/setup-java@v1
         with:
