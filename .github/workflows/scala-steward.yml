@@ -1,15 +1,16 @@
+name: Scala Steward
+
 # This workflow will launch at 00:00 every day
-# It can be also triggered manually using the workflow_dispatch event
+# It can also be triggered manually
 on:
 # TODO: uncomment after test
 #  schedule:
 #    - cron: '0 0 * * *'
+#  workflow_dispatch:
 # TODO: remove after test
   push:
     branches:
-      - 2183-add-scala-steward-action-7
-
-name: Launch Scala Steward
+      - 2183-add-scala-steward-action-8
 
 jobs:
   scala-steward:
@@ -38,7 +39,7 @@ jobs:
           repo-config: .scala-steward.conf
           ignore-opts-files: false
 # TODO: remove after test
-          branches: 2183-add-scala-steward-action-7
+          branches: 2183-add-scala-steward-action-8
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
