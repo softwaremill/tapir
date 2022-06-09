@@ -23,7 +23,7 @@ jobs:
 # TODO: remove after test
     - name: ECHO USER LOGIN
       id: echo-user-login
-      run: echo "::set-output ctx=github-context::$(echo $GITHUB_CONTEXT)"
+      run: echo "::set-output name=ctx::$(echo $GITHUB_CONTEXT)"
     - name: ECHO USER LOGIN 2
       run: echo "${{ steps.echo-user-login.outputs.ctx }}"
     - name: Set up JDK 11
