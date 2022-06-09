@@ -1,12 +1,10 @@
 name: Scala Steward
 
 # This workflow will launch at 00:00 every day
-# It can also be triggered manually
 on:
 # TODO: uncomment after test
 #  schedule:
 #    - cron: '0 0 * * *'
-#  workflow_dispatch:
 # TODO: remove after test
   push:
     branches:
