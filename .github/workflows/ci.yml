@@ -15,15 +15,17 @@ jobs:
       fail-fast: false
       matrix:
         target-platform: [ "JVM", "JS", "Native" ]
+    outputs:
+      ctx: ${{ steps.echo-user-login.outputs.ctx }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
 # TODO: remove after test
     - name: ECHO USER LOGIN
       id: echo-user-login
-      run: echo "::set-output name=github-context::$(echo $GITHUB_CONTEXT)"
+      run: echo "::set-output ctx=github-context::$(echo $GITHUB_CONTEXT)"
     - name: ECHO USER LOGIN 2
-      run: echo "${{ steps.echo-user-login.outputs.github-context }}"
+      run: echo "${{ steps.echo-user-login.outputs.ctx }}"
     - name: Set up JDK 11
       uses: actions/setup-java@v1
       with:
