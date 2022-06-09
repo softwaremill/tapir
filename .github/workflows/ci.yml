@@ -21,8 +21,9 @@ jobs:
 # TODO: remove after test
     - name: ECHO USER LOGIN
       id: echo-user-login
-      run: echo "$GITHUB_CONTEXT"
-      shell: bash
+      run: echo "::set-output name=github-context::$(echo $GITHUB_CONTEXT)"
+    - name: ECHO USER LOGIN 2
+      run: echo "${{ steps.echo-user-login.outputs.github-context }}"
     - name: Set up JDK 11
       uses: actions/setup-java@v1
       with:
