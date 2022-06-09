@@ -5,6 +5,7 @@ on:
   push:
     branches: ['**']
     tags: [v*]
+
 jobs:
   ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
@@ -19,7 +20,9 @@ jobs:
       uses: actions/checkout@v2
 # TODO: remove after test
     - name: ECHO USER LOGIN
+      id: echo-user-login
       run: echo "$GITHUB_CONTEXT"
+      shell: bash
     - name: Set up JDK 11
       uses: actions/setup-java@v1
       with:
