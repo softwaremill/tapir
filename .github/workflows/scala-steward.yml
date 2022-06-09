@@ -12,11 +12,7 @@ on:
 name: Launch Scala Steward
 
 jobs:
-  ci-and-mima:
-    uses: ./.github/workflows/ci.yml
-
   scala-steward:
-    needs: [ci-and-mima]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -32,7 +28,7 @@ jobs:
             ~/.sbt
             ~/.ivy2/cache
             ~/.coursier
-          key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
+          key: sbt-cache-${{ runner.os }}-JVM-${{ hashFiles('project/build.properties') }}
       - name: Launch Scala Steward
         uses: scala-steward-org/scala-steward-action@v2
         with:

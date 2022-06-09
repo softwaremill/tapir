@@ -6,7 +6,11 @@ name: CI
 #    branches: ['**']
 #    tags: [v*]
 on:
-  workflow_call:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: ['**']
+    tags: [v*]
 jobs:
   ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
