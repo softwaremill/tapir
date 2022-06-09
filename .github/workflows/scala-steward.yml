@@ -7,7 +7,7 @@ on:
 # TODO: remove after test
   push:
     branches:
-      - 2183-add-scala-steward-action-3
+      - 2183-add-scala-steward-action-4
 
 name: Launch Scala Steward
 
@@ -38,7 +38,7 @@ jobs:
           repo-config: .scala-steward.conf
           ignore-opts-files: false
 # TODO: remove after test
-          branches: 2183-add-scala-steward-action-3
+          branches: 2183-add-scala-steward-action-4
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
