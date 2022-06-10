@@ -2,7 +2,7 @@ package sttp.tapir.server.interceptor.decodefailure
 
 import sttp.model.{Header, HeaderNames, StatusCode}
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, MultipartDecodeException}
-import sttp.tapir.DecodeResult.{Error, InvalidValue, Mismatch, Missing, Multiple}
+import sttp.tapir.DecodeResult._
 import sttp.tapir.internal.RichEndpoint
 import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.model.ValuedEndpointOutput
@@ -40,6 +40,9 @@ case class DefaultDecodeFailureHandler(
       case None => None
     }
   }
+
+  def withErrorMessage(errorMessageOutput: String => ValuedEndpointOutput[_]): DefaultDecodeFailureHandler =
+    copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h)))
 }
 
 object DefaultDecodeFailureHandler {
@@ -257,14 +260,17 @@ object DefaultDecodeFailureHandler {
       }
     }
 
+    def pathMessage(path: List[FieldName]): Option[String] =
+      path match {
+        case Nil => None
+        case l   => Some(l.map(_.encodedName).mkString("."))
+      }
+
     /** Default message describing the path to an invalid value. This is the path inside the validated object, e.g.
       * `user.address.street.name`.
       */
     def pathMessage(ve: ValidationError[_]): Option[String] =
-      ve.path match {
-        case Nil => None
-        case l   => Some(l.map(_.encodedName).mkString("."))
-      }
+      pathMessage(ve.path)
 
     /** Default message describing the validation error: which value is invalid, and why. */
     def validationErrorMessage(ve: ValidationError[_]): String = invalidValueMessage(ve, pathMessage(ve).getOrElse("value"))
