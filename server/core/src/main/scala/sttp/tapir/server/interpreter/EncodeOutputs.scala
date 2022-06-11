@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
-import sttp.tapir.EndpointIO.{Body, OneOfBodyVariant, StreamBodyWrapper}
+import sttp.tapir.EndpointIO.OneOfBodyVariant
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
@@ -83,12 +83,21 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
     // mapping. We need to take the first defined into account.
     val bodyVariants: Seq[(MediaType, OneOfVariant[_])] = variants
-      .flatMap(om =>
-        om.output.traverseOutputs {
+      .flatMap { om =>
+        val mediaTypeFromBody = om.output.traverseOutputs {
           case b: EndpointIO.Body[_, _]              => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
           case b: EndpointIO.StreamBodyWrapper[_, _] => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
         }
-      )
+
+        // #2200: some variants might have no body, which means that they match any of the `acceptsContentTypes`;
+        // in this case, creating a "fake" media type which will match the first content range
+        if (mediaTypeFromBody.isEmpty) {
+          val fakeMediaType = acceptsContentTypes.headOption
+            .map(r => MediaType(r.mainType, r.subType))
+            .getOrElse(MediaType.ApplicationOctetStream)
+          Vector(fakeMediaType -> om)
+        } else mediaTypeFromBody
+      }
 
     chooseBestVariant(bodyVariants).getOrElse(variants.head)
   }
