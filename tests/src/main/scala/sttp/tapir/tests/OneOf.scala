@@ -4,7 +4,7 @@ import io.circe.generic.auto._
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.tests.data.{Entity, FruitErrorDetail, Organization, Person}
+import sttp.tapir.tests.data.{CustomError, Entity, FruitErrorDetail, Organization, Person}
 import sttp.tapir._
 
 object OneOf {
@@ -88,6 +88,17 @@ object OneOf {
         oneOf[Either[Unit, Person]](
           oneOfVariantValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
           oneOfVariantValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+        )
+      )
+
+  val out_empty_or_default_json_output: PublicEndpoint[Int, Unit, CustomError, Any] =
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        oneOf[CustomError](
+          oneOfVariant(StatusCode.NotFound, emptyOutputAs(CustomError.NotFound)),
+          oneOfDefaultVariant(statusCode(StatusCode.BadRequest).and(jsonBody[CustomError.Default]))
         )
       )
 
