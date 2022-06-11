@@ -86,8 +86,8 @@ object OneOf {
       .in(query[Int]("statusOut"))
       .out(
         oneOf[Either[Unit, Person]](
-          oneOfVariantValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
-          oneOfVariantValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+          oneOfVariantValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Right(_) => true },
+          oneOfVariantValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case Left(_) => true }
         )
       )
 
