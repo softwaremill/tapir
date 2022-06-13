@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 # TODO: remove
   push:
-    - branches: ['2233-fix-mergify-configuration-test']
+    branches: ['2233-fix-mergify-configuration-test']
 
 jobs:
   scala-steward:
