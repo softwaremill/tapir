@@ -5,7 +5,7 @@ pull_request_rules:
       delete_head_branch: {}
   - name: automatic merge for github-actions pull requests affecting build.sbt
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -16,7 +16,7 @@ pull_request_rules:
         method: merge
   - name: automatic merge for github-actions pull requests affecting project plugins.sbt
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -27,7 +27,7 @@ pull_request_rules:
         method: merge
   - name: semi-automatic merge for github-actions pull requests
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -37,7 +37,7 @@ pull_request_rules:
         method: merge
   - name: automatic merge for github-actions pull requests affecting project build.properties
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -48,7 +48,7 @@ pull_request_rules:
         method: merge
   - name: automatic merge for github-actions pull requests affecting .scalafmt.conf
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -59,7 +59,7 @@ pull_request_rules:
         method: merge
   - name: automatic merge for github-actions pull requests affecting project Versions.scala
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
       - check-success=ci (JVM)
       - check-success=ci (JS)
       - check-success=mima
@@ -70,7 +70,7 @@ pull_request_rules:
         method: merge
   - name: add label to github-actions PRs
     conditions:
-      - author=github-actions
+      - author=github-actions[bot]
     actions:
       label:
         add:

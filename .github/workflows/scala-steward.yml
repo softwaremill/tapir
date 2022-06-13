@@ -29,7 +29,7 @@ jobs:
         with:
           author-name: scala-steward
           author-email: scala-steward
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
           repo-config: .scala-steward.conf
           ignore-opts-files: false
       - name: Cleanup
