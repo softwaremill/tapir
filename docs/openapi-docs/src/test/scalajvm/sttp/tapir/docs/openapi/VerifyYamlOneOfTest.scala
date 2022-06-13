@@ -11,17 +11,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.model.StatusCodeRange
 import sttp.tapir.tests.ContentNegotiation
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  emptyOutput,
-  endpoint,
-  header,
-  oneOfDefaultVariant,
-  oneOfVariant,
-  plainBody,
-  statusCode
-}
+import sttp.tapir.{Codec, CodecFormat, emptyOutput, endpoint, header, oneOfDefaultVariant, oneOfVariant, plainBody, statusCode}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
