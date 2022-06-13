@@ -1,6 +1,5 @@
 package sttp.tapir.server.vertx.zio
 
-import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
@@ -20,9 +19,6 @@ import _root_.zio.blocking.Blocking
 import java.util.concurrent.atomic.AtomicReference
 
 trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
-
-  private val logger = LoggerFactory.getLogger(VertxZioServerInterpreter.getClass)
-
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
   def route(e: ZServerEndpoint[R, ZioStreams])(implicit
