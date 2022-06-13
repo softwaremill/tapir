@@ -97,7 +97,7 @@ case class CustomiseInterceptors[F[_], O](
   ): CustomiseInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
-      decodeFailureHandler = DefaultDecodeFailureHandler.default.withErrorMessage(errorMessageOutput),
+      decodeFailureHandler = DefaultDecodeFailureHandler.default.response(errorMessageOutput),
       rejectHandler = Some(DefaultRejectHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s), None))
     )
   }
