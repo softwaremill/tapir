@@ -65,7 +65,13 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
       case o @ EndpointOutput.OneOf(mappings, mapping) =>
         val enc = encodedM[Any](mapping)
         val applicableMappings = mappings.filter(_.appliesTo(enc))
-        require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
+        if (applicableMappings.isEmpty) {
+          throw new IllegalArgumentException(
+            s"None of the mappings defined in the one-of output: ${o.show}, is applicable to the value: $enc. " +
+              s"Verify that the type parameters to oneOf are correct, and that the oneOfVariants are exhaustive " +
+              s"(that is, that they cover all possible cases)."
+          )
+        }
 
         val chosenVariant = chooseOneOfVariant(applicableMappings)
         apply(chosenVariant.output, ParamsAsAny(enc), ov)
