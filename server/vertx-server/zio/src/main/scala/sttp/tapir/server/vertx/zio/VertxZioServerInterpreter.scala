@@ -49,6 +49,11 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
     { rc =>
       val serverRequest = VertxServerRequest(rc)
 
+      def fail(t: Throwable): Unit = {
+        if (rc.response().bytesWritten() > 0) rc.response().end()
+        rc.fail(t)
+      }
+
       val result: ZIO[R, Throwable, Any] =
         interpreter(serverRequest)
           .flatMap {
@@ -63,13 +68,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
                   })
               })
           }
-          .catchAll { ex =>
-            ZIO.attempt({
-              logger.error("Error while processing the request", ex)
-              if (rc.response().bytesWritten() > 0) rc.response().end()
-              rc.fail(ex)
-            })
-          }
+          .catchAll { t => ZIO.attempt(fail(t)) }
 
       // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
       // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
@@ -90,7 +89,10 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
         ()
       }
 
-      val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
+      val canceler = runtime.unsafeRunAsyncCancelable(result) {
+        case Exit.Failure(cause) => fail(cause.squash)
+        case Exit.Success(_)     => ()
+      }
       cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
         rc.vertx()
           .executeBlocking[Unit](
