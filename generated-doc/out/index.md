@@ -39,6 +39,20 @@ for a more detailed description of how tapir works!
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
 * **library, not a framework**: integrates with your stack
 
+## Adopt a tapir
+
+```eval_rst
+.. raw:: html
+
+   <iframe
+     frameborder=0
+     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+     src="https://adopt-tapir.softwaremill.com/embedded-form"
+     width="720"
+     height="450"
+   ></iframe>
+```
+
 ## Availability
 
 Tapir is available:
