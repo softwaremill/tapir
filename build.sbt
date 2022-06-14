@@ -85,8 +85,7 @@ val enableMimaSettings = Seq(
   mimaBinaryIssueFilters ++= Seq(
     ProblemFilters.exclude[Problem]("sttp.tapir.internal.*"),
     ProblemFilters.exclude[Problem]("sttp.tapir.generic.internal.*"),
-    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*"),
-    ProblemFilters.exclude[Problem]("sttp.tapir.server.interpreter.*") // for 0.19
+    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*")
   )
 )
 
