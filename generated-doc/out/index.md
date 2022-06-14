@@ -43,8 +43,8 @@ for a more detailed description of how tapir works!
 
 Tapir is available:
 
-* all modules - Scala 2.12 and 2.13 on the JVM
-* selected modules - Scala 3 on the JVM  
+* all modules - Scala 2.12 and 2.13 on the JVM (Java 11+)
+* selected modules - Scala 3 on the JVM (Java 11+)
 * selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
 * selected modules - Scala 2.12, 2.13 and 3 using Scala Native
 

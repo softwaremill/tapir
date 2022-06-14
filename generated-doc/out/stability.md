@@ -2,15 +2,15 @@
 
 The modules are categorised using the following levels:
 
-* **stable**: binary compatibility is guaranteed across major versions; adheres to semantic versioning
+* **stable**: binary compatibility is guaranteed within a major version; adheres to semantic versioning
 * **stabilising**: the API is mostly stable, with rare binary-incompatible changes possible in minor releases (only if necessary)
 * **experimental**: API can change significantly even in patch releases
 
-## Main modules
+## Main modules 
 
 | Module         | Level       |
 |----------------|-------------|
-| core (Scala 2) | stabilising |
+| core (Scala 2) | stable      |
 | core (Scala 3) | stabilising |
 | server-core    | stabilising |
 | client-core    | stabilising |
