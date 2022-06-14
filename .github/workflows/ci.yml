@@ -96,8 +96,8 @@ jobs:
             ~/.ivy2/cache
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-JVM-${{ hashFiles('project/build.properties') }}
-#      - name: Check MiMa # disable for major releases
-#        run: sbt -v mimaReportBinaryIssues
+      - name: Check MiMa # disable for major releases
+        run: sbt -v mimaReportBinaryIssues
       - name: Cleanup
         run: |
           rm -rf "$HOME/.ivy2/local" || true
