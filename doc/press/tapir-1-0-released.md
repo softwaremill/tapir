@@ -23,9 +23,13 @@ Compile-time verification combined with type-driven auto-complete in the IDE all
 If you’d like to try tapir, check out our [documentation](https://tapir.softwaremill.com/en/latest/) or the [adopt-tapir page](https://adopt-tapir.softwaremill.com), where you can generate a customised bare-bones tapir project. Looking forward to learning about your impressions of the library!
 
 ## Additional Resources
+
 [scala.page](https://softwaremill.com/scala/)
+
 [SoftwareMill Tech Blog](https://softwaremill.com/blog/)
+
 [Scala Times](https://scalatimes.com/)
 
 ## About SoftwareMill
+
 We help clients scale their business through software, conduct digital transformation, implement event sourcing and create data processing pipelines. We specialise in Scala, Kafka, Akka and Cassandra, among other technologies. Our areas of expertise include distributed systems, big data, blockchain, machine learning and data analytics. Project in trouble? We'll help your team.
