@@ -24,11 +24,9 @@ If you’d like to try tapir, check out our [documentation](https://tapir.softwa
 
 ## Additional Resources
 
-[scala.page](https://softwaremill.com/scala/)
-
-[SoftwareMill Tech Blog](https://softwaremill.com/blog/)
-
-[Scala Times](https://scalatimes.com/)
+* [scala.page](https://softwaremill.com/scala/)
+* [SoftwareMill Tech Blog](https://softwaremill.com/blog/)
+* [Scala Times](https://scalatimes.com/)
 
 ## About SoftwareMill
 
