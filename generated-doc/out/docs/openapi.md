@@ -44,7 +44,7 @@ within a context, and you don't want Swagger to use relative paths, you'll need 
 to `false`, and specify the `contextPath` one.
 
 Moreover, model generation can be configured - see below for more details on `OpenAPIDocsOptions` and the method
-parameters of `fromEndpoitns`. Finally, the generated model can be customised. See the scaladocs for 
+parameters of `fromEndpoints`. Finally, the generated model can be customised. See the scaladocs for 
 `SwaggerInterpreter`.
 
 The swagger server endpoints can be secured using `ServerLogic.prependSecurity`, see [server logic](../server/logic.md)
