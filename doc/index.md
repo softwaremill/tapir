@@ -92,6 +92,11 @@ Thank you!
 <a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
 </div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<div></div>
+<a href="http://www.broad.app/" title="Broad"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a>
+<div></div>
+</div>
 
 ## Code teaser
 
