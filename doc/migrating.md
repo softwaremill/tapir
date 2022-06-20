@@ -23,7 +23,7 @@
 * metrics classes and interceptors have moved to the `sttp.tapir.server.metrics` package
 * `Endpoint.renderPathTemplate` is renamed to `Endpoint.showPathTemplate`
 * web socket exceptions `UnsupportedWebSocketFrameException` and `WebSocketFrameDecodeFailure` are now in the `sttp.tapir.model` package
-* OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.tapir.apispec.(...)`
+* OpenAPI and AsyncAPI models are now part of a separate sttp-apispec project, hence the packages of these objects changed as well, from `sttp.tapir.apispec` / `sttp.tapir.openapi` / `sttp.tapir.asyncapi` to `sttp.apispec.(...)`
 * server interpreters sources are now grouped based on the underlying server implementation (e.g. http4s, vertx), and then sub-directories contain effect integrations (e.g. cats, zio). Name templates:
   * for artifacts: `tapir-<server>-server-<effect>`. E.g. `tapir-zio-http4s-server` became `tapir-http4s-server-zio1`
   * for package names: `sttp.tapir.server.<server>.<effect>`
