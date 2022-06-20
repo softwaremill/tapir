@@ -10,7 +10,7 @@ private[tapir] object CodecEnumerationMacro {
 
     // this needs to be a macro so that we can call another macro - Validator.derivedEnumeration
     c.Expr[CreateDerivedEnumerationCodec[L, T]](q"""
-      new sttp.tapir.macros.CreateDerivedEnumerationCodec(Validator.derivedEnumeration)
+      new sttp.tapir.macros.CreateDerivedEnumerationCodec(sttp.tapir.Validator.derivedEnumeration)
     """)
   }
 }
