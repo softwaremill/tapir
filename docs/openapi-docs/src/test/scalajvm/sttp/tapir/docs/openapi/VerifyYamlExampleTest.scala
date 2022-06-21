@@ -14,6 +14,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.tests.data.{Entity, Organization, Person}
 import sttp.tapir.{endpoint, _}
 
+import java.nio.ByteBuffer
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 
@@ -179,6 +180,19 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     )
 
     val expectedYaml = load("example/expected_single_example_with_summary.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support byte buffer examples") {
+    val e = endpoint.out(
+      byteBufferBody
+        .example(Example.of(ByteBuffer.wrap("a,b,c,1024,e,f,42,g h,i".getBytes("UTF-8"))))
+        .and(header("Content-Type", "text/csv"))
+    )
+
+    val expectedYaml = load("example/expected_byte_buffer_example.yml")
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml
