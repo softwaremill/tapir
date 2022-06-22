@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "1.0.0"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "1.0.1"
 ```
 
 To interpret an endpoint definition as an `org.http4s.Request[F]`, import:
@@ -37,7 +37,7 @@ After providing the input parameters, the following values are returned:
   The result will then contain the decoded error or success values
   (note that this can be the body enriched with data from headers/status code).
 
-See the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/Http4sClientExample.scala)
+See the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/client/Http4sClientExample.scala)
 for example usage.
 
 ## Limitations
