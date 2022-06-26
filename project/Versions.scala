@@ -2,7 +2,7 @@ object Versions {
   val http4s = "0.23.12"
   val catsEffect = "3.3.12"
   val circe = "0.14.2"
-  val circeYaml = "0.14.2"
+  val circeYaml = "0.14.1"
   val sttp = "3.6.2"
   val sttpModel = "1.4.26"
   val sttpShared = "1.3.6"
