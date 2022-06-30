@@ -44,7 +44,7 @@ private[zio] final case class TapirZioService[R](
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest).map(ResultMapping.toArmeria)
 
-    val cancellable = runtime.unsafeRunToFuture(result)
+    val cancellable = runtime.run(result).toCompletableFuture
     cancellable.future.onComplete {
       case Failure(exception) =>
         future.completeExceptionally(exception)
