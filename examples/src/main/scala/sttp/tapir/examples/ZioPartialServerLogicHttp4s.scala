@@ -1,8 +1,8 @@
 package sttp.tapir.examples
 
 import org.http4s._
-import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.tapir.examples.UserAuthenticationLayer._
@@ -69,14 +69,16 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
   //
 
   override def run: URIO[Any, ExitCode] =
-    BlazeServerBuilder[RIO[UserService, *]]
-      .withExecutionContext(runtime.executor.asExecutionContext)
-      .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-      .resource
-      .use(_ => test)
-      .provide(UserService.live)
-      .exitCode
+    ZIO.executor.flatMap(executor =>
+      BlazeServerBuilder[RIO[UserService, *]]
+        .withExecutionContext(executor.asExecutionContext)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+        .resource
+        .use(_ => test)
+        .provide(UserService.live)
+        .exitCode
+    )
 }
 
 object UserAuthenticationLayer {

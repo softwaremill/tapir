@@ -1,17 +1,15 @@
 package sttp.tapir.server.vertx.zio.streams
 
-import java.nio.ByteBuffer
+import _root_.zio.stream.ZStream
+import _root_.zio.{durationInt, Runtime => ZIORuntime, _}
 import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import _root_.zio._
-import _root_.zio.durationInt
-import _root_.zio.stream.ZStream
-import _root_.zio.Clock
 import sttp.capabilities.zio.ZioStreams
-import _root_.zio.{Runtime => ZIORuntime}
 import sttp.tapir.server.vertx.streams.FakeStream
 import sttp.tapir.server.vertx.zio.VertxZioServerOptions
+
+import java.nio.ByteBuffer
 
 class ZStreamTest extends AsyncFlatSpec with Matchers {
 
@@ -47,7 +45,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
   val schedule = (Schedule.spaced(50.millis) >>> Schedule.elapsed).whileOutput(_ < 15.seconds)
 
   def eventually[A](task: Task[A])(cond: PartialFunction[A, Unit]): Task[A] =
-    task.tap(a => ZIO.attempt(cond(a))).retry(schedule).provideSomeLayer(Clock.live)
+    task.tap(a => ZIO.attempt(cond(a))).retry(schedule)
 
   "ZioReadStreamCompatible" should "convert zio stream to read stream" in {
     val stream: ZioStreams.BinaryStream = ZStream
@@ -56,34 +54,32 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .haltAfter(3.seconds)
       .map(intAsBuffer)
       .flattenChunks
-      .provideLayer(Clock.live)
     val readStream = zioReadStreamCompatible(options)(runtime).asReadStream(stream)
-    runtime
-      .unsafeRunToFuture(for {
-        ref <- Ref.make[List[Int]](Nil)
-        completed <- Ref.make[Boolean](false)
-        _ <- ZIO.attempt {
-          readStream.handler { buffer =>
-            runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
-            ()
-          }
+    unsafeToFuture(for {
+      ref <- Ref.make[List[Int]](Nil)
+      completed <- Ref.make[Boolean](false)
+      _ <- ZIO.attempt {
+        readStream.handler { buffer =>
+          unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
+          ()
         }
-        _ <- ZIO.attempt {
-          readStream.endHandler { _ =>
-            runtime.unsafeRunSync(completed.set(true))
-            ()
-          }
+      }
+      _ <- ZIO.attempt {
+        readStream.endHandler { _ =>
+          unsafeRunSync(completed.set(true))
+          ()
         }
-        _ <- ZIO.attempt(readStream.resume())
-        _ <- eventually(ref.get)({ case _ :: _ => () })
-        _ <- ZIO.attempt(readStream.pause())
-        _ <- ZIO.sleep(1.seconds)
-        snapshot2 <- ref.get
-        _ <- ZIO.attempt(readStream.resume())
-        snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
-        _ = shouldIncreaseMonotonously(snapshot3)
-        _ <- eventually(completed.get)({ case true => () })
-      } yield succeed)
+      }
+      _ <- ZIO.attempt(readStream.resume())
+      _ <- eventually(ref.get)({ case _ :: _ => () })
+      _ <- ZIO.attempt(readStream.pause())
+      _ <- ZIO.sleep(1.seconds)
+      snapshot2 <- ref.get
+      _ <- ZIO.attempt(readStream.resume())
+      snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
+      _ = shouldIncreaseMonotonously(snapshot3)
+      _ <- eventually(completed.get)({ case true => () })
+    } yield succeed)
   }
 
   it should "interrupt read stream after zio stream interruption" in {
@@ -92,38 +88,36 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
       .mapAccum(0)((acc, _) => (acc + 1, acc))
       .haltAfter(7.seconds)
       .map(intAsBuffer)
-      .flattenChunks
-      .provideLayer(Clock.live) ++ ZStream.fail(new Exception("!"))
+      .flattenChunks ++ ZStream.fail(new Exception("!"))
     val readStream = zioReadStreamCompatible(options)(runtime).asReadStream(stream)
-    runtime
-      .unsafeRunToFuture(for {
-        ref <- Ref.make[List[Int]](Nil)
-        completedRef <- Ref.make[Boolean](false)
-        interruptedRef <- Ref.make[Option[Throwable]](None)
-        _ <- ZIO.attempt {
-          readStream.handler { buffer =>
-            runtime.unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
-            ()
-          }
+    unsafeToFuture(for {
+      ref <- Ref.make[List[Int]](Nil)
+      completedRef <- Ref.make[Boolean](false)
+      interruptedRef <- Ref.make[Option[Throwable]](None)
+      _ <- ZIO.attempt {
+        readStream.handler { buffer =>
+          unsafeRunSync(ref.update(_ :+ bufferAsInt(buffer)))
+          ()
         }
-        _ <- ZIO.attempt {
-          readStream.endHandler { _ =>
-            runtime.unsafeRunSync(completedRef.set(true))
-            ()
-          }
+      }
+      _ <- ZIO.attempt {
+        readStream.endHandler { _ =>
+          unsafeRunSync(completedRef.set(true))
+          ()
         }
-        _ <- ZIO.attempt {
-          readStream.exceptionHandler { cause =>
-            runtime.unsafeRunSync(interruptedRef.set(Some(cause)))
-            ()
-          }
+      }
+      _ <- ZIO.attempt {
+        readStream.exceptionHandler { cause =>
+          unsafeRunSync(interruptedRef.set(Some(cause)))
+          ()
         }
-        _ <- ZIO.attempt(readStream.resume())
-        snapshot <- eventually(ref.get)({ case list => list.length should be > 3 })
-        _ = shouldIncreaseMonotonously(snapshot)
-        _ <- eventually(completedRef.get zip interruptedRef.get)({ case (false, Some(_)) =>
-        })
-      } yield succeed)
+      }
+      _ <- ZIO.attempt(readStream.resume())
+      snapshot <- eventually(ref.get)({ case list => list.length should be > 3 })
+      _ = shouldIncreaseMonotonously(snapshot)
+      _ <- eventually(completedRef.get zip interruptedRef.get)({ case (false, Some(_)) =>
+      })
+    } yield succeed)
   }
 
   it should "drain read stream without pauses if buffer has enough space" in {
@@ -131,30 +125,29 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val count = 100
     val readStream = new FakeStream()
     val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
-    runtime
-      .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .toIterator
-              .map(_.toList)
-          )
-          .fork
-        _ <- ZIO.attempt {
-          (1 to count).foreach { i =>
-            readStream.handle(intAsVertxBuffer(i))
-          }
-          readStream.end()
+    unsafeToFuture(for {
+      resultFiber <- ZIO
+        .scoped(
+          stream
+            .mapChunks((chunkAsInt _).andThen(Chunk.single))
+            .toIterator
+            .map(_.toList)
+        )
+        .fork
+      _ <- ZIO.attempt {
+        (1 to count).foreach { i =>
+          readStream.handle(intAsVertxBuffer(i))
         }
-        result <- resultFiber.join
-      } yield {
-        val successes = result.collect { case Right(i) => i }
-        shouldIncreaseMonotonously(successes)
-        successes should have size count.toLong
-        readStream.pauseCount shouldBe 0
-        // readStream.resumeCount shouldBe 0
-      })
+        readStream.end()
+      }
+      result <- resultFiber.join
+    } yield {
+      val successes = result.collect { case Right(i) => i }
+      shouldIncreaseMonotonously(successes)
+      successes should have size count.toLong
+      readStream.pauseCount shouldBe 0
+      // readStream.resumeCount shouldBe 0
+    })
   }
 
   it should "drain read stream with small buffer" in {
@@ -162,34 +155,33 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val count = 100
     val readStream = new FakeStream()
     val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
-    runtime
-      .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .mapZIO(i => ZIO.sleep(50.millis).as(i))
-              .toIterator
-              .map(_.toList)
-          )
-          .fork
-        _ <- ZIO
-          .attempt({
-            (1 to count).foreach { i =>
-              Thread.sleep(25)
-              readStream.handle(intAsVertxBuffer(i))
-            }
-            readStream.end()
-          })
-          .fork
-        result <- resultFiber.join
-      } yield {
-        val successes = result.collect { case Right(i) => i }
-        shouldIncreaseMonotonously(successes)
-        successes should have size count.toLong
-        readStream.pauseCount should be > 0
-        readStream.resumeCount should be > 0
-      })
+    unsafeToFuture(for {
+      resultFiber <- ZIO
+        .scoped(
+          stream
+            .mapChunks((chunkAsInt _).andThen(Chunk.single))
+            .mapZIO(i => ZIO.sleep(50.millis).as(i))
+            .toIterator
+            .map(_.toList)
+        )
+        .fork
+      _ <- ZIO
+        .attempt({
+          (1 to count).foreach { i =>
+            Thread.sleep(25)
+            readStream.handle(intAsVertxBuffer(i))
+          }
+          readStream.end()
+        })
+        .fork
+      result <- resultFiber.join
+    } yield {
+      val successes = result.collect { case Right(i) => i }
+      shouldIncreaseMonotonously(successes)
+      successes should have size count.toLong
+      readStream.pauseCount should be > 0
+      readStream.resumeCount should be > 0
+    })
   }
 
   it should "drain failed read stream" in {
@@ -197,34 +189,41 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
     val count = 50
     val readStream = new FakeStream()
     val stream = zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
-    runtime
-      .unsafeRunToFuture(for {
-        resultFiber <- ZIO
-          .scoped(
-            stream
-              .mapChunks((chunkAsInt _).andThen(Chunk.single))
-              .mapZIO(i => ZIO.sleep(50.millis).as(i))
-              .toIterator
-              .map(_.toList)
-          )
-          .fork
-        _ <- ZIO
-          .attempt({
-            (1 to count).foreach { i =>
-              Thread.sleep(25)
-              readStream.handle(intAsVertxBuffer(i))
-            }
-            readStream.fail(new Exception("!"))
-          })
-          .fork
-        result <- resultFiber.join
-      } yield {
-        val successes = result.collect { case Right(i) => i }
-        shouldIncreaseMonotonously(successes)
-        successes should have size count.toLong
-        readStream.pauseCount should be > 0
-        readStream.resumeCount should be > 0
-        result.lastOption.collect { case Left(e) => e } should not be empty
-      })
+    unsafeToFuture(for {
+      resultFiber <- ZIO
+        .scoped(
+          stream
+            .mapChunks((chunkAsInt _).andThen(Chunk.single))
+            .mapZIO(i => ZIO.sleep(50.millis).as(i))
+            .toIterator
+            .map(_.toList)
+        )
+        .fork
+      _ <- ZIO
+        .attempt({
+          (1 to count).foreach { i =>
+            Thread.sleep(25)
+            readStream.handle(intAsVertxBuffer(i))
+          }
+          readStream.fail(new Exception("!"))
+        })
+        .fork
+      result <- resultFiber.join
+    } yield {
+      val successes = result.collect { case Right(i) => i }
+      shouldIncreaseMonotonously(successes)
+      successes should have size count.toLong
+      readStream.pauseCount should be > 0
+      readStream.resumeCount should be > 0
+      result.lastOption.collect { case Left(e) => e } should not be empty
+    })
   }
+
+  private def unsafeRunSync[T](task: Task[T]): Exit[Throwable, T] =
+    Unsafe.unsafeCompat { implicit u =>
+      runtime.unsafe.run(task)
+    }
+
+  private def unsafeToFuture[T](task: Task[T]): CancelableFuture[T] =
+    Unsafe.unsafeCompat(implicit u => runtime.unsafe.runToFuture(task))
 }
