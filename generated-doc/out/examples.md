@@ -2,6 +2,10 @@
 
 The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) and [examples3](https://github.com/softwaremill/tapir/tree/master/examples3/src/main/scala/sttp/tapir/examples3) sub-projects (the latter containing Scala 3-only code) contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
 
+## Generate a tapir project
+
+You can generate a simple project using tapir using [adopt-tapir](https://adopt-tapir.softwaremill.com).
+
 ## Third-party examples
 
 To see an example project using tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
@@ -12,6 +16,7 @@ A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-
 
 ## Blogs, articles
 
+* [Tapir 1.0 released](https://softwaremill.com/tapir-1-0-released/)
 * [Security improvements in tapir 0.19](https://softwaremill.com/security-improvements-in-tapir-0-19/)
 * [Tapir serverless: a proof of concept](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)
 * [Designing tapir's WebSockets support](https://blog.softwaremill.com/designing-tapirs-websockets-support-ff1573166368)

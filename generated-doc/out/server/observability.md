@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.0.0-RC3"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.0.1"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -130,7 +130,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.0.0-RC3"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.0.1"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one

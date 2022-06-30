@@ -37,7 +37,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
           .description("The book to add")
           .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom"))))
       )
-      .in(header[String]("X-Auth-Token").description("The token is 'secret'"))
+      .in(header[AuthToken]("X-Auth-Token").description("The token is 'secret'"))
 
     // Re-usable parameter description
     private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")

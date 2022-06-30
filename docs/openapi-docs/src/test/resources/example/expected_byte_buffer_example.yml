@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: Users
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          headers:
+            Content-Type:
+              required: true
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+              example: a,b,c,1024,e,f,42,g h,i

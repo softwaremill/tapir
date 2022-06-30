@@ -11,9 +11,9 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.15"
+val scala2_12 = "2.12.16"
 val scala2_13 = "2.13.8"
-val scala3 = "3.1.2"
+val scala3 = "3.1.3"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -85,8 +85,7 @@ val enableMimaSettings = Seq(
   mimaBinaryIssueFilters ++= Seq(
     ProblemFilters.exclude[Problem]("sttp.tapir.internal.*"),
     ProblemFilters.exclude[Problem]("sttp.tapir.generic.internal.*"),
-    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*"),
-    ProblemFilters.exclude[Problem]("sttp.tapir.server.interpreter.*") // for 0.19
+    ProblemFilters.exclude[Problem]("sttp.tapir.typelevel.internal.*")
   )
 )
 
@@ -452,13 +451,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.7.0",
+      "org.typelevel" %%% "cats-core" % "2.8.0",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.7.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.8.0" % Test
     )
   )
   .jvmPlatform(
@@ -697,8 +696,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.26",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.26" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.33",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.33" % Test,
       scalaTest.value % Test
     )
   )
@@ -752,7 +751,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.15.0",
+      "io.prometheus" % "simpleclient_common" % "0.16.0",
       scalaTest.value % Test
     )
   )
@@ -1081,7 +1080,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.77.Final"
+      "io.netty" % "netty-all" % "4.1.78.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1094,7 +1093,7 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.77.Final",
+      "io.netty" % "netty-all" % "4.1.78.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016

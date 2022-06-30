@@ -39,6 +39,20 @@ for a more detailed description of how tapir works!
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
 * **library, not a framework**: integrates with your stack
 
+## Adopt a tapir
+
+```eval_rst
+.. raw:: html
+
+   <iframe
+     frameborder=0
+     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+     src="https://adopt-tapir.softwaremill.com/embedded-form"
+     width="100%"
+     height="450"
+   ></iframe>
+```
+
 ## Availability
 
 Tapir is available:
@@ -77,6 +91,11 @@ Thank you!
 <a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
 <a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<div></div>
+<a href="http://www.broad.app/" title="Broad"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a>
+<div></div>
 </div>
 
 ## Code teaser

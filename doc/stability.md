@@ -10,7 +10,7 @@ The modules are categorised using the following levels:
 
 | Module         | Level       |
 |----------------|-------------|
-| core (Scala 2) | stabilising |
+| core (Scala 2) | stable      |
 | core (Scala 3) | stabilising |
 | server-core    | stabilising |
 | client-core    | stabilising |

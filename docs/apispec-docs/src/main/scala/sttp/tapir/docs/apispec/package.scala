@@ -4,6 +4,9 @@ import sttp.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, Sec
 import sttp.tapir.Schema.SName
 import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
+
 package object apispec {
   private[docs] type SchemeName = String
   private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
@@ -23,7 +26,11 @@ package object apispec {
     result
   }
 
-  private def rawToString[T](v: Any): String = v.toString
+  private def rawToString[T](v: Any): String = v match {
+    case a: Array[Byte] => new String(a, "UTF-8")
+    case b: ByteBuffer  => Charset.forName("UTF-8").decode(b).toString
+    case _              => v.toString
+  }
 
   private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
