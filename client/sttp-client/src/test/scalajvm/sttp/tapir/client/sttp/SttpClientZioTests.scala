@@ -7,10 +7,12 @@ import sttp.client3._
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
-import zio.Task
+import zio.Runtime.default
+import zio.{CancelableFuture, Task, Unsafe}
 
 abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends ClientTests[R] {
-  val backend: SttpBackend[Task, R] = zio.Runtime.default.unsafeRun(HttpClientZioBackend())
+  private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
+  val backend: SttpBackend[Task, R] = unsafeRun(HttpClientZioBackend())
   def wsToPipe: WebSocketToPipe[R]
 
   override def send[A, I, E, O](
@@ -28,7 +30,7 @@ abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends Clien
         .apply(args)
         .send(backend)
         .map(_.body)
-      zio.Runtime.default.unsafeRunToFuture(send).future
+      unsafeToFuture(send).future
     })
 
   override def safeSend[A, I, E, O](
@@ -45,11 +47,20 @@ abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends Clien
         .apply(args)
         .send(backend)
         .map(_.body)
-      zio.Runtime.default.unsafeRunToFuture(send).future
+      unsafeToFuture(send).future
     })
 
   override protected def afterAll(): Unit = {
-    zio.Runtime.default.unsafeRun(backend.close())
+    unsafeRun(backend.close())
     super.afterAll()
   }
+
+  def unsafeRun[T](task: Task[T]): T =
+    Unsafe.unsafeCompat { implicit u =>
+      runtime.run(task).getOrThrowFiberFailure()
+    }
+
+  def unsafeToFuture[T](task: Task[T]): CancelableFuture[T] =
+    Unsafe.unsafeCompat(implicit u => runtime.runToFuture(task))
+
 }
