@@ -69,13 +69,13 @@ object DatadogMetrics {
         m.unit {
           EndpointMetric()
             .onEndpointRequest { ep =>
-              m.eval(counter.increment(toTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
+              m.eval(counter.increment(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
             }
             .onResponseBody { (ep, _) =>
-              m.eval(counter.decrement(toTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
+              m.eval(counter.decrement(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
             }
             .onException { (ep, _) =>
-              m.eval(counter.decrement(toTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
+              m.eval(counter.decrement(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
             }
         }
       }
@@ -92,7 +92,7 @@ object DatadogMetrics {
             .onResponseBody { (ep, res) =>
               m.eval {
                 counter.increment(
-                  toTags(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse,
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res)
                   )
@@ -102,7 +102,7 @@ object DatadogMetrics {
             .onException { (ep, ex) =>
               m.eval {
                 counter.increment(
-                  toTags(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse,
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex)
                   )
@@ -132,7 +132,7 @@ object DatadogMetrics {
               m.eval {
                 recoder.record(
                   duration,
-                  toTags(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.headersValue)
                   )
@@ -143,7 +143,7 @@ object DatadogMetrics {
               m.eval {
                 recoder.record(
                   duration,
-                  toTags(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue)
                   )
@@ -154,7 +154,7 @@ object DatadogMetrics {
               m.eval {
                 recoder.record(
                   duration,
-                  toTags(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex)
                   )
@@ -191,7 +191,7 @@ object DatadogMetrics {
     def record(value: Double, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags: _*)
   }
 
-  def toTags(names: List[String], values: List[String]): List[String] = names.zip(values).map { case (n, v) =>
+  def mergeTags(names: List[String], values: List[String]): List[String] = names.zip(values).map { case (n, v) =>
     n + ":" + v
   }
 }
