@@ -172,9 +172,23 @@ object DatadogMetrics {
     def decrement(tags: List[String]): Unit = client.decrementCounter(name, tags: _*)
   }
 
+  case class Gauge(name: String)(client: StatsDClient) {
+    def record(value: Long, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags: _*)
+    def record(value: Double, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags: _*)
+  }
+
+  case class Timer(name: String)(client: StatsDClient) {
+    def record(milliSeconds: Long, tags: List[String]): Unit = client.recordExecutionTime(name, milliSeconds, tags: _*)
+  }
+
   case class Histogram(name: String)(client: StatsDClient) {
     def record(value: Long, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags: _*)
     def record(value: Double, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags: _*)
+  }
+
+  case class Distribution(name: String)(client: StatsDClient) {
+    def record(value: Long, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags: _*)
+    def record(value: Double, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags: _*)
   }
 
   def toTags(names: List[String], values: List[String]): List[String] = names.zip(values).map { case (n, v) =>
