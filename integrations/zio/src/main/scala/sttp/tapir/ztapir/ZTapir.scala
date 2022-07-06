@@ -1,11 +1,13 @@
 package sttp.tapir.ztapir
 
 import sttp.tapir._
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.{ServerEndpoint, ServerRoutes}
 import zio.{RIO, ZIO}
 
 trait ZTapir {
+
   type ZServerEndpoint[R, -C] = ServerEndpoint[C, RIO[R, *]]
+  type ZServerRoutes[R, ROUTES] = ServerRoutes[RIO[R, *], ROUTES]
 
   implicit class RichZEndpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, C](
       e: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, C]
