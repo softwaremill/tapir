@@ -9,7 +9,7 @@ trait ServerRoutesInstances {
 
   import cats.implicits._
 
-  type KleisliServerRoutes[F[_], G[_], -REQ, RES] = ServerRoutes[F, Kleisli[G, REQ, RES]]
+  type KleisliServerRoutes[F[_], G[_], REQ, RES] = ServerRoutes[F, Kleisli[G, REQ, RES]]
 
   implicit def serverRoutesFunctor[F[_]]: Functor[ServerRoutes[F, *]] =
     new Functor[ServerRoutes[F, *]] {
