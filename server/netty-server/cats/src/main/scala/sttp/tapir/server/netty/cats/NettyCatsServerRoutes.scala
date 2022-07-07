@@ -8,20 +8,20 @@ import sttp.tapir.server.netty.Route
 object NettyCatsServerRoutes extends ServerRoutesInstances {
 
   def combine[F[_]: MonadError](a: NettyServerRoutes[F], b: NettyServerRoutes[F]): NettyServerRoutes[F] =
-    a.combine(b)((ra, rb) => Route.combine(List(ra, rb)))
+    a.combine(b)((ra, rb) => Route.combine[F](List(ra, rb)))
 
   def combine[F[_]: MonadError](routes: Iterable[NettyServerRoutes[F]]): NettyServerRoutes[F] =
-    routes.reduce(combine)
+    routes.reduce(combine[F])
 
   // syntax
   implicit class NettyCatsServerEndpointsRoutesOps[F[_]: MonadError](thisRoutes: NettyServerRoutes[F]) {
     def combine(thatRoutes: NettyServerRoutes[F]): NettyServerRoutes[F] =
-      NettyCatsServerRoutes.combine(thisRoutes, thatRoutes)
+      NettyCatsServerRoutes.combine[F](thisRoutes, thatRoutes)
   }
 
   implicit class NettyCatsServerEndpointsRoutesIterableOps[F[_]: MonadError](theseRoutes: Iterable[NettyServerRoutes[F]]) {
     def combine(thoseRoutes: Iterable[NettyServerRoutes[F]]): NettyServerRoutes[F] =
-      NettyCatsServerRoutes.combine(theseRoutes ++ thoseRoutes)
+      NettyCatsServerRoutes.combine[F](theseRoutes ++ thoseRoutes)
   }
 
   implicit class NettyCatsServerEndpointOps[F[_]](se: ServerEndpoint[Any, F]) {
