@@ -2,6 +2,8 @@ package sttp.tapir.server
 
 import io.vertx.ext.web.{Route, Router}
 
+import scala.concurrent.Future
+
 package object vertx {
-  type VertxServerRoutes[F[_]] = ServerRoutes[F, Router => Route]
+  type VertxFutureServerRoutes = ServerRoutes[Future, Router => Route]
 }
