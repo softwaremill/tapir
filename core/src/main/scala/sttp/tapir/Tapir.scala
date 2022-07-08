@@ -75,6 +75,13 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
+  /** A JSON body in string format, read from a raw string read using UTF-8. */
+  val stringJsonBody: EndpointIO.Body[String, String] = stringJsonBody(StandardCharsets.UTF_8)
+
+  /** A JSON body in string format, read from a raw string read using `charset`. */
+  def stringJsonBody(charset: Charset): EndpointIO.Body[String, String] =
+    stringBodyAnyFormat(Codec.json(DecodeResult.Value.apply)(identity), charset)
+
   /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
     *
     * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with various json libraries
