@@ -1,5 +1,6 @@
 package sttp.tapir.server.armeria
 
+import com.linecorp.armeria.common.ExchangeType
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -18,7 +19,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(stringBody)
     val routesMap = RouteMapping.toRoute(stringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.Unary) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.UNARY) shouldBe true
   }
 
   test("unary - json") {
@@ -28,7 +29,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(jsonBody[Person])
     val routesMap = RouteMapping.toRoute(stringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.Unary) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.UNARY) shouldBe true
   }
 
   test("streaming - fileBody") {
@@ -38,7 +39,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(fileBody)
     val routesMap = RouteMapping.toRoute(stringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BidiStreaming) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BIDI_STREAMING) shouldBe true
   }
 
   test("streaming - multipart") {
@@ -48,7 +49,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(multipartBody)
     val routesMap = RouteMapping.toRoute(stringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BidiStreaming) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BIDI_STREAMING) shouldBe true
   }
 
   test("streaming - publisher") {
@@ -58,7 +59,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(streamBody(ArmeriaStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
     val routesMap = RouteMapping.toRoute(stringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BidiStreaming) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.BIDI_STREAMING) shouldBe true
   }
 
   test("mixed - string~file") {
@@ -68,7 +69,7 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(fileBody)
     val routesMap = RouteMapping.toRoute(stringFileEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.ResponseStreaming) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.RESPONSE_STREAMING) shouldBe true
   }
 
   test("mixed - file~string") {
@@ -78,6 +79,6 @@ class RouteMappingTest extends AnyFunSuite with Matchers {
       .out(stringBody)
     val routesMap = RouteMapping.toRoute(fileStringEndpoint).toMap
     val exchangeTypes = routesMap.values
-    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.RequestStreaming) shouldBe true
+    exchangeTypes.forall(exchangeType => exchangeType == ExchangeType.REQUEST_STREAMING) shouldBe true
   }
 }

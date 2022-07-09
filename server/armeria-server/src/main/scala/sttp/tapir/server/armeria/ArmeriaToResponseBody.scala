@@ -57,7 +57,7 @@ private[armeria] final class ArmeriaToResponseBody[S <: Streams[S]](streamCompat
         val streamMessage = tapirFile.range
           .flatMap(r =>
             r.startAndEnd.map { case (start, end) =>
-              PathStreamMessage(tapirFile.file.toPath, start, end)
+              StreamMessage.of(tapirFile.file.toPath).range(start, end - start)
             }
           )
           .getOrElse(StreamMessage.of(tapirFile.file))
