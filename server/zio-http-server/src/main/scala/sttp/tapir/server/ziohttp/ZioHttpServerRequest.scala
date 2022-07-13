@@ -19,7 +19,7 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
 
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, remote, None)
   override def underlying: Any = req
-  override lazy val pathSegments: List[String] = req.url.path.toList
+  override lazy val pathSegments: List[String] = req.url.path.segments.map(_.toString).toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
   override lazy val method: SttpMethod = SttpMethod(req.method.toJava.name().toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.encode)

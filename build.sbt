@@ -1160,7 +1160,11 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC9")
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test,
+      "io.d11" %% "zhttp" % "2.0.0-RC9+2-4e82d839-SNAPSHOT" // https://github.com/dream11/zio-http/issues/1348
+    ),
+    resolvers += "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
