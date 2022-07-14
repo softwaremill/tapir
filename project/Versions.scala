@@ -45,6 +45,6 @@ object Versions {
   val fs2 = "3.2.10"
   val decline = "2.3.0"
   val quicklens = "1.8.8"
-  val openTelemetry = "1.15.0"
+  val openTelemetry = "1.16.0"
   val mockServer = "5.13.2"
 }
