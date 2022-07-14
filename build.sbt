@@ -416,8 +416,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.7.6" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.7.6" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.2" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.8.1" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
@@ -456,7 +456,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
       "org.typelevel" %%% "cats-laws" % "2.8.0" % Test
     )
   )
@@ -696,8 +696,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.33",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.33" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.36",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.36" % Test,
       scalaTest.value % Test
     )
   )
@@ -1080,7 +1080,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.78.Final"
+      "io.netty" % "netty-all" % "4.1.79.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1093,7 +1093,7 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.78.Final",
+      "io.netty" % "netty-all" % "4.1.79.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -1255,7 +1255,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.3.2"
+      "org.typelevel" %% "jawn-parser" % "1.4.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
