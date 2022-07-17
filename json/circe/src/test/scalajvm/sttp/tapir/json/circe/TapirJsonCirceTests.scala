@@ -31,8 +31,8 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
       List(
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("name"))),
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("yearOfBirth")))
+        JsonError("Missing required field", List(FieldName("name"))),
+        JsonError("Missing required field", List(FieldName("yearOfBirth")))
       )
   }
 
@@ -49,8 +49,8 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
       List(
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("serialNumber"))),
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("price")))
+        JsonError("Missing required field", List(FieldName("[0]"), FieldName("serialNumber"))),
+        JsonError("Missing required field", List(FieldName("[0]"), FieldName("price")))
       )
     error.underlying shouldBe a[Errors]
   }
