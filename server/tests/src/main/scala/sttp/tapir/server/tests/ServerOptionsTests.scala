@@ -7,6 +7,7 @@ import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir._
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.tests._
 
@@ -29,7 +30,8 @@ class ServerOptionsTests[F[_], OPTIONS, ROUTE](
             endpoint.in("p1").out(stringBody).serverLogic(_ => pureResult(s"ok1".asRight[Unit])),
             endpoint.in("p2").out(stringBody).serverLogic(_ => pureResult(s"ok2".asRight[Unit]))
           ),
-          _.defaultHandlers(e => ValuedEndpointOutput(stringBody, "ERROR: " + e), notFoundWhenRejected = true)
+          (_: CustomiseInterceptors[F, OPTIONS])
+            .defaultHandlers(e => ValuedEndpointOutput(stringBody, "ERROR: " + e), notFoundWhenRejected = true)
         )
       )
     ) { (backend, baseUri) =>
