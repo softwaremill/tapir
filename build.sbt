@@ -1,11 +1,13 @@
+import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
-import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
-import sbtassembly.AssemblyPlugin.autoImport.assembly // explicit import to avoid clash with gatling plugin
+
+// explicit import to avoid clash with gatling plugin
+import sbtassembly.AssemblyPlugin.autoImport.assembly
 
 import java.net.URL
 import scala.concurrent.duration.DurationInt
@@ -128,6 +130,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
+  datadogMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
@@ -767,6 +770,18 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry % Test,
       "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore % CompileAndTest)
+
+lazy val datadogMetrics: ProjectMatrix = (projectMatrix in file("metrics/datadog-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-datadog-metrics",
+    libraryDependencies ++= Seq(
+      "com.datadoghq" % "java-dogstatsd-client" % Versions.dogstatsdClient,
       scalaTest.value % Test
     )
   )
@@ -1510,6 +1525,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     playJson,
     prometheusMetrics,
     opentelemetryMetrics,
+    datadogMetrics,
     sttpMockServer,
     zioJson,
     vertxServer,
@@ -1603,6 +1619,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     zioJson,
     prometheusMetrics,
     opentelemetryMetrics,
+    datadogMetrics,
     sttpMockServer,
     nettyServer,
     swaggerUiBundle

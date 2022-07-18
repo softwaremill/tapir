@@ -49,4 +49,5 @@ object Versions {
   val quicklens = "1.8.8"
   val openTelemetry = "1.16.0"
   val mockServer = "5.13.2"
+  val dogstatsdClient = "4.0.0"
 }

@@ -151,3 +151,69 @@ val metrics = OpenTelemetryMetrics.default[Future](meter)
 
 val metricsInterceptor = metrics.metricsInterceptor() // add to your server options
 ```
+
+## Datadog Metrics
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "@VERSION@"
+```
+
+Datadog metrics are sent as Datadog custom metrics through
+[DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) protocol.
+
+`DatadogMetrics` uses `StatsDClient` to send the metrics, and its settings such as host, port, etc. depend on it.
+For example:
+
+```scala mdoc:compile-only
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
+import sttp.tapir.server.metrics.datadog.DatadogMetrics
+import scala.concurrent.Future
+
+val statsdClient: StatsDClient = new NonBlockingStatsDClientBuilder()
+  .hostname("localhost")   // Datadog Agent's hostname
+  .port(8125)              // Datadog Agent's port (UDP)
+  .build()
+
+val metrics = DatadogMetrics.default[Future](statsdClient)
+```
+
+### Custom Metrics
+
+To create and add custom metrics:
+
+```scala mdoc:compile-only
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
+import sttp.tapir.server.metrics.datadog.DatadogMetrics
+import sttp.tapir.server.metrics.datadog.DatadogMetrics.Counter
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
+import scala.concurrent.Future
+
+val statsdClient: StatsDClient = new NonBlockingStatsDClientBuilder()
+  .hostname("localhost")
+  .port(8125)
+  .build()
+
+// Metric for counting responses labeled by path, method and status code
+val responsesTotal = Metric[Future, Counter](
+  Counter("tapir.responses_total.count")(statsdClient),
+  onRequest = (req, counter, _) =>
+    Future.successful(
+      EndpointMetric()
+        .onResponseBody { (ep, res) =>
+          Future.successful {
+            val labels = List(
+              s"path:${ep.showPathTemplate()}", 
+              s"method:${req.method.method}",
+              s"status:${res.code.toString()}"
+            )
+            counter.increment(labels)
+          }
+        }
+    )
+)
+
+val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
+  .addCustom(responsesTotal)
+```
