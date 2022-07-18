@@ -167,15 +167,16 @@ Datadog metrics are sent as Datadog custom metrics through
 For example:
 
 ```scala mdoc:compile-only
-import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
 import sttp.tapir.server.metrics.datadog.DatadogMetrics
+import scala.concurrent.Future
 
 val statsdClient: StatsDClient = new NonBlockingStatsDClientBuilder()
   .hostname("localhost")   // Datadog Agent's hostname
   .port(8125)              // Datadog Agent's port (UDP)
   .build()
 
-val metrics = DatadogMetrics.default[Future](client)
+val metrics = DatadogMetrics.default[Future](statsdClient)
 ```
 
 ### Custom Metrics
@@ -183,7 +184,7 @@ val metrics = DatadogMetrics.default[Future](client)
 To create and add custom metrics:
 
 ```scala mdoc:compile-only
-import com.timgroup.statsd.NonBlockingStatsDClientBuilder
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
 import sttp.tapir.server.metrics.datadog.DatadogMetrics
 import sttp.tapir.server.metrics.datadog.DatadogMetrics.Counter
 import sttp.tapir.server.metrics.{EndpointMetric, Metric}
