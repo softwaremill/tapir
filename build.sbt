@@ -291,7 +291,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     publish / skip := true,
     libraryDependencies ++= loggerDependencies ++ Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "org.http4s" %% "http4s-circe" % Versions.http4s
     ),
     // the test server needs to be started before running any client tests
@@ -416,11 +416,11 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.7.6" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.7.6" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.2" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.8.2" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "org.http4s" %% "http4s-server" % Versions.http4s,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
@@ -456,7 +456,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
       "org.typelevel" %%% "cats-laws" % "2.8.0" % Test
     )
   )
@@ -696,8 +696,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.33",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.33" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.36",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.36" % Test,
       scalaTest.value % Test
     )
   )
@@ -846,7 +846,7 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
     name := "tapir-swagger-ui-bundle",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
       scalaTest.value % Test
     )
   )
@@ -872,7 +872,7 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
     name := "tapir-redoc-bundle",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
       scalaTest.value % Test
     )
   )
@@ -976,7 +976,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-server" % Versions.http4s,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -988,7 +988,7 @@ lazy val http4sServerZio1: ProjectMatrix = (projectMatrix in file("server/http4s
     name := "tapir-http4s-server-zio1",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1000,7 +1000,7 @@ lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-
     name := "tapir-http4s-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s % Test
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1080,7 +1080,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.78.Final"
+      "io.netty" % "netty-all" % "4.1.79.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1093,7 +1093,7 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.78.Final",
+      "io.netty" % "netty-all" % "4.1.79.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -1255,7 +1255,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.3.2"
+      "org.typelevel" %% "jawn-parser" % "1.4.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1302,7 +1302,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     name := "tapir-client-tests",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "org.http4s" %% "http4s-circe" % Versions.http4s
     )
   )
@@ -1331,7 +1331,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
     name := "tapir-http4s-client",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-core" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-client" % Versions.http4s % Test,
+      "org.http4s" %% "http4s-blaze-client" % Versions.http4sBlazeClient % Test,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     )
   )
@@ -1477,7 +1477,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
@@ -1523,7 +1523,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .settings(
     name := "tapir-examples3",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
@@ -1560,7 +1560,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     name := "doc",
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
     ),

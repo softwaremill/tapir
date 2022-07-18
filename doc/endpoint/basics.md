@@ -45,7 +45,7 @@ import sttp.tapir._
 val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 ```
 
-You can think of an endpoint as a function, which takes input parameters of type `A` & `I` and returns a result of type 
+You can think of an endpoint as a function, which takes input parameters of type `A` and `I` and returns a result of type 
 `Either[E, O]`.
 
 ### Infallible endpoints

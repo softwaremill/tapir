@@ -14,3 +14,7 @@ auto-generate clients in multiple-languages with multiple libraries.
 
 [scala-opentracing](https://github.com/Colisweb/scala-opentracing) contains a module which provides a small integration 
 layer that allows you to create traced http endpoints from tapir Endpoint definitions.
+
+## SNUnit
+
+[SNUnit](https://github.com/lolgab/snunit) is a Scala Native HTTP Server library based on [NGINX Unit](https://unit.nginx.org/). It provides first-class support for Tapir.
