@@ -21,7 +21,7 @@ object Versions {
   val scalaTestPlusScalaCheck = "3.2.12.0"
   val refined = "0.10.1"
   val enumeratum = "1.7.0"
-  val zio1 = "1.0.15"
+  val zio1 = "1.0.16"
   val zio1InteropCats = "3.2.9.1"
   val zio1Json = "0.2.0-M4"
   val zio1InteropReactiveStreams = "1.3.12"
