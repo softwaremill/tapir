@@ -1,5 +1,6 @@
 package sttp.tapir.server.armeria
 
+import com.linecorp.armeria.common.ExchangeType
 import com.linecorp.armeria.server.Route
 import sttp.tapir.EndpointIO.{Body, StreamBodyWrapper}
 import sttp.tapir.EndpointInput.{FixedPath, PathCapture, PathsCapture}
@@ -9,17 +10,17 @@ import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType, no
 
 private[armeria] object RouteMapping {
 
-  def toRoute(e: AnyEndpoint): List[(Route, ExchangeType.Value)] = {
+  def toRoute(e: AnyEndpoint): List[(Route, ExchangeType)] = {
     val inputs: Seq[EndpointInput.Basic[_]] = e.asVectorOfBasicInputs()
 
     val outputsList = e.output.asBasicOutputsList
     val requestStreaming = inputs.exists(isStreaming)
     val responseStreaming = outputsList.exists(_.exists(isStreaming))
     val exchangeType = (requestStreaming, responseStreaming) match {
-      case (false, false) => ExchangeType.Unary
-      case (true, false)  => ExchangeType.RequestStreaming
-      case (false, true)  => ExchangeType.ResponseStreaming
-      case (true, true)   => ExchangeType.BidiStreaming
+      case (false, false) => ExchangeType.UNARY
+      case (true, false)  => ExchangeType.REQUEST_STREAMING
+      case (false, true)  => ExchangeType.RESPONSE_STREAMING
+      case (true, true)   => ExchangeType.BIDI_STREAMING
     }
 
     val hasNoTrailingSlash = e.securityInput
@@ -83,9 +84,4 @@ private[armeria] object RouteMapping {
       }
     }
   }
-}
-
-private[armeria] object ExchangeType extends Enumeration {
-  type ExchangeType = Value
-  val Unary, RequestStreaming, ResponseStreaming, BidiStreaming = Value
 }
