@@ -85,22 +85,25 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
         ()
       }
 
-      val canceler = runtime.unsafeRunAsyncCancelable(result) {
-        case Exit.Failure(cause) => fail(cause.squash)
-        case Exit.Success(_)     => ()
-      }
-      cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-        rc.vertx()
-          .executeBlocking[Unit](
-            (promise: Promise[Unit]) => {
-              canceler(FiberId.None)
-              promise.complete(())
-            },
-            false
-          )
+      val canceler: FiberId => Exit[Throwable, Any] = {
+        Unsafe.unsafeCompat(implicit u => {
+          val value = runtime.unsafe.fork(result)
+          (fiberId: FiberId) => runtime.unsafe.run(value.interruptAs(fiberId)).flattenExit
+        })
       }
 
-      ()
+    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
+      rc.vertx()
+        .executeBlocking[Unit](
+          (promise: Promise[Unit]) => {
+            canceler(FiberId.None)
+            promise.complete(())
+          },
+          false
+        )
+    }
+
+    ()
     }
   }
 }

@@ -11,7 +11,7 @@ class SttpClientStreamingZioTests extends SttpClientZioTests[ZioStreams] with Cl
 
   override def mkStream(s: String): Stream[Throwable, Byte] = ZStream.fromChunk(Chunk.fromArray(s.getBytes("utf-8")))
   override def rmStream(s: Stream[Throwable, Byte]): String = {
-    zio.Runtime.default.unsafeRun(
+    unsafeRun(
       s.via(ZPipeline.utf8Decode).runCollect.map(_.fold("")(_ ++ _))
     )
   }

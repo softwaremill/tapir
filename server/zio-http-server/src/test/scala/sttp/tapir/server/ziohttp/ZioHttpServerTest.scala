@@ -14,7 +14,7 @@ import zhttp.http.{Path, Request, URL}
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, ServerChannelFactory}
 import zio.interop.catz._
-import zio.{Runtime, Task, UIO, ZEnvironment, ZIO}
+import zio.{Runtime, Task, UIO, Unsafe, ZEnvironment, ZIO}
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -38,7 +38,7 @@ class ZioHttpServerTest extends TestSuite {
               .flatMap(response => response.data.toByteBuf.map(_.toString(CharsetUtil.UTF_8)))
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            zio.Runtime.default.unsafeRunToFuture(test)
+            Unsafe.unsafeCompat(implicit u => r.unsafe.runToFuture(test))
           }
         )
 

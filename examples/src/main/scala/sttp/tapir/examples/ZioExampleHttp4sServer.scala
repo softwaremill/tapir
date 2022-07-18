@@ -50,13 +50,15 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
 
   // Starting the server
   val serve: Task[Unit] =
-    BlazeServerBuilder[Task]
-      .withExecutionContext(runtime.executor.asExecutionContext)
-      .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
-      .serve
-      .compile
-      .drain
+    ZIO.executor.flatMap(executor =>
+      BlazeServerBuilder[Task]
+        .withExecutionContext(executor.asExecutionContext)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
+        .serve
+        .compile
+        .drain
+    )
 
   override def run: URIO[Any, ExitCode] = serve.exitCode
 }
