@@ -23,7 +23,7 @@ class ZioVertxServerTest extends TestSuite {
         new DefaultCreateServerTest(backend, interpreter)
           .asInstanceOf[DefaultCreateServerTest[RIO[Blocking, *], ZioStreams, VertxZioServerOptions[RIO[Blocking, *]], Router => Route]]
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong

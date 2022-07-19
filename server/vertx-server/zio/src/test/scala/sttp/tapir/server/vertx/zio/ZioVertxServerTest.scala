@@ -22,7 +22,7 @@ class ZioVertxServerTest extends TestSuite {
         new DefaultCreateServerTest(backend, interpreter)
           .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route]]
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong

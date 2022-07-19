@@ -109,7 +109,8 @@ class PlayServerTest extends TestSuite {
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
+        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false, options = false)
+          .tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
