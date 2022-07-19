@@ -147,33 +147,26 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       )(implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
 
     // when
-    interpret(100, 1000)
-    interpret(200, 2000)
-    interpret(300, 3000)
+    interpret(500, 1500)
+    interpret(1000, 2000)
 
     waitReceiveMessage(statsdServer)
 
     // then
     // headers
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.5|h|#phase:headers,status:2xx,method:GET,path:/person"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,method:GET,path:/person"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:1|h|#phase:headers,status:2xx,method:GET,path:/person"""
     )
 
     // body
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:2|h|#phase:body,status:2xx,method:GET,path:/person"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,method:GET,path:/person"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:3|h|#phase:body,status:2xx,method:GET,path:/person"""
     )
   }
 
