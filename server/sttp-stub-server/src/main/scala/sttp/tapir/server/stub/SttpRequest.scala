@@ -14,7 +14,7 @@ case class SttpRequest(r: Request[_, _], attributes: AttributeMap = AttributeMap
   override def protocol: String = "HTTP/1.1"
   override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def underlying: Any = r
-  override def pathSegments: List[String] = r.uri.pathSegments.segments.map(_.v).toList
+  override def pathSegments: List[String] = r.uri.pathSegments.segments.collect{ case x if !x.v.trim.isEmpty => x.v.trim }.toList
   override def uri: Uri = r.uri
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): SttpRequest = copy(attributes = attributes.put(k, v))
