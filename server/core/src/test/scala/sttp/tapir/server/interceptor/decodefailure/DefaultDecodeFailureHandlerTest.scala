@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError, MultipartDecodeException}
 import sttp.tapir.generic.auto._
-import sttp.tapir.{DecodeResult, FieldName, Schema, Validator}
+import sttp.tapir.{DecodeResult, FieldName, Schema, ValidationResult, Validator}
 
 class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
@@ -31,6 +31,20 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
       validationErrors
     ) shouldBe "expected value to be one of (1, 10, 11), but was 4"
+  }
+
+  it should "create a validation error message for custom validations" in {
+    // given
+    val numberSchema: Schema[Int] =
+      Schema.schemaForInt.validate(Validator.custom[Int]((i: Int) => ValidationResult.validWhen(i == 2), Some("should be even")))
+
+    // when
+    val validationErrors = numberSchema.applyValidation(3)
+
+    // then
+    DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
+      validationErrors
+    ) shouldBe "expected value to pass validation, should be even, but was: 3"
   }
 
   it should "create an error message including failed json paths" in {
