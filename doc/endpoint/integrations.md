@@ -50,7 +50,7 @@ enumerations. To use, add the following dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "@VERSION@"
 ```
 
-Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
+Then, `import sttp.tapir.codec.enumeratum._`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
 
 This will bring into scope implicit values for values extending `*EnumEntry`.
 
