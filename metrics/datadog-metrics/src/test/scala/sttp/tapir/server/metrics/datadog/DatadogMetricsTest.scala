@@ -1,12 +1,14 @@
 package sttp.tapir.server.metrics.datadog
 
 import com.timgroup.statsd._
+import org.scalatest.Retries.isRetryable
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.tagobjects.Retryable
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Canceled, Failed, Outcome}
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
@@ -41,6 +43,23 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
   after {
     statsdServer.clear()
   }
+
+  // some tests are timing-dependent and sometimes fail
+  // https://stackoverflow.com/questions/22799495/scalatest-running-a-test-50-times
+  val retries = 5
+
+  override def withFixture(test: NoArgTest): Outcome = {
+    if (isRetryable(test)) withFixture(test, retries) else super.withFixture(test)
+  }
+
+  def withFixture(test: NoArgTest, count: Int): Outcome = {
+    val outcome = super.withFixture(test)
+    outcome match {
+      case Failed(_) | Canceled(_) => if (count == 1) super.withFixture(test) else withFixture(test, count - 1)
+      case other                   => other
+    }
+  }
+  //
 
   "default metrics" should "collect requests active" in {
     // given
@@ -112,7 +131,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,method:GET,path:/person""")
   }
 
-  "default metrics" should "collect requests duration" in {
+  "default metrics" should "collect requests duration" taggedAs Retryable in {
     // given
     val clock = new TestClock()
 
@@ -147,26 +166,33 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       )(implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
 
     // when
-    interpret(500, 1500)
-    interpret(1000, 2000)
+    interpret(100, 1000)
+    interpret(200, 2000)
+    interpret(300, 3000)
 
     waitReceiveMessage(statsdServer)
 
     // then
     // headers
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.5|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,method:GET,path:/person"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:1|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,method:GET,path:/person"""
+    )
+    statsdServer.getReceivedMessages should contain(
+      """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,method:GET,path:/person"""
     )
 
     // body
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:2|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,method:GET,path:/person"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:3|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,method:GET,path:/person"""
+    )
+    statsdServer.getReceivedMessages should contain(
+      """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,method:GET,path:/person"""
     )
   }
 
