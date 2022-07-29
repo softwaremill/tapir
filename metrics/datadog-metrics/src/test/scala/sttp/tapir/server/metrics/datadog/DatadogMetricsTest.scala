@@ -196,7 +196,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     )
   }
 
-  "default metrics" should "customize labels" in {
+  "default metrics" should "customize labels" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi().serverEp
     val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
@@ -225,7 +225,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#key:value""")
   }
 
-  "metrics" should "be collected on exception when response from exception handler" in {
+  "metrics" should "be collected on exception when response from exception handler" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
     val client =
