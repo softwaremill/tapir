@@ -20,8 +20,9 @@ jobs:
     - name: Set up JDK 11
       uses: actions/setup-java@v3
       with:
-        java-version: 11
+        distribution: 'temurin''
         cache: 'sbt'
+        java-version: 11
     - name: Install sam cli
       run: |
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
@@ -76,6 +77,7 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
+          distribution: 'temurin''
           java-version: 11
           cache: 'sbt'
       - name: Check MiMa
@@ -94,6 +96,7 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
+          distribution: 'temurin''
           java-version: 11
           cache: 'sbt'
       - name: Install libidn11-dev
