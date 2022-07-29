@@ -1,0 +1,15 @@
+# https://scala-lang.org/blog/2022/07/18/secure-your-dependencies-on-github.html
+name: Update Dependency Graph
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  update-graph:
+    name: Update Dependency Graph
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: scalacenter/sbt-dependency-submission@v2
