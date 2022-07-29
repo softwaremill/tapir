@@ -20,7 +20,7 @@ jobs:
     - name: Set up JDK 11
       uses: actions/setup-java@v3
       with:
-        distribution: 'temurin''
+        distribution: 'temurin'
         cache: 'sbt'
         java-version: 11
     - name: Install sam cli
@@ -77,7 +77,7 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin''
+          distribution: 'temurin'
           java-version: 11
           cache: 'sbt'
       - name: Check MiMa
@@ -96,7 +96,7 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin''
+          distribution: 'temurin'
           java-version: 11
           cache: 'sbt'
       - name: Install libidn11-dev
