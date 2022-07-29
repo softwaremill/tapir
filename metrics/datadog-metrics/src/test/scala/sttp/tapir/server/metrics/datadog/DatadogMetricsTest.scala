@@ -55,8 +55,10 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
   def withFixture(test: NoArgTest, count: Int): Outcome = {
     val outcome = super.withFixture(test)
     outcome match {
-      case Failed(_) | Canceled(_) => if (count == 1) super.withFixture(test) else withFixture(test, count - 1)
-      case other                   => other
+      case Failed(_) | Canceled(_) =>
+        statsdServer.clear()
+        if (count == 1) super.withFixture(test) else withFixture(test, count - 1)
+      case other => other
     }
   }
   //
