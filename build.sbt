@@ -138,6 +138,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   tethysJson.projectRefs ++
   zio1Json.projectRefs ++
   zioJson.projectRefs ++
+  protobuf.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
@@ -148,6 +149,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   serverTests.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
+  akkaGrpcServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
@@ -747,6 +749,16 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .dependsOn(core)
 
+//grpc
+
+lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-grpc-protobuf",
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core)
+
 // metrics
 
 lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
@@ -908,6 +920,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
 
+//TODO does it work with the grpc server?
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
   .settings(
@@ -933,6 +946,14 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, serverTests % Test)
+
+lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-akka-grpc-server",
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(serverCore)
 
 lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
   .settings(commonJvmSettings)
