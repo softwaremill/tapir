@@ -3,51 +3,59 @@ package sttp.tapir.grpc.protobuf
 import sttp.tapir.generic.auto._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
-object BooksExample extends App {
-  type Limit = Option[Int]
-  type AuthToken = String
+// type Limit = Option[Int]
+// type AuthToken = String
 
-  case class Country(name: String)
-  case class Author(name: String, country: Country)
-  case class Genre(name: String, description: String)
-  case class Book(title: String, genre: Genre, year: Int, author: Author)
-  case class SimpleBook(title: String)
-  case class BooksQuery(genre: Option[String], limit: Limit)
+case class Country(name: String)
+case class Author(name: String, country: Country)
+case class Genre(name: String, description: String)
+case class Book(title: String, genre: Genre, year: Int, author: Author)
+case class SimpleBook(title: String)
+case class BooksQuery(genre: Option[String], limit: Option[Int])
 
-  /** Descriptions of endpoints used in the example.
-    */
-  object Endpoints {
-    // import io.circe.generic.auto._
-    import sttp.tapir._
-    
+/** Descriptions of endpoints used in the example.
+  */
+object Endpoints {
+  // import io.circe.generic.auto._
+  import sttp.tapir._
 
-    // All endpoints report errors as strings, and have the common path prefix '/books'
-    private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
+  // All endpoints report errors as strings, and have the common path prefix '/books'
+  private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
 
-    // The path for this endpoint will be '/books/add', as we are using the base endpoint
-    // val addBook: PublicEndpoint[(Book, AuthToken), String, Unit, Any] = baseEndpoint.post
-    //   .in("add")
-    //   .in(
-    //     grpcBody[Book]
-    //       .description("The book to add")
-    //       .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom"))))
-    //   )
-    //   .in(header[AuthToken]("X-Auth-Token").description("The token is 'secret'"))
+  // The path for this endpoint will be '/books/add', as we are using the base endpoint
+  // val addBook: PublicEndpoint[(Book, AuthToken), String, Unit, Any] = baseEndpoint.post
+  //   .in("add")
+  //   .in(
+  //     grpcBody[Book]
+  //       .description("The book to add")
+  //       .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom"))))
+  //   )
+  //   .in(header[AuthToken]("X-Auth-Token").description("The token is 'secret'"))
 
-    val addBook = endpoint.in(grpcBody[SimpleBook])
+  val addBook = endpoint.in(grpcBody[SimpleBook])
 
-    // // Re-usable parameter description
-    // private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
+  // // Re-usable parameter description
+  // private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
 
-    // val booksListing: PublicEndpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
-    //   .in("list" / "all")
-    //   .in(limitParameter)
-    //   .out(jsonBody[Vector[Book]])
+  // val booksListing: PublicEndpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
+  //   .in("list" / "all")
+  //   .in(limitParameter)
+  //   .out(jsonBody[Vector[Book]])
 
-    // val booksListingByGenre: PublicEndpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
-    //   .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
-    //   .out(jsonBody[Vector[Book]])
-  }
+  // val booksListingByGenre: PublicEndpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
+  //   .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
+  //   .out(jsonBody[Vector[Book]])
+
+  val proto = new ProtobufInterpreter(new EndpointToProtobufMessage()).toProtobuf(List(addBook))
+
+  println(proto)
+  println()
+  println()
+
+  // new ProtoSchemaRegistry(new ProtoRenderer(), "grpc/protobuf/src/protobuf/main.proto").register(proto)
+}
+
+class BooksExample {
 
   //
 
@@ -93,13 +101,13 @@ object BooksExample extends App {
   def booksServerEndpoints: List[ServerEndpoint[Any, Future]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] =
+    def bookAddLogic(book: Book, token: String): Future[Either[String, Unit]] =
       Future {
         if (token != "secret") {
-        //   logger.warn(s"Tried to access with token: $token")
+          //   logger.warn(s"Tried to access with token: $token")
           Left("Unauthorized access!!!11")
         } else {
-        //   logger.info(s"Adding book $book")
+          //   logger.info(s"Adding book $book")
           Library.Books.getAndUpdate(books => books :+ book)
           Right(())
         }
@@ -119,8 +127,8 @@ object BooksExample extends App {
     // should be run when the endpoint is invoked.
     List(
       // addBook.serverLogic((bookAddLogic _).tupled),
-    //   booksListing.serverLogic(bookListingLogic),
-    //   booksListingByGenre.serverLogic(bookListingByGenreLogic)
+      //   booksListing.serverLogic(bookListingLogic),
+      //   booksListingByGenre.serverLogic(bookListingByGenreLogic)
     )
   }
 
@@ -129,19 +137,17 @@ object BooksExample extends App {
 //     // interpreting the endpoint descriptions as yaml openapi documentation
 //     // exposing the docs using SwaggerUI endpoints, interpreted as an akka-http route
 //     OpenAPIDocsInterpreter().toOpenAPI(addBook, "My Bookshop", "1.0").toYaml
-    
+
 //   }
 
 //   println(swaggerUIServerEndpoints)
 
+}
 
-  val proto = new ProtobufInterpreter(new EndpointToProtobufMessage()).toProtobuf(List(addBook))
+object Main extends ProtoSchemaRegistry {
+  val renderer: ProtoRenderer = new ProtoRenderer()
+  val path: String = "grpc/protobuf/src/main/protobuf/main.proto"
+  val proto: Protobuf = Endpoints.proto
 
-  println(proto)
-  println()
-  println()
-
-  val renderedProto = new ProtoRenderer().render(proto)
-
-  println(renderedProto)
+  register()
 }

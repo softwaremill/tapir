@@ -14,3 +14,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
 addSbtPlugin("io.gatling" % "gatling-sbt" % "4.2.1")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.5")
+
+
+
+addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.4")

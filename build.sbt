@@ -750,14 +750,24 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .dependsOn(core)
 
 //grpc
-
 lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .settings(commonSettings)
+  .enablePlugins(AkkaGrpcPlugin)
   .settings(
     name := "tapir-grpc-protobuf",
+    addCommandAlias("refreshProtoDefinitions", "run;compile"),
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(core)
+  .dependsOn(
+    core,
+    // only for playground purposes -> remove
+    openapiDocs,
+    asyncapiDocs,
+    swaggerUiBundle,
+    openapiDocs,
+    asyncapiDocs,
+    swaggerUiBundle
+  )
 
 // metrics
 
@@ -950,7 +960,7 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
 lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-akka-grpc-server",
+    name := "tapir-akka-grpc-server"
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore)

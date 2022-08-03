@@ -57,5 +57,6 @@ object ProtoRenderer {
         |syntax = "proto3";
         |
         |option java_multiple_files = true;
+        |option java_package = "example.myapp.helloworld.grpc";
         |""".stripMargin
 }

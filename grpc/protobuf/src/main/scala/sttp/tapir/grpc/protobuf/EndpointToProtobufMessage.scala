@@ -105,7 +105,7 @@ class EndpointToProtobufMessage {
               }
 
             }
-            List(new ProtobufMessage(name.fullName, protoFields))
+            List(new ProtobufMessage(name.fullName.split('.').last, protoFields))//FIXME
         }
       case st =>
         println(s"NOT SUPPORTED SCHEMA TOP LEVEL TYOE $st")
