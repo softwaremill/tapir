@@ -756,11 +756,20 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .settings(
     name := "tapir-grpc-protobuf",
     addCommandAlias("refreshProtoDefinitions", "run;compile"),
+    libraryDependencies ++= Seq(
+       "com.typesafe.akka" %% "akka-discovery" % "2.6.19",
+       "ch.megard" %% "akka-http-cors" % "0.4.2"
+    ) ++ loggerDependencies ++ Seq(
+      "com.47deg" %% "pbdirect" % "0.7.0"
+    ),
+    fork := true
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(
     core,
+    pbDirectProtobuf,
     // only for playground purposes -> remove
+    akkaHttpServer,
     openapiDocs,
     asyncapiDocs,
     swaggerUiBundle,
@@ -768,6 +777,17 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
     asyncapiDocs,
     swaggerUiBundle
   )
+
+  lazy val pbDirectProtobuf: ProjectMatrix = (projectMatrix in file("grpc/pbdirect"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-protobuf-pbdirect",
+    libraryDependencies ++= Seq(
+      "com.47deg" %% "pbdirect" % "0.7.0"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core)
 
 // metrics
 
