@@ -1,16 +1,30 @@
 package sttp.tapir.grpc.protobuf
 
-import sttp.tapir.grpc.protobuf.model.ProtobufMessageField
+import sttp.tapir.grpc.protobuf.model._
 import java.util.concurrent.atomic.AtomicInteger
 
 class ProtoRenderer {
   def render(protobuf: Protobuf): String = {
-      s"""
+    s"""
       |${ProtoRenderer.header}
+      |
+      |${protobuf.services.map(renderService).mkString("\n")}
       |
       |${protobuf.messages.map(renderMessage).mkString("\n\n")}
       """.stripMargin
   }
+
+  private def renderService(service: ProtobufService): String =
+    s"""
+    |service ${service.name} {
+    |${service.methods.map(renderMethod).mkString("\n")}
+    |}
+    """.stripMargin
+
+  private def renderMethod(method: ProtobufServiceMethod): String =
+    s"""
+    |rpc ${method.name} (${method.input}) returns (${method.output}) {}
+    """.stripMargin
 
   private def renderMessage(msg: ProtobufMessage): String = {
     s"""
@@ -20,7 +34,7 @@ class ProtoRenderer {
         """.stripMargin
   }
 
-  //I use here Vector because of the `lastOption` operation, consider if it make sense
+  // I use here Vector because of the `lastOption` operation, consider if it make sense
   private def renderMessageFields(fields: Vector[ProtobufMessageField]): String = {
 
     val fieldsWithDefinedId = fields

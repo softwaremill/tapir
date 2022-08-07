@@ -1,5 +1,3 @@
-package sttp.tapir.grpc.protobuf
+package sttp.tapir.grpc.protobuf.model
 
-class ProtobufService {
-  ???
-}
+case class ProtobufService(name: ServiceName, methods: List[ProtobufServiceMethod])
