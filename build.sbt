@@ -752,7 +752,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
 //grpc
 lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .settings(commonSettings)
-  .enablePlugins(AkkaGrpcPlugin)
+  // .enablePlugins(AkkaGrpcPlugin)
   .settings(
     name := "tapir-grpc-protobuf",
     addCommandAlias("refreshProtoDefinitions", "run;compile"),
@@ -767,15 +767,7 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(
     core,
-    pbDirectProtobuf,
-    // only for playground purposes -> remove
-    akkaHttpServer,
-    openapiDocs,
-    asyncapiDocs,
-    swaggerUiBundle,
-    openapiDocs,
-    asyncapiDocs,
-    swaggerUiBundle
+    pbDirectProtobuf
   )
 
   lazy val pbDirectProtobuf: ProjectMatrix = (projectMatrix in file("grpc/pbdirect"))
@@ -1582,7 +1574,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     vertxServer,
     vertxServerCats,
     vertxServerZio,
-    finatraServer
+    finatraServer,
+    protobuf
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
