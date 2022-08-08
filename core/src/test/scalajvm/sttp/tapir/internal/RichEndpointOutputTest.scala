@@ -13,7 +13,7 @@ class RichEndpointOutputTest extends AnyFlatSpec with Matchers {
       .out(stringBody)
       .output
 
-    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=utf-8")) should be(true)
-    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=UTF-8")) should be(true)
+    o.hasOptionalBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=utf-8")) should be(true)
+    o.hasOptionalBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=UTF-8")) should be(true)
   }
 }
