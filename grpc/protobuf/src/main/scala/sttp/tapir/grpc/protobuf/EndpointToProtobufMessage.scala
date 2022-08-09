@@ -13,7 +13,7 @@ class EndpointToProtobufMessage {
   }
 
   private def forEndpoint(e: AnyEndpoint): List[ProtobufMessage] =
-    forInput(e.input) ++ forOutput(e.output)
+    (forInput(e.input) ++ forOutput(e.output)).distinctBy(_.name)
 
   private def forInput(input: EndpointInput[_]): List[ProtobufMessage] = {
     input match {
