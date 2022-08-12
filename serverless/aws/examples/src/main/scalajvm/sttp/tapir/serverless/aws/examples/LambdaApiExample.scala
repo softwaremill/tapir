@@ -36,7 +36,7 @@ object LambdaApiExample extends RequestStreamHandler {
     (decode[AwsRequest](json) match {
       /** Process request using interpreted route */
       case Right(awsRequest) => route(awsRequest)
-      case Left(ex)          => IO.pure(AwsResponse(Nil, isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ex.getMessage))
+      case Left(ex)          => IO.pure(AwsResponse(isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ex.getMessage))
     }).map { awsRes =>
       /** Write response to output */
       val writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8))

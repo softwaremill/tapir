@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.sam
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 private[sam] object EndpointsToSamTemplate {
   def apply(es: List[AnyEndpoint], options: AwsSamOptions): SamTemplate = {

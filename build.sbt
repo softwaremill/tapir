@@ -187,7 +187,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   openapiCodegenSbt.projectRefs ++
   openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
-  derevo.projectRefs
+  derevo.projectRefs ++
+  awsCdk.projectRefs
 
 lazy val allAggregates: Seq[ProjectReference] = {
   if (sys.env.isDefinedAt("STTP_NATIVE")) {
@@ -1261,6 +1262,22 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, tests % Test)
+
+lazy val awsCdk: ProjectMatrix = (projectMatrix in file("serverless/aws/cdk"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-cdk",
+    assembly / assemblyJarName := "tapir-aws-cdk.jar",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %%% "circe-parser" % Versions.circe,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, tests % Test, awsLambda)
 
 lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
   .settings(commonJvmSettings)
