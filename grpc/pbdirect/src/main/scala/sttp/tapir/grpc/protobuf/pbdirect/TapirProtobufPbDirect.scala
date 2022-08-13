@@ -1,7 +1,7 @@
 package sttp.tapir.grpc.protobuf.pbdirect
 
-import pbdirect._
-import sttp.tapir._
+import _root_.pbdirect._
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, RawBodyType, Schema}
 
 trait TapirProtobufPbDirect {
   def grpcBody[T](implicit codec: Codec[Array[Byte], T, CodecFormat.OctetStream]): EndpointIO.Body[Array[Byte], T] =
@@ -13,14 +13,7 @@ trait TapirProtobufPbDirect {
       reader: PBMessageReader[T]
   ): Codec[Array[Byte], T, CodecFormat.OctetStream] =
     Codec.fromDecodeAndMeta[Array[Byte], T, CodecFormat.OctetStream](CodecFormat.OctetStream()) { input =>
-
-      // it's only PoC support for gRPC in tapir, so I decided to not support multiple data frames in a single body at this point.
-      // proper implementation that we will need to adopt in tapir can be found in akka.grpc.internal.AbstractGrpcProtocol#decoder
-      println(s"RECEIVED [${{ input.mkString }}]")
-      val sikppedDataFrameMetadata = input.drop(5)
-      println(s"RECEIVED [${{ sikppedDataFrameMetadata.mkString }}]")
-
-      DecodeResult.Value(reader.read(sikppedDataFrameMetadata))
+      DecodeResult.Value(reader.read(input))
 
     }(_.toPB)
 }
