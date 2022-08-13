@@ -1,17 +1,9 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{
-  complete,
-  extractExecutionContext,
-  extractMaterializer,
-  extractRequestContext,
-  handleWebSocketMessages,
-  onSuccess,
-  reject,
-  respondWithHeaders
-}
+import akka.http.scaladsl.server.Directives.{complete, extractExecutionContext, extractMaterializer, extractRequestContext, handleWebSocketMessages, onSuccess, reject, respondWithHeaders}
 import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import sttp.capabilities.WebSockets
@@ -22,7 +14,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,6 +22,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait AkkaHttpServerInterpreter {
 
   implicit def executionContext: ExecutionContext
+
+  protected def requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams] = new AkkaRequestBody(akkaHttpServerOptions)(_, _)
+  protected def toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams] = new AkkaToResponseBody()(_, _)
 
   def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
@@ -46,8 +41,8 @@ trait AkkaHttpServerInterpreter {
 
         val interpreter = new ServerInterpreter(
           filterServerEndpoints,
-          new AkkaRequestBody(akkaHttpServerOptions),
-          new AkkaToResponseBody,
+          requestBody(mat, ec),
+          toResponseBody(mat, ec),
           interceptors,
           akkaHttpServerOptions.deleteFile
         )
