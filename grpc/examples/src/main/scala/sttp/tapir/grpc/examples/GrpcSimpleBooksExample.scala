@@ -37,7 +37,7 @@ object SimpleBooksExample extends StrictLogging {
 
   def booksServerEndpoints: List[ServerEndpoint[Any, Future]] =
     List(
-      addBook.serverLogic { book =>AkkaHttpTestServerInterpreter.scala
+      addBook.serverLogic { book =>
         println(book)
         Future.successful(book.asRight[Unit])
       }

@@ -4,8 +4,8 @@ import _root_.pbdirect._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, RawBodyType, Schema}
 
 trait TapirProtobufPbDirect {
-  def grpcBody[T](implicit codec: Codec[Array[Byte], T, CodecFormat.OctetStream]): EndpointIO.Body[Array[Byte], T] =
-    EndpointIO.Body(RawBodyType.ByteArrayBody, codec, EndpointIO.Info.empty)
+  def grpcBody[T: PBMessageReader: PBMessageWriter: Schema]: EndpointIO.Body[Array[Byte], T] =
+    EndpointIO.Body(RawBodyType.ByteArrayBody, protobufPbDirectCodec[T], EndpointIO.Info.empty)
 
   implicit def protobufPbDirectCodec[T](implicit
       schema: Schema[T],
@@ -14,6 +14,5 @@ trait TapirProtobufPbDirect {
   ): Codec[Array[Byte], T, CodecFormat.OctetStream] =
     Codec.fromDecodeAndMeta[Array[Byte], T, CodecFormat.OctetStream](CodecFormat.OctetStream()) { input =>
       DecodeResult.Value(reader.read(input))
-
     }(_.toPB)
 }
