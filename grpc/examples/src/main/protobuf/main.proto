@@ -1,0 +1,24 @@
+
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "example.myapp.helloworld.grpc";
+
+
+
+service Library {
+
+rpc AddBook (SimpleBook) returns (SimpleBook) {}
+    
+}
+    
+
+
+message SimpleBook {
+
+string title = 1;
+        
+}
+        
+      
