@@ -11,8 +11,8 @@ trait TapirProtobufPbDirect {
       schema: Schema[T],
       writer: PBMessageWriter[T],
       reader: PBMessageReader[T]
-  ): Codec[Array[Byte], T, CodecFormat.OctetStream] =
-    Codec.fromDecodeAndMeta[Array[Byte], T, CodecFormat.OctetStream](CodecFormat.OctetStream()) { input =>
+  ): Codec[Array[Byte], T, CodecFormat.Grpc] =
+    Codec.fromDecodeAndMeta[Array[Byte], T, CodecFormat.Grpc](CodecFormat.Grpc()) { input =>
       DecodeResult.Value(reader.read(input))
     }(_.toPB)
 }
