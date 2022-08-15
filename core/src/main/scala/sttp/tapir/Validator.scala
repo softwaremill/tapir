@@ -173,7 +173,9 @@ object Validator extends ValidatorMacros {
   }
 
   object Any {
-    private[tapir] def EmptyValidators[T]: Custom[T] = Custom(_ => ValidationResult.Invalid("Any of empty validators."))
+    private val _emptyValidators: Primitive[scala.Any] = Custom(_ => ValidationResult.Invalid("Any of empty validators."))
+
+    private[tapir] def EmptyValidators[T]: Primitive[T] = _emptyValidators.asInstanceOf[Primitive[T]]
   }
 
   //
