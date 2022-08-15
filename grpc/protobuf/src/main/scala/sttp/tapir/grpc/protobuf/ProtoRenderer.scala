@@ -1,12 +1,14 @@
 package sttp.tapir.grpc.protobuf
 
 import sttp.tapir.grpc.protobuf.model._
+
 import java.util.concurrent.atomic.AtomicInteger
 
 class ProtoRenderer {
   def render(protobuf: Protobuf): String = {
     s"""
       |${ProtoRenderer.header}
+      |${renderOptions(protobuf.options)}
       |
       |${protobuf.services.map(renderService).mkString("\n")}
       |
@@ -28,11 +30,20 @@ class ProtoRenderer {
 
   private def renderMessage(msg: ProtobufMessage): String = {
     s"""
-        |message ${msg.name} {
-        |${renderMessageFields(msg.fields.toVector)}
-        |}
+       |message ${msg.name} {
+       |${renderMessageFields(msg.fields.toVector)}
+
+       |}
         """.stripMargin
   }
+
+  private def renderOptions(options: ProtobufOptions): String =
+    options.maybePackageName.map(renderPackageName).getOrElse("")
+
+  private def renderPackageName(packageName: PackageName): String =
+    s"""
+         |option java_package = "$packageName";
+         |""".stripMargin
 
   // I use here Vector because of the `lastOption` operation, consider if it make sense
   private def renderMessageFields(fields: Vector[ProtobufMessageField]): String = {
@@ -71,6 +82,5 @@ object ProtoRenderer {
         |syntax = "proto3";
         |
         |option java_multiple_files = true;
-        |option java_package = "example.myapp.helloworld.grpc";
         |""".stripMargin
 }

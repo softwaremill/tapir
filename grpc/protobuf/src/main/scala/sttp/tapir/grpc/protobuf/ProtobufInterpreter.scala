@@ -7,13 +7,17 @@ class ProtobufInterpreter(
   endpointToMsg: EndpointToProtobufMessage,
   endpointToService: EndpointToProtobufService
 ) {
-  def toProtobuf(es: Iterable[AnyEndpoint]): Protobuf = {
+  def toProtobuf(es: Iterable[AnyEndpoint], maybePackageName: Option[PackageName] = None): Protobuf = {
       val messages = endpointToMsg(es.toList)
       val services = endpointToService(es.toList)
-      
+      val options = ProtobufOptions(
+        maybePackageName = maybePackageName
+      )
+
       Protobuf(
         messages = messages,
-        services = services
+        services = services,
+        options = options
       )
   }
 }
