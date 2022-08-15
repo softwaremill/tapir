@@ -145,6 +145,13 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v("abc") shouldBe empty
   }
 
+  it should "validate with reject" in {
+    val validator = Validator.reject[Int]
+    validator(4) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 4))
+    validator(7) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 7))
+    validator(11) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 11))
+  }
+
   it should "validate with any of validators" in {
     val validator = Validator.any(Validator.max(5), Validator.max(10))
     validator(4) shouldBe empty

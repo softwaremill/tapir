@@ -161,13 +161,19 @@ object Validator extends ValidatorMacros {
       val results = validators.map(_.apply(t))
       if (results.exists(_.isEmpty)) {
         List.empty
-      } else {
+      } else if (validators.nonEmpty) {
         results.flatten.toList
+      } else {
+        List(ValidationError[T](Any.EmptyValidators, t))
       }
     }
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
+  }
+
+  object Any {
+    private[tapir] def EmptyValidators[T]: Custom[T] = Custom(_ => ValidationResult.Invalid("Any of empty validators."))
   }
 
   //
