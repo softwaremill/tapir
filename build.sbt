@@ -757,14 +757,14 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   // .enablePlugins(AkkaGrpcPlugin)
   .settings(
     name := "tapir-grpc-protobuf",
-    addCommandAlias("refreshProtoDefinitions", "run;compile"),
     libraryDependencies ++= Seq(
-       "com.typesafe.akka" %% "akka-discovery" % "2.6.19",
-       "ch.megard" %% "akka-http-cors" % "0.4.2"
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.19",
+      "ch.megard" %% "akka-http-cors" % "0.4.2"
     ) ++ loggerDependencies ++ Seq(
-      "com.47deg" %% "pbdirect" % "0.7.0"
-    ),
-    fork := true
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(
@@ -772,7 +772,7 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
     pbDirectProtobuf
   )
 
-  lazy val pbDirectProtobuf: ProjectMatrix = (projectMatrix in file("grpc/pbdirect"))
+lazy val pbDirectProtobuf: ProjectMatrix = (projectMatrix in file("grpc/pbdirect"))
   .settings(commonSettings)
   .settings(
     name := "tapir-protobuf-pbdirect",
@@ -783,11 +783,11 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core)
 
-  lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
+lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
   .settings(commonSettings)
   .settings(
     name := "tapir-grpc-examples",
-    fork := true,
+    fork := true
   )
   .enablePlugins(AkkaGrpcPlugin)
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -991,7 +991,7 @@ lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grp
     name := "tapir-akka-grpc-server",
     libraryDependencies ++= Seq(
       "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.4"
-    ),
+    )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, akkaHttpServer)
