@@ -147,9 +147,9 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 
   it should "validate with reject" in {
     val validator = Validator.reject[Int]
-    validator(4) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 4))
-    validator(7) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 7))
-    validator(11) shouldBe List(ValidationError(Validator.Any.EmptyValidators, 11))
+    validator(4) shouldBe List(ValidationError(Validator.Any.PrimitiveRejectValidator, 4))
+    validator(7) shouldBe List(ValidationError(Validator.Any.PrimitiveRejectValidator, 7))
+    validator(11) shouldBe List(ValidationError(Validator.Any.PrimitiveRejectValidator, 11))
   }
 
   it should "validate with any of validators" in {

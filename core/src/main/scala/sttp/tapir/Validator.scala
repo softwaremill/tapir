@@ -156,6 +156,7 @@ object Validator extends ValidatorMacros {
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
+
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       val results = validators.map(_.apply(t))
@@ -164,18 +165,16 @@ object Validator extends ValidatorMacros {
       } else if (validators.nonEmpty) {
         results.flatten.toList
       } else {
-        List(ValidationError[T](Any.EmptyValidators, t))
+        List(ValidationError[T](Any.PrimitiveRejectValidator, t))
       }
     }
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
   }
-
   object Any {
-    private val _emptyValidators: Primitive[scala.Any] = Custom(_ => ValidationResult.Invalid("Any of empty validators."))
-
-    private[tapir] def EmptyValidators[T]: Primitive[T] = _emptyValidators.asInstanceOf[Primitive[T]]
+    private val _primitiveRejectValidator: Primitive[scala.Any] = Custom(_ => ValidationResult.Invalid("Validation rejected"))
+    private[tapir] def PrimitiveRejectValidator[T]: Primitive[T] = _primitiveRejectValidator.asInstanceOf[Primitive[T]]
   }
 
   //
