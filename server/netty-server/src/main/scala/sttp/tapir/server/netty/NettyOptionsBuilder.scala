@@ -1,75 +1,61 @@
 package sttp.tapir.server.netty
 
 import io.netty.channel.unix.DomainSocketAddress
-import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup}
+import io.netty.channel.{ChannelHandler, ChannelPipeline}
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
-import sttp.tapir.server.netty.NettyOptionsBuilder.{DomainSocketOptionsBuilder, TcpOptionsBuilder}
 
 import java.net.InetSocketAddress
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 import java.util.UUID
 
-case class NettyOptionsBuilder(initPipeline: (ChannelPipeline, ChannelHandler) => Unit) {
-  def tcp(): TcpOptionsBuilder = TcpOptionsBuilder(this, NettyDefaults.DefaultHost, NettyDefaults.DefaultPort)
-  def domainSocket(): DomainSocketOptionsBuilder = DomainSocketOptionsBuilder(this, tempFile)
-
-  private def tempFile = {
-    Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)
-  }
-}
-
 object NettyOptionsBuilder {
-  private val defaultInitPipeline: (ChannelPipeline, ChannelHandler) => Unit = (pipeline, handler) => {
-    pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpObjectAggregator(Integer.MAX_VALUE))
-    pipeline.addLast(handler)
-    pipeline.addLast(new LoggingHandler()) // TODO
-    ()
+
+  /** Starts configuring the netty pipeline. By default, there's no max content length limit, and the logging handler isn't added. */
+  def start: ConfigurePipeline = ConfigurePipeline(Integer.MAX_VALUE, addLoggingHandler = false)
+
+  /** Allows choosing the socket type, using the default pipeline. */
+  def defaultPipeline: ChooseSocketType = start.chooseSocketType
+
+  /** @param maxContentLength
+    *   The max content length passed to the [[HttpObjectAggregator]] handler.
+    * @param addLoggingHandler
+    *   Should a [[LoggingHandler]] be used.
+    */
+  case class ConfigurePipeline(maxContentLength: Int, addLoggingHandler: Boolean) {
+    def maxContentLength(max: Int): ConfigurePipeline = copy(maxContentLength = max)
+    def withLoggingHandler: ConfigurePipeline = copy(addLoggingHandler = true)
+    def withoutLoggingHandler: ConfigurePipeline = copy(addLoggingHandler = false)
+
+    def chooseSocketType: ChooseSocketType = ChooseSocketType((pipeline, handler) => {
+      pipeline.addLast(new HttpServerCodec())
+      pipeline.addLast(new HttpObjectAggregator(maxContentLength))
+      pipeline.addLast(handler)
+      if (addLoggingHandler) pipeline.addLast(new LoggingHandler())
+      ()
+    })
   }
-  def make(): NettyOptionsBuilder = NettyOptionsBuilder(defaultInitPipeline)
 
-  def default: TcpOptionsBuilder = make().tcp()
-  def domainSocket: DomainSocketOptionsBuilder = make().domainSocket()
+  case class ChooseSocketType(initPipeline: (ChannelPipeline, ChannelHandler) => Unit) {
 
-  case class DomainSocketOptionsBuilder(
-      netty: NettyOptionsBuilder,
-      path: Path,
-      shutdownOnClose: Boolean = true,
-      eventLoopConfig: EventLoopConfig = EventLoopConfig.domainSocket
-  ) {
-    def path(path: Path) = copy(path = path)
-    def eventLoopGroup(g: EventLoopGroup): DomainSocketOptionsBuilder =
-      copy(eventLoopConfig = EventLoopConfig.useExisting(g), shutdownOnClose = true)
-    def noShutdownOnClose: DomainSocketOptionsBuilder = copy(shutdownOnClose = false)
-    def build: NettyOptions = NettyOptions(
-      new DomainSocketAddress(path.toFile),
-      EventLoopConfig.domainSocket,
-      shutdownOnClose,
-      netty.initPipeline
+    /** Use a TCP socket. The host/port can be specified later. */
+    def tcp: NettyOptions[InetSocketAddress] = NettyOptions(
+      new InetSocketAddress(NettyDefaults.DefaultHost, NettyDefaults.DefaultPort),
+      EventLoopConfig.auto,
+      shutdownEventLoopGroupOnClose = true,
+      initPipeline
     )
-  }
 
-  case class TcpOptionsBuilder(
-      netty: NettyOptionsBuilder,
-      host: String,
-      port: Int,
-      shutdownOnClose: Boolean = true,
-      eventLoopConfig: EventLoopConfig = EventLoopConfig.auto
-  ) {
-    def host(host: String): TcpOptionsBuilder = copy(host = host)
-    def port(port: Int): TcpOptionsBuilder = copy(port = port)
-    def randomPort: TcpOptionsBuilder = copy(port = 0)
-    def noShutdownOnClose: TcpOptionsBuilder = copy(shutdownOnClose = false)
-    def eventLoopGroup(g: EventLoopGroup): TcpOptionsBuilder =
-      copy(eventLoopConfig = EventLoopConfig.useExisting(g), shutdownOnClose = true)
-    def build: NettyOptions = NettyOptions(
-      new InetSocketAddress(host, port),
-      eventLoopConfig,
-      shutdownOnClose,
-      netty.initPipeline
-    )
+    /** Use a domain socket. By default uses a temp file, but this can be configured later. */
+    def domainSocket: NettyOptions[DomainSocketAddress] = {
+      val tempFile = Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)
+      NettyOptions(
+        new DomainSocketAddress(tempFile.toFile),
+        EventLoopConfig.domainSocket,
+        shutdownEventLoopGroupOnClose = true,
+        initPipeline
+      )
+    }
   }
-
 }
