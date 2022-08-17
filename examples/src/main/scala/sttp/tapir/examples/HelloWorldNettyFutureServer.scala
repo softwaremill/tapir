@@ -2,10 +2,10 @@ package sttp.tapir.examples
 
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.netty.NettyServerType.TCP
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 
+import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -22,7 +22,7 @@ object HelloWorldNettyFutureServer extends App {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
   // Creating handler for netty bootstrap
-  val serverBinding: NettyFutureServerBinding[TCP] =
+  val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
     Await.result(
       NettyFutureServer()
         .port(declaredPort)
