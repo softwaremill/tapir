@@ -149,9 +149,13 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
 
   private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.SDiscriminator): Discriminator = {
     val schemas = Some(
-      discriminator.mapping.map { case (k, TSchemaType.SRef(fullName)) =>
-        k -> toSchemaReference.mapDiscriminator(fullName).$ref
-      }.toListMap
+      discriminator.mapping
+        .map { case (k, TSchemaType.SRef(fullName)) =>
+          k -> toSchemaReference.mapDiscriminator(fullName).$ref
+        }
+        .toList
+        .sortBy(_._1)
+        .toListMap
     )
     Discriminator(discriminator.name.encodedName, schemas)
   }
