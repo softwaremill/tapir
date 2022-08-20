@@ -305,7 +305,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       runtimeClass: Class[_]
   ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -314,8 +314,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     OneOfVariant(output, matcher.lift.andThen(_.getOrElse(false)))
 
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate. Adds
-    * a fixed status-code output with the given value.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
+    * Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */

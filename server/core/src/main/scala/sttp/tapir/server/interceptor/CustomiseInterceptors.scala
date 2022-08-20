@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectHandler, RejectInterceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
-import sttp.tapir.{headers, statusCode}
+import sttp.tapir.statusCode
 
 /** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via `addInterceptor`, sitting
   * between two configurable, default interceptor groups.
@@ -88,8 +88,8 @@ case class CustomiseInterceptors[F[_], O](
     * @param errorMessageOutput
     *   customise the way error messages are shown in error responses
     * @param notFoundWhenRejected
-    *   return a 404 formatted using `errorMessageOutput` when the request was rejected by all endpoints (using
-    *   [[DefaultRejectHandler.orNotFound]]), instead of propagating the rejection to the server library
+    *   return a 404 formatted using `errorMessageOutput` when the request was rejected by all endpoints, instead of propagating the
+    *   rejection to the server library
     */
   def defaultHandlers(
       errorMessageOutput: String => ValuedEndpointOutput[_],
@@ -98,7 +98,12 @@ case class CustomiseInterceptors[F[_], O](
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
       decodeFailureHandler = DefaultDecodeFailureHandler.default.response(errorMessageOutput),
-      rejectHandler = Some(DefaultRejectHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s), None))
+      rejectHandler = Some(
+        DefaultRejectHandler(
+          (s, m) => errorMessageOutput(m).prepend(statusCode, s),
+          if (notFoundWhenRejected) Some(DefaultRejectHandler.Responses.NotFound) else None
+        )
+      )
     )
   }
 

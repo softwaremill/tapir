@@ -80,13 +80,13 @@ val baseEndpoint = endpoint.errorOut(
     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                             ^
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
 //                             ^
-// error: Type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Left[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
 //                             ^
 ```

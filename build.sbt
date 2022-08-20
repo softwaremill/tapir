@@ -326,7 +326,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.4")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.5")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -419,8 +419,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.2" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.8.2" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.3" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.8.3" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -699,8 +699,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.13.36",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.13.36" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.15.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.15.0" % Test,
       scalaTest.value % Test
     )
   )
@@ -1040,7 +1040,7 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
       "io.circe" %% "circe-generic" % Versions.circe,
       // test libs
       "io.circe" %% "circe-literal" % Versions.circe % Test,
-      "org.mock-server" % "mockserver-netty-no-dependencies" % Versions.mockServer % Test
+      "org.mock-server" % "mockserver-netty" % Versions.mockServer % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1499,7 +1499,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
-      "org.mock-server" % "mockserver-netty-no-dependencies" % Versions.mockServer,
+      "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,

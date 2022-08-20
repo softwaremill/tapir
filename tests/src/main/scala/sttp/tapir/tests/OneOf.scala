@@ -117,4 +117,15 @@ object OneOf {
           oneOfVariant(jsonBody[FruitErrorDetail.Unknown])
         )
       )
+
+  val out_status_or_status_with_body: PublicEndpoint[String, FruitErrorDetail, Unit, Any] =
+    endpoint
+      .in(query[String]("fruit"))
+      .errorOut(
+        oneOf[FruitErrorDetail](
+          // the server returns various errors for status code 400, but here we always map to this one, disregarding the actual body
+          oneOfVariant(statusCode(StatusCode.BadRequest).map(_ => FruitErrorDetail.NameTooShort(10))(_ => ())),
+          oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[FruitErrorDetail.Unknown]))
+        )
+      )
 }

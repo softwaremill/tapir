@@ -1,12 +1,14 @@
 package sttp.tapir.server.metrics.datadog
 
 import com.timgroup.statsd._
+import org.scalatest.Retries.isRetryable
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.tagobjects.Retryable
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Canceled, Failed, Outcome}
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
@@ -41,6 +43,25 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
   after {
     statsdServer.clear()
   }
+
+  // some tests are timing-dependent and sometimes fail
+  // https://stackoverflow.com/questions/22799495/scalatest-running-a-test-50-times
+  val retries = 5
+
+  override def withFixture(test: NoArgTest): Outcome = {
+    if (isRetryable(test)) withFixture(test, retries) else super.withFixture(test)
+  }
+
+  def withFixture(test: NoArgTest, count: Int): Outcome = {
+    val outcome = super.withFixture(test)
+    outcome match {
+      case Failed(_) | Canceled(_) =>
+        statsdServer.clear()
+        if (count == 1) super.withFixture(test) else withFixture(test, count - 1)
+      case other => other
+    }
+  }
+  //
 
   "default metrics" should "collect requests active" in {
     // given
@@ -112,7 +133,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,method:GET,path:/person""")
   }
 
-  "default metrics" should "collect requests duration" in {
+  "default metrics" should "collect requests duration" taggedAs Retryable in {
     // given
     val clock = new TestClock()
 
@@ -177,7 +198,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     )
   }
 
-  "default metrics" should "customize labels" in {
+  "default metrics" should "customize labels" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi().serverEp
     val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
@@ -206,7 +227,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#key:value""")
   }
 
-  "metrics" should "be collected on exception when response from exception handler" in {
+  "metrics" should "be collected on exception when response from exception handler" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
     val client =

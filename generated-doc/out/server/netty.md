@@ -1,11 +1,13 @@
 # Running as a Netty-based server
 
-## Using `Future`
-
 To expose an endpoint using a [Netty](https://netty.io)-based server, first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.2"
+// if you are using Future or just exploring
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.0.5"
+
+// if you are using cats-effect:
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.0.5"
 ```
 
 Then, use:
@@ -20,7 +22,6 @@ For example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.netty.NettyServerType.TCP
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -32,48 +33,58 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogic(name => Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
 
-val binding: Future[NettyFutureServerBinding[TCP]] = 
+val binding: Future[NettyFutureServerBinding[InetSocketAddress]] = 
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-### Domain socket support
-There is possibility to use Domain socket instead of TCP for handling traffic.
+## Configuration
 
-
-```scala
-import sttp.tapir.server.netty.NettyServerType.DomainSocket
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
-import sttp.tapir.{endpoint, query, stringBody}
-
-import java.nio.file.Paths
-import java.util.UUID
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-
-val serverBinding: Future[NettyFutureServerBinding[DomainSocket]] =
-  NettyFutureServer.domainSocket
-    .path(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString))
-    .addEndpoint(
-      endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
-        Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
-    )
-  .start()
-```
-
-
-### Configuration
-
-The interpreter can be configured by providing an `NettyFutureServerOptions` value, see [server options](options.md) for 
+The interpreter can be configured by providing an `NettyFutureServerOptions` value, see [server options](options.md) for
 details.
 
 Some options can be configured directly using a `NettyFutureServer` instance, such as the host and port. Others
 can be passed using the `NettyFutureServer(options)` methods. Options may also be overridden when adding endpoints.
-
-## Using cats-effect
-
-Add the following dependency:
+For example:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.0.2"
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// customising the port
+NettyFutureServer().port(9090).addEndpoints(???)
+
+// customising the interceptors
+NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None).options)
+
+// customise Netty options
+NettyFutureServer(NettyFutureServerOptions.default.nettyOptions(???))
+```
+
+## Domain socket support
+
+There is possibility to use Domain socket instead of TCP for handling traffic.
+
+```scala
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyOptions}
+import sttp.tapir.{endpoint, query, stringBody}
+
+import java.nio.file.Paths
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+import io.netty.channel.unix.DomainSocketAddress
+
+val serverBinding: Future[NettyFutureServerBinding[DomainSocketAddress]] =
+  NettyFutureServer(
+    NettyFutureServerOptions.default.nettyOptions(
+        NettyOptions.defaultDomainSocket.domainSocketPath(
+          Paths.get(System.getProperty("java.io.tmpdir"), "hello")
+        )
+    )    
+  )
+  .addEndpoint(
+    endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
+      Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
+  )
+  .start()
 ```

@@ -5,12 +5,14 @@ addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-browser-tes
 //addSbtPlugin("io.spray" % "sbt-boilerplate" % "0.6.1")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-twirl" % "1.5.1")
-addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.3.2")
+addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.3.3")
 addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.9.0")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.10.1")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
-addSbtPlugin("io.gatling" % "gatling-sbt" % "4.2.1")
+addSbtPlugin("io.gatling" % "gatling-sbt" % "4.2.3")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.5")
+
+addDependencyTreePlugin

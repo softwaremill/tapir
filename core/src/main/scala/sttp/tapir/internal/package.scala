@@ -177,7 +177,7 @@ package object internal {
       case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
     }
 
-    def hasBodyMatchingContent(content: MediaType): Boolean = {
+    def hasOptionalBodyMatchingContent(content: MediaType): Boolean = {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
         case m @ MediaType(_, _, None, _) if m.isText => m.charset(StandardCharsets.ISO_8859_1.name())
@@ -187,7 +187,9 @@ package object internal {
       val contentTypeRange =
         ContentTypeRange(contentToMatch.mainType, contentToMatch.subType, contentToMatch.charset.getOrElse(ContentTypeRange.Wildcard))
 
-      supportedMediaTypes.exists(_.matches(contentTypeRange))
+      // #2354: if there's no body, treating the output as if it was matching the given content-type (the body might be ignored)
+      val supported = supportedMediaTypes
+      supported.isEmpty || supported.exists(_.matches(contentTypeRange))
     }
   }
 
