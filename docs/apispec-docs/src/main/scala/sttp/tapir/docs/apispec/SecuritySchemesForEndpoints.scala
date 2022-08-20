@@ -36,7 +36,7 @@ private[docs] object SecuritySchemesForEndpoints {
         nameSecuritySchemes(tail, takenNames, acc + (scheme -> name))
       case Some(((None, scheme), tail)) =>
         val baseName = scheme.`type` + "Auth"
-        val name = uniqueName(baseName, !takenNames.contains(_))
+        val name = uniqueString(baseName, !takenNames.contains(_))
         nameSecuritySchemes(tail, takenNames + name, acc + (scheme -> name))
       case None => acc
     }

@@ -1,0 +1,99 @@
+openapi: 3.0.3
+info:
+  title: title
+  version: '1.0'
+paths:
+  /api/user/{userId}:
+    get:
+      operationId: getApiUserUserid
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/entity/{entityId}:
+    get:
+      operationId: getApiEntityEntityid
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Entity:
+      oneOf:
+        - $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Person1'
+      discriminator:
+        propertyName: kind
+        mapping:
+          organization: '#/components/schemas/Organization'
+          person: '#/components/schemas/Person1'
+    Organization:
+      required:
+        - name
+        - kind
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
+    Person1:
+      required:
+        - name
+        - age
+        - kind
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32
+        kind:
+          type: string
