@@ -9,11 +9,12 @@ import scala.io.Source
 import scala.reflect.io.Directory
 
 class FileMover(sourceDir: String, destDir: String) {
+
   def move(files: Map[String, String]): IO[Unit] =
     files.toList.map { case (source, destination) => move(source, destination) }.sequence.void
 
   def move(from: String, to: String): IO[Unit] = IO.blocking {
-    val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString("\n")
+    val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString
     val destination = destDir + "/" + to
     createDirectories(destination) >> save(bytes, destination)
   }
@@ -25,11 +26,11 @@ class FileMover(sourceDir: String, destDir: String) {
     createDirectories(destination) >> content.map(c => save(c, destination))
 
   private def save(content: String, destination: String): IO[Unit] = IO.blocking {
-    Files.write(Paths.get(destination), content.getBytes(StandardCharsets.UTF_8)) // extract to const?
+    Files.write(Paths.get(destination), content.getBytes(StandardCharsets.UTF_8))
   }
 
   private def createDirectories(destination: String): IO[Unit] = IO.blocking {
-    val directories = destination.split("/").dropRight(1) // fixme extract
+    val directories = destination.split("/").dropRight(1)
     directories.foldLeft("") { (prefix, path) =>
       val fullPath = if (prefix.isEmpty) path else prefix + "/" + path
       if (!Paths.get(fullPath).toFile.isDirectory) {
