@@ -4,6 +4,7 @@
 .cache
 .history
 .lib/
+/cdk
 dist/*
 target/
 lib_managed/
