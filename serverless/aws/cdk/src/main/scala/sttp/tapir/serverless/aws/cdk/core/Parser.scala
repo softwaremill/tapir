@@ -21,11 +21,11 @@ class Parser[F[_]: Sync] {
       .sequence
       .toRight(new RuntimeException("No single valid endpoint to generate stack"))
       .map { requests =>
-        val tree = Tree.build(requests)
-        val resources = Resource.generate(tree)
-
         val generator = SuperGenerator
-        val stacks = generator.generate(resources).map(i => if (i != "\n") s"    $i" else "").mkString("\n") // fixme ugly
+        val stacks = generator
+          .generate(Resource.generate(Tree.build(requests)))
+          .map(i => if (i != "\n") s"    $i" else "")
+          .mkString("\n") // fixme ugly
 
         content.map(processors.foldLeft(_)((prev, f) => f(prev))).map(c => c.replace("{{stacks}}", stacks))
       }
