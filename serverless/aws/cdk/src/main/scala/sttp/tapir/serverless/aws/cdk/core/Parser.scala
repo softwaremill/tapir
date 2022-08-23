@@ -11,7 +11,7 @@ class Parser {
 
   // fixme use F[_]
   def parse(path: String, values: StackFile, endpoints: Set[ServerEndpoint[Any, IO]]): IO[String] = {
-    val content: IO[String] = file(path).use(content => IO.delay(content.getLines().mkString("\n"))) // fixme separator
+    val content: IO[String] = file(path).use(content => IO.delay(content.getLines().mkString("\n")))
     val processors: List[String => String] = values.productElementNames.toList.zipWithIndex.map { case (placeholder, counter) =>
       s => s.replace(s"{{$placeholder}}", values.productElement(counter).toString)
     }
@@ -21,7 +21,7 @@ class Parser {
     val resources = Resource.generate(tree)
 
     val generator = SuperGenerator
-    val stacks = generator.generate(resources)
+    val stacks = generator.generate(resources).map(i => if (i != "\n") s"    $i" else "").mkString("\n") //fixme ugly
 
     content.map(processors.foldLeft(_)((prev, f) => f(prev))).map(c => c.replace("{{stacks}}", stacks))
   }

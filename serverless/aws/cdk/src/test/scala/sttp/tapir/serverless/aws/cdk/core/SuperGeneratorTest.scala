@@ -8,7 +8,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   test("single resource with single method") {
     val resource = new Resource("variableName", "root/hi", NonEmptyList.one(GET), "")
     val generator = SuperGenerator
-    val result = generator.generate(List(resource))
+    val result = generator.generate(List(resource)).mkString("\n")
     val expected =
       """
         |const variableName = api.root.addResource('root/hi');
@@ -21,7 +21,8 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   test("single resource with two methods") {
     val resource = new Resource("variableName", "root/hi", NonEmptyList.of(GET, POST), "")
     val generator = SuperGenerator
-    val result = generator.generate(List(resource))
+    val value1 = generator.generate(List(resource))
+    val result = value1.mkString("\n")
     val expected =
       """
         |const variableName = api.root.addResource('root/hi');
@@ -35,7 +36,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   test("single resource with two methods with different order") {
     val resource = new Resource("variableName", "root/hi", NonEmptyList.of(POST, GET), "")
     val generator = SuperGenerator
-    val result = generator.generate(List(resource))
+    val result = generator.generate(List(resource)).mkString("\n")
     val expected =
       """
         |const variableName = api.root.addResource('root/hi');
@@ -50,7 +51,8 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
     val resourceA = new Resource("hi", "hi", NonEmptyList.one(GET), "")
     val resourceB = new Resource("hiName", "{name}", NonEmptyList.one(GET), "hi")
     val generator = SuperGenerator
-    val result = generator.generate(List(resourceA, resourceB))
+    val value1 = generator.generate(List(resourceA, resourceB))
+    val result = value1.map(i => if (i != "\n") s"$i" else "").mkString("\n") //fixme
     val expected =
       """
         |const hi = api.root.addResource('hi');

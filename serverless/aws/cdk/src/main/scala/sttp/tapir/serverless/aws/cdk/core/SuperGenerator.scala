@@ -1,38 +1,34 @@
 package sttp.tapir.serverless.aws.cdk.core
 
-import cats.data.NonEmptyList
-
-object SuperGenerator {
+object SuperGenerator { //fixme rename
 
   val separator = System.lineSeparator()
 
-  def generate(resources: List[Resource]): String = {
-    def util(r: List[Resource]): String = {
+  def generate(resources: List[Resource]): List[String] = {
+    def util(r: List[Resource]): List[String] = {
       r match {
         case head :: Nil  => generate(head)
-        case head :: tail => generate(head) + separator + separator + util(tail)
-        case _            => ""
+        case head :: tail => generate(head) ++ List(separator) ++ util(tail)
+        case _            => List.empty
       }
     }
 
     util(resources)
   }
 
-  private def generate(resource: Resource): String = {
-    val nel: NonEmptyList[String] = resource.method.sortBy(_.toString).map(m => addMethod(resource.variableName, m))
-    val methods = nel.toList.mkString(separator)
-    addResource(resource.variableName, resource.dependOn, resource.path) + separator + methods
+  private def generate(resource: Resource): List[String] = {
+    val nel = resource.method.sortBy(_.toString).toList.flatMap(m => addMethod(resource.variableName, m))
+    addResource(resource.variableName, resource.dependOn, resource.path) ++ nel
   }
 
   //fixme tab number should be dynamic (or skipped all togheter)
   //^ just return list of lines so client may reformat this easily
-  private def addResource(variableName: String, dependOn: String, path: String): String = {
+  private def addResource(variableName: String, dependOn: String, path: String): List[String] = {
     val api = if (dependOn.isEmpty) "api.root" else dependOn
-    s"    const $variableName = $api.addResource('$path');"
+    List(s"const $variableName = $api.addResource('$path');")
   }
 
   // fixme use VN
-  private def addMethod(variableName: String, method: Method): String = {
-    s"    $variableName.addMethod('$method');"
-  }
+  private def addMethod(variableName: String, method: Method): List[String] =
+    List(s"$variableName.addMethod('$method');")
 }
