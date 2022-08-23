@@ -1,17 +1,15 @@
 package sttp.tapir.serverless.aws.cdk.core
 
-import cats.effect.{IO, kernel}
+import cats.effect.{Sync, kernel}
 import sttp.tapir.server.ServerEndpoint
 
 import scala.io.Source
-import cats.implicits.toTraverseOps
+import cats.implicits.{toFunctorOps, toTraverseOps}
 
 //todo add comment to TS code
-class Parser {
-
-  // fixme use F[_]
-  def parse(path: String, values: StackFile, endpoints: Set[ServerEndpoint[Any, IO]]): IO[String] = {
-    val content: IO[String] = file(path).use(content => IO.delay(content.getLines().mkString("\n")))
+class Parser[F[_]: Sync] {
+  def parse(path: String, values: StackFile, endpoints: Set[ServerEndpoint[Any, F]]): F[String] = {
+    val content: F[String] = file(path).use(content => Sync[F].delay(content.getLines().mkString("\n"))) //fixme
     val processors: List[String => String] = values.productElementNames.toList.zipWithIndex.map { case (placeholder, counter) =>
       s => s.replace(s"{{$placeholder}}", values.productElement(counter).toString)
     }
@@ -21,14 +19,14 @@ class Parser {
     val resources = Resource.generate(tree)
 
     val generator = SuperGenerator
-    val stacks = generator.generate(resources).map(i => if (i != "\n") s"    $i" else "").mkString("\n") //fixme ugly
+    val stacks = generator.generate(resources).map(i => if (i != "\n") s"    $i" else "").mkString("\n") // fixme ugly
 
     content.map(processors.foldLeft(_)((prev, f) => f(prev))).map(c => c.replace("{{stacks}}", stacks))
   }
 
   // fixme parser should not be responsible for reading file
-  val file: String => kernel.Resource[IO, Source] = o =>
-    cats.effect.Resource.make[IO, Source](
-      IO.blocking(Source.fromInputStream(getClass.getResourceAsStream(o)))
-    )(w => IO.blocking(w.close()).void)
+  private val file: String => kernel.Resource[F, Source] = o =>
+    cats.effect.Resource.make[F, Source](
+      Sync[F].blocking(Source.fromInputStream(getClass.getResourceAsStream(o)))
+    )(w => Sync[F].blocking(w.close()))
 }

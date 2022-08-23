@@ -16,7 +16,7 @@ object ExampleApp extends IOApp.Simple {
       2048
     )
 
-    val parser = new Parser
+    val parser = new Parser[IO]
     val content: IO[String] = parser.parse(path, values, TestEndpoints.all[IO])
 
     val mover = new FileMover("/app-template", "cdk")
