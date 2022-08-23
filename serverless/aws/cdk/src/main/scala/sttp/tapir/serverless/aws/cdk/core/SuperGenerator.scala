@@ -21,8 +21,6 @@ object SuperGenerator { //fixme rename
     addResource(resource.variableName, resource.dependOn, resource.path) ++ nel
   }
 
-  //fixme tab number should be dynamic (or skipped all togheter)
-  //^ just return list of lines so client may reformat this easily
   private def addResource(variableName: String, dependOn: String, path: String): List[String] = {
     val api = if (dependOn.isEmpty) "api.root" else dependOn
     List(s"const $variableName = $api.addResource('$path');")
