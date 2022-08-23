@@ -1,32 +1,27 @@
 package sttp.tapir.serverless.aws.cdk
 
 import cats.effect.{IO, IOApp}
-import cats.implicits.toTraverseOps
-import java.nio.file.Paths
-import scala.reflect.io.Directory
+import sttp.tapir.serverless.aws.cdk.core.{Parser, StackFile}
 
 object ExampleApp extends IOApp.Simple {
   override def run: IO[Unit] = {
-//    val path = "/app-template/lib/stack-template.ts"
-//    val values = new StackFile(
-//      "API",
-//      "TapirHandler",
-//      "lambda.Runtime.JAVA_11",
-//      "/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar",
-//      "sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest",
-//      20,
-//      2048
-//    )
-//
-//    val parser = new Parser
-//    val actual = parser.parse(path, values, TestEndpoints.all[IO])
-//    val d = actual.unsafeRunSync()
+    val path = "/app-template/lib/stack-template.ts"
+    val values = new StackFile(
+      "API",
+      "TapirHandler",
+      "lambda.Runtime.JAVA_11",
+      "/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar",
+      "sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest",
+      20,
+      2048
+    )
 
+    val parser = new Parser
+    val content: IO[String] = parser.parse(path, values, TestEndpoints.all[IO])
 
     val mover = new FileMover("/app-template", "cdk")
     val files = Map(
       "bin/tapir-cdk-stack.ts" -> "bin/tapir-cdk-stack.ts",
-      "lib/stack-template.ts" -> "lib/stack-template.ts",
       "gitignore" -> ".gitignore",
       "cdk.json" -> "cdk.json",
       "jest.config.js" -> "jest.config.js",
@@ -35,6 +30,6 @@ object ExampleApp extends IOApp.Simple {
       "tsconfig.json" -> "tsconfig.json"
     )
 
-    mover.clear >> files.toList.map { case (file, file2) => mover.move(file, file2) }.sequence.void
+    mover.clear >> mover.move(files) >> mover.put(content, "cdk/lib/tapir-cdk-stack.ts") >> IO.unit
   }
 }
