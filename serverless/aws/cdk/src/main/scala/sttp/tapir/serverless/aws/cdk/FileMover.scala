@@ -13,26 +13,22 @@ class FileMover(sourceDir: String, destDir: String) {
     files.toList.map { case (source, destination) => move(source, destination) }.sequence.void
 
   def move(from: String, to: String): IO[Unit] = IO.blocking {
-    val destination = Paths.get(destDir + "/" + to)
-    val directories = destination.toString.split("/").dropRight(1)
-
-    directories.foldLeft("") { (prefix, path) =>
-      val fullPath = if (prefix.isEmpty) path else prefix + "/" + path
-      if (!Paths.get(fullPath).toFile.isDirectory) {
-        Files.createDirectory(Paths.get(fullPath))
-      }
-
-      fullPath
-    }
-
     val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString("\n")
-    Files.write(destination, bytes.getBytes(StandardCharsets.UTF_8))
+    val destination = destDir + "/" + to
+    createDirectories(destination) >> save(bytes, destination)
   }
 
-  def clear: IO[Unit] = IO.blocking(new Directory(Paths.get(sourceDir).toFile).deleteRecursively())
+  def clear: IO[Unit] =
+    IO.blocking(new Directory(Paths.get(sourceDir).toFile).deleteRecursively())
 
-  def put(content: IO[String], destination: String): IO[Unit] = content.map { c =>
+  def put(content: IO[String], destination: String): IO[Unit] =
+    createDirectories(destination) >> content.map(c => save(c, destination))
 
+  private def save(content: String, destination: String): IO[Unit] = IO.blocking {
+    Files.write(Paths.get(destination), content.getBytes(StandardCharsets.UTF_8)) // extract to const?
+  }
+
+  private def createDirectories(destination: String): IO[Unit] = IO.blocking {
     val directories = destination.split("/").dropRight(1) // fixme extract
     directories.foldLeft("") { (prefix, path) =>
       val fullPath = if (prefix.isEmpty) path else prefix + "/" + path
@@ -42,7 +38,5 @@ class FileMover(sourceDir: String, destDir: String) {
 
       fullPath
     }
-
-    Files.write(Paths.get(destination), c.getBytes(StandardCharsets.UTF_8)) //extract to const?
   }
 }
