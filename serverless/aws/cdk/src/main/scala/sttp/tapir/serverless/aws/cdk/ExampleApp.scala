@@ -10,7 +10,7 @@ object ExampleApp extends IOApp.Simple {
       "API",
       "TapirHandler",
       "lambda.Runtime.JAVA_11",
-      "/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar",
+      "/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar", //fixme
       "sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest",
       20,
       2048
