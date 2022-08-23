@@ -2,42 +2,16 @@ package sttp.tapir.serverless.aws.cdk
 
 import com.amazonaws.services.lambda.runtime.api.client.api._
 import io.circe.generic.auto._
-import io.circe.syntax._
+import io.circe.parser.decode
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir._
 import sttp.tapir.serverless.aws.lambda.AwsResponse
+
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import scala.collection.immutable.HashMap
 
-class UrlExtractorTest extends AnyFunSuite with Matchers {
+class IOLambdaHandlerV1Test extends AnyFunSuite with Matchers {
 
-  // todo: test default method
-  // todo: test invalid path (invalid chars)
-
-  // fixme: use table tests
-  test("basic test 1") {
-    val e = endpoint.get.in("books")
-
-    assert("books" == e.getPath.stringify)
-    assert("GET" == e.getMethod)
-  }
-
-  test("basic test 2") {
-    val e = endpoint.get.in("books" / path[Int]("id"))
-
-    assert("books/{id}" == e.getPath.stringify)
-    assert("GET" == e.getMethod)
-  }
-
-  test("basic test 3") { // fixme rename tests
-    val e = endpoint.get.in("books" / path[Int] / path[Int])
-
-    assert("books/{param0}/{param1}" == e.getPath.stringify)
-    assert("GET" == e.getMethod)
-  }
-
-  val input2: String = //fixme: move to file?
+  val input: String =
     """
       |{
       |    "resource": "/hello",
@@ -93,31 +67,32 @@ class UrlExtractorTest extends AnyFunSuite with Matchers {
       |}
       |""".stripMargin
 
-  test("lambda handler") { //fixme move it out
+  private val context = new LambdaContext(
+    128,
+    10,
+    "requestId",
+    "logGroupName",
+    "logStreamName",
+    "functionName",
+    new LambdaCognitoIdentity("identityId", "PoolId"),
+    "1.0",
+    "1",
+    new LambdaClientContext()
+  )
+
+  test("lambda handler") {
     val output = new ByteArrayOutputStream()
-    val context = new LambdaContext( //fixme mock it somehow
-      1,
-      1,
-      "1",
-      "1",
-      "1",
-      "1",
-      new LambdaCognitoIdentity("1", "1"),
-      "1",
-      "1",
-      new LambdaClientContext()
-    )
 
     val handler = new IOLambdaHandlerV1
-    handler.handleRequest(new ByteArrayInputStream(input2.getBytes), output, context)
+    handler.handleRequest(new ByteArrayInputStream(input.getBytes), output, context)
 
     val expected = AwsResponse(
       isBase64Encoded = false,
-      200, //fixme use status code VO
-      HashMap("Content-Length" -> "9", "Content-Type" -> "text/plain; charset=UTF-8"),
+      200, // fixme use status code VO
+      Map("Content-Length" -> "9", "Content-Type" -> "text/plain; charset=UTF-8"),
       "Hi! Julie"
     )
 
-    assert(expected.asJson.noSpaces == output.toString())
+    decode[AwsResponse](output.toString()) shouldBe Right(expected)
   }
 }

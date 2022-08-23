@@ -295,6 +295,25 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     ) shouldBe "/p1/{par1}?param={par2}"
   }
 
+  "showPathTemplate" should "skip query parameters" in {
+    val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
+    testEndpoint.showPathTemplate(
+      showQueryParam = None
+    ) shouldBe "/p1/{param1}"
+  }
+
+  //fixme: remove - redundant case
+  "showPathTemplate" should "take into account security input" in {
+    val testEndpoint = endpoint.securityIn("auth").in("p1")
+    testEndpoint.showPathTemplate() shouldBe "/auth/p1"
+  }
+
+  //fixme add as case to the general test above
+  "showPathTemplate" should "encode not allowed chars" in {
+    val testEndpoint = endpoint.in("not" / "allowed" / "chars" / "hi?hello")
+    testEndpoint.showPathTemplate() shouldBe "/not/allowed/chars/hi%3Fhello"
+  }
+
   "validate" should "accumulate validators" in {
     val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
     input.codec.schema.applyValidation(0) should not be empty

@@ -3,12 +3,23 @@ package sttp.tapir.serverless.aws
 import scala.language.implicitConversions
 
 package object lambda {
+
+  trait Upcaster[A] { //fixme find out better name (converter)
+    def toV2(a: A): AwsRequest
+  }
+
+  implicit val upcasterV1: Upcaster[AwsRequestV1] = (a: AwsRequestV1) => a.toV2
+
+  implicit val upcasterV2: Upcaster[AwsRequest] = (a: AwsRequest) => a
+
+
   private[lambda] type LambdaResponseBody = (String, Option[Long])
   type Route[F[_]] = AwsRequest => F[AwsResponse]
 
   implicit def toV2(v1: AwsRequestV1): AwsRequest = v1.toV2
 
   //fixme: is this good idea to put toV2 as OPS?
+  //introduce converter
   implicit final class AwsRequestOps(private val v1: AwsRequestV1) {
     def toV2: AwsRequest =
       AwsRequest(

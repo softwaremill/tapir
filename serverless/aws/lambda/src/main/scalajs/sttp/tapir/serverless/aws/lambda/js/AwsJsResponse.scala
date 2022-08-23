@@ -18,8 +18,7 @@ object AwsJsResponse {
       r.statusCode,
       r.body,
       r.isBase64Encoded,
-      js.Dictionary(r.headers.toList: _*),
-      js.Array(r.cookies: _*)
+      js.Dictionary(r.headers.toList: _*)
     )
   }
 }

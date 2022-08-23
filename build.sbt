@@ -1189,7 +1189,8 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp,
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1203,7 +1204,6 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-tests",
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {

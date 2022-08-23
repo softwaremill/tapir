@@ -21,7 +21,8 @@ object AwsResponse {
     AwsResponse(isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, body)
 }
 
-/** I could NOT managed to enforce CDK to use payload version 2.0 At time of this writing no valuable
+/**
+  * I could NOT managed to enforce CDK to use payload version 2.0 At time of this writing no valuable
   * documentation of aws/apigateway2 exists
   * @see https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-apigatewayv2.PayloadFormatVersion.html
   */
