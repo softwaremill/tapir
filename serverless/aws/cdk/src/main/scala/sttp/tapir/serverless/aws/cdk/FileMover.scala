@@ -43,6 +43,6 @@ class FileMover(sourceDir: String, destDir: String) {
       fullPath
     }
 
-    Files.write(Paths.get(destination), c.getBytes(StandardCharsets.UTF_8))
+    Files.write(Paths.get(destination), c.getBytes(StandardCharsets.UTF_8)) //extract to const?
   }
 }
