@@ -24,7 +24,7 @@ class ParserTest extends AnyFunSuite with Matchers {
     )
 
     val parser = new Parser[IO]
-    val actual = parser.parse(path, values, TestEndpoints.all[IO]).unsafeRunSync()
+    val actual = parser.parse(path, values, TestEndpoints.all[IO]).getOrElse(IO.unit).unsafeRunSync()
     val expected = load("/stack.ts")
 
     assert(expected == actual)
