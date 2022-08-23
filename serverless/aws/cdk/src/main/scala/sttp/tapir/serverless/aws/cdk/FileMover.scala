@@ -13,7 +13,6 @@ class FileMover(sourceDir: String, destDir: String) {
     files.toList.map { case (source, destination) => move(source, destination) }.sequence.void
 
   def move(from: String, to: String): IO[Unit] = IO.blocking {
-    //val source = getClass.getResource(sourceDir + "/" + from)
     val destination = Paths.get(destDir + "/" + to)
     val directories = destination.toString.split("/").dropRight(1)
 
