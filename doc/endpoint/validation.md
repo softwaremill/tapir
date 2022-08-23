@@ -61,13 +61,17 @@ words, decoding failures should be reported for format failures, not business va
 To customise error messages that are returned upon validation/decode failures by the server, see 
 [error handling](../server/errors.md).
 
-## Enum validators
+## Enumeration validators
 
 Validators for enumerations can be created using:
 
-* `Validator.derivedEnumeration`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
-  macro determines the possible values
-* `Validator.enumeration`, which takes the list of possible values
+* for arbitrary types, using `Validator.enumeration`, which takes the list of possible values
+* for `sealed` hierarchies, where all implementations are objects, using `Validator.derivedEnumeration[T]`. 
+  This method is a macro which determines the possible values.
+* for Scala3 `enum`s, where all implementation don't have parameters, using `Validator.derivedEnumeration[T]` as above
+* for Scala2 `Enumeration#Value`, automatically derived `Schema`s have the validator added (see `Schema.derivedEnumerationValue`)
+
+### Enumeration values in documentation
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
 converts the enum value to a raw type (typically a string). This can be specified by:
@@ -76,6 +80,8 @@ converts the enum value to a raw type (typically a string). This can be specifie
 * by using one of the `.encode` methods on the `Validator.Enumeration` instance
 * when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
 * by adding the validator directly to a codec using `.validate` (the encode function is then taken from the codec)
+
+### Enumerations in schemas/codecs
 
 To simplify creation of schemas and codec, with a derived enum validator, `Schema.derivedEnumeration` and `Codec.derivedEnumeration`
 helper methods are available. For example:
@@ -100,8 +106,8 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
 }
 ```
 
-If the enum is nested within an object and its values aren't of a "basic" type (numbers, strings), regardless of whether 
-the codec for that object is defined by hand or derived, we need to specify the encode function by hand:
+If the enum values aren't of a "basic" type (numbers, strings), regardless of whether the codec for that object is 
+defined by hand or derived, we need to specify the encode function by hand:
 
 ```scala mdoc:silent
 // providing the enum values by hand
@@ -110,6 +116,21 @@ implicit def colorSchema: Schema[Color] = Schema.string.validate(
 
 // or deriving the enum values and using the helper function
 implicit def colorSchema2: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
+```
+
+### Scala3 enums
+
+Due to technical limitations, automatically derived schemas for `enum`s where all cases are parameterless don't have
+the enumeration validator added. Until this limitation is lifted, you'll have to define `implicit` (or equivalently, 
+`given`) schemas in such cases by hand. These values will be used when deriving schemas containing your enumeration:
+
+```scala
+enum ColorEnum {
+  case Green extends ColorEnum
+  case Pink extends ColorEnum
+}
+
+given Schema[ColorEnum] = Schema.derivedEnumeration(encode = Some(v => v))
 ```
 
 ## Next

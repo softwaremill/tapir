@@ -60,11 +60,13 @@ object Validator extends ValidatorMacros {
   // enum
   /** Create an enumeration validator, with the given possible values.
     *
-    * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be done: * by using the
-    * overloaded [[enumeration]] method with an `encode` parameter * by adding an encode function on an [[Validator.Enumeration]] instance
-    * using one of the `.encode` functions * by adding the validator directly to a codec (see [[Mapping.addEncodeToEnumValidator]] * when
-    * the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present, when being added to
-    * the schema, see [[Schema.validate]]
+    * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be done:
+    *
+    *   - by using the overloaded [[enumeration]] method with an `encode` parameter
+    *   - by adding an encode function on an [[Validator.Enumeration]] instance using one of the `.encode` functions
+    *   - by adding the validator directly to a codec (see [[Mapping.addEncodeToEnumValidator]])
+    *   - when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present, when being
+    *     added to the schema, see [[Schema.validate]]
     */
   def enumeration[T](possibleValues: List[T]): Validator.Enumeration[T] = Enumeration(possibleValues, None, None)
 
