@@ -4,6 +4,8 @@ import java.net.URLDecoder
 import scala.util.Try
 
 case class VariableName private (private val name: String, private val counter: Int = 0) {
+  def concat(segment: String): VariableName = VariableName(raw + segment.capitalize)
+
   def changeCounter(number: Int): VariableName = new VariableName(name, number)
 
   override def toString: String = if (counter > 0) name + "_" + counter else name
@@ -23,14 +25,14 @@ object VariableName {
     if (finalResult.isEmpty) return VariableName("v")
 
     Try(finalResult.toInt).toOption match {
-      case Some(number) => new VariableName("p" + number.toString, counter) //fixme: this is strange, how it is gonna work?
-      case None    => new VariableName(finalResult, counter)
+      case Some(number) => new VariableName("p" + number.toString, counter) // fixme: this is strange, how it is gonna work?
+      case None         => new VariableName(finalResult, counter)
     }
   }
 
   def fromSegment(segment: Segment, prefix: Option[VariableName] = None): VariableName = {
     prefix match {
-      case Some(variableName) => VariableName(variableName + segment.raw.capitalize)
+      case Some(variableName) => variableName.concat(segment.raw)
       case None               => VariableName(segment.raw)
     }
   }

@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.cdk.core
 import cats.implicits.toFunctorFilterOps
 import sttp.tapir.AnyEndpoint
 
-private[core] case class Request private (method: Method, path: List[Segment])
+private[core] case class Request(method: Method, path: List[Segment])
 
 private[core] object Request {
   def fromEndpoint(endpoint: AnyEndpoint): Option[Request] = {
