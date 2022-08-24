@@ -18,8 +18,6 @@ package object lambda {
 
   implicit def toV2(v1: AwsRequestV1): AwsRequest = v1.toV2
 
-  //fixme: is this good idea to put toV2 as OPS?
-  //introduce converter
   implicit final class AwsRequestOps(private val v1: AwsRequestV1) {
     def toV2: AwsRequest =
       AwsRequest(

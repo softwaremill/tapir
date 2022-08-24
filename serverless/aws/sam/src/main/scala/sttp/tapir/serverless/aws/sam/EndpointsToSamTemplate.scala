@@ -46,7 +46,6 @@ private[sam] object EndpointsToSamTemplate {
     )
   }
 
-  //fixme: this is duplicated
   private def endpointNameMethodAndPath(e: AnyEndpoint): (String, Option[Method], String) = {
     val pathComponents = e
       .asVectorOfBasicInputs()

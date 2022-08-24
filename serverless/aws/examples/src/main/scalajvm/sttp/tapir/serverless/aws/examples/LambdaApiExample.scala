@@ -18,12 +18,9 @@ object LambdaApiExample extends LambdaHandler[IO, AwsRequest] {
     .out(stringBody)
     .serverLogic { _ => IO.pure(s"Hello!".asRight[Unit]) }
 
-
   override protected def getAllEndpoints: List[ServerEndpoint[Any, IO]] = List(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
     process(input, output).unsafeRunSync()
   }
-
-  //todo: add CDK example and update serverless docs (aws.md)
 }

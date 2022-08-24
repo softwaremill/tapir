@@ -88,7 +88,7 @@ class IOLambdaHandlerV1Test extends AnyFunSuite with Matchers {
 
     val expected = AwsResponse(
       isBase64Encoded = false,
-      200, // fixme use status code VO
+      200,
       Map("Content-Length" -> "9", "Content-Type" -> "text/plain; charset=UTF-8"),
       "Hi! Julie"
     )

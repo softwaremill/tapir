@@ -6,7 +6,7 @@ import cats.implicits.toFunctorFilterOps
 package object core {
   type Tree = List[Node]
 
-  implicit val reader = new FileReader[IO]
+  implicit val reader: FileReader[IO] = new FileReader[IO]
 
   implicit final class ListStringOps(private val input: List[String]) {
     def toRequest(method: Method): Request =

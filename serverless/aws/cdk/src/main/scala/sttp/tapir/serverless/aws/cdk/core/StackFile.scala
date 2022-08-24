@@ -8,4 +8,28 @@ case class StackFile(
     handler: String,
     timeout: Int,
     memorySize: Int
-)
+) {
+
+  // productElementNames does not work with Scala 2.12
+  def getFields(): List[String] = List(
+    "apiName",
+    "lambdaName",
+    "runtime",
+    "jarPath",
+    "handler",
+    "timeout",
+    "memorySize"
+  )
+
+  // productElementNames does not work with Scala 2.12
+  def getValue(field: String): String = field match {
+    case "apiName"    => apiName
+    case "lambdaName" => lambdaName
+    case "runtime"    => runtime
+    case "jarPath"    => jarPath
+    case "handler"    => handler
+    case "timeout"    => timeout.toString
+    case "memorySize" => memorySize.toString
+    case _            => ""
+  }
+}

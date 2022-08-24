@@ -12,7 +12,6 @@ private[terraform] object EndpointsToTerraformConfig {
 
       val basicInputs = endpoint.asVectorOfBasicInputs()
 
-      //fixme: this is duplicated
       val pathComponents: Seq[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)] = basicInputs
         .foldLeft((Seq.empty[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)], 0)) { case ((acc, c), input) =>
           input match {
@@ -27,7 +26,7 @@ private[terraform] object EndpointsToTerraformConfig {
       val path = pathComponents
         .map {
           case (Left(_), p)  => p
-          case (Right(_), p) => s"{$p}" //fixme leaked logic
+          case (Right(_), p) => s"{$p}"
         }
         .mkString("/")
 
