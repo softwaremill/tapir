@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import cats.effect.unsafe.implicits.global
 import cats.implicits.catsSyntaxEitherId
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.{endpoint, stringBody}
+import sttp.tapir._
 import sttp.tapir.serverless.aws.cdk.TestEndpoints
 
 import scala.io.Source
