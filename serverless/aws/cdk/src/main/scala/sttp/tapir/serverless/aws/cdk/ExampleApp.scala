@@ -1,7 +1,7 @@
 package sttp.tapir.serverless.aws.cdk
 
 import cats.effect.{IO, IOApp}
-import sttp.tapir.serverless.aws.cdk.core.{Parser, StackFile}
+import sttp.tapir.serverless.aws.cdk.core.{FileReader, Parser, StackFile}
 
 import java.nio.file.Paths
 
@@ -18,6 +18,8 @@ object ExampleApp extends IOApp.Simple {
       20,
       2048
     )
+
+    implicit val reader: FileReader[IO] = new FileReader[IO]
 
     val parser = new Parser[IO]
     parser.parse(templateFilePath, values, TestEndpoints.all[IO]) match {

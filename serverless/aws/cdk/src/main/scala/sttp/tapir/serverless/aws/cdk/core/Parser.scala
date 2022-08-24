@@ -10,7 +10,9 @@ import cats.implicits.{toFunctorFilterOps, toFunctorOps}
 class Parser[F[_]: Sync](spacesNo: Int = 4)(implicit reader: FileReader[F]) {
   def parse(path: String, values: StackFile, endpoints: Set[ServerEndpoint[Any, F]]): Either[Throwable, F[String]] = {
     val processors: List[String => String] =
-      values.getFields().map { placeholder => s => s.replace(s"{{$placeholder}}", values.getValue(placeholder)) }
+      values.getFields().map { placeholder => (s: String) =>
+        s.replace(s"{{$placeholder}}", values.getValue(placeholder))
+      }
 
     val value = endpoints
       .map(e => Request.fromEndpoint(e.endpoint))
