@@ -8,13 +8,13 @@ import java.nio.file.{Files, Paths}
 import scala.io.Source
 import scala.reflect.io.Directory
 
-class FileMover(sourceDir: String, destDir: String) {
+class FileMover(sourceDir: String, destDir: String) { //fixme use F[_]
 
   def move(files: Map[String, String]): IO[Unit] =
     files.toList.map { case (source, destination) => move(source, destination) }.sequence.void
 
-  def move(from: String, to: String): IO[Unit] = IO.blocking {
-    val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString
+  def move(from: String, to: String): IO[Unit] = {
+    val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString("\n")
     val destination = destDir + "/" + to
     createDirectories(destination) >> save(bytes, destination)
   }
@@ -22,8 +22,9 @@ class FileMover(sourceDir: String, destDir: String) {
   def clear: IO[Unit] =
     IO.blocking(new Directory(Paths.get(sourceDir).toFile).deleteRecursively())
 
-  def put(content: IO[String], destination: String): IO[Unit] =
-    createDirectories(destination) >> content.map(c => save(c, destination))
+  def put(content: IO[String], destination: String): IO[Unit] = {
+    createDirectories(destination) >> content.flatMap(c => save(c, destination))
+  }
 
   private def save(content: String, destination: String): IO[Unit] = IO.blocking {
     Files.write(Paths.get(destination), content.getBytes(StandardCharsets.UTF_8))

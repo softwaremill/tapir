@@ -8,7 +8,7 @@ export class TapirCdkStack extends cdk.Stack {
 
     const lambdaJar = new lambda.Function(this, 'TapirHandler', {
       runtime: lambda.Runtime.JAVA_11,
-      code: lambda.Code.fromAsset('/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar'),
+      code: lambda.Code.fromAsset('..serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar'),
       handler: 'sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest',
       timeout: cdk.Duration.seconds(20),
       memorySize: 2048

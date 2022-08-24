@@ -3,22 +3,24 @@ package sttp.tapir.serverless.aws.cdk
 import cats.effect.{IO, IOApp}
 import sttp.tapir.serverless.aws.cdk.core.{Parser, StackFile}
 
+import java.nio.file.Paths
+
 object ExampleApp extends IOApp.Simple {
   override def run: IO[Unit] = {
-    val path = "/app-template/lib/stack-template.ts"
+    val templateFilePath = "/app-template/lib/stack-template.ts"
+    val jarPath = Paths.get("serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar").toAbsolutePath.toString
     val values = new StackFile(
       "API",
       "TapirHandler",
       "lambda.Runtime.JAVA_11",
-      "/Users/ayeo/www/tapir/serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar", //fixme
+      jarPath,
       "sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest",
       20,
       2048
     )
 
     val parser = new Parser[IO]
-
-    parser.parse(path, values, TestEndpoints.all[IO]) match {
+    parser.parse(templateFilePath, values, TestEndpoints.all[IO]) match {
       case Right(content) => {
         val mover = new FileMover("/app-template", "cdk")
         val files = Map(
