@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 
 class SuperGeneratorTest extends AnyFunSuite with Matchers {
   test("single resource with single method") {
-    val resource = new Resource("variableName", "root/hi", NonEmptyList.one(GET), "")
+    val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.one(GET), "")
     val generator = SuperGenerator
     val result = generator.generate(List(resource)).mkString("\n")
     val expected =
@@ -19,7 +19,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   }
 
   test("single resource with two methods") {
-    val resource = new Resource("variableName", "root/hi", NonEmptyList.of(GET, POST), "")
+    val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.of(GET, POST), "")
     val generator = SuperGenerator
     val value1 = generator.generate(List(resource))
     val result = value1.mkString("\n")
@@ -34,7 +34,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   }
 
   test("single resource with two methods with different order") {
-    val resource = new Resource("variableName", "root/hi", NonEmptyList.of(POST, GET), "")
+    val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.of(POST, GET), "")
     val generator = SuperGenerator
     val result = generator.generate(List(resource)).mkString("\n")
     val expected =
@@ -48,8 +48,8 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
   }
 
   test("multiple resources with single method") {
-    val resourceA = new Resource("hi", "hi", NonEmptyList.one(GET), "")
-    val resourceB = new Resource("hiName", "{name}", NonEmptyList.one(GET), "hi")
+    val resourceA = new Resource(VariableName("hi"), "hi", NonEmptyList.one(GET), "")
+    val resourceB = new Resource(VariableName("hiName"), "{name}", NonEmptyList.one(GET), "hi")
     val generator = SuperGenerator
     val value1 = generator.generate(List(resourceA, resourceB))
     val result = value1.map(i => if (i != "\n") s"$i" else "").mkString("\n") //fixme

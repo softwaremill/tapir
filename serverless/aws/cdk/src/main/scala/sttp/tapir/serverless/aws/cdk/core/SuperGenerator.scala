@@ -21,12 +21,11 @@ object SuperGenerator { //fixme rename
     addResource(resource.variableName, resource.dependOn, resource.path) ++ nel
   }
 
-  private def addResource(variableName: String, dependOn: String, path: String): List[String] = {
+  private def addResource(variableName: VariableName, dependOn: String, path: String): List[String] = {
     val api = if (dependOn.isEmpty) "api.root" else dependOn
     List(s"const $variableName = $api.addResource('$path');")
   }
 
-  // fixme use VN
-  private def addMethod(variableName: String, method: Method): List[String] =
-    List(s"$variableName.addMethod('$method');")
+  private def addMethod(variableName: VariableName, method: Method): List[String] =
+    List(s"${variableName.toString}.addMethod('$method');")
 }

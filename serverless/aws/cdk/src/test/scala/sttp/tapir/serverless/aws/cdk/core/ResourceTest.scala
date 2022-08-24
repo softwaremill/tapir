@@ -21,8 +21,8 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.one(GET), ""),
-      Resource("helloName", "{name}", NonEmptyList.one(GET), "hello")
+      Resource(VariableName("hello"), "hello", NonEmptyList.one(GET), ""),
+      Resource(VariableName("helloName"), "{name}", NonEmptyList.one(GET), "hello")
     )
 
     val resources = Resource.generate(tree)
@@ -44,7 +44,7 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("helloName", "hello/{name}", NonEmptyList.one(GET), "")
+      Resource(VariableName("helloName"), "hello/{name}", NonEmptyList.one(GET), "")
     )
 
     val resources = Resource.generate(tree)
@@ -101,9 +101,14 @@ class ResourceTest extends AnyFunSuite with Matchers {
       )
 
     val expected = List(
-      Resource("countryCountryIdProvinceProvinceId", "country/{countryId}/province/{provinceId}", NonEmptyList.one(GET), ""),
-      Resource("countryCountryIdProvinceProvinceIdGovernor", "governor", NonEmptyList.one(GET), "countryCountryIdProvinceProvinceId"),
-      Resource("productIdTariff", "product/{id}/tariff", NonEmptyList.one(GET), "")
+      Resource(VariableName("countryCountryIdProvinceProvinceId"), "country/{countryId}/province/{provinceId}", NonEmptyList.one(GET), ""),
+      Resource(
+        VariableName("countryCountryIdProvinceProvinceIdGovernor"),
+        "governor",
+        NonEmptyList.one(GET),
+        "countryCountryIdProvinceProvinceId"
+      ),
+      Resource(VariableName("productIdTariff"), "product/{id}/tariff", NonEmptyList.one(GET), "")
     )
 
     val resources = Resource.generate(tree)
@@ -138,8 +143,8 @@ class ResourceTest extends AnyFunSuite with Matchers {
       )
 
     val expected = List(
-      Resource("aB", "a/b", NonEmptyList.one(GET), ""),
-      Resource("aBCD", "c/d", NonEmptyList.one(GET), "aB")
+      Resource(VariableName("aB"), "a/b", NonEmptyList.one(GET), ""),
+      Resource(VariableName("aBCD"), "c/d", NonEmptyList.one(GET), "aB")
     )
 
     val resources = Resource.generate(tree)
@@ -159,8 +164,8 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.one(GET), ""),
-      Resource("hello_1", "{hello}", NonEmptyList.one(GET), "")
+      Resource(VariableName("hello"), "hello", NonEmptyList.one(GET), ""),
+      Resource(VariableName("hello", 1), "{hello}", NonEmptyList.one(GET), ""),
     )
 
     val resources = Resource.generate(tree)
@@ -176,7 +181,7 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("p1", "1", NonEmptyList.one(GET), "") // expect prefix
+      Resource(VariableName("p1"), "1", NonEmptyList.one(GET), "") // expect prefix
     )
 
     val resources = Resource.generate(tree)
@@ -202,9 +207,9 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("p1", "1", NonEmptyList.one(GET), ""),
-      Resource("p11", "1", NonEmptyList.one(GET), "p1"),
-      Resource("p11_1", "11", NonEmptyList.one(GET), "")
+      Resource(VariableName("p1"), "1", NonEmptyList.one(GET), ""),
+      Resource(VariableName("p11"), "1", NonEmptyList.one(GET), "p1"),
+      Resource(VariableName("p11", 1), "11", NonEmptyList.one(GET), "")
     )
 
     val resources = Resource.generate(tree)
@@ -256,10 +261,10 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("p123", "12/3", NonEmptyList.one(GET), ""),
-      Resource("p123_1", "123", NonEmptyList.one(GET), ""),
-      Resource("p123_2", "1/23", NonEmptyList.one(GET), ""),
-      Resource("p123_3", "1/2/3", NonEmptyList.one(GET), "")
+      Resource(VariableName("p123"), "12/3", NonEmptyList.one(GET), ""),
+      Resource(VariableName("p123", 1), "123", NonEmptyList.one(GET), ""),
+      Resource(VariableName("p123", 2), "1/23", NonEmptyList.one(GET), ""),
+      Resource(VariableName("p123", 3), "1/2/3", NonEmptyList.one(GET), "")
     )
 
     val resources = Resource.generate(tree)
@@ -281,8 +286,8 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.one(GET), ""),
-      Resource("helloBob", "bob%3F", NonEmptyList.one(GET), "hello")
+      Resource(VariableName("hello"), "hello", NonEmptyList.one(GET), ""),
+      Resource(VariableName("helloBob"), "bob%3F", NonEmptyList.one(GET), "hello")
     )
 
     val resources = Resource.generate(tree)
@@ -306,27 +311,27 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.one(GET), ""),
-      Resource("hello_1", "hello!", NonEmptyList.one(GET), ""),
-      Resource("hello_2", "hello?", NonEmptyList.one(GET), "")
+      Resource(VariableName("hello"), "hello", NonEmptyList.one(GET), ""),
+      Resource(VariableName("hello", 1), "hello!", NonEmptyList.one(GET), ""),
+      Resource(VariableName("hello", 2), "hello?", NonEmptyList.one(GET), "")
     )
 
     val resources = Resource.generate(tree)
     assert(expected.equals(resources))
   }
 
-  //todo: test non suppoerted method
+  // todo: test non suppoerted method
 
   test("many methods") {
     val tree = List(
       Node(
         Fixed("hello").get,
-        List(GET, POST),
+        List(GET, POST)
       )
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.of(GET, POST), ""),
+      Resource(VariableName("hello"), "hello", NonEmptyList.of(GET, POST), "")
     )
 
     val resources = Resource.generate(tree)
@@ -337,12 +342,12 @@ class ResourceTest extends AnyFunSuite with Matchers {
     val tree = List(
       Node(
         Fixed("hello").get,
-        List(POST, GET),
+        List(POST, GET)
       )
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.of(POST, GET), ""),
+      Resource(VariableName("hello"), "hello", NonEmptyList.of(POST, GET), "")
     )
 
     val resources = Resource.generate(tree)
@@ -353,12 +358,12 @@ class ResourceTest extends AnyFunSuite with Matchers {
     val tree = List(
       Node(
         Fixed("hello").get,
-        List(POST, POST),
+        List(POST, POST)
       )
     )
 
     val expected = List(
-      Resource("hello", "hello", NonEmptyList.of(POST), ""),
+      Resource(VariableName("hello"), "hello", NonEmptyList.of(POST), "")
     )
 
     val resources = Resource.generate(tree)

@@ -15,7 +15,7 @@ object VariableName {
 
   val allowedChars: List[Char] = List('-', '_')
 
-  def apply(name: String): VariableName = {
+  def apply(name: String, counter: Int = 0): VariableName = {
     // fixme deprecated
     val removeEncoded = URLDecoder.decode(name).filter(s => s.isLetterOrDigit || allowedChars.contains(s))
     val finalResult = removeEncoded.substring(0, Math.min(removeEncoded.length, 64))
@@ -23,8 +23,8 @@ object VariableName {
     if (finalResult.isEmpty) return VariableName("v")
 
     Try(finalResult.toInt).toOption match {
-      case Some(number) => new VariableName("p" + number.toString)
-      case None    => new VariableName(finalResult)
+      case Some(number) => new VariableName("p" + number.toString, counter) //fixme: this is strange, how it is gonna work?
+      case None    => new VariableName(finalResult, counter)
     }
   }
 

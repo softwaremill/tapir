@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.cdk.core
 import cats.data.NonEmptyList
 
 private[core] case class Resource(
-    variableName: String,
+    variableName: VariableName,
     path: String,
     method: NonEmptyList[Method],
     dependOn: String
@@ -51,7 +51,7 @@ private[core] object Resource {
 
   // fixme rename
   def generate(tree: List[Node]): Resources = {
-    helper(tree).resources.sortWith((a, b) => a.variableName < b.variableName)
+    helper(tree).resources.sortWith((a, b) => a.variableName.toString < b.variableName.toString)
   }
 
   private def helper(
@@ -75,7 +75,7 @@ private[core] object Resource {
 
           val resource =
             Resource(
-              suffixed.toString,
+              suffixed,
               newPrefix.mkString("/"),
               methods,
               dependOn.getOrElse("").toString
