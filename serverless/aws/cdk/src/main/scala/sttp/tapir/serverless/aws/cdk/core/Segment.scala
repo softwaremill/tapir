@@ -1,15 +1,14 @@
 package sttp.tapir.serverless.aws.cdk.core
 
-sealed trait Segment {
+sealed abstract class Segment protected (value: String) {
   def toString: String
 
-  def raw: String
+  def raw: String = value
 }
 
-case class Fixed private (value: String) extends Segment {
-  override def toString: String = value
+case class Fixed private (value: String) extends Segment(value) {
+  override def toString: String = raw
 
-  override def raw: String = value
 }
 
 object Fixed {
@@ -19,10 +18,8 @@ object Fixed {
   }
 }
 
-case class Parameter private (value: String) extends Segment {
-  override def toString: String = s"{$value}"
-
-  override def raw: String = value
+case class Parameter private (value: String) extends Segment(value) {
+  override def toString: String = s"{$raw}"
 }
 
 object Parameter {

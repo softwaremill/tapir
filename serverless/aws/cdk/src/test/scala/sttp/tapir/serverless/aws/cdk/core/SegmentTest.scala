@@ -18,4 +18,16 @@ class SegmentTest extends AnyFunSuite with Matchers {
   test("empty") {
     assert(Segment("").isEmpty)
   }
+
+  test("fixed uppercase") {
+    val url = Segment("Hello")
+    assert(url.get.raw == "Hello")
+    assert(url.get.toString == "Hello")
+  }
+
+  test("parameter uppercase") {
+    val url = Segment("{Hello}")
+    assert(url.get.raw == "Hello")
+    assert(url.get.toString == "{Hello}")
+  }
 }
