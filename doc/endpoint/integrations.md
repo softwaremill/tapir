@@ -84,13 +84,24 @@ Tapir `Schema` for any `Enumeration.Value` can also be auto or semi-auto derived
 ## NewType integration
 
 If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapir-newtype` module will provide implicit codecs and
-schemas for a types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
+schemas for types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-newtype" % "@VERSION@"
 ```
 
-Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.enumeratum.TapirCodecNewType` trait to bring the implicit values into scope.
+Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.newtype.TapirCodecNewType` trait to bring the implicit values into scope.
+
+## Monix NewType integration
+
+If you use [monix newtypes](https://github.com/monix/newtypes), the `tapir-monix-newtype` module will provide implicit codecs and
+schemas for types which extend `NewtypeWrapped` and `NewsubtypeWrapped` annotations as long as a codec and schema for its underlying value already exists:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "@VERSION@"
+```
+
+Then, `import sttp.tapir.codec.monix.newtype._`, or extend the `sttp.tapir.codec.monix.newtype.TapirCodecMonixNewType` trait to bring the implicit values into scope.
 
 ## Derevo integration
 

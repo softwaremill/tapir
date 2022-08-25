@@ -126,6 +126,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   zio1.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
+  monixNewtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
@@ -581,6 +582,23 @@ lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype")
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+  lazy val monixNewtype: ProjectMatrix = (projectMatrix in file("integrations/monix-newtype"))
+  .settings(commonSettings)
+  .settings(macros)
+  .settings(
+    name := "tapir-monix-newtype",
+    libraryDependencies ++= Seq(
+      "io.monix" %%% "newtypes-core" % Versions.monixNewtype,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
