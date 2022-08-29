@@ -36,11 +36,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install libidn11-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
+    - name: Compile
+      run: sbt -v compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}
     - name: Compile documentation
       if: matrix.target-platform == 'JVM'
       run: sbt -v compileDocumentation
     - name: Test
-      run: sbt -v testScoped ${matrix.scala-version} ${matrix.target-platform}
+      run: sbt -v testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'

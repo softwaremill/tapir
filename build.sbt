@@ -3,6 +3,7 @@ import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
+import complete.DefaultParsers._
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
@@ -211,12 +212,24 @@ val testClients = taskKey[Unit]("Test client projects")
 val testOther = taskKey[Unit]("Test other projects")
 val testFinatra = taskKey[Unit]("Test Finatra projects")
 
-val testScoped = inputKey[Unit](
-  "Run tests in the given scope. Usage: testScoped [scala version] [platform]. Scala version can be: 2.12, 2.13, 3; platform: JVM, JS, Native"
-)
+val scopesDescription = "Scala version can be: 2.12, 2.13, 3; platform: JVM, JS, Native"
+val compileScoped =
+  inputKey[Unit](s"Compiles sources in the given scope. Usage: compileScoped [scala version] [platform]. $scopesDescription")
+val testScoped = inputKey[Unit](s"Run tests in the given scope. Usage: testScoped [scala version] [platform]. $scopesDescription")
 
-def filterProject(p: String => Boolean) =
-  ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
+def filterProject(p: String => Boolean) = ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
+def filterByVersionAndPlatform(scalaVersionFilter: String, platformFilter: String) = filterProject { projectName =>
+  val byPlatform =
+    if (platformFilter == "JVM") !projectName.contains("JS") && !projectName.contains("Native")
+    else projectName.contains(platformFilter)
+  val byVersion = scalaVersionFilter match {
+    case "2.13" => !projectName.contains("2_12") && !projectName.contains("3")
+    case "2.12" => projectName.contains("2_12")
+    case "3"    => projectName.contains("3")
+  }
+
+  byPlatform && byVersion
+}
 
 lazy val macros = Seq(
   libraryDependencies ++= {
@@ -260,27 +273,13 @@ lazy val rootProject = (project in file("."))
       )
       .value,
     testFinatra := (Test / test).all(filterProject(p => p.contains("finatra"))).value,
-    testScoped := Def.inputTaskDyn {
-      import complete.DefaultParsers._
+    compileScoped := Def.inputTaskDyn {
       val args = spaceDelimited("<arg>").parsed
-      val scalaVersionFilter = args.head
-      val platformFilter = args(1)
-
-      Def.taskDyn {
-        (Test / test)
-          .all(filterProject { projectName =>
-            val byPlatform =
-              if (platformFilter == "JVM") !projectName.contains("JS") && !projectName.contains("Native")
-              else projectName.contains(platformFilter)
-            val byVersion = scalaVersionFilter match {
-              case "2.13" => !projectName.contains("2_12") && !projectName.contains("3")
-              case "2.12" => projectName.contains("2_12")
-              case "3"    => projectName.contains("3")
-            }
-
-            byPlatform && byVersion
-          })
-      }
+      Def.taskDyn((Compile / compile).all(filterByVersionAndPlatform(args.head, args(1))))
+    }.evaluated,
+    testScoped := Def.inputTaskDyn {
+      val args = spaceDelimited("<arg>").parsed
+      Def.taskDyn((Test / test).all(filterByVersionAndPlatform(args.head, args(1))))
     }.evaluated,
     ideSkipProject := false,
     generateMimeByExtensionDB := GenerateMimeByExtensionDB()
