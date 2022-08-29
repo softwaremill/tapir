@@ -201,9 +201,6 @@ lazy val allAggregates: Seq[ProjectReference] = {
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
-val testJVM_2_12 = taskKey[Unit]("Test JVM Scala 2.12 projects, without Finatra")
-val testJVM_2_13 = taskKey[Unit]("Test JVM Scala 2.13 projects, without Finatra")
-val testJVM_3 = taskKey[Unit]("Test JVM Scala 3 projects, without Finatra")
 val testJS = taskKey[Unit]("Test JS projects")
 val testNative = taskKey[Unit]("Test native projects")
 val testDocs = taskKey[Unit]("Test docs projects")
@@ -228,7 +225,7 @@ def filterByVersionAndPlatform(scalaVersionFilter: String, platformFilter: Strin
     case "3"    => projectName.contains("3")
   }
 
-  byPlatform && byVersion
+  byPlatform && byVersion && !projectName.contains("finatra")
 }
 
 lazy val macros = Seq(
