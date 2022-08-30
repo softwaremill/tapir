@@ -583,12 +583,12 @@ lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype")
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .jsPlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = scala2Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
 
-  lazy val monixNewtype: ProjectMatrix = (projectMatrix in file("integrations/monix-newtype"))
+lazy val monixNewtype: ProjectMatrix = (projectMatrix in file("integrations/monix-newtype"))
   .settings(commonSettings)
   .settings(macros)
   .settings(
@@ -600,7 +600,7 @@ lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
