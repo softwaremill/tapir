@@ -58,7 +58,7 @@ jobs:
       run: sbt catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zio1JsonJS/test zioJsonJS/test
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
-      run: sbt catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zio1JsonJS3/test zioJsonJS3/test
+      run: sbt catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
     - name: Prepare release notes
       uses: release-drafter/release-drafter@v5
       with:
