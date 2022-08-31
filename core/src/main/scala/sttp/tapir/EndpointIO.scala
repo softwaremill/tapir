@@ -529,12 +529,13 @@ object EndpointIO {
 
   //
 
-  case class Example[+T](value: T, name: Option[String], summary: Option[String]) {
+  case class Example[+T](value: T, name: Option[String], summary: Option[String], description: Option[String]) {
     def map[B](f: T => B): Example[B] = copy(value = f(value))
   }
 
   object Example {
-    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
+    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None, description: Option[String] = None): Example[T] =
+      Example(value, name, summary, description)
   }
 
   case class Info[T](
@@ -555,8 +556,8 @@ object EndpointIO {
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
         description,
-        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary) =>
-          Example(ee, name, summary)
+        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary, desc) =>
+          Example(ee, name, summary, desc)
         },
         deprecated,
         attributes
@@ -696,12 +697,13 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
 
   def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
   def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
-  def requestsExamples(examples: List[REQ]): ThisType[T] = copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None))))
+  def requestsExamples(examples: List[REQ]): ThisType[T] =
+    copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None, None))))
 
   def responsesDescription(d: String): ThisType[T] = copy(responsesInfo = responsesInfo.description(d))
   def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
   def responsesExamples(examples: List[RESP]): ThisType[T] =
-    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
+    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None, None))))
 
   /** @param c
     *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always

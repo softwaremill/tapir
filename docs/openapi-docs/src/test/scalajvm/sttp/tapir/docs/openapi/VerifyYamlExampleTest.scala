@@ -44,7 +44,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
           .out(
             jsonBody[Entity].examples(
               List(
-                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary"), Some("Some description")),
                 Example.of(Organization("acme"), Some("Acme"))
               )
             )
@@ -78,7 +78,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
         endpoint.post
           .out(
             jsonBody[Entity].example(
-              Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+              Example.of(Person("michal", 40), Some("Michal"), Some("Some summary"))
             )
           ),
         Info("Entities", "1.0")
@@ -180,6 +180,19 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     )
 
     val expectedYaml = load("example/expected_single_example_with_summary.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support description for single example") {
+    val e = endpoint.in(
+      "users" / query[Option[Boolean]]("active")
+        .description("Filter for only active or inactive users.")
+        .example(Example.of(value = Some(true), description = Some("Get only active users")))
+    )
+
+    val expectedYaml = load("example/expected_single_example_with_description.yml")
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml
