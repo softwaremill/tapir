@@ -1,5 +1,6 @@
 package sttp.tapir.examples.custom_types
 
+// Note that you'll need the extras.auto._ import, not the usual one
 import io.circe.generic.extras.auto._
 import io.circe.generic.extras.{Configuration => CirceConfiguration}
 import sttp.tapir._
