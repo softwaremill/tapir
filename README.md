@@ -128,7 +128,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.5"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.6"
 ```
 
 Then, import:
@@ -182,7 +182,7 @@ code is unclear and be improved for the benefit of all.
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
 causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
 
-* run only JVM tests for a specific Scala version using `testJVM2_13`
+* run only tests for a specific Scala version and platform using `testScoped 2.13 JS` (supported versions: 2.12, 2.13, 3; supported platforms: JVM, JS, Native)
 * test single JS projects
 * use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 

@@ -16,7 +16,7 @@ package object apispec {
     (shortName +: info.typeParameterShortNames).mkString("_")
   }
 
-  private[docs] def uniqueName(base: String, isUnique: String => Boolean): String = {
+  private[docs] def uniqueString(base: String, isUnique: String => Boolean): String = {
     var i = 0
     var result = base
     while (!isUnique(result)) {
@@ -26,15 +26,15 @@ package object apispec {
     result
   }
 
-  private def rawToString[T](v: Any): String = v match {
+  private def rawToString(v: Any): String = v match {
     case a: Array[Byte] => new String(a, "UTF-8")
     case b: ByteBuffer  => Charset.forName("UTF-8").decode(b).toString
     case _              => v.toString
   }
 
-  private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
+  private[docs] def exampleValue(v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
-  private[docs] def exampleValue[T](schema: Schema[_], raw: Any): Option[ExampleValue] = {
+  private[docs] def exampleValue(schema: Schema[_], raw: Any): Option[ExampleValue] = {
     (raw, schema.schemaType) match {
       case (it: Iterable[_], SchemaType.SArray(_)) => Some(ExampleMultipleValue(it.map(rawToString).toList))
       case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))

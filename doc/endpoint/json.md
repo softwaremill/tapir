@@ -25,6 +25,25 @@ If you have a custom, implicit `Codec[String, T, Json]` instance, you should use
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
 the json codec that is in scope.
 
+## JSON as string
+
+If you'd like to work with JSON bodies in a serialised `String` form, instead of integrating on a higher level using
+one of the libraries mentioned below, this is also possible. Note that in this case, the serialising/deserialising
+of the body must be part of the [server logic](../server/logic.md).
+
+The `stringBody` body input/output will work, however by default it uses the `text/plain` content type. This can be 
+customised, by creating a string-based body with the correct codec format (which is a tapir wrapper for media types):
+
+```scala mdoc:compile-only
+import sttp.tapir._
+stringBodyUtf8AnyFormat(Codec.id(CodecFormat.Json(), Schema.string))
+
+// or, providing a schema:
+import sttp.tapir.generic.auto._
+case class MyBody(field: Int)
+stringBodyUtf8AnyFormat(Codec.id(CodecFormat.Json(), implicitly[Schema[MyBody]].as[String]))
+```
+
 ## Circe
 
 To use [Circe](https://github.com/circe/circe), add the following dependency to your project:
