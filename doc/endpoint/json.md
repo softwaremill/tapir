@@ -36,7 +36,7 @@ customised, by creating a string-based body with the correct codec format (which
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-stringBodyUtf8AnyFormat(Codec.id(CodecFormat.Json(), Schema.string))
+stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.Json()))
 
 // or, providing a schema:
 import sttp.tapir.generic.auto._
