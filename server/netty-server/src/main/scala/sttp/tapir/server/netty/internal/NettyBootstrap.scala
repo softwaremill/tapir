@@ -4,9 +4,11 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import sttp.tapir.server.netty.NettyOptions
 
+import java.net.SocketAddress
+
 object NettyBootstrap {
   def apply[F[_]](
-      nettyOptions: NettyOptions,
+      nettyOptions: NettyOptions[_ <: SocketAddress],
       handler: => NettyServerHandler[F],
       eventLoopGroup: EventLoopGroup
   ): ChannelFuture = {

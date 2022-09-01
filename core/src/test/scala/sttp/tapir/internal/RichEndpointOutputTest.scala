@@ -5,7 +5,6 @@ import org.scalatest.matchers.should.Matchers
 import sttp.model.MediaType
 import sttp.tapir._
 
-// TODO: move to shared test sources when https://github.com/softwaremill/sttp-model/issues/188 is fixed
 class RichEndpointOutputTest extends AnyFlatSpec with Matchers {
   "output media type" should "match content type with lower and upper case charset" in {
     val o = endpoint.put
@@ -13,7 +12,7 @@ class RichEndpointOutputTest extends AnyFlatSpec with Matchers {
       .out(stringBody)
       .output
 
-    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=utf-8")) should be(true)
-    o.hasBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=UTF-8")) should be(true)
+    o.hasOptionalBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=utf-8")) should be(true)
+    o.hasOptionalBodyMatchingContent(MediaType.unsafeParse("text/plain; charset=UTF-8")) should be(true)
   }
 }

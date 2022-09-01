@@ -273,6 +273,12 @@ val e: PublicEndpoint[FruitAmount, Unit, Unit, Nothing] =
   endpoint.in(jsonBody[FruitAmount])
 ```
 
+## Enumerations
+
+Currently only schemas for Scala2's `Enumeration#Value` enumerations are automatically derived. For Scala3 `enum`s,
+an implicit schema value has to be provided by hand. See the enumeration docs in [validation](validation.md) for
+details.
+
 ## Next
 
 Read on about [validation](validation.md).

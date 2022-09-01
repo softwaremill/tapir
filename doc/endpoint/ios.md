@@ -220,7 +220,7 @@ To match only the root path, use an empty string: `endpoint.in("")` will match `
 `http://server.com`.
 
 To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
-`paths`, e.g.: `endpoint.in("api" / "download").in(paths)"`.
+`paths`, e.g.: `endpoint.in("api" / "download").in(paths)`.
 
 ## Status codes 
 
