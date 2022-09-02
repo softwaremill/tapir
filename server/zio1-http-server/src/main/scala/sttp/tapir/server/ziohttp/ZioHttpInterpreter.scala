@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
-import zhttp.http.{Http, HttpData, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
+import zhttp.http.{Http, Body, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
 
 trait ZioHttpInterpreter[R] {
@@ -47,7 +47,7 @@ trait ZioHttpInterpreter[R] {
                   Response(
                     status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
                     headers = ZioHttpHeaders(allHeaders),
-                    data = resp.body.map { case (stream, _) => HttpData.fromStream(stream) }.getOrElse(HttpData.empty)
+                    data = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
                   )
                 )
               case RequestResult.Failure(_) => Http.empty
