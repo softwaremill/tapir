@@ -530,6 +530,11 @@ object EndpointIO {
   //
 
   case class Example[+T](value: T, name: Option[String], summary: Option[String], description: Option[String]) {
+
+    def this(value: T, name: Option[String], summary: Option[String]) = {
+      this(value, name, summary, None)
+    }
+
     def map[B](f: T => B): Example[B] = copy(value = f(value))
   }
 
