@@ -1366,6 +1366,7 @@ lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-client"))
