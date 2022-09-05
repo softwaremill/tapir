@@ -4,7 +4,7 @@ A schema describes the shape of a value, how the low-level representation should
 used when generating [documentation](../docs/openapi.md) and when [validating](validation.md) incoming values.
 
 Schemas are typically defined as implicit values. They are part of [codecs](codecs.md), and are looked up in the 
-implicit scope during codec derivation, as well as wehn using [json](json.md) or [form](forms.md) bodies.
+implicit scope during codec derivation, as well as when using [json](json.md) or [form](forms.md) bodies.
 
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
