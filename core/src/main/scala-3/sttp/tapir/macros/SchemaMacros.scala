@@ -101,9 +101,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
-  /** Create a coproduct schema (e.g. for a `sealed trait`), where the discriminator between child types is computed from the base type
-    * using `extractor`, and serialised to a string using `asString`. The `extractor` must be a field read of the base type, e.g.
-    * `_.myField`. The field, if not yet present, is added to each child schema.
+  /** Create a coproduct schema (e.g. for a `sealed trait`), where the value of the discriminator between child types is a read of a field
+    * of the base type. The field, if not yet present, is added to each child schema.
     *
     * The schemas of the child types have to be provided explicitly with their value mappings in `mapping`.
     *
