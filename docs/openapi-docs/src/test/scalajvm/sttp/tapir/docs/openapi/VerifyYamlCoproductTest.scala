@@ -5,7 +5,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData2._
@@ -156,44 +155,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   }
 
   test("coproduct using a wrapped representation of child schemas") {
-    val conf = implicitly[Configuration]
-
-    val implicitPersonSchema = implicitly[Schema[Person]]
-    val wrappedPersonSchema = Schema(
-      schemaType = SchemaType.SProduct(
-        List(
-          SchemaType.SProductField[Person, Person](
-            FieldName(conf.toDiscriminatorValue(implicitPersonSchema.name.getOrElse(Schema.SName.Unit)).toLowerCase),
-            implicitPersonSchema,
-            p => Some(p)
-          )
-        )
-      )
-    )
-
-    val implicitOrganizationSchema = implicitly[Schema[Organization]]
-    val wrappedOrganizationSchema = Schema(
-      schemaType = SchemaType.SProduct(
-        List(
-          SchemaType.SProductField[Organization, Organization](
-            FieldName(conf.toDiscriminatorValue(implicitOrganizationSchema.name.getOrElse(Schema.SName.Unit)).toLowerCase),
-            implicitOrganizationSchema,
-            o => Some(o)
-          )
-        )
-      )
-    )
-
-    implicit val entitySchema: Schema[Entity] = Schema(
-      name = Some(Schema.SName("Entity")),
-      schemaType = SchemaType.SCoproduct(
-        List(wrappedPersonSchema, wrappedOrganizationSchema),
-        None
-      ) {
-        case p: Person       => Some(SchemaWithValue(wrappedPersonSchema, p))
-        case o: Organization => Some(SchemaWithValue(wrappedOrganizationSchema, o))
-      }
-    )
+    implicit val entitySchema: Schema[Entity] = Schema.oneOfWrapped[Entity]
 
     val entityEndpoint = endpoint.get
       .in("api" / "entity" / path[String]("entityId"))
@@ -202,7 +164,6 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("coproduct/expected_coproduct_wrapped.yml")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(entityEndpoint), "title", "1.0").toYaml
-    println(actualYaml)
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }

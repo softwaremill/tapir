@@ -282,6 +282,23 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     }
   }
 
+  it should "create a one-of wrapped schema" in {
+    val schema = Schema.oneOfWrapped[Entity]
+    val schemaType: SCoproduct[Entity] = schema.schemaType.asInstanceOf[SCoproduct[Entity]]
+
+    schemaType.discriminator shouldBe None
+    schemaType.subtypes shouldBe List(
+      Schema.wrapWithSingleFieldProduct(Schema.derived[Organization]),
+      Schema.wrapWithSingleFieldProduct(Schema.derived[User])
+    )
+    schemaType.subtypeSchema(User("x", "y")) shouldBe Some(
+      SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[User]), User("x", "y"))
+    )
+    schemaType.subtypeSchema(Organization("a")) shouldBe Some(
+      SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[Organization]), Organization("a"))
+    )
+  }
+
   it should "create a schema using oneOfField given an enum extractor" in {
     sealed trait YEnum
     case object Y1 extends YEnum

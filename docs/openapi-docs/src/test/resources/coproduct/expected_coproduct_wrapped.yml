@@ -32,16 +32,16 @@ components:
     Entity:
       oneOf:
         - required:
-            - organization
+            - Organization
           type: object
           properties:
-            organization:
+            Organization:
               $ref: '#/components/schemas/Organization'
         - required:
-            - person
+            - Person
           type: object
           properties:
-            person:
+            Person:
               $ref: '#/components/schemas/Person'
     Organization:
       required:
