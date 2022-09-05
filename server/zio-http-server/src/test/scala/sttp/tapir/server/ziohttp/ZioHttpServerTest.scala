@@ -35,10 +35,10 @@ class ZioHttpServerTest extends TestSuite {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
             val route = ZioHttpInterpreter().toHttp(ep)
             val test: UIO[Assertion] = route(Request(url = URL.apply(Path.empty / "p1")))
-              .flatMap(response => response.data.toByteBuf.map(_.toString(CharsetUtil.UTF_8)))
+              .flatMap(response => response.body.asString(CharsetUtil.UTF_8))
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            Unsafe.unsafeCompat(implicit u => r.unsafe.runToFuture(test))
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }
         )
 

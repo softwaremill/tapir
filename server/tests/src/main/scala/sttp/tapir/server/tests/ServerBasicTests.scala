@@ -192,7 +192,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri?fruit2=orange").send(backend).map(_.code shouldBe StatusCode.BadRequest)
     },
-    testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { (backend, baseUri) =>
+    testServer(in_query_list_out_header_list, "foobar")((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
         .send(backend)
@@ -200,6 +200,19 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           if (multipleValueHeaderSupport) {
             r.headers.filter(_.is("hh")).map(_.value).toSet shouldBe Set("v3", "v2", "v1", "v0")
           } else {
+            import java.nio.charset.Charset
+
+            val utf8Charset = Charset.forName("UTF-8")
+
+            val actualHeaderStr = r.headers.filter(_.is("hh")).map(_.value).head
+            val actualHeaderBytes = actualHeaderStr.getBytes(utf8Charset)
+
+            val expectedHeaderStr = "v3, v2, v1, v0"
+            val expectedHeaderBytes = expectedHeaderStr.getBytes(utf8Charset)
+
+            println(s"*** Header strings ***\ngot: $actualHeaderStr\nexp: $expectedHeaderStr")
+            println(s"*** Header bytes ***\ngot: ${actualHeaderBytes.mkString("Array(", ", ", ")")}\nexp: ${expectedHeaderBytes.mkString("Array(", ", ", ")")}")
+
             r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
           }
         }
@@ -515,10 +528,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/p2")
-        .body("a" * 1000000)
+        .body("a" * 100)
         .send(backend)
-        .map { r => r.body shouldBe "p2 1000000" }
+        .map { r => println(s"---R = ${r.show()}"); r.body shouldBe "p2 100" }
     },
+
+
     testServer(
       "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
       NonEmptyList.of(
