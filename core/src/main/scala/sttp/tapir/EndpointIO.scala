@@ -535,12 +535,19 @@ object EndpointIO {
       this(value, name, summary, None)
     }
 
+    def description(description: String): Example[T] = copy(description = Some(description))
+
     def map[B](f: T => B): Example[B] = copy(value = f(value))
   }
 
   object Example {
-    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None, description: Option[String] = None): Example[T] =
-      Example(value, name, summary, description)
+
+    def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] =
+      new Example(value, name, summary)
+
+    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] =
+      Example(value, name, summary)
+
   }
 
   case class Info[T](

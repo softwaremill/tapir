@@ -44,7 +44,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
           .out(
             jsonBody[Entity].examples(
               List(
-                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary"), Some("Some description")),
+                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")).description("Some description"),
                 Example.of(Organization("acme"), Some("Acme"))
               )
             )
@@ -189,7 +189,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val e = endpoint.in(
       "users" / query[Option[Boolean]]("active")
         .description("Filter for only active or inactive users.")
-        .example(Example.of(value = Some(true), description = Some("Get only active users")))
+        .example(Example.of(value = Some(true)).description("Get only active users"))
     )
 
     val expectedYaml = load("example/expected_single_example_with_description.yml")
