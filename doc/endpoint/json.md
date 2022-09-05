@@ -268,6 +268,16 @@ To add support for additional JSON libraries, see the
 [sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/sttp/tapir/json/circe/TapirJsonCirce.scala)
 for the Circe codec (which is just a couple of lines of code).
 
+## Coproducts (enums, sealed traits, classes)
+
+If you are serialising a sealed hierarchy, such as a Scala 3 `enum`, a `sealed trait` or `sealed class`, the configuration
+of [schema derivation](schemas.md) will have to match the configuration of your json library. Different json libraries
+have different defaults when it comes to a discrimination strategy, so in order to have the schemas (and hence the
+documentation) in sync with how the values are serialised, you will have to configure schema derivation as well.
+
+Schemas are referenced at the point of `jsonBody` usage, so any configuration must be available in the implicit scope
+when this method is called.
+
 ## Next
 
 Read on about [working with forms](forms.md).

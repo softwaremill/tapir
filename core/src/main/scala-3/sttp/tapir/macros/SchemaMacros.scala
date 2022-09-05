@@ -101,7 +101,15 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
-  /** @param discriminatorSchema
+  /** Create a coproduct schema (e.g. for a `sealed trait`), where the value of the discriminator between child types is a read of a field
+    * of the base type. The field, if not yet present, is added to each child schema.
+    *
+    * The schemas of the child types have to be provided explicitly with their value mappings in `mapping`.
+    *
+    * Note that if the discriminator value is some transformation of the child's type name (obtained using the implicit [[Configuration]]),
+    * the coproduct schema can be derived automatically or semi-automatically.
+    *
+    * @param discriminatorSchema
     *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
     */
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
@@ -109,6 +117,14 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] = ${
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf, 'discriminatorSchema)
   }
+
+  /** Create a coproduct schema for an `enum`, `sealed trait` or `sealed abstract class`, where to discriminate between child types a
+    * wrapper product is used. The name of the sole field in this product corresponds to the type's name, transformed using the implicit
+    * [[Configuration]].
+    *
+    * See also [[Schema.wrapWithSingleFieldProduct]], which creates the wrapper product given a schema.
+    */
+  inline def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = ${ SchemaCompanionMacros.generateOneOfWrapped[E]('conf) }
 
   /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
   implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] = ${
@@ -210,6 +226,67 @@ private[tapir] object SchemaCompanionMacros {
         ),
         Some(sname)
       )
+    }
+  }
+
+  def generateOneOfWrapped[E: Type](conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
+    import q.reflect.*
+
+    val tpe = TypeRepr.of[E]
+    val symbol = tpe.typeSymbol
+    val typeParams = SNameMacros.extractTypeArguments(tpe)
+
+    if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
+      report.errorAndAbort("Can only generate a coproduct schema for an enum, sealed trait or class.")
+    } else {
+      val subclasses = symbol.children.toList.sortBy(_.name)
+
+      val subclassesSchemas: List[Expr[(String, Schema[_])]] = subclasses.map(subclass =>
+        TypeIdent(subclass).tpe.asType match {
+          case '[f] =>
+            val subSchema = Expr.summon[Schema[f]].get
+            '{ ${ Expr(subclass.name) } -> Schema.wrapWithSingleFieldProduct($subSchema)($conf) }
+        }
+      )
+
+      def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[_]]]) = {
+        val eIdent = e.asTerm match {
+          case Inlined(_, _, ei: Ident) => ei
+          case ei: Ident                => ei
+        }
+
+        val t = Match(
+          eIdent,
+          subclasses.map { subclass =>
+            CaseDef(
+              Typed(Wildcard(), TypeIdent(subclass)),
+              None,
+              Block(Nil, '{ Some(SchemaWithValue($map(${ Expr(subclass.name) }).asInstanceOf[Schema[Any]], $e)) }.asTerm)
+            )
+          }
+        )
+
+        t.asExprOf[Option[SchemaWithValue[_]]]
+      }
+
+      '{
+        import _root_.sttp.tapir.internal._
+        import _root_.sttp.tapir.Schema
+        import _root_.sttp.tapir.Schema._
+        import _root_.sttp.tapir.SchemaType._
+        import _root_.scala.collection.immutable.{List, Map}
+
+        val subclassNameToSchema: List[(String, Schema[_])] = List(${ Varargs(subclassesSchemas) }: _*)
+        val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
+
+        val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
+        Schema(
+          schemaType = SCoproduct[E](subclassNameToSchema.map(_._2), None) { e =>
+            ${ subtypeSchema('e, 'subclassNameToSchemaMap) }
+          },
+          name = Some(sname)
+        )
+      }
     }
   }
 

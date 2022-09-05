@@ -153,4 +153,18 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("coproduct using a wrapped representation of child schemas") {
+    implicit val entitySchema: Schema[Entity] = Schema.oneOfWrapped[Entity]
+
+    val entityEndpoint = endpoint.get
+      .in("api" / "entity" / path[String]("entityId"))
+      .in(jsonBody[Entity])
+
+    val expectedYaml = load("coproduct/expected_coproduct_wrapped.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(entityEndpoint), "title", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
