@@ -210,7 +210,18 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
             val expectedHeaderStr = "v3, v2, v1, v0"
             val expectedHeaderBytes = expectedHeaderStr.getBytes(utf8Charset)
 
+            /**
+              * *** Header strings ***
+              * got: "v3, v2, v1, v0"
+              * exp: v3, v2, v1, v0
+              */
             println(s"*** Header strings ***\ngot: $actualHeaderStr\nexp: $expectedHeaderStr")
+
+            /**
+              * *** Header bytes ***
+              * got: Array(34, 118, 51, 44, 32, 118, 50, 44, 32, 118, 49, 44, 32, 118, 48, 34)
+              * exp: Array(118, 51, 44, 32, 118, 50, 44, 32, 118, 49, 44, 32, 118, 48)
+              */
             println(s"*** Header bytes ***\ngot: ${actualHeaderBytes.mkString("Array(", ", ", ")")}\nexp: ${expectedHeaderBytes.mkString("Array(", ", ", ")")}")
 
             r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
@@ -528,9 +539,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/p2")
-        .body("a" * 100)
+        .body("a" * 1000000)
         .send(backend)
-        .map { r => println(s"---R = ${r.show()}"); r.body shouldBe "p2 100" }
+        .map { r => r.body shouldBe "p2 1000000" }
     },
 
 

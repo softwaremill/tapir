@@ -151,7 +151,7 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
     badRequestWithCorrectAuthAndEndpointHidingTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
-    testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"missing $authType") { (backend, baseUri) =>
+    testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"missing auth $authType") { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.Unauthorized
         r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))

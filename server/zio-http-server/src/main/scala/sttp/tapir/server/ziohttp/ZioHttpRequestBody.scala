@@ -32,7 +32,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = stream(serverRequest).asInstanceOf[streams.BinaryStream]
 
   private def stream(serverRequest: ServerRequest): Stream[Throwable, Byte] =
-    zioHttpRequest((serverRequest)).body.asStream
+    zioHttpRequest(serverRequest).body.asStream
 
   private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] =
     zioHttpRequest(serverRequest).body.asArray
