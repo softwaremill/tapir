@@ -7,7 +7,6 @@ import sttp.client3.httpclient.fs2.HttpClientFs2Backend
 import sttp.client3.{PartialRequest, SttpBackend, asStringAlways, basicRequest}
 import sttp.model.Header
 import sttp.monad.MonadError
-import scala.util.matching.Regex
 
 package object tests {
   val backendResource: Resource[IO, SttpBackend[IO, Fs2Streams[IO] with WebSockets]] = HttpClientFs2Backend.resource()

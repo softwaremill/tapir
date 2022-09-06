@@ -380,7 +380,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           }
     },
     testServer(in_raw_with_json_out_string) { case (s: String, fa: FruitAmount) =>
-      pureResult((s.length + " " + fa.amount).asRight[Unit])
+      pureResult((s"${s.length} ${fa.amount}").asRight[Unit])
     } { (backend, baseUri) =>
       basicRequest
         .post(uri"$baseUri/api/echo")
@@ -523,7 +523,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/p2")
-        .body("a" * 100_000)
+        .body("a" * 100000)
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.Ok
