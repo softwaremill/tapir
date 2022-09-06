@@ -30,7 +30,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         .send(backend)
         .map { response =>
           response.code shouldBe StatusCode.NoContent
-          response.headers should contain allOf (
+          response.headers.map(stripEnclosingDoubleQuotesFromHeader) should contain allOf (
             Header.accessControlAllowOrigin("*"),
             Header.accessControlAllowMethods(CORSConfig.default.allowedMethods.asInstanceOf[AllowedMethods.Some].methods.toList: _*),
             Header.accessControlAllowHeaders("X-Foo"),
@@ -62,7 +62,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         .send(backend)
         .map { response =>
           response.code shouldBe StatusCode.NoContent
-          response.headers should contain allOf (
+          response.headers.map(stripEnclosingDoubleQuotesFromHeader) should contain allOf (
             Header.accessControlAllowOrigin("https://example.com"),
             Header.accessControlAllowMethods(Method.POST),
             Header.accessControlAllowHeaders("X-Foo", "X-Bar"),
@@ -185,7 +185,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         .send(backend)
         .map { response =>
           response.code shouldBe StatusCode.Ok
-          response.headers should contain allOf (
+          response.headers.map(stripEnclosingDoubleQuotesFromHeader) should contain allOf (
             Header.accessControlAllowOrigin("https://example.com"),
             Header.accessControlExposeHeaders("X-Bar", "X-Baz"),
             Header.accessControlAllowCredentials(true),

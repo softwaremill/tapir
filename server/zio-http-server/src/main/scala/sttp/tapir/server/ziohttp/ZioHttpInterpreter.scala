@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
-import zhttp.http.{Http, Body, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
+import zhttp.http.{Body, Http, Request, Response, Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
 
 trait ZioHttpInterpreter[R] {
@@ -35,7 +35,7 @@ trait ZioHttpInterpreter[R] {
           .apply(ZioHttpServerRequest(req))
           .map {
             case RequestResult.Response(resp) =>
-              val baseHeaders = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList
+              val baseHeaders = resp.headers.map(h => h.name -> h.value).toList
               val allHeaders = resp.body match {
                 case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
                   (HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
@@ -54,9 +54,6 @@ trait ZioHttpInterpreter[R] {
       }.flatten
     }
   }
-
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
-    (hl._1, hl._2.map(f => f.value).mkString(", "))
 }
 
 object ZioHttpInterpreter {

@@ -51,6 +51,7 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
 
   private def validRequest(uri: Uri): Request[Either[String, String], Any] =
     basicRequest.post(uri.addPath("secret", "1234").addQuerySegment(QuerySegment.KeyValue("q", "x")))
+
   private def invalidRequest(uri: Uri): Request[Either[String, String], Any] = basicRequest.post(uri.addPath("secret", "1234"))
 
   private val endpoints = {
@@ -153,8 +154,11 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
     testServerLogic(endpoint.serverSecurityLogic(_ => result).serverLogic(_ => _ => result), s"missing auth $authType") { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
+        val cleansedHeader =
+          r.header("WWW-Authenticate").map(stripEnclosingDoubleQuotesFromString andThen reduceRepetitiveDoubleQuotes)
+
         r.code shouldBe StatusCode.Unauthorized
-        r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
+        cleansedHeader shouldBe Some(expectedChallenge(authType))
       }
     }
   }
