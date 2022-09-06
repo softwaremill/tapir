@@ -192,7 +192,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri?fruit2=orange").send(backend).map(_.code shouldBe StatusCode.BadRequest)
     },
-    testServer(in_query_list_out_header_list, "foobar")((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { (backend, baseUri) =>
+    testServer(in_query_list_out_header_list, "multiple header values")((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
         .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
         .send(backend)
@@ -200,7 +200,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           if (multipleValueHeaderSupport) {
             r.headers.filter(_.is("hh")).map(_.value).toSet shouldBe Set("v3", "v2", "v1", "v0")
           } else {
-            val maybeHeaderStrings =
+            val maybeHeaderValues =
               r.headers
                 .filter(_.is("hh"))
                 .map(_.value)
@@ -208,7 +208,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
                 .map(_.split(",").map(_.trim))
                 .map(_.toList)
 
-            maybeHeaderStrings.fold(assert(false))(ls => ls should contain allOf ("v0", "v1", "v2", "v3"))
+            maybeHeaderValues.fold(assert(false))(ls => ls should contain allOf ("v0", "v1", "v2", "v3"))
           }
         }
     },
