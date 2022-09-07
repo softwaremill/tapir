@@ -15,7 +15,8 @@ package object tests {
   def suspendResult[F[_]: MonadError, T](t: => T): F[T] = implicitly[MonadError[F]].eval(t)
 
   val stripEnclosingDoubleQuotesFromString: String => String = string =>
-    string.stripPrefix("\"").stripSuffix("\"")
+    if (string.startsWith("\"") && string.endsWith("\"")) string.stripPrefix("\"").stripSuffix("\"")
+    else string
 
   val stripEnclosingDoubleQuotesFromHeader: Header => Header = header =>
     Header(header.name, stripEnclosingDoubleQuotesFromString(header.value))
