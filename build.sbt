@@ -114,8 +114,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.11",
-  "ch.qos.logback" % "logback-core" % "1.2.11",
+  "ch.qos.logback" % "logback-classic" % "1.4.0",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -1237,6 +1236,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
       case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     },
