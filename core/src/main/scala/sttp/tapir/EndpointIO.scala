@@ -552,13 +552,9 @@ object EndpointIO {
   }
 
   object Example {
-
-    def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] =
-      new Example(value, name, summary)
-
-    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] =
-      Example(value, name, summary)
-
+    // required for binary compatibility
+    def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] = new Example(value, name, summary)
+    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
   }
 
   case class Info[T](
