@@ -533,6 +533,8 @@ object EndpointIO {
     // required for binary compatibility
     def this(value: T, name: Option[String], summary: Option[String]) = this(value, name, summary, None)
 
+    def name(name: String): Example[T] = copy(name = Some(name))
+    def summary(summary: String): Example[T] = copy(summary = Some(summary))
     def description(description: String): Example[T] = copy(description = Some(description))
 
     def map[B](f: T => B): Example[B] = copy(value = f(value))
