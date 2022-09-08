@@ -530,14 +530,23 @@ object EndpointIO {
   //
 
   case class Example[+T](value: T, name: Option[String], summary: Option[String], description: Option[String]) {
-
-    def this(value: T, name: Option[String], summary: Option[String]) = {
-      this(value, name, summary, None)
-    }
+    // required for binary compatibility
+    def this(value: T, name: Option[String], summary: Option[String]) = this(value, name, summary, None)
 
     def description(description: String): Example[T] = copy(description = Some(description))
 
     def map[B](f: T => B): Example[B] = copy(value = f(value))
+
+    // required for binary compatibility
+    def copy[TT](value: TT, name: Option[String], summary: Option[String]): Example[TT] =
+      Example(value, name, summary, description)
+
+    def copy[TT](
+        value: TT = this.value,
+        name: Option[String] = this.name,
+        summary: Option[String] = this.summary,
+        description: Option[String] = this.description
+    ): Example[TT] = Example(value, name, summary, description)
   }
 
   object Example {
