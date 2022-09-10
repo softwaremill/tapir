@@ -177,7 +177,7 @@ If you are having doubts on the *why* or *how* something works, don't hesitate t
 [gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
 
-The `core` module needs to remain binary-compatible with earlier version. To check if your changes meet this requirement,
+The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
 you can run `core/mimaReportBinaryIssues` from the sbt console. 
 
 ### Testing locally
