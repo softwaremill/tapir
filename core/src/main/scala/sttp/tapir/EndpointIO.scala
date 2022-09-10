@@ -554,6 +554,8 @@ object EndpointIO {
   object Example {
     // required for binary compatibility
     def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] = new Example(value, name, summary)
+
+    /** To add a description, use the [[Example.description]] method on the result. */
     def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
   }
 
