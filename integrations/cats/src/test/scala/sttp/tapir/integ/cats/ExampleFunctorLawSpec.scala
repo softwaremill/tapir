@@ -17,7 +17,8 @@ class ExampleFunctorLawSpec extends AnyFunSuite with FunSuiteDiscipline with Che
       t <- Arbitrary.arbitrary[T]
       name <- Arbitrary.arbitrary[Option[String]]
       summary <- Arbitrary.arbitrary[Option[String]]
-    } yield Example(t, name, summary)
+      description <- Arbitrary.arbitrary[Option[String]]
+    } yield Example(t, name, summary, description)
   }
 
   checkAll("Example.FunctorLaws", FunctorTests[Example].functor[Int, Int, String])
