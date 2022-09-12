@@ -30,11 +30,11 @@ jobs:
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
-    - name: Install libidn11-dev
+    - name: Install libidn2-dev
       if: matrix.target-platform == 'Native'
       run: |
         sudo apt-get update
-        sudo apt-get install libidn11-dev
+        sudo apt-get install libidn2-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
@@ -100,10 +100,10 @@ jobs:
           distribution: 'temurin'
           java-version: 11
           cache: 'sbt'
-      - name: Install libidn11-dev
+      - name: Install libidn2-dev
         run: |
           sudo apt-get update
-          sudo apt-get install libidn11-dev
+          sudo apt-get install libidn2-dev
       - name: Compile
         run: sbt compile
       - name: Publish artifacts
