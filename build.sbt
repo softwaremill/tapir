@@ -337,7 +337,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.1.5")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.0")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -431,7 +431,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.3" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.8.3" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.8.4" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -1123,7 +1123,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.81.Final"
+      "io.netty" % "netty-all" % "4.1.82.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1136,7 +1136,7 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.81.Final",
+      "io.netty" % "netty-all" % "4.1.82.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
