@@ -114,7 +114,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.0",
+  "ch.qos.logback" % "logback-classic" % "1.4.1",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
