@@ -21,16 +21,14 @@ object AwsJsRouteHandler {
     jsRoute(event).toJSPromise
   }
 
-  def catsIOHandler(event: AwsJsRequest, route: Route[IO])(implicit ec: ExecutionContext): scala.scalajs.js.Promise[AwsJsResponse] = {
+  def catsIOHandler(event: AwsJsRequest, route: Route[IO]): scala.scalajs.js.Promise[AwsJsResponse] = {
     implicit val monadError: MonadError[IO] = new CatsMonadAsyncError[IO]()
     val jsRoute = toJsRoute(route)
-    jsRoute(event).unsafeToFuture().toJSPromise
+    jsRoute(event).unsafeToPromise()
   }
 
-  def catsResourceHandler(event: AwsJsRequest, routeR: Resource[IO, Route[IO]])(implicit
-      ec: ExecutionContext
-  ): scala.scalajs.js.Promise[AwsJsResponse] = {
+  def catsResourceHandler(event: AwsJsRequest, routeR: Resource[IO, Route[IO]]): scala.scalajs.js.Promise[AwsJsResponse] = {
     implicit val monadError: MonadError[IO] = new CatsMonadAsyncError[IO]()
-    routeR.use(route => toJsRoute(route).apply(event)).unsafeToFuture().toJSPromise
+    routeR.use(route => toJsRoute(route).apply(event)).unsafeToPromise()
   }
 }

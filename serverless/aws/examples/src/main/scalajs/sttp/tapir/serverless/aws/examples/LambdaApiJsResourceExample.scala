@@ -7,11 +7,8 @@ import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.js._
 
 import scala.scalajs.js.annotation._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object LambdaApiJsResourceExample {
-
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val helloEndpoint: ServerEndpoint[Any, IO] = endpoint.get
     .in("api" / "hello")
@@ -20,8 +17,10 @@ object LambdaApiJsResourceExample {
 
   val options: AwsServerOptions[IO] = AwsCatsEffectServerOptions.default[IO].copy(encodeResponseBody = false)
 
-  val route: Resource[IO, Route[IO]] = Resource.pure(AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)) // for demonstration purposes only
+  val route: Resource[IO, Route[IO]] =
+    Resource.pure(AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)) // for demonstration purposes only
 
   @JSExportTopLevel(name = "handler")
-  def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] = AwsJsRouteHandler.catsResourceHandler(event, route)
+  def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] =
+    AwsJsRouteHandler.catsResourceHandler(event, route)
 }
