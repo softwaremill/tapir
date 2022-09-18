@@ -13,7 +13,7 @@ import sttp.tapir.grpc.protobuf.pbdirect._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkagrpc.AkkaGrpcServerInterpreter
 import sttp.tapir.generic.auto._
-import example.myapp.helloworld.grpc.{SimpleBook => GenSimpleBook, Library => GenLibrary, LibraryClient => GenLibraryClient}
+import sttp.tapir.grpc.examples.gen.{SimpleBook => GenSimpleBook, Library => GenLibrary, LibraryClient => GenLibraryClient}
 
 import java.io.ByteArrayOutputStream
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -28,7 +28,7 @@ object Endpoints {
     .in(grpcBody[SimpleBook])
     .out(grpcBody[SimpleBook])
 
-  val proto = new ProtobufInterpreter(new EndpointToProtobufMessage(), new EndpointToProtobufService()).toProtobuf(List(addBook))
+  val es = List(addBook)
 }
 
 object SimpleBooksExample extends StrictLogging {
@@ -72,13 +72,14 @@ class TestServer(system: ActorSystem) {
   }
 }
 
-object Main extends ProtoSchemaRegistry {
+object MainGenerator extends ProtoSchemaGenerator {
   val renderer: ProtoRenderer = new ProtoRenderer()
-  // val path: String = "???/tapir/grpc/examples/src/main/protobuf/main.proto"
+  
   val path: String = "/Users/mborek/OSS/tapir/grpc/examples/src/main/protobuf/main.proto"
-  val proto: Protobuf = Endpoints.proto
+  val endpoints = Endpoints.es
+  val packageName = "sttp.tapir.grpc.examples.gen"
 
-  register()
+  generate()
 }
 
 object ClientMain extends App with StrictLogging {
@@ -87,12 +88,8 @@ object ClientMain extends App with StrictLogging {
   implicit val sys = ActorSystem("HelloWorldClient")
   implicit val ec = sys.dispatcher
 
-  val client = GenLibraryClient(GrpcClientSettings.connectToServiceAt("localhost", 8080).withTls(false))
+  val client = GenLibraryClient(GrpcClientSettings.connectToServiceAt("localhost", 8080).withTls(false))  
+  val result = Await.result(client.addBook(GenSimpleBook("TEST_BOOK")), 10.second)
 
-  val outputStream = new ByteArrayOutputStream()
-  GenSimpleBook("TEST_BOOK").writeTo(outputStream)
-  val serialized = outputStream.toByteArray()
-  println(s"SERIALIZED BODY: [${serialized.mkString}]")
-  Await.ready(client.addBook(GenSimpleBook("TEST_BOOK")), 10.second)
-
+  println(s"Result: [$result]")
 }

@@ -69,7 +69,7 @@ class EndpointToProtobufMessage {
           case Some(name) =>
             val protoFields = fields.map { field =>
               field.schema.schemaType match {
-                case SString() => new ProtobufMessageField("string", field.name.name, None)
+                case SString() => ProtobufMessageField("string", field.name.name, None)
                 case _        => ???
               }
             }
