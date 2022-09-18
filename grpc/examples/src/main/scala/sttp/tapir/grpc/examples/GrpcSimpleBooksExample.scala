@@ -73,8 +73,6 @@ class TestServer(system: ActorSystem) {
 }
 
 object MainGenerator extends ProtoSchemaGenerator {
-  val renderer: ProtoRenderer = new ProtoRenderer()
-  
   val path: String = "/Users/mborek/OSS/tapir/grpc/examples/src/main/protobuf/main.proto"
   val endpoints = Endpoints.es
   val packageName = "sttp.tapir.grpc.examples.gen"

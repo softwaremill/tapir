@@ -1,10 +1,7 @@
 package sttp.tapir.grpc.protobuf
 
+import sttp.tapir.SchemaType.{SProduct, SString}
 import sttp.tapir._
-import sttp.tapir.StreamBodyIO
-import sttp.tapir.Codec
-import sttp.tapir.SchemaType.SProduct
-import sttp.tapir.SchemaType.SString
 import sttp.tapir.grpc.protobuf.model._
 
 class EndpointToProtobufMessage {
@@ -12,8 +9,16 @@ class EndpointToProtobufMessage {
     es.flatMap(forEndpoint)
   }
 
+  private def distinctBy[T, U](elements: List[T])(selector: T => U): List[T] = elements
+    .groupBy(selector)
+    .flatMap {
+      case (_, Seq(el)) => Seq(el)
+      case _            => Seq.empty[T]
+    }
+    .toList
+
   private def forEndpoint(e: AnyEndpoint): List[ProtobufMessage] =
-    (forInput(e.input) ++ forOutput(e.output)).distinctBy(_.name)
+    distinctBy(forInput(e.input) ++ forOutput(e.output))(_.name)
 
   private def forInput(input: EndpointInput[_]): List[ProtobufMessage] = {
     input match {
@@ -70,7 +75,7 @@ class EndpointToProtobufMessage {
             val protoFields = fields.map { field =>
               field.schema.schemaType match {
                 case SString() => ProtobufMessageField("string", field.name.name, None)
-                case _        => ???
+                case _         => ???
               }
             }
             List(new ProtobufMessage(name.fullName.split('.').last, protoFields)) // FIXME

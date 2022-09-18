@@ -9,7 +9,6 @@ import sttp.tapir.AnyEndpoint
 import sttp.tapir.grpc.protobuf.model._
 
 trait ProtoSchemaGenerator extends App with StrictLogging {
-  def renderer: ProtoRenderer
   def path: String
   def endpoints: Iterable[AnyEndpoint]
   def packageName: PackageName
@@ -17,6 +16,7 @@ trait ProtoSchemaGenerator extends App with StrictLogging {
   def generate(): Unit = {
     logger.info(s"Generating proto file")
 
+    val renderer: ProtoRenderer = new ProtoRenderer()
     val interpreter = new ProtobufInterpreter(new EndpointToProtobufMessage(), new EndpointToProtobufService())
     val proto = interpreter.toProtobuf(endpoints, Some(packageName))
 

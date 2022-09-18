@@ -3,7 +3,9 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "example.myapp.helloworld.grpc";
+
+
+option java_package = "sttp.tapir.grpc.examples.gen";
 
 
 
@@ -19,6 +21,7 @@ message SimpleBook {
 
 string title = 1;
         
+
 }
         
       
