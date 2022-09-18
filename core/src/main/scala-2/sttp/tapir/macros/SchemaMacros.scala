@@ -32,13 +32,25 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   def schemaForMap[K, V: Schema](keyToString: K => String): Schema[Map[K, V]] =
     macro SchemaMapMacro.generateSchemaForMap[K, V]
 
-  /** @param discriminatorSchema
+  /** Create a coproduct schema (e.g. for a `sealed trait`), where the value of the discriminator between child types is a read of a field
+    * of the base type. The field, if not yet present, is added to each child schema.
+    *
+    * The schemas of the child types have to be provided explicitly with their value mappings in `mapping`.
+    *
+    * Note that if the discriminator value is some transformation of the child's type name (obtained using the implicit [[Configuration]]),
+    * the coproduct schema can be derived automatically or semi-automatically.
+    *
+    * @param discriminatorSchema
     *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
     */
   def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(
       mapping: (V, Schema[_])*
-  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] =
-    macro OneOfMacro.generateOneOfUsingField[E, V]
+  )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] = macro OneOfMacro.generateOneOfUsingField[E, V]
+
+  /** Create a coproduct schema for a `sealed trait` or `sealed abstract class`, where to discriminate between child types a wrapper product
+    * is used. The name of the sole field in this product corresponds to the type's name, transformed using the implicit [[Configuration]].
+    */
+  def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = macro OneOfMacro.generateOneOfWrapped[E]
 
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
 

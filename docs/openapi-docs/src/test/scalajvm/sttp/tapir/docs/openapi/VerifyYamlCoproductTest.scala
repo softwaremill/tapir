@@ -8,6 +8,7 @@ import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData2._
+import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.tests.data.{Entity, Organization, Person}
@@ -131,6 +132,39 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("coproduct/expected_flat_either.yml")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ep, "title", "1.0").toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  // https://github.com/softwaremill/tapir/issues/2358
+  test("coproduct elements used individually should have separate schemas when there's a discriminator") {
+    implicit val tapirSchemaConfiguration: Configuration = Configuration.default.withDiscriminator("kind").withKebabCaseDiscriminatorValues
+
+    val personEndpoint = endpoint.get
+      .in("api" / "user" / path[String]("userId"))
+      .in(jsonBody[Person])
+
+    val entityEndpoint = endpoint.get
+      .in("api" / "entity" / path[String]("entityId"))
+      .in(jsonBody[Entity])
+
+    val expectedYaml = load("coproduct/expected_coproduct_independent.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(personEndpoint, entityEndpoint), "title", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("coproduct using a wrapped representation of child schemas") {
+    implicit val entitySchema: Schema[Entity] = Schema.oneOfWrapped[Entity]
+
+    val entityEndpoint = endpoint.get
+      .in("api" / "entity" / path[String]("entityId"))
+      .in(jsonBody[Entity])
+
+    val expectedYaml = load("coproduct/expected_coproduct_wrapped.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(entityEndpoint), "title", "1.0").toYaml
+
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 }

@@ -115,4 +115,46 @@ case class PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT,
               case Some(v) => Right(v)
             }
     )
+
+  /** If the error type is an `Either`, e.g. when using `errorOutEither`, this method accepts server logic that returns either success or
+    * the `Right` error type. Use of this method avoids having to wrap the returned error in `Right`.
+    */
+  def serverLogicRightErrorOrSuccess[LE, RE](
+      f: PRINCIPAL => INPUT => F[Either[RE, OUTPUT]]
+  )(implicit
+      eIsEither: Either[LE, RE] =:= ERROR_OUTPUT
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, F] =
+    ServerEndpoint(
+      endpoint,
+      securityLogic,
+      implicit m =>
+        u =>
+          i => {
+            f(u)(i).map {
+              case Left(e)  => Left(Right(e))
+              case Right(r) => Right(r)
+            }
+          }
+    )
+
+  /** If the error type is an `Either`, e.g. when using `errorOutEither`, this method accepts server logic that returns either success or
+    * the `Left` error type. Use of this method avoids having to wrap the returned error in `Left`.
+    */
+  def serverLogicLeftErrorOrSuccess[LE, RE](
+      f: PRINCIPAL => INPUT => F[Either[LE, OUTPUT]]
+  )(implicit
+      eIsEither: Either[LE, RE] =:= ERROR_OUTPUT
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, F] =
+    ServerEndpoint(
+      endpoint,
+      securityLogic,
+      implicit m =>
+        u =>
+          i => {
+            f(u)(i).map {
+              case Left(e)  => Left(Left(e))
+              case Right(r) => Right(r)
+            }
+          }
+    )
 }

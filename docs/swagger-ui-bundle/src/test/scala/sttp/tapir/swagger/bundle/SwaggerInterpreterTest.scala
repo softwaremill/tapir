@@ -9,7 +9,7 @@ import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
-import sttp.model.StatusCode
+import sttp.model.{Header, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.swagger.SwaggerUIOptions
@@ -82,6 +82,25 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
 
           respCss.code shouldBe StatusCode.Ok
           respCss.body should include(".swagger-ui")
+
+          // test getting the yaml
+          val respYaml = basicRequest
+            .response(asStringAlways)
+            .get(uri"http://localhost:$port/${context ++ prefix}/docs.yaml")
+            .send(backend)
+
+          respYaml.code shouldBe StatusCode.Ok
+          respYaml.body should include("paths:")
+
+          // test getting the yaml with `Accepts: application/json, application/yaml`, as that's what SwaggerUI sends (#2396)
+          val respYamlAccepts = basicRequest
+            .response(asStringAlways)
+            .header(Header.accept(MediaType.ApplicationJson, MediaType.unsafeParse("application/yaml")))
+            .get(uri"http://localhost:$port/${context ++ prefix}/docs.yaml")
+            .send(backend)
+
+          respYamlAccepts.code shouldBe StatusCode.Ok
+          respYamlAccepts.body should include("paths:")
         }
       }
   }

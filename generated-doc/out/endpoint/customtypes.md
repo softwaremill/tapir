@@ -1,11 +1,31 @@
 # Custom types
 
 To support a custom type, you'll need to provide an implicit `Codec` for that type, or the components to create such
-a codec. The below mostly applies to wrapper types for inputs/outputs such as query parameters, path segments or 
-headers. For custom types used in [json](json.md) or [forms](forms.md) bodies, see the dedicated sections. 
+a codec. 
+
+Most commonly, you'll be defining a custom codec so that a custom type can be used in inputs/outputs such as query 
+parameters, path segments or headers. [Json](json.md) and [forms](forms.md) bodies have dedicated support for 
+creating codecs, see the appropriate sections.
 
 A custom codec can be created by writing one from scratch, mapping over an existing codec, or automatically deriving one.
 Which of these approaches can be taken, depends on the context in which the codec will be used.
+
+## Automatically deriving codecs
+
+In some cases, codecs can be automatically derived:
+
+* for supported [json](json.md) libraries
+* for urlencoded and multipart [forms](forms.md)
+* for value classes (extending `AnyVal`)
+
+Automatic codec derivation usually requires other implicits, such as:
+
+* json encoders/decoders from the json library
+* codecs for individual form fields
+* schema of the custom type, through the `Schema[T]` implicits (see the [next section on schemas](schemas.md))
+
+Note that derivation of e.g. circe json encoders/decoders and tapir schemas are separate processes, and must be
+configured separately.
 
 ## Creating an implicit codec by hand
 
@@ -76,22 +96,10 @@ endpoint.in(query[MyId]("myId"))
 endpoint.in(path[MyId])
 ```
 
-## Automatically deriving codecs
+### Codecs for enumerations
 
-In some cases, codecs can be automatically derived:
-
-* for supported [json](json.md) libraries
-* for urlencoded and multipart [forms](forms.md)
-* for value classes (extending `AnyVal`)
-
-Automatic codec derivation usually requires other implicits, such as:
-
-* json encoders/decoders from the json library
-* codecs for individual form fields
-* schema of the custom type, through the `Schema[T]` implicits (see the next section)
-
-Note the derivation of e.g. circe json encoders/decoders and tapir schemas are separate processes, and must be 
-configured separately.
+In some cases, codecs for enumerations can be derived, but need to be defined as an implicit value by hand, because
+you'll need to provide some parameters. See the section on [enumerations validators](validation.md) for more details.
 
 ## Next
 

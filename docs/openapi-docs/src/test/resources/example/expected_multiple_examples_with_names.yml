@@ -16,6 +16,7 @@ paths:
               examples:
                 Michal:
                   summary: Some summary
+                  description: Some description
                   value:
                     Person:
                       name: michal
