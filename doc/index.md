@@ -200,6 +200,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/xml
    endpoint/forms
    endpoint/security
    endpoint/streaming
