@@ -270,6 +270,9 @@ case class FruitAmount(fruit: String, amount: Int)
 
 case class MyExtension(string: String, int: Int)
 
+implicit val fruitAmountSchemaWithMyExtension: Schema[FruitAmount] = implicitly[Derived[Schema[FruitAmount]]].value
+  .docsExtension("hello", MyExtension("world", 42))
+
 val sampleEndpoint =
   endpoint.post
     .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
