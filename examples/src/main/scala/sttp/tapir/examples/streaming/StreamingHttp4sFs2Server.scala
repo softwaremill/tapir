@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 object StreamingHttp4sFs2Server extends IOApp {
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
-  // body. Here, the schema is a `string` (set by `streamTextBody`)  and the media type is `text/plain`.
+  // body. Here, the schema is a `string` (set by `streamTextBody`) and the media type is `text/plain`.
   val streamingEndpoint: PublicEndpoint[Unit, Unit, (Long, Stream[IO, Byte]), Fs2Streams[IO]] =
     endpoint.get
       .in("receive")
