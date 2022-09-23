@@ -13,24 +13,20 @@ import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 // https://github.com/softwaremill/tapir/issues/367
 object StreamingHttp4sFs2Server extends IOApp {
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
-  // body. Here, the schema is a `string` and the media type is `text/plain`.
+  // body. Here, the schema is a `string` (set by `streamTextBody`)  and the media type is `text/plain`.
   val streamingEndpoint: PublicEndpoint[Unit, Unit, (Long, Stream[IO, Byte]), Fs2Streams[IO]] =
     endpoint.get
       .in("receive")
       .out(header[Long](HeaderNames.ContentLength))
       .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
-  // mandatory implicits
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
-  // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
+  // converting an endpoint to a route (providing server-side logic)
   val streamingRoutes: HttpRoutes[IO] =
     Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint.serverLogicSuccess { _ =>
       val size = 100L
@@ -49,7 +45,6 @@ object StreamingHttp4sFs2Server extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     // starting the server
     BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> streamingRoutes).orNotFound)
       .resource
