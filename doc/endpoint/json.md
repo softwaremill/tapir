@@ -34,6 +34,7 @@ serialising/deserialising of the body must be part of the [server logic](../serv
 A schema can be provided in this case as well:
 
 ```scala mdoc:compile-only
+import sttp.tapir._
 import sttp.tapir.generic.auto._
 case class MyBody(field: Int)
 stringJsonBody.schema(implicitly[Schema[MyBody]].as[String])
