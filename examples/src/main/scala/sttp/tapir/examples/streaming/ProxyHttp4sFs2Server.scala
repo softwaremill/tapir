@@ -9,26 +9,33 @@ import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.client3.httpclient.fs2.HttpClientFs2Backend
-import sttp.model.{Header, HeaderNames, Method, Uri}
+import sttp.model.{Header, HeaderNames, Method, QueryParams}
 import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
-/** Proxies requests to https://httpbin.org/anything */
+/** Proxies requests from /proxy to https://httpbin.org/anything */
 object ProxyHttp4sFs2Server extends IOApp with StrictLogging {
-  val proxyEndpoint: PublicEndpoint[(Method, Uri, List[Header], Stream[IO, Byte]), Unit, (List[Header], Stream[IO, Byte]), Fs2Streams[IO]] =
+  val proxyEndpoint: PublicEndpoint[
+    (Method, List[String], QueryParams, List[Header], Stream[IO, Byte]),
+    Unit,
+    (List[Header], Stream[IO, Byte]),
+    Fs2Streams[IO]
+  ] =
     endpoint
       .in(extractFromRequest(_.method))
-      .in(extractFromRequest(_.uri))
+      .in("proxy")
+      .in(paths)
+      .in(queryParams)
       .in(headers)
       .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream()))
       .out(headers)
       .out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream()))
 
   def proxyRoutes(backend: SttpBackend[IO, Fs2Streams[IO]]): HttpRoutes[IO] =
-    Http4sServerInterpreter[IO]().toRoutes(proxyEndpoint.serverLogicSuccess { case (method, uri, headers, body) =>
-      val proxyUri = uri.scheme("https").host("httpbin.org").port(None).withPath("anything" +: uri.path)
+    Http4sServerInterpreter[IO]().toRoutes(proxyEndpoint.serverLogicSuccess { case (method, paths, queryParams, headers, body) =>
+      val proxyUri = uri"https://httpbin.org/anything/$paths?$queryParams"
       val filteredHeaders = headers.filterNot(h => h.is(HeaderNames.Host))
-      logger.info(s"Proxying: $method $uri ($filteredHeaders)  -> $proxyUri")
+      logger.info(s"Proxying: $method $paths $queryParams ($filteredHeaders) -> $proxyUri")
       basicRequest
         .method(method, proxyUri)
         .headers(filteredHeaders: _*)
