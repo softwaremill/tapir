@@ -6,9 +6,10 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
+import play.api.http.ParserConfiguration
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
-import sttp.model.{Part, StatusCode}
+import sttp.model.{MediaType, Part, StatusCode}
 import sttp.monad.FutureMonad
 import sttp.tapir._
 import sttp.tapir.server.tests._
@@ -68,6 +69,35 @@ class PlayServerTest extends TestSuite {
                 }
             }
             .unsafeToFuture()
+        },
+        Test("accept string in big multipart") {
+          case class A(part1: Part[TapirFile], part2: String)
+          implicit val schema: Schema[A] = Schema.derived
+          val e = endpoint.post.in("hello").in(multipartBody[A]).out(stringBody).serverLogicSuccess(_ => Future.successful("world"))
+          val routes = PlayServerInterpreter().toRoutes(e)
+          interpreter
+            .server(NonEmptyList.of(routes))
+            .use { port =>
+              basicRequest
+                .post(uri"http://localhost:$port/hello")
+                .multipartBody(
+                  Part(
+                    "part1",
+                    ByteArrayBody(Array.ofDim[Byte](ParserConfiguration().maxMemoryBuffer.toInt + 100)),
+                    contentType = Some(MediaType.ApplicationOctetStream),
+                    fileName = Some("file.bin")
+                  ),
+                  Part("part2", StringBody("world", "utf-8"))
+                )
+                .send(backend)
+                .map(_.code shouldBe StatusCode.Ok)
+                // sometimes the connection is closed before received the response
+                .handleErrorWith {
+                  case _: SttpClientException.ReadException => IO.pure(succeed)
+                  case e                                    => IO.raiseError(e)
+                }
+            }
+            .unsafeToFuture()
         }
       )
 
@@ -79,7 +109,8 @@ class PlayServerTest extends TestSuite {
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false).tests() ++
+        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false, options = false)
+          .tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {

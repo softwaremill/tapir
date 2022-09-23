@@ -1,12 +1,17 @@
 # Schema derivation
 
-A schema describes the shape of a value, how the low-level representation should be structured.
+A schema describes the shape of a value, how the low-level representation should be structured. Schemas are primarily
+used when generating [documentation](../docs/openapi.md) and when [validating](validation.md) incoming values.
+
+Schemas are typically defined as implicit values. They are part of [codecs](codecs.md), and are looked up in the 
+implicit scope during codec derivation, as well as when using [json](json.md) or [form](forms.md) bodies.
 
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
-For case classes, `Schema[_]` values can be derived automatically using
-[Magnolia](https://github.com/softwaremill/magnolia), given that schemas are defined for all the case class's fields.
+For case classes and sealed hierarchies, `Schema[_]` values can be derived automatically using
+[Magnolia](https://github.com/softwaremill/magnolia), given that implicit schemas are available for all the case class's
+fields, or all of the implementations of the `enum`/`sealed trait`/`sealed class`.
 
 Two policies of custom type derivation are available:
 
@@ -111,8 +116,18 @@ implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaT
 
 ## Sealed traits / coproducts
 
-Schema derivation for coproduct types (sealed trait hierarchies) is supported as well. By default, such hierarchies
-will be represented as a coproduct which contains a list of child schemas, without any discriminator field.
+Schema derivation for coproduct types (sealed hierarchies) is supported as well. By default, such hierarchies
+will be represented as a coproduct which contains a list of child schemas, without any discriminators.
+
+```eval_rst
+.. note::
+
+  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
+  encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
+  configured in the json library, matching the configuration of the schema.  
+```
+
+### Field discriminators
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used
 during automatic and semi-automatic derivation:
@@ -128,7 +143,7 @@ The discriminator will be added as a field to all coproduct child schemas, if it
 the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and
 the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
 
-Alternatively, derived schemas can be customised (see below), and a discriminator can be added by calling
+Alternatively, derived schemas can be customised (see also below), and a discriminator can be added by calling
 the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, maping)` method. This method is useful when using
 semi-automatic or automatic derivation; in both cases a custom implicit has to be defined, basing on the derived
 one:
@@ -166,7 +181,7 @@ for example (this will also generate the appropriate mappings):
 sealed trait Entity {
   def kind: String
 } 
-case class Person(firstName:String, lastName:String) extends Entity { 
+case class Person(firstName: String, lastName: String) extends Entity { 
   def kind: String = "person"
 }
 case class Organization(name: String) extends Entity {
@@ -178,17 +193,29 @@ import sttp.tapir._
 val sPerson = Schema.derived[Person]
 val sOrganization = Schema.derived[Organization]
 implicit val sEntity: Schema[Entity] = 
-    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
+    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)(
+      "person" -> sPerson, "org" -> sOrganization)
 ```
 
-```eval_rst
-.. note::
+### Wrapper object discriminators
 
-  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
-  encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
-  configured in the json library, matching the configuration of the schema.  
+Another discrimination strategy uses a wrapper object. Such an object contains a single field, with its name 
+corresponding to the discriminator value. A schema can be automatically generated using the `Schema.oneOfWrapped`
+macro, for example:
+
+```scala mdoc:silent:reset
+sealed trait Entity
+case class Person(firstName: String, lastName: String) extends Entity
+case class Organization(name: String) extends Entity 
+
+import sttp.tapir._
+import sttp.tapir.generic.auto._ // to derive child schemas
+
+implicit val sEntity: Schema[Entity] = Schema.oneOfWrapped[Entity]
 ```
 
+The names of the field in the wrapper object will be generated using the implicit `Configuration`. If for some reason
+this is insufficient, you can generate schemas for individual wrapper objects using `Schema.wrapWithSingleFieldProduct`.
 
 ## Customising derived schemas
 
@@ -272,6 +299,12 @@ implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
 val e: PublicEndpoint[FruitAmount, Unit, Unit, Nothing] =
   endpoint.in(jsonBody[FruitAmount])
 ```
+
+## Enumerations
+
+Currently only schemas for Scala2's `Enumeration#Value` enumerations are automatically derived. For Scala3 `enum`s,
+an implicit schema value has to be provided by hand. See the enumeration docs in [validation](validation.md) for
+details.
 
 ## Next
 

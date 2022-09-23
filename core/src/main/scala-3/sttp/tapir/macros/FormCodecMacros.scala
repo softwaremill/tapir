@@ -95,7 +95,7 @@ private[tapir] object FormCodecMacros {
     '{
       Codec.formSeqUtf8
         .mapDecode($decodeExpr)($encodeExpr)
-        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}].")) })
+        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${Type.show[T]}].")) })
     }
   }
 }

@@ -80,13 +80,13 @@ val baseEndpoint = endpoint.errorOut(
     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                             ^
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
 //                             ^
-// error: Type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Left[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
 //                             ^
 ```
@@ -130,9 +130,39 @@ val baseEndpoint = endpoint.errorOut(
 ### Error outputs
 
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
-[security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
-error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
-different from `Any`. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
+[security logic](../server/logic.md) is already provided. There are some specialised functions for this purpose.
+
+The `.errorOutVariant` functions allow appending an alternative error outputs; the result is typed as the common supertype 
+of the existing and new outputs; hence usually this should be different from `Any`. At runtime, a class check is performed
+to choose the variant to use.
+
+The `.errorOutVariantPrepend` function allows prepending an error out variant, leaving the current error output as
+a default. This is useful e.g. when providing a more specific error output, than the current one. For example:
+
+```scala
+import sttp.tapir._
+
+trait DomainException {
+  def help: String
+}
+case class SecurityException(help: String) extends DomainException
+case class LogicException(help: String) extends DomainException
+
+val base: PublicEndpoint[Unit, DomainException, Unit, Any] = endpoint
+  .errorOut(
+    oneOf(
+      oneOfVariant(statusCode(StatusCode.BadRequest).and(stringBody.mapTo[LogicException])),
+      oneOfDefaultVariant(
+        statusCode(StatusCode.InternalServerError).and(stringBody.map(v => new DomainException { def help: String = v })(_.help))
+      )
+    )
+  )
+
+val specialised: PublicEndpoint[Unit, DomainException, Unit, Any] = base
+  .errorOutVariant(oneOfVariant(statusCode(StatusCode.Forbidden).and(stringBody.mapTo[SecurityException])))
+```
+
+The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
 the result in an additional `Either`.
 
 ## `oneOfBody` inputs/outputs

@@ -8,45 +8,49 @@ import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, ServerChannel}
 import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 
+import java.io.File
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 
-case class NettyOptions(
-    socketAddress: SocketAddress,
+/** Netty configuration options. Default instances for TCP and domain sockets are available via the [[NettyOptions#default()]] companion
+  * object and [[NettyOptions#defaultDomainSocket()]]. Full customisation is available via [[NettyOptionsBuilder]].
+  *
+  * @tparam SA
+  *   the type of socket being used; can be either [[InetSocketAddress]] for TCP sockets (the most common case), or [[DomainSocketAddress]]
+  *   for unix domain sockets.
+  */
+case class NettyOptions[SA <: SocketAddress](
+    socketAddress: SA,
     eventLoopConfig: EventLoopConfig,
     shutdownEventLoopGroupOnClose: Boolean,
     initPipeline: (ChannelPipeline, ChannelHandler) => Unit
 ) {
+  def host(hostname: String)(implicit saIsInetSocketAddress: SA =:= InetSocketAddress): NettyOptions[InetSocketAddress] =
+    copy(new InetSocketAddress(hostname, saIsInetSocketAddress(socketAddress).getPort))
 
-  def host(hostname: String): NettyOptions = {
-    val newSocketAddress = socketAddress match {
-      case s: InetSocketAddress => new InetSocketAddress(hostname, s.getPort)
-      case other                => throw new RuntimeException(s"Socket $other is not IneSocketAddress")
-    }
+  def port(p: Int)(implicit saIsInetSocketAddress: SA =:= InetSocketAddress): NettyOptions[InetSocketAddress] =
+    copy(new InetSocketAddress(saIsInetSocketAddress(socketAddress).getHostName, p))
 
-    copy(newSocketAddress)
-  }
+  def randomPort(implicit saIsInetSocketAddress: SA =:= InetSocketAddress): NettyOptions[InetSocketAddress] =
+    copy(new InetSocketAddress(saIsInetSocketAddress(socketAddress).getHostName, 0))
 
-  def port(p: Int): NettyOptions = {
-    val newSocketAddress = socketAddress match {
-      case s: InetSocketAddress => new InetSocketAddress(s.getHostName, p)
-      case other                => throw new RuntimeException(s"Socket $other is not InetSocketAddress")
-    }
+  def domainSocketPath(path: Path)(implicit saIsDomainSocketAddres: SA =:= DomainSocketAddress): NettyOptions[DomainSocketAddress] =
+    copy(new DomainSocketAddress(path.toFile))
 
-    copy(newSocketAddress)
-  }
+  def domainSocketFile(file: File)(implicit saIsDomainSocketAddres: SA =:= DomainSocketAddress): NettyOptions[DomainSocketAddress] =
+    copy(new DomainSocketAddress(file))
 
-  def path(path: Path): NettyOptions = {
-    val newSocketAddress = socketAddress match {
-      case s: DomainSocketAddress => new DomainSocketAddress(path.toFile)
-      case other                  => throw new RuntimeException(s"Socket $other is not DomainSocketAddress")
-    }
+  def noShutdownOnClose: NettyOptions[SA] = copy(shutdownEventLoopGroupOnClose = false)
 
-    copy(newSocketAddress)
-  }
+  def eventLoopConfig(elc: EventLoopConfig): NettyOptions[SA] = copy(eventLoopConfig = elc)
+
+  def eventLoopGroup(elg: EventLoopGroup): NettyOptions[SA] = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 }
 
 object NettyOptions {
+  def default: NettyOptions[InetSocketAddress] = NettyOptionsBuilder.defaultPipeline.tcp
+  def defaultDomainSocket: NettyOptions[DomainSocketAddress] = NettyOptionsBuilder.defaultPipeline.domainSocket
+
   case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 
   object EventLoopConfig {

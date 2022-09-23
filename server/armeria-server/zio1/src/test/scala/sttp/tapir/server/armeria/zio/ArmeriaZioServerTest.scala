@@ -17,7 +17,7 @@ class ArmeriaZioServerTest extends TestSuite {
     val interpreter = new ArmeriaZioTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false).tests() ++
+    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
       new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
       new ServerStreamingTests(createServerTest, ZioStreams).tests()
   }

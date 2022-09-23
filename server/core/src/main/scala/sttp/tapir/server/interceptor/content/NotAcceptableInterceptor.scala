@@ -9,9 +9,9 @@ import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.{server, _}
 
 /** If no body in the endpoint's outputs satisfies the constraints from the request's `Accept` header, returns an empty response with status
-  * code 415, before any further processing (running the business logic) is done.
+  * code 406, before any further processing (running the business logic) is done.
   */
-class UnsupportedMediaTypeInterceptor[F[_]] extends EndpointInterceptor[F] {
+class NotAcceptableInterceptor[F[_]] extends EndpointInterceptor[F] {
 
   override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
@@ -26,7 +26,7 @@ class UnsupportedMediaTypeInterceptor[F[_]] extends EndpointInterceptor[F] {
             val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty
 
             if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
-            else responder(ctx.request, server.model.ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ()))
+            else responder(ctx.request, server.model.ValuedEndpointOutput(statusCode(StatusCode.NotAcceptable), ()))
 
           case Left(_) =>
             // we're forgiving, if we can't parse the accepts header, we try to return any response

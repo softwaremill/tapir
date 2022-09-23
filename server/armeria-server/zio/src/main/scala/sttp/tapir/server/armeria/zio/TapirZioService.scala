@@ -44,7 +44,7 @@ private[zio] final case class TapirZioService[R](
     val future = new CompletableFuture[HttpResponse]()
     val result = interpreter(serverRequest).map(ResultMapping.toArmeria)
 
-    val cancellable = runtime.unsafeRunToFuture(result)
+    val cancellable = Unsafe.unsafeCompat(implicit u => runtime.unsafe.runToFuture(result))
     cancellable.future.onComplete {
       case Failure(exception) =>
         future.completeExceptionally(exception)
@@ -70,7 +70,11 @@ private object ZioStreamCompatible {
       override val streams: ZioStreams = ZioStreams
 
       override def asStreamMessage(stream: Stream[Throwable, Byte]): Publisher[HttpData] =
-        runtime.unsafeRun(stream.mapChunks(c => Chunk.single(HttpData.wrap(c.toArray))).toPublisher)
+        Unsafe.unsafeCompat(implicit u =>
+          runtime.unsafe
+            .run(stream.mapChunks(c => Chunk.single(HttpData.wrap(c.toArray))).toPublisher)
+            .getOrThrowFiberFailure()
+        )
 
       override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[Throwable, Byte] =
         publisher.toZIOStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
@@ -88,5 +92,6 @@ private class RioFutureConversion[R](implicit ec: ExecutionContext, runtime: Run
     }
   }
 
-  override def to[A](f: => RIO[R, A]): Future[A] = runtime.unsafeRunToFuture(f)
+  override def to[A](f: => RIO[R, A]): Future[A] =
+    Unsafe.unsafeCompat(implicit u => runtime.unsafe.runToFuture(f))
 }

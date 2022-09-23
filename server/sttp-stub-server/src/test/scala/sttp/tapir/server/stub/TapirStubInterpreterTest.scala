@@ -42,6 +42,20 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     response.body shouldBe Right("computer")
   }
 
+  it should "stub endpoint logic with trailing slash with success response" in {
+    // given
+    val server = TapirStubInterpreter(options, SttpBackendStub(IdMonad))
+      .whenEndpoint(getProduct)
+      .thenRespond("computer")
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest.get(uri"http://test.com/api/products/").send(server)
+
+    // then
+    response.body shouldBe Right("computer")
+  }
+
   it should "stub endpoint logic with error response" in {
     // given
     val server = TapirStubInterpreter[Identity, Nothing, ServerOptions](options, SttpBackendStub(IdMonad))

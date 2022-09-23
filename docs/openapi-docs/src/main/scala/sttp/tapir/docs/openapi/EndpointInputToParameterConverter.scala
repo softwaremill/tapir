@@ -58,7 +58,7 @@ private[openapi] object EndpointInputToParameterConverter {
     val examples =
       if (baseExamples.multipleExamples.nonEmpty) baseExamples
       else
-        ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None)))
+        ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None, None)))
     Parameter(
       name = header.h.name,
       in = ParameterIn.Header,

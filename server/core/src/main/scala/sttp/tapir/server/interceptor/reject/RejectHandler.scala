@@ -29,7 +29,7 @@ case class DefaultRejectHandler[F[_]](
   override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
     import DefaultRejectHandler._
 
-    val statusCodeAndBody = if (hasMethodMismatch(failure)) Some(StatusCodeAndBody.MethodNotAllowed) else defaultStatusCodeAndBody
+    val statusCodeAndBody = if (hasMethodMismatch(failure)) Some(Responses.MethodNotAllowed) else defaultStatusCodeAndBody
     monad.unit(statusCodeAndBody.map(response.tupled))
   }
 }
@@ -41,7 +41,7 @@ object DefaultRejectHandler {
   def orNotFound[F[_]]: RejectHandler[F] =
     DefaultRejectHandler[F](
       (sc: StatusCode, m: String) => ValuedEndpointOutput(statusCode.and(stringBody), (sc, m)),
-      Some(StatusCodeAndBody.NotFound)
+      Some(Responses.NotFound)
     )
 
   private def hasMethodMismatch(f: RequestResult.Failure): Boolean = f.failures.map(_.failingInput).exists {
@@ -49,7 +49,7 @@ object DefaultRejectHandler {
     case _                               => false
   }
 
-  private object StatusCodeAndBody {
+  object Responses {
     val NotFound: (StatusCode, String) = (StatusCode.NotFound, "Not Found")
     val MethodNotAllowed: (StatusCode, String) = (StatusCode.MethodNotAllowed, "Method Not Allowed")
   }

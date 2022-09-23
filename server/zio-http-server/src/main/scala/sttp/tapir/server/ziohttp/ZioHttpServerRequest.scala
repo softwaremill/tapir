@@ -3,6 +3,7 @@ package sttp.tapir.server.ziohttp
 import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import zhttp.http.Path.Segment
 import zhttp.http.Request
 
 import java.net.InetSocketAddress
@@ -19,7 +20,10 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
 
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, remote, None)
   override def underlying: Any = req
-  override lazy val pathSegments: List[String] = req.url.path.toList
+  override lazy val pathSegments: List[String] = req.url.path.segments.flatMap {
+    case Segment.Text(text) => List(text)
+    case Segment.Root       => Nil
+  }.toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
   override lazy val method: SttpMethod = SttpMethod(req.method.toJava.name().toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.encode)

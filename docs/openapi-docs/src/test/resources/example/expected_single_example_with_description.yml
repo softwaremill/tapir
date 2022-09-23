@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: Users
+  version: '1.0'
+paths:
+  /users:
+    get:
+      operationId: getUsers
+      parameters:
+        - name: active
+          in: query
+          description: Filter for only active or inactive users.
+          required: false
+          schema:
+            type: boolean
+          examples:
+            Example 0:
+              description: Get only active users
+              value: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: query parameter active'
+          content:
+            text/plain:
+              schema:
+                type: string

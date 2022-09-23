@@ -13,7 +13,7 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import sttp.tapir.ztapir.ZServerEndpoint
-import zio.Task
+import zio.{Runtime, Task, Unsafe}
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
@@ -47,9 +47,9 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     // Converting a zio.RIO-resource to an cats.IO-resource
     val runtime = implicitly[zio.Runtime[Any]]
     Resource
-      .eval(IO.fromFuture(IO(runtime.unsafeRunToFuture(serverResource.allocated))))
+      .eval(IO.fromFuture(IO(Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(serverResource.allocated)))))
       .flatMap { case (port, release) =>
-        Resource.make(IO.pure(port))(_ => IO.fromFuture(IO(runtime.unsafeRunToFuture(release))))
+        Resource.make(IO.pure(port))(_ => IO.fromFuture(IO(Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(release)))))
       }
   }
 }

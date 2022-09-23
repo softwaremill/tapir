@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
 import zio.interop.catz._
 import zio.stream.ZStream
-import zio.{Runtime, Task}
+import zio.{Runtime, Task, Unsafe}
 
 import scala.concurrent.Future
 
@@ -16,7 +16,7 @@ object ZHttp4sCreateServerStubTest extends CreateServerStubTest[Task, Http4sServ
   override def customiseInterceptors: CustomiseInterceptors[Task, Http4sServerOptions[Task]] =
     Http4sServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(new CatsMonadError[Task])
-  override def asFuture[A]: Task[A] => Future[A] = rio => Runtime.default.unsafeRunToFuture(rio)
+  override def asFuture[A]: Task[A] => Future[A] = rio => Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(rio))
 }
 
 class ZHttp4sServerStubTest extends ServerStubTest(ZHttp4sCreateServerStubTest)

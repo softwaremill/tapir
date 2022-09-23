@@ -34,7 +34,6 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
       ZIO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))
 
   // Docs
   val swaggerEndpoints: List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0")

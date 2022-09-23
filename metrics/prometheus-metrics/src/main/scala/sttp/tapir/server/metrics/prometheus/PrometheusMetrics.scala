@@ -160,7 +160,7 @@ object PrometheusMetrics {
             .onException { (ep, ex) =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex): _*)
+                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex) ++ List(labels.forResponsePhase.bodyValue): _*)
                   .observe(duration)
               )
             }

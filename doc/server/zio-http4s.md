@@ -126,7 +126,7 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
-import zio.{Task, Runtime}
+import zio.{Task, Runtime, ZIO}
 import zio.interop.catz._
 import zio.stream.Stream
 
@@ -141,13 +141,15 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
 
 val serve: Task[Unit] =
-  BlazeServerBuilder[Task]
-    .withExecutionContext(runtime.executor.asExecutionContext)
-    .bindHttp(8080, "localhost")
-    .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-    .serve
-    .compile
-    .drain
+  ZIO.executor.flatMap(executor =>
+    BlazeServerBuilder[Task]
+      .withExecutionContext(executor.asExecutionContext)
+      .bindHttp(8080, "localhost")
+      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+      .serve
+      .compile
+      .drain
+  )  
 ```
 
 ## Server Sent Events

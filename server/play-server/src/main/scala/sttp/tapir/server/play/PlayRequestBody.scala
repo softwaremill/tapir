@@ -88,11 +88,13 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       case Right(value) =>
         val dataParts: Seq[Future[Option[Part[Any]]]] = value.dataParts.flatMap { case (key, value: scala.collection.Seq[String]) =>
           m.partType(key).map { partType =>
+            val data = value.map(ByteString.apply).to(scala.collection.immutable.Seq)
+            val contentLength = Header.contentLength(data.map(_.length.toLong).sum)
             toRaw(
-              request,
+              request.withHeaders(request.headers.replace(contentLength.name -> contentLength.value)),
               partType,
               charset(partType),
-              () => Source(value.map(ByteString.apply).to(scala.collection.immutable.Seq)),
+              () => Source(data),
               None
             ).map(body => Some(Part(key, body.value)))
           }

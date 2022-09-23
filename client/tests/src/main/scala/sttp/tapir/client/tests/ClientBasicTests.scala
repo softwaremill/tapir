@@ -235,6 +235,10 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(in_string_out_error_detail_nested.in("one-of").name("orange"), (), "orange", Right(()))
     testClient(in_string_out_error_detail_nested.in("one-of").name("kiwi"), (), "kiwi", Left(FruitErrorDetail.Unknown(List("orange"))))
     testClient(in_string_out_error_detail_nested.in("one-of").name("apple"), (), "apple", Left(FruitErrorDetail.AlreadyPicked("apple")))
+
+    // #2354: no-body variants should also be considered when mixed with some-body variants
+    testClient(out_status_or_status_with_body.in("one-of").name("kiwi"), (), "kiwi", Left(FruitErrorDetail.Unknown(List("orange"))))
+    testClient(out_status_or_status_with_body.in("one-of").name("apple"), (), "apple", Left(FruitErrorDetail.NameTooShort(10)))
   }
 
   def oneOfBodyTests(): Unit = {

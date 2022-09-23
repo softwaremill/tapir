@@ -3,7 +3,7 @@ package sttp.tapir
 import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
@@ -345,6 +345,27 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
     class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
   }
+
+  /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T], fieldName: FieldName): Schema[T] = Schema(
+    schemaType = SchemaType.SProduct(List(SchemaType.SProductField[T, T](fieldName, schema, t => Some(t))))
+  )
+
+  /** Wraps the given schema with a single-field product, where a field computed using the implicit [[Configuration]] maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T])(implicit conf: Configuration): Schema[T] =
+    wrapWithSingleFieldProduct(schema, FieldName(conf.toDiscriminatorValue(schema.name.getOrElse(SName.Unit))))
 }
 
 trait LowPrioritySchema {

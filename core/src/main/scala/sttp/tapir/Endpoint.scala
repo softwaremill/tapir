@@ -165,18 +165,16 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
 
-  /** Appends a new error output variant.
-    *
-    * A variant for the current endpoint output will be created using the given [[Tapir.oneOfVariant]]. This is needed to capture the logic
-    * which allows deciding if a run-time value is applicable to a variant. If the erasure of the `E` type is different from `E`, there will
-    * be a compile-time failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a
-    * variant using one of the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
-    *
-    * During encoding/decoding, the new `o` variant will be checked after the current variant.
-    *
-    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
-    *   - the first output variant is the current variant: `oneOfVariant(errorOutput)`
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the current output: `oneOfVariant(errorOutput)`
     *   - the second output variant is the given `o`
+    *
+    * The variant for the current endpoint output will be created using [[Tapir.oneOfVariant]]. Hence, the current output will be used if
+    * the run-time class of the output matches `E`. If the erasure of the `E` type is different from `E`, there will be a compile-time
+    * failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a variant using one of
+    * the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
+    *
+    * During encoding/decoding, the new `o` variant will be considered after the current variant.
     *
     * Usage example:
     *
@@ -202,6 +200,25 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
       o: OneOfVariant[_ <: E2]
   )(implicit ct: ClassTag[E], eEqualToErasure: ErasureSameAsType[E]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), o), identity)
+
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the given `o`
+    *   - the second, default output variant is the current output: `oneOfDefaultVariant(errorOutput)`
+    *
+    * Useful for adding specific error variants, while the more general ones are already covered by the existing error output.
+    *
+    * During encoding/decoding, the new `o` variant will be considered before the current variant.
+    *
+    * Adding error output variants is useful when extending the error outputs in a [[PartialServerEndpoint]], created using
+    * [[EndpointServerLogicOps.serverSecurityLogic]].
+    *
+    * @param o
+    *   The variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
+    * @tparam E2
+    *   A common supertype of the new variant and the current output `E`.
+    */
+  def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf[E2](o, oneOfDefaultVariant(errorOutput)), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
