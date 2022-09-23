@@ -76,7 +76,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
   /** A body in the JSON format, read from a raw string read using UTF-8. */
-  val stringJsonBody: EndpointIO.Body[String, String] = stringJsonBody(StandardCharsets.UTF_8)
+  def stringJsonBody: EndpointIO.Body[String, String] = stringJsonBody(StandardCharsets.UTF_8)
 
   /** A body in the JSON format, read from a raw string read using `charset`. */
   def stringJsonBody(charset: Charset): EndpointIO.Body[String, String] =
