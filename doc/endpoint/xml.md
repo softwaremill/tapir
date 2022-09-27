@@ -1,7 +1,7 @@
 # Working with XML
 
-Enabling support for XML is a matter of implementing proper `XmlCodec[T]` and providing it in scope.
-This would enable encoding objects to XML strings, and decoding XML strings to objects.
+Enabling support for XML is a matter of implementing proper [`XmlCodec[T]`](codecs.md) and providing it in scope.
+This enables encoding objects to XML strings, and decoding XML strings to objects.
 Implementation is fairly easy, and for now, one guide on how to integrate with scalaxb is provided.
 
 ```eval_rst
@@ -16,7 +16,7 @@ Implementation is fairly easy, and for now, one guide on how to integrate with s
 ## Scalaxb
 
 If you possess the XML Schema definition file (`.xsd` file) consider using the scalaxb tool,
-which would generate needed models and serialization/deserialization logic.
+which generates needed models and serialization/deserialization logic.
 To use the tool please follow the documentation on [setting up](https://scalaxb.org/setup) and
 [running](https://scalaxb.org/running-scalaxb) scalaxb.
 
@@ -60,8 +60,11 @@ Next to this trait, you might want to introduce `xml` package object to simplify
 package object xml extends TapirXmlScalaxb
 ```
 
-From now on, XML serialization/deserialization would work for all classes generated from `.xsd` file as long as `XMLFormat`
-and `Schema` for the type in the question, `XmlElementLabel` for the top XML node would be implicitly provided in the scope.
+From now on, XML serialization/deserialization would work for all classes generated from `.xsd` file as long as
+`XMLFormat`, `Schema` and `XmlElementLabel` would be implicitly provided in the scope.
+`XMLFormat` is scalaxb related, allowing for XML encoding / decoding.
+[`Schema`](schemas.md) is tapir related, used primarily when generating documentation and validating incoming values.
+And `XmlElementLabel` is required by scalaxb code when encoding to XML to give proper top node name.
 
 Usage example:
 ```scala
