@@ -265,10 +265,14 @@ import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class FruitAmount(fruit: String, amount: Int)
 
 case class MyExtension(string: String, int: Int)
+
+implicit val fruitAmountSchemaWithMyExtension: Schema[FruitAmount] =
+  Schema.derived[FruitAmount].docsExtension("hello", MyExtension("world", 42))
 
 val sampleEndpoint =
   endpoint.post
