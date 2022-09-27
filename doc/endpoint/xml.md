@@ -94,7 +94,7 @@ For more information on adding OpenAPI doc extension in tapir refer to [document
 Adding xml namespace doc extension to `Outer`'s `Schema` example:
 ```scala
 case class XmlNamespace(namespace: String)
-implicit val outerSchemaWithXmlNamspace: Schema[Outer] = implicitly[Derived[Schema[Outer]]].value
+implicit val outerSchemaWithXmlNamespace: Schema[Outer] = implicitly[Derived[Schema[Outer]]].value
   .docsExtension("xml", XmlNamespace("http://www.example.com/innerouter"))
 ```
 
