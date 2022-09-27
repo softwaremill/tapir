@@ -782,13 +782,9 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
 //grpc
 lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .settings(commonSettings)
-  // .enablePlugins(AkkaGrpcPlugin)
   .settings(
     name := "tapir-grpc-protobuf",
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-discovery" % "2.6.19",
-      "ch.megard" %% "akka-http-cors" % "0.4.2"
-    ) ++ loggerDependencies ++ Seq(
+    libraryDependencies ++= loggerDependencies ++ Seq(
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test
@@ -815,6 +811,9 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
   .settings(commonSettings)
   .settings(
     name := "tapir-grpc-examples",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.20",
+    ),
     fork := true
   )
   .enablePlugins(AkkaGrpcPlugin)
@@ -986,7 +985,6 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
 
-//TODO does it work with the grpc server?
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
   .settings(
@@ -1018,7 +1016,7 @@ lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grp
   .settings(
     name := "tapir-akka-grpc-server",
     libraryDependencies ++= Seq(
-      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.4"
+      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.6"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
