@@ -28,20 +28,16 @@ the json codec that is in scope.
 ## JSON as string
 
 If you'd like to work with JSON bodies in a serialised `String` form, instead of integrating on a higher level using
-one of the libraries mentioned below, this is also possible. Note that in this case, the serialising/deserialising
-of the body must be part of the [server logic](../server/logic.md).
+one of the libraries mentioned below, you should use the `stringJsonBody` input/output. Note that in this case, the 
+serialising/deserialising of the body must be part of the [server logic](../server/logic.md).
 
-The `stringBody` body input/output will work, however by default it uses the `text/plain` content type. This can be 
-customised, by creating a string-based body with the correct codec format (which is a tapir wrapper for media types):
+A schema can be provided in this case as well:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.Json()))
-
-// or, providing a schema:
 import sttp.tapir.generic.auto._
 case class MyBody(field: Int)
-stringBodyUtf8AnyFormat(Codec.id(CodecFormat.Json(), implicitly[Schema[MyBody]].as[String]))
+stringJsonBody.schema(implicitly[Schema[MyBody]].as[String])
 ```
 
 ## Circe

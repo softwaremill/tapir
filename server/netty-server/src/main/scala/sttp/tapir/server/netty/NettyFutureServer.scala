@@ -50,7 +50,7 @@ case class NettyFutureServer[SA <: SocketAddress](routes: Vector[FutureRoute], o
 
     val channelFuture = NettyBootstrap(
       options.nettyOptions,
-      new NettyServerHandler(route, (f: Future[Unit]) => f),
+      new NettyServerHandler(route, (f: () => Future[Unit]) => f()),
       eventLoopGroup
     )
 

@@ -8,7 +8,7 @@ Armeria interpreter can be used with different effect systems (cats-effect, ZIO)
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server" % "1.1.1"
 ```
 
 and import the object:
@@ -75,7 +75,7 @@ Note that Armeria automatically injects an `ExecutionContext` on top of Armeria'
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-cats" % "1.1.1"
 ```
 to use this interpreter with Cats Effect typeclasses.
 
@@ -155,9 +155,9 @@ Add the following dependency
 
 ```scala
 // for zio 2:
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "1.1.1"
 // for zio 1:
-"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio1" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio1" % "1.1.1"
 ```
 
 to use this interpreter with ZIO.
