@@ -25,14 +25,14 @@ case class CORSConfig(
   /** Allows CORS requests only from a specific origin.
     *
     * If the request `Origin` matches the given `origin`, sets the `Access-Control-Allow-Origin` response header to the given `origin`.
-    * Otherwise the `Access-Control-Allow-Origin` response header is suppressed..
+    * Otherwise the `Access-Control-Allow-Origin` response header is suppressed.
     */
   def allowOrigin(origin: Origin): CORSConfig = copy(allowedOrigin = AllowedOrigin.Single(origin))
 
   /** Allows CORS requests from origins matching predicate
     *
     * If the request `Origin` header matches the given `predicate`, sets the `Access-Control-Allow-Origin` response header to the given
-    * `origin`. Otherwise the `Access-Control-Allow-Origin` response header is suppressed..
+    * `origin`. Otherwise the `Access-Control-Allow-Origin` response header is suppressed.
     */
   def allowMatchingOrigins(predicate: String => Boolean): CORSConfig = copy(allowedOrigin = AllowedOrigin.Matching(predicate))
 
