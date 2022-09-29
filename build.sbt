@@ -1534,7 +1534,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
-      "io.circe" %% "circe-generic-extras" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
