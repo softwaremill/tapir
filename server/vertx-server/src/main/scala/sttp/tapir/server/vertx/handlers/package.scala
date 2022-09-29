@@ -13,6 +13,7 @@ package object handlers {
 
   private[vertx] lazy val multipartHandler: Handler[RoutingContext] = { rc =>
     rc.request.setExpectMultipart(true)
+    bodyHandler.setDeleteUploadedFilesOnEnd(true)
     bodyHandler.handle(rc)
   }
 
