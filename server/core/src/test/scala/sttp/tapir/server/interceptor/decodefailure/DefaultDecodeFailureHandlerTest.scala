@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError, MultipartDecodeException}
 import sttp.tapir.generic.auto._
-import sttp.tapir.{DecodeResult, FieldName, Schema, Validator}
+import sttp.tapir.{DecodeResult, FieldName, Schema, ValidationError, Validator}
 
 class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
@@ -17,7 +17,7 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     // then
     DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
       validationErrors
-    ) shouldBe "expected address.number to be greater than or equal to 1, but was 0"
+    ) shouldBe "expected address.number to be greater than or equal to 1, but got 0"
   }
 
   it should "create a validation error message including encoded enumeration values" in {
@@ -30,7 +30,7 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     // then
     DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
       validationErrors
-    ) shouldBe "expected value to be one of (1, 10, 11), but was 4"
+    ) shouldBe "expected value to be one of (1, 10, 11), but got: 4"
   }
 
   it should "create an error message including failed json paths" in {
@@ -59,6 +59,16 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
 
     // then
     msg shouldBe Some("part: part1 (missing)")
+  }
+
+  it should "enclose string values in error messages in quotes" in {
+    DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
+      List(ValidationError(Validator.maxLength(1), "abc"))
+    ) shouldBe "expected value to have length less than or equal to 1, but got: \"abc\""
+
+    DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(
+      List(ValidationError(Validator.max(10), 11))
+    ) shouldBe "expected value to be less than or equal to 10, but got 11"
   }
 
   case class Person(name: String, address: Address)

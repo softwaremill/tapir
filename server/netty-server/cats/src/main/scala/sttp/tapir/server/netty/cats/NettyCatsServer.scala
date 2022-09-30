@@ -53,7 +53,7 @@ case class NettyCatsServer[F[_]: Async, SA <: SocketAddress](routes: Vector[Rout
 
     val channelFuture = NettyBootstrap(
       options.nettyOptions,
-      new NettyServerHandler(route, (f: F[Unit]) => options.dispatcher.unsafeToFuture(f)),
+      new NettyServerHandler(route, (f: () => F[Unit]) => options.dispatcher.unsafeToFuture(f())),
       eventLoopGroup
     )
 

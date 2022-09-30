@@ -9,7 +9,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.{Task, ZIO, ZIOAppDefault}
+import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
 object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -34,7 +34,6 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
       ZIO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))
 
   // Docs
   val swaggerEndpoints: List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0")
@@ -42,6 +41,5 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   // Starting the server
   val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
 
-  override def run =
-    Server.start(8080, routes).exitCode
+  override def run: URIO[Any, ExitCode] = Server.start(8080, routes).exitCode
 }

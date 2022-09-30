@@ -25,9 +25,16 @@ case class CORSConfig(
   /** Allows CORS requests only from a specific origin.
     *
     * If the request `Origin` matches the given `origin`, sets the `Access-Control-Allow-Origin` response header to the given `origin`.
-    * Otherwise the `Access-Control-Allow-Origin` response header is suppressed..
+    * Otherwise the `Access-Control-Allow-Origin` response header is suppressed.
     */
   def allowOrigin(origin: Origin): CORSConfig = copy(allowedOrigin = AllowedOrigin.Single(origin))
+
+  /** Allows CORS requests from origins matching predicate
+    *
+    * If the request `Origin` header matches the given `predicate`, sets the `Access-Control-Allow-Origin` response header to the given
+    * `origin`. Otherwise the `Access-Control-Allow-Origin` response header is suppressed.
+    */
+  def allowMatchingOrigins(predicate: String => Boolean): CORSConfig = copy(allowedOrigin = AllowedOrigin.Matching(predicate))
 
   /** Allows credentialed requests by setting the `Access-Control-Allow-Credentials` response header to `true`
     */
@@ -130,6 +137,7 @@ object CORSConfig {
   object AllowedOrigin {
     case object All extends AllowedOrigin
     case class Single(origin: Origin) extends AllowedOrigin
+    case class Matching(predicate: String => Boolean) extends AllowedOrigin
   }
 
   sealed trait AllowedCredentials

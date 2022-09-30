@@ -14,7 +14,7 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.16"
+val scala2_12 = "2.12.17"
 val scala2_13 = "2.13.8"
 val scala3 = "3.2.0"
 
@@ -633,6 +633,10 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(core)
 
 lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
@@ -727,8 +731,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.4" % Test,
       scalaTest.value % Test
     )
   )
@@ -1530,7 +1534,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
-      "io.circe" %% "circe-generic-extras" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
