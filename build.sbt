@@ -633,6 +633,10 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(core)
 
 lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
@@ -1530,7 +1534,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
-      "io.circe" %% "circe-generic-extras" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
