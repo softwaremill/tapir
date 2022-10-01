@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
 import sttp.client3.Response
-import sttp.model.{ContentTypeRange, HasHeaders, Headers, StatusCode}
+import sttp.model.{ContentTypeRange, HasHeaders, Headers, StatusCode, StatusText}
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
@@ -18,7 +18,7 @@ private[stub] object SttpResponseEncoder {
     sttp.client3.Response(
       outputValues.body.map(_.apply(Headers(outputValues.headers))).getOrElse(()),
       outputValues.statusCode.getOrElse(statusCode),
-      "",
+      StatusText.default(outputValues.statusCode.getOrElse(statusCode)).getOrElse(""),
       outputValues.headers,
       Nil,
       Response.ExampleGet
