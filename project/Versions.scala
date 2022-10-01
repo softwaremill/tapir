@@ -6,7 +6,7 @@ object Versions {
   val circe = "0.14.3"
   val circeGenericExtras = "0.14.2"
   val circeYaml = "0.14.1"
-  val sttp = "3.8.0"
+  val sttp = "3.8.2"
   val sttpModel = "1.5.2"
   val sttpShared = "1.3.8"
   val sttpApispec = "0.2.1"
