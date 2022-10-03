@@ -1,3 +1,3 @@
--J-Xmx4500M
+-J-Xmx3500M
 -J-Xss2M
 -Dsbt.task.timings=false
