@@ -492,6 +492,14 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
   .dependsOn(core)
 
 lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumeratum"))
