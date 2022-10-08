@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.1.2"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.1.0"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.1.2"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -265,10 +265,14 @@ import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class FruitAmount(fruit: String, amount: Int)
 
 case class MyExtension(string: String, int: Int)
+
+implicit val fruitAmountSchemaWithMyExtension: Schema[FruitAmount] =
+  Schema.derived[FruitAmount].docsExtension("hello", MyExtension("world", 42))
 
 val sampleEndpoint =
   endpoint.post

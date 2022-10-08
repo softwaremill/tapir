@@ -46,10 +46,10 @@ for a more detailed description of how tapir works!
 
    <iframe
      frameborder=0
-     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
      src="https://adopt-tapir.softwaremill.com/embedded-form"
      width="100%"
-     height="450"
+     height="590"
    ></iframe>
 ```
 
@@ -200,6 +200,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/xml
    endpoint/forms
    endpoint/security
    endpoint/streaming

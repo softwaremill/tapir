@@ -114,7 +114,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.1",
+  "ch.qos.logback" % "logback-classic" % "1.4.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -496,6 +496,14 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
   .dependsOn(core)
 
 lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumeratum"))
@@ -637,6 +645,10 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(core)
 
 lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
@@ -731,8 +743,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.5",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.5" % Test,
       scalaTest.value % Test
     )
   )
@@ -1590,7 +1602,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
-      "io.circe" %% "circe-generic-extras" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,

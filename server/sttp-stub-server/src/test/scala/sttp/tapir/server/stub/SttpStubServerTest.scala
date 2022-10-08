@@ -52,7 +52,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     val response: Identity[Response[Either[ResponseWrapper, Unit]]] =
       SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(11).send(backend)
 
-    response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest, "", List(Header.contentType(MediaType.ApplicationJson)))
+    response shouldBe Response(
+      Left(ResponseWrapper(1.0)),
+      StatusCode.BadRequest,
+      "Bad Request",
+      List(Header.contentType(MediaType.ApplicationJson))
+    )
   }
 
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {

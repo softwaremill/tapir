@@ -12,7 +12,7 @@ import sttp.tapir.server.netty.{NettyServerRequest, Route}
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
-class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Future[Unit])(implicit me: MonadError[F])
+class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[FullHttpRequest] {
 
   private val logger = Logger[NettyServerHandler[F]]
@@ -42,7 +42,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Futur
     } else {
       val req = request.retainedDuplicate()
 
-      unsafeToFuture {
+      unsafeRunAsync { () =>
         route(NettyServerRequest(req))
           .map {
             case Some(response) => response
@@ -58,7 +58,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeToFuture: F[Unit] => Futur
             flushResponse(ctx, request, res)
             me.unit(())
           }
-      } // ignoring the result, exceptions should already be handled
+      } // exceptions should be handled
 
       ()
     }
