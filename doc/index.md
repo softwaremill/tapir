@@ -18,7 +18,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
-  * [gRPC](grpcSupport.md)
+  * [gRPC](grpc.md)
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
   * [sttp](client/sttp.md)

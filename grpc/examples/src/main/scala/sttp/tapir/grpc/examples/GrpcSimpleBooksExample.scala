@@ -74,7 +74,7 @@ class ExampleGrpcServer(system: ActorSystem) extends StrictLogging {
 }
 
 object SimpleBookExampleProtoGenerator extends App {
-  ProtoSchemaGenerator.generate(
+  ProtoSchemaGenerator.renderToFile(
     path = "grpc/examples/src/main/protobuf/main.proto",
     packageName = "sttp.tapir.grpc.examples.gen",
     endpoints = Endpoints.endpoints
