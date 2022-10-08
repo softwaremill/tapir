@@ -1,16 +1,21 @@
 package sttp.tapir.server.akkagrpc
 
-import akka.stream.Materializer
+import akka.http.scaladsl.server.Route
+import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaResponseBody}
-import sttp.tapir.server.interpreter.{RequestBody, ToResponseBody}
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait AkkaGrpcServerInterpreter extends AkkaHttpServerInterpreter {
-  override protected def requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams] =
-    new AkkaGrpcRequestBody(akkaHttpServerOptions)(_, _)
+  override def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route =
+    toRoute(new AkkaGrpcRequestBody(akkaHttpServerOptions)(_, _), new AkkaGrpcToResponseBody()(_, _))(ses)
 
-  override protected def toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams] =
-    new AkkaGrpcToResponseBody()(_, _)
+}
+
+object AkkaGrpcServerInterpreter {
+  def apply(ec: ExecutionContext): AkkaGrpcServerInterpreter = new AkkaGrpcServerInterpreter {
+    override implicit def executionContext: ExecutionContext = ec
+  }
 }

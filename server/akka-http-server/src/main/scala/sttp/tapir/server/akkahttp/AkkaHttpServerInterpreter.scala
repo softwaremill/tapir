@@ -23,14 +23,16 @@ trait AkkaHttpServerInterpreter {
 
   implicit def executionContext: ExecutionContext
 
-  protected def requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams] = new AkkaRequestBody(akkaHttpServerOptions)(_, _)
-  protected def toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams] = new AkkaToResponseBody()(_, _)
-
   def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
 
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
+  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route =
+    toRoute(new AkkaRequestBody(akkaHttpServerOptions)(_, _), new AkkaToResponseBody()(_, _))(ses)
+
+  protected def toRoute(requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams],
+                        toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
+                       )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(akkaHttpServerOptions.interceptors, ses)
 
@@ -50,7 +52,7 @@ trait AkkaHttpServerInterpreter {
         extractRequestContext { ctx =>
           val serverRequest = AkkaServerRequest(ctx)
           onSuccess(interpreter(serverRequest)) {
-            case RequestResult.Failure(_)         => reject
+            case RequestResult.Failure(_) => reject
             case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)
           }
         }
@@ -74,7 +76,7 @@ trait AkkaHttpServerInterpreter {
           val contentLength: Long = response.contentLength.getOrElse(0)
           val contentType: ContentType = response.contentType match {
             case Some(t) => ContentType.parse(t).getOrElse(ContentTypes.NoContentType)
-            case None    => ContentTypes.NoContentType
+            case None => ContentTypes.NoContentType
           }
           complete(
             HttpResponse(

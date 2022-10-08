@@ -8,12 +8,8 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.grpc.protobuf.model._
 
-trait ProtoSchemaGenerator extends App with StrictLogging {
-  def path: String
-  def endpoints: Iterable[AnyEndpoint]
-  def packageName: PackageName
-
-  def generate(): Unit = {
+object ProtoSchemaGenerator extends StrictLogging {
+  def generate(path: String, packageName: PackageName, endpoints: Iterable[AnyEndpoint]): Unit = {
     logger.info(s"Generating proto file")
 
     val renderer: ProtoRenderer = new ProtoRenderer()
