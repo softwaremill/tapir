@@ -1,6 +1,6 @@
 package sttp.tapir.grpc.protobuf
 
-import sttp.tapir.SchemaType.{SProduct, SString}
+import sttp.tapir.SchemaType.{SInteger, SNumber, SProduct, SString}
 import sttp.tapir._
 import sttp.tapir.grpc.protobuf.model._
 
@@ -75,6 +75,8 @@ class EndpointToProtobufMessage {
             val protoFields = fields.map { field =>
               field.schema.schemaType match {
                 case SString() => ProtobufMessageField("string", field.name.name, None)
+                case SNumber() => ProtobufMessageField("int64", field.name.name, None)
+                case SInteger() => ProtobufMessageField("int32", field.name.name, None)
                 case _         => ???
               }
             }
