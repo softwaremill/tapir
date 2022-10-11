@@ -139,6 +139,9 @@ lazy val rawAllAggregates = core.projectRefs ++
   tethysJson.projectRefs ++
   zio1Json.projectRefs ++
   zioJson.projectRefs ++
+  protobuf.projectRefs ++
+  pbDirectProtobuf.projectRefs ++
+  grpcExamples.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
@@ -149,6 +152,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   serverTests.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
+  akkaGrpcServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
@@ -787,6 +791,51 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   )
   .dependsOn(core)
 
+//grpc
+lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-grpc-protobuf",
+    libraryDependencies ++= loggerDependencies ++ Seq(
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(
+    core,
+    pbDirectProtobuf
+  )
+
+lazy val pbDirectProtobuf: ProjectMatrix = (projectMatrix in file("grpc/pbdirect"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-protobuf-pbdirect",
+    libraryDependencies ++= Seq(
+      "com.47deg" %% "pbdirect" % "0.7.0"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core)
+
+lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-grpc-examples",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.20",
+    ),
+    fork := true
+  )
+  .enablePlugins(AkkaGrpcPlugin)
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(
+    protobuf,
+    pbDirectProtobuf,
+    akkaGrpcServer
+  )
+
 // metrics
 
 lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
@@ -973,6 +1022,17 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, serverTests % Test)
+
+lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-akka-grpc-server",
+    libraryDependencies ++= Seq(
+      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.6"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(serverCore, akkaHttpServer)
 
 lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
   .settings(commonJvmSettings)
@@ -1574,7 +1634,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     vertxServer,
     vertxServerCats,
     vertxServerZio,
-    finatraServer
+    finatraServer,
+    protobuf
   )
 
 lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))

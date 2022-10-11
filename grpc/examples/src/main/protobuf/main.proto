@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sttp.tapir.grpc.examples.gen";
+
+service Library {
+  rpc AddBook (AddBookMsg) returns (SimpleBook) {}
+}
+
+message SimpleBook {
+  int32 id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message AddBookMsg {
+  string title = 1;
+  string description = 2;
+}
