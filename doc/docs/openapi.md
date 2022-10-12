@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.1.2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "@VERSION@"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.1.2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "@VERSION@"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -138,7 +138,7 @@ For example, generating the OpenAPI 3.1.0 YAML string can be achieved by perform
 Firstly add dependencies:
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
-"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % " // see https://github.com/softwaremill/sttp-apispec
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
 Create an auxiliary method for encoding OpenAPI object to OpenAPI 3.1 YAML String:
@@ -148,7 +148,7 @@ import io.circe.yaml.Printer
 import sttp.apispec.openapi.OpenAPI
 import sttp.apispec.openapi.circe.SttpOpenAPI3_1CirceEncoders
 
-object Encoding extends SttpOpenAPI3_1CirceEncoders { // using `SttpOpenAPI3_1CirceEncoders` ensures that proper encoder would be selected
+object Encoding extends SttpOpenAPI3_1CirceEncoders { // using `SttpOpenAPI3_1CirceEncoders` ensures that proper encoder will be selected
   def toOpenApi3_1(openAPI: OpenAPI): String = {
     Printer(dropNullKeys = true, preserveOrder = true).pretty(openAPI.asJson)
   }
