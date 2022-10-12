@@ -12,7 +12,7 @@ import sttp.tapir.grpc.protobuf.pbdirect._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkagrpc.AkkaGrpcServerInterpreter
 import sttp.tapir.generic.auto._
-import sttp.tapir.grpc.examples.gen.{Library => GenLibrary, LibraryClient => GenLibraryClient, AddBookMsg => GenAddBookMsg}
+import sttp.tapir.grpc.examples.grpc_simple_books_example.gen.{Library => GenLibrary, LibraryClient => GenLibraryClient, AddBookMsg => GenAddBookMsg}
 
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -61,7 +61,7 @@ class ExampleGrpcServer(system: ActorSystem) extends StrictLogging {
     implicit val sys: ActorSystem = system
     implicit val ec: ExecutionContext = sys.dispatcher
 
-    val route = AkkaGrpcServerInterpreter(ec).toRoute(SimpleBooksExampleServer.booksServerEndpoints)
+    val route = AkkaGrpcServerInterpreter().toRoute(SimpleBooksExampleServer.booksServerEndpoints)
 
     val binding = Http().newServerAt("127.0.0.1", 8080).bind(route)
 
@@ -74,8 +74,8 @@ class ExampleGrpcServer(system: ActorSystem) extends StrictLogging {
 
 object SimpleBookExampleProtoGenerator extends App {
   ProtoSchemaGenerator.renderToFile(
-    path = "grpc/examples/src/main/protobuf/main.proto",
-    packageName = "sttp.tapir.grpc.examples.gen",
+    path = "grpc/examples/src/main/protobuf/simple_books_example.proto",
+    packageName = "sttp.tapir.grpc.examples.grpc_simple_books_example.gen",
     endpoints = Endpoints.endpoints
   )
 }
