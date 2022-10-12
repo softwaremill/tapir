@@ -824,7 +824,7 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
   .settings(
     name := "tapir-grpc-examples",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-discovery" % "2.6.20",
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.20"
     ),
     fork := true
   )
@@ -1195,7 +1195,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final"
+      "io.netty" % "netty-all" % "4.1.83.Final"
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1208,7 +1208,7 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
+      "io.netty" % "netty-all" % "4.1.83.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
