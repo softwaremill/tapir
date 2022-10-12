@@ -1089,13 +1089,25 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
+      "org.http4s" %%% "http4s-server" % Versions.http4s,
+      "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared,
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, cats, serverTests % Test)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    libraryDependencies ++= Seq(
+      "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
+    )    
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
+  .dependsOn(serverCore, cats)
+
+lazy val http4sServer2_12 = http4sServer.jvm(scala2_12).dependsOn(serverTests.jvm(scala2_12) % Test)
+lazy val http4sServer2_13 = http4sServer.jvm(scala2_13).dependsOn(serverTests.jvm(scala2_13) % Test)
+lazy val http4sServer3 = http4sServer.jvm(scala3).dependsOn(serverTests.jvm(scala3) % Test)
 
 lazy val http4sServerZio1: ProjectMatrix = (projectMatrix in file("server/http4s-server/zio1"))
   .settings(commonJvmSettings)
