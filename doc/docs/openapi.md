@@ -130,6 +130,44 @@ import sttp.apispec.openapi.circe._
 println(Printer.spaces2.print(docs.asJson))
 ```
 
+### Support for OpenAPI 3.1.0
+
+Generating OpenAPI documentation compatible with 3.1.0 specifications is a matter of using a different encoder.
+For example, generating the OpenAPI 3.1.0 YAML string can be achieved by performing the following steps:
+
+Firstly add dependencies:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % " // see https://github.com/softwaremill/sttp-apispec
+```
+
+Create an auxiliary method for encoding OpenAPI object to OpenAPI 3.1 YAML String:
+```scala mdoc:compile-only
+import io.circe.syntax.EncoderOps
+import io.circe.yaml.Printer
+import sttp.apispec.openapi.OpenAPI
+import sttp.apispec.openapi.circe.SttpOpenAPI3_1CirceEncoders
+
+object Encoding extends SttpOpenAPI3_1CirceEncoders { // using `SttpOpenAPI3_1CirceEncoders` ensures that proper encoder would be selected
+  def toOpenApi3_1(openAPI: OpenAPI): String = {
+    Printer(dropNullKeys = true, preserveOrder = true).pretty(openAPI.asJson)
+  }
+}
+```
+
+Use it, explicitly specifying the "3.1.0" version in the OpenAPI model:
+```scala
+import sttp.tapir._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+
+val booksListing = endpoint.in(path[String]("bookId"))
+
+val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
+  .openapi("3.1.0") // "3.1.0" version explicitly specified
+
+println(Encoding.toOpenApi3_1(docs)) // OpenApi 3.1 YAML string would be printed to the console
+```
+
 ## Exposing generated OpenAPI documentation
 
 Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or
