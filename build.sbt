@@ -1101,7 +1101,9 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   )
   .nativePlatform(
     scalaVersions = scala2And3Versions,
-    settings = commonNativeSettings
+    settings = commonNativeSettings ++ Seq(
+      Test / skip := true,      
+    )
   )
   .dependsOn(serverCore, cats)
 
