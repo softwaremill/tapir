@@ -44,8 +44,8 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
                   case t                                                          => apply(t)
                 }
                 .sortBy {
-                  case Left(Reference(ref)) => ref
-                  case Right(schema)        => schema.`type`.map(_.value).getOrElse("") + schema.toString
+                  case Left(Reference(ref, _, _)) => ref
+                  case Right(schema)        => schema.`type`.collect{case t: BasicSchemaType => t.value}.getOrElse("") + schema.toString
                 },
               d.map(tDiscriminatorToADiscriminator)
             )
@@ -116,7 +116,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
           maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
           exclusiveMaximum = Option(exclusive).filter(identity)
         )
-      case Validator.Pattern(value)                  => aschema.copy(pattern = Some(value))
+      case Validator.Pattern(value)                  => aschema.copy(pattern = Some(Pattern(value)))
       case Validator.MinLength(value)                => aschema.copy(minLength = Some(value))
       case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
