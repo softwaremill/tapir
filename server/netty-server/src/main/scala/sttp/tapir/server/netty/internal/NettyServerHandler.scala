@@ -10,7 +10,6 @@ import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.{NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Future
 
 class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[FullHttpRequest] {
@@ -29,8 +28,6 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       .foreach { case (k, v) =>
         res.headers().set(k, v.map(_.value).asJava)
       }
-
-    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes())
 
     res
   }
