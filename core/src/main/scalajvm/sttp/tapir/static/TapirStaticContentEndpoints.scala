@@ -36,8 +36,10 @@ trait TapirStaticContentEndpoints {
   private val ifModifiedSinceHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.IfModifiedSince)
   private val lastModifiedHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.LastModified)
   private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[MediaType]](HeaderNames.ContentType)
+  private val contentLengthHeader: EndpointIO[Option[Long]] = header[Option[Long]](HeaderNames.ContentLength)
   private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
   private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
+  private val acceptRangesHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptRanges)
   private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
@@ -81,10 +83,10 @@ trait TapirStaticContentEndpoints {
             StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
-              .and(header[Option[String]](HeaderNames.AcceptRanges))
+              .and(acceptRangesHeader)
               .and(header[Option[String]](HeaderNames.ContentRange))
               .map[StaticOutput.FoundPartial[T]](
                 (t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
@@ -96,7 +98,7 @@ trait TapirStaticContentEndpoints {
             StatusCode.Ok,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
               .and(contentEncodingHeader)
@@ -130,8 +132,8 @@ trait TapirStaticContentEndpoints {
         oneOf[HeadOutput](
           oneOfVariantClassMatcher(
             StatusCode.Ok,
-            header[Option[String]](HeaderNames.AcceptRanges)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+            acceptRangesHeader
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType])) => HeadOutput.Found(t._1, t._2, t._3))(fo =>
                 (fo.acceptRanges, fo.contentLength, fo.contentType)
