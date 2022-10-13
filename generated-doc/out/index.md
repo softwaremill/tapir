@@ -49,7 +49,7 @@ for a more detailed description of how tapir works!
      sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
      src="https://adopt-tapir.softwaremill.com/embedded-form"
      width="100%"
-     height="590"
+     height="603"
    ></iframe>
 ```
 
