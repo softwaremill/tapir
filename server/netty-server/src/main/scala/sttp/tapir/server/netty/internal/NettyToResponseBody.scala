@@ -5,7 +5,7 @@ import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -30,7 +30,16 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
         val stream = v.asInstanceOf[InputStream]
         Unpooled.wrappedBuffer(stream.readAllBytes())
 
-      case RawBodyType.FileBody         => Unpooled.wrappedBuffer(Files.readAllBytes(v.file.toPath))
+      case RawBodyType.FileBody         =>
+        val fileRange = v.asInstanceOf[FileRange]
+        val bytes = (for {
+          range <- fileRange.range
+          start <- range.start
+          end <- range.end
+        } yield Files.readAllBytes(fileRange.file.toPath).slice(start.toInt, end.toInt + NettyToResponseBody.IncludingLastOffset))
+          .getOrElse(Files.readAllBytes(fileRange.file.toPath))
+        Unpooled.wrappedBuffer(bytes)
+
       case _: RawBodyType.MultipartBody => ???
     }
   }
@@ -46,4 +55,8 @@ class NettyToResponseBody extends ToResponseBody[ByteBuf, NoStreams] {
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): ByteBuf = throw new UnsupportedOperationException
+}
+
+object NettyToResponseBody {
+  private val IncludingLastOffset = 1
 }
