@@ -115,7 +115,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
-import sttp.apispec.openapi.circe.yaml.RichOpenAPI
+import sttp.apispec.openapi.circe.yaml._
 
 println(docs.toYaml)
 ```
@@ -144,7 +144,7 @@ Firstly add dependencies:
 and generate the documentation by importing valid extension methods and explicitly specifying the "3.1.0" version in the OpenAPI model:
 ```scala mdoc:compile-only
 import sttp.apispec.openapi.OpenAPI
-import sttp.apispec.openapi.circe.yaml.RichOpenAPI3_1 // for `toYaml` extension method with OpenApi 3.1.0 encoders/decoders
+import sttp.apispec.openapi.circe.yaml._ // for `toYaml3_1` extension method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
@@ -155,7 +155,7 @@ val booksListing = endpoint.in(path[String]("bookId"))
 val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
   .openapi("3.1.0") // "3.1.0" version explicitly specified
   
-println(docs.toYaml) // OpenApi 3.1 YAML string would be printed to the console
+println(docs.toYaml3_1) // OpenApi 3.1.0 YAML string would be printed to the console
 ```
 
 ## Exposing generated OpenAPI documentation
