@@ -15,7 +15,7 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
 val scala2_12 = "2.12.17"
-val scala2_13 = "2.13.8"
+val scala2_13 = "2.13.10"
 val scala3 = "3.2.0"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -824,7 +824,7 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
   .settings(
     name := "tapir-grpc-examples",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-discovery" % "2.6.20",
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.20"
     ),
     fork := true
   )
