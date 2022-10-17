@@ -4,10 +4,10 @@ import cats.effect.Sync
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import org.log4s.{Logger, getLogger}
 
-object Http4sDefaultServerLogOptions {
+object Http4sDefaultServerLog {
   private[http4s] val log: Logger = getLogger
-  
-  def defaultServerLog[F[_]: Sync]: DefaultServerLog[F] = {
+
+  def apply[F[_]: Sync]: DefaultServerLog[F] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog[F],

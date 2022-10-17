@@ -32,7 +32,7 @@ object Http4sServerOptions {
 
   def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
-  def defaultServerLog[F[_]: Sync]: DefaultServerLog[F] = Http4sDefaultServerLogOptions.defaultServerLog[F]
+  def defaultServerLog[F[_]: Sync]: DefaultServerLog[F] = Http4sDefaultServerLog[F]
 
   def default[F[_]: Sync]: Http4sServerOptions[F] = customiseInterceptors[F].options
 }
