@@ -6,11 +6,9 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.DecodeResult.{Multiple, Value}
 import sttp.tapir.{Codec, Schema}
-import zio.prelude.Assertion.{divisibleBy, endsWith, greaterThan, startsWith}
-import zio.prelude.{Newtype, Subtype}
 
 class TapirNewtypeSupportTest extends AnyFlatSpec with Matchers {
-  import TapirNewtypeSupportTest._
+  import TapirNewtypeSupportTestFixture._
 
   it should "find schema for Newtype which is equal to the schema of its underlying value" in {
     import StartsWithFooEndsWithBaz.tapirSchema
@@ -66,16 +64,4 @@ class TapirNewtypeSupportTest extends AnyFlatSpec with Matchers {
     newTypeCodec.decode("3") shouldBe Multiple(List("3 did not satisfy divisibleBy(2)", "3 did not satisfy greaterThan(5)"))
   }
 
-}
-
-object TapirNewtypeSupportTest {
-  object StartsWithFooEndsWithBaz extends Newtype[String] with TapirNewtypeSupport[String] {
-    override def assertion = assert(startsWith("foo") && endsWith("baz"))
-  }
-  type StartsWithFooEndsWithBaz = StartsWithFooEndsWithBaz.Type
-
-  object EvenGreaterThanFive extends Subtype[Int] with TapirNewtypeSupport[Int] {
-    override def assertion = assert(divisibleBy(2) && greaterThan(5))
-  }
-  type EvenGreaterThanFive = EvenGreaterThanFive.Type
 }
