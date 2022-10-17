@@ -4,7 +4,7 @@ import akka.event.LoggingAdapter
 import org.slf4j.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.annotation.nowarn
@@ -38,7 +38,7 @@ object AkkaHttpServerOptions {
     Future(blocking(Defaults.deleteFile()(file)))
   }
 
-  val defaultSlf4jServerLog: ServerLog[Future] = {
+  val defaultSlf4jServerLog: DefaultServerLog[Future] = {
     val log = LoggerFactory.getLogger(AkkaHttpServerInterpreter.getClass)
 
     def debugLog(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {

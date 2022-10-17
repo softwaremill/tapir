@@ -6,7 +6,7 @@ import com.twitter.util.Future
 import com.twitter.util.logging.Logging
 import sttp.tapir.TapirFile
 import sttp.tapir.server.finatra.FinatraServerOptions
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.finatra.cats.conversions._
 
@@ -21,7 +21,7 @@ object FinatraCatsServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomiseInterceptors[F, FinatraCatsServerOptions[F]] = {
-    def finatraCatsServerLog(finatraServerLog: DefaultServerLog[Future]): ServerLog[F] = DefaultServerLog[F](
+    def finatraCatsServerLog(finatraServerLog: DefaultServerLog[Future]): DefaultServerLog[F] = DefaultServerLog[F](
       doLogWhenReceived = m => finatraServerLog.doLogWhenReceived(m).asF,
       doLogWhenHandled = (m, e) => finatraServerLog.doLogWhenHandled(m, e).asF,
       doLogAllDecodeFailures = (m, e) => finatraServerLog.doLogAllDecodeFailures(m, e).asF,
