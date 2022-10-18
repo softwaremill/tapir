@@ -63,7 +63,9 @@ class ProtoRenderer {
 
     val renderedFields =
       fieldsWithDefinedId
-        .map { case (id, field) => renderMessageField(field, id) } ++ fieldsWithUndefinedId.map(field => renderMessageField(field, lastUsedId.incrementAndGet()))
+        .map { case (id, field) => renderMessageField(field, id) } ++ fieldsWithUndefinedId.map(field =>
+        renderMessageField(field, lastUsedId.incrementAndGet())
+      )
 
     renderedFields.mkString("\n")
   }

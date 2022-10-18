@@ -6,7 +6,7 @@ package object model {
   type MethodName = String
   type MessageReference = String
   type PackageName = String
-  
-  //FIXME should be better represented
+
+  // FIXME should be better represented
   type ScalarType = String
 }

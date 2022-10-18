@@ -1,7 +1,16 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{complete, extractExecutionContext, extractMaterializer, extractRequestContext, handleWebSocketMessages, onSuccess, reject, respondWithHeaders}
+import akka.http.scaladsl.server.Directives.{
+  complete,
+  extractExecutionContext,
+  extractMaterializer,
+  extractRequestContext,
+  handleWebSocketMessages,
+  onSuccess,
+  reject,
+  respondWithHeaders
+}
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -30,9 +39,10 @@ trait AkkaHttpServerInterpreter {
   def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route =
     toRoute(new AkkaRequestBody(akkaHttpServerOptions)(_, _), new AkkaToResponseBody()(_, _))(ses)
 
-  protected def toRoute(requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams],
-                        toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
-                       )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
+  protected def toRoute(
+      requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams],
+      toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
+  )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(akkaHttpServerOptions.interceptors, ses)
 
@@ -52,7 +62,7 @@ trait AkkaHttpServerInterpreter {
         extractRequestContext { ctx =>
           val serverRequest = AkkaServerRequest(ctx)
           onSuccess(interpreter(serverRequest)) {
-            case RequestResult.Failure(_) => reject
+            case RequestResult.Failure(_)         => reject
             case RequestResult.Response(response) => serverResponseToAkka(response, serverRequest.method)
           }
         }
@@ -76,7 +86,7 @@ trait AkkaHttpServerInterpreter {
           val contentLength: Long = response.contentLength.getOrElse(0)
           val contentType: ContentType = response.contentType match {
             case Some(t) => ContentType.parse(t).getOrElse(ContentTypes.NoContentType)
-            case None => ContentTypes.NoContentType
+            case None    => ContentTypes.NoContentType
           }
           complete(
             HttpResponse(

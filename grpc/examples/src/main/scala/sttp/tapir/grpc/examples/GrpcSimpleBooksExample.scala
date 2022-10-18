@@ -20,9 +20,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 case class SimpleBook(id: Long, title: String, description: String)
 case class AddBookMsg(title: String, description: String)
 
-
 /** Descriptions of endpoints used in the example.
- */
+  */
 object Endpoints {
   val addBook = endpoint
     .in("Library" / "AddBook")

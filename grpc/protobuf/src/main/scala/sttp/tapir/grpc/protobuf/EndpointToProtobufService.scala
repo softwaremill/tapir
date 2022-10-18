@@ -63,17 +63,17 @@ class EndpointToProtobufService {
   private def extractInput(input: EndpointInput[_]): List[MessageReference] = {
     input match {
       case EndpointInput.Pair(left, right, _, _) => extractInput(left) ++ extractInput(right)
-      case op: EndpointIO[_] => forIO(op)
-      case _                 => List.empty
+      case op: EndpointIO[_]                     => forIO(op)
+      case _                                     => List.empty
     }
   }
 
   private def extractOutput(output: EndpointOutput[_]): List[MessageReference] = {
     output match {
-      case EndpointOutput.MappedPair(wrapped, _)        => extractOutput(wrapped)
-      case EndpointOutput.Pair(left, right, _, _)       => extractOutput(left) ++ extractOutput(right)
-      case op: EndpointIO[_]                     => forIO(op)
-      case _                                     => List.empty
+      case EndpointOutput.MappedPair(wrapped, _)  => extractOutput(wrapped)
+      case EndpointOutput.Pair(left, right, _, _) => extractOutput(left) ++ extractOutput(right)
+      case op: EndpointIO[_]                      => forIO(op)
+      case _                                      => List.empty
     }
   }
 

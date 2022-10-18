@@ -1090,19 +1090,19 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared,
+      "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
-    )    
+    )
   )
   .nativePlatform(
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings ++ Seq(
-      Test / skip := true,      
+      Test / skip := true
     )
   )
   .dependsOn(serverCore, cats)
