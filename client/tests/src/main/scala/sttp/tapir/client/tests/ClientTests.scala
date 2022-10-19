@@ -13,8 +13,8 @@ import sttp.tapir.{DecodeResult, _}
 import scala.concurrent.ExecutionContext
 
 abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAndAfterAll {
-  implicit val ioRT: IORuntime = ClientContext.ioRT
-  implicit override val executionContext: ExecutionContext = ioRT.compute
+  implicit val ioRT: IORuntime = ClientTestsPlatform.ioRT
+  implicit override val executionContext: ExecutionContext = ClientTestsPlatform.executionContext
 
   type Port = Int
   var port: Port = 51823
@@ -37,7 +37,7 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
         r.map(doAdjust).left.map(doAdjust).bisequence
       }
 
-      val r =  for {
+      val r = for {
         result <- send(e, port, securityArgs, args)
         adjustedResult <- adjust(result)
         adjustedExpectedResult <- adjust(expectedResult)
@@ -49,6 +49,6 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
     }
   }
 
-  def platformIsScalaJS: Boolean = ClientContext.platformIsScalaJS
-  def platformIsScalaNative: Boolean = ClientContext.platformIsScalaNative
+  def platformIsScalaJS: Boolean = ClientTestsPlatform.platformIsScalaJS
+  def platformIsScalaNative: Boolean = ClientTestsPlatform.platformIsScalaNative
 }

@@ -3,7 +3,7 @@ package sttp.tapir.client.tests
 import cats.effect.unsafe.IORuntime
 import scala.concurrent.ExecutionContext
 
-object ClientContext {
+object ClientTestsPlatform {
   // These two lines should define IO Runtime and ExcecutionContext on Scala Native, but ScalaTest AsyncFunSuite fails with Timeout exception
   // val ioRT:IORuntime = cats.effect.unsafe.implicits.global
   // val executionContext: ExecutionContext = ioRT.compute

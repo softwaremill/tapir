@@ -7,13 +7,9 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client3._
 
-object Backend  {
-  val backend = CurlTryBackend(verbose = false)
-}
-
 abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
 
-  val backend: SttpBackend[Try, R] = Backend.backend
+  val backend: SttpBackend[Try, R] = CurlTryBackend(verbose = false)
   def wsToPipe: WebSocketToPipe[R]
 
   override def send[A, I, E, O](
