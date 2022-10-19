@@ -1,6 +1,5 @@
 package sttp.tapir.client.tests
 
-import cats.effect.unsafe.implicits.global
 import sttp.capabilities.Streams
 import sttp.tapir.tests.Streaming.in_stream_out_stream
 
