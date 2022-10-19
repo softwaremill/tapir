@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.internal
 
 import com.typesafe.scalalogging.Logger
-import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.buffer.Unpooled
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
 import sttp.monad.MonadError
@@ -16,21 +16,6 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
   private val logger = Logger[NettyServerHandler[F]]
 
-  private def toHttpResponse(interpreterResponse: ServerResponse[ByteBuf], req: FullHttpRequest): FullHttpResponse = {
-    val res = new DefaultFullHttpResponse(
-      req.protocolVersion(),
-      HttpResponseStatus.valueOf(interpreterResponse.code.code),
-      interpreterResponse.body.getOrElse(Unpooled.EMPTY_BUFFER)
-    )
-
-    interpreterResponse.headers
-      .groupBy(_.name)
-      .foreach { case (k, v) =>
-        res.headers().set(k, v.map(_.value).asJava)
-      }
-
-    res
-  }
 
   override def channelRead0(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
     if (HttpUtil.is100ContinueExpected(request)) {
@@ -45,8 +30,10 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case Some(response) => response
             case None           => ServerResponse.notFound
           }
-          .map(toHttpResponse(_, request))
-          .map(flushResponse(ctx, request, _))
+          .map((serverResponse: ServerResponse[HttpChunkedInput]) => {
+            writeHeader(ctx, req, serverResponse)
+            writeBodyAndFlush(ctx, serverResponse)
+          })
           .handleError { case ex: Exception =>
             logger.error("Error while processing the request", ex)
             // send 500
@@ -61,7 +48,36 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     }
   }
 
-  def flushResponse(ctx: ChannelHandlerContext, req: HttpRequest, res: HttpResponse): Unit = {
+  private def writeHeader(ctx: ChannelHandlerContext, req: HttpRequest, res: ServerResponse[HttpChunkedInput]): Unit = {
+    val response: DefaultHttpResponse = {
+      val r = new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(res.code.code))
+
+      res.headers
+        .groupBy(_.name)
+        .foreach { case (k, v) =>
+          r.headers().set(k, v.map(_.value).asJava)
+        }
+
+      if (HttpUtil.isKeepAlive(req)) {
+        r.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+      }
+      r
+    }
+
+    ctx.write(response)
+  }
+
+  private def writeBodyAndFlush(ctx: ChannelHandlerContext, res: ServerResponse[HttpChunkedInput]): Unit = {
+    res.body match {
+      case Some(httpChunkedInput) => ctx.writeAndFlush(httpChunkedInput, ctx.newProgressivePromise())
+        .addListener(ChannelFutureListener.CLOSE)
+      case None => ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE)
+    }
+
+    ()
+  }
+
+  private def flushResponse(ctx: ChannelHandlerContext, req: HttpRequest, res: HttpResponse): Unit = {
     if (!HttpUtil.isKeepAlive(req)) {
       ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
       ()

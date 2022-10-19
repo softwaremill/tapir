@@ -1,8 +1,8 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.ByteBuf
-import sttp.monad.syntax._
+import io.netty.handler.codec.http.HttpChunkedInput
 import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
@@ -19,8 +19,8 @@ object NettyServerInterpreter {
       createFile: ServerRequest => F[TapirFile],
       deleteFile: TapirFile => F[Unit]
   ): Route[F] = {
-    implicit val bodyListener: BodyListener[F, ByteBuf] = new NettyBodyListener
-    val serverInterpreter = new ServerInterpreter[Any, F, ByteBuf, NoStreams](
+    implicit val bodyListener: BodyListener[F, HttpChunkedInput] = new NettyBodyListener
+    val serverInterpreter = new ServerInterpreter[Any, F, HttpChunkedInput, NoStreams](
       FilterServerEndpoints(ses),
       new NettyRequestBody(createFile),
       new NettyToResponseBody,
