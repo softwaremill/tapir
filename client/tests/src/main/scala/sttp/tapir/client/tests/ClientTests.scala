@@ -28,10 +28,10 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
       def adjust(r: Either[Any, Any]): IO[Either[Any, Any]] = {
         def doAdjust(v: Any) =
           v match {
-            case is: InputStream => IO.pure(inputStreamToByteArray(is).toList)
-            case a: Array[Byte]  => IO.pure(a.toList)
+            case is: InputStream => IO(inputStreamToByteArray(is).toList)
+            case a: Array[Byte]  => IO(a.toList)
             case f: TapirFile    => IO.fromFuture(IO(readFromFile(f)))
-            case _               => IO.pure(v)
+            case _               => IO(v)
           }
 
         r.map(doAdjust).left.map(doAdjust).bisequence
