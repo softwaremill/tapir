@@ -4,6 +4,7 @@ import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{ChannelHandler, ChannelPipeline}
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
+import io.netty.handler.stream.ChunkedWriteHandler
 import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 
 import java.net.InetSocketAddress
@@ -31,6 +32,7 @@ object NettyOptionsBuilder {
     def chooseSocketType: ChooseSocketType = ChooseSocketType((pipeline, handler) => {
       pipeline.addLast(new HttpServerCodec())
       pipeline.addLast(new HttpObjectAggregator(maxContentLength))
+      pipeline.addLast(new ChunkedWriteHandler())
       pipeline.addLast(handler)
       if (addLoggingHandler) pipeline.addLast(new LoggingHandler())
       ()
