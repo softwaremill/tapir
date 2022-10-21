@@ -2,7 +2,15 @@ package sttp.tapir.server
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.{ChannelFuture, ChannelFutureListener}
-import io.netty.handler.codec.http.{FullHttpRequest, HttpChunkedInput, HttpHeaderNames, HttpHeaderValues, HttpMessage, HttpUtil, HttpVersion}
+import io.netty.handler.codec.http.{
+  FullHttpRequest,
+  HttpChunkedInput,
+  HttpHeaderNames,
+  HttpHeaderValues,
+  HttpMessage,
+  HttpUtil,
+  HttpVersion
+}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -21,7 +29,7 @@ package object netty {
         case head :: tail =>
           head(req).flatMap {
             case Some(response) => me.unit(Some(response))
-            case None => run(tail)
+            case None           => run(tail)
           }
         case Nil => me.unit(None)
       }
@@ -31,14 +39,17 @@ package object netty {
   }
 
   implicit class RichOptionalNettyResponse(val r: Option[NettyResponse]) {
-    def handle(byteBufHandler: (ByteBuf) => Unit,
-               chunkedInputHandler: (HttpChunkedInput, Long) => Unit,
-               noBodyHandler: () => Unit): Unit = {
+    def handle(
+        byteBufHandler: (ByteBuf) => Unit,
+        chunkedInputHandler: (HttpChunkedInput, Long) => Unit,
+        noBodyHandler: () => Unit
+    ): Unit = {
       r match {
-        case Some(value) => value match {
-          case Left(byteBuf) => byteBufHandler(byteBuf)
-          case Right((httpChunkedInput, length)) => chunkedInputHandler(httpChunkedInput, length)
-        }
+        case Some(value) =>
+          value match {
+            case Left(byteBuf)                     => byteBufHandler(byteBuf)
+            case Right((httpChunkedInput, length)) => chunkedInputHandler(httpChunkedInput, length)
+          }
         case None => noBodyHandler()
       }
     }

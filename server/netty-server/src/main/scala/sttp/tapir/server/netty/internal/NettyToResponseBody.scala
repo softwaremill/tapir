@@ -35,7 +35,7 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         val stream = v.asInstanceOf[InputStream]
         Left(Unpooled.wrappedBuffer(stream.readAllBytes()))
 
-      case RawBodyType.FileBody         =>
+      case RawBodyType.FileBody =>
         val fileRange = v.asInstanceOf[FileRange]
         Right(wrap(fileRange))
 

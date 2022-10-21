@@ -30,10 +30,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           .map((serverResponse: ServerResponse[NettyResponse]) => {
             serverResponse.body.handle(
               byteBufHandler = (byteBuf) => {
-                val res = new DefaultFullHttpResponse(
-                  req.protocolVersion(),
-                  HttpResponseStatus.valueOf(serverResponse.code.code),
-                  byteBuf)
+                val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
 
                 res.setHeadersFrom(serverResponse)
                 res.handleContentLengthHeader(byteBuf.readableBytes())
@@ -56,7 +53,8 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                 val res = new DefaultFullHttpResponse(
                   req.protocolVersion(),
                   HttpResponseStatus.valueOf(serverResponse.code.code),
-                  Unpooled.EMPTY_BUFFER)
+                  Unpooled.EMPTY_BUFFER
+                )
 
                 res.setHeadersFrom(serverResponse)
                 res.handleContentLengthHeader(Unpooled.EMPTY_BUFFER.readableBytes())
