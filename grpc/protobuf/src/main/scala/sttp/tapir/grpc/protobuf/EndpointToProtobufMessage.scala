@@ -74,10 +74,10 @@ class EndpointToProtobufMessage {
           case Some(name) =>
             val protoFields = fields.map { field =>
               field.schema.schemaType match {
-                case SString() => ProtobufMessageField("string", field.name.name, None)
-                case SNumber() => ProtobufMessageField("int64", field.name.name, None)
+                case SString()  => ProtobufMessageField("string", field.name.name, None)
+                case SNumber()  => ProtobufMessageField("int64", field.name.name, None)
                 case SInteger() => ProtobufMessageField("int32", field.name.name, None)
-                case _         => ???
+                case _          => ???
               }
             }
             List(new ProtobufMessage(name.fullName.split('.').last, protoFields)) // FIXME
