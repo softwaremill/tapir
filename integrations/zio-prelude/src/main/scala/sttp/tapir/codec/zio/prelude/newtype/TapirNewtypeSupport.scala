@@ -5,13 +5,8 @@ import zio.prelude.Newtype
 
 trait TapirNewtypeSupport[A] { self: Newtype[A] =>
   implicit def tapirCodec[L, CF <: CodecFormat](implicit codec: Codec[L, A, CF]): Codec[L, Type, CF] =
-    codec.mapDecode(
-      make(_).fold(
-        errors => DecodeResult.Multiple(errors.toList),
-        DecodeResult.Value(_)
-      )
-    )(unwrap)
+    TapirNewtype[A, self.type](self).tapirCodec
 
   implicit def tapirSchema(implicit schema: Schema[A]): Schema[Type] =
-    schema.map(make(_).toOption)(unwrap)
+    TapirNewtype[A, self.type](self).tapirSchema
 }

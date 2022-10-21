@@ -1,16 +1,17 @@
 package sttp.tapir.codec.zio.prelude.newtype
 
+import sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupportTestFixture.{IntSubtypeWithMixin, StringNewtypeWithMixin}
 import zio.prelude.Assertion.{divisibleBy, endsWith, greaterThan, startsWith}
 import zio.prelude.{Newtype, Subtype}
 
 object TapirNewtypeSupportTestFixture {
-  object StartsWithFooEndsWithBaz extends Newtype[String] with TapirNewtypeSupport[String] {
+  object StringNewtypeWithMixin extends Newtype[String] with TapirNewtypeSupport[String] {
     override inline def assertion = startsWith("foo") && endsWith("baz")
   }
-  type StartsWithFooEndsWithBaz = StartsWithFooEndsWithBaz.Type
+  type StringNewtypeWithMixin = StringNewtypeWithMixin.Type
 
-  object EvenGreaterThanFive extends Subtype[Int] with TapirNewtypeSupport[Int] {
+  object IntSubtypeWithMixin extends Subtype[Int] with TapirNewtypeSupport[Int] {
     override inline def assertion = divisibleBy(2) && greaterThan(5)
   }
-  type EvenGreaterThanFive = EvenGreaterThanFive.Type
+  type IntSubtypeWithMixin = IntSubtypeWithMixin.Type
 }
