@@ -8,7 +8,7 @@ import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters.IterableHasAsJava
+import scala.collection.JavaConverters._
 
 package object netty {
   type Route[F[_]] = NettyServerRequest => F[Option[ServerResponse[NettyResponse]]]
