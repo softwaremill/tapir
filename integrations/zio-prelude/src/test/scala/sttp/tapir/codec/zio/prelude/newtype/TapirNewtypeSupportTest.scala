@@ -5,7 +5,6 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.DecodeResult.{Multiple, Value}
-import sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupportTestFixture.{IntSubtypeWithMixin, StringNewtypeWithMixin}
 import sttp.tapir.{Codec, Schema}
 
 class TapirNewtypeSupportTest extends AnyFlatSpec with Matchers {

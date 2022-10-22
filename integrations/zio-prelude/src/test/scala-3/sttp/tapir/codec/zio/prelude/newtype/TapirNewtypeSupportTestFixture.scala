@@ -1,6 +1,5 @@
 package sttp.tapir.codec.zio.prelude.newtype
 
-import sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupportTestFixture.{IntSubtypeWithMixin, StringNewtypeWithMixin}
 import zio.prelude.Assertion.{divisibleBy, endsWith, greaterThan, startsWith}
 import zio.prelude.{Newtype, Subtype}
 
