@@ -11,7 +11,6 @@ class EndpointToProtobufMessage {
 
   private def distinctBy[T, U](elements: List[T])(selector: T => U): List[T] = elements
     .groupBy(selector)
-    .tapEach(x => println(x))
     .flatMap {
       case (_, hd :: _) => Seq(hd)
       case _ => Seq.empty[T]
