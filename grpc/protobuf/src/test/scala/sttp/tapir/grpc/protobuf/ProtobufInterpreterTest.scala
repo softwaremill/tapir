@@ -2,11 +2,15 @@ package sttp.tapir.grpc.protobuf
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import shapeless.PolyDefns.Compose.composeCase
+import sttp.tapir.Schema.SName
 import sttp.tapir.generic.Derived
 import sttp.tapir._
 import sttp.tapir.generic.auto.schemaForCaseClass
 import sttp.tapir.grpc.protobuf.pbdirect._
 import sttp.tapir.generic.auto._
+import sttp.tapir.grpc.protobuf.ProtobufScalarType.{ProtobufInt32, ProtobufInt64, ProtobufString}
+import sttp.tapir.grpc.protobuf.model.{ProtobufMessage, ProtobufMessageField}
 
 
 class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
@@ -54,6 +58,9 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
 
     val result = endpointToProtobufMessage(List(testEndpoint))
 
-    println(result)
+    result should contain theSameElementsAs List(
+      ProtobufMessage("A", List(ProtobufMessageField(ProtobufInt64, "l", None), ProtobufMessageField(ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.B")), "b", None))),
+      ProtobufMessage("B", List(ProtobufMessageField(ProtobufInt32, "int", None), ProtobufMessageField(ProtobufString, "s", None))),
+    )
   }
 }

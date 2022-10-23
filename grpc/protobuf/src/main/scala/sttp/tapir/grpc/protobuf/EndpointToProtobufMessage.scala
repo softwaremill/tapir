@@ -1,10 +1,9 @@
 package sttp.tapir.grpc.protobuf
 
+import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.{SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
 import sttp.tapir.{Schema, _}
 import sttp.tapir.grpc.protobuf.model._
-
-import java.time.LocalDate
 
 class EndpointToProtobufMessage {
   def apply(es: List[AnyEndpoint]): List[ProtobufMessage] =
@@ -12,8 +11,9 @@ class EndpointToProtobufMessage {
 
   private def distinctBy[T, U](elements: List[T])(selector: T => U): List[T] = elements
     .groupBy(selector)
+    .tapEach(x => println(x))
     .flatMap {
-      case (_, Seq(el)) => Seq(el)
+      case (_, hd :: _) => Seq(hd)
       case _ => Seq.empty[T]
     }
     .toList
@@ -51,7 +51,7 @@ class EndpointToProtobufMessage {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[ProtobufMessage] = {
+  private def forIO(io: EndpointIO[_]): List[ProtobufMessage] =
     io match {
       case EndpointIO.Pair(left, right, _, _) => forIO(left) ++ forIO(right)
       case EndpointIO.Header(_, codec, _) => ???
@@ -63,26 +63,31 @@ class EndpointToProtobufMessage {
       case EndpointIO.FixedHeader(_, _, _) => List.empty
       case EndpointIO.Empty(_, _) => List.empty
     }
-  }
 
   private def fromCodec(codec: Codec[_, _, _]): List[ProtobufMessage] = {
-    val schema = codec.schema
+    val rootSchema = codec.schema
 
-    schema.schemaType match {
+    val msgs = availableMessagesFromSchema(rootSchema)
+
+    msgs.flatMap { case (name, msgSchema) => msgSchema.schemaType match {
       case SProduct(fields) =>
-        schema.name match {
-          case None => ???
-          case Some(name) =>
-            val protoFields = fields.map { field =>
-              //TODO files support?
-              fromProductField(field)
-            }
-            List(ProtobufMessage(name.fullName.split('.').last, protoFields)) // FIXME
+        val protoFields = fields.map { field =>
+          //TODO files support?
+          fromProductField(msgs)(field)
         }
+        List(ProtobufMessage(name.fullName.split('.').last, protoFields)) // FIXME
       case _ => ???
     }
-
+    }.toList
   }
+
+  private def availableMessagesFromSchema(schema: Schema[_]): Map[SName, Schema[_]] = schema.schemaType match {
+    case SProduct(fields) => schema.name.map(name => Map(name -> schema)).getOrElse(Map.empty) ++
+      fields.foldLeft(Map.empty[SName, Schema[_]])((m, field) => m ++ availableMessagesFromSchema(field.schema))
+    case SchemaType.SCoproduct(subtypes, discriminator) => ???
+    case _ => Map.empty
+  }
+
   private def defaultScalarMappings(field: SProductField[_]): ProtobufScalarType = field.schema.schemaType match {
     case SString() => ProtobufScalarType.ProtobufString
     case SInteger() if field.schema.format.contains("int64") => ProtobufScalarType.ProtobufInt64
@@ -96,15 +101,19 @@ class EndpointToProtobufMessage {
     case SDate() => ProtobufScalarType.ProtobufInt64
     case in =>
       println(s"Not supported input [$in]") //FIXME
-    ???
+      ???
   }
 
 
+  private def fromProductField(availableMessages: Map[SName, Schema[_]])(field: SProductField[_]): ProtobufMessageField = {
+    val maybeCustomType = field.schema.attribute(ProtobufAttributes.ScalarValueAttribute)
+    val maybeMessageRef = field.schema.name match {
+      case Some(name) if availableMessages.contains(name) => Some(ProtobufMessageRef(name))
+      case _ => None
+    }
+    val `type` = maybeCustomType.orElse(maybeMessageRef).getOrElse(defaultScalarMappings(field))
 
-  private def fromProductField(field: SProductField[_]): ProtobufMessageField = {
-    val scalarType = field.schema.attribute(ProtobufAttributes.ScalarValueAttribute).getOrElse(defaultScalarMappings(field))
-
-    ProtobufMessageField(scalarType, field.name.name, None)
+    ProtobufMessageField(`type`, field.name.name, None)
   }
 
 }
