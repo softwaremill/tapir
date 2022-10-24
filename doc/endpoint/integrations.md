@@ -103,6 +103,44 @@ schemas for types which extend `NewtypeWrapped` and `NewsubtypeWrapped` annotati
 
 Then, `import sttp.tapir.codec.monix.newtype._`, or extend the `sttp.tapir.codec.monix.newtype.TapirCodecMonixNewType` trait to bring the implicit values into scope.
 
+## ZIO Prelude Newtype integration
+
+If you use [ZIO Prelude Newtypes](https://zio.github.io/zio-prelude/docs/newtypes/), the `tapir-zio-prelude` module will provide implicit codecs and
+schemas for types defined using `Newtype` and `Subtype` as long as a codec and a schema for the underlying type already exists:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "@VERSION@"
+```
+
+Then, mix in `sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport` into your newtype to bring the implicit values into scope:
+
+```scala
+import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Schema
+import sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport
+import zio.prelude.Newtype
+
+object Foo extends Newtype[String] with TapirNewtypeSupport[String]
+type Foo = Foo.Type
+
+implicitly[Schema[Foo]]
+implicitly[PlainCodec[Foo]]
+```
+
+Or use the `TapirNewtype` helper to derive a codec or a schema without modifying the newtype:
+```scala
+import sttp.tapir.codec.zio.prelude.newtype.TapirNewtype
+
+object Bar extends Newtype[String]
+type Bar = Bar.Type
+
+// Explicitly provide the base type of your newtype when instantiating the helper, in this case, String.
+val BarSupport = TapirNewtype[String](Bar)
+import BarSupport._
+implicitly[Schema[Bar]]
+implicitly[PlainCodec[Bar]]
+```
+
 ## Derevo integration
 
 The `tapir-derevo` module provides a way to derive schema for your type using `@derive` annotation.
