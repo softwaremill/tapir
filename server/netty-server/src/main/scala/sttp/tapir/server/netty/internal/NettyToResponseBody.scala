@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.HttpChunkedInput
-import io.netty.handler.stream.ChunkedFile
+import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
@@ -29,11 +29,11 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
 
       case RawBodyType.ByteBufferBody =>
         val byteBuffer = v.asInstanceOf[ByteBuffer]
-        Left(Unpooled.wrappedBuffer(byteBuffer.array()))
+        Left(Unpooled.wrappedBuffer(byteBuffer))
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        Left(Unpooled.wrappedBuffer(stream.readAllBytes()))
+        Right(wrap(stream))
 
       case RawBodyType.FileBody =>
         val fileRange = v.asInstanceOf[FileRange]
@@ -41,6 +41,10 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
 
       case _: RawBodyType.MultipartBody => ???
     }
+  }
+
+  private def wrap(content: InputStream): (HttpChunkedInput, Long) = {
+    (new HttpChunkedInput(new ChunkedStream(content)), content.available())
   }
 
   private def wrap(content: FileRange): (HttpChunkedInput, Long) = {

@@ -1,13 +1,15 @@
 package sttp.tapir.server.netty.internal
 
 import com.typesafe.scalalogging.Logger
-import io.netty.buffer.Unpooled
-import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
+import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.channel.{ChannelFuture, ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, RichChannelFuture, RichHttpMessage, RichOptionalNettyResponse, Route}
+import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+
+import scala.collection.JavaConverters._
 
 class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[FullHttpRequest] {
@@ -77,6 +79,51 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       } // exceptions should be handled
 
       ()
+    }
+  }
+
+  private implicit class RichOptionalNettyResponse(val r: Option[NettyResponse]) {
+    def handle(
+        byteBufHandler: (ByteBuf) => Unit,
+        chunkedInputHandler: (HttpChunkedInput, Long) => Unit,
+        noBodyHandler: () => Unit
+    ): Unit = {
+      r match {
+        case Some(Left(byteBuf))                     => byteBufHandler(byteBuf)
+        case Some(Right((httpChunkedInput, length))) => chunkedInputHandler(httpChunkedInput, length)
+        case None                                    => noBodyHandler()
+      }
+    }
+  }
+
+  private implicit class RichHttpMessage(val m: HttpMessage) {
+    def setHeadersFrom(response: ServerResponse[_]): Unit = {
+      response.headers
+        .groupBy(_.name)
+        .foreach { case (k, v) =>
+          m.headers().set(k, v.map(_.value).asJava)
+        }
+    }
+
+    def handleContentLengthHeader(length: Long): Unit = {
+      if (!m.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
+        m.headers().set(HttpHeaderNames.CONTENT_LENGTH, length)
+      }
+    }
+
+    def handleCloseAndKeepAliveHeaders(request: FullHttpRequest): Unit = {
+      if (!HttpUtil.isKeepAlive(request))
+        m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+      else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))
+        m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+    }
+  }
+
+  private implicit class RichChannelFuture(val cf: ChannelFuture) {
+    def closeIfNeeded(request: FullHttpRequest): Unit = {
+      if (!HttpUtil.isKeepAlive(request)) {
+        cf.addListener(ChannelFutureListener.CLOSE)
+      }
     }
   }
 }
