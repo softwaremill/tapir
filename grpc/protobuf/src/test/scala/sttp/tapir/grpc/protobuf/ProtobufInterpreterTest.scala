@@ -12,7 +12,6 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.grpc.protobuf.ProtobufScalarType.{ProtobufInt32, ProtobufInt64, ProtobufString}
 import sttp.tapir.grpc.protobuf.model.{ProtobufMessage, ProtobufMessageField}
 
-
 class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
   val endpointToProtobufMessage = new EndpointToProtobufMessage()
   val interpreter = new ProtobufInterpreter(new EndpointToProtobufMessage(), new EndpointToProtobufService())
@@ -20,16 +19,16 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
 
   it should "handle all scalar types" in {
     case class TestClass(
-                          int: Int,
-                          long: Long,
-                          string: String,
-                          float: Float,
-                          double: Double,
-                          byte: Byte,
-                          boolean: Boolean,
-                          short: Short,
-                          unit: Unit
-                        )
+        int: Int,
+        long: Long,
+        string: String,
+        float: Float,
+        double: Double,
+        byte: Byte,
+        boolean: Boolean,
+        short: Short,
+        unit: Unit
+    )
 
     val testEndpoint = baseTestEndpoint.in(grpcBody[TestClass])
 
@@ -45,7 +44,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
       "byte" -> ProtobufScalarType.ProtobufInt32,
       "boolean" -> ProtobufScalarType.ProtobufBool,
       "short" -> ProtobufScalarType.ProtobufInt32,
-      "unit" -> ProtobufScalarType.ProtobufEmpty,
+      "unit" -> ProtobufScalarType.ProtobufEmpty
     )
   }
 
@@ -53,14 +52,23 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     case class B(int: Int, s: String)
     case class A(l: Long, b: B)
 
-
     val testEndpoint = baseTestEndpoint.in(grpcBody[A])
 
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result should contain theSameElementsAs List(
-      ProtobufMessage("A", List(ProtobufMessageField(ProtobufInt64, "l", None), ProtobufMessageField(ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.B")), "b", None))),
-      ProtobufMessage("B", List(ProtobufMessageField(ProtobufInt32, "int", None), ProtobufMessageField(ProtobufString, "s", None))),
+      ProtobufMessage(
+        "A",
+        List(
+          ProtobufMessageField(ProtobufInt64, "l", None),
+          ProtobufMessageField(
+            ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.B")),
+            "b",
+            None
+          )
+        )
+      ),
+      ProtobufMessage("B", List(ProtobufMessageField(ProtobufInt32, "int", None), ProtobufMessageField(ProtobufString, "s", None)))
     )
   }
 }

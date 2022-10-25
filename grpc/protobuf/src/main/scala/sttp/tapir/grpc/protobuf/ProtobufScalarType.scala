@@ -8,7 +8,7 @@ sealed trait ProtobufType {
 }
 
 case class ProtobufMessageRef(refName: SName) extends ProtobufType {
-  override def filedTypeName: String = refName.show.split('.').last//FIXME we need to a better way for generating messages names
+  override def filedTypeName: String = refName.show.split('.').last // FIXME we need to a better way for generating messages names
 }
 sealed trait ProtobufScalarType extends ProtobufType
 

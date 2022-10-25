@@ -1,7 +1,6 @@
 package sttp.tapir.grpc.protobuf.pbdirect
 
-//import _root_.pbdirect._
-import pbdirect.{PBMessageWriter, PBMessageReader, PBMessageWriterOps}
+import _root_.pbdirect._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, RawBodyType, Schema}
 
 trait TapirProtobufPbDirect {
