@@ -12,6 +12,11 @@ trait SchemaMacros[T] { this: Schema[T] =>
 
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
+    *
+    * Should only be used on schemas which haven't been `.map`ped, as then the shape of the schema no longer represents the shape of the `T`
+    * type.
+    *
+    * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
     */
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${
     SchemaMacros.modifyImpl[T, U]('this)('path)('modification)

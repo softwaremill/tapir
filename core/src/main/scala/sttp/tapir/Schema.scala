@@ -163,6 +163,7 @@ case class Schema[T](
     } else None
   }
 
+  /** See [[modify]]: instead of a path expressed using code, accepts a path a sequence of `String`s. */
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
