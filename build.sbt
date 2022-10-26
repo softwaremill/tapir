@@ -415,7 +415,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .nativePlatform(
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings
-  )  
+  )
   .dependsOn(core, circeJson, cats)
 
 val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
@@ -765,8 +765,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.5",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.5" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.6",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.6" % Test,
       scalaTest.value % Test
     )
   )
@@ -1466,7 +1466,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .nativePlatform(
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings
-  )  
+  )
   .dependsOn(tests)
 
 lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
@@ -1538,10 +1538,10 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test,
-        "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test,
+        "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
       )
     )
-  )    
+  )
   .dependsOn(clientCore, clientTests % Test)
 
 lazy val sttpClientWsZio1: ProjectMatrix = (projectMatrix in file("client/sttp-client-ws-zio1"))
