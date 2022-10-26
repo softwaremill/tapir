@@ -72,7 +72,7 @@ class ProtoRenderer {
 
   private def renderMessageField(field: ProtobufMessageField, id: Int): String =
     s"""
-        |${field.`type`} ${field.name} = $id;
+        |${field.`type`.filedTypeName} ${field.name} = $id;
         """.stripMargin
 
 }
