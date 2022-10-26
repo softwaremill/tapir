@@ -106,8 +106,22 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     }
 
   def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
+
+  /** Adds a validator which validates the option's element, if it is present.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
+    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
+    * run-time.
+    */
   def validateOption[U](v: Validator[U])(implicit hIsOptionU: H =:= Option[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+  /** Adds a validator which validates each element in the collection.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
+    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
+    * run-time.
+    */
   def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit hIsCU: H =:= C[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }

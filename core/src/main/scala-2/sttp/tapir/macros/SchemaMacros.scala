@@ -11,8 +11,8 @@ trait SchemaMacros[T] {
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
     *
-    * Should only be used on schemas which haven't been `.map`ped, as then the shape of the schema no longer represents the shape of the `T`
-    * type.
+    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * correspond to the type `T`, but to some lower-level representation of the type.
     *
     * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
     */

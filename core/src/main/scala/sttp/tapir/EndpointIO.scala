@@ -73,8 +73,21 @@ object EndpointTransput {
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
 
+    /** Adds a validator which validates the option's element, if it is present.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+    /** Adds a validator which validates each element in the collection.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
