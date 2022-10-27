@@ -263,6 +263,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    other_interpreters
    mytapir
+   grpc
    troubleshooting
    migrating
    goals

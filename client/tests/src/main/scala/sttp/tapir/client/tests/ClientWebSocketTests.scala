@@ -1,7 +1,6 @@
 package sttp.tapir.client.tests
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.tapir._
 import sttp.tapir.json.circe._

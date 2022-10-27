@@ -2,7 +2,6 @@ package sttp.tapir.client.sttp
 
 import cats.effect.IO
 import cats.effect.std.Dispatcher
-import cats.effect.unsafe.implicits.global
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._

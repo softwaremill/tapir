@@ -4,7 +4,7 @@ import _root_.zio.{RIO, Task, URIO}
 import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir.server.armeria.ArmeriaServerOptions
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -43,7 +43,7 @@ object ArmeriaZioServerOptions {
 
   def defaultDeleteFile[R](file: TapirFile): RIO[R, Unit] = blocking(Defaults.deleteFile()(file))
 
-  def defaultServerLog[R]: ServerLog[RIO[R, *]] = DefaultServerLog(
+  def defaultServerLog[R]: DefaultServerLog[RIO[R, *]] = DefaultServerLog(
     doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[R],
     doLogAllDecodeFailures = debugLog[R],

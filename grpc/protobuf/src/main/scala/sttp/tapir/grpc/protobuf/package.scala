@@ -1,5 +1,3 @@
 package sttp.tapir.grpc
 
-package object protobuf {
-  
-}
+package object protobuf {}

@@ -7,10 +7,11 @@ Implementation is fairly easy, and for now, one guide on how to integrate with s
 ```eval_rst
 .. note::
 
-  Note, that implementing `XmlCodec[T]` would require deriving not only XML library encoders/decoders, 
-  but also tapir related `Schema[T]`. These are completely separate - any customization e.g. for field
+  Note, that implementing ``XmlCodec[T]`` would require deriving not only XML library encoders/decoders, 
+  but also tapir related ``Schema[T]``. These are completely separate - any customization e.g. for field
   naming or inheritance strategies must be done separately for both derivations.
-  For more details see sections on [schema derivation](schemas.md) and on supporting [custom types](customtypes.md) in general.
+  For more details see sections on `schema derivation <https://tapir.softwaremill.com/en/latest/endpoint/schemas.html>`_ 
+  and on supporting `custom types <https://tapir.softwaremill.com/en/latest/endpoint/customtypes.html>`_ in general.
 ```
 
 ## Scalaxb

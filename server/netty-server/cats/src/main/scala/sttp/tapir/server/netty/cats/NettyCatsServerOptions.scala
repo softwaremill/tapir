@@ -4,7 +4,7 @@ import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import com.typesafe.scalalogging.Logger
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.netty.{NettyDefaults, NettyOptions}
 import sttp.tapir.{Defaults, TapirFile}
@@ -52,7 +52,7 @@ object NettyCatsServerOptions {
 
   private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
 
-  def defaultServerLog[F[_]: Async]: ServerLog[F] = DefaultServerLog(
+  def defaultServerLog[F[_]: Async]: DefaultServerLog[F] = DefaultServerLog(
     doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[F],
     doLogAllDecodeFailures = debugLog[F],
