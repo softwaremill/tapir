@@ -40,7 +40,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
     } else {
-      val req = request.retainedDuplicate()
+      val req = request.retain()
 
       unsafeRunAsync { () =>
         route(NettyServerRequest(req))
@@ -48,16 +48,17 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case Some(response) => response
             case None           => ServerResponse.notFound
           }
-          .map(toHttpResponse(_, request))
-          .map(flushResponse(ctx, request, _))
+          .map(toHttpResponse(_, req))
+          .map(flushResponse(ctx, req, _))
           .handleError { case ex: Exception =>
             logger.error("Error while processing the request", ex)
             // send 500
             val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
             res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-            flushResponse(ctx, request, res)
+            flushResponse(ctx, req, res)
             me.unit(())
           }
+          .ensure(me.eval(req.release()))
       } // exceptions should be handled
 
       ()
