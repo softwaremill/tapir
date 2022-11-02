@@ -30,7 +30,7 @@ import sttp.tapir._
 type PublicEndpoint[I, E, O, -R] = Endpoint[Unit, I, E, O, R]
 ```
 
-A public endpoint has two inputs of types `UUID` and `Int`, upon error returns a `String`, and on normal 
+A public endpoint that has two inputs of types `UUID` and `Int`, upon error returns a `String`, and on normal 
 completion returns a `User`, would have the type:
 
 ```scala mdoc:invisible
@@ -45,7 +45,7 @@ import sttp.tapir._
 val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 ```
 
-You can think of an endpoint as a function, which takes input parameters of type `A` and `I` and returns a result of type 
+You can think of an endpoint as a function which takes input parameters of type `A` and `I` and returns a result of type 
 `Either[E, O]`.
 
 ### Infallible endpoints
@@ -54,7 +54,7 @@ Note that the empty `endpoint` description maps no values to either error and su
 are still represented and allowed to occur. In case of the error output, the single member of the unit type, `(): Unit`, 
 maps to an empty-body `400 Bad Request`.
 
-If you prefer to use an endpoint description, where errors cannot happen, use 
+If you prefer to use an endpoint description where errors cannot happen, use 
 `infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any]`. This might be useful when
 interpreting endpoints [as a client](../client/sttp.md).
 
