@@ -326,6 +326,16 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
     Codec.string.mapDecode(decode)(encode)
   }
 
+  implicit def part[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], Part[U], CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body).map(r => e.copy(body = r)))(e => e.copy(body = c.encode(e.body)))
+  }
+
+  implicit def unwrapPart[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], U, CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
+  }
+
   //
 
   implicit val webSocketFrame: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
@@ -553,16 +563,6 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
 
   implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
   implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
-
-  implicit def part[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], Part[U], CF] = {
-    id[Part[T], CF](c.format, Schema.binary)
-      .mapDecode(e => c.decode(e.body).map(r => e.copy(body = r)))(e => e.copy(body = c.encode(e.body)))
-  }
-
-  implicit def unwrapPart[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], U, CF] = {
-    id[Part[T], CF](c.format, Schema.binary)
-      .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
-  }
 
   implicit def tupledWithRaw[L, H, CF <: CodecFormat](implicit codec: Codec[L, H, CF]): Codec[L, (L, H), CF] =
     new Codec[L, (L, H), CF] {
