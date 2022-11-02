@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.Unpooled
-import io.netty.handler.codec.http.HttpChunkedInput
+import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
 import sttp.model.HasHeaders
@@ -21,33 +21,37 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = v.asInstanceOf[String].getBytes(charset)
-        Left(Unpooled.wrappedBuffer(bytes))
+        asFun(Left(Unpooled.wrappedBuffer(bytes)))
 
       case RawBodyType.ByteArrayBody =>
         val bytes = v.asInstanceOf[Array[Byte]]
-        Left(Unpooled.wrappedBuffer(bytes))
+        asFun(Left(Unpooled.wrappedBuffer(bytes)))
 
       case RawBodyType.ByteBufferBody =>
         val byteBuffer = v.asInstanceOf[ByteBuffer]
-        Left(Unpooled.wrappedBuffer(byteBuffer))
+        asFun(Left(Unpooled.wrappedBuffer(byteBuffer)))
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        Right(wrap(stream))
+        asFun(Middle(wrap(stream)))
 
       case RawBodyType.FileBody =>
         val fileRange = v.asInstanceOf[FileRange]
-        Right(wrap(fileRange))
+        asFun(Right(wrap(fileRange)))
 
-      case _: RawBodyType.MultipartBody => ???
+      case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
   }
 
-  private def wrap(content: InputStream): (HttpChunkedInput, Long) = {
-    (new HttpChunkedInput(new ChunkedStream(content)), content.available())
+  private def asFun(c: Choice3[ByteBuf, ChunkedStream, ChunkedFile]): NettyResponse = {
+    (ctx: ChannelHandlerContext) => (ctx.newPromise(), c)
   }
 
-  private def wrap(content: FileRange): (HttpChunkedInput, Long) = {
+  private def wrap(content: InputStream): ChunkedStream = {
+    new ChunkedStream(content)
+  }
+
+  private def wrap(content: FileRange): ChunkedFile = {
     val file = content.file
     val maybeRange = for {
       range <- content.range
@@ -58,9 +62,9 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     maybeRange match {
       case Some((start, end)) => {
         val randomAccessFile = new RandomAccessFile(file, NettyToResponseBody.ReadOnlyAccessMode)
-        (new HttpChunkedInput(new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)), end - start)
+        new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)
       }
-      case None => (new HttpChunkedInput(new ChunkedFile(file)), file.length())
+      case None => new ChunkedFile(file)
     }
   }
 

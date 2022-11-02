@@ -2,8 +2,9 @@ package sttp.tapir.server.netty.internal
 
 import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
-import io.netty.channel.{ChannelFuture, ChannelFutureListener, ChannelHandlerContext, SimpleChannelInboundHandler}
+import io.netty.channel._
 import io.netty.handler.codec.http._
+import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -30,7 +31,8 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case None           => ServerResponse.notFound
           }
           .map((serverResponse: ServerResponse[NettyResponse]) => {
-            serverResponse.body.handle(
+            serverResponse.handle(
+              ctx = ctx,
               byteBufHandler = (byteBuf) => {
                 val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
 
@@ -40,16 +42,28 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
                 ctx.writeAndFlush(res).closeIfNeeded(req)
               },
-              chunkedInputHandler = (httpChunkedInput, length) => {
+              chunkedStreamHandler = (channelPromise, chunkedStream) => {
                 val resHeader: DefaultHttpResponse =
                   new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
 
                 resHeader.setHeadersFrom(serverResponse)
-                resHeader.handleContentLengthHeader(length)
+                resHeader.setChunked()
                 resHeader.handleCloseAndKeepAliveHeaders(request)
 
                 ctx.write(resHeader)
-                ctx.writeAndFlush(httpChunkedInput, ctx.newProgressivePromise()).closeIfNeeded(req)
+                ctx.writeAndFlush(new HttpChunkedInput(chunkedStream), channelPromise).closeIfNeeded(req)
+              },
+              chunkedFileHandler = (channelPromise, chunkedFile) => {
+                val resHeader: DefaultHttpResponse =
+                  new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
+
+                resHeader.setHeadersFrom(serverResponse)
+                resHeader.handleContentLengthHeader(chunkedFile.length())
+                resHeader.handleCloseAndKeepAliveHeaders(request)
+
+                ctx.write(resHeader)
+                // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+                ctx.writeAndFlush(new HttpChunkedInput(chunkedFile), channelPromise).closeIfNeeded(req)
               },
               noBodyHandler = () => {
                 val res = new DefaultFullHttpResponse(
@@ -63,8 +77,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                 res.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.writeAndFlush(res).closeIfNeeded(req)
-              }
-            )
+              })
           })
           .handleError { case ex: Exception =>
             logger.error("Error while processing the request", ex)
@@ -82,16 +95,24 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     }
   }
 
-  private implicit class RichOptionalNettyResponse(val r: Option[NettyResponse]) {
-    def handle(
-        byteBufHandler: (ByteBuf) => Unit,
-        chunkedInputHandler: (HttpChunkedInput, Long) => Unit,
-        noBodyHandler: () => Unit
+  private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
+    def handle(ctx: ChannelHandlerContext,
+               byteBufHandler: (ByteBuf) => Unit,
+               chunkedStreamHandler: (ChannelPromise, ChunkedStream) => Unit,
+               chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
+               noBodyHandler: () => Unit
     ): Unit = {
-      r match {
-        case Some(Left(byteBuf))                     => byteBufHandler(byteBuf)
-        case Some(Right((httpChunkedInput, length))) => chunkedInputHandler(httpChunkedInput, length)
-        case None                                    => noBodyHandler()
+      r.body match {
+        case Some(function) => {
+          val values = function(ctx)
+
+          values match {
+            case (_, Left(byteBuf)) => byteBufHandler(byteBuf)
+            case (channelPromise, Middle(chunkedStream)) => chunkedStreamHandler(channelPromise, chunkedStream)
+            case (channelPromise, Right(chunkedFile)) => chunkedFileHandler(channelPromise, chunkedFile)
+          }
+        }
+        case None => noBodyHandler()
       }
     }
   }
@@ -109,6 +130,11 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       if (!m.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
         m.headers().set(HttpHeaderNames.CONTENT_LENGTH, length)
       }
+    }
+
+    def setChunked(): Unit = {
+      m.headers().remove(HttpHeaderNames.CONTENT_LENGTH)
+      m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
     }
 
     def handleCloseAndKeepAliveHeaders(request: FullHttpRequest): Unit = {
