@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -316,6 +317,33 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       val y1ConfSchema: Schema[Y1Conf] = Schema.derived[Y1Conf]
       Schema.oneOfUsingField[YConf, YEnum](_.kind, _.toString)((Y1: YEnum) -> y1ConfSchema)
     }
+  }
+
+  it should "derive schema for enumeration and enrich schema" in {
+    val expected = Schema[Countries.Country](SString())
+      .validate(
+        Validator.enumeration[Countries.Country](
+          Countries.values.toList,
+          (v: Countries.Country) => Option(v),
+          Some(SName("sttp.tapir.SchemaMacroTestData.Countries"))
+        )
+      )
+      .description("country")
+      .default(Countries.PL)
+      .name(SName("country-encoded-name"))
+
+    val actual = implicitly[Schema[Countries.Country]]
+
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(na)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Countries.PL) shouldBe ee(Countries.PL)
+        na shouldBe ne
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+    actual.default shouldBe expected.default
+    actual.name shouldBe expected.name
   }
 
   behavior of "apply default"

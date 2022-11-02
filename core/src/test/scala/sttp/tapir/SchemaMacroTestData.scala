@@ -46,4 +46,12 @@ object SchemaMacroTestData {
   }
 
   case class Hamster(name: String, likesNuts: Boolean) extends Rodent
+
+  @description("country")
+  @default(Countries.PL)
+  @encodedName("country-encoded-name")
+  object Countries extends Enumeration {
+    type Country = Value
+    val PL, NL = Value
+  }
 }
