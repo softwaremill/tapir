@@ -564,6 +564,8 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
   implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
 
+  // raw tuples
+
   implicit def tupledWithRaw[L, H, CF <: CodecFormat](implicit codec: Codec[L, H, CF]): Codec[L, (L, H), CF] =
     new Codec[L, (L, H), CF] {
       override def schema: Schema[(L, H)] = codec.schema.map(h => Some(codec.encode(h) -> h))(_._2)
@@ -571,6 +573,28 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       override def rawDecode(l: L): DecodeResult[(L, H)] = codec.rawDecode(l).map(l -> _)
       override def encode(h: (L, H)): L = codec.encode(h._2)
     }
+
+  // non-implicit codecs
+
+  /** A [[delimited]] codec, where values are separated using commas. */
+  def commaSeparated[T](implicit codec: Codec[String, T, CodecFormat.TextPlain]): Codec[List[String], List[T], CodecFormat.TextPlain] =
+    delimited(",")
+
+  /** Creates a codec which handles values delimited using `delimiter`. The implicit `T`-codec is used for handling each individual value.
+    *
+    * Upon decoding, each string is split using the delimiter, and then decoded using the `T`-codec. Upon encoding, the values are first
+    * encoded using the `T`-codec, and then combined using the delimiter.
+    *
+    * Useful for query & header inputs/outputs.
+    */
+  def delimited[T](
+      delimiter: String
+  )(implicit codec: Codec[String, T, CodecFormat.TextPlain]): Codec[List[String], List[T], CodecFormat.TextPlain] =
+    Codec
+      .list(Codec.string.map(_.split(delimiter).toList)(_.mkString(delimiter)))
+      .map(_.flatten)(List(_))
+      .mapDecode(ls => DecodeResult.sequence(ls.map(codec.decode)).map(_.toList))(_.map(codec.encode))
+      .schema(codec.schema.asIterable[List])
 }
 
 /** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec `List[T] <-> Either[A, B]`, given
