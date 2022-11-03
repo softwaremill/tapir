@@ -8,7 +8,7 @@ import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{ByteBufNettyResponseContent, ChunkedFileNettyResponseContent, ChunkedStreamNettyResponseContent, NettyResponse, NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
 
@@ -107,9 +107,9 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           val values = function(ctx)
 
           values match {
-            case (channelPromise, Left(byteBuf)) => byteBufHandler(channelPromise, byteBuf)
-            case (channelPromise, Middle(chunkedStream)) => chunkedStreamHandler(channelPromise, chunkedStream)
-            case (channelPromise, Right(chunkedFile)) => chunkedFileHandler(channelPromise, chunkedFile)
+            case r: ByteBufNettyResponseContent => byteBufHandler(r.channelPromise, r.byteBuf)
+            case r: ChunkedStreamNettyResponseContent => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
+            case r: ChunkedFileNettyResponseContent => chunkedFileHandler(r.channelPromise, r.chunkedFile)
           }
         }
         case None => noBodyHandler()

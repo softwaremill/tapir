@@ -11,8 +11,8 @@ import scala.util.{Failure, Success, Try}
 class NettyBodyListener[F[_]](implicit m: MonadError[F]) extends BodyListener[F, NettyResponse] {
   override def onComplete(body: NettyResponse)(cb: Try[Unit] => F[Unit]): F[NettyResponse] = {
     m.eval((ctx: ChannelHandlerContext) => {
-      val (promise, choice3) = body(ctx)
-      promise.addListener((future: Future[_ >: Void]) => {
+      val nettyResponseContent = body(ctx)
+      nettyResponseContent.channelPromise.addListener((future: Future[_ >: Void]) => {
         if (future.isSuccess) {
           cb(Success(()))
         } else {
@@ -20,7 +20,7 @@ class NettyBodyListener[F[_]](implicit m: MonadError[F]) extends BodyListener[F,
         }
       })
 
-      (promise, choice3)
+      nettyResponseContent
     })
   }
 }

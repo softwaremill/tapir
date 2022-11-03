@@ -1,13 +1,13 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.{ByteBufNettyResponseContent, ChunkedFileNettyResponseContent, ChunkedStreamNettyResponseContent, NettyResponse}
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{InputStream, RandomAccessFile}
@@ -21,30 +21,26 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = v.asInstanceOf[String].getBytes(charset)
-        asFun(Left(Unpooled.wrappedBuffer(bytes)))
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
 
       case RawBodyType.ByteArrayBody =>
         val bytes = v.asInstanceOf[Array[Byte]]
-        asFun(Left(Unpooled.wrappedBuffer(bytes)))
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
 
       case RawBodyType.ByteBufferBody =>
         val byteBuffer = v.asInstanceOf[ByteBuffer]
-        asFun(Left(Unpooled.wrappedBuffer(byteBuffer)))
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        asFun(Middle(wrap(stream)))
+        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(stream))
 
       case RawBodyType.FileBody =>
         val fileRange = v.asInstanceOf[FileRange]
-        asFun(Right(wrap(fileRange)))
+        (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(fileRange))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
-  }
-
-  private def asFun(c: Choice3[ByteBuf, ChunkedStream, ChunkedFile]): NettyResponse = {
-    (ctx: ChannelHandlerContext) => (ctx.newPromise(), c)
   }
 
   private def wrap(content: InputStream): ChunkedStream = {
