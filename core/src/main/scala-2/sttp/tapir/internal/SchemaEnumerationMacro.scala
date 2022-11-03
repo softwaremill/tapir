@@ -9,17 +9,44 @@ private[tapir] object SchemaEnumerationMacro {
   def derivedEnumeration[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[CreateDerivedEnumerationSchema[T]] = {
     import c.universe._
 
+    val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
+    val weakTypeT = weakTypeOf[T]
+    val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
+
     // this needs to be a macro so that we can call another macro - Validator.derivedEnumeration
     c.Expr[CreateDerivedEnumerationSchema[T]](q"""
-      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema(_root_.sttp.tapir.Validator.derivedEnumeration)
+      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema(_root_.sttp.tapir.Validator.derivedEnumeration, $schemaAnnotations)
+    """)
+  }
+
+  def derivedEnumerationValueCustomise[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[CreateDerivedEnumerationSchema[T]] = {
+    import c.universe._
+
+    val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
+    val weakTypeT = weakTypeOf[T]
+    val validator = enumerationValueValidator[T](c)
+    val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
+
+    c.Expr[CreateDerivedEnumerationSchema[T]](q"""
+      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema($validator, $schemaAnnotations)
     """)
   }
 
   def derivedEnumerationValue[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
     import c.universe._
 
-    val Enumeration = typeOf[scala.Enumeration]
     val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
+    val weakTypeT = weakTypeOf[T]
+    val validator = enumerationValueValidator[T](c)
+    val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
+
+    c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")
+  }
+
+  private def enumerationValueValidator[T: c.WeakTypeTag](c: blackbox.Context) = {
+    import c.universe._
+
+    val Enumeration = typeOf[scala.Enumeration]
 
     val weakTypeT = weakTypeOf[T]
     val owner = weakTypeT.typeSymbol.owner
@@ -33,12 +60,8 @@ private[tapir] object SchemaEnumerationMacro {
         case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      val validator =
-        q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
-            .mkString(".")})))"
-      val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
-
-      c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")
+      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
+          .mkString(".")})))"
     }
   }
 }

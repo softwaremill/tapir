@@ -54,4 +54,12 @@ object SchemaMacroTestData {
     type Country = Value
     val PL, NL = Value
   }
+
+  @description("it's a small alphabet")
+  sealed trait Letters
+  object Letters {
+    case object A extends Letters
+    case object B extends Letters
+    case object C extends Letters
+  }
 }
