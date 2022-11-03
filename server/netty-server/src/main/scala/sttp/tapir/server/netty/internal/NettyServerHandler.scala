@@ -33,14 +33,14 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           .map((serverResponse: ServerResponse[NettyResponse]) => {
             serverResponse.handle(
               ctx = ctx,
-              byteBufHandler = (byteBuf) => {
+              byteBufHandler = (channelPromise, byteBuf) => {
                 val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
 
                 res.setHeadersFrom(serverResponse)
                 res.handleContentLengthHeader(byteBuf.readableBytes())
                 res.handleCloseAndKeepAliveHeaders(req)
 
-                ctx.writeAndFlush(res).closeIfNeeded(req)
+                ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
               },
               chunkedStreamHandler = (channelPromise, chunkedStream) => {
                 val resHeader: DefaultHttpResponse =
@@ -91,14 +91,13 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           }
           .ensure(me.eval(req.release()))
       } // exceptions should be handled
-
       ()
     }
   }
 
   private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
     def handle(ctx: ChannelHandlerContext,
-               byteBufHandler: (ByteBuf) => Unit,
+               byteBufHandler: (ChannelPromise, ByteBuf) => Unit,
                chunkedStreamHandler: (ChannelPromise, ChunkedStream) => Unit,
                chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
                noBodyHandler: () => Unit
@@ -108,7 +107,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           val values = function(ctx)
 
           values match {
-            case (_, Left(byteBuf)) => byteBufHandler(byteBuf)
+            case (channelPromise, Left(byteBuf)) => byteBufHandler(channelPromise, byteBuf)
             case (channelPromise, Middle(chunkedStream)) => chunkedStreamHandler(channelPromise, chunkedStream)
             case (channelPromise, Right(chunkedFile)) => chunkedFileHandler(channelPromise, chunkedFile)
           }
