@@ -8,8 +8,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.interpreter.RequestBody
 import zhttp.http.Request
-import zio.RIO
-import zio.Task
+import zio.{RIO, Task, ZIO}
 import zio.blocking.Blocking
 import zio.stream.{Stream, ZSink, ZStream}
 
@@ -32,7 +31,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
         val fileRange = FileRange(tmpFile)
         RawValue(fileRange, Seq(fileRange))
       }
-    case RawBodyType.MultipartBody(_, _) => Task.never
+    case RawBodyType.MultipartBody(_, _) => ZIO.fail(new UnsupportedOperationException("Multipart is not supported"))
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = stream(serverRequest).asInstanceOf[streams.BinaryStream]

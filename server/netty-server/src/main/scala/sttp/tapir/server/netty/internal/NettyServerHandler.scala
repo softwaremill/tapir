@@ -22,7 +22,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
     } else {
-      val req = request.retainedDuplicate()
+      val req = request.retain()
 
       unsafeRunAsync { () =>
         route(NettyServerRequest(req))
@@ -38,7 +38,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
                 res.setHeadersFrom(serverResponse)
                 res.handleContentLengthHeader(byteBuf.readableBytes())
-                res.handleCloseAndKeepAliveHeaders(request)
+                res.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.writeAndFlush(res).closeIfNeeded(req)
               },
@@ -48,7 +48,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
                 resHeader.setHeadersFrom(serverResponse)
                 resHeader.setChunked()
-                resHeader.handleCloseAndKeepAliveHeaders(request)
+                resHeader.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.write(resHeader)
                 ctx.writeAndFlush(new HttpChunkedInput(chunkedStream), channelPromise).closeIfNeeded(req)
@@ -59,7 +59,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
                 resHeader.setHeadersFrom(serverResponse)
                 resHeader.handleContentLengthHeader(chunkedFile.length())
-                resHeader.handleCloseAndKeepAliveHeaders(request)
+                resHeader.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.write(resHeader)
                 // HttpChunkedInput will write the end marker (LastHttpContent) for us.
@@ -89,6 +89,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             ctx.writeAndFlush(res).closeIfNeeded(req)
             me.unit(())
           }
+          .ensure(me.eval(req.release()))
       } // exceptions should be handled
 
       ()

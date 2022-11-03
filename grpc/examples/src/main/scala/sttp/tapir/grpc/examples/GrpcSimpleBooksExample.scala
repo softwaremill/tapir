@@ -12,7 +12,11 @@ import sttp.tapir.grpc.protobuf.pbdirect._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkagrpc.AkkaGrpcServerInterpreter
 import sttp.tapir.generic.auto._
-import sttp.tapir.grpc.examples.grpc_simple_books_example.gen.{Library => GenLibrary, LibraryClient => GenLibraryClient, AddBookMsg => GenAddBookMsg}
+import sttp.tapir.grpc.examples.grpc_simple_books_example.gen.{
+  Library => GenLibrary,
+  LibraryClient => GenLibraryClient,
+  AddBookMsg => GenAddBookMsg
+}
 
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.{Await, ExecutionContext, Future}

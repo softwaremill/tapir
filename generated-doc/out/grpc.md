@@ -61,7 +61,7 @@ It's possible to connect the generated server code to tapir endpoints definition
 on auto-generated code. We strongly recommend using the new dedicated server interpreter `AkkaGrpcServerInterpreter`.
 It's built on top of `AkkaHttpServerInterpreter` and provides support for encoding and decoding HTTP2 binary messages.
 
-[Here](https://github.com/softwaremill/tapir/grpc/examples/src/main/scala/sttp/tapir/grpc/examples/GrpcSimpleBooksExample.scala)
+[Here](https://github.com/softwaremill/tapir/blob/master/grpc/examples/src/main/scala/sttp/tapir/grpc/examples/GrpcSimpleBooksExample.scala)
 you can find a simple example.
 
 It's worth mentioning that by adjusting slightly encoders/decoders it's possible to expose gRPC endpoints with 
