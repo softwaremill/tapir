@@ -495,7 +495,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
         .use { port =>
           get(port, List("r1.txt")).map { r =>
             val headersToValues = r.headers.map(h => (h.name.toLowerCase, h.value))
-            headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, Some("10"))) or contain(
+            headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, "10")) or contain(
               (HeaderNames.TransferEncoding.toLowerCase, "chunked")
             ))
             r.contentType shouldBe Some(MediaType.TextPlain.toString())

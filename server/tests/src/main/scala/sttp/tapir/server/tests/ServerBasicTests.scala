@@ -656,7 +656,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.body.map(_.foreach(b => b shouldBe 0))
 
           val headersToValues = r.headers.map(h => (h.name.toLowerCase, h.value))
-          headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, Some("128"))) or
+          headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, "128")) or
             contain((HeaderNames.TransferEncoding.toLowerCase, "chunked")))
         }
     }
