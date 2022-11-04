@@ -494,10 +494,7 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
       serveRoute(resourcesGetServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
         .use { port =>
           get(port, List("r1.txt")).map { r =>
-            val headersToValues = r.headers.map(h => (h.name.toLowerCase, h.value))
-            headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, "10")) or contain(
-              (HeaderNames.TransferEncoding.toLowerCase, "chunked")
-            ))
+            r.contentLength shouldBe Some(10)
             r.contentType shouldBe Some(MediaType.TextPlain.toString())
             r.header(HeaderNames.LastModified)
               .flatMap(t => Header.parseHttpDate(t).toOption)

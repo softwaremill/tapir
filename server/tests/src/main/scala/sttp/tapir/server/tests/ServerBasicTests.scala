@@ -654,10 +654,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
           r.body.map(_.length) shouldBe Right(128)
           r.body.map(_.foreach(b => b shouldBe 0))
-
-          val headersToValues = r.headers.map(h => (h.name.toLowerCase, h.value))
-          headersToValues should (contain((HeaderNames.ContentLength.toLowerCase, "128")) or
-            contain((HeaderNames.TransferEncoding.toLowerCase, "chunked")))
+          r.headers.map(_.name.toLowerCase) should contain(HeaderNames.ContentLength.toLowerCase)
+          r.header(HeaderNames.ContentLength) shouldBe Some("128")
         }
     }
   )
