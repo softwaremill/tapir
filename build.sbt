@@ -906,7 +906,7 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .settings(
     name := "tapir-apispec-docs",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.apispec" %% "asyncapi-model" % Versions.sttpApispec
+      "com.softwaremill.sttp.apispec" %%% "asyncapi-model" % Versions.sttpApispec
     )
   )
   .jvmPlatform(
@@ -916,6 +916,10 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core, tests % Test)
 
@@ -925,8 +929,8 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     name := "tapir-openapi-docs",
     libraryDependencies ++= Seq(
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
-      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
+      "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe-yaml" % Versions.sttpApispec % Test
     )
   )
   .jvmPlatform(
@@ -936,6 +940,10 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core, apispecDocs, tests % Test)
 
@@ -964,6 +972,7 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
     libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-bundle"))
@@ -971,12 +980,18 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .settings(
     name := "tapir-swagger-ui-bundle",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe-yaml" % Versions.sttpApispec,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings ++ Seq(
+      Test / skip := true
+    )
+  )
   .dependsOn(swaggerUi, openapiDocs, sttpClient % Test, http4sServer % Test)
 
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
