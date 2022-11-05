@@ -29,7 +29,7 @@ A default codec for any subtype of `scala.Enumeration#Value` is provided as an i
 assumes that the low-level representation of the enumeration is a string. Encoding is done using `.toString`, while
 decoding performs a case-insensitive search through the enumeration's values. For example:
 
-```scala mdoc:silent
+```scala 
 import sttp.tapir._
 
 object Features extends Enumeration {
@@ -46,7 +46,7 @@ query[Features.Feature]("feature")
 This can be customised (e.g. if the encoding/decoding should behave differently, or if the low-level representation
 should be a number), by defining an implicit codec:
 
-```scala mdoc:silent
+```scala
 import sttp.tapir.Codec.PlainCodec
 
 implicit val customFeatureCodec: PlainCodec[Features.Feature] = 

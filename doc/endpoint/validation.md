@@ -95,6 +95,8 @@ converts the enum value to a raw type (typically a string). This can be specifie
 For example:
 
 ```scala mdoc:silent
+import sttp.tapir._
+
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
