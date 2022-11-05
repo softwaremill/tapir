@@ -96,11 +96,6 @@ endpoint.in(query[MyId]("myId"))
 endpoint.in(path[MyId])
 ```
 
-### Codecs for enumerations
-
-In some cases, codecs for enumerations can be derived, but need to be defined as an implicit value by hand, because
-you'll need to provide some parameters. See the section on [enumerations validators](validation.md) for more details.
-
 ## Next
 
 Read on about [deriving schemas](schemas.md).
