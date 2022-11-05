@@ -132,9 +132,10 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   inline def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = ${ SchemaCompanionMacros.generateOneOfWrapped[E]('conf) }
 
   /** Create a schema for an [[Enumeration]], where the validator is created using the enumeration's values. The low-level representation of
-    * the enum is a `String`, and the enum values are encoded (so that they can be displayed in the documentation) using `.toString`.
+    * the enum is a `String`, and the enum values in the documentation will be encoded using `.toString`.
     */
-  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] = ${ SchemaCompanionMacros.derivedEnumerationValue[T] }
+  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] =
+    derivedEnumerationValueCustomise[T].defaultStringBased
 
   /** Creates a schema for an [[Enumeration]], where the validator is created using the enumeration's values. Unlike the default
     * [[derivedEnumerationValue]] method, which provides the schema implicitly, this variant allows customising how the schema is created.
@@ -144,18 +145,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
     * [[CreateDerivedEnumerationSchema]].
     */
-  inline def derivedEnumerationValueCustomise[T <: scala.Enumeration#Value](
-      encode: Option[T => Any] = None,
-      schemaType: SchemaType[T] = SchemaType.SString[T](),
-      default: Option[T] = None
-  ): Schema[T] = {
-    val v0 = derivedEnumerationValueValidator[T]
-    val v = encode.fold(v0)(e => v0.encode(e))
-
-    val s0 = Schema(schemaType).validate(v)
-    val s1 = default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
-    SchemaAnnotations.derived[T].enrich(s1)
-  }
+  inline def derivedEnumerationValueCustomise[T <: scala.Enumeration#Value]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(derivedEnumerationValueValidator[T], SchemaAnnotations.derived[T])
 
   private inline def derivedEnumerationValueValidator[T <: Enumeration#Value]: Validator.Enumeration[T] = ${
     SchemaCompanionMacros.derivedEnumerationValueValidator[T]
@@ -322,12 +313,6 @@ private[tapir] object SchemaCompanionMacros {
         )
       }
     }
-  }
-
-  def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
-    import q.reflect.*
-    val validator = derivedEnumerationValueValidator[T]
-    '{ SchemaAnnotations.derived[T].enrich(Schema.string[T].validate($validator)) }
   }
 
   def derivedEnumerationValueValidator[T: Type](using q: Quotes): Expr[Validator.Enumeration[T]] = {

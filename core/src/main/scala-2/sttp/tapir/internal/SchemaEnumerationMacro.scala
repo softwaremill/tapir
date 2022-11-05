@@ -28,18 +28,12 @@ private[tapir] object SchemaEnumerationMacro {
     val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
 
     c.Expr[CreateDerivedEnumerationSchema[T]](q"""
-      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema($validator, $schemaAnnotations)
+      new _root_.sttp.tapir.macros.CreateDerivedEnumerationSchema[$weakTypeT]($validator, $schemaAnnotations)
     """)
   }
 
   def derivedEnumerationValue[T: c.WeakTypeTag](c: blackbox.Context): c.Expr[Schema[T]] = {
     import c.universe._
-
-    val SchemaAnnotations = typeOf[SchemaAnnotations[_]]
-    val weakTypeT = weakTypeOf[T]
-    val validator = ValidatorEnumerationMacro.enumerationValueValidator[T](c)
-    val schemaAnnotations = c.inferImplicitValue(appliedType(SchemaAnnotations, weakTypeT))
-
-    c.Expr[Schema[T]](q"$schemaAnnotations.enrich(Schema.string[$weakTypeT].validate($validator))")
+    c.Expr[Schema[T]](q"""(${derivedEnumerationValueCustomise[T](c)}).defaultStringBased""")
   }
 }
