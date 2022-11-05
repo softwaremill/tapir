@@ -88,7 +88,8 @@ object Feature {
   case object C extends Feature
 }
 
-implicit val featureCodec: PlainCodec[Feature] = Codec.derivedEnumeration[String, Feature].defaultStringBased
+implicit val featureCodec: PlainCodec[Feature] = 
+  Codec.derivedEnumeration[String, Feature].defaultStringBased
 
 query[Feature]("feature")
 ```
@@ -181,8 +182,8 @@ case class Body(someField: String, feature: Features.Feature)
 implicit val enumDecoder: Decoder[Features.Feature] = Decoder.decodeEnumeration(Features)
 implicit val enumEncoder: Encoder[Features.Feature] = Encoder.encodeEnumeration(Features)
 
-// the schema for the body is automatically-derived, using the default schema for enumerations 
-// (Schema.derivedEnumerationValue)
+// the schema for the body is automatically-derived, using the default schema for 
+// enumerations (Schema.derivedEnumerationValue)
 jsonBody[Body]
 ``` 
 
@@ -233,7 +234,8 @@ object Feature {
   case object C extends Feature
 }
 
-implicit val featureSchema: Schema[Feature] = Schema.derivedEnumeration[Feature].defaultStringBased
+implicit val featureSchema: Schema[Feature] = 
+  Schema.derivedEnumeration[Feature].defaultStringBased
 ```
 
 Similarly, using Scala 3's enums:
