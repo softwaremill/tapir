@@ -126,11 +126,13 @@ value fails, it's best to return a `DecodeResult.InvalidValue`, with a reference
 
 ### Lists of enumeration values
 
-If the query parameter or header value contains multiple enumeration values, delimited e.g. using a comma, a special
-codec is provided which handles these cases. For example:
+If the query parameter or header value contains multiple enumeration values, delimited e.g. using a comma, you can
+look up a codec for `CommaSeparated[T]` or `Delimited[DELIMITER, T]` (where `D` is a type literal). The `Delimited`
+type is a simple wrapper for a list of `T`-values. For example, if the query parameter is required:
 
 ```scala mdoc:silent
 import sttp.tapir._
+import sttp.tapir.model.CommaSeparated
 
 object Features extends Enumeration {
   type Feature = Value
@@ -140,10 +142,8 @@ object Features extends Enumeration {
   val C: Feature = Value("c")
 }
 
-query[List[Features.Feature]]("features")(Codec.commaSeparated[Features.Feature])
+query[CommaSeparated[Features.Feature]]("features")
 ```
-
-For other delimiters, use `Codec.delimited`.
 
 ## Using enumerations as part of bodies
 

@@ -16,7 +16,7 @@ import java.time._
 import java.util.{Date, UUID}
 import scala.reflect.ClassTag
 
-// see also CodecTestDateTime
+// see also CodecTestDateTime and CodecDelimitedTest
 class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
   private implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
@@ -62,17 +62,6 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     val d = Date.from(Instant.ofEpochMilli(1619518169000L))
     val encoded = codec.encode(d)
     codec.decode(encoded) == Value(d) && Date.from(Instant.parse(encoded)) == d
-  }
-
-  it should "encode and decode comma-separated values" in {
-    val c = Codec.commaSeparated[Int]
-
-    c.encode(List(1, 10, 24)) shouldBe List("1,10,24")
-    c.decode(Nil) shouldBe DecodeResult.Value(Nil)
-    c.decode(List("1")) shouldBe DecodeResult.Value(List(1))
-    c.decode(List("1,10")) shouldBe DecodeResult.Value(List(1, 10))
-    c.decode(List("1,10", "24")) shouldBe DecodeResult.Value(List(1, 10, 24))
-    c.decode(List("1,10", "24,x")) should matchPattern { case DecodeResult.Error("x", _) => }
   }
 
   def checkEncodeDecodeToString[T: Arbitrary](implicit c: Codec[String, T, TextPlain], ct: ClassTag[T]): Assertion =

@@ -36,8 +36,8 @@ val CompileAndTest = "compile->compile;test->test"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _))            => List(sourceDir / "scala-3")
-    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+    case Some((3, _))            => List(sourceDir / "scala-3", sourceDir / "scala-3-2.13+")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+", sourceDir / "scala-3-2.13+")
     case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
   }
 
