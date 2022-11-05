@@ -1,7 +1,7 @@
 package sttp.tapir.grpc.protobuf
 
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType.{SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
+import sttp.tapir.SchemaType.{SArray, SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
 import sttp.tapir.{Schema, _}
 import sttp.tapir.grpc.protobuf.model._
 
@@ -86,34 +86,41 @@ class EndpointToProtobufMessage {
       schema.name.map(name => Map(name -> schema)).getOrElse(Map.empty) ++
         fields.foldLeft(Map.empty[SName, Schema[_]])((m, field) => m ++ availableMessagesFromSchema(field.schema))
     case SchemaType.SCoproduct(subtypes, discriminator) => ???
+    case SchemaType.SArray(element) => availableMessagesFromSchema(element)
     case _                                              => Map.empty
   }
 
-  private def defaultScalarMappings(field: SProductField[_]): ProtobufScalarType = field.schema.schemaType match {
-    case SString()                                           => ProtobufScalarType.ProtobufString
-    case SInteger() if field.schema.format.contains("int64") => ProtobufScalarType.ProtobufInt64
-    case SInteger()                                          => ProtobufScalarType.ProtobufInt32
-    case SNumber() if field.schema.format.contains("float")  => ProtobufScalarType.ProtobufFloat
-    case SNumber()                                           => ProtobufScalarType.ProtobufDouble
-    case SchemaType.SBoolean()                               => ProtobufScalarType.ProtobufBool
-    case SProduct(Nil)                                       => ProtobufScalarType.ProtobufEmpty
-    case SchemaType.SBinary()                                => ProtobufScalarType.ProtobufBytes
-    case SDateTime()                                         => ProtobufScalarType.ProtobufInt64
-    case SDate()                                             => ProtobufScalarType.ProtobufInt64
-    case in =>
-      println(s"Not supported input [$in]") // FIXME
-      ???
-  }
+  private def fromProductField(availableMessages: Map[SName, Schema[_]])(field: SProductField[_]): ProtobufMessageField =
+    ProtobufMessageField(resolveType(availableMessages)(field.schema), field.name.name, None)
 
-  private def fromProductField(availableMessages: Map[SName, Schema[_]])(field: SProductField[_]): ProtobufMessageField = {
-    val maybeCustomType = field.schema.attribute(ProtobufAttributes.ScalarValueAttribute)
-    val maybeMessageRef = field.schema.name match {
+  private def resolveType(availableMessages: Map[SName, Schema[_]])(schema: Schema[_]): ProtobufType = {
+    lazy val maybeCustomType = schema.attribute(ProtobufAttributes.ScalarValueAttribute)
+    lazy val maybeMessageRef = schema.name match {
       case Some(name) if availableMessages.contains(name) => Some(ProtobufMessageRef(name))
       case _                                              => None
     }
-    val `type` = maybeCustomType.orElse(maybeMessageRef).getOrElse(defaultScalarMappings(field))
+    lazy val defaultMappings: ProtobufType = schema.schemaType match {
+      case SString()                                     => ProtobufScalarType.ProtobufString
+      case SInteger() if schema.format.contains("int64") => ProtobufScalarType.ProtobufInt64
+      case SInteger()                                    => ProtobufScalarType.ProtobufInt32
+      case SNumber() if schema.format.contains("float")  => ProtobufScalarType.ProtobufFloat
+      case SNumber()                                     => ProtobufScalarType.ProtobufDouble
+      case SchemaType.SBoolean()                         => ProtobufScalarType.ProtobufBool
+      case SProduct(Nil)                                 => ProtobufScalarType.ProtobufEmpty
+      case SchemaType.SBinary()                          => ProtobufScalarType.ProtobufBytes
+      case SDateTime()                                   => ProtobufScalarType.ProtobufInt64
+      case SDate()                                       => ProtobufScalarType.ProtobufInt64
+      case SArray(element) =>
+        resolveType(availableMessages)(element) match {
+          case valueType: SingularValueType => ProtobufRepeatedField(valueType)
+          case ProtobufRepeatedField(_)     => throw new IllegalArgumentException("Nested collections are not supported.")
+        }
+      case in =>
+        println(s"Not supported input [$in]") // FIXME
+        ???
+    }
 
-    ProtobufMessageField(`type`, field.name.name, None)
+    maybeCustomType.orElse(maybeMessageRef).getOrElse(defaultMappings)
   }
 
 }

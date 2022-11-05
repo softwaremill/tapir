@@ -7,10 +7,15 @@ sealed trait ProtobufType {
   def filedTypeName: String
 }
 
-case class ProtobufMessageRef(refName: SName) extends ProtobufType {
+sealed trait SingularValueType extends ProtobufType
+case class ProtobufMessageRef(refName: SName) extends SingularValueType {
   override def filedTypeName: String = refName.show.split('.').last // FIXME we need to a better way for generating messages names
 }
-sealed trait ProtobufScalarType extends ProtobufType
+sealed trait ProtobufScalarType extends SingularValueType
+
+case class ProtobufRepeatedField(element: SingularValueType) extends ProtobufType {
+  override def filedTypeName: String = s"repeated ${element.filedTypeName}"
+}
 
 object ProtobufScalarType {
   case object ProtobufString extends ProtobufScalarType {
