@@ -93,7 +93,8 @@ object EnumsCodecDerivationTest {
   @description("country")
   object Countries extends Enumeration {
     type Country = Value
-    val PL, NL = Value
+    val PL = Value("PL")
+    val NL = Value("NL")
   }
 
   @description("it's a small alphabet")
