@@ -2,17 +2,15 @@ package sttp.tapir.grpc.protobuf
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import shapeless.PolyDefns.Compose.composeCase
 import sttp.tapir.Schema.SName
 import sttp.tapir.generic.Derived
 import sttp.tapir._
 import pbdirect._
 import _root_.pbdirect._
 import com.google.protobuf.CodedOutputStream
-import pbdirect._
 import sttp.tapir.generic.auto._
 import sttp.tapir.grpc.protobuf.ProtobufScalarType.{ProtobufInt32, ProtobufInt64, ProtobufString}
-import sttp.tapir.grpc.protobuf.model.{ProtobufMessage, ProtobufMessageField, ProtobufProductMessage}
+import sttp.tapir.grpc.protobuf.model.{ProtobufMessageField, ProtobufProductMessage}
 
 class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
   val endpointToProtobufMessage = new EndpointToProtobufMessage()
@@ -107,7 +105,9 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result.map(_.name) should contain theSameElementsAs List("TestClass", "A")
-    result.flatMap(_.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`))) should contain theSameElementsAs List(
+    result.flatMap(
+      _.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`))
+    ) should contain theSameElementsAs List(
       "la" -> ProtobufRepeatedField(
         ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.A"))
       )
@@ -120,13 +120,14 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     )
 
     implicit val testClassSchema: Typeclass[TestClass] =
-      implicitly[Derived[Schema[TestClass]]].value.modify(_.x)(_.attribute(ProtobufAttributes.ScalarValueAttribute, ProtobufScalarType.ProtobufString))
+      implicitly[Derived[Schema[TestClass]]].value
+        .modify(_.x)(_.attribute(ProtobufAttributes.ScalarValueAttribute, ProtobufScalarType.ProtobufString))
 
     val testEndpoint = baseTestEndpoint.in(grpcBody[TestClass])
 
     val result = endpointToProtobufMessage(List(testEndpoint))
 
-    result.head.name should contain theSameElementsAs "TestClass"
+    result.head.name shouldBe "TestClass"
     result.head.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
       "x" -> ProtobufScalarType.ProtobufString
     )
@@ -142,6 +143,34 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val testEndpoint = baseTestEndpoint.in(grpcBody[TestClass])
 
     assertThrows[IllegalArgumentException](endpointToProtobufMessage(List(testEndpoint)))
+  }
+
+  it should "handle coproducts" in {
+    sealed trait CP
+    case class A(s: String, s2: String) extends CP
+    case class B(i: Int) extends CP
+
+    // PBDirect does not support sealed traits, but does support shapeless.Coproduct, so may consider either adding support for Coproducts in tapir or raising PR with sealed traits support in PBDirect
+    implicit val dummyCoproductWriter: PBMessageWriter[CP] = (value: CP, out: CodedOutputStream) => ()
+    implicit val dummyCoproductReader: PBMessageReader[CP] = (bytes: Array[Byte]) => B(1)
+
+    case class TestClass(
+        cp: CP
+    )
+
+    val testEndpoint = baseTestEndpoint.in(grpcBody[TestClass])
+
+    val result = endpointToProtobufMessage(List(testEndpoint))
+
+    result.map(_.name) should contain theSameElementsAs List("TestClass", "CP", "A", "B")
+    result
+      .find(_.name == "TestClass")
+      .get
+      .asInstanceOf[ProtobufProductMessage]
+      .fields
+      .map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
+      "cp" -> ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.CP"))
+    )
   }
 }
 

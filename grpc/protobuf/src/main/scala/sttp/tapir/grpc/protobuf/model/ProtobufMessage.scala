@@ -7,4 +7,4 @@ sealed trait ProtobufMessage {
 }
 
 case class ProtobufProductMessage(name: MessageName, fields: Iterable[ProtobufMessageField]) extends ProtobufMessage
-case class ProtobufCoproductMessage(name: MessageName, alternatives: Iterable[ProtobufMessageRef]) extends ProtobufMessage
+case class ProtobufCoproductMessage(name: MessageName, alternatives: Iterable[ProtobufMessageField]) extends ProtobufMessage

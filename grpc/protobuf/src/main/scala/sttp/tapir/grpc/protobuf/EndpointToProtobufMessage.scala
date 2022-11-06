@@ -1,7 +1,7 @@
 package sttp.tapir.grpc.protobuf
 
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType.{SArray, SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
+import sttp.tapir.SchemaType.{SArray, SCoproduct, SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
 import sttp.tapir.{Schema, _}
 import sttp.tapir.grpc.protobuf.model._
 
@@ -75,11 +75,20 @@ class EndpointToProtobufMessage {
             // TODO files support?
             fromProductField(msgs)(field)
           }
-          List(ProtobufProductMessage(name.fullName.split('.').last, protoFields)) // FIXME
+          List(ProtobufProductMessage(toMessageName(name), protoFields))
+        case SCoproduct(subtypes, discriminator) =>
+
+          List(
+            ProtobufCoproductMessage(
+              toMessageName(name),
+              subtypes.map(fromCoproductSubtype(msgs))
+            )
+          )
         case _ => ???
       }
     }.toList
   }
+  private def toMessageName(sName: SName): MessageName = sName.fullName.split('.').last // FIXME
 
   private def availableMessagesFromSchema(schema: Schema[_]): Map[SName, Schema[_]] = schema.schemaType match {
     case SProduct(fields) =>
@@ -89,9 +98,14 @@ class EndpointToProtobufMessage {
       schema.name.map(name => Map(name -> schema)).getOrElse(Map.empty) ++
         subtypes.foldLeft(Map.empty[SName, Schema[_]])((m, subtype) => m ++ availableMessagesFromSchema(subtype))
     case SchemaType.SArray(element) => availableMessagesFromSchema(element)
-    case _                                              => Map.empty
+    case _                          => Map.empty
   }
 
+  private def fromCoproductSubtype(availableMessages: Map[SName, Schema[_]])(subtype: Schema[_]) = {
+    val `type` = resolveType(availableMessages)(subtype)
+
+    ProtobufMessageField(`type`, `type`.filedTypeName.toLowerCase, None)
+  }
   private def fromProductField(availableMessages: Map[SName, Schema[_]])(field: SProductField[_]): ProtobufMessageField =
     ProtobufMessageField(resolveType(availableMessages)(field.schema), field.name.name, None)
 
