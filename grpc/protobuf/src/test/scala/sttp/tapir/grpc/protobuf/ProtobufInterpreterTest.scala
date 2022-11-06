@@ -12,7 +12,7 @@ import com.google.protobuf.CodedOutputStream
 import pbdirect._
 import sttp.tapir.generic.auto._
 import sttp.tapir.grpc.protobuf.ProtobufScalarType.{ProtobufInt32, ProtobufInt64, ProtobufString}
-import sttp.tapir.grpc.protobuf.model.{ProtobufMessage, ProtobufMessageField}
+import sttp.tapir.grpc.protobuf.model.{ProtobufMessage, ProtobufMessageField, ProtobufProductMessage}
 
 class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
   val endpointToProtobufMessage = new EndpointToProtobufMessage()
@@ -37,7 +37,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result.head.name shouldBe "TestClass"
-    result.map(_.fields.map(field => (field.name, field.`type`))).head should contain theSameElementsAs List(
+    result.head.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
       "int" -> ProtobufScalarType.ProtobufInt32,
       "long" -> ProtobufScalarType.ProtobufInt64,
       "string" -> ProtobufScalarType.ProtobufString,
@@ -59,7 +59,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result should contain theSameElementsAs List(
-      ProtobufMessage(
+      ProtobufProductMessage(
         "A",
         List(
           ProtobufMessageField(ProtobufInt64, "l", None),
@@ -70,7 +70,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
           )
         )
       ),
-      ProtobufMessage("B", List(ProtobufMessageField(ProtobufInt32, "int", None), ProtobufMessageField(ProtobufString, "s", None)))
+      ProtobufProductMessage("B", List(ProtobufMessageField(ProtobufInt32, "int", None), ProtobufMessageField(ProtobufString, "s", None)))
     )
   }
 
@@ -88,7 +88,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result.head.name shouldBe "TestClass"
-    result.map(_.fields.map(field => (field.name, field.`type`))).head should contain theSameElementsAs List(
+    result.head.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
       "li" -> ProtobufRepeatedField(ProtobufInt32),
       "vi" -> ProtobufRepeatedField(ProtobufInt32),
       "si" -> ProtobufRepeatedField(ProtobufInt32)
@@ -107,7 +107,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result.map(_.name) should contain theSameElementsAs List("TestClass", "A")
-    result.flatMap(_.fields.map(field => (field.name, field.`type`))) should contain theSameElementsAs List(
+    result.flatMap(_.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`))) should contain theSameElementsAs List(
       "la" -> ProtobufRepeatedField(
         ProtobufMessageRef(SName("sttp.tapir.grpc.protobuf.ProtobufInterpreterTest.<local ProtobufInterpreterTest>.A"))
       )
@@ -127,7 +127,7 @@ class ProtobufInterpreterTest extends AnyFlatSpec with Matchers {
     val result = endpointToProtobufMessage(List(testEndpoint))
 
     result.head.name should contain theSameElementsAs "TestClass"
-    result.head.fields.map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
+    result.head.asInstanceOf[ProtobufProductMessage].fields.map(field => (field.name, field.`type`)) should contain theSameElementsAs List(
       "x" -> ProtobufScalarType.ProtobufString
     )
   }

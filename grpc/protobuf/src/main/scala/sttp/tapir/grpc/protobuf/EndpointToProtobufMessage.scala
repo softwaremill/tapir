@@ -75,7 +75,7 @@ class EndpointToProtobufMessage {
             // TODO files support?
             fromProductField(msgs)(field)
           }
-          List(ProtobufMessage(name.fullName.split('.').last, protoFields)) // FIXME
+          List(ProtobufProductMessage(name.fullName.split('.').last, protoFields)) // FIXME
         case _ => ???
       }
     }.toList
@@ -85,7 +85,9 @@ class EndpointToProtobufMessage {
     case SProduct(fields) =>
       schema.name.map(name => Map(name -> schema)).getOrElse(Map.empty) ++
         fields.foldLeft(Map.empty[SName, Schema[_]])((m, field) => m ++ availableMessagesFromSchema(field.schema))
-    case SchemaType.SCoproduct(subtypes, discriminator) => ???
+    case SchemaType.SCoproduct(subtypes, discriminator) =>
+      schema.name.map(name => Map(name -> schema)).getOrElse(Map.empty) ++
+        subtypes.foldLeft(Map.empty[SName, Schema[_]])((m, subtype) => m ++ availableMessagesFromSchema(subtype))
     case SchemaType.SArray(element) => availableMessagesFromSchema(element)
     case _                                              => Map.empty
   }

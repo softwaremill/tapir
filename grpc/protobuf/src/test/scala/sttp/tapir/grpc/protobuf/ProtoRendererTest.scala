@@ -23,7 +23,7 @@ class ProtoRendererTest extends AnyFlatSpec with ProtobufMatchers {
         |""".stripMargin
 
     val proto = Protobuf(
-      messages = List(ProtobufMessage("SimpleBook", List(ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1))))),
+      messages = List(ProtobufProductMessage("SimpleBook", List(ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1))))),
       services = List(ProtobufService("Library", List(ProtobufServiceMethod("AddBook", "SimpleBook", "SimpleBook")))),
       options = ProtobufOptions.empty
     )
@@ -49,7 +49,7 @@ class ProtoRendererTest extends AnyFlatSpec with ProtobufMatchers {
         |""".stripMargin
 
     val proto = Protobuf(
-      messages = List(ProtobufMessage("SimpleBook", List(ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1))))),
+      messages = List(ProtobufProductMessage("SimpleBook", List(ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1))))),
       services = List(ProtobufService("Library", List(ProtobufServiceMethod("AddBook", "SimpleBook", "SimpleBook")))),
       options = ProtobufOptions(Some("com.myexample"))
     )
@@ -80,13 +80,13 @@ class ProtoRendererTest extends AnyFlatSpec with ProtobufMatchers {
 
     val proto = Protobuf(
       messages = List(
-        ProtobufMessage(
+        ProtobufProductMessage(
           "Title",
           List(
             ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1))
           )
         ),
-        ProtobufMessage(
+        ProtobufProductMessage(
           "SimpleBook",
           List(
             ProtobufMessageField(ProtobufScalarType.ProtobufString, "title", Some(1)),
