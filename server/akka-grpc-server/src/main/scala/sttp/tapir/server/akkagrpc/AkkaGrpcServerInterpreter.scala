@@ -15,7 +15,7 @@ trait AkkaGrpcServerInterpreter extends AkkaHttpServerInterpreter {
 }
 
 object AkkaGrpcServerInterpreter {
-  def apply(ec: ExecutionContext): AkkaGrpcServerInterpreter = new AkkaGrpcServerInterpreter {
-    override implicit def executionContext: ExecutionContext = ec
+  def apply()(implicit _ec: ExecutionContext): AkkaGrpcServerInterpreter = new AkkaGrpcServerInterpreter {
+    override implicit def executionContext: ExecutionContext = _ec
   }
 }

@@ -45,7 +45,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
                 }
                 .sortBy {
                   case Left(Reference(ref, _, _)) => ref
-                  case Right(schema)        => schema.`type`.collect{case t: BasicSchemaType => t.value}.getOrElse("") + schema.toString
+                  case Right(schema) => schema.`type`.collect { case t: BasicSchemaType => t.value }.getOrElse("") + schema.toString
                 },
               d.map(tDiscriminatorToADiscriminator)
             )

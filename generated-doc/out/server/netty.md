@@ -4,10 +4,10 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.1.3"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.1.4"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.1.3"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.1.4"
 ```
 
 Then, use:

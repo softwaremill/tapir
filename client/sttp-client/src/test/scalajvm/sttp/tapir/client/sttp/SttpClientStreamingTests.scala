@@ -1,7 +1,6 @@
 package sttp.tapir.client.sttp
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientStreamingTests

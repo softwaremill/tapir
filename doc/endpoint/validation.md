@@ -69,8 +69,8 @@ implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
 The validators are run when a value is being decoded from its low-level representation. This is done using the
 `Codec.decode` method, which returns a `DecodeResult`. Such a result can be successful, or a decoding failure.
 
-Keep in mind, that the validator mechanism described here is meant for input/output values which are in an incorrect 
-low-level format. Validators and more generally decoding failures should be reported only for format failures.
+Keep in mind that the validator mechanism described here is meant for input/output values which are in an incorrect 
+low-level format. Validation and more generally decoding failures should be reported only for format failures.
 Business validation errors, which are often contextual, should use the error output instead.
 
 To customise error messages that are returned upon validation/decode failures by the server, see 
@@ -101,7 +101,7 @@ converts the enum value to a raw type (typically a string). This can be specifie
 
 For example:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset-object
 import sttp.tapir._
 
 sealed trait Color
