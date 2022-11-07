@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Enums
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: styles
+          in: query
+          required: false
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CornerStyle'
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: query parameter styles'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    CornerStyle:
+      type: string
+      enum:
+        - rounded
+        - straight

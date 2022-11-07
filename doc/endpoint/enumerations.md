@@ -126,8 +126,8 @@ value fails, it's best to return a `DecodeResult.InvalidValue`, with a reference
 
 ### Lists of enumeration values
 
-If the query parameter or header value contains multiple enumeration values, delimited e.g. using a comma, you can
-look up a codec for `CommaSeparated[T]` or `Delimited[DELIMITER, T]` (where `D` is a type literal). The `Delimited`
+If an input/output contains multiple enumeration values, delimited e.g. using a comma, you can look up a codec for 
+`CommaSeparated[T]` or `Delimited[DELIMITER, T]` (where `D` is a type literal). The `Delimited`
 type is a simple wrapper for a list of `T`-values. For example, if the query parameter is required:
 
 ```scala mdoc:silent
@@ -144,6 +144,9 @@ object Features extends Enumeration {
 
 query[CommaSeparated[Features.Feature]]("features")
 ```
+
+Additionally, the schema for such an input/output will have the `explode` parameter set to `false`, so that it is
+properly represented in [OpenAPI](../docs/openapi.md) documentation.
 
 ## Using enumerations as part of bodies
 

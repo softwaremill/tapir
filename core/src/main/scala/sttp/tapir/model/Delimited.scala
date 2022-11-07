@@ -1,10 +1,11 @@
 package sttp.tapir.model
 
-/** Used to lookup codecs which split/combine values using the given `DELIMITER`.
+/** Used to represent lists of values delimited with `DELIMITER`.
   *
   * @see
   *   [[sttp.tapir.Codec.delimited]]
-  *
+  * @see
+  *   [[sttp.tapir.Schema.schemaForDelimited]]
   * @see
   *   [[CommaSeparated]]
   */

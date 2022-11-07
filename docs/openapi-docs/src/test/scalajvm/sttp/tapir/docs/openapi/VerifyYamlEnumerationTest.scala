@@ -8,6 +8,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.VerifyYamlEnumerationTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir.model.CommaSeparated
 import sttp.tapir.{Schema, Validator, _}
 
 class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
@@ -31,6 +32,15 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
     val e = endpoint.get.out(jsonBody[Square])
 
     val expectedYaml = load("enum/expected_enum_collections.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, "Enums", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support delimited query parameters") {
+    val e = endpoint.get.in(query[CommaSeparated[CornerStyle.Value]]("styles"))
+
+    val expectedYaml = load("enum/expected_enum_in_delimited_query.yml")
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, "Enums", "1.0").toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml

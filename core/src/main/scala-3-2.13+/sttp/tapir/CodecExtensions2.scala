@@ -9,7 +9,7 @@ trait CodecExtensions2 {
     * Upon decoding, the string is split using the delimiter, and then decoded using the `T`-codec. Upon encoding, the values are first
     * encoded using the `T`-codec, and then combined using the delimiter.
     *
-    * Useful for query & header inputs/outputs.
+    * The codec's schema has the `explode` attribute set to `false`.
     */
   implicit def delimited[D <: String, T](implicit
       codec: Codec[String, T, CodecFormat.TextPlain],
@@ -18,6 +18,6 @@ trait CodecExtensions2 {
     Codec.string
       .map(_.split(delimiter.value).toList)(_.mkString(delimiter.value))
       .mapDecode(ls => DecodeResult.sequence(ls.map(codec.decode)).map(_.toList))(_.map(codec.encode))
-      .schema(codec.schema.asIterable[List])
+      .schema(codec.schema.asIterable[List].attribute(Schema.Explode.attribute, Schema.Explode(false)))
       .map(Delimited[D, T](_))(_.values)
 }
