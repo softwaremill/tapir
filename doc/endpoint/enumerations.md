@@ -70,7 +70,7 @@ implicit val customFeatureCodec: PlainCodec[Features.Feature] =
 ### Sealed families / enum support
 
 When the enumeration is defined as a sealed family containing only objects, or a Scala 3 `enum` with all cases
-parameterless, a codec has to be provided as an implicit value.
+parameterless, a codec has to be provided as an implicit value by hand. 
 
 There is no implicit/given codec provided by default, as there's no way to constrain the type for which such an implicit
 would be considered by the compiler.
@@ -223,7 +223,10 @@ When the enumeration is defined as a sealed family containing only objects, or a
 parameterless, a schema has to be provided as an implicit/given value.
 
 There is no implicit/given schema provided by default, as there's no way to constrain the type for which such an 
-implicit would be considered by the compiler.
+implicit would be considered by the compiler. Moreover, when automatic [schema](schemas.md) derivation is used,
+the current implementation has no possibility to create the list of possible enumeration values (which is needed
+to create the enumeration validator). This might be changed in the future, but currently schemas for enumerations
+need to be created using `.derivedEnumeration`, instead of the more general `.derived`.
 
 For example:
 
