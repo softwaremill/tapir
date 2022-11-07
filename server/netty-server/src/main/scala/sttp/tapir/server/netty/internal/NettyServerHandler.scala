@@ -42,7 +42,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                 val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
 
                 res.setHeadersFrom(serverResponse)
-                res.handleContentLengthHeader(Option(byteBuf.readableBytes()))
+                res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
                 res.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
@@ -52,7 +52,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                   new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
 
                 resHeader.setHeadersFrom(serverResponse)
-                resHeader.handleContentLengthHeader(None)
+                resHeader.handleContentLengthAndChunkedHeaders(None)
                 resHeader.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.write(resHeader)
@@ -63,7 +63,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                   new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
 
                 resHeader.setHeadersFrom(serverResponse)
-                resHeader.handleContentLengthHeader(Option(chunkedFile.length()))
+                resHeader.handleContentLengthAndChunkedHeaders(Option(chunkedFile.length()))
                 resHeader.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.write(resHeader)
@@ -78,7 +78,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
                 )
 
                 res.setHeadersFrom(serverResponse)
-                res.handleContentLengthHeader(Option(Unpooled.EMPTY_BUFFER.readableBytes()))
+                res.handleContentLengthAndChunkedHeaders(Option(Unpooled.EMPTY_BUFFER.readableBytes()))
                 res.handleCloseAndKeepAliveHeaders(req)
 
                 ctx.writeAndFlush(res).closeIfNeeded(req)
@@ -133,14 +133,12 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
         }
     }
 
-    def handleContentLengthHeader(length: Option[Long]): Unit = {
-      if (m.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
-        m.headers().remove(HttpHeaderNames.TRANSFER_ENCODING)
-      } else if (!m.headers().contains(HttpHeaderNames.CONTENT_LENGTH) && length.nonEmpty) {
-        length.map { l => m.headers().set(HttpHeaderNames.CONTENT_LENGTH, l) }
-      } else {
-        m.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
-      }
+    def handleContentLengthAndChunkedHeaders(length: Option[Long]): Unit = {
+      val lengthKnownAndShouldBeSet = !m.headers().contains(HttpHeaderNames.CONTENT_LENGTH) && length.nonEmpty
+      val lengthUnknownAndChunkedShouldBeUsed = !m.headers().contains(HttpHeaderNames.CONTENT_LENGTH) && length.isEmpty
+
+      if (lengthKnownAndShouldBeSet) { length.map { l => m.headers().set(HttpHeaderNames.CONTENT_LENGTH, l) } }
+      if (lengthUnknownAndChunkedShouldBeUsed) { m.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED) }
     }
 
     def handleCloseAndKeepAliveHeaders(request: FullHttpRequest): Unit = {
