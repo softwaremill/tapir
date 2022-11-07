@@ -51,6 +51,34 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
 
+  /** Adds the given validator, and maps to the given higher-level type `U`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create inputs/outputs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[U](v: Validator[T])(f: T => U)(g: U => T): ThisType[U] = validate(v)
+    .asInstanceOf[this.type] // compiler gets lost with ThisType-s
+    .mapDecode { t =>
+      v(t) match {
+        case Nil    => DecodeResult.Value(f(t))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
+  /** Adds a validator.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
+    */
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
   def show: String

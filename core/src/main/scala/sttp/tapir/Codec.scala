@@ -87,6 +87,25 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   def mapDecode[HH](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
   def map[HH](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
 
+  /** Adds the given validator to the codec's schema, and maps this codec to the given higher-level type `HH`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create codecs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[HH](v: Validator[H])(f: H => HH)(g: HH => H): Codec[L, HH, CF] =
+    validate(v).mapDecode { h =>
+      v(h) match {
+        case Nil    => DecodeResult.Value(f(h))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
   def schema(s2: Schema[H]): Codec[L, H, CF] =
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
@@ -107,15 +126,18 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
 
   /** Adds a validator to the codec's schema.
     *
-    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
-    * `.map`s or `.mapDecode`s will be invoked before validation.
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
     */
   def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
 
   /** Adds a validator which validates the option's element, if it is present.
     *
-    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
-    * `.map`s or `.mapDecode`s will be invoked before validation.
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
     *
     * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
     * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
@@ -126,8 +148,8 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
 
   /** Adds a validator which validates each element in the collection.
     *
-    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
-    * `.map`s or `.mapDecode`s will be invoked before validation.
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
     *
     * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
     * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at

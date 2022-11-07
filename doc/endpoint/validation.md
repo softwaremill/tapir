@@ -57,13 +57,6 @@ implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
   .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
 ```
 
-```eval_rst
-.. note::
-
-  Note that during decoding, first any provided decoding functions are run, followed by validations. Hence, even if
-  validators have been added before a ``.mapDecode``, they will be used only if the decoding is successful.
-```
-
 ## Decode failures
 
 The validators are run when a value is being decoded from its low-level representation. This is done using the
@@ -112,6 +105,13 @@ case object Red extends Color
 implicit def colorSchema: Schema[Color] = Schema.string.validate(
   Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
 ```
+
+## Validation of unrepresentable values
+
+Note that validation is run on a fully decoded values. That is, during decoding, first all the provided decoding 
+functions are run, followed by validations. If you'd like to validate before decoding, e.g. because the value 
+isn't representable unless validator conditions are met due to preconditions, you can use ``.mapValidate``. However,
+this will cause the validator function to be run twice if there are no validation error.
 
 ## Next
 
