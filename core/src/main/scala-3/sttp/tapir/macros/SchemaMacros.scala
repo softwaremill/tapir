@@ -157,25 +157,9 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     *
     * This method cannot be implicit, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
     * that this would be invoked only when necessary.
-    *
-    * @param encode
-    *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
-    *   `schemaType`). This encoding will be used when generating documentation.
-    * @param schemaType
-    *   The low-level representation of the enumeration. Defaults to a string.
     */
-  inline def derivedEnumeration[T](
-      encode: Option[T => Any] = None,
-      schemaType: SchemaType[T] = SchemaType.SString[T](),
-      default: Option[T] = None
-  ): Schema[T] = {
-    val v0 = Validator.derivedEnumeration[T]
-    val v = encode.fold(v0)(e => v0.encode(e))
-
-    val s0 = Schema(schemaType).validate(v)
-    val s1 = default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
-    SchemaAnnotations.derived[T].enrich(s1)
-  }
+  inline def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
 }
 
 private[tapir] object SchemaCompanionMacros {
