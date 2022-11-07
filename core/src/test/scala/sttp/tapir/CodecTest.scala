@@ -85,7 +85,7 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     val codec = Codec.int.mapValidate(Validator.min(18))(Member(_))(_.age)
 
     codec.decode("10") should matchPattern { case DecodeResult.InvalidValue(_) => }
-    codec.schema.validator.isInstanceOf[Validator.Mapped[_, _]] shouldBe true
+    codec.schema.validator should not be (Validator.pass)
   }
 
   case class Member(age: Int) {
