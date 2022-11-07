@@ -198,6 +198,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/codecs
    endpoint/customtypes
    endpoint/schemas
+   endpoint/enumerations
    endpoint/validation
    endpoint/contenttype
    endpoint/json

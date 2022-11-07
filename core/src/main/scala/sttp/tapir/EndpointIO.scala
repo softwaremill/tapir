@@ -51,6 +51,34 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
 
+  /** Adds the given validator, and maps to the given higher-level type `U`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create inputs/outputs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[U](v: Validator[T])(f: T => U)(g: U => T): ThisType[U] = validate(v)
+    .asInstanceOf[this.type] // compiler gets lost with ThisType-s
+    .mapDecode { t =>
+      v(t) match {
+        case Nil    => DecodeResult.Value(f(t))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
+  /** Adds a validator.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
+    */
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
   def show: String
@@ -73,8 +101,21 @@ object EndpointTransput {
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
 
+    /** Adds a validator which validates the option's element, if it is present.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+    /** Adds a validator which validates each element in the collection.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 

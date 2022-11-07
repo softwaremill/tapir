@@ -74,14 +74,17 @@ To customise error messages that are returned upon validation/decode failures by
 Validators for enumerations can be created using:
 
 * for arbitrary types, using `Validator.enumeration`, which takes the list of possible values
-* for `sealed` hierarchies, where all implementations are objects, using `Validator.derivedEnumeration[T]`. 
+* for `sealed` hierarchies, where all implementations are objects, using `Validator.derivedEnumeration[T]`.
   This method is a macro which determines the possible values.
 * for Scala3 `enum`s, where all implementation don't have parameters, using `Validator.derivedEnumeration[T]` as above
 * for Scala2 `Enumeration#Value`, automatically derived `Schema`s have the validator added (see `Schema.derivedEnumerationValue`)
 
+The enumeration schemas and codecs that are created by tapir-provided methods already have the enumeration validator
+added. See the section on [enumerations](enumerations.md) for more information. 
+
 ### Enumeration values in documentation
 
-To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
+To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which
 converts the enum value to a raw type (typically a string). This can be specified by:
 
 * explicitly providing it using the overloaded `enumeration` method with an `encode` parameter
@@ -89,57 +92,26 @@ converts the enum value to a raw type (typically a string). This can be specifie
 * when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
 * by adding the validator directly to a codec using `.validate` (the encode function is then taken from the codec)
 
-### Enumerations in schemas/codecs
-
-To simplify creation of schemas and codec with a derived enum validator, `Schema.derivedEnumeration` and `Codec.derivedEnumeration`
-helper methods are available. For example:
+For example:
 
 ```scala mdoc:silent:reset-object
 import sttp.tapir._
-import sttp.tapir.Codec.PlainCodec
 
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
 
-implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.derivedEnumeration[String, Color](
-    (_: String) match {
-      case "red"  => Some(Red)
-      case "blue" => Some(Blue)
-      case _      => None
-    },
-    _.toString.toLowerCase
-  )
-}
-```
-
-If the enum values aren't of a "basic" type (numbers, strings), regardless of whether the codec for that object is 
-defined by hand or derived, we need to specify the encode function by hand:
-
-```scala mdoc:silent
 // providing the enum values by hand
 implicit def colorSchema: Schema[Color] = Schema.string.validate(
   Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
-
-// or deriving the enum values and using the helper function
-implicit def colorSchema2: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
 ```
 
-### Scala3 enums
+## Validation of unrepresentable values
 
-Due to technical limitations, automatically derived schemas for `enum`s where all cases are parameterless don't have
-the enumeration validator added. Until this limitation is lifted, you'll have to define `implicit` (or equivalently, 
-`given`) schemas in such cases by hand. These values will be used when deriving schemas containing your enumeration:
-
-```scala
-enum ColorEnum {
-  case Green extends ColorEnum
-  case Pink extends ColorEnum
-}
-
-given Schema[ColorEnum] = Schema.derivedEnumeration(encode = Some(v => v))
-```
+Note that validation is run on a fully decoded values. That is, during decoding, first all the provided decoding 
+functions are run, followed by validations. If you'd like to validate before decoding, e.g. because the value 
+isn't representable unless validator conditions are met due to preconditions, you can use ``.mapValidate``. However,
+this will cause the validator function to be run twice if there are no validation error.
 
 ## Next
 

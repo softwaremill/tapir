@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import sttp.tapir.{Validator, Schema, SchemaType}
+import sttp.tapir.{Validator, Schema, SchemaAnnotations, SchemaType}
 import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
 import magnolia1._
@@ -12,6 +12,11 @@ trait SchemaMacros[T] { this: Schema[T] =>
 
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * correspond to the type `T`, but to some lower-level representation of the type.
+    *
+    * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
     */
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${
     SchemaMacros.modifyImpl[T, U]('this)('path)('modification)
@@ -126,31 +131,35 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     */
   inline def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = ${ SchemaCompanionMacros.generateOneOfWrapped[E]('conf) }
 
-  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
-  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] = ${
-    SchemaCompanionMacros.derivedEnumerationValue[T]
+  /** Create a schema for an [[Enumeration]], where the validator is created using the enumeration's values. The low-level representation of
+    * the enum is a `String`, and the enum values in the documentation will be encoded using `.toString`.
+    */
+  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] =
+    derivedEnumerationValueCustomise[T].defaultStringBased
+
+  /** Creates a schema for an [[Enumeration]], where the validator is created using the enumeration's values. Unlike the default
+    * [[derivedEnumerationValue]] method, which provides the schema implicitly, this variant allows customising how the schema is created.
+    * This is useful if the low-level representation of the schema is different than a `String`, or if the enumeration's values should be
+    * encoded in a different way than using `.toString`.
+    *
+    * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
+    * [[CreateDerivedEnumerationSchema]].
+    */
+  inline def derivedEnumerationValueCustomise[T <: scala.Enumeration#Value]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(derivedEnumerationValueValidator[T], SchemaAnnotations.derived[T])
+
+  private inline def derivedEnumerationValueValidator[T <: Enumeration#Value]: Validator.Enumeration[T] = ${
+    SchemaCompanionMacros.derivedEnumerationValueValidator[T]
   }
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that all subtypes of the sealed hierarchy `T` must be `object`s.
+    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object`s.
     *
-    * @param encode
-    *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
-    *   `schemaType`). This encoding will be used when generating documentation.
-    * @param schemaType
-    *   The low-level representation of the enumeration. Defaults to a string.
+    * This method cannot be implicit, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
+    * that this would be invoked only when necessary.
     */
-  inline def derivedEnumeration[T](
-      encode: Option[T => Any] = None,
-      schemaType: SchemaType[T] = SchemaType.SString[T](),
-      default: Option[T] = None
-  ): Schema[T] = {
-    val v0 = Validator.derivedEnumeration[T]
-    val v = encode.fold(v0)(e => v0.encode(e))
-
-    val s0 = Schema.string.validate(v)
-    default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
-  }
+  inline def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
 }
 
 private[tapir] object SchemaCompanionMacros {
@@ -290,8 +299,7 @@ private[tapir] object SchemaCompanionMacros {
     }
   }
 
-  def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
-    import sttp.tapir.SchemaAnnotations
+  def derivedEnumerationValueValidator[T: Type](using q: Quotes): Expr[Validator.Enumeration[T]] = {
     import q.reflect.*
 
     val Enumeration = TypeTree.of[scala.Enumeration].tpe
@@ -300,30 +308,25 @@ private[tapir] object SchemaCompanionMacros {
 
     val owner = tpe.typeSymbol.owner.tree
 
-    if (owner.symbol != Enumeration.typeSymbol) {
-      report.errorAndAbort("Can only derive Schema for values owned by scala.Enumeration")
-    } else {
-
+    if (tpe <:< TypeRepr.of[Enumeration#Value]) {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
       val enumeration = Symbol.requiredModule(enumerationPath)
 
-      val sName = '{ Some(Schema.SName(${ Expr(enumerationPath) })) }
+      val sName = '{
+        Some(Schema.SName(${
+          Expr(enumerationPath)
+        }))
+      }
 
       '{
-        SchemaAnnotations
-          .derived[T]
-          .enrich(
-            Schema
-              .string[T]
-              .validate(
-                Validator.enumeration(
-                  ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
-                  v => Option(v),
-                  $sName
-                )
-              )
-          )
+        Validator.enumeration(
+          ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
+          v => Option(v),
+          $sName
+        )
       }
+    } else {
+      report.errorAndAbort(s"Can only derive Schema for values owned by scala.Enumeration")
     }
   }
 }

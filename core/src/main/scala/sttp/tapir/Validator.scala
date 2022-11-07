@@ -223,7 +223,7 @@ object ValidationResult {
 
 case class ValidationError[T](
     validator: Validator.Primitive[T],
-    invalidValue: T,
+    invalidValue: Any, // this isn't T, as we might want to report that a value can't be decoded as an enumeration member
     path: List[FieldName] = Nil,
     customMessage: Option[String] = None
 ) {

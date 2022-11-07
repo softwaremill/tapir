@@ -36,15 +36,16 @@ val CompileAndTest = "compile->compile;test->test"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _))            => List(sourceDir / "scala-3")
-    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+    case Some((3, _))            => List(sourceDir / "scala-3", sourceDir / "scala-3-2.13+")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+", sourceDir / "scala-3-2.13+")
     case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
   }
 
 def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _)) => List(sourceDir / "scalajvm-3")
-    case _            => List(sourceDir / "scalajvm-2")
+    case Some((3, _))            => List(sourceDir / "scalajvm-3")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scalajvm-2", sourceDir / "scalajvm-3-2.13+")
+    case _                       => List(sourceDir / "scalajvm-2")
   }
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
@@ -74,15 +75,19 @@ val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    val current = version.value
-    val isRcOrMilestone = current.contains("M") || current.contains("RC")
-    if (!isRcOrMilestone) {
-      val previous = previousStableVersion.value
-      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
-      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-    } else {
-      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
-      Set.empty
+    // currently only 2.* versions are stable; skipping mima for scala3
+    if (scalaVersion.value == scala3) Set.empty
+    else {
+      val current = version.value
+      val isRcOrMilestone = current.contains("M") || current.contains("RC")
+      if (!isRcOrMilestone) {
+        val previous = previousStableVersion.value
+        println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
+        previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+      } else {
+        println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
+        Set.empty
+      }
     }
   },
   mimaBinaryIssueFilters ++= Seq(
