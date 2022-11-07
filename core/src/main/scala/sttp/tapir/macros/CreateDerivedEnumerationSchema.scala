@@ -9,12 +9,13 @@ class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T], sch
 
   /** @param encode
     *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
-    *   `schemaType`). This encoding will be used when generating documentation.
+    *   `schemaType`). This encoding will be used when generating documentation. Defaults to an identity function, which effectively mean
+    *   that `.toString` will be used to represent the enumeration in the docs.
     * @param schemaType
     *   The low-level representation of the enumeration. Defaults to a string.
     */
   def apply(
-      encode: Option[T => Any] = None,
+      encode: Option[T => Any] = Some(v => v),
       schemaType: SchemaType[T] = SchemaType.SString[T](),
       default: Option[T] = None
   ): Schema[T] = {
@@ -29,5 +30,5 @@ class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T], sch
   /** Creates the schema assuming the low-level representation is a `String`. The encoding function passes the object unchanged (which means
     * `.toString` will be used to represent the enumeration in documentation).
     */
-  def defaultStringBased: Schema[T] = apply(Some((t: T) => t))
+  def defaultStringBased: Schema[T] = apply()
 }

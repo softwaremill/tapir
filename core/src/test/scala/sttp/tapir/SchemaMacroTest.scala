@@ -311,7 +311,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       override def kind: YEnum = Y1
     }
 
-    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum](encode = Some(_.toString))
+    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum].defaultStringBased
 
     implicit val yConfSchema: Schema[YConf] = {
       val y1ConfSchema: Schema[Y1Conf] = Schema.derived[Y1Conf]
@@ -330,7 +330,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       )
       .description("it's a small alphabet")
 
-    val actual: Schema[Letters] = Schema.derivedEnumeration[Letters](encode = Some(_.toString))
+    val actual: Schema[Letters] = Schema.derivedEnumeration[Letters].defaultStringBased
 
     actual.schemaType shouldBe expected.schemaType
     (actual.validator, expected.validator) match {
@@ -338,7 +338,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
         va shouldBe ve
         ea(Letters.A) shouldBe ee(Letters.A)
         // in Scala2 the name is "sttp.tapir.SchemaMacroTestData.Letters", in Scala3: "sttp.tapir.SchemaMacroTestData$.Letters"
-        ne.fullName should endWith ("Letters")
+        ne.fullName should endWith("Letters")
       case _ => Assertions.fail()
     }
     actual.description shouldBe expected.description

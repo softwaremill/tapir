@@ -249,7 +249,7 @@ enum ColorEnum {
   case Pink extends ColorEnum
 }
 
-given Schema[ColorEnum] = Schema.derivedEnumeration(encode = Some(v => v))
+given Schema[ColorEnum] = Schema.derivedEnumeration.defaultStringBased
 ```
 
 ### Creating an enum schema by hand
