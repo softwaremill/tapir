@@ -57,6 +57,13 @@ implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
   .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
 ```
 
+```eval_rst
+.. note::
+
+  Note that during decoding, first any provided decoding functions are run, followed by validations. Hence, even if
+  validators have been added before a ``.mapDecode``, they will be used only if the decoding is successful.
+```
+
 ## Decode failures
 
 The validators are run when a value is being decoded from its low-level representation. This is done using the

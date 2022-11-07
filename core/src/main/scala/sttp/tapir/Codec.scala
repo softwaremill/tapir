@@ -24,11 +24,11 @@ import scala.concurrent.duration.{Duration => SDuration}
 
 /** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values are formatted as `CF`.
   *
-  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`) Decoding can fail, and this is
+  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`). Decoding can fail, and this is
   * represented as a result of type [[DecodeResult]].
   *
-  * A codec also contains optional meta-data on the `schema` of the high-level value, as well as an instance of the format (which determines
-  * the media type of the low-level value).
+  * A codec also contains optional meta-data in the `schema` of the high-level value (which includes validators), as well as an instance of
+  * the format (which determines the media type of the low-level value).
   *
   * Codec instances are used as implicit values, and are looked up when defining endpoint inputs/outputs. Depending on a particular endpoint
   * input/output, it might require a codec which uses a specific format, or a specific low-level value.
@@ -105,9 +105,17 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
       override def format: CF2 = f
     }
 
+  /** Adds a validator to the codec's schema.
+    *
+    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
+    * `.map`s or `.mapDecode`s will be invoked before validation.
+    */
   def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
 
   /** Adds a validator which validates the option's element, if it is present.
+    *
+    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
+    * `.map`s or `.mapDecode`s will be invoked before validation.
     *
     * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
     * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
@@ -117,6 +125,9 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
   /** Adds a validator which validates each element in the collection.
+    *
+    * Note that during decoding, first decoding functions are run, followed by validations. Hence any functions provided in subsequent
+    * `.map`s or `.mapDecode`s will be invoked before validation.
     *
     * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
     * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
