@@ -113,7 +113,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def enrich(e: EndpointInput.Atom[_], p: Parameter): Parameter = addExplode(e, p)
 
   private def addExplode(e: EndpointInput.Atom[_], p: Parameter): Parameter =
-    (e, e.codec.schema.attribute(Schema.Explode.attribute)) match {
+    (e, e.codec.schema.attribute(Schema.Explode.Attribute)) match {
       // see https://swagger.io/specification/#parameter-object for defaults
       case ((_: EndpointInput.Query[_]), Some(Schema.Explode(false)))      => p.explode(false)
       case ((_: EndpointInput.Cookie[_]), Some(Schema.Explode(false)))     => p.explode(false)

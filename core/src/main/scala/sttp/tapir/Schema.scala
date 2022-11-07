@@ -312,12 +312,12 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   }
 
   implicit def schemaForDelimited[D <: String, T](implicit tSchema: Schema[T]): Schema[Delimited[D, T]] =
-    tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.attribute, Explode(false))
+    tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.Attribute, Explode(false))
 
   /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values. */
   case class Explode(explode: Boolean)
   object Explode {
-    val attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
+    val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
