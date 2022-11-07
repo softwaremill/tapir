@@ -324,7 +324,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       .validate(
         Validator.enumeration[Letters](
           List(Letters.A, Letters.B, Letters.C),
-          (v: Letters) => Option(v.toString),
+          (v: Letters) => Option(v),
           Some(SName("sttp.tapir.SchemaMacroTestData.Letters"))
         )
       )
