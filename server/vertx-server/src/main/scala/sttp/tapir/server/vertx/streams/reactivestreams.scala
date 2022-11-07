@@ -20,8 +20,8 @@ package object streams {
 
     override def fromReadStream(readStream: ReadStream[Buffer]): Publisher[Buffer] ={
       val writeStream: ReactiveWriteStream[Buffer] = ReactiveWriteStream.writeStream(vertx)
-     writeStream.subscribe(readStream.asInstanceOf[ReactiveReadStream[Buffer]])
-     writeStream
+      readStream.pipeTo(writeStream)
+      writeStream
     }
   }
 }
