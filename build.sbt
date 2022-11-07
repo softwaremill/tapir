@@ -43,8 +43,9 @@ def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List
 
 def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _)) => List(sourceDir / "scalajvm-3")
-    case _            => List(sourceDir / "scalajvm-2")
+    case Some((3, _))            => List(sourceDir / "scalajvm-3")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scalajvm-2", sourceDir / "scalajvm-3-2.13+")
+    case _                       => List(sourceDir / "scalajvm-2")
   }
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
@@ -75,7 +76,8 @@ val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
     // currently only 2.* versions are stable; skipping mima for scala3
-    if (scalaVersion.value == scala3) Set.empty else {
+    if (scalaVersion.value == scala3) Set.empty
+    else {
       val current = version.value
       val isRcOrMilestone = current.contains("M") || current.contains("RC")
       if (!isRcOrMilestone) {
@@ -1093,19 +1095,19 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared,
+      "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
-    )    
+    )
   )
   .nativePlatform(
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings ++ Seq(
-      Test / skip := true,      
+      Test / skip := true
     )
   )
   .dependsOn(serverCore, cats)
