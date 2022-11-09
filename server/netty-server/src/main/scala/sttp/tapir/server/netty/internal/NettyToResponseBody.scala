@@ -1,19 +1,25 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.Unpooled
+import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
-import sttp.model.HasHeaders
+import sttp.model.{HasHeaders, Part}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ChunkedFileNettyResponseContent, ChunkedStreamNettyResponseContent}
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.server.netty.NettyResponseContent.{
+  ByteBufNettyResponseContent,
+  ChunkedFileNettyResponseContent,
+  ChunkedStreamNettyResponseContent
+}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.{InputStream, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.nio.file.Files
+import java.util.UUID
 
 class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
@@ -40,7 +46,32 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         val fileRange = v.asInstanceOf[FileRange]
         (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(fileRange))
 
-      case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
+      case m: RawBodyType.MultipartBody =>
+        val buffers: List[ByteBuf] = v
+          .asInstanceOf[List[RawPart]]
+          .flatMap(part =>
+            m.partType(part.name)
+              .map(bodyType => convertToBuffs(bodyType, part))
+          )
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(buffers: _*))
+    }
+  }
+
+  private def convertToBuffs(bodyType: RawBodyType[_], p: Part[Any]): ByteBuf = {
+    bodyType match {
+      case RawBodyType.StringBody(_) =>
+        toPart(p.body, p.contentType.get, p.name, None)
+      case RawBodyType.ByteArrayBody =>
+        toPart(p.body, p.contentType.get, p.name, None)
+      case RawBodyType.ByteBufferBody =>
+        toPart(p.body, p.contentType.get, p.name, None)
+      case RawBodyType.InputStreamBody =>
+        toPart(p.body, p.contentType.get, p.name, None)
+      case RawBodyType.FileBody =>
+        val fileRange = p.body.asInstanceOf[FileRange]
+        toPart(Files.readString(fileRange.file.toPath), p.contentType.get, p.name, Some(fileRange.file.getName))
+      case RawBodyType.MultipartBody(_, _) =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
   }
 
@@ -57,10 +88,9 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     } yield (start, end + NettyToResponseBody.IncludingLastOffset)
 
     maybeRange match {
-      case Some((start, end)) => {
+      case Some((start, end)) =>
         val randomAccessFile = new RandomAccessFile(file, NettyToResponseBody.ReadOnlyAccessMode)
         new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)
-      }
       case None => new ChunkedFile(file)
     }
   }
@@ -76,6 +106,21 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): NettyResponse = throw new UnsupportedOperationException
+
+  private def toPart(data: Any, contentType: String, name: String, filename: Option[String]): ByteBuf = {
+    val boundary = UUID.randomUUID.toString
+    val fileNameStr = filename.map(c => s"filename=\"$c\";").getOrElse("")
+    val textPart =
+      s"""
+      $boundary
+          Content-Type: $contentType
+          Content-Disposition: form-data; $fileNameStr name="$name"
+
+          $data
+      $boundary
+      """
+    Unpooled.wrappedBuffer(textPart.getBytes)
+  }
 }
 
 object NettyToResponseBody {

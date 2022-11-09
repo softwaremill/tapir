@@ -9,7 +9,9 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{FutureConversion, NettyResponse, NettyServerRequest, Route}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object NettyServerInterpreter {
   def toRoute[F[_]: MonadError](
@@ -17,7 +19,7 @@ object NettyServerInterpreter {
       interceptors: List[Interceptor[F]],
       createFile: ServerRequest => F[TapirFile],
       deleteFile: TapirFile => F[Unit]
-  ): Route[F] = {
+  )(implicit futureConversion: FutureConversion[F]): Route[F] = {
     implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener
     val serverInterpreter = new ServerInterpreter[Any, F, NettyResponse, NoStreams](
       FilterServerEndpoints(ses),

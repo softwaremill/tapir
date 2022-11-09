@@ -2,20 +2,27 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import io.netty.handler.codec.http.FullHttpRequest
+import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
+import io.netty.handler.codec.http.multipart.{Attribute, FileUpload, HttpPostMultipartRequestDecoder}
 import sttp.capabilities
+import sttp.model.{MediaType, Part}
 import sttp.monad.MonadError
-import sttp.tapir.{FileRange, RawBodyType, TapirFile}
-import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.server.netty.NettyServerRequest
+import sttp.tapir.server.netty.FutureConversion
+import sttp.tapir.{FileRange, RawBodyType, TapirFile}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
-    monadError: MonadError[F]
+    monadError: MonadError[F],
+    executionContext: ExecutionContext,
+    futureConversion: FutureConversion[F]
 ) extends RequestBody[F, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
@@ -36,7 +43,49 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
             Files.write(file.toPath, requestContentAsByteArray)
             RawValue(FileRange(file), Seq(FileRange(file)))
           })
-      case _: RawBodyType.MultipartBody => ???
+      case m: RawBodyType.MultipartBody =>
+        futureConversion
+          .from(
+            Future
+              .sequence(getParts(serverRequest, m))
+              .map(RawValue.fromParts(_))
+          )
+    }
+  }
+
+  private def getParts(serverRequest: ServerRequest, m: RawBodyType.MultipartBody): List[Future[Part[Any]]] = {
+    new HttpPostMultipartRequestDecoder(nettyRequest(serverRequest)).getBodyHttpDatas.asScala
+      .flatMap(httpData =>
+        httpData.getHttpDataType match {
+          case HttpDataType.Attribute =>
+            List(Future.successful(Part(name = httpData.getName, body = httpData.asInstanceOf[Attribute].getValue)))
+          case HttpDataType.FileUpload =>
+            m.partType(httpData.getName).map(c => handleNettyFileUpload(serverRequest, c, httpData.asInstanceOf[FileUpload])).toList
+          case HttpDataType.InternalAttribute => throw new UnsupportedOperationException("DataType not supported")
+        }
+      )
+      .toList
+  }
+
+  private def handleNettyFileUpload(serverRequest: ServerRequest, m: RawBodyType[_], upload: FileUpload): Future[Part[Any]] = {
+    m match {
+      case RawBodyType.ByteArrayBody =>
+        Future.successful(
+          Part(name = upload.getName, body = upload.get(), contentType = MediaType.parse(upload.getContentType).toOption)
+        )
+      case RawBodyType.FileBody =>
+        futureConversion
+          .to(createFile(serverRequest))
+          .map(file => {
+            Files.write(file.toPath, ByteBufUtil.getBytes(upload.content()))
+            Part(
+              name = upload.getName,
+              body = FileRange(file),
+              contentType = MediaType.parse(upload.getContentType).toOption,
+              fileName = Some(file.getName)
+            )
+          })
+      case _ => throw new UnsupportedOperationException("BodyType not supported as FileUpload type")
     }
   }
 
