@@ -8,12 +8,15 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.NettyServerInterpreter
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
   def nettyServerOptions: NettyCatsServerOptions[F, _]
 
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
+    implicit val catsFutureConversion: CatsFutureConversion[F] = new CatsFutureConversion(nettyServerOptions.dispatcher)
     NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
   }
 }

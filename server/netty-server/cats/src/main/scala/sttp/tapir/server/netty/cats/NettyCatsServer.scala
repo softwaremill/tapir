@@ -9,11 +9,13 @@ import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.server.netty.Route
+import sttp.tapir.server.netty.{FutureConversion, Route}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 case class NettyCatsServer[F[_]: Async, SA <: SocketAddress](routes: Vector[Route[F]], options: NettyCatsServerOptions[F, SA]) {
   def addEndpoint(se: ServerEndpoint[Any, F]): NettyCatsServer[F, SA] = addEndpoints(List(se))
@@ -90,4 +92,18 @@ case class NettyCatsServerBinding[F[_], SA <: SocketAddress](localSocket: SA, st
   def hostName(implicit isTCP: SA =:= InetSocketAddress): String = isTCP(localSocket).getHostName
   def port(implicit isTCP: SA =:= InetSocketAddress): Int = isTCP(localSocket).getPort
   def path(implicit isDomainSocket: SA =:= DomainSocketAddress): String = isDomainSocket(localSocket).path()
+}
+
+private class CatsFutureConversion[F[_]: Async](dispatcher: Dispatcher[F])(implicit ec: ExecutionContext) extends FutureConversion[F] {
+  override def from[A](f: => Future[A]): F[A] = {
+    Async[F].async_ { cb =>
+      f.onComplete {
+        case Failure(exception) => cb(Left(exception))
+        case Success(value)     => cb(Right(value))
+      }
+      ()
+    }
+  }
+
+  override def to[A](f: => F[A]): Future[A] = dispatcher.unsafeToFuture(f)
 }
