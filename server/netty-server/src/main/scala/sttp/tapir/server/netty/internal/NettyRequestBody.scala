@@ -48,25 +48,23 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
 
   private def getParts(serverRequest: ServerRequest, m: RawBodyType.MultipartBody): List[F[Part[Any]]] = {
     new HttpPostMultipartRequestDecoder(nettyRequest(serverRequest)).getBodyHttpDatas.asScala
-      .flatMap(httpData => {
+      .flatMap(httpData =>
         httpData.getHttpDataType match {
           case HttpDataType.Attribute =>
-            val value: F[Part[Any]] = monadError.unit(Part(name = httpData.getName, body = httpData.asInstanceOf[Attribute].getValue))
-            List(value)
+            val part: F[Part[Any]] = monadError.unit(Part(name = httpData.getName, body = httpData.asInstanceOf[Attribute].getValue))
+            List(part)
           case HttpDataType.FileUpload =>
             m.partType(httpData.getName).map(c => handleNettyFileUpload(serverRequest, c, httpData.asInstanceOf[FileUpload])).toList
           case HttpDataType.InternalAttribute => throw new UnsupportedOperationException("DataType not supported")
         }
-      })
+      )
       .toList
   }
 
   private def handleNettyFileUpload(serverRequest: ServerRequest, m: RawBodyType[_], upload: FileUpload): F[Part[Any]] = {
     m match {
       case RawBodyType.ByteArrayBody =>
-        monadError.unit(
-          Part(name = upload.getName, body = upload.get(), contentType = MediaType.parse(upload.getContentType).toOption)
-        )
+        monadError.unit(Part(name = upload.getName, body = upload.get(), contentType = MediaType.parse(upload.getContentType).toOption))
       case RawBodyType.FileBody =>
         createFile(serverRequest)
           .map(file => {

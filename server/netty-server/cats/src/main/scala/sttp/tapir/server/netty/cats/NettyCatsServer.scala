@@ -8,8 +8,8 @@ import io.netty.channel.unix.DomainSocketAddress
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
+import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}

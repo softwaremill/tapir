@@ -57,19 +57,19 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     }
   }
 
-  private def convertToBuffs(bodyType: RawBodyType[_], p: Part[Any]): ByteBuf = {
+  private def convertToBuffs(bodyType: RawBodyType[_], part: Part[Any]): ByteBuf = {
     bodyType match {
       case RawBodyType.StringBody(_) =>
-        toPart(p.body, p.contentType.get, p.name, None)
+        toPart(part.body, part.contentType, part.name, None)
       case RawBodyType.ByteArrayBody =>
-        toPart(p.body, p.contentType.get, p.name, None)
+        toPart(part.body, part.contentType, part.name, None)
       case RawBodyType.ByteBufferBody =>
-        toPart(p.body, p.contentType.get, p.name, None)
+        toPart(part.body, part.contentType, part.name, None)
       case RawBodyType.InputStreamBody =>
-        toPart(p.body, p.contentType.get, p.name, None)
+        toPart(part.body, part.contentType, part.name, None)
       case RawBodyType.FileBody =>
-        val fileRange = p.body.asInstanceOf[FileRange]
-        toPart(Files.readString(fileRange.file.toPath), p.contentType.get, p.name, Some(fileRange.file.getName))
+        val fileRange = part.body.asInstanceOf[FileRange]
+        toPart(Files.readString(fileRange.file.toPath), part.contentType, part.name, Some(fileRange.file.getName))
       case RawBodyType.MultipartBody(_, _) =>
         throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
@@ -107,13 +107,14 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): NettyResponse = throw new UnsupportedOperationException
 
-  private def toPart(data: Any, contentType: String, name: String, filename: Option[String]): ByteBuf = {
+  private def toPart(data: Any, contentType: Option[String], name: String, filename: Option[String]): ByteBuf = {
     val boundary = UUID.randomUUID.toString
-    val fileNameStr = filename.map(c => s"filename=\"$c\";").getOrElse("")
+    val fileNameStr = filename.map(name => s"filename=\"$name\";").getOrElse("")
+    val contentTypeStr = contentType.map(ct => s"Content-Type: $ct").getOrElse("")
     val textPart =
       s"""
       $boundary
-          Content-Type: $contentType
+          $contentTypeStr
           Content-Disposition: form-data; $fileNameStr name="$name"
 
           $data
