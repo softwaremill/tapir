@@ -234,6 +234,7 @@ Metrics have been integrated into ZIO core in ZIO2.
 ### Collecting Metrics
 ```scala mdoc:compile-only
 import sttp.tapir.server.metrics.zio.ZioMetrics
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import zio.{Task, ZIO}
 
 val metrics: ZioMetrics[Task] = ZioMetrics.default[Task]()
