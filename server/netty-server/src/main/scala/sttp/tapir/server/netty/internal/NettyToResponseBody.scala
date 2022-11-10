@@ -109,7 +109,7 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
 
   private def toPart(data: Any, contentType: Option[String], name: String, filename: Option[String]): ByteBuf = {
     val boundary = UUID.randomUUID.toString
-    val fileNameStr = filename.map(name => s"filename=\"$name\";").getOrElse("")
+    val fileNameStr = filename.map(name => s"""filename="$name";""").getOrElse("")
     val contentTypeStr = contentType.map(ct => s"Content-Type: $ct").getOrElse("")
     val textPart =
       s"""

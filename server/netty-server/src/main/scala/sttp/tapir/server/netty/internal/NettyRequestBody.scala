@@ -15,7 +15,7 @@ import sttp.tapir.{FileRange, RawBodyType, TapirFile}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.collection.JavaConverters._
 
 class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     monadError: MonadError[F]
