@@ -904,6 +904,21 @@ lazy val datadogMetrics: ProjectMatrix = (projectMatrix in file("metrics/datadog
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore % CompileAndTest)
 
+lazy val zioMetrics: ProjectMatrix = (projectMatrix in file("metrics/zio-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-prometheus-metrics",
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % Versions.zio,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore % CompileAndTest)
+
 // docs
 
 lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"))
