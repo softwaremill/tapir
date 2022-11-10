@@ -5,7 +5,7 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.{Route, Router}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests._
-import sttp.tapir.server.vertx.streams.ReactiveStreams
+import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,14 +20,14 @@ class VertxServerTest extends TestSuite {
 
       val interpreter = new VertxTestServerInterpreter(vertx)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
-          .asInstanceOf[DefaultCreateServerTest[Future, ReactiveStreams, VertxFutureServerOptions, Router => Route]]
+          .asInstanceOf[DefaultCreateServerTest[Future, VertxStreams, VertxFutureServerOptions, Router => Route]]
 
       new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
-        ).tests() ++ new ServerStreamingTests(createServerTest, ReactiveStreams).tests()
+        ).tests() ++ new ServerStreamingTests(createServerTest, VertxStreams).tests()
     }
   }
 }

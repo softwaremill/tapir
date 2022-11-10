@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.streams
 
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
-import org.reactivestreams.{Processor, Publisher}
+import org.reactivestreams.Processor
 import sttp.capabilities.Streams
 import sttp.tapir.capabilities.NoStreams
 
@@ -22,9 +22,9 @@ object ReadStreamCompatible {
   }
 }
 
-trait ReactiveStreams extends Streams[ReactiveStreams] {
-  override type BinaryStream = Publisher[Buffer]
-  override type Pipe[A, B] = Processor[A,B]
+trait VertxStreams extends Streams[VertxStreams] {
+  override type BinaryStream = ReadStream[Buffer]
+  override type Pipe[A, B] = Processor[A, B]
 }
 
-object ReactiveStreams extends ReactiveStreams
+object VertxStreams extends VertxStreams

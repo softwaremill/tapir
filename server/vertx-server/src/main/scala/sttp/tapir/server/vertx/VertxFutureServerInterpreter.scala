@@ -12,7 +12,7 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.{ReactiveStreams, ReadStreamCompatible}
+import sttp.tapir.server.vertx.streams.{VertxStreams, ReadStreamCompatible}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -27,7 +27,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[A, U, I, E, O](e: ServerEndpoint[ReactiveStreams, Future]): Router => Route = { router =>
+  def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
@@ -38,19 +38,19 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute(e: ServerEndpoint[ReactiveStreams, Future]): Router => Route = { router =>
+  def blockingRoute(e: ServerEndpoint[VertxStreams, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e))
   }
 
   private def endpointHandler(
-      e: ServerEndpoint[ReactiveStreams, Future]
+      e: ServerEndpoint[VertxStreams, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
-    val reactiveStreamsReadStream:ReadStreamCompatible[ReactiveStreams] = streams.reactiveStreamsReadStreamCompatible(rc.vertx)
-    val interpreter = new ServerInterpreter[ReactiveStreams, Future, RoutingContext => VFuture[Void], ReactiveStreams](
+    val reactiveStreamsReadStream: ReadStreamCompatible[VertxStreams] = streams.reactiveStreamsReadStreamCompatible()
+    val interpreter = new ServerInterpreter[VertxStreams, Future, RoutingContext => VFuture[Void], VertxStreams](
       _ => List(e),
       new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(reactiveStreamsReadStream),
       new VertxToResponseBody(vertxFutureServerOptions)(reactiveStreamsReadStream),
