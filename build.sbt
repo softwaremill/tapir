@@ -1698,6 +1698,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
+    zioMetrics,
     sttpMockServer,
     zioJson,
     vertxServer,
@@ -1793,6 +1794,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
+    zioMetrics,
     sttpMockServer,
     nettyServer,
     swaggerUiBundle
