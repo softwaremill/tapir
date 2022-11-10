@@ -250,7 +250,7 @@ libraryDependencies += "dev.zio" %% "zio-metrics-connectors" % "2.0.0-RC6"
 ```
 
 Example zio metrics prometheus publisher style tapir metrics endpoint.
-```scala mdoc:compile-only
+```scala
 import sttp.tapir.{endpoint, stringBody}
 import zio._
 import zio.metrics.connectors.MetricsConfig
