@@ -20,7 +20,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
           Thread.sleep(100)
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DEFAULT_NAMESPACE).addRequestsActive()
+        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsActive()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
@@ -51,7 +51,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DEFAULT_NAMESPACE).addRequestsTotal()
+        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsTotal()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
@@ -86,7 +86,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DEFAULT_NAMESPACE).addRequestsDuration()
+        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsDuration()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
