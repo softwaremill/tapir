@@ -138,6 +138,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
+  zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
