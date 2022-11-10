@@ -5,6 +5,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.metrics.zio.ZioMetrics.DefaultNamespace
 import zio.metrics.Metric.Counter
 import zio.metrics._
 import zio.test._
@@ -20,7 +21,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
           Thread.sleep(100)
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsActive()
+        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsActive()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
@@ -51,7 +52,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsTotal()
+        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsTotal()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
@@ -79,14 +80,14 @@ object ZioMetricsTest extends ZIOSpecDefault {
           })
           state <- counter.value
           stateMissed <- missedCounter.value
-        } yield assertTrue(state == MetricState.Counter(3)) &&
-          assertTrue(stateMissed == MetricState.Counter(2))
+        } yield assertTrue(state == MetricState.Counter(3D)) &&
+          assertTrue(stateMissed == MetricState.Counter(2D))
       },
       test ("can collect requests duration") {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics = ZioMetrics[Id](ZioMetrics.DefaultNamespace).addRequestsDuration()
+        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsDuration()
         val interpreter =
           new ServerInterpreter[Any, Id, Unit, NoStreams](
             _ => List(serverEp),
@@ -106,10 +107,10 @@ object ZioMetricsTest extends ZIOSpecDefault {
             interpreter.apply(PersonsApi.request("Jacob"))
           })
           state <- histogram.value
-        } yield assertTrue(state.buckets.exists(_._2 == 1)) &&
-          assertTrue(state.count == 1) &&
-          assertTrue(state.min > 0) &&
-          assertTrue(state.max > 0)
+        } yield assertTrue(state.buckets.exists(_._2 > 0L)) &&
+          assertTrue(state.count == 1L) &&
+          assertTrue(state.min > 0D) &&
+          assertTrue(state.max > 0D)
       }
     )
   }
