@@ -128,7 +128,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.0"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.1"
 ```
 
 Then, import:
