@@ -28,6 +28,8 @@ Definition of an endpoint's inputs and output format is very similar to the one 
 endpoint body constructor helper `sttp.tapir.grpc.protobuf.pbdirect.grpcBody[T]` that based on the type `T` create a
 body definition that can be passed to as input or output of a given endpoint
 e.g. `endpoint.in(grpcBody[AddSimpleBook]).out(grpcBody[SimpleBook])`.
+Mapping for basic types are defined (e.g. `java.lang.String` -> `string`), but the target protobuf type can be simply customized via `.attribute` schema feature 
+(e.g. `implicit newSchema = implicitly[Derived[Schema[SimpleBook]]].value.modify(_.title)(_.attribute(ProtobufAttributes.ScalarValueAttribute, ProtobufScalarType.ProtobufBytes))`
 
 Currently, the only supported protocol is protobuf. On the server side, we use
 a [PBDirect](https://github.com/47degrees/pbdirect) library for encoding and decoding messages. It derives codecs from a
@@ -67,3 +69,9 @@ you can find a simple example.
 It's worth mentioning that by adjusting slightly encoders/decoders it's possible to expose gRPC endpoints with 
 `AkkaHttpServerInterpreter` as simple HTTP endpoints. This approach is not recommended, because it does not support
 transmitting multiple messages in a single http request.
+
+## Supported data formats
+* Basic scalar types 
+* Collections (repeated values)
+* Top level and nested products
+* Tapir schema derivation for coproducts (sealed traits) is supported, but we're missing codecs on the pbdirect side out of the box (oneof)
