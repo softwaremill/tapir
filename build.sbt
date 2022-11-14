@@ -1258,8 +1258,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
-      "io.vertx" % "vertx-web" % Versions.vertx,
-      "io.vertx" % "vertx-reactive-streams" % Versions.vertx
+      "io.vertx" % "vertx-web" % Versions.vertx
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)

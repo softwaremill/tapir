@@ -2,13 +2,12 @@ package sttp.tapir.server.vertx
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
-import io.vertx.ext.web.{Route, Router}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests._
 import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.tests.{Test, TestSuite}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class VertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
@@ -20,7 +19,6 @@ class VertxServerTest extends TestSuite {
 
       val interpreter = new VertxTestServerInterpreter(vertx)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
-          .asInstanceOf[DefaultCreateServerTest[Future, VertxStreams, VertxFutureServerOptions, Router => Route]]
 
       new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
