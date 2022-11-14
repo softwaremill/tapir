@@ -179,6 +179,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   nettyServerCats.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
+  zioSttpStubServer.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
   awsSam.projectRefs ++
@@ -1320,6 +1321,14 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
+
+lazy val zioSttpStubServer: ProjectMatrix = (projectMatrix in file("server/zio-sttp-stub-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "zio-tapir-sttp-stub-server"
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, sttpClient, sttpStubServer, zio, zioHttpServer, tests % Test)
 
 // serverless
 
