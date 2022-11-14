@@ -9,6 +9,7 @@ import sttp.model.{MediaType, Part}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
+import sttp.tapir.internal.SequenceSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, TapirFile}
@@ -46,6 +47,8 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     }
   }
 
+  private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
+
   private def getParts(serverRequest: ServerRequest, m: RawBodyType.MultipartBody): List[F[Part[Any]]] = {
     new HttpPostMultipartRequestDecoder(nettyRequest(serverRequest)).getBodyHttpDatas.asScala
       .flatMap(httpData =>
@@ -81,6 +84,4 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
-
-  private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 }

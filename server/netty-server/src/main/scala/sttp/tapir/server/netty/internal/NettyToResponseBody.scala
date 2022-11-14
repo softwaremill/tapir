@@ -57,24 +57,6 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     }
   }
 
-  private def convertToBuffs(bodyType: RawBodyType[_], part: Part[Any]): ByteBuf = {
-    bodyType match {
-      case RawBodyType.StringBody(_) =>
-        toPart(part.body, part.contentType, part.name, None)
-      case RawBodyType.ByteArrayBody =>
-        toPart(part.body, part.contentType, part.name, None)
-      case RawBodyType.ByteBufferBody =>
-        toPart(part.body, part.contentType, part.name, None)
-      case RawBodyType.InputStreamBody =>
-        toPart(part.body, part.contentType, part.name, None)
-      case RawBodyType.FileBody =>
-        val fileRange = part.body.asInstanceOf[FileRange]
-        toPart(Files.readString(fileRange.file.toPath), part.contentType, part.name, Some(fileRange.file.getName))
-      case RawBodyType.MultipartBody(_, _) =>
-        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
-    }
-  }
-
   private def wrap(content: InputStream): ChunkedStream = {
     new ChunkedStream(content)
   }
@@ -95,17 +77,23 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     }
   }
 
-  override def fromStreamValue(
-      v: streams.BinaryStream,
-      headers: HasHeaders,
-      format: CodecFormat,
-      charset: Option[Charset]
-  ): NettyResponse = throw new UnsupportedOperationException
-
-  override def fromWebSocketPipe[REQ, RESP](
-      pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
-  ): NettyResponse = throw new UnsupportedOperationException
+  private def convertToBuffs(bodyType: RawBodyType[_], part: Part[Any]): ByteBuf = {
+    bodyType match {
+      case RawBodyType.StringBody(_) =>
+        toPart(part.body, part.contentType, part.name, None)
+      case RawBodyType.ByteArrayBody =>
+        toPart(part.body, part.contentType, part.name, None)
+      case RawBodyType.ByteBufferBody =>
+        toPart(part.body, part.contentType, part.name, None)
+      case RawBodyType.InputStreamBody =>
+        toPart(part.body, part.contentType, part.name, None)
+      case RawBodyType.FileBody =>
+        val fileRange = part.body.asInstanceOf[FileRange]
+        toPart(Files.readString(fileRange.file.toPath), part.contentType, part.name, Some(fileRange.file.getName))
+      case RawBodyType.MultipartBody(_, _) =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
+    }
+  }
 
   private def toPart(data: Any, contentType: Option[String], name: String, filename: Option[String]): ByteBuf = {
     val boundary = UUID.randomUUID.toString
@@ -122,6 +110,18 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
       """
     Unpooled.wrappedBuffer(textPart.getBytes)
   }
+  override def fromStreamValue(
+      v: streams.BinaryStream,
+      headers: HasHeaders,
+      format: CodecFormat,
+      charset: Option[Charset]
+  ): NettyResponse = throw new UnsupportedOperationException
+
+  override def fromWebSocketPipe[REQ, RESP](
+      pipe: streams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+  ): NettyResponse = throw new UnsupportedOperationException
+
 }
 
 object NettyToResponseBody {
