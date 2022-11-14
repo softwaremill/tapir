@@ -16,7 +16,6 @@ class ZTapirStubInterpreter[C, R, OPTIONS](
     private val stub: SttpBackendStub[RIO[R, *], C]
 ) {
 
-  // type F[_] = RIO[R, _]
   private implicit val monad: MonadError[RIO[R, *]] = stub.responseMonad
 
   def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): ZTapirEndpointStub[I, E, O] = new ZTapirEndpointStub(endpoint)
