@@ -1,28 +1,22 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.buffer.{ByteBuf, ByteBufInputStream, ByteBufUtil, Unpooled}
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
-import sttp.capabilities
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{
-  ByteBufNettyResponseContent,
-  ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent
-}
+import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ChunkedFileNettyResponseContent, ChunkedStreamNettyResponseContent}
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
-import java.io.{InputStream, RandomAccessFile}
+import java.io.{ByteArrayInputStream, InputStream, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.util.UUID
 
-class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+class NettyToResponseBody extends ToResponseBody[NettyResponse, NettyStreams] {
+  override val streams: NettyStreams = NettyStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
@@ -115,11 +109,12 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): NettyResponse = throw new UnsupportedOperationException
+  ): NettyResponse =
+    (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), v)
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NettyStreams]
   ): NettyResponse = throw new UnsupportedOperationException
 
 }

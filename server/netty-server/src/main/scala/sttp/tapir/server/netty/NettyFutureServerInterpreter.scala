@@ -2,7 +2,7 @@ package sttp.tapir.server.netty
 
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.internal.NettyServerInterpreter
+import sttp.tapir.server.netty.internal.{NettyServerInterpreter, NettyStreams}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -10,7 +10,7 @@ trait NettyFutureServerInterpreter {
   def nettyServerOptions: NettyFutureServerOptions[_]
 
   def toRoute(
-      ses: List[ServerEndpoint[Any, Future]]
+      ses: List[ServerEndpoint[NettyStreams, Future]]
   )(implicit ec: ExecutionContext): FutureRoute = {
     implicit val monad: FutureMonad = new FutureMonad()
     NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)

@@ -5,6 +5,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
 import sttp.monad.FutureMonad
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
+import sttp.tapir.server.netty.internal.NettyStreams
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -20,7 +21,8 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests = new AllServerTests(createServerTest, interpreter, backend, multipart = false).tests() ++
-            new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests()
+            new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
+            new ServerStreamingTests(createServerTest, NettyStreams).tests()
 
           (tests, eventLoopGroup)
         }) { case (_, eventLoopGroup) =>

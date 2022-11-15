@@ -4,6 +4,7 @@ import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import io.netty.handler.codec.http.multipart.{Attribute, FileUpload, HttpPostMultipartRequestDecoder}
+import io.netty.handler.stream.ChunkedStream
 import sttp.capabilities
 import sttp.model.{MediaType, Part}
 import sttp.monad.MonadError
@@ -14,15 +15,16 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, RawBodyType, TapirFile}
 
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import scala.collection.JavaConverters._
 
 class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     monadError: MonadError[F]
-) extends RequestBody[F, NoStreams] {
+) extends RequestBody[F, NettyStreams] {
 
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+  override val streams: NettyStreams = NettyStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): F[RawValue[RAW]] = {
 
@@ -83,5 +85,10 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
+    val buf = nettyRequest(serverRequest).content()
+    val stream = new ByteArrayInputStream(ByteBufUtil.getBytes(buf))
+
+    new ChunkedStream(stream)
+  }
 }

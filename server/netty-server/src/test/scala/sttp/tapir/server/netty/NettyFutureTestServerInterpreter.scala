@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.netty.internal.NettyStreams
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -11,9 +12,9 @@ import java.net.InetSocketAddress
 import scala.concurrent.{ExecutionContext, Future}
 
 class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit ec: ExecutionContext)
-    extends TestServerInterpreter[Future, Any, NettyFutureServerOptions[InetSocketAddress], FutureRoute] {
+    extends TestServerInterpreter[Future, NettyStreams, NettyFutureServerOptions[InetSocketAddress], FutureRoute] {
 
-  override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FutureRoute = {
+  override def route(es: List[ServerEndpoint[NettyStreams, Future]], interceptors: Interceptors): FutureRoute = {
     val serverOptions = interceptors(NettyFutureServerOptions.customiseInterceptors).options
     NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
