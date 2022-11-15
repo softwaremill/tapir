@@ -6,6 +6,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
+import sttp.tapir.model.Delimited
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
@@ -163,6 +164,7 @@ case class Schema[T](
     } else None
   }
 
+  /** See [[modify]]: instead of a path expressed using code, accepts a path a sequence of `String`s. */
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
@@ -307,6 +309,15 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
         nb <- sb.name
       } yield Schema.SName("Either", List(na.show, nb.show))
     )
+  }
+
+  implicit def schemaForDelimited[D <: String, T](implicit tSchema: Schema[T]): Schema[Delimited[D, T]] =
+    tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.Attribute, Explode(false))
+
+  /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values. */
+  case class Explode(explode: Boolean)
+  object Explode {
+    val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {

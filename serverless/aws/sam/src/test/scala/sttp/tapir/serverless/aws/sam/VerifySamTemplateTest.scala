@@ -21,7 +21,7 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
       memorySize = 1024
     )
 
-    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint, getCutePetsEndpoint)).toYaml
 
     expectedYaml shouldBe noIndentation(actualYaml)
   }
@@ -35,7 +35,7 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
       memorySize = 1024
     )
 
-    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint, getCutePetsEndpoint)).toYaml
 
     expectedYaml shouldBe noIndentation(actualYaml)
   }
@@ -53,6 +53,10 @@ object VerifySamTemplateTest {
   val addPetEndpoint: PublicEndpoint[Pet, Unit, Unit, Any] = endpoint.post
     .in("api" / "pets")
     .in(jsonBody[Pet])
+
+  val getCutePetsEndpoint: PublicEndpoint[Unit, Unit, Pet, Any] = endpoint.get
+    .in("api" / "cute-pets")
+    .out(jsonBody[Pet])
 
   def load(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))

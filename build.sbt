@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.17"
 val scala2_13 = "2.13.10"
-val scala3 = "3.2.0"
+val scala3 = "3.2.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -36,15 +36,16 @@ val CompileAndTest = "compile->compile;test->test"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _))            => List(sourceDir / "scala-3")
-    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+    case Some((3, _))            => List(sourceDir / "scala-3", sourceDir / "scala-3-2.13+")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+", sourceDir / "scala-3-2.13+")
     case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
   }
 
 def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _)) => List(sourceDir / "scalajvm-3")
-    case _            => List(sourceDir / "scalajvm-2")
+    case Some((3, _))            => List(sourceDir / "scalajvm-3")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scalajvm-2", sourceDir / "scalajvm-3-2.13+")
+    case _                       => List(sourceDir / "scalajvm-2")
   }
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
@@ -74,15 +75,19 @@ val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    val current = version.value
-    val isRcOrMilestone = current.contains("M") || current.contains("RC")
-    if (!isRcOrMilestone) {
-      val previous = previousStableVersion.value
-      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
-      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-    } else {
-      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
-      Set.empty
+    // currently only 2.* versions are stable; skipping mima for scala3
+    if (scalaVersion.value == scala3) Set.empty
+    else {
+      val current = version.value
+      val isRcOrMilestone = current.contains("M") || current.contains("RC")
+      if (!isRcOrMilestone) {
+        val previous = previousStableVersion.value
+        println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
+        previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+      } else {
+        println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
+        Set.empty
+      }
     }
   },
   mimaBinaryIssueFilters ++= Seq(
@@ -133,6 +138,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
+  zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
@@ -765,8 +771,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.6",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.6" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.9",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.9" % Test,
       scalaTest.value % Test
     )
   )
@@ -894,6 +900,20 @@ lazy val datadogMetrics: ProjectMatrix = (projectMatrix in file("metrics/datadog
     libraryDependencies ++= Seq(
       "com.datadoghq" % "java-dogstatsd-client" % Versions.dogstatsdClient,
       scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore % CompileAndTest)
+
+lazy val zioMetrics: ProjectMatrix = (projectMatrix in file("metrics/zio-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-zio-metrics",
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % Versions.zio,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1678,6 +1698,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
+    zioMetrics,
     sttpMockServer,
     zioJson,
     vertxServer,
@@ -1773,6 +1794,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
+    zioMetrics,
     sttpMockServer,
     nettyServer,
     swaggerUiBundle

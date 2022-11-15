@@ -29,8 +29,8 @@ integer. If any of this fails, a decode failure will be reported.
 
 However, in some cases codecs aren't looked up as implicit values, instead being created from simpler components, which
 themselves are looked up as implicits. This is the case e.g. for json bodies specified using `jsonBody`. The rationale 
-behind such a design is that this provides better error reporting, in case the implicit components, used to create the
-codec, are missing. Consult the signature of the specific input/output to learn what are its implicit requirements.
+behind such a design is that this provides better error reporting, in case the implicit components used to create the
+codec are missing. Consult the signature of the specific input/output to learn what are its implicit requirements.
 
 ## Decode failures
 

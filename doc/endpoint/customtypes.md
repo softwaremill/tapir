@@ -36,7 +36,7 @@ information:
 * schema (for documentation and validation)
 * codec format (`text/plain`, `application/json` etc.)
 
-This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
+This might be quite a lot of work; that's why it's usually easier to map over an existing codec. To do that, you'll 
 need to provide two mappings: 
 
 * a `decode` method which decodes the lower-level type into the custom type, optionally reporting decode failures 
@@ -88,18 +88,13 @@ implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode
   usually better to define a codec for that type. 
 ```
 
-Then, you can use the new codec e.g. to obtain an id from a query parameter, or a path segment:
+Then, you can use the new codec; e.g. to obtain an id from a query parameter, or a path segment:
 
 ```scala mdoc:silent
 endpoint.in(query[MyId]("myId"))
 // or
 endpoint.in(path[MyId])
 ```
-
-### Codecs for enumerations
-
-In some cases, codecs for enumerations can be derived, but need to be defined as an implicit value by hand, because
-you'll need to provide some parameters. See the section on [enumerations validators](validation.md) for more details.
 
 ## Next
 

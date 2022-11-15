@@ -54,33 +54,6 @@ Then, `import sttp.tapir.codec.enumeratum._`, or extends the `sttp.tapir.codec.e
 
 This will bring into scope implicit values for values extending `*EnumEntry`.
 
-## Enumeration integration
-
-There is no library for the use of the build in scala `Enumeration`, but it can be implemented by hand.
-
-The example code below will generate [enums](https://swagger.io/docs/specification/data-models/enums/) to the open-api documentation.
-
-```scala mdoc:compile-only
-import sttp.tapir._
-
-trait EnumHelper { e: Enumeration =>
-  import io.circe._
-
-  implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
-  implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
-
-  // needs to be a def or lazy val so that the enumeration values are available!
-  implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
-}
-object Color extends Enumeration with EnumHelper {
-  type Color = Value
-  val Blue = Value("blue")
-  val Red   = Value("red")
-}
-``` 
-
-Tapir `Schema` for any `Enumeration.Value` can also be auto or semi-auto derived using `import sttp.tapir.generic.auto._` or `Schema.derivedEnumerationValue`.
-
 ## NewType integration
 
 If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapir-newtype` module will provide implicit codecs and
