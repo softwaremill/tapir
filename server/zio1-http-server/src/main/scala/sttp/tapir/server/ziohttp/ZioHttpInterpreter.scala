@@ -66,9 +66,15 @@ trait ZioHttpInterpreter[R] {
 }
 
 object ZioHttpInterpreter {
-  def apply[R](serverOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default[R]): ZioHttpInterpreter[R] = {
+  def apply[R](serverOptions: ZioHttpServerOptions[R]): ZioHttpInterpreter[R] = {
     new ZioHttpInterpreter[R] {
       override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions
+    }
+  }
+
+  def apply(): ZioHttpInterpreter[Any] = {
+    new ZioHttpInterpreter[Any] {
+      override def zioHttpServerOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.default[Any]
     }
   }
 }
