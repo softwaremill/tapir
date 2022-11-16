@@ -61,7 +61,9 @@ private[sam] object EndpointsToSamTemplate {
     val method = e.method
 
     val nameComponents = if (pathComponents.isEmpty) Vector("root") else pathComponents.map(_.fold(identity, identity))
-    val name = (method.map(_.method.toLowerCase).getOrElse("any").capitalize +: nameComponents.map(_.toLowerCase.capitalize)).mkString
+    val name = (method.map(_.method.toLowerCase).getOrElse("any").capitalize +: nameComponents.map(
+      _.toLowerCase.capitalize.replaceAll("\\W", "")
+    )).mkString
 
     val idComponents = pathComponents.map {
       case Left(s)  => s"{$s}"

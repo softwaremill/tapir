@@ -24,11 +24,11 @@ import scala.concurrent.duration.{Duration => SDuration}
 
 /** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values are formatted as `CF`.
   *
-  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`) Decoding can fail, and this is
+  * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`). Decoding can fail, and this is
   * represented as a result of type [[DecodeResult]].
   *
-  * A codec also contains optional meta-data on the `schema` of the high-level value, as well as an instance of the format (which determines
-  * the media type of the low-level value).
+  * A codec also contains optional meta-data in the `schema` of the high-level value (which includes validators), as well as an instance of
+  * the format (which determines the media type of the low-level value).
   *
   * Codec instances are used as implicit values, and are looked up when defining endpoint inputs/outputs. Depending on a particular endpoint
   * input/output, it might require a codec which uses a specific format, or a specific low-level value.
@@ -87,6 +87,25 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   def mapDecode[HH](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
   def map[HH](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
 
+  /** Adds the given validator to the codec's schema, and maps this codec to the given higher-level type `HH`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create codecs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[HH](v: Validator[H])(f: H => HH)(g: HH => H): Codec[L, HH, CF] =
+    validate(v).mapDecode { h =>
+      v(h) match {
+        case Nil    => DecodeResult.Value(f(h))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
   def schema(s2: Schema[H]): Codec[L, H, CF] =
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
@@ -105,14 +124,42 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
       override def format: CF2 = f
     }
 
+  /** Adds a validator to the codec's schema.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
+    */
   def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
+
+  /** Adds a validator which validates the option's element, if it is present.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
+    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
+    * run-time.
+    */
   def validateOption[U](v: Validator[U])(implicit hIsOptionU: H =:= Option[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+  /** Adds a validator which validates each element in the collection.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
+    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
+    * run-time.
+    */
   def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit hIsCU: H =:= C[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with LowPriorityCodec {
+object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros with CodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -310,6 +357,16 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
       Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
 
     Codec.string.mapDecode(decode)(encode)
+  }
+
+  implicit def part[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], Part[U], CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body).map(r => e.copy(body = r)))(e => e.copy(body = c.encode(e.body)))
+  }
+
+  implicit def unwrapPart[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], U, CF] = {
+    id[Part[T], CF](c.format, Schema.binary)
+      .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
   }
 
   //
@@ -540,15 +597,7 @@ object Codec extends CodecExtensions with FormCodecMacros with CodecMacros with 
   implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
   implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
 
-  implicit def part[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], Part[U], CF] = {
-    id[Part[T], CF](c.format, Schema.binary)
-      .mapDecode(e => c.decode(e.body).map(r => e.copy(body = r)))(e => e.copy(body = c.encode(e.body)))
-  }
-
-  implicit def unwrapPart[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Part[T], U, CF] = {
-    id[Part[T], CF](c.format, Schema.binary)
-      .mapDecode(e => c.decode(e.body))(e => Part("?", c.encode(e)))
-  }
+  // raw tuples
 
   implicit def tupledWithRaw[L, H, CF <: CodecFormat](implicit codec: Codec[L, H, CF]): Codec[L, (L, H), CF] =
     new Codec[L, (L, H), CF] {

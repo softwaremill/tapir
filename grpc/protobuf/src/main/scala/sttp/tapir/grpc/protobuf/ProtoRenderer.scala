@@ -28,13 +28,27 @@ class ProtoRenderer {
     |rpc ${method.name} (${method.input}) returns (${method.output}) {}
     """.stripMargin
 
-  private def renderMessage(msg: ProtobufMessage): String = {
+  private def renderMessage(msg: ProtobufMessage): String = msg match {
+    case m: ProtobufCoproductMessage => renderCoproductMessage(m)
+    case m: ProtobufProductMessage   => renderProductMessage(m)
+  }
+
+  private def renderCoproductMessage(msg: ProtobufCoproductMessage): String =
+    s"""
+       |message ${msg.name} {
+       |  oneof alternatives {
+       |    ${renderMessageFields(msg.alternatives.toVector)}
+       |  }
+       |}
+       |""".stripMargin
+
+  private def renderProductMessage(msg: ProtobufProductMessage): String = {
     s"""
        |message ${msg.name} {
        |${renderMessageFields(msg.fields.toVector)}
 
        |}
-        """.stripMargin
+  """.stripMargin
   }
 
   private def renderOptions(options: ProtobufOptions): String =
@@ -72,7 +86,7 @@ class ProtoRenderer {
 
   private def renderMessageField(field: ProtobufMessageField, id: Int): String =
     s"""
-        |${field.`type`} ${field.name} = $id;
+        |${field.`type`.filedTypeName} ${field.name} = $id;
         """.stripMargin
 
 }

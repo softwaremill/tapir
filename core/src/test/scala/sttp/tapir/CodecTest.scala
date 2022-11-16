@@ -16,7 +16,7 @@ import java.time._
 import java.util.{Date, UUID}
 import scala.reflect.ClassTag
 
-// see also CodecTestDateTime
+// see also CodecTestDateTime and CodecDelimitedTest
 class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
   private implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
@@ -79,5 +79,16 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[String]
     PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8))[Int]
     PartCodec(RawBodyType.ByteArrayBody)[Array[Byte]]
+  }
+
+  it should "call the validator during decoding when using .mapValidate" in {
+    val codec = Codec.int.mapValidate(Validator.min(18))(Member(_))(_.age)
+
+    codec.decode("10") should matchPattern { case DecodeResult.InvalidValue(_) => }
+    codec.schema.validator should not be (Validator.pass)
+  }
+
+  case class Member(age: Int) {
+    require(age >= 18)
   }
 }

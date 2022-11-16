@@ -47,7 +47,7 @@ For outputs:
 Endpoint inputs/outputs can be combined in two ways. However they are combined, the values they represent always 
 accumulate into tuples of values.
 
-First, inputs/outputs can be combined using the `.and` method. Such a combination results in an input/output, which maps
+First, inputs/outputs can be combined using the `.and` method. Such a combination results in an input/output which maps
 to a tuple of the given types. This combination can be assigned to a value and re-used in multiple endpoints. As all 
 other values in tapir, endpoint input/output descriptions are immutable. For example, an input specifying two query 
 parameters, `start` (mandatory) and `limit` (optional) can be written down as:

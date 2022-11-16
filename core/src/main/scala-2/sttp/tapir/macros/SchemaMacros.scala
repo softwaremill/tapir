@@ -1,15 +1,20 @@
 package sttp.tapir.macros
 
 import magnolia1.Magnolia
+import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
 import sttp.tapir.internal.{ModifySchemaMacro, OneOfMacro, SchemaEnumerationMacro, SchemaMapMacro}
-import sttp.tapir.{Schema, SchemaType, Validator}
 
 trait SchemaMacros[T] {
 
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * correspond to the type `T`, but to some lower-level representation of the type.
+    *
+    * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
     */
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.generateModify[T, U]
 }
@@ -57,31 +62,26 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
     * that all subtypes of the sealed hierarchy `T` must be `object`s.
     *
-    * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
-    * [[CreateDerivedEnumerationSchema]].
+    * This method cannot be implicit, as there's no way to constraint the type `T` to be a sealed trait / class enumeration, so that this
+    * would be invoked only when necessary.
     */
   def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] = macro SchemaEnumerationMacro.derivedEnumeration[T]
 
-  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
+  /** Creates a schema for an [[Enumeration]], where the validator is created using the enumeration's values. Unlike the default
+    * [[derivedEnumerationValue]] method, which provides the schema implicitly, this variant allows customising how the schema is created.
+    * This is useful if the low-level representation of the schema is different than a `String`, or if the enumeration's values should be
+    * encoded in a different way than using `.toString`.
+    *
+    * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
+    * [[CreateDerivedEnumerationSchema]].
+    */
+  def derivedEnumerationValueCustomise[T <: scala.Enumeration#Value]: CreateDerivedEnumerationSchema[T] =
+    macro SchemaEnumerationMacro.derivedEnumerationValueCustomise[T]
+
+  /** Create a schema for an [[Enumeration]], where the validator is created using the enumeration's values. The low-level representation of
+    * the enum is a `String`, and the enum values in the documentation will be encoded using `.toString`.
+    */
   implicit def derivedEnumerationValue[T <: scala.Enumeration#Value]: Schema[T] = macro SchemaEnumerationMacro.derivedEnumerationValue[T]
 }
 
-class CreateDerivedEnumerationSchema[T](validator: Validator.Enumeration[T]) {
 
-  /** @param encode
-    *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
-    *   `schemaType`). This encoding will be used when generating documentation.
-    * @param schemaType
-    *   The low-level representation of the enumeration. Defaults to a string.
-    */
-  def apply(
-      encode: Option[T => Any] = None,
-      schemaType: SchemaType[T] = SchemaType.SString[T](),
-      default: Option[T] = None
-  ): Schema[T] = {
-    val v = encode.fold(validator)(e => validator.encode(e))
-
-    val s0 = Schema(schemaType).validate(v)
-    default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
-  }
-}
