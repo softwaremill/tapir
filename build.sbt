@@ -173,6 +173,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs++
+  nettyServerZio1.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -1267,6 +1268,20 @@ lazy val nettyServerZio: ProjectMatrix = (projectMatrix in file("server/netty-se
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(nettyServer, zio, serverTests % Test)
+
+lazy val nettyServerZio1: ProjectMatrix = (projectMatrix in file("server/netty-server/zio1"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-netty-server-zio1",
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % "4.1.82.Final",
+      "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
+    ) ++ loggerDependencies,
+    // needed because of https://github.com/coursier/coursier/issues/2016
+    useCoursier := false
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(nettyServer, zio1, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
