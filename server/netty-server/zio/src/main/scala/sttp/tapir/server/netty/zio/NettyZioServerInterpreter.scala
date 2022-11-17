@@ -11,7 +11,10 @@ trait NettyZioServerInterpreter[R] {
 
   def toRoute(ses: List[ServerEndpoint[Any, RIO[R, *]]]): Route[RIO[R, *]] = {
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
-    NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
+    NettyServerInterpreter
+      .toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
+      // we want to log & return a 500 in case of defects as well
+      .andThen(_.resurrect)
   }
 }
 
