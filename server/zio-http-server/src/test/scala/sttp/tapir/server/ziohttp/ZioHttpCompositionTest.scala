@@ -7,7 +7,8 @@ import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
-import zhttp.http._
+import zio.http._
+import zio.http.model._
 import zio.{Task, ZIO}
 
 class ZioHttpCompositionTest(
@@ -23,7 +24,7 @@ class ZioHttpCompositionTest(
 
         val route1: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
         val route2: RHttpApp[Any] = Http.collect { case Method.GET -> !! / "p2" =>
-          zhttp.http.Response.ok
+          zio.http.Response.ok
         }
         val route3: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep3)
 

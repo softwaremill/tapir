@@ -6,12 +6,13 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
-import zhttp.http._
-import zhttp.service.{EventLoopGroup, Server, ServerChannelFactory}
 import zio._
+import zio.http._
 import zio.interop.catz._
 
-class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactory: ServerChannelFactory)
+import java.net.InetSocketAddress
+
+class ZioHttpTestServerInterpreter()
     extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
@@ -21,15 +22,12 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: EventLoopGroup, channelFactor
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-    val layers: ZLayer[Any, Nothing, EventLoopGroup with ServerChannelFactory] =
-      ZLayer.succeed(eventLoopGroup) ++ ZLayer.succeed(channelFactory)
 
-    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _))
+    val io: ZIO[Scope, Throwable, Nothing] =
+      Server
+        .serve(routes.toList.reduce(_ ++ _))
+        .provide(ServerConfig.live(ServerConfig(address = new InetSocketAddress(0))), Server.live)
 
-    val io: ZIO[Scope, Throwable, Server.Start] = ZIO
-      .scoped(Server.make(server ++ Server.port(0)))
-      .provide(layers)
-
-    Resource.scoped[IO, Any, Int](io.map(_.port))
+    Resource.scoped[IO, Any, Int](io)
   }
 }

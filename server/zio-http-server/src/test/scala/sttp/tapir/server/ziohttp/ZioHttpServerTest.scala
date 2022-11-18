@@ -1,7 +1,6 @@
 package sttp.tapir.server.ziohttp
 
 import cats.effect.{IO, Resource}
-import io.netty.util.CharsetUtil
 import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
@@ -10,11 +9,9 @@ import sttp.tapir._
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.{RIOMonadError, RichZEndpoint}
-import zhttp.http.{Path, Request, URL}
-import zhttp.service.server.ServerChannelFactory
-import zhttp.service.{EventLoopGroup, ServerChannelFactory}
+import zio.http.{Path, Request, URL}
 import zio.interop.catz._
-import zio.{Runtime, Task, UIO, Unsafe, ZEnvironment, ZIO}
+import zio.{Runtime, Task, UIO, Unsafe, ZIO}
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -22,11 +19,8 @@ class ZioHttpServerTest extends TestSuite {
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     Resource
-      .scoped[IO, Any, ZEnvironment[EventLoopGroup with ServerChannelFactory]]((EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build)
-      .map { nettyDeps =>
-        val eventLoopGroup = nettyDeps.get[EventLoopGroup]
-        val channelFactory = nettyDeps.get[ServerChannelFactory]
-        val interpreter = new ZioHttpTestServerInterpreter(eventLoopGroup, channelFactory)
+      .scoped[IO, Any, Nothing] {
+        val interpreter = new ZioHttpTestServerInterpreter()
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
         def additionalTests(): List[Test] = List(
@@ -34,8 +28,8 @@ class ZioHttpServerTest extends TestSuite {
           Test("zio http route can be used as a function") {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
             val route = ZioHttpInterpreter().toHttp(ep)
-            val test: UIO[Assertion] = route(Request(url = URL.apply(Path.empty / "p1")))
-              .flatMap(response => response.data.toByteBuf.map(_.toString(CharsetUtil.UTF_8)))
+            val test: UIO[Assertion] = route(Request.get(url = URL.apply(Path.empty / "p1")))
+              .flatMap(response => response.body.asString)
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
