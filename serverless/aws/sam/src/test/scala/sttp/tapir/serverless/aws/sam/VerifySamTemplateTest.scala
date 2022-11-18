@@ -40,6 +40,34 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
     expectedYaml shouldBe noIndentation(actualYaml)
   }
 
+  test("should match the expected yaml with HttpApi properties") {
+    val expectedYaml = load("http_api_template.yaml")
+
+    val samOptions: AwsSamOptions = AwsSamOptions(
+      "PetApi",
+      httpApi = Some(
+        HttpApiProperties(cors =
+          Some(
+            HttpApiProperties.Cors(
+              allowCredentials = Some(false),
+              allowedHeaders = List("*"),
+              allowedMethods = List("GET"),
+              allowedOrigins = List("*"),
+              exposeHeaders = Nil,
+              maxAge = Some(0)
+            )
+          )
+        )
+      ),
+      source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest"),
+      memorySize = 1024
+    )
+
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint, getCutePetsEndpoint)).toYaml
+
+    expectedYaml shouldBe noIndentation(actualYaml)
+  }
+
 }
 
 object VerifySamTemplateTest {

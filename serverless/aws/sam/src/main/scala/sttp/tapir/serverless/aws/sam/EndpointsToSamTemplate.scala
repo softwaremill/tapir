@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.sam
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 private[sam] object EndpointsToSamTemplate {
   def apply(es: List[AnyEndpoint], options: AwsSamOptions): SamTemplate = {
@@ -35,7 +35,23 @@ private[sam] object EndpointsToSamTemplate {
               )
           }
         ),
-        httpApiName -> HttpResource(HttpProperties("$default"))
+        httpApiName -> HttpResource(
+          HttpProperties(
+            "$default",
+            CorsConfiguration = options.httpApi
+              .flatMap(_.cors)
+              .map(v =>
+                CorsConfiguration(
+                  AllowCredentials = v.allowCredentials,
+                  AllowHeaders = v.allowedHeaders,
+                  AllowMethods = v.allowedMethods,
+                  AllowOrigins = v.allowedOrigins,
+                  ExposeHeaders = if (v.exposeHeaders.isEmpty) None else Some(v.exposeHeaders),
+                  MaxAge = v.maxAge
+                )
+              )
+          )
+        )
       ),
       Outputs = Map(
         (options.namePrefix + "Url") -> Output(
