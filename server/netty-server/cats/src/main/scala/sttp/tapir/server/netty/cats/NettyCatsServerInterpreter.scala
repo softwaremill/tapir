@@ -6,7 +6,7 @@ import sttp.monad.MonadError
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.Route
-import sttp.tapir.server.netty.internal.NettyServerInterpreter
+import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 
 trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
@@ -14,7 +14,16 @@ trait NettyCatsServerInterpreter[F[_]] {
 
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
-    NettyServerInterpreter.toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
+    val runAsync = new RunAsync[F] {
+      override def apply[T](f: => F[T]): Unit = nettyServerOptions.dispatcher.unsafeRunAndForget(f)
+    }
+    NettyServerInterpreter.toRoute(
+      ses,
+      nettyServerOptions.interceptors,
+      nettyServerOptions.createFile,
+      nettyServerOptions.deleteFile,
+      runAsync
+    )
   }
 }
 
