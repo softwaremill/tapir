@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
-import io.netty.handler.codec.http.multipart.{Attribute, FileUpload, HttpPostMultipartRequestDecoder}
+import io.netty.handler.codec.http.multipart.{Attribute, FileUpload, HttpData, HttpPostMultipartRequestDecoder}
 import sttp.capabilities
 import sttp.model.{MediaType, Part}
 import sttp.monad.MonadError
@@ -12,7 +12,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.internal.SequenceSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, TapirFile}
+import sttp.tapir.{FileRange, RawBodyType, RawPart, TapirFile}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -41,33 +41,59 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
             RawValue(FileRange(file), Seq(FileRange(file)))
           })
       case m: RawBodyType.MultipartBody =>
-        new SequenceSupport[F]()
-          .sequence[Part[Any]](getParts(serverRequest, m))
-          .map(RawValue.fromParts(_))
+        monadError
+          .unit(new HttpPostMultipartRequestDecoder(nettyRequest(serverRequest)))
+          .flatMap(decoder => {
+            getParts(serverRequest, m, decoder)
+              .sequence()
+              .map(RawValue.fromParts)
+              .map(a => {
+                decoder.destroy()
+                a.asInstanceOf[RawValue[RAW]]
+              })
+          })
     }
   }
 
   private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 
-  private def getParts(serverRequest: ServerRequest, m: RawBodyType.MultipartBody): List[F[Part[Any]]] = {
-    new HttpPostMultipartRequestDecoder(nettyRequest(serverRequest)).getBodyHttpDatas.asScala
+  private def getParts(
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody,
+      decoder: HttpPostMultipartRequestDecoder
+  ): List[F[Part[Any]]] = {
+    decoder.getBodyHttpDatas.asScala
       .flatMap(httpData =>
         httpData.getHttpDataType match {
           case HttpDataType.Attribute =>
-            val part: F[Part[Any]] = monadError.unit(Part(name = httpData.getName, body = httpData.asInstanceOf[Attribute].getValue))
-            List(part)
+            m.partType(httpData.getName).map(c => toPart(serverRequest, c, httpData.asInstanceOf[Attribute], None)).toList
           case HttpDataType.FileUpload =>
-            m.partType(httpData.getName).map(c => handleNettyFileUpload(serverRequest, c, httpData.asInstanceOf[FileUpload])).toList
+            m.partType(httpData.getName)
+              .map(c => {
+                val upload = httpData.asInstanceOf[FileUpload]
+                toPart(serverRequest, c, upload, Some(upload.getContentType))
+              })
+              .toList
           case HttpDataType.InternalAttribute => throw new UnsupportedOperationException("DataType not supported")
         }
       )
       .toList
   }
 
-  private def handleNettyFileUpload(serverRequest: ServerRequest, m: RawBodyType[_], upload: FileUpload): F[Part[Any]] = {
+  private def toPart(
+      serverRequest: ServerRequest,
+      m: RawBodyType[_],
+      upload: HttpData,
+      contentType: Option[String]
+  ): F[Part[Any]] = {
+    val mediaType = contentType.flatMap(c => MediaType.parse(c).toOption)
     m match {
-      case RawBodyType.ByteArrayBody =>
-        monadError.unit(Part(name = upload.getName, body = upload.get(), contentType = MediaType.parse(upload.getContentType).toOption))
+      case RawBodyType.StringBody(charset) =>
+        monadError.unit(Part(name = upload.getName, body = upload.getString(charset), contentType = mediaType))
+      case RawBodyType.ByteBufferBody => monadError.unit(Part(name = upload.getName, body = upload.content(), contentType = mediaType))
+      case RawBodyType.InputStreamBody =>
+        monadError.unit(Part(name = upload.getName, body = new ByteBufInputStream(upload.content()), contentType = mediaType))
+      case RawBodyType.ByteArrayBody => monadError.unit(Part(name = upload.getName, body = upload.get(), contentType = mediaType))
       case RawBodyType.FileBody =>
         createFile(serverRequest)
           .map(file => {
@@ -75,7 +101,7 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
             Part(
               name = upload.getName,
               body = FileRange(file),
-              contentType = MediaType.parse(upload.getContentType).toOption,
+              contentType = mediaType,
               fileName = Some(file.getName)
             )
           })
