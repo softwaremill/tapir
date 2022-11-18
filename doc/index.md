@@ -11,7 +11,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   Currently supported: 
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
   * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
-  * [Netty](server/netty.md) (using `Future`s or cats-effect)
+  * [Netty](server/netty.md) (using `Future`s, cats-effect or ZIO)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
   * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
