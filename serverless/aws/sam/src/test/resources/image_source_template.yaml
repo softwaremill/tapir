@@ -22,6 +22,14 @@ Resources:
             TimeoutInMillis: 20000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
+        GetApiCutepets:
+          Properties:
+            ApiId: !Ref 'PetApiHttpApi'
+            Method: GET
+            Path: /api/cute-pets
+            TimeoutInMillis: 10000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
       ImageUri: image.repository:pet-api
       PackageType: Image
     Type: AWS::Serverless::Function

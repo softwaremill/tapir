@@ -19,6 +19,9 @@ Request interceptors for two common scenarios can be created using the `RequestI
 Note, that for most server interpreters, the server endpoints passed to the request interceptor will be pre-filtered
 using `FilterServerEndpoints`, as a performance optimization (these will be only the endpoints for which the request
 path might potentially decode successfully).
+
+To enable, disable or configure an interceptor, you'll need to modify the [server options](options.md), using the
+`.customiseInterceptors` method.
   
 ## Endpoint interceptors
 

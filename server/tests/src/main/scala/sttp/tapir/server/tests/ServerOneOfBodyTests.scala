@@ -43,7 +43,7 @@ class ServerOneOfBodyTests[F[_], OPTIONS, ROUTE](
         post.body("orange").header(Accept, ApplicationXml.toString()).send(backend).map(_.body shouldBe """<f>orange</f>""") >>
         post.body("pear").header(Accept, TextPlain.toString()).send(backend).map(_.body shouldBe "pear") >>
         post.body("apple").send(backend).map(_.body shouldBe """{"f":"apple"}""") >> // default
-        post.body("apple").header(Accept, ApplicationPdf.toString()).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+        post.body("apple").header(Accept, ApplicationPdf.toString()).send(backend).map(_.code shouldBe StatusCode.NotAcceptable)
     }
   )
 }

@@ -8,24 +8,21 @@ For some guidelines as to where to perform a specific type of validation, see th
 logic might be if the property that we are checking is a format error, or a business-level error? The validation
 capabilities described in this section are intended only for format errors.
 
-## Single type validation
+Validation rules added using the built-in validators are translated to [OpenAPI](../docs/openapi.md) documentation.
 
-Validation rules are part of the [`Schema`](codecs.md#schemas) for a given type, and can be added either directly
-to the schema, or via the `Codec` or `EndpointInput`/`EndpointOutput`. For example, when defining a codec for a type, 
-we have the `.validate()` method:
- 
-```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.CodecFormat.TextPlain
+## Adding validators to schemas
 
-case class MyId(id: String)
+A validator is always part of a `Schema`, which is part of a `Codec`. It can validate either the top-level object, or 
+some nested component (such as a field value). 
 
-implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
-  .map(MyId(_))(_.id)
-  .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
-```
- 
-Validators can also be added to individual inputs/outputs, in addition to whatever the codec provides:
+If you are using automatic or semi-automatic schema derivation, validators for such schemas, and their nested 
+components, including collections and options, can be added as described in 
+[schema customisation](schemas.md#customising-derived-schemas).
+
+## Adding validators to inputs/outputs
+
+Validators can also be added to individual inputs/outputs. Behind the scenes, this modifies the schema, but it's easier
+to add top-level validators this way, rather than modifying the implicit schemas, for example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -45,31 +42,49 @@ query[Option[Int]]("item").validateOption(Validator.min(0))
 query[List[Int]]("item").validateIterable(Validator.min(0)) // validates each repeated parameter
 ```
 
-Validation rules added using the built-in validators are translated to [OpenAPI](../docs/openapi.md) documentation.
+## Adding validators to codecs
 
-## Validation rules and automatic codec derivation
+Finally, if you are creating a reusable [codec](codecs.md), a validator can be added to it as well:
 
-As validators are parts of schemas, they are looked up as part of the implicit `Schema[T]` values. When 
-[customising schemas](schemas.md), use the `.validate` method on the schema to add a validator.
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.CodecFormat.TextPlain
+
+case class MyId(id: String)
+
+implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
+  .map(MyId(_))(_.id)
+  .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
+```
 
 ## Decode failures
 
-Codecs support reporting decoding failures, by returning a `DecodeResult` from the `Codec.decode` method. However, this 
-is meant for input/output values which are in an incorrect low-level format, when parsing a "raw value" fails. In other 
-words, decoding failures should be reported for format failures, not business validation errors.
+The validators are run when a value is being decoded from its low-level representation. This is done using the
+`Codec.decode` method, which returns a `DecodeResult`. Such a result can be successful, or a decoding failure.
+
+Keep in mind that the validator mechanism described here is meant for input/output values which are in an incorrect 
+low-level format. Validation and more generally decoding failures should be reported only for format failures.
+Business validation errors, which are often contextual, should use the error output instead.
 
 To customise error messages that are returned upon validation/decode failures by the server, see 
 [error handling](../server/errors.md).
 
-## Enum validators
+## Enumeration validators
 
 Validators for enumerations can be created using:
 
-* `Validator.derivedEnumeration`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
-  macro determines the possible values
-* `Validator.enumeration`, which takes the list of possible values
+* for arbitrary types, using `Validator.enumeration`, which takes the list of possible values
+* for `sealed` hierarchies, where all implementations are objects, using `Validator.derivedEnumeration[T]`.
+  This method is a macro which determines the possible values.
+* for Scala3 `enum`s, where all implementation don't have parameters, using `Validator.derivedEnumeration[T]` as above
+* for Scala2 `Enumeration#Value`, automatically derived `Schema`s have the validator added (see `Schema.derivedEnumerationValue`)
 
-To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
+The enumeration schemas and codecs that are created by tapir-provided methods already have the enumeration validator
+added. See the section on [enumerations](enumerations.md) for more information. 
+
+### Enumeration values in documentation
+
+To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which
 converts the enum value to a raw type (typically a string). This can be specified by:
 
 * explicitly providing it using the overloaded `enumeration` method with an `encode` parameter
@@ -77,40 +92,26 @@ converts the enum value to a raw type (typically a string). This can be specifie
 * when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
 * by adding the validator directly to a codec using `.validate` (the encode function is then taken from the codec)
 
-To simplify creation of schemas and codec, with a derived enum validator, `Schema.derivedEnumeration` and `Codec.derivedEnumeration`
-helper methods are available. For example:
+For example:
 
 ```scala mdoc:silent:reset-object
 import sttp.tapir._
-import sttp.tapir.Codec.PlainCodec
 
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
 
-implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.derivedEnumeration[String, Color](
-    (_: String) match {
-      case "red"  => Some(Red)
-      case "blue" => Some(Blue)
-      case _      => None
-    },
-    _.toString.toLowerCase
-  )
-}
-```
-
-If the enum is nested within an object and its values aren't of a "basic" type (numbers, strings), regardless of whether 
-the codec for that object is defined by hand or derived, we need to specify the encode function by hand:
-
-```scala mdoc:silent
 // providing the enum values by hand
 implicit def colorSchema: Schema[Color] = Schema.string.validate(
   Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
-
-// or deriving the enum values and using the helper function
-implicit def colorSchema2: Schema[Color] = Schema.derivedEnumeration[Color](encode = Some(_.toString.toLowerCase))
 ```
+
+## Validation of unrepresentable values
+
+Note that validation is run on a fully decoded values. That is, during decoding, first all the provided decoding 
+functions are run, followed by validations. If you'd like to validate before decoding, e.g. because the value 
+isn't representable unless validator conditions are met due to preconditions, you can use ``.mapValidate``. However,
+this will cause the validator function to be run twice if there are no validation error.
 
 ## Next
 

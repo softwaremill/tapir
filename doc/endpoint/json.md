@@ -25,6 +25,21 @@ If you have a custom, implicit `Codec[String, T, Json]` instance, you should use
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
 the json codec that is in scope.
 
+## JSON as string
+
+If you'd like to work with JSON bodies in a serialised `String` form, instead of integrating on a higher level using
+one of the libraries mentioned below, you should use the `stringJsonBody` input/output. Note that in this case, the 
+serialising/deserialising of the body must be part of the [server logic](../server/logic.md).
+
+A schema can be provided in this case as well:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+case class MyBody(field: Int)
+stringJsonBody.schema(implicitly[Schema[MyBody]].as[String])
+```
+
 ## Circe
 
 To use [Circe](https://github.com/circe/circe), add the following dependency to your project:
@@ -248,6 +263,16 @@ Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for e
 To add support for additional JSON libraries, see the
 [sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/sttp/tapir/json/circe/TapirJsonCirce.scala)
 for the Circe codec (which is just a couple of lines of code).
+
+## Coproducts (enums, sealed traits, classes)
+
+If you are serialising a sealed hierarchy, such as a Scala 3 `enum`, a `sealed trait` or `sealed class`, the configuration
+of [schema derivation](schemas.md) will have to match the configuration of your json library. Different json libraries
+have different defaults when it comes to a discrimination strategy, so in order to have the schemas (and hence the
+documentation) in sync with how the values are serialised, you will have to configure schema derivation as well.
+
+Schemas are referenced at the point of `jsonBody` usage, so any configuration must be available in the implicit scope
+when this method is called.
 
 ## Next
 

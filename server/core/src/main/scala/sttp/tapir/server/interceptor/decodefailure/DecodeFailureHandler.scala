@@ -234,28 +234,28 @@ object DefaultDecodeFailureHandler {
       */
     def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String = {
       ve.customMessage match {
-        case Some(message) => s"expected $valueName to pass validation: $message, but was: ${ve.invalidValue}"
+        case Some(message) => s"expected $valueName to pass validation: $message, but got: ${ve.invalidValue}"
         case None =>
           ve.validator match {
             case Validator.Min(value, exclusive) =>
-              s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+              s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but got ${ve.invalidValue}"
             case Validator.Max(value, exclusive) =>
-              s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+              s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but got ${ve.invalidValue}"
             // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
-            case p: Validator.Pattern[T] => s"expected $valueName to match: ${p.value}, but was: ${ve.invalidValue}"
+            case p: Validator.Pattern[T] => s"expected $valueName to match: ${p.value}, but got: ${quoteIfString(ve.invalidValue)}"
             case m: Validator.MinLength[T] =>
-              s"expected $valueName to have length greater than or equal to ${m.value}, but was ${ve.invalidValue}"
+              s"expected $valueName to have length greater than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
             case m: Validator.MaxLength[T] =>
-              s"expected $valueName to have length less than or equal to ${m.value}, but was ${ve.invalidValue} "
-            case m: Validator.MinSize[T, Iterable] =>
-              s"expected size of $valueName to be greater than or equal to ${m.value}, but was ${ve.invalidValue.size}"
-            case m: Validator.MaxSize[T, Iterable] =>
-              s"expected size of $valueName to be less than or equal to ${m.value}, but was ${ve.invalidValue.size}"
-            case Validator.Custom(_, _) => s"expected $valueName to pass validation, but was: ${ve.invalidValue}"
+              s"expected $valueName to have length less than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
+            case m: Validator.MinSize[T, Iterable] @unchecked =>
+              s"expected size of $valueName to be greater than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
+            case m: Validator.MaxSize[T, Iterable] @unchecked =>
+              s"expected size of $valueName to be less than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
+            case Validator.Custom(_, _) => s"expected $valueName to pass validation, but got: ${quoteIfString(ve.invalidValue)}"
             case Validator.Enumeration(possibleValues, encode, _) =>
               val encodedPossibleValues =
                 encode.fold(possibleValues.map(_.toString))(e => possibleValues.flatMap(e(_).toList).map(_.toString))
-              s"expected $valueName to be one of ${encodedPossibleValues.mkString("(", ", ", ")")}, but was ${ve.invalidValue}"
+              s"expected $valueName to be one of ${encodedPossibleValues.mkString("(", ", ", ")")}, but got: ${quoteIfString(ve.invalidValue)}"
           }
       }
     }
@@ -274,5 +274,15 @@ object DefaultDecodeFailureHandler {
 
     /** Default message describing a list of validation errors: which values are invalid, and why. */
     def validationErrorsMessage(ve: List[ValidationError[_]]): String = ve.map(validationErrorMessage).mkString(", ")
+
+    private def quoteIfString(v: Any): Any = v match {
+      case s: String => s""""$s""""
+      case _         => v
+    }
+
+    private def size(v: Any): Any = v match {
+      case i: Iterable[_] => i.size
+      case _              => v
+    }
   }
 }

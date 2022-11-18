@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import org.scalatest.Assertions
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -282,6 +283,23 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     }
   }
 
+  it should "create a one-of wrapped schema" in {
+    val schema = Schema.oneOfWrapped[Entity]
+    val schemaType: SCoproduct[Entity] = schema.schemaType.asInstanceOf[SCoproduct[Entity]]
+
+    schemaType.discriminator shouldBe None
+    schemaType.subtypes shouldBe List(
+      Schema.wrapWithSingleFieldProduct(Schema.derived[Organization]),
+      Schema.wrapWithSingleFieldProduct(Schema.derived[User])
+    )
+    schemaType.subtypeSchema(User("x", "y")) shouldBe Some(
+      SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[User]), User("x", "y"))
+    )
+    schemaType.subtypeSchema(Organization("a")) shouldBe Some(
+      SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[Organization]), Organization("a"))
+    )
+  }
+
   it should "create a schema using oneOfField given an enum extractor" in {
     sealed trait YEnum
     case object Y1 extends YEnum
@@ -293,12 +311,93 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       override def kind: YEnum = Y1
     }
 
-    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum](encode = Some(_.toString))
+    implicit val yEnumSchema: Schema[YEnum] = Schema.derivedEnumeration[YEnum].defaultStringBased
 
     implicit val yConfSchema: Schema[YConf] = {
       val y1ConfSchema: Schema[Y1Conf] = Schema.derived[Y1Conf]
       Schema.oneOfUsingField[YConf, YEnum](_.kind, _.toString)((Y1: YEnum) -> y1ConfSchema)
     }
+  }
+
+  it should "create and enrich a schema for an enum" in {
+    val expected = Schema[Letters](SString())
+      .validate(
+        Validator.enumeration[Letters](
+          List(Letters.A, Letters.B, Letters.C),
+          (v: Letters) => Option(v),
+          Some(SName("sttp.tapir.SchemaMacroTestData.Letters"))
+        )
+      )
+      .description("it's a small alphabet")
+
+    val actual: Schema[Letters] = Schema.derivedEnumeration[Letters].defaultStringBased
+
+    actual.schemaType shouldBe expected.schemaType
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(_)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Letters.A) shouldBe ee(Letters.A)
+        // in Scala2 the name is "sttp.tapir.SchemaMacroTestData.Letters", in Scala3: "sttp.tapir.SchemaMacroTestData$.Letters"
+        ne.fullName should endWith("Letters")
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+  }
+
+  it should "derive schema for a scala enumeration and enrich schema" in {
+    val expected = Schema[Countries.Country](SString())
+      .validate(
+        Validator.enumeration[Countries.Country](
+          Countries.values.toList,
+          (v: Countries.Country) => Option(v),
+          Some(SName("sttp.tapir.SchemaMacroTestData.Countries"))
+        )
+      )
+      .description("country")
+      .default(Countries.PL)
+      .name(SName("country-encoded-name"))
+
+    val actual = implicitly[Schema[Countries.Country]]
+
+    actual.schemaType shouldBe expected.schemaType
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(na)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Countries.PL) shouldBe ee(Countries.PL)
+        na shouldBe ne
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+    actual.default shouldBe expected.default
+    actual.name shouldBe expected.name
+  }
+
+  it should "derive a customised schema for a scala enumeration and enrich schema" in {
+    val expected = Schema[Countries.Country](SInteger())
+      .validate(
+        Validator.enumeration[Countries.Country](
+          Countries.values.toList,
+          (v: Countries.Country) => Option(v.id),
+          Some(SName("sttp.tapir.SchemaMacroTestData.Countries"))
+        )
+      )
+      .description("country")
+      .default(Countries.PL)
+      .name(SName("country-encoded-name"))
+
+    val actual = Schema.derivedEnumerationValueCustomise[Countries.Country](encode = Some(_.id), schemaType = SchemaType.SInteger())
+
+    actual.schemaType shouldBe expected.schemaType
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(na)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Countries.PL) shouldBe ee(Countries.PL)
+        na shouldBe ne
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+    actual.default shouldBe expected.default
+    actual.name shouldBe expected.name
   }
 
   behavior of "apply default"

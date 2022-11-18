@@ -4,6 +4,7 @@ import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests._
+import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.ExecutionContext
@@ -24,7 +25,7 @@ class VertxServerTest extends TestSuite {
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
-        ).tests()
+        ).tests() ++ new ServerStreamingTests(createServerTest, VertxStreams).tests()
     }
   }
 }

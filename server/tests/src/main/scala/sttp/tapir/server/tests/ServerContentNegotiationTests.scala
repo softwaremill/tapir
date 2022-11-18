@@ -21,7 +21,7 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
   def tests(): List[Test] = List(
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { (backend, baseUri) =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
-      def unsupportedMediaType() = (StatusCode.UnsupportedMediaType, "".asLeft[String])
+      def notAcceptable() = (StatusCode.NotAcceptable, "".asLeft[String])
 
       val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
         ("application/json", "*") -> ok(organizationJson),
@@ -42,8 +42,8 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
         ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
         ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
         //
-        ("text/html", "iso-8859-5") -> unsupportedMediaType(),
-        ("text/csv", "*") -> unsupportedMediaType(),
+        ("text/html", "iso-8859-5") -> notAcceptable(),
+        ("text/csv", "*") -> notAcceptable(),
         // in case of an invalid accepts header, the first mapping should be used
         ("text/html;(q)=xxx", "utf-8") -> ok(organizationJson)
       )

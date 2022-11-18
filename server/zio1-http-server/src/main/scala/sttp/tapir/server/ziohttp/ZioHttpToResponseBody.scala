@@ -45,7 +45,7 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStrea
           )
           .getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
         (stream, Some(tapirFile.file.length))
-      case RawBodyType.MultipartBody(_, _) => (Stream.empty, None)
+      case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
     }
   }
 }

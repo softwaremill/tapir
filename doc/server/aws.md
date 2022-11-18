@@ -68,14 +68,16 @@ To destroy all the created resources run `terraform destroy`.
 
 ## Scala.js interpreter
 
-`LambdaApiJsExample` demonstrates how to create an API route,
+`LambdaApiJsExample` and `LambdaApiJsResourceExample` demonstrate how to create an API route,
 that can be built into Node.js module with Scala.js plugin.
 Such module can be deployed as an AWS Lambda function with Node.js runtime.
 The main benefit is the reduced deployment time.
 Initialization of JVM-based application (with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
 
 `LambdaApiJsExample` uses `AwsFutureServerInterpreter` and `JsRoute[Future]`,
-which is an alias for the route function `AwsJsRequest => Future[AwsJsResponse]`
+which is an alias for the route function `AwsJsRequest => Future[AwsJsResponse]`.
+
+`LambdaApiJsResourceExample` builds a `cats.effect.Resource` and uses `AwsCatsEffectServerInterpreter` and `JsRoute[IO]`.
 
 ### SAM example
 

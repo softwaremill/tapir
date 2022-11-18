@@ -6,7 +6,7 @@ import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 import scala.concurrent.{ExecutionContext, Future, blocking}
@@ -46,7 +46,7 @@ object PlayServerOptions {
     Future(blocking(Defaults.deleteFile()(file)))
   }
 
-  lazy val defaultServerLog: ServerLog[Future] = {
+  lazy val defaultServerLog: DefaultServerLog[Future] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,

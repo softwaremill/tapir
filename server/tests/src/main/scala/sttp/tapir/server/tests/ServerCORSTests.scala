@@ -75,8 +75,51 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
     },
     testServer(
       endpoint.options.in("path"),
+      "CORS with multiple allowed origins, method, headers, allowed credentials and max age; preflight request with matching origin, method and headers",
+      _.corsInterceptor(
+        CORSInterceptor.customOrThrow[F](
+          CORSConfig.default
+            .allowMatchingOrigins(Set("https://example1.com", "https://example2.com"))
+            .allowMethods(Method.POST)
+            .allowHeaders("X-Foo", "X-Bar")
+            .allowCredentials
+            .maxAge(42.seconds)
+        )
+      )
+    )(noop) { (backend, baseUri) =>
+      preflightRequest(baseUri, "example2.com")
+        .send(backend)
+        .map { response =>
+          response.code shouldBe StatusCode.NoContent
+          response.headers should contain allOf (
+            Header.accessControlAllowOrigin("https://example2.com"),
+            Header.accessControlAllowMethods(Method.POST),
+            Header.accessControlAllowHeaders("X-Foo", "X-Bar"),
+            Header.accessControlAllowCredentials(true),
+            Header.accessControlMaxAge(42),
+            Header.vary(HeaderNames.Origin, HeaderNames.AccessControlRequestMethod, HeaderNames.AccessControlRequestHeaders)
+          )
+          response.headers.map(_.name) should contain noneOf (HeaderNames.AccessControlMaxAge, HeaderNames.AccessControlAllowCredentials)
+        }
+    },
+    testServer(
+      endpoint.options.in("path"),
       "CORS with specific allowed origin; preflight request with unsupported origin",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.allowOrigin(Origin.Host("https", "example.com"))))
+    )(noop) { (backend, baseUri) =>
+      preflightRequest(baseUri, "unsupported.com")
+        .send(backend)
+        .map { response =>
+          response.code shouldBe StatusCode.NoContent
+          response.headers.map(_.name) should not contain (HeaderNames.AccessControlAllowOrigin)
+        }
+    },
+    testServer(
+      endpoint.options.in("path"),
+      "CORS with multiple allowed origins; preflight request with unsupported origin",
+      _.corsInterceptor(
+        CORSInterceptor.customOrThrow[F](CORSConfig.default.allowMatchingOrigins(Set("https://example1.com", "https://example2.com")))
+      )
     )(noop) { (backend, baseUri) =>
       preflightRequest(baseUri, "unsupported.com")
         .send(backend)

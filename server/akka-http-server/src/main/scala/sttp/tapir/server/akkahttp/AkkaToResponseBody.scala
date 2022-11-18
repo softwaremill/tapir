@@ -15,7 +15,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Materializer)
+private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: ExecutionContext)
     extends ToResponseBody[AkkaResponseBody, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
 

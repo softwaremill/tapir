@@ -1,6 +1,5 @@
 package sttp.tapir.client.tests
 
-import cats.effect.unsafe.implicits.global
 import sttp.model.{MediaType, Part}
 import sttp.tapir.tests.Multipart.{in_raw_multipart_out_string, in_simple_multipart_out_raw_string, in_simple_multipart_out_string}
 import sttp.tapir.tests.data.{FruitAmount, FruitAmountWrapper}

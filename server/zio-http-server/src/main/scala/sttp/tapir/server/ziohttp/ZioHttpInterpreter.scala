@@ -15,17 +15,20 @@ trait ZioHttpInterpreter[R] {
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp(se: ZServerEndpoint[R, ZioStreams]): Http[R, Throwable, Request, Response] =
+  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams]): Http[R & R2, Throwable, Request, Response] =
     toHttp(List(se))
 
-  def toHttp(ses: List[ZServerEndpoint[R, ZioStreams]]): Http[R, Throwable, Request, Response] = {
-    implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
-    implicit val monadError: MonadError[RIO[R, *]] = new RIOMonadError[R]
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZioHttpResponseBody, ZioStreams](
-      FilterServerEndpoints(ses),
-      new ZioHttpRequestBody(zioHttpServerOptions),
+  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams]]): Http[R & R2, Throwable, Request, Response] = {
+    implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
+    implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
+    val widenedSes = ses.map(_.widen[R & R2])
+    val widenedServerOptions = zioHttpServerOptions.widen[R & R2]
+
+    val interpreter = new ServerInterpreter[ZioStreams, RIO[R & R2, *], ZioHttpResponseBody, ZioStreams](
+      FilterServerEndpoints[ZioStreams, RIO[R & R2, *]](widenedSes),
+      new ZioHttpRequestBody(widenedServerOptions),
       new ZioHttpToResponseBody,
-      RejectInterceptor.disableWhenSingleEndpoint(zioHttpServerOptions.interceptors, ses),
+      RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
       zioHttpServerOptions.deleteFile
     )
 
@@ -60,9 +63,14 @@ trait ZioHttpInterpreter[R] {
 }
 
 object ZioHttpInterpreter {
-  def apply[R](serverOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default[R]): ZioHttpInterpreter[R] = {
+  def apply[R](serverOptions: ZioHttpServerOptions[R]): ZioHttpInterpreter[R] = {
     new ZioHttpInterpreter[R] {
       override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions
+    }
+  }
+  def apply(): ZioHttpInterpreter[Any] = {
+    new ZioHttpInterpreter[Any] {
+      override def zioHttpServerOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.default[Any]
     }
   }
 }

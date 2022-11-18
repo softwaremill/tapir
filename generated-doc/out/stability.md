@@ -54,15 +54,17 @@ The modules are categorised using the following levels:
 
 ## Integration modules
 
-| Module     | Level        |
-|------------|--------------|
-| cats       | stabilising  |
-| derevo     | stabilising  |
-| enumeratum | stabilising  |
-| newtype    | stabilising  |
-| refined    | stabilising  |
-| zio        | experimental |
-| zio1       | stabilising  |
+| Module           | Level        |
+|------------------|--------------|
+| cats             | stabilising  |
+| derevo           | stabilising  |
+| enumeratum       | stabilising  |
+| newtype          | stabilising  |
+| monix-newtype    | stabilising  |
+| refined          | stabilising  |
+| zio              | experimental |
+| zio1             | stabilising  |
+| zio-prelude      | experimental |
 
 ## JSON modules
 
