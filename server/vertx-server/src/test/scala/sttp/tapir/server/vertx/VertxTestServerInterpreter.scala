@@ -7,14 +7,15 @@ import io.vertx.core.{Vertx, Future => VFuture}
 import io.vertx.ext.web.{Route, Router}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
+import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, VertxFutureServerOptions, Router => Route] {
+class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, VertxStreams, VertxFutureServerOptions, Router => Route] {
   import VertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): Router => Route = { router =>
+  override def route(es: List[ServerEndpoint[VertxStreams, Future]], interceptors: Interceptors): Router => Route = { router =>
     val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customiseInterceptors).options
     val interpreter = VertxFutureServerInterpreter(options)
     es.map(interpreter.route(_)(router)).last
