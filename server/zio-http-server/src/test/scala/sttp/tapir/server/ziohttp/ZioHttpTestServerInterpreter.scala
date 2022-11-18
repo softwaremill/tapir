@@ -11,7 +11,7 @@ import zio.http._
 import zio.http.netty.server.NettyDriver
 import zio.interop.catz._
 
-import java.net.InetSocketAddress
+import java.net.InetAddress
 
 class ZioHttpTestServerInterpreter(implicit trace: Trace)
     extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
