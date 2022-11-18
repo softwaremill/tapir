@@ -21,11 +21,8 @@ class NettyZioServerTest extends TestSuite with EitherValues {
           val interpreter = new NettyZioTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          val tests =
-            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false, basic = false).tests() ++
-              // I was unable to came up with why and how this tests fails - probably error cause whole interpreter to crush without sending 500
-              new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
-              new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests()
+          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
+            new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

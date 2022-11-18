@@ -5,8 +5,8 @@ import io.netty.channel.unix.DomainSocketAddress
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.zio.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.ztapir.RIOMonadError
+import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
+import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio.{RIO, Runtime, Unsafe, ZIO}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -15,9 +15,9 @@ import java.nio.file.Path
 case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[Route[RIO[R, *]]], options: NettyZioServerOptions[R, SA])(implicit
     runtime: Runtime[R]
 ) {
-  def addEndpoint(se: ServerEndpoint[Any, RIO[R, *]]): NettyZioServer[R, SA] = addEndpoints(List(se))
+  def addEndpoint(se: ZServerEndpoint[R, Any]): NettyZioServer[R, SA] = addEndpoints(List(se))
   def addEndpoint(
-      se: ServerEndpoint[Any, RIO[R, *]],
+      se: ZServerEndpoint[R, Any],
       overrideOptions: NettyZioServerOptions[R, SA]
   ): NettyZioServer[R, SA] =
     addEndpoints(List(se), overrideOptions)
@@ -25,7 +25,7 @@ case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[Route[RIO[R, *]
     NettyZioServerInterpreter[R](options).toRoute(ses)
   )
   def addEndpoints(
-      ses: List[ServerEndpoint[Any, RIO[R, *]]],
+      ses: List[ZServerEndpoint[R, Any]],
       overrideOptions: NettyZioServerOptions[R, SA]
   ): NettyZioServer[R, SA] = addRoute(
     NettyZioServerInterpreter[R](overrideOptions).toRoute(ses)
