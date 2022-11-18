@@ -56,11 +56,11 @@ abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends Clien
   }
 
   def unsafeRun[T](task: Task[T]): T =
-    Unsafe.unsafeCompat { implicit u =>
+    Unsafe.unsafe { implicit u =>
       runtime.run(task).getOrThrowFiberFailure()
     }
 
   def unsafeToFuture[T](task: Task[T]): CancelableFuture[T] =
-    Unsafe.unsafeCompat(implicit u => runtime.runToFuture(task))
+    Unsafe.unsafe(implicit u => runtime.runToFuture(task))
 
 }

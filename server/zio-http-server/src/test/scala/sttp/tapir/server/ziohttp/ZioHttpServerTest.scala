@@ -38,7 +38,7 @@ class ZioHttpServerTest extends TestSuite {
               .flatMap(response => response.data.toByteBuf.map(_.toString(CharsetUtil.UTF_8)))
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            Unsafe.unsafeCompat(implicit u => r.unsafe.runToFuture(test))
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }
         )
 
