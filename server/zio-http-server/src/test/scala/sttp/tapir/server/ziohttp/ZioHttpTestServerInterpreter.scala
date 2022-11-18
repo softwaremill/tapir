@@ -11,8 +11,6 @@ import zio.http._
 import zio.http.netty.server.NettyDriver
 import zio.interop.catz._
 
-import java.net.InetSocketAddress
-
 class ZioHttpTestServerInterpreter(implicit trace: Trace)
     extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
@@ -28,8 +26,11 @@ class ZioHttpTestServerInterpreter(implicit trace: Trace)
       (for {
         driver <- ZIO.service[Driver]
         _ <- driver.start(trace)
-        _ <- Server.serve(routes.toList.reduce(_ ++ _)).provide(ZLayer.succeed(driver) >>> Server.base).forkScoped
-      } yield 0).provide(Scope.default, ServerConfig.live(ServerConfig(address = new InetSocketAddress(0))), NettyDriver.default)
+        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
+      } yield 0).provideSome[Scope](
+        ServerConfig.live(ServerConfig.default.port(0)),
+        NettyDriver.default
+      )
 
     Resource.scoped[IO, Any, Int](io)
   }
