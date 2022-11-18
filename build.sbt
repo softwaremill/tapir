@@ -1233,7 +1233,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final"
+      "io.netty" % "netty-all" % Versions.nettyAll
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1246,21 +1246,19 @@ lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-cats",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, nettyServer, cats, serverTests % Test)
+  .dependsOn(nettyServer, cats, serverTests % Test)
 
 lazy val nettyServerZio: ProjectMatrix = (projectMatrix in file("server/netty-server/zio"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server-zio",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -1274,7 +1272,6 @@ lazy val nettyServerZio1: ProjectMatrix = (projectMatrix in file("server/netty-s
   .settings(
     name := "tapir-netty-server-zio1",
     libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats,
     ) ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016

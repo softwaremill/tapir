@@ -53,4 +53,5 @@ object Versions {
   val openTelemetry = "1.19.0"
   val mockServer = "5.14.0"
   val dogstatsdClient = "4.1.0"
+  val nettyAll = "4.1.82.Final"
 }
