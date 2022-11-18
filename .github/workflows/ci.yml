@@ -99,7 +99,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 11
-          cache: 'sbt'
       - name: Install libidn2-dev libcurl3-dev
         run: |
           sudo apt-get update
