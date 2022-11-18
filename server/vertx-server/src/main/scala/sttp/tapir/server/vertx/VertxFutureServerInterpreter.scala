@@ -7,12 +7,12 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxFutureServerInterpreter.FutureFromVFuture
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter.{FutureFromVFuture, FutureRunAsync}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.{VertxStreams, ReadStreamCompatible}
+import sttp.tapir.server.vertx.streams.{ReadStreamCompatible, VertxStreams}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -48,7 +48,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
-    implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
+    implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future](FutureRunAsync)
     val reactiveStreamsReadStream: ReadStreamCompatible[VertxStreams] = streams.reactiveStreamsReadStreamCompatible()
     val interpreter = new ServerInterpreter[VertxStreams, Future, RoutingContext => VFuture[Void], VertxStreams](
       _ => List(e),
@@ -84,6 +84,10 @@ object VertxFutureServerInterpreter {
 
   private[vertx] object FutureFromVFuture extends FromVFuture[Future] {
     def apply[T](f: => VFuture[T]): Future[T] = f.asScala
+  }
+
+  private[vertx] object FutureRunAsync extends RunAsync[Future] {
+    override def apply[T](f: => Future[T]): Unit = f
   }
 
   implicit class VertxFutureToScalaFuture[A](future: => VFuture[A]) {
