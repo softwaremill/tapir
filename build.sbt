@@ -1473,9 +1473,9 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(
     name := "tapir-client-tests",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-circe" % Versions.http4s
+      "org.http4s" %%% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "org.http4s" %%% "http4s-circe" % Versions.http4s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
