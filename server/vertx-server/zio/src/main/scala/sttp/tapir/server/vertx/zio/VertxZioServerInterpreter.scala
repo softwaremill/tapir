@@ -86,7 +86,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       }
 
       val canceler: FiberId => Exit[Throwable, Any] = {
-        Unsafe.unsafeCompat(implicit u => {
+        Unsafe.unsafe(implicit u => {
           val value = runtime.unsafe.fork(result)
           (fiberId: FiberId) => runtime.unsafe.run(value.interruptAs(fiberId)).flattenExit
         })

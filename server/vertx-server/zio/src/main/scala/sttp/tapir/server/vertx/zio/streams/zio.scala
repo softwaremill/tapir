@@ -160,7 +160,7 @@ package object streams {
         .fold(throw _, identity)
 
     def unsafeRunSync[T](task: Task[T]): Exit[Throwable, T] =
-      Unsafe.unsafeCompat { implicit u =>
+      Unsafe.unsafe { implicit u =>
         runtime.unsafe.run(task)
       }
   }
