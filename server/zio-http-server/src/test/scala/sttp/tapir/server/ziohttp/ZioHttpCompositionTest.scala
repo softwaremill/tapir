@@ -12,7 +12,7 @@ import zio.http.model._
 import zio.{Task, ZIO}
 
 class ZioHttpCompositionTest(
-    createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
+    createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zio.http.Request, zio.http.Response]]
 ) {
   import createServerTest._
 
