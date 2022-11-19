@@ -25,9 +25,9 @@ class ZioHttpTestServerInterpreter(implicit trace: Trace)
     val io: ZIO[Scope, Throwable, Int] =
       (for {
         driver <- ZIO.service[Driver]
-        _ <- driver.start(trace)
+        port <- driver.start(trace)
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
-      } yield 0).provideSome[Scope](
+      } yield port).provideSome[Scope](
         ServerConfig.live(ServerConfig.default.port(0)),
         NettyDriver.default
       )
