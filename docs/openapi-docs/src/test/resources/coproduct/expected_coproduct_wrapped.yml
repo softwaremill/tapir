@@ -1,0 +1,63 @@
+openapi: 3.0.3
+info:
+  title: title
+  version: '1.0'
+paths:
+  /api/entity/{entityId}:
+    get:
+      operationId: getApiEntityEntityid
+      parameters:
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Entity:
+      oneOf:
+        - required:
+            - Organization
+          type: object
+          properties:
+            Organization:
+              $ref: '#/components/schemas/Organization'
+        - required:
+            - Person
+          type: object
+          properties:
+            Person:
+              $ref: '#/components/schemas/Person'
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          format: int32

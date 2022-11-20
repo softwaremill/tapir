@@ -12,6 +12,7 @@ import akka.http.scaladsl.server.Directives.{
   respondWithHeaders
 }
 import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import sttp.capabilities.WebSockets
@@ -22,7 +23,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,7 +36,13 @@ trait AkkaHttpServerInterpreter {
 
   def toRoute(se: ServerEndpoint[AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
+  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route =
+    toRoute(new AkkaRequestBody(akkaHttpServerOptions)(_, _), new AkkaToResponseBody()(_, _))(ses)
+
+  protected def toRoute(
+      requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams],
+      toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
+  )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(akkaHttpServerOptions.interceptors, ses)
 
@@ -46,8 +53,8 @@ trait AkkaHttpServerInterpreter {
 
         val interpreter = new ServerInterpreter(
           filterServerEndpoints,
-          new AkkaRequestBody(akkaHttpServerOptions),
-          new AkkaToResponseBody,
+          requestBody(mat, ec),
+          toResponseBody(mat, ec),
           interceptors,
           akkaHttpServerOptions.deleteFile
         )

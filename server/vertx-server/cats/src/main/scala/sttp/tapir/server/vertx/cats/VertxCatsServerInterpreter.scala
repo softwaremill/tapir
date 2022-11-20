@@ -13,10 +13,10 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxBodyListener
-import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, CatsRunAsync, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.vertx.cats.streams.fs2.fs2ReadStreamCompatible
@@ -47,7 +47,8 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = {
     implicit val monad: MonadError[F] = monadError[F]
-    implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] = new VertxBodyListener[F]
+    implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] =
+      new VertxBodyListener[F](new CatsRunAsync(vertxCatsServerOptions.dispatcher))
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
       _ => List(e),
@@ -124,6 +125,10 @@ object VertxCatsServerInterpreter {
 
   private[cats] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
     def apply[T](f: => Future[T]): F[T] = f.asF
+  }
+
+  private[cats] class CatsRunAsync[F[_]: Async](dispatcher: Dispatcher[F]) extends RunAsync[F] {
+    override def apply[T](f: => F[T]): Unit = dispatcher.unsafeRunAndForget(f)
   }
 
   implicit class VertxFutureToCatsF[A](f: => Future[A]) {

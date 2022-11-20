@@ -51,6 +51,34 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
 
+  /** Adds the given validator, and maps to the given higher-level type `U`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create inputs/outputs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[U](v: Validator[T])(f: T => U)(g: U => T): ThisType[U] = validate(v)
+    .asInstanceOf[this.type] // compiler gets lost with ThisType-s
+    .mapDecode { t =>
+      v(t) match {
+        case Nil    => DecodeResult.Value(f(t))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
+  /** Adds a validator.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
+    */
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
   def show: String
@@ -73,8 +101,21 @@ object EndpointTransput {
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
 
+    /** Adds a validator which validates the option's element, if it is present.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+    /** Adds a validator which validates each element in the collection.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
@@ -529,11 +570,33 @@ object EndpointIO {
 
   //
 
-  case class Example[+T](value: T, name: Option[String], summary: Option[String]) {
+  case class Example[+T](value: T, name: Option[String], summary: Option[String], description: Option[String]) {
+    // required for binary compatibility
+    def this(value: T, name: Option[String], summary: Option[String]) = this(value, name, summary, None)
+
+    def name(name: String): Example[T] = copy(name = Some(name))
+    def summary(summary: String): Example[T] = copy(summary = Some(summary))
+    def description(description: String): Example[T] = copy(description = Some(description))
+
     def map[B](f: T => B): Example[B] = copy(value = f(value))
+
+    // required for binary compatibility
+    def copy[TT](value: TT, name: Option[String], summary: Option[String]): Example[TT] =
+      Example(value, name, summary, description)
+
+    def copy[TT](
+        value: TT = this.value,
+        name: Option[String] = this.name,
+        summary: Option[String] = this.summary,
+        description: Option[String] = this.description
+    ): Example[TT] = Example(value, name, summary, description)
   }
 
   object Example {
+    // required for binary compatibility
+    def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] = new Example(value, name, summary)
+
+    /** To add a description, use the [[Example.description]] method on the result. */
     def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
   }
 
@@ -555,8 +618,8 @@ object EndpointIO {
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
         description,
-        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary) =>
-          Example(ee, name, summary)
+        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary, desc) =>
+          Example(ee, name, summary, desc)
         },
         deprecated,
         attributes
@@ -696,12 +759,13 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
 
   def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
   def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
-  def requestsExamples(examples: List[REQ]): ThisType[T] = copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None))))
+  def requestsExamples(examples: List[REQ]): ThisType[T] =
+    copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None, None))))
 
   def responsesDescription(d: String): ThisType[T] = copy(responsesInfo = responsesInfo.description(d))
   def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
   def responsesExamples(examples: List[RESP]): ThisType[T] =
-    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
+    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None, None))))
 
   /** @param c
     *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always

@@ -47,9 +47,9 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     // Converting a zio.RIO-resource to an cats.IO-resource
     val runtime = implicitly[zio.Runtime[Any]]
     Resource
-      .eval(IO.fromFuture(IO(Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(serverResource.allocated)))))
+      .eval(IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(serverResource.allocated)))))
       .flatMap { case (port, release) =>
-        Resource.make(IO.pure(port))(_ => IO.fromFuture(IO(Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(release)))))
+        Resource.make(IO.pure(port))(_ => IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(release)))))
       }
   }
 }

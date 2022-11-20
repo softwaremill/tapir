@@ -4,7 +4,7 @@ import io.vertx.core.logging.{Logger, LoggerFactory}
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
 import sttp.monad.{FutureMonad, MonadError}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -49,7 +49,7 @@ object VertxFutureServerOptions {
 
   val default: VertxFutureServerOptions = customiseInterceptors.options
 
-  def defaultServerLog(log: Logger): ServerLog[Future] = {
+  def defaultServerLog(log: Logger): DefaultServerLog[Future] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     implicit val monadError: MonadError[Future] = new FutureMonad
 

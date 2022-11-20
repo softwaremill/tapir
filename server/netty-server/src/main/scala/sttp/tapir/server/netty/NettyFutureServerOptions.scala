@@ -1,9 +1,8 @@
 package sttp.tapir.server.netty
 
 import com.typesafe.scalalogging.Logger
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -57,7 +56,7 @@ object NettyFutureServerOptions {
 
   private val log = Logger[NettyFutureServerInterpreter]
 
-  lazy val defaultServerLog: ServerLog[Future] = {
+  lazy val defaultServerLog: DefaultServerLog[Future] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,

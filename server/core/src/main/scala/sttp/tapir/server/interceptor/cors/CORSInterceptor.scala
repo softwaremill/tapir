@@ -89,6 +89,8 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
       case AllowedOrigin.All => Some(AllowAnyOrigin)
       case AllowedOrigin.Single(allowedOrigin) if origin.equalsIgnoreCase(allowedOrigin.toString) =>
         Some(Header.accessControlAllowOrigin(origin))
+      case AllowedOrigin.Matching(predicate) if predicate(origin) =>
+        Some(Header.accessControlAllowOrigin(origin))
       case _ => None
     }
 
@@ -122,8 +124,8 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
 
     def varyPreflight: Option[Header] = {
       val origin = config.allowedOrigin match {
-        case AllowedOrigin.All       => Nil
-        case AllowedOrigin.Single(_) => List(HeaderNames.Origin)
+        case AllowedOrigin.All                                   => Nil
+        case AllowedOrigin.Single(_) | AllowedOrigin.Matching(_) => List(HeaderNames.Origin)
       }
 
       val methods = config.allowedMethods match {
@@ -143,8 +145,8 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
     }
 
     def varyNonPreflight: Option[Header] = config.allowedOrigin match {
-      case AllowedOrigin.All       => None
-      case AllowedOrigin.Single(_) => Some(Header.vary(HeaderNames.Origin))
+      case AllowedOrigin.All                                   => None
+      case AllowedOrigin.Single(_) | AllowedOrigin.Matching(_) => Some(Header.vary(HeaderNames.Origin))
     }
   }
 }

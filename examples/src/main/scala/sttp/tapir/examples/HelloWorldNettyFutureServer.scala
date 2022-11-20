@@ -21,7 +21,7 @@ object HelloWorldNettyFutureServer extends App {
 
   private val declaredPort = 9090
   private val declaredHost = "localhost"
-  // Creating handler for netty bootstrap
+  // Starting netty server
   val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
     Await.result(
       NettyFutureServer()

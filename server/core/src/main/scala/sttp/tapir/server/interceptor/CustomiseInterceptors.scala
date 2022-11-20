@@ -1,6 +1,6 @@
 package sttp.tapir.server.interceptor
 
-import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
+import sttp.tapir.server.interceptor.content.NotAcceptableInterceptor
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
@@ -29,9 +29,9 @@ import sttp.tapir.statusCode
   *   Whether to respond to exceptions in the server logic, or propagate them to the server.
   * @param serverLog
   *   The server log using which an interceptor will be created, if any.
-  * @param unsupportedMediaTypeInterceptor
-  *   Whether to return 415 (unsupported media type) if there's no body in the endpoint's outputs, which can satisfy the constraints from
-  *   the `Accept` header.
+  * @param notAcceptableInterceptor
+  *   Whether to return 406 (not acceptable) if there's no body in the endpoint's outputs, which can satisfy the constraints from the
+  *   `Accept` header.
   * @param additionalInterceptors
   *   Additional interceptors, which will be called before (on request) / after (on response) the `decodeFailureHandler` one, e.g.
   *   performing logging, metrics, or providing alternate responses.
@@ -49,9 +49,7 @@ case class CustomiseInterceptors[F[_], O](
     rejectHandler: Option[RejectHandler[F]] = Some(DefaultRejectHandler[F]),
     exceptionHandler: Option[ExceptionHandler[F]] = Some(DefaultExceptionHandler[F]),
     serverLog: Option[ServerLog[F]] = None,
-    unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
-      new UnsupportedMediaTypeInterceptor[F]()
-    ),
+    notAcceptableInterceptor: Option[NotAcceptableInterceptor[F]] = Some(new NotAcceptableInterceptor[F]()),
     additionalInterceptors: List[Interceptor[F]] = Nil,
     decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default,
     appendedInterceptors: List[Interceptor[F]] = Nil
@@ -73,10 +71,10 @@ case class CustomiseInterceptors[F[_], O](
   def serverLog(log: ServerLog[F]): CustomiseInterceptors[F, O] = copy(serverLog = Some(log))
   def serverLog(log: Option[ServerLog[F]]): CustomiseInterceptors[F, O] = copy(serverLog = log)
 
-  def unsupportedMediaTypeInterceptor(u: UnsupportedMediaTypeInterceptor[F]): CustomiseInterceptors[F, O] =
-    copy(unsupportedMediaTypeInterceptor = Some(u))
-  def unsupportedMediaTypeInterceptor(u: Option[UnsupportedMediaTypeInterceptor[F]]): CustomiseInterceptors[F, O] =
-    copy(unsupportedMediaTypeInterceptor = u)
+  def notAcceptableInterceptor(u: NotAcceptableInterceptor[F]): CustomiseInterceptors[F, O] =
+    copy(notAcceptableInterceptor = Some(u))
+  def notAcceptableInterceptor(u: Option[NotAcceptableInterceptor[F]]): CustomiseInterceptors[F, O] =
+    copy(notAcceptableInterceptor = u)
 
   def addInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(additionalInterceptors = additionalInterceptors :+ i)
 
@@ -116,7 +114,7 @@ case class CustomiseInterceptors[F[_], O](
     rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
     serverLog.map(new ServerLogInterceptor[F](_)).toList ++
-    unsupportedMediaTypeInterceptor.toList ++
+    notAcceptableInterceptor.toList ++
     additionalInterceptors ++
     List(new DecodeFailureInterceptor[F](decodeFailureHandler)) ++
     appendedInterceptors

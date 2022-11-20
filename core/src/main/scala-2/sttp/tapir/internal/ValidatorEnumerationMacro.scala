@@ -4,8 +4,8 @@ import sttp.tapir.Validator
 
 import scala.reflect.macros.blackbox
 
-// based on: https://stackoverflow.com/questions/13671734/iteration-over-a-sealed-trait-in-scala
 private[tapir] object ValidatorEnumerationMacro {
+  // based on: https://stackoverflow.com/questions/13671734/iteration-over-a-sealed-trait-in-scala
   def apply[E: c.WeakTypeTag](c: blackbox.Context): c.Expr[Validator.Enumeration[E]] = {
     import c.universe._
 
@@ -24,6 +24,31 @@ private[tapir] object ValidatorEnumerationMacro {
         Debug.logGeneratedCode(c)(t.typeSymbol.fullName, validatorEnum)
         c.Expr[Validator.Enumeration[E]](validatorEnum)
       }
+    }
+  }
+
+  // for Scala's Enumerations
+  def enumerationValueValidator[T: c.WeakTypeTag](c: blackbox.Context): c.universe.Tree = {
+    import c.universe._
+
+    val Enumeration = typeOf[scala.Enumeration]
+
+    val weakTypeT = weakTypeOf[T]
+    val owner = weakTypeT.typeSymbol.owner
+
+    if (!(owner.asClass.toType <:< Enumeration)) {
+      c.abort(c.enclosingPosition, "Can only derive Schema for values owned by scala.Enumeration")
+    } else {
+      val enumNameComponents = weakTypeT.toString.split("\\.").dropRight(1)
+      val enumeration = enumNameComponents.toList match {
+        case head :: tail => tail.foldLeft[Tree](Ident(TermName(head))) { case (tree, nextName) => Select(tree, TermName(nextName)) }
+        case Nil => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
+      }
+
+      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${
+        enumNameComponents
+          .mkString(".")
+      })))"
     }
   }
 }

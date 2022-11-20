@@ -4,16 +4,15 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxFutureServerInterpreter.FutureFromVFuture
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter.{FutureFromVFuture, FutureRunAsync}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.streams.{ReadStreamCompatible, VertxStreams}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
@@ -28,7 +27,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[A, U, I, E, O](e: ServerEndpoint[Any, Future]): Router => Route = { router =>
+  def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
@@ -39,21 +38,22 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute(e: ServerEndpoint[Any, Future]): Router => Route = { router =>
+  def blockingRoute(e: ServerEndpoint[VertxStreams, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e))
   }
 
   private def endpointHandler(
-      e: ServerEndpoint[Any, Future]
+      e: ServerEndpoint[VertxStreams, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
-    implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future]
-    val interpreter = new ServerInterpreter[Any, Future, RoutingContext => VFuture[Void], NoStreams](
+    implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future](FutureRunAsync)
+    val reactiveStreamsReadStream: ReadStreamCompatible[VertxStreams] = streams.reactiveStreamsReadStreamCompatible()
+    val interpreter = new ServerInterpreter[VertxStreams, Future, RoutingContext => VFuture[Void], VertxStreams](
       _ => List(e),
-      new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible),
-      new VertxToResponseBody(vertxFutureServerOptions)(ReadStreamCompatible.incompatible),
+      new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(reactiveStreamsReadStream),
+      new VertxToResponseBody(vertxFutureServerOptions)(reactiveStreamsReadStream),
       vertxFutureServerOptions.interceptors,
       vertxFutureServerOptions.deleteFile
     )
@@ -84,6 +84,10 @@ object VertxFutureServerInterpreter {
 
   private[vertx] object FutureFromVFuture extends FromVFuture[Future] {
     def apply[T](f: => VFuture[T]): Future[T] = f.asScala
+  }
+
+  private[vertx] object FutureRunAsync extends RunAsync[Future] {
+    override def apply[T](f: => Future[T]): Unit = f
   }
 
   implicit class VertxFutureToScalaFuture[A](future: => VFuture[A]) {

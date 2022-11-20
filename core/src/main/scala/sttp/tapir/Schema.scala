@@ -3,9 +3,10 @@ package sttp.tapir
 import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
+import sttp.tapir.model.Delimited
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
@@ -163,6 +164,7 @@ case class Schema[T](
     } else None
   }
 
+  /** See [[modify]]: instead of a path expressed using code, accepts a path a sequence of `String`s. */
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
@@ -309,6 +311,15 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     )
   }
 
+  implicit def schemaForDelimited[D <: String, T](implicit tSchema: Schema[T]): Schema[Delimited[D, T]] =
+    tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.Attribute, Explode(false))
+
+  /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values. */
+  case class Explode(explode: Boolean)
+  object Explode {
+    val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
+  }
+
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
   }
@@ -345,6 +356,27 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
     class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
   }
+
+  /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T], fieldName: FieldName): Schema[T] = Schema(
+    schemaType = SchemaType.SProduct(List(SchemaType.SProductField[T, T](fieldName, schema, t => Some(t))))
+  )
+
+  /** Wraps the given schema with a single-field product, where a field computed using the implicit [[Configuration]] maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T])(implicit conf: Configuration): Schema[T] =
+    wrapWithSingleFieldProduct(schema, FieldName(conf.toDiscriminatorValue(schema.name.getOrElse(SName.Unit))))
 }
 
 trait LowPrioritySchema {
