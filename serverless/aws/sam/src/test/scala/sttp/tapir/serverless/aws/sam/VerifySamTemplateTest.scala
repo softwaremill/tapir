@@ -8,7 +8,9 @@ import sttp.tapir.json.circe._
 import sttp.tapir.serverless.aws.sam.VerifySamTemplateTest._
 import sttp.tapir._
 
+import scala.concurrent.duration._
 import scala.io.Source
+import sttp.model.Method
 
 class VerifySamTemplateTest extends AnyFunSuite with Matchers {
 
@@ -49,12 +51,12 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
         HttpApiProperties(cors =
           Some(
             HttpApiProperties.Cors(
-              allowCredentials = Some(false),
-              allowedHeaders = List("*"),
-              allowedMethods = List("GET"),
-              allowedOrigins = List("*"),
-              exposeHeaders = Nil,
-              maxAge = Some(0)
+              allowCredentials = Some(HttpApiProperties.AllowedCredentials.Deny),
+              allowedHeaders = Some(HttpApiProperties.AllowedHeaders.All),
+              allowedMethods = Some(HttpApiProperties.AllowedMethods.Some(Set(Method.GET, Method.POST))),
+              allowedOrigins = Some(HttpApiProperties.AllowedOrigin.All),
+              exposeHeaders = None,
+              maxAge = Some(HttpApiProperties.MaxAge.Some(0.seconds))
             )
           )
         )

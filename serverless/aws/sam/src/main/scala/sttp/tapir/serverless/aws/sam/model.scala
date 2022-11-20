@@ -61,9 +61,9 @@ case class Output(Description: String, Value: Map[String, String])
 
 case class CorsConfiguration(
     AllowCredentials: Option[Boolean],
-    AllowHeaders: List[String],
-    AllowMethods: List[String],
-    AllowOrigins: List[String],
-    ExposeHeaders: Option[List[String]],
+    AllowHeaders: Option[Set[String]],
+    AllowMethods: Option[Set[String]],
+    AllowOrigins: Option[Set[String]],
+    ExposeHeaders: Option[Set[String]],
     MaxAge: Option[Long]
 )

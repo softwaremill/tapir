@@ -42,12 +42,24 @@ private[sam] object EndpointsToSamTemplate {
               .flatMap(_.cors)
               .map(v =>
                 CorsConfiguration(
-                  AllowCredentials = v.allowCredentials,
-                  AllowHeaders = v.allowedHeaders,
-                  AllowMethods = v.allowedMethods,
-                  AllowOrigins = v.allowedOrigins,
-                  ExposeHeaders = if (v.exposeHeaders.isEmpty) None else Some(v.exposeHeaders),
-                  MaxAge = v.maxAge
+                  AllowCredentials = v.allowCredentials.map(_ == HttpApiProperties.AllowedCredentials.Allow),
+                  AllowHeaders = v.allowedHeaders.map {
+                    case HttpApiProperties.AllowedHeaders.All                => Set("*")
+                    case HttpApiProperties.AllowedHeaders.Some(headersNames) => headersNames
+                  },
+                  AllowMethods = v.allowedMethods.map {
+                    case HttpApiProperties.AllowedMethods.All           => Set("*")
+                    case HttpApiProperties.AllowedMethods.Some(methods) => methods.map(_.method)
+                  },
+                  AllowOrigins = v.allowedOrigins.map {
+                    case HttpApiProperties.AllowedOrigin.All           => Set("*")
+                    case HttpApiProperties.AllowedOrigin.Some(origins) => origins.map(_.toString)
+                  },
+                  ExposeHeaders = v.exposeHeaders.map {
+                    case HttpApiProperties.ExposedHeaders.All               => Set("*")
+                    case HttpApiProperties.ExposedHeaders.Some(headerNames) => headerNames
+                  },
+                  MaxAge = v.maxAge.map { case HttpApiProperties.MaxAge.Some(duration) => duration.toSeconds }
                 )
               )
           )

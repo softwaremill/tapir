@@ -43,6 +43,7 @@ Resources:
           - '*'
         AllowMethods:
           - GET
+          - POST
         AllowOrigins:
           - '*'
         MaxAge: 0
