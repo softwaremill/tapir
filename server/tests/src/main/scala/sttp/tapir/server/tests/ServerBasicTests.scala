@@ -200,7 +200,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           if (multipleValueHeaderSupport) {
             r.headers.filter(_.is("hh")).map(_.value).toSet shouldBe Set("v3", "v2", "v1", "v0")
           } else {
-            r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
+            r.headers.filter(_.is("hh")).map(_.value).headOption should (contain("v3, v2, v1, v0") or contain("v3,v2,v1,v0"))
           }
         }
     },
