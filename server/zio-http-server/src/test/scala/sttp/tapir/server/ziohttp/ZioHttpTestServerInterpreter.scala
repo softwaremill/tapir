@@ -70,7 +70,7 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: zio.http.service.EventLoopGro
         driver <- makeNettyDriver
         port <- driver.start(trace)
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
-      } yield port).provideSome[Scope](ServerConfig.live(ServerConfig.default.port(0)))
+      } yield port).provideSome[Scope](ServerConfig.live(ServerConfig.default.port(0).objectAggregator(1000000)))
 
     Resource.scoped[IO, Any, Int](effect)
   }
