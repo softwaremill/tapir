@@ -12,7 +12,7 @@ import sttp.tapir.ztapir.{RIOMonadError, RichZEndpoint}
 import zio.http.{Path, Request, URL}
 import zio.http.netty.{ChannelType, EventLoopGroups, ChannelFactories}
 import zio.interop.catz._
-import zio.{Runtime, Task, UIO, Unsafe, Scope, ZIO, ZEnvironment, ZLayer}
+import zio.{Runtime, Task, UIO, Unsafe, ZIO, ZEnvironment, ZLayer}
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -21,12 +21,13 @@ class ZioHttpServerTest extends TestSuite {
     // creating the netty dependencies once, to speed up tests
     Resource
       .scoped[IO, Any, ZEnvironment[zio.http.service.EventLoopGroup with zio.http.service.ServerChannelFactory]]({
-        val config = ZLayer.succeed(new ChannelType.Config {
+        val eventConfig = ZLayer.succeed(new EventLoopGroups.Config {
           def channelType = ChannelType.AUTO
+          val nThreads = 0
         })
-        val eventLoop: ZLayer[Any, Nothing, io.netty.channel.EventLoopGroup] =
-          ZLayer.succeed(new io.netty.channel.DefaultEventLoopGroup())
-        config >>> ChannelFactories.Server.fromConfig ++ eventLoop
+
+        val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
+        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.fromConfig)
       }.build)
       .map { nettyDeps =>
         val eventLoopGroup = nettyDeps.get[zio.http.service.EventLoopGroup]
@@ -59,17 +60,17 @@ class ZioHttpServerTest extends TestSuite {
         ).tests() ++
           // TODO: re-enable static content once a newer zio http is available. Currently these tests often fail with:
           // Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [f2 content], parser state [STATUS_LINE]
-          // new AllServerTests(
-          //   createServerTest,
-          //   interpreter,
-          //   backend,
-          //   basic = false,
-          //   staticContent = false,
-          //   multipart = false,
-          //   file = false
-          // ).tests() ++ new ServerStreamingTests(createServerTest, ZioStreams).tests()
-          // ++
-          // new ZioHttpCompositionTest(createServerTest).tests() ++
+          new AllServerTests(
+            createServerTest,
+            interpreter,
+            backend,
+            basic = false,
+            staticContent = false,
+            multipart = false,
+            file = false
+          ).tests() ++
+          new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ZioHttpCompositionTest(createServerTest).tests() ++
           additionalTests()
       }
   }
