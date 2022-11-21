@@ -4,6 +4,7 @@
 .cache
 .history
 .lib/
+.vscode/
 dist/*
 target/
 lib_managed/
@@ -12,6 +13,7 @@ project/boot/
 project/plugins/project/
 .bloop
 .metals
+metals.sbt
 template.yaml
 
 .bsp

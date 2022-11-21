@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.sam
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{AnyEndpoint, Endpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 private[sam] object EndpointsToSamTemplate {
   def apply(es: List[AnyEndpoint], options: AwsSamOptions): SamTemplate = {
@@ -35,7 +35,35 @@ private[sam] object EndpointsToSamTemplate {
               )
           }
         ),
-        httpApiName -> HttpResource(HttpProperties("$default"))
+        httpApiName -> HttpResource(
+          HttpProperties(
+            "$default",
+            CorsConfiguration = options.httpApi
+              .flatMap(_.cors)
+              .map(v =>
+                CorsConfiguration(
+                  AllowCredentials = v.allowCredentials.map(_ == HttpApiProperties.AllowedCredentials.Allow),
+                  AllowHeaders = v.allowedHeaders.map {
+                    case HttpApiProperties.AllowedHeaders.All                => Set("*")
+                    case HttpApiProperties.AllowedHeaders.Some(headersNames) => headersNames
+                  },
+                  AllowMethods = v.allowedMethods.map {
+                    case HttpApiProperties.AllowedMethods.All           => Set("*")
+                    case HttpApiProperties.AllowedMethods.Some(methods) => methods.map(_.method)
+                  },
+                  AllowOrigins = v.allowedOrigins.map {
+                    case HttpApiProperties.AllowedOrigin.All           => Set("*")
+                    case HttpApiProperties.AllowedOrigin.Some(origins) => origins.map(_.toString)
+                  },
+                  ExposeHeaders = v.exposeHeaders.map {
+                    case HttpApiProperties.ExposedHeaders.All               => Set("*")
+                    case HttpApiProperties.ExposedHeaders.Some(headerNames) => headerNames
+                  },
+                  MaxAge = v.maxAge.map { case HttpApiProperties.MaxAge.Some(duration) => duration.toSeconds }
+                )
+              )
+          )
+        )
       ),
       Outputs = Map(
         (options.namePrefix + "Url") -> Output(
