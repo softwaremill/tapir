@@ -480,13 +480,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.8.0",
+      "org.typelevel" %%% "cats-core" % "2.9.0",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.8.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.9.0" % Test
     )
   )
   .jvmPlatform(
@@ -1470,14 +1470,7 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-client-tests",
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-circe" % Versions.http4s
-    )
-  )
+  .settings(name := "tapir-client-tests")
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,
