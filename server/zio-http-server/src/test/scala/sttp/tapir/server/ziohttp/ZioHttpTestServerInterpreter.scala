@@ -47,8 +47,6 @@ class ZioHttpTestServerInterpreter(eventLoopGroup: zio.http.service.EventLoopGro
       val ecb = ZLayer.succeed(new AtomicReference[Option[Server.ErrorCallback]](Option.empty))
       val time = ZLayer.succeed(ServerTime.make(1000.millis))
 
-      // val serverChannelFactory = ChannelFactories.Server.fromConfig
-      // val eventLoopGroup = EventLoopGroups.fromConfig
       val nettyRuntime = NettyRuntime.usingSharedThreadPool
       val serverChannelInitializer = ServerChannelInitializer.layer
       val serverInboundHandler = ServerInboundHandler.layer
