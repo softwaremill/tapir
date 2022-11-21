@@ -16,7 +16,7 @@ import zio.{Runtime, Task, UIO, Unsafe, Scope, ZIO, ZEnvironment, ZLayer}
 
 class ZioHttpServerTest extends TestSuite {
 
-  override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
+  override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     Resource
