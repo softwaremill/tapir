@@ -1,8 +1,8 @@
 package sttp.tapir.serverless.aws.cdk.core
 
 import cats.effect.Sync
+import cats.syntax.all._
 import sttp.tapir.server.ServerEndpoint
-import cats.implicits.{toFunctorFilterOps, toFunctorOps}
 
 //todo add comment to TS code
 //fixme parser should get content to parse not the file path
@@ -14,25 +14,22 @@ class Parser[F[_]: Sync](spacesNo: Int = 4)(implicit reader: FileReader[F]) {
         s.replace(s"{{$placeholder}}", values.getValue(placeholder))
       }
 
-    val value = endpoints
-      .map(e => Request.fromEndpoint(e.endpoint))
-      .toList
-      .flattenOption
+    val requests = endpoints.flatMap(e => Request.fromEndpoint(e.endpoint)).toList
 
-    value match {
+    requests match {
       case Nil => Left(new RuntimeException("No single valid endpoint to generate stack"))
-      case requests =>
+      case rs =>
         Right {
           val generator = SuperGenerator
           val stacks = generator
-            .generate(Resource.generate(Tree.build(requests)))
-            .map(i => if (!i.trim.isEmpty) " " * spacesNo + i else "")
+            .generate(Resource.generate(Tree.build(rs)))
+            .map(i => if (i.trim.nonEmpty) " " * spacesNo + i else "")
             .mkString(System.lineSeparator())
 
           reader
             .getContent(path)
             .map(processors.foldLeft(_)((prev, f) => f(prev)))
-            .map(c => c.replace("{{stacks}}", stacks))
+            .map(_.replace("{{stacks}}", stacks))
         }
     }
   }

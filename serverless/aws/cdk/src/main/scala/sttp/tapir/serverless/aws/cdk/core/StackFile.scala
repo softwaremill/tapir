@@ -6,10 +6,9 @@ case class StackFile(
     runtime: String,
     jarPath: String,
     handler: String,
-    timeout: Int,
+    timeout: Long,
     memorySize: Int
 ) {
-
   // productElementNames does not work with Scala 2.12
   def getFields(): List[String] = List(
     "apiName",

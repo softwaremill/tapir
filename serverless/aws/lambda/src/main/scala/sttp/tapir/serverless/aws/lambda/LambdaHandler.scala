@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.lambda
 
-import cats.Applicative
 import cats.effect.{Resource, Sync}
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
@@ -13,7 +12,7 @@ import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 
 //fixme add docs: F is an effect and R is request type (v1 or v2)
-abstract class LambdaHandler[F[_]: Sync: Applicative, R: Decoder: Upcaster] extends RequestStreamHandler {
+abstract class LambdaHandler[F[_]: Sync, R: Decoder: Upcaster] extends RequestStreamHandler {
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, F]]
 
@@ -24,7 +23,7 @@ abstract class LambdaHandler[F[_]: Sync: Applicative, R: Decoder: Upcaster] exte
     Sync[F].blocking(input.readAllBytes()).flatMap { allBytes =>
       (decode[R](new String(allBytes, StandardCharsets.UTF_8)) match {
         case Right(awsRequest) => server.toRoute(getAllEndpoints)(implicitly[Upcaster[R]].toV2(awsRequest))
-        case Left(_)           => Sync[F].pure(AwsResponse.badRequest())
+        case Left(e)           => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
       }).flatMap { awsRes =>
         writerResource(Sync[F].delay(output)).use { writer =>
           Sync[F].blocking(writer.write(Printer.noSpaces.print(awsRes.asJson)))

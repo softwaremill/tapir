@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.cdk
+package sttp.tapir.serverless.aws.cdk.test
 
 import cats.effect.kernel.Sync
 import cats.implicits._

@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.cdk.core
 private[core] case class Node(
     name: Segment,
     methods: List[Method] = List.empty[Method],
-    content: List[Node] = List.empty[Node]
+    children: List[Node] = List.empty[Node]
 )
 
 private[core] object Tree {
@@ -19,8 +19,8 @@ private[core] object Tree {
      helloId.addMethod('GET');
    */
   def build(urls: List[Request]): Tree = {
-    urls.foldLeft(List.empty[Node]) { (acc, url) => //rename
-      add(acc, url.path, url.method) // fixme what if empty?
+    urls.foldLeft(List.empty[Node]) { (acc, request) => // rename
+      add(acc, request.path, request.method) // fixme what if empty?
     }
   }
 
@@ -41,11 +41,11 @@ private[core] object Tree {
     val s: Node = fetch(current, pathPrefix.head)
     val remaining = current.filter(x => x.name != pathPrefix.head)
 
-    sort(remaining :+ Node(s.name, s.methods, add(s.content, pathPrefix.tail :+ lastSegment, method)))
+    sort(remaining :+ Node(s.name, s.methods, add(s.children, pathPrefix.tail :+ lastSegment, method)))
   }
 
   private def fetch(current: Tree, name: Segment): Node = {
-    val value = current.filter(i => i.name.toString == name.toString)
+    val value = current.filter(n => n.name == name)
     if (value.isEmpty) Node(name)
     else value.head
   }

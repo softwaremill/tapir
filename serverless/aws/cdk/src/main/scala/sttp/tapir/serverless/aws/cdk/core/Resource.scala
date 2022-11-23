@@ -23,10 +23,10 @@ case object DELETE extends Method
 
 object Method { // fixme move out to dedicated file
   implicit val userOrdering: Ordering[Method] = Ordering.by[Method, Int] {
-    case GET => 0
-    case POST => 1
-    case PUT => 2
-    case PATCH => 3
+    case GET    => 0
+    case POST   => 1
+    case PUT    => 2
+    case PATCH  => 3
     case DELETE => 4
   }
 
@@ -39,7 +39,6 @@ object Method { // fixme move out to dedicated file
     case _        => None
   }
 }
-
 
 private[core] object Resource {
 
@@ -71,7 +70,7 @@ private[core] object Resource {
       NonEmptyList.fromList(node.methods.distinct) match {
         case Some(methods) => {
           val updatedVariables = composedVariables + (rawVariableName.raw -> (counter + 1))
-          val resources = helper(node.content, Some(rawVariableName), List.empty, Some(rawVariableName), updatedVariables)
+          val resources = helper(node.children, Some(rawVariableName), List.empty, Some(rawVariableName), updatedVariables)
 
           val resource =
             Resource(
@@ -84,7 +83,7 @@ private[core] object Resource {
         }
         case None => {
           // skip non reachable parts
-          val resources = helper(node.content, Some(suffixed), newPrefix, dependOn, composedVariables)
+          val resources = helper(node.children, Some(suffixed), newPrefix, dependOn, composedVariables)
           resources.enrich(c.resources)
         }
       }

@@ -1466,6 +1466,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
         case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
         case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
         case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+        case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
         case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
       },
       libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
@@ -1480,8 +1481,8 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   )
   .dependsOn(awsLambda)
 
-lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12))
-lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13))
+lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
+lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
 
 // client
 

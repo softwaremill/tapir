@@ -2,11 +2,11 @@ package sttp.tapir.serverless.aws.cdk.core
 
 object SuperGenerator { //fixme rename
 
-  val separator = System.lineSeparator()
+  private val separator = System.lineSeparator()
 
   def generate(resources: List[Resource]): List[String] = {
-    def util(r: List[Resource]): List[String] = {
-      r match {
+    def util(rs: List[Resource]): List[String] = {
+      rs match {
         case head :: Nil  => generate(head)
         case head :: tail => generate(head) ++ List(separator) ++ util(tail)
         case _            => List.empty

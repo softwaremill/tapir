@@ -5,6 +5,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.serverless.aws.cdk.test.IOLambdaHandlerV1
 import sttp.tapir.serverless.aws.lambda.AwsResponse
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}

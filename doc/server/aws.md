@@ -32,7 +32,7 @@ Add one of the following dependencies:
 
 In our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples)
 you'll find a `LambdaApiExample` handler which uses `AwsCatsEffectServerInterpreter` to route a hello endpoint along
-with `SamTemplateExample` and `TerraformConfigExample` which interpret endpoints to SAM/Terraform configuration. Go
+with `SamTemplateExample`, `TerraformConfigExample` and `CdkAppExample` which interpret endpoints to SAM/Terraform/CDK application configuration. Go
 ahead and clone tapir project and select `project awsExamples` from sbt shell.
 
 Make sure you have [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).

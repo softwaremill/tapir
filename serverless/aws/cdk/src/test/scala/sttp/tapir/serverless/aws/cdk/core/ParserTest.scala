@@ -7,19 +7,19 @@ import cats.effect.unsafe.implicits.global
 import cats.implicits.catsSyntaxEitherId
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir._
-import sttp.tapir.serverless.aws.cdk.TestEndpoints
+import sttp.tapir.serverless.aws.cdk.test.TestEndpoints
 
 import scala.io.Source
 
 class ParserTest extends AnyFunSuite with Matchers {
 
   val path = "/app-template/lib/stack-template.ts"
-  val values = new StackFile(
+  val values = StackFile(
     "API",
     "TapirHandler",
     "lambda.Runtime.JAVA_11",
     "..serverless/aws/cdk/target/jvm-2.13/tapir-aws-cdk.jar",
-    "sttp.tapir.serverless.aws.cdk.IOLambdaHandlerV1::handleRequest",
+    "sttp.tapir.serverless.aws.cdk.test.IOLambdaHandlerV1::handleRequest",
     20,
     2048
   )

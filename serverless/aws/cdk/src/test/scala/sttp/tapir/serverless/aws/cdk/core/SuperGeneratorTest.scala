@@ -15,7 +15,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
         |variableName.addMethod('GET');
         |""".stripMargin
 
-    assert(result == prepare(expected))
+    assert(result == format(expected))
   }
 
   test("single resource with two methods") {
@@ -30,7 +30,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
         |variableName.addMethod('POST');
         |""".stripMargin
 
-    assert(result == prepare(expected))
+    assert(result == format(expected))
   }
 
   test("single resource with two methods with different order") {
@@ -44,7 +44,7 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
         |variableName.addMethod('POST');
         |""".stripMargin
 
-    assert(result == prepare(expected))
+    assert(result == format(expected))
   }
 
   test("multiple resources with single method") {
@@ -62,9 +62,9 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
         |hiName.addMethod('GET');
         |""".stripMargin
 
-    val str = prepare(expected)
+    val str = format(expected)
     assert(result == str)
   }
 
-  private def prepare(input: String) = input.split("\n").drop(1).mkString("\n")
+  private def format(input: String): String = input.split("\n").drop(1).mkString("\n")
 }

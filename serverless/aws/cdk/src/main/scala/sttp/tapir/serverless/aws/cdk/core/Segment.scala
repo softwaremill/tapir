@@ -8,7 +8,6 @@ sealed abstract class Segment protected (value: String) {
 
 case class Fixed private (value: String) extends Segment(value) {
   override def toString: String = raw
-
 }
 
 object Fixed {
