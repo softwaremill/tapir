@@ -37,10 +37,14 @@ private[tapir] object MapToMacro {
 
     if (caseClassUtil.fields.size == 1) {
       verifySingleFieldCaseClass(c)(caseClassUtil, tupleType)
+      // Compilation failure if `CaseClass` gets passed as `[Wrapper.CaseClass]` caused by invalid `className`
+      // retrieval below, workaround available (see: https://github.com/softwaremill/tapir/issues/2540)
       q"(t: ${tupleType.dealias}) => ${caseClassUtil.className}(t)"
     } else {
       verifyCaseClassMatchesTuple(c)(caseClassUtil, tupleType, tupleTypeArgs)
       val ctorArgs = (1 to tupleTypeArgs.length).map(idx => q"t.${TermName(s"_$idx")}")
+      // Compilation failure if `CaseClass` gets passed as `[Wrapper.CaseClass]` caused by invalid `className`
+      // retrieval below, workaround available (see: https://github.com/softwaremill/tapir/issues/2540)
       q"(t: ${tupleType.dealias}) => ${caseClassUtil.className}(..$ctorArgs)"
     }
   }
