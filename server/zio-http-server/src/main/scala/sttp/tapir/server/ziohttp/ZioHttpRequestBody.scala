@@ -7,7 +7,7 @@ import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.interpreter.RequestBody
-import zhttp.http.Request
+import zio.http.Request
 import zio.{RIO, Task, ZIO}
 import zio.stream.Stream
 
@@ -30,9 +30,9 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = stream(serverRequest).asInstanceOf[streams.BinaryStream]
 
   private def stream(serverRequest: ServerRequest): Stream[Throwable, Byte] =
-    zioHttpRequest(serverRequest).bodyAsStream
+    zioHttpRequest(serverRequest).body.asStream
 
-  private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = zioHttpRequest(serverRequest).body.map(_.toArray)
+  private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = zioHttpRequest(serverRequest).body.asArray
 
   private def zioHttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
 }

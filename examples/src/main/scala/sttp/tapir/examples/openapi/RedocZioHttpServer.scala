@@ -6,10 +6,12 @@ import sttp.tapir.json.circe._
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
-import zhttp.http.HttpApp
-import zhttp.service.Server
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault}
+
+import java.net.InetSocketAddress
 
 object RedocZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -28,8 +30,12 @@ object RedocZioHttpServer extends ZIOAppDefault {
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
       printLine("Press any key to exit ...") *>
-      Server.start(8080, petRoutes ++ redocRoutes).fork.flatMap { fiber =>
-        readLine *> fiber.interrupt
-      }
+      Server
+        .serve(petRoutes ++ redocRoutes)
+        .provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8080))) >>> Server.default)
+        .fork
+        .flatMap { fiber =>
+          readLine *> fiber.interrupt
+        }
   }.exitCode
 }
