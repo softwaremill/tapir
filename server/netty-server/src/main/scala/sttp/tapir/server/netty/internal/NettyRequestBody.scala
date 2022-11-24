@@ -12,7 +12,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.internal.SequenceSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{FileRange, RawBodyType, TapirFile}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -97,7 +97,7 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
       case RawBodyType.FileBody =>
         createFile(serverRequest)
           .map(file => {
-            Files.write(file.toPath, ByteBufUtil.getBytes(upload.content()))
+            upload.renameTo(file)
             Part(
               name = upload.getName,
               body = FileRange(file),

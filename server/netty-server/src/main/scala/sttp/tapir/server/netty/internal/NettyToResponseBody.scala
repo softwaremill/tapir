@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
@@ -15,7 +15,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
-import java.io.{InputStream, RandomAccessFile}
+import java.io.{ByteArrayInputStream, InputStream, RandomAccessFile, SequenceInputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -47,13 +47,12 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(fileRange))
 
       case m: RawBodyType.MultipartBody =>
-        val buffers: List[ByteBuf] = v
+        val is = v
           .asInstanceOf[List[RawPart]]
-          .flatMap(part =>
-            m.partType(part.name)
-              .map(bodyType => convertToBuffs(bodyType, part))
-          )
-        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(buffers: _*))
+          .flatMap(part => m.partType(part.name).map(bodyType => convertToBuffs(bodyType, part)))
+          .reduce((is1, is2) => new SequenceInputStream(is1, is2))
+
+        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(is))
     }
   }
 
@@ -77,7 +76,7 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     }
   }
 
-  private def convertToBuffs(bodyType: RawBodyType[_], part: Part[Any]): ByteBuf = {
+  private def convertToBuffs(bodyType: RawBodyType[_], part: Part[Any]): InputStream = {
     bodyType match {
       case RawBodyType.StringBody(_) =>
         toPart(part.body, part.contentType, part.name, None)
@@ -89,18 +88,24 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         toPart(part.body, part.contentType, part.name, None)
       case RawBodyType.FileBody =>
         val fileRange = part.body.asInstanceOf[FileRange]
-        toPart(Files.readString(fileRange.file.toPath), part.contentType, part.name, Some(fileRange.file.getName))
+        toPart(fileRange, part.contentType, part.name, Some(fileRange.file.getName))
       case RawBodyType.MultipartBody(_, _) =>
         throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
   }
 
-  private def toPart(data: Any, contentType: Option[String], name: String, filename: Option[String]): ByteBuf = {
+  private def toPart(data: Any, contentType: Option[String], name: String, filename: Option[String]): InputStream = {
     val boundary = UUID.randomUUID.toString
     val fileNameStr = filename.map(name => s"""filename="$name";""").getOrElse("")
     val contentTypeStr = contentType.map(ct => s"Content-Type: $ct").getOrElse("")
-    val textPart =
-      s"""
+    data match {
+      case range: FileRange => filePart(range, name, boundary, fileNameStr, contentTypeStr)
+      case _                => textPart(data, name, boundary, fileNameStr, contentTypeStr)
+    }
+  }
+
+  private def textPart(data: Any, name: String, boundary: String, fileNameStr: String, contentTypeStr: String): InputStream = {
+    val text = s"""
       $boundary
           $contentTypeStr
           Content-Disposition: form-data; $fileNameStr name="$name"
@@ -108,8 +113,22 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
           $data
       $boundary
       """
-    Unpooled.wrappedBuffer(textPart.getBytes)
+    new ByteArrayInputStream(text.getBytes)
   }
+
+  private def filePart(data: FileRange, name: String, boundary: String, fileNameStr: String, contentTypeStr: String): InputStream = {
+    val textPartStart =
+      s"""
+      $boundary
+          $contentTypeStr
+          Content-Disposition: form-data; $fileNameStr name="$name"\n
+      """
+    val start = new ByteArrayInputStream(textPartStart.getBytes)
+    val fileIS = Files.newInputStream(data.file.toPath)
+    val end = new ByteArrayInputStream(f"\n $boundary".getBytes)
+    new SequenceInputStream(new SequenceInputStream(start, fileIS), end)
+  }
+
   override def fromStreamValue(
       v: streams.BinaryStream,
       headers: HasHeaders,
