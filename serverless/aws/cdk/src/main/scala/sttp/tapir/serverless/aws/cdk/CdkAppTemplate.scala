@@ -13,35 +13,34 @@ class CdkAppTemplate[F[_]: Sync](es: Set[ServerEndpoint[Any, F]], options: AwsCd
 
     }
 
-//    val values = StackFile(
-//      apiName = options.apiName,
-//      lambdaName = options.lambdaName,
-//      runtime = "lambda.Runtime.JAVA_11",
-//      jarPath = options.codeUri,
-//      handler = options.handler,
-//      timeout = options.timeout.toSeconds,
-//      memorySize = options.memorySizeInMB
-//    )
-//
-//    implicit val reader: FileReader[F] = new FileReader[F]
-//
-//    val parser = new Parser[F]
-//    parser.parse(options.templateFilePath, values, es) match {
-//      case Right(content) =>
-//        val mover = new FileMover[F]("/app-template", "cdk")
-//        val files = Map(
-//          "bin/tapir-cdk-stack.ts" -> "bin/tapir-cdk-stack.ts",
-//          "gitignore" -> ".gitignore",
-//          "cdk.json" -> "cdk.json",
-//          "jest.config.js" -> "jest.config.js",
-//          "package.json" -> "package.json",
-//          "readme.md" -> "readme.md",
-//          "tsconfig.json" -> "tsconfig.json"
-//        )
-//        mover.clear >> mover.move(files) >> mover.put(content, "cdk/lib/tapir-cdk-stack.ts")
-//      case Left(ex) => Sync[F].delay(println(ex)).void
-//    }
-    Sync[F].delay(Right())
+    val values = StackFile(
+      apiName = options.apiName,
+      lambdaName = options.lambdaName,
+      runtime = "lambda.Runtime.JAVA_11",
+      jarPath = options.codeUri,
+      handler = options.handler,
+      timeout = options.timeout.toSeconds,
+      memorySize = options.memorySizeInMB
+    )
+
+    implicit val reader: FileReader[F] = new FileReader[F]
+
+    val parser = new Parser[F]
+    parser.parse(options.templateFilePath, values, es) match {
+      case Right(content) =>
+        val mover = new FileMover[F]("/app-template", "cdk")
+        val files = Map(
+          "bin/tapir-cdk-stack.ts" -> "bin/tapir-cdk-stack.ts",
+          "gitignore" -> ".gitignore",
+          "cdk.json" -> "cdk.json",
+          "jest.config.js" -> "jest.config.js",
+          "package.json" -> "package.json",
+          "readme.md" -> "readme.md",
+          "tsconfig.json" -> "tsconfig.json"
+        )
+        mover.clear >> mover.move(files) >> mover.put(content, "cdk/lib/tapir-cdk-stack.ts").map(_.asRight[Throwable])
+      case Left(ex) => Sync[F].delay(println(ex)).as(ex.asLeft[Unit])
+    }
   }
 
   private def serverEndpointsToRequests(es: Set[ServerEndpoint[Any, F]]): List[Request] =

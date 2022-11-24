@@ -9,37 +9,6 @@ private[core] case class Resource(
     dependOn: String
 )
 
-sealed trait Method
-
-case object GET extends Method
-
-case object POST extends Method
-
-case object PATCH extends Method
-
-case object PUT extends Method
-
-case object DELETE extends Method
-
-object Method { // fixme move out to dedicated file
-  implicit val userOrdering: Ordering[Method] = Ordering.by[Method, Int] {
-    case GET    => 0
-    case POST   => 1
-    case PUT    => 2
-    case PATCH  => 3
-    case DELETE => 4
-  }
-
-  def apply(method: String): Option[Method] = method match {
-    case "GET"    => Some(GET)
-    case "POST"   => Some(POST)
-    case "DELETE" => Some(DELETE)
-    case "PATCH"  => Some(PATCH)
-    case "PUT"    => Some(PUT)
-    case _        => None
-  }
-}
-
 private[core] object Resource {
 
   type Resources = List[Resource]

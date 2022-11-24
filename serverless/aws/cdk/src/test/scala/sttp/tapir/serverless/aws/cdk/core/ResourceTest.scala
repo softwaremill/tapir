@@ -3,6 +3,7 @@ package sttp.tapir.serverless.aws.cdk.core
 import cats.data.NonEmptyList
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.serverless.aws.cdk.core.Method._
 
 class ResourceTest extends AnyFunSuite with Matchers {
 
@@ -363,7 +364,7 @@ class ResourceTest extends AnyFunSuite with Matchers {
     )
 
     val expected = List(
-      Resource(VariableName("hello"), "hello", NonEmptyList.of(POST), "")
+      Resource(VariableName("hello"), "hello", NonEmptyList.one(POST), "")
     )
 
     val resources = Resource.generate(tree)

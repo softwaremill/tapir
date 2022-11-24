@@ -2,57 +2,75 @@ package sttp.tapir.serverless.aws.cdk.core
 
 import cats.data.NonEmptyList
 import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
+import sttp.tapir.serverless.aws.cdk.core.Method._
 
-class SuperGeneratorTest extends AnyFunSuite with Matchers {
+class SuperGeneratorTest extends AnyFunSuite {
   test("single resource with single method") {
+    // given
     val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.one(GET), "")
-    val generator = SuperGenerator
-    val result = generator.generate(List(resource)).mkString("\n")
+
+    // when
+    val result = SuperGenerator.generate(List(resource)).mkString("\n")
+
+    // then
     val expected =
       """
-        |const variableName = api.root.addResource('root/hi');
-        |variableName.addMethod('GET');
+        |const variableNameRoot = api.root.addResource('root');
+        |const variableNameHi = variableNameRoot.addResource('hi');
+        |variableNameHi.addMethod('GET');
         |""".stripMargin
 
     assert(result == format(expected))
   }
 
   test("single resource with two methods") {
+    // given
     val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.of(GET, POST), "")
-    val generator = SuperGenerator
-    val value1 = generator.generate(List(resource))
-    val result = value1.mkString("\n")
+
+    // when
+    val result = SuperGenerator.generate(List(resource)).mkString("\n")
+
+    // then
     val expected =
       """
-        |const variableName = api.root.addResource('root/hi');
-        |variableName.addMethod('GET');
-        |variableName.addMethod('POST');
+        |const variableNameRoot = api.root.addResource('root');
+        |const variableNameHi = variableNameRoot.addResource('hi');
+        |variableNameHi.addMethod('GET');
+        |variableNameHi.addMethod('POST');
         |""".stripMargin
 
     assert(result == format(expected))
   }
 
   test("single resource with two methods with different order") {
+    // given
     val resource = new Resource(VariableName("variableName"), "root/hi", NonEmptyList.of(POST, GET), "")
-    val generator = SuperGenerator
-    val result = generator.generate(List(resource)).mkString("\n")
+
+    // when
+    val result = SuperGenerator.generate(List(resource)).mkString("\n")
+
+    // then
     val expected =
       """
-        |const variableName = api.root.addResource('root/hi');
-        |variableName.addMethod('GET');
-        |variableName.addMethod('POST');
+        |const variableNameRoot = api.root.addResource('root');
+        |const variableNameHi = variableNameRoot.addResource('hi');
+        |variableNameHi.addMethod('GET');
+        |variableNameHi.addMethod('POST');
         |""".stripMargin
 
     assert(result == format(expected))
   }
 
   test("multiple resources with single method") {
+    // given
     val resourceA = new Resource(VariableName("hi"), "hi", NonEmptyList.one(GET), "")
     val resourceB = new Resource(VariableName("hiName"), "{name}", NonEmptyList.one(GET), "hi")
-    val generator = SuperGenerator
-    val value1 = generator.generate(List(resourceA, resourceB))
-    val result = value1.map(i => if (i != "\n") s"$i" else "").mkString("\n") //fixme
+
+    // when
+    val value1 = SuperGenerator.generate(List(resourceA, resourceB))
+    val result = value1.map(i => if (i != "\n") s"$i" else "").mkString("\n") // fixme
+
+    // then
     val expected =
       """
         |const hi = api.root.addResource('hi');
@@ -62,8 +80,29 @@ class SuperGeneratorTest extends AnyFunSuite with Matchers {
         |hiName.addMethod('GET');
         |""".stripMargin
 
-    val str = format(expected)
-    assert(result == str)
+    assert(result == format(expected))
+  }
+
+  test("multiple resources with single method") {
+    // given
+    val resourceA = new Resource(VariableName("hi"), "hi/{one}", NonEmptyList.one(GET), "")
+    val resourceB = new Resource(VariableName("two"), "two/{two}", NonEmptyList.one(GET), "hi")
+
+    // when
+    val value1 = SuperGenerator.generate(List(resourceA, resourceB))
+    val result = value1.map(i => if (i != "\n") s"$i" else "").mkString("\n") // fixme
+
+    // then
+    val expected =
+      """
+        |const hi = api.root.addResource('hi');
+        |hi.addMethod('GET');
+        |
+        |const hiName = hi.addResource('{name}');
+        |hiName.addMethod('GET');
+        |""".stripMargin
+
+    assert(result == format(expected))
   }
 
   private def format(input: String): String = input.split("\n").drop(1).mkString("\n")

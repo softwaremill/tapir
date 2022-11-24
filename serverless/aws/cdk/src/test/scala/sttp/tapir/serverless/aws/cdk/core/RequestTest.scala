@@ -3,6 +3,7 @@ package sttp.tapir.serverless.aws.cdk.core
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir._
+import sttp.tapir.serverless.aws.cdk.core.Method._
 
 class RequestTest extends AnyFunSuite with Matchers {
 
