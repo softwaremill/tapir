@@ -7,8 +7,6 @@ import zio.http.HttpApp
 import zio.http.{Server, ServerConfig}
 import zio.{Task, ZIO, _}
 
-import java.net.InetSocketAddress
-
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
 object ZioMetricsExample extends ZIOAppDefault {
 
@@ -40,7 +38,10 @@ object ZioMetricsExample extends ZIOAppDefault {
       _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
       _ <- Console.readLine
     } yield serverPort)
-      .provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(port))) >>> Server.default)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(port)),
+        Server.live,
+      )
       .exitCode
   }
 

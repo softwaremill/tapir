@@ -10,7 +10,6 @@ import zio.http.{Server, ServerConfig}
 import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault}
 import zio.stream._
 
-import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 
@@ -42,5 +41,11 @@ object StreamingZioHttpServer extends ZIOAppDefault {
 
   // Test using: curl http://localhost:8080/receive
   override def run: URIO[Any, ExitCode] =
-    Server.serve(routes).provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8080))) >>> Server.default).exitCode
+    Server
+      .serve(routes)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(8080)),
+        Server.live,
+      )
+      .exitCode
 }

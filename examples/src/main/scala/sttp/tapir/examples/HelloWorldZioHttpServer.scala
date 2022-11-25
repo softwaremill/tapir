@@ -10,8 +10,6 @@ import zio.http.{Server, ServerConfig}
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-import java.net.InetSocketAddress
-
 object HelloWorldZioHttpServer extends ZIOAppDefault {
   // a simple string-only endpoint
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
@@ -40,5 +38,8 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // starting the server
   override def run =
-    Server.serve(app).provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8090))) >>> Server.default).exitCode
+    Server.serve(app).provide(
+      ServerConfig.live(ServerConfig.default.port(8090)),
+      Server.live,
+    ).exitCode
 }
