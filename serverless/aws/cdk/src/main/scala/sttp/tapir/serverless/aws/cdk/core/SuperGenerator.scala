@@ -17,33 +17,37 @@ object SuperGenerator { // fixme rename
   }
 
   def generateV2(tree: Tree): Seq[String] = {
-    def generateForNode(path: String, parentResourceName: String, parentNode: Node): Seq[String] = {
-      val currentPath = s"$path/${parentNode.name.toString}"
-
-      parentNode.children.foldLeft(Seq.empty[String]) { case (acc, node) =>
-        val name = node.name
-        val nodePath = s"$currentPath/${name.toString}"
-        val comments = node.methods.map(m => s"// $m $nodePath")
-        val resourceConstName = s"$parentResourceName${name.raw.capitalize}"
-        val addResourceInvocation = node.methods match {
-          case Nil => s"$parentResourceName.addResource('${name.raw}');"
-          case _ => s"const $resourceConstName = $parentResourceName.addResource('${name.raw}');"
-        }
-        val addResourceMethods = node.methods.map(m => s"$resourceConstName.addMethod('$m');")
-        acc ++ Seq("") ++ comments ++ Seq(addResourceInvocation) ++ addResourceMethods ++ generateForNode(currentPath, resourceConstName, node)
-      }
-    }
-
     tree.foldLeft(Seq.empty[String]) { case (acc, rootNode) =>
       val name = rootNode.name.raw
       val comments = rootNode.methods.map(m => s"// $m /$name")
-      val rootResource = s"root${name.capitalize}"
+      val rootResource = s"root${toVariableName(name)}"
       val rootApiDefinition = s"const $rootResource = api.root.addResource('$name');"
       val methods = rootNode.methods.map(m => s"$rootResource.addMethod('$m');")
+      val separator = if (acc.size < (tree.size - 1) && rootNode.children.isEmpty) Seq("") else Seq.empty
 
-      acc ++ comments ++ Seq(rootApiDefinition) ++ methods ++ generateForNode(path = "", rootResource, rootNode)
+      acc ++ comments ++ Seq(rootApiDefinition) ++ methods ++ separator ++ generateForNode(path = "", rootResource, rootNode)
     }
   }
+
+  private def generateForNode(path: String, parentResourceName: String, parentNode: Node): Seq[String] = {
+    val currentPath = s"$path/${parentNode.name.toString}"
+
+    parentNode.children.foldLeft(Seq.empty[String]) { case (acc, node) =>
+      val name = node.name
+      val nodePath = s"$currentPath/${name.toString}"
+      val comments = node.methods.map(m => s"// $m $nodePath")
+      val resourceConstName = s"$parentResourceName${toVariableName(name.raw)}"
+      val addResourceInvocation = s"const $resourceConstName = $parentResourceName.addResource('${name.toString}');"
+      val addResourceMethods = node.methods.map(m => s"$resourceConstName.addMethod('$m');")
+      acc ++ Seq("") ++ comments ++ Seq(addResourceInvocation) ++ addResourceMethods ++ generateForNode(
+        currentPath,
+        resourceConstName,
+        node
+      )
+    }
+  }
+
+  private def toVariableName(name: String): String = name.replaceAll("[^a-zA-Z]", "").capitalize
 
   private def generate(resource: Resource): List[String] = {
     val nel = resource.method.sortBy(_.toString).toList.flatMap(m => addMethod(resource.variableName, m))

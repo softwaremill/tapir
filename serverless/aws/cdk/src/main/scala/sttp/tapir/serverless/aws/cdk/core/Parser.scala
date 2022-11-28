@@ -20,9 +20,7 @@ class Parser[F[_]: Sync](spacesNo: Int = 4)(implicit reader: FileReader[F]) {
       case Nil => Left(new RuntimeException("No single valid endpoint to generate stack"))
       case rs =>
         Right {
-          val generator = SuperGenerator
-          val stacks = generator
-            .generate(Resource.generate(Tree.build(rs)))
+          val stacks = SuperGenerator.generateV2(Tree.build(rs))
             .map(i => if (i.trim.nonEmpty) " " * spacesNo + i else "")
             .mkString(System.lineSeparator())
 
