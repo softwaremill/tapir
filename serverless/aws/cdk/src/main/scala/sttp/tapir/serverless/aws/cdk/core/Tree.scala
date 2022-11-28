@@ -18,7 +18,7 @@ private[core] object Tree {
      const helloId = hello.addResource('{id}')
      helloId.addMethod('GET');
    */
-  def build(urls: List[Request]): Tree = {
+  def fromRequests(urls: List[Request]): Tree = {
     urls.foldLeft(List.empty[Node]) { (acc, request) => // rename
       add(acc, request.path, request.method) // fixme what if empty?
     }

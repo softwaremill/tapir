@@ -61,7 +61,7 @@ class TreeTest extends AnyFunSuite with Matchers {
         )
       )
 
-    val tree = Tree.build(requests)
+    val tree = Tree.fromRequests(requests)
     assert(expected.equals(tree))
   }
 
@@ -78,7 +78,7 @@ class TreeTest extends AnyFunSuite with Matchers {
       Node(Fixed("c").get, List(GET))
     )
 
-    assert(expected.equals(Tree.build(requests)))
+    assert(expected.equals(Tree.fromRequests(requests)))
   }
 
   test("segments on the shared level") {
@@ -112,7 +112,7 @@ class TreeTest extends AnyFunSuite with Matchers {
         )
       )
 
-    assert(expected.equals(Tree.build(requests)))
+    assert(expected.equals(Tree.fromRequests(requests)))
   }
 
   test("multiple methods") {
@@ -136,7 +136,7 @@ class TreeTest extends AnyFunSuite with Matchers {
         )
       )
 
-    assert(expected.equals(Tree.build(requests)))
+    assert(expected.equals(Tree.fromRequests(requests)))
   }
 
   test("multiple methods order") { // different order
@@ -160,7 +160,7 @@ class TreeTest extends AnyFunSuite with Matchers {
         )
       )
 
-    val tree = Tree.build(urls)
+    val tree = Tree.fromRequests(urls)
     assert(expected.equals(tree))
   }
 
@@ -185,7 +185,7 @@ class TreeTest extends AnyFunSuite with Matchers {
         )
       )
 
-    assert(expected.equals(Tree.build(urls)))
+    assert(expected.equals(Tree.fromRequests(urls)))
   }
 
   test("parameter and fixed segment with the same name") {
@@ -199,7 +199,7 @@ class TreeTest extends AnyFunSuite with Matchers {
       Node(Parameter("a").get, List(GET))
     )
 
-    val tree = Tree.build(requests)
+    val tree = Tree.fromRequests(requests)
     assert(expected.equals(tree))
   }
 }

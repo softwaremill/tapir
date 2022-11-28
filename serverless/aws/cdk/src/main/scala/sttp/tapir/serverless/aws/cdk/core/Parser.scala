@@ -10,7 +10,7 @@ import sttp.tapir.server.ServerEndpoint
 class Parser[F[_]: Sync](spacesNo: Int = 4)(implicit reader: FileReader[F]) {
   def parse(path: String, values: StackFile, endpoints: Set[ServerEndpoint[Any, F]]): Either[Throwable, F[String]] = {
     val processors: List[String => String] =
-      values.getFields().map { placeholder => (s: String) =>
+      values.getFields.map { placeholder => (s: String) =>
         s.replace(s"{{$placeholder}}", values.getValue(placeholder))
       }
 
@@ -20,7 +20,7 @@ class Parser[F[_]: Sync](spacesNo: Int = 4)(implicit reader: FileReader[F]) {
       case Nil => Left(new RuntimeException("No single valid endpoint to generate stack"))
       case rs =>
         Right {
-          val stacks = SuperGenerator.generateV2(Tree.build(rs))
+          val stacks = TreeToTypeScript.apply(Tree.fromRequests(rs))
             .map(i => if (i.trim.nonEmpty) " " * spacesNo + i else "")
             .mkString(System.lineSeparator())
 
