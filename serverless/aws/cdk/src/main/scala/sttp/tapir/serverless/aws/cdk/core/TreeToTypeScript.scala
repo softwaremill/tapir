@@ -37,7 +37,7 @@ private[cdk] object TreeToTypeScript {
 
   private def toVariableName(segment: Segment): String =
     segment match {
-      case Fixed(name) => name.replaceAll("[^a-zA-Z]", "").capitalize
-      case Parameter(name) => s"${name.replaceAll("[^a-zA-Z]", "").capitalize}Param"
+      case Segment.Fixed(name) => name.replaceAll("[^a-zA-Z]", "").capitalize
+      case Segment.Parameter(name) => s"${name.replaceAll("[^a-zA-Z]", "").capitalize}Param"
     }
 }

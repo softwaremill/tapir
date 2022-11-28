@@ -4,6 +4,8 @@ import org.scalatest.OptionValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.serverless.aws.cdk.core
+import sttp.tapir.serverless.aws.cdk.core.Segment.Parameter
+import sttp.tapir.serverless.aws.cdk.core.Segment.Fixed
 
 class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
   implicit class StringSeqSyntax(l: Seq[String]) {

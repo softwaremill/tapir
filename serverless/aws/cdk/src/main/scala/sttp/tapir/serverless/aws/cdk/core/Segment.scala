@@ -6,29 +6,29 @@ sealed abstract class Segment protected (value: String) {
   def raw: String = value
 }
 
-case class Fixed private (value: String) extends Segment(value) {
-  override def toString: String = raw
-}
-
-object Fixed {
-  def apply(value: String): Option[Fixed] = {
-    if (value.isEmpty) None
-    else Some(new Fixed(value))
-  }
-}
-
-case class Parameter private (value: String) extends Segment(value) {
-  override def toString: String = s"{$raw}"
-}
-
-object Parameter {
-  def apply(value: String): Option[Parameter] = {
-    if (value.isEmpty) None
-    else Some(new Parameter(value))
-  }
-}
-
 object Segment {
+
+  case class Fixed private(value: String) extends Segment(value) {
+    override def toString: String = raw
+  }
+
+  object Fixed {
+    def apply(value: String): Option[Fixed] = {
+      if (value.isEmpty) None
+      else Some(new Fixed(value))
+    }
+  }
+
+  case class Parameter private(value: String) extends Segment(value) {
+    override def toString: String = s"{$raw}"
+  }
+
+  object Parameter {
+    def apply(value: String): Option[Parameter] = {
+      if (value.isEmpty) None
+      else Some(new Parameter(value))
+    }
+  }
 
   /** This do not enforce any strict rules or logic. Preprocessed and encoded segments derive from core tapir Endpoint. Duplicating any url
     * segments processing rules would be rather harmful here. This is not responsibility of this module at all. Segment just introduce
