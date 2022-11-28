@@ -5,7 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.serverless.aws.cdk.core
 
-class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
+class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
   implicit class StringSeqSyntax(l: Seq[String]) {
     def format: String = l.mkString(System.lineSeparator())
   }
@@ -21,7 +21,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe Seq(
@@ -40,7 +40,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -66,7 +66,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -101,7 +101,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -112,8 +112,8 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
       "rootApiHello.addMethod('GET');",
       "",
       "// POST /api/hello/{name}",
-      "const rootApiHelloName = rootApiHello.addResource('{name}');",
-      "rootApiHelloName.addMethod('POST');"
+      "const rootApiHelloNameParam = rootApiHello.addResource('{name}');",
+      "rootApiHelloNameParam.addMethod('POST');"
     ).format
   }
 
@@ -133,7 +133,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -169,7 +169,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -178,8 +178,8 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
       "const rootApiHello = rootApi.addResource('hello');",
       "",
       "// PUT /api/hello/{name}",
-      "const rootApiHelloName = rootApiHello.addResource('{name}');",
-      "rootApiHelloName.addMethod('PUT');"
+      "const rootApiHelloNameParam = rootApiHello.addResource('{name}');",
+      "rootApiHelloNameParam.addMethod('PUT');"
     ).format
   }
 
@@ -205,7 +205,7 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
     )
 
     // when
-    val result = SuperGenerator.generateV2(tree)
+    val result = TreeToTypeScript.apply(tree)
 
     // then
     result.format shouldBe List(
@@ -219,9 +219,53 @@ class SuperGenerator2Test extends AnyFlatSpec with Matchers with OptionValues {
       "",
       "// POST /api/hello/{id}",
       "// DELETE /api/hello/{id}",
-      "const rootApiHelloId = rootApiHello.addResource('{id}');",
-      "rootApiHelloId.addMethod('POST');",
-      "rootApiHelloId.addMethod('DELETE');"
+      "const rootApiHelloIdParam = rootApiHello.addResource('{id}');",
+      "rootApiHelloIdParam.addMethod('POST');",
+      "rootApiHelloIdParam.addMethod('DELETE');"
+    ).format
+  }
+
+  it should "handle parameters with the same raw name" in {
+    // given
+    val tree = List(
+      Node(
+        name = Fixed("api").value,
+        methods = List.empty,
+        children = List(
+          Node(
+            name = Parameter("id").value,
+            children = List(
+              Node(name = Fixed("name").value, methods = List(core.Method.DELETE))
+            )
+          ),
+          Node(
+            name = Fixed("id").value,
+            children = List(
+              Node(name = Parameter("name").value, methods = List(core.Method.DELETE))
+            )
+          )
+        )
+      )
+    )
+
+    // when
+    val result = TreeToTypeScript.apply(tree)
+
+    // then
+    result.format shouldBe List(
+      "const rootApi = api.root.addResource('api');",
+      "",
+      "const rootApiIdParam = rootApi.addResource('{id}');",
+      "",
+      "// DELETE /api/{id}/name",
+      "const rootApiIdParamName = rootApiIdParam.addResource('name');",
+      "rootApiIdParamName.addMethod('DELETE');",
+      "",
+      "const rootApiId = rootApi.addResource('id');",
+      "",
+      "// DELETE /api/id/{name}",
+      "const rootApiIdNameParam = rootApiId.addResource('{name}');",
+      "rootApiIdNameParam.addMethod('DELETE');",
     ).format
   }
 }

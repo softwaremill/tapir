@@ -59,9 +59,4 @@ class RequestTest extends AnyFunSuite with Matchers {
     val e = endpoint.in("books!")
     assert(Request.fromEndpoint(e).isEmpty)
   }
-
-  test("unsupported method") {
-    val e = endpoint.trace.in("var")
-    assert(Request.fromEndpoint(e).isEmpty)
-  }
 }

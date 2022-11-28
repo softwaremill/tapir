@@ -10,7 +10,7 @@ case class StackFile(
     memorySize: Int
 ) {
   // productElementNames does not work with Scala 2.12
-  def getFields(): List[String] = List(
+  def getFields: List[String] = List(
     "apiName",
     "lambdaName",
     "runtime",

@@ -13,7 +13,7 @@ object Method {
   case object CONNECT extends Method
   case object TRACE extends Method
 
-  implicit val userOrdering: Ordering[Method] = Ordering.by[Method, Int] {
+  implicit val methodOrdering: Ordering[Method] = Ordering.by[Method, Int] {
     case GET     => 0
     case POST    => 1
     case PUT     => 2
