@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.2.3"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.2.3"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -65,7 +65,7 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.2.3"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -88,8 +88,8 @@ val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Booksho
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
-The documentation is generated in a large part basing on [schemas](../endpoint/codecs.md#schemas). Schemas can be
-[automatically derived and customised](../endpoint/schemas.md).
+The documentation is generated in a large part basing on [schemas](../endpoint/schemas.md). Schemas can be automatically 
+derived and customised.
 
 Quite often, you'll need to define the servers, through which the API can be reached. To do this, you can modify the
 returned `OpenAPI` case class either directly or by using a helper method:
@@ -126,6 +126,34 @@ import sttp.apispec.openapi.circe._
 println(Printer.spaces2.print(docs.asJson))
 ```
 
+### Support for OpenAPI 3.1.0
+
+Generating OpenAPI documentation compatible with 3.1.0 specifications is a matter of using a different encoder.
+For example, generating the OpenAPI 3.1.0 YAML string can be achieved by performing the following steps:
+
+Firstly add dependencies:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.2.3"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
+```
+
+and generate the documentation by importing valid extension methods and explicitly specifying the "3.1.0" version in the OpenAPI model:
+```scala
+import sttp.apispec.openapi.OpenAPI
+import sttp.apispec.openapi.circe.yaml._ // for `toYaml3_1` extension method // for `toYaml3_1` extension method
+import sttp.tapir._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+
+case class Book(id: Option[Long], title: Option[String])
+
+val booksListing = endpoint.in(path[String]("bookId"))
+
+val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
+  .openapi("3.1.0") // "3.1.0" version explicitly specified // "3.1.0" version explicitly specified
+  
+println(docs.toYaml3_1) // OpenApi 3.1.0 YAML string would be printed to the console
+```
+
 ## Exposing generated OpenAPI documentation
 
 Exposing the OpenAPI can be done using [Swagger UI](https://swagger.io/tools/swagger-ui/) or
@@ -136,12 +164,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.2.3"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.2.3"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -261,10 +289,14 @@ import io.circe.generic.auto._
 
 import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class FruitAmount(fruit: String, amount: Int)
 
 case class MyExtension(string: String, int: Int)
+
+implicit val fruitAmountSchemaWithMyExtension: Schema[FruitAmount] =
+  Schema.derived[FruitAmount].docsExtension("hello", MyExtension("world", 42))
 
 val sampleEndpoint =
   endpoint.post

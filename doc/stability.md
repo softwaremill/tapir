@@ -64,6 +64,7 @@ The modules are categorised using the following levels:
 | refined          | stabilising  |
 | zio              | experimental |
 | zio1             | stabilising  |
+| zio-prelude      | experimental |
 
 ## JSON modules
 

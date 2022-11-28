@@ -18,6 +18,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
+  * [gRPC](grpc.md)
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
   * [sttp](client/sttp.md)
@@ -46,10 +47,10 @@ for a more detailed description of how tapir works!
 
    <iframe
      frameborder=0
-     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
      src="https://adopt-tapir.softwaremill.com/embedded-form"
      width="100%"
-     height="590"
+     height="603"
    ></iframe>
 ```
 
@@ -74,7 +75,7 @@ Thank you!
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.adobe.com" title="Adobe"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/adobe.png" alt="Adobe" width="160"/></a>
-<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
+<a href="https://swisscom.com" title="Swisscom"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swisscom.svg" alt="Swisscom" width="160"/></a>
 <a href="https://swissborg.com" title="Swissborg"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swissborg.png" alt="Swissborg" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -93,9 +94,9 @@ Thank you!
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<div></div>
 <a href="http://www.broad.app/" title="Broad"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a>
-<div></div>
+<a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a>
+<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
 </div>
 
 ## Code teaser
@@ -197,9 +198,11 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/codecs
    endpoint/customtypes
    endpoint/schemas
+   endpoint/enumerations
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/xml
    endpoint/forms
    endpoint/security
    endpoint/streaming
@@ -261,6 +264,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    other_interpreters
    mytapir
+   grpc
    troubleshooting
    migrating
    goals

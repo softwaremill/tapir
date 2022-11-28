@@ -8,14 +8,13 @@ You can generate a simple project using tapir using [adopt-tapir](https://adopt-
 
 ## Third-party examples
 
-To see an example project using tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
-using tapir and http4s.
-
-For a quick start using http4s and tapir you can use [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8).
-A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-tapir.g8.git`
+* http4s interpreter: [todo-backend](https://github.com/lolgab/snunit-tapir-example)
+* quickstart using http4s: [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8). A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-tapir.g8.git`
+* Scala Native application, [using Nginx Unit](https://github.com/lolgab/snunit-tapir-example).
 
 ## Blogs, articles
 
+* [Migrating from Akka HTTP to tapir](https://softwaremill.com/migrating-from-akka-http-to-tapir/)
 * [Tapir 1.0 released](https://softwaremill.com/tapir-1-0-released/)
 * [Security improvements in tapir 0.19](https://softwaremill.com/security-improvements-in-tapir-0-19/)
 * [Tapir serverless: a proof of concept](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)

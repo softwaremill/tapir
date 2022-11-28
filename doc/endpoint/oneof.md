@@ -11,7 +11,7 @@ Outputs with multiple variants can be specified using the `oneOf` output. Each v
 variant. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the variants 
 are implementing case classes.
 
-Each one-of variant needs an `appliesTo` function to determine at run-time, if the variant should be used for a given 
+Each one-of variant needs an `appliesTo` function to determine at run-time if the variant should be used for a given 
 value. This function is inferred at compile time when using `oneOfVariant`, but can also be provided by hand, or if
 the compile-time inference fails, using one of the other factory methods (see below). A catch-all variant can be defined
 using `oneOfDefaultVariant`, and should be placed as the last variant in the list of possible variants.
@@ -209,7 +209,7 @@ However, this makes it impossible to use streaming bodies in `oneOf` (via `oneOf
 require normal input/outputs as parameters. To bypass this limitation, a `.toEndpointIO` method is available
 on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the streaming requirement. This decreases
 type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
-endpoints, which require including streaming bodies in output variants.
+endpoints which require including streaming bodies in output variants.
 
 ```eval_rst
 .. note::

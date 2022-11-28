@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 import sttp.tapir.{Defaults, TapirFile}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 final case class ArmeriaFutureServerOptions(
@@ -20,7 +20,7 @@ final case class ArmeriaFutureServerOptions(
 
 object ArmeriaFutureServerOptions {
 
-  val defaultServerLog: ServerLog[Future] = DefaultServerLog[Future](
+  val defaultServerLog: DefaultServerLog[Future] = DefaultServerLog[Future](
     doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog,
     doLogAllDecodeFailures = debugLog,

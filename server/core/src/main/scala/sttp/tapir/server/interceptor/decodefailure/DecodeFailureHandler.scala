@@ -247,10 +247,10 @@ object DefaultDecodeFailureHandler {
               s"expected $valueName to have length greater than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
             case m: Validator.MaxLength[T] =>
               s"expected $valueName to have length less than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
-            case m: Validator.MinSize[T, Iterable] =>
-              s"expected size of $valueName to be greater than or equal to ${m.value}, but got ${ve.invalidValue.size}"
-            case m: Validator.MaxSize[T, Iterable] =>
-              s"expected size of $valueName to be less than or equal to ${m.value}, but got ${ve.invalidValue.size}"
+            case m: Validator.MinSize[T, Iterable] @unchecked =>
+              s"expected size of $valueName to be greater than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
+            case m: Validator.MaxSize[T, Iterable] @unchecked =>
+              s"expected size of $valueName to be less than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
             case Validator.Custom(_, _) => s"expected $valueName to pass validation, but got: ${quoteIfString(ve.invalidValue)}"
             case Validator.Enumeration(possibleValues, encode, _) =>
               val encodedPossibleValues =
@@ -278,6 +278,11 @@ object DefaultDecodeFailureHandler {
     private def quoteIfString(v: Any): Any = v match {
       case s: String => s""""$s""""
       case _         => v
+    }
+
+    private def size(v: Any): Any = v match {
+      case i: Iterable[_] => i.size
+      case _              => v
     }
   }
 }

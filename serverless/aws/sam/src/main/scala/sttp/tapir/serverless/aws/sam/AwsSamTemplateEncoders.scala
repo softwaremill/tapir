@@ -20,6 +20,7 @@ object AwsSamTemplateEncoders {
     e => Json.fromJsonObject(encoder(e).asJson.asObject.get.add("Type", Json.fromString("HttpApi")))
   }
 
+  implicit val encoderCorsConfiguration: Encoder[CorsConfiguration] = deriveEncoder[CorsConfiguration]
   implicit val encoderHttpProperties: Encoder[HttpProperties] = deriveEncoder[HttpProperties]
   implicit val encoderFunctionImageProperties: Encoder[FunctionImageProperties] = deriveEncoder[FunctionImageProperties]
   implicit val encoderFunctionCodeProperties: Encoder[FunctionCodeProperties] = deriveEncoder[FunctionCodeProperties]

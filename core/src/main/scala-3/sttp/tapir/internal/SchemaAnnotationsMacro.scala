@@ -73,6 +73,6 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) }
       )
 
-    transformations.foldLeft('{ SchemaAnnotations[T](None, None, None, None, None, None, None, Nil, Nil) })((sa, t) => t(sa))
+    transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))
   }
 }

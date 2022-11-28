@@ -9,13 +9,13 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.2.3"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.2.3"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -46,7 +46,7 @@ example:
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.{Http, Request, Response}
+import zio.http.{Http, Request, Response}
 import zio._
 
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =

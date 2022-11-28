@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx.zio
 
 import io.vertx.core.logging.{Logger, LoggerFactory}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.{Defaults, TapirFile}
@@ -35,7 +35,7 @@ object VertxZioServerOptions {
 
   implicit def default[R]: VertxZioServerOptions[RIO[R, *]] = customiseInterceptors.options
 
-  def defaultServerLog[R](log: Logger): ServerLog[RIO[R, *]] = {
+  def defaultServerLog[R](log: Logger): DefaultServerLog[RIO[R, *]] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(log)(_, None),
       doLogWhenHandled = debugLog(log),

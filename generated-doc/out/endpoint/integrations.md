@@ -14,7 +14,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.2.3"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -26,7 +26,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.2.3"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -47,39 +47,12 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.2.3"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum._`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
 
 This will bring into scope implicit values for values extending `*EnumEntry`.
-
-## Enumeration integration
-
-There is no library for the use of the build in scala `Enumeration`, but it can be implemented by hand.
-
-The example code below will generate [enums](https://swagger.io/docs/specification/data-models/enums/) to the open-api documentation.
-
-```scala
-import sttp.tapir._
-
-trait EnumHelper { e: Enumeration =>
-  import io.circe._
-
-  implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
-  implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
-
-  // needs to be a def or lazy val so that the enumeration values are available!
-  implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
-}
-object Color extends Enumeration with EnumHelper {
-  type Color = Value
-  val Blue = Value("blue")
-  val Red   = Value("red")
-}
-``` 
-
-Tapir `Schema` for any `Enumeration.Value` can also be auto or semi-auto derived using `import sttp.tapir.generic.auto._` or `Schema.derivedEnumerationValue`.
 
 ## NewType integration
 
@@ -87,7 +60,7 @@ If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapi
 schemas for types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.2.3"
 ```
 
 Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.newtype.TapirCodecNewType` trait to bring the implicit values into scope.
@@ -98,10 +71,48 @@ If you use [monix newtypes](https://github.com/monix/newtypes), the `tapir-monix
 schemas for types which extend `NewtypeWrapped` and `NewsubtypeWrapped` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.2.3"
 ```
 
 Then, `import sttp.tapir.codec.monix.newtype._`, or extend the `sttp.tapir.codec.monix.newtype.TapirCodecMonixNewType` trait to bring the implicit values into scope.
+
+## ZIO Prelude Newtype integration
+
+If you use [ZIO Prelude Newtypes](https://zio.github.io/zio-prelude/docs/newtypes/), the `tapir-zio-prelude` module will provide implicit codecs and
+schemas for types defined using `Newtype` and `Subtype` as long as a codec and a schema for the underlying type already exists:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "1.2.3"
+```
+
+Then, mix in `sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport` into your newtype to bring the implicit values into scope:
+
+```scala
+import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Schema
+import sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport
+import zio.prelude.Newtype
+
+object Foo extends Newtype[String] with TapirNewtypeSupport[String]
+type Foo = Foo.Type
+
+implicitly[Schema[Foo]]
+implicitly[PlainCodec[Foo]]
+```
+
+Or use the `TapirNewtype` helper to derive a codec or a schema without modifying the newtype:
+```scala
+import sttp.tapir.codec.zio.prelude.newtype.TapirNewtype
+
+object Bar extends Newtype[String]
+type Bar = Bar.Type
+
+// Explicitly provide the base type of your newtype when instantiating the helper, in this case, String.
+val BarSupport = TapirNewtype[String](Bar)
+import BarSupport._
+implicitly[Schema[Bar]]
+implicitly[PlainCodec[Bar]]
+```
 
 ## Derevo integration
 
@@ -110,7 +121,7 @@ For details refer to [derevo documentation](https://github.com/tofu-tf/derevo#in
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.1.1"
+"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.2.3"
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:

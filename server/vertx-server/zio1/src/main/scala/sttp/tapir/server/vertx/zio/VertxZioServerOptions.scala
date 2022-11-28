@@ -36,7 +36,7 @@ object VertxZioServerOptions {
 
   implicit def default[R <: Blocking]: VertxZioServerOptions[RIO[R, *]] = customiseInterceptors.options
 
-  def defaultServerLog[R](log: Logger): ServerLog[RIO[R, *]] = {
+  def defaultServerLog[R](log: Logger): DefaultServerLog[RIO[R, *]] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(log)(_, None),
       doLogWhenHandled = debugLog(log),

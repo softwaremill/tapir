@@ -5,10 +5,12 @@ import sttp.tapir.ztapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.zio._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.HttpApp
-import zhttp.service.Server
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
+
+import java.net.InetSocketAddress
 
 object HelloWorldZioHttpServer extends ZIOAppDefault {
   // a simple string-only endpoint
@@ -38,5 +40,5 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // starting the server
   override def run =
-    Server.start(8090, app).exitCode
+    Server.serve(app).provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8090))) >>> Server.default).exitCode
 }
