@@ -66,6 +66,12 @@ output the url of the created API Gateway which you can call followed by `/api/h
 
 To destroy all the created resources run `terraform destroy`.
 
+### CDK
+
+To run the example using AWS CDK you will need an AWS account, or just Docker if you want to run it locally.
+
+* Run `runMain sttp.tapir.serverless.aws.examples.CdkAppExample` to generate CDK application template.
+
 ## Scala.js interpreter
 
 `LambdaApiJsExample` and `LambdaApiJsResourceExample` demonstrate how to create an API route,

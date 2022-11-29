@@ -19,10 +19,12 @@ export class TapirCdkStack extends cdk.Stack {
       proxy: false
     });
 
+    // GET /hello
     const hello = api.root.addResource('hello');
     hello.addMethod('GET');
 
-    const helloId = hello.addResource('{id}');
-    helloId.addMethod('GET');
+    // GET /hello/{id}
+    const helloIdParam = hello.addResource('{id}');
+    helloIdParam.addMethod('GET');
   }
 }

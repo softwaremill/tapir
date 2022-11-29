@@ -9,5 +9,17 @@ case class AwsCdkOptions(
     lambdaName: String = "TapirHandler",
     templateFilePath: String = "/app-template/lib/stack-template.ts",
     timeout: FiniteDuration = 20.seconds,
-    memorySizeInMB: Int = 2048
+    memorySizeInMB: Int = 2048,
+    runtime: AwsCdkOptions.Runtime = AwsCdkOptions.Runtime.Java11,
+    outputDir: String = "cdk"
 )
+
+object AwsCdkOptions {
+  sealed trait Runtime
+
+  object Runtime {
+    case object Java8 extends Runtime
+    case object Java8Corretto extends Runtime
+    case object Java11 extends Runtime
+  }
+}
