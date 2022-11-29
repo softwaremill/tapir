@@ -11,8 +11,6 @@ import zio.http.{Server, ServerConfig}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault}
 
-import java.net.InetSocketAddress
-
 object RedocZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
 
@@ -32,7 +30,10 @@ object RedocZioHttpServer extends ZIOAppDefault {
       printLine("Press any key to exit ...") *>
       Server
         .serve(petRoutes ++ redocRoutes)
-        .provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8080))) >>> Server.default)
+        .provide(
+          ServerConfig.live(ServerConfig.default.port(8080)),
+          Server.live,
+        )
         .fork
         .flatMap { fiber =>
           readLine *> fiber.interrupt

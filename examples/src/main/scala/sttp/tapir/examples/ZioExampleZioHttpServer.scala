@@ -11,8 +11,6 @@ import zio.http.HttpApp
 import zio.http.{Server, ServerConfig}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
-import java.net.InetSocketAddress
-
 object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
 
@@ -44,5 +42,11 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
 
   override def run: URIO[Any, ExitCode] =
-    Server.serve(routes).provide(ServerConfig.live(ServerConfig().binding(new InetSocketAddress(8080))) >>> Server.default).exitCode
+    Server
+      .serve(routes)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(8080)),
+        Server.live,
+      )
+      .exitCode
 }
