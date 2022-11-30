@@ -19,8 +19,8 @@ private[core] object Tree {
      helloId.addMethod('GET');
    */
   def fromRequests(urls: List[Request]): Tree = {
-    urls.foldLeft(List.empty[Node]) { (acc, request) => // rename
-      add(acc, request.path, request.method) // fixme what if empty?
+    urls.foldLeft(List.empty[Node]) { (acc, request) =>
+      add(acc, request.path, request.method)
     }
   }
 

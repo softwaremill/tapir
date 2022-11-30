@@ -1,34 +1,36 @@
 package sttp.tapir.serverless.aws.cdk.core
 
+import org.scalatest.OptionValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.serverless.aws.cdk.core.Segment._
 
-class SegmentTest extends AnyFunSuite with Matchers {
-
+class SegmentTest extends AnyFunSuite with Matchers with OptionValues {
   test("building fixed segment") {
     val url = Segment("hello")
-    assert(url.get.isInstanceOf[Fixed])
+    url.value shouldBe a[Fixed]
   }
 
   test("with bracket") {
     val url = Segment("hel{ooo}")
-    assert(url.get.isInstanceOf[Fixed]) // this is ok (todo: explain why)
+    url.value shouldBe a[Fixed]
   }
 
-  test("empty") {
-    assert(Segment("").isEmpty)
+  test("empty string should return None") {
+    Segment("") shouldBe None
   }
 
   test("fixed uppercase") {
-    val url = Segment("Hello")
-    assert(url.get.raw == "Hello")
-    assert(url.get.toString == "Hello")
+    val url = Segment("Hello").value
+
+    url.raw shouldBe "Hello"
+    url.toString shouldBe "Hello"
   }
 
   test("parameter uppercase") {
-    val url = Segment("{Hello}")
-    assert(url.get.raw == "Hello")
-    assert(url.get.toString == "{Hello}")
+    val url = Segment("{Hello}").value
+
+    url.raw shouldBe "Hello"
+    url.toString shouldBe "{Hello}"
   }
 }

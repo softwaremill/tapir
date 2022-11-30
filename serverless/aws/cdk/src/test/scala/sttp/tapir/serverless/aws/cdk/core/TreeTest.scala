@@ -203,4 +203,9 @@ class TreeTest extends AnyFunSuite with Matchers {
     val tree = Tree.fromRequests(requests)
     assert(expected.equals(tree))
   }
+
+  test("Tree is empty when there are no request to process") {
+    val requests = List.empty[Request]
+    assert(Tree.fromRequests(requests) == List.empty)
+  }
 }
