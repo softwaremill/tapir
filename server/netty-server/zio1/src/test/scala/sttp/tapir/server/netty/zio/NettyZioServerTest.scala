@@ -21,8 +21,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
           val interpreter = new NettyZioTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
-            new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests()
+          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

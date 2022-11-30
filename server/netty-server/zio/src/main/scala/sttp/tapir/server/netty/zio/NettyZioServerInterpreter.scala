@@ -1,17 +1,19 @@
 package sttp.tapir.server.netty.zio
 
 import sttp.tapir.server.netty.Route
-import sttp.tapir.server.netty.internal.NettyServerInterpreter
+import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
+import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
-import zio.RIO
+import zio.{CancelableFuture, RIO, Runtime, Unsafe}
 
 trait NettyZioServerInterpreter[R] {
   def nettyServerOptions: NettyZioServerOptions[R, _]
 
-  def toRoute(ses: List[ZServerEndpoint[R, Any]]): Route[RIO[R, *]] = {
+  def toRoute(ses: List[ZServerEndpoint[R, Any]])(implicit runtime: Runtime[R]): Route[RIO[R, *]] = {
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
+    val runAsync = new ZioRunAsync(runtime)
     NettyServerInterpreter
-      .toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile)
+      .toRoute(ses, nettyServerOptions.interceptors, nettyServerOptions.createFile, nettyServerOptions.deleteFile, runAsync)
       // we want to log & return a 500 in case of defects as well
       .andThen(_.resurrect)
   }
@@ -27,5 +29,12 @@ object NettyZioServerInterpreter {
     new NettyZioServerInterpreter[R] {
       override def nettyServerOptions: NettyZioServerOptions[R, _] = options
     }
+  }
+
+  private[netty] class ZioRunAsync[R](runtime: Runtime[R]) extends RunAsync[RIO[R, *]] {
+    override def apply[T](f: => RIO[R, T]): Unit = Unsafe.unsafe(implicit u => {
+      val value: CancelableFuture[T] = runtime.unsafe.runToFuture(f)
+      value
+    })
   }
 }
