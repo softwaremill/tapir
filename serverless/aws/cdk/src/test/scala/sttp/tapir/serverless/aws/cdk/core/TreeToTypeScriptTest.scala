@@ -267,7 +267,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
       "",
       "// DELETE /api/id/{name}",
       "const rootApiIdNameParam = rootApiId.addResource('{name}');",
-      "rootApiIdNameParam.addMethod('DELETE');",
+      "rootApiIdNameParam.addMethod('DELETE');"
     ).format
   }
 }

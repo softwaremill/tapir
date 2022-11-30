@@ -3,31 +3,28 @@ package sttp.tapir.serverless.aws.cdk
 import cats.effect._
 import cats.syntax.all._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.cdk.core.{ParseStackTemplate, Request, StackFile}
+import sttp.tapir.serverless.aws.cdk.core.{AppTemplateFiles, ParseStackTemplate, Request, StackFile}
 
 class CdkAppTemplate[F[_]: Sync](es: Set[ServerEndpoint[Any, F]], options: AwsCdkOptions) {
-  import CdkAppTemplate._
-
-  def generate(): F[Either[Throwable, Unit]] = {
+  def generate(): F[Either[Throwable, Unit]] =
     serverEndpointsToRequests(es) match {
       case Nil => Sync[F].delay(Left(new RuntimeException("No single valid endpoint to generate stack")))
       case rs =>
-        ParseStackTemplate.apply[F](options.templateFilePath, StackFile.fromAwsCdkOptions(options), rs).as(().asRight[Throwable])
+        for {
+          files <- new AppTemplateFiles[F](sourceDir = "/app-template", outputDir = options.outputDir).pure[F]
+          _ <- files.clearOutputDir()
+          _ <- files.copyStaticFiles()
+          _ <- files.renderStackTemplate(
+            options.templateFilePath,
+            s => ParseStackTemplate.apply[F](content = s, StackFile.fromAwsCdkOptions(options), rs)
+          )
+        } yield ().asRight[Throwable]
     }
-  }
 
   private def serverEndpointsToRequests(es: Set[ServerEndpoint[Any, F]]): List[Request] =
     es.flatMap(e => Request.fromEndpoint(e.endpoint)).toList
 }
 
 object CdkAppTemplate {
-  private[cdk] val files = Map(
-    "bin/tapir-cdk-stack.ts" -> "bin/tapir-cdk-stack.ts",
-    "gitignore" -> ".gitignore",
-    "cdk.json" -> "cdk.json",
-    "jest.config.js" -> "jest.config.js",
-    "package.json" -> "package.json",
-    "readme.md" -> "readme.md",
-    "tsconfig.json" -> "tsconfig.json"
-  )
+  def apply[F[_]: Sync](es: Set[ServerEndpoint[Any, F]], options: AwsCdkOptions): CdkAppTemplate[F] = new CdkAppTemplate(es, options)
 }

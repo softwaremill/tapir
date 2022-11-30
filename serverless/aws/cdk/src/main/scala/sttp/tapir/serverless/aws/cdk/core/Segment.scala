@@ -8,7 +8,7 @@ sealed abstract class Segment protected (value: String) {
 
 object Segment {
 
-  case class Fixed private(value: String) extends Segment(value) {
+  case class Fixed private (value: String) extends Segment(value) {
     override def toString: String = raw
   }
 
@@ -19,7 +19,7 @@ object Segment {
     }
   }
 
-  case class Parameter private(value: String) extends Segment(value) {
+  case class Parameter private (value: String) extends Segment(value) {
     override def toString: String = s"{$raw}"
   }
 

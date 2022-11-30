@@ -44,9 +44,9 @@ object StackFile {
       apiName = options.apiName,
       lambdaName = options.lambdaName,
       runtime = options.runtime match {
-        case Runtime.Java8 => s"$tsRuntimePackage.JAVA_8"
+        case Runtime.Java8         => s"$tsRuntimePackage.JAVA_8"
         case Runtime.Java8Corretto => s"$tsRuntimePackage.JAVA_8_CORRETTO"
-        case Runtime.Java11 => s"$tsRuntimePackage.JAVA_11"
+        case Runtime.Java11        => s"$tsRuntimePackage.JAVA_11"
       },
       jarPath = options.codeUri,
       handler = options.handler,

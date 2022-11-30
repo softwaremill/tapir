@@ -67,9 +67,9 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
       ).flatten
 
     // expect
-    template.flatMap { content =>
+    template.flatMap { t =>
       ParseStackTemplate
-        .apply[IO](content, values, requests)
+        .apply[IO](content = t, stackFile = values, rs = requests)
         .map(parsedTemplate => parsedTemplate shouldBe expected)
     }
   }

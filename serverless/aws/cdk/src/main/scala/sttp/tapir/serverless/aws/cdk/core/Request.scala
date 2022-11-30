@@ -9,7 +9,6 @@ private[cdk] object Request {
     for {
       e <- endpoint.method
       method <- Method(e.toString())
-      // todo: check if cdk works with leading backslash
       path = endpoint.showPathTemplate(showQueryParam = None).substring(1)
     } yield Request(method, path.split("/").flatMap(Segment.apply).toList)
   }
