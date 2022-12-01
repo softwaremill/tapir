@@ -16,9 +16,10 @@ object NettyServerInterpreter {
       ses: List[ServerEndpoint[Any, F]],
       interceptors: List[Interceptor[F]],
       createFile: ServerRequest => F[TapirFile],
-      deleteFile: TapirFile => F[Unit]
+      deleteFile: TapirFile => F[Unit],
+      runAsync: RunAsync[F]
   ): Route[F] = {
-    implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener
+    implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
     val serverInterpreter = new ServerInterpreter[Any, F, NettyResponse, NoStreams](
       FilterServerEndpoints(ses),
       new NettyRequestBody(createFile),

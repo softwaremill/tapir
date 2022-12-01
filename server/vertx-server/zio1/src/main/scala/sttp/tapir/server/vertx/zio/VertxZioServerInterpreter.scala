@@ -5,10 +5,10 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.RioFromVFuture
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.streams._
 import sttp.tapir.server.vertx.VertxBodyListener
@@ -33,7 +33,8 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
-    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] = new VertxBodyListener[RIO[R, *]]
+    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] =
+      new VertxBodyListener[RIO[R, *]](new ZioRunAsync(runtime))
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
       _ => List(e),
@@ -117,6 +118,10 @@ object VertxZioServerInterpreter {
 
   private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {
     def apply[T](f: => Future[T]): RIO[R, T] = f.asRIO
+  }
+
+  private[vertx] class ZioRunAsync[R](runtime: Runtime[R]) extends RunAsync[RIO[R, *]] {
+    override def apply[T](f: => RIO[R, T]): Unit = runtime.unsafeRunAsync(f)(_ => ())
   }
 
   implicit class VertxFutureToRIO[A](f: => Future[A]) {

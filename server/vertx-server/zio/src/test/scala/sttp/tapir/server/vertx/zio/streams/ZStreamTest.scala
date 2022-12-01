@@ -220,10 +220,10 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
   }
 
   private def unsafeRunSync[T](task: Task[T]): Exit[Throwable, T] =
-    Unsafe.unsafeCompat { implicit u =>
+    Unsafe.unsafe { implicit u =>
       runtime.unsafe.run(task)
     }
 
   private def unsafeToFuture[T](task: Task[T]): CancelableFuture[T] =
-    Unsafe.unsafeCompat(implicit u => runtime.unsafe.runToFuture(task))
+    Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(task))
 }

@@ -1,12 +1,10 @@
-
 import sttp.tapir._
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir.ZServerEndpoint
-import zhttp.http.HttpApp
-import zhttp.service.server.ServerChannelFactory
-import zhttp.service.{EventLoopGroup, Server}
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
 import zio.{Task, ZIO, _}
 
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
@@ -27,7 +25,7 @@ object ZioMetricsExample extends ZIOAppDefault {
   val metrics: ZioMetrics[Task] = ZioMetrics.default[Task]()
   val metricsInterceptor: MetricsRequestInterceptor[Task] = metrics.metricsInterceptor()
 
-  //noinspection DuplicatedCode
+  // noinspection DuplicatedCode
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
@@ -36,13 +34,15 @@ object ZioMetricsExample extends ZIOAppDefault {
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
     (for {
-      serverStart <- Server(app).withPort(port).make
-      _ <- Console.printLine(s"Server started at http://localhost:${serverStart.port}. Press ENTER key to exit.")
+      serverPort <- Server.install(app)
+      _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
       _ <- Console.readLine
-    } yield serverStart)
-      .provideSomeLayer(EventLoopGroup.auto(0) ++ ServerChannelFactory.auto ++ Scope.default)
+    } yield serverPort)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(port)),
+        Server.live,
+      )
       .exitCode
   }
-
 
 }
