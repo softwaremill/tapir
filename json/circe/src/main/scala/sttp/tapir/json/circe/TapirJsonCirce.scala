@@ -17,6 +17,9 @@ trait TapirJsonCirce {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
+
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decodeAccumulating[T](s) match {

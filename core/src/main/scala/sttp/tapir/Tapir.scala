@@ -27,8 +27,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     EndpointInput.PathCapture(Some(name), implicitly, EndpointIO.Info.empty)
   def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idPlain(), EndpointIO.Info.empty)
 
+  /** A query parameter in any format, read using the given `codec`. */
+  def anyQuery[T, CF <: CodecFormat](name: String, codec: Codec[List[String], T, CF]): EndpointInput.Query[T] =
+    EndpointInput.Query(name, None, codec, EndpointIO.Info.empty)
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
-    EndpointInput.Query(name, None, implicitly, EndpointIO.Info.empty)
+    anyQuery[T, TextPlain](name, implicitly)
   def queryParams: EndpointInput.QueryParams[QueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
 
   def header[T: Codec[List[String], *, TextPlain]](name: String): EndpointIO.Header[T] =

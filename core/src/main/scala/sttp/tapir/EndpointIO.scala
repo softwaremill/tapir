@@ -196,11 +196,11 @@ object EndpointInput extends EndpointInputMacros {
     override def show = s"/*"
   }
 
-  case class Query[T](name: String, flagValue: Option[T], codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
+  case class Query[T](name: String, flagValue: Option[T], codec: Codec[List[String], T, CodecFormat], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Query[X]
     override private[tapir] type L = List[String]
-    override private[tapir] type CF = TextPlain
-    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] =
+    override private[tapir] type CF = CodecFormat
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, CodecFormat], i: Info[U]): Query[U] =
       copy(flagValue = flagValue.map(t => c.decode(codec.encode(t))).collect { case DecodeResult.Value(u) => u }, codec = c, info = i)
     override def show: String = addValidatorShow(s"?$name", codec.schema)
 

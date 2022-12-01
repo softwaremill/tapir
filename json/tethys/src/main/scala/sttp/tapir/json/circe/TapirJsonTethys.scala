@@ -14,6 +14,9 @@ trait TapirJsonTethys {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: JsonWriter: JsonReader: Schema](name: String): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
+
   implicit def tethysCodec[T: JsonReader: JsonWriter: Schema]: JsonCodec[T] =
     Codec.json(s =>
       s.jsonAs[T] match {

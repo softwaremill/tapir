@@ -8,7 +8,6 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
-import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
@@ -17,6 +16,9 @@ trait TapirJsonSpray {
   def jsonBodyWithRaw[T: JsonFormat: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
     implicitly[JsonCodec[(String, T)]]
   )
+
+  def jsonQuery[T: JsonFormat: Schema](name: String): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
 
   implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>

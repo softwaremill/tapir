@@ -15,6 +15,9 @@ trait TapirJsonuPickle {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: ReadWriter: Schema](name: String): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
+
   implicit def readWriterCodec[T: ReadWriter: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>
       Try(read[T](s)) match {

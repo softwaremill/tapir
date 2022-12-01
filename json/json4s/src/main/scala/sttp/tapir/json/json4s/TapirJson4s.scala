@@ -5,7 +5,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType.SCoproduct
-import sttp.tapir.{Codec, EndpointIO, Schema, stringBodyUtf8AnyFormat}
+import sttp.tapir._
 
 trait TapirJson4s {
   def jsonBody[T: Manifest: Schema](implicit formats: Formats, serialization: Serialization): EndpointIO.Body[String, T] =
@@ -15,6 +15,9 @@ trait TapirJson4s {
     stringBodyUtf8AnyFormat(
       implicitly[JsonCodec[(String, T)]]
     )
+
+  def jsonQuery[T: Manifest: Schema](name: String)(implicit formats: Formats, serialization: Serialization): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
 
   implicit def json4sCodec[T: Manifest: Schema](implicit formats: Formats, serialization: Serialization): JsonCodec[T] =
     Codec.json[T] { s =>

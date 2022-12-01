@@ -1,10 +1,10 @@
 package sttp.tapir.json.jsoniter
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, _}
+import com.github.plokhotnyuk.jsoniter_scala.core._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, Value}
-import sttp.tapir.{EndpointIO, Schema, stringBodyUtf8AnyFormat}
+import sttp.tapir._
 
 import scala.util.{Failure, Success, Try}
 
@@ -14,6 +14,9 @@ trait TapirJsonJsoniter {
   def jsonBodyWithRaw[T: JsonValueCodec: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
     implicitly[JsonCodec[(String, T)]]
   )
+
+  def jsonQuery[T: JsonValueCodec: Schema](name: String): EndpointInput.Query[T] =
+    anyQuery[T, CodecFormat.Json](name, implicitly)
 
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
