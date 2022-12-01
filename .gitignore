@@ -5,6 +5,7 @@
 .history
 .lib/
 /cdk
+/aws-cdk-tests
 dist/*
 target/
 lib_managed/
