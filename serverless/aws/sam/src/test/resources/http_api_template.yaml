@@ -33,6 +33,10 @@ Resources:
       Runtime: java11
       CodeUri: /somewhere/pet-api.jar
       Handler: pet.api.Handler::handleRequest
+      Environment:
+        Variables:
+          myEnv: foo
+          otherEnv: bar
     Type: AWS::Serverless::Function
   PetApiHttpApi:
     Properties:

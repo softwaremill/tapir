@@ -24,14 +24,15 @@ private[sam] object EndpointsToSamTemplate {
           options.source match {
             case ImageSource(imageUri) =>
               FunctionImageProperties(options.timeout.toSeconds, options.memorySize, apiEvents, imageUri)
-            case cs @ CodeSource(_, _, _) =>
+            case cs @ CodeSource(_, _, _, environment) =>
               FunctionCodeProperties(
                 options.timeout.toSeconds,
                 options.memorySize,
                 apiEvents,
                 cs.runtime,
                 cs.codeUri,
-                cs.handler
+                cs.handler,
+                Environment = if (environment.nonEmpty) Some(EnvironmentCodeProperties(environment)) else None
               )
           }
         ),

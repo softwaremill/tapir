@@ -41,7 +41,8 @@ case class FunctionCodeProperties(
     Events: Map[String, FunctionHttpApiEvent],
     Runtime: String,
     CodeUri: String,
-    Handler: String
+    Handler: String,
+    Environment: Option[EnvironmentCodeProperties]
 ) extends Properties
     with FunctionProperties
 
@@ -67,3 +68,5 @@ case class CorsConfiguration(
     ExposeHeaders: Option[Set[String]],
     MaxAge: Option[Long]
 )
+
+case class EnvironmentCodeProperties(Variables: Map[String, String])
