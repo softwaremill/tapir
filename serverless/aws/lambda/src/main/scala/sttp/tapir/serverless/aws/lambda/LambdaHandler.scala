@@ -11,8 +11,16 @@ import sttp.tapir.server.ServerEndpoint
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 
-//fixme add docs: F is an effect and R is request type (v1 or v2)
-abstract class LambdaHandler[F[_]: Sync, R: Decoder: Upcaster] extends RequestStreamHandler {
+/**
+ * [[LambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
+ *
+ * @tparam F
+ *   The effect type constructor used in by the endpoint.
+ * @tparam R
+ *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]].
+ *   At the moment mapping is required as there is no support for generating API Gateway V2 definitions with AWS CDK v2.
+ */
+abstract class LambdaHandler[F[_]: Sync, R: Decoder: Mapper] extends RequestStreamHandler {
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, F]]
 
@@ -22,7 +30,7 @@ abstract class LambdaHandler[F[_]: Sync, R: Decoder: Upcaster] extends RequestSt
 
     Sync[F].blocking(input.readAllBytes()).flatMap { allBytes =>
       (decode[R](new String(allBytes, StandardCharsets.UTF_8)) match {
-        case Right(awsRequest) => server.toRoute(getAllEndpoints)(implicitly[Upcaster[R]].toV2(awsRequest))
+        case Right(awsRequest) => server.toRoute(getAllEndpoints)(implicitly[Mapper[R]].toV2(awsRequest))
         case Left(e)           => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
       }).flatMap { awsRes =>
         writerResource(Sync[F].delay(output)).use { writer =>
