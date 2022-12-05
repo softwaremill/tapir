@@ -30,6 +30,11 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
 
   it should "replace all variables with proper values" in {
     // given
+    val requests: Seq[Request] = Seq(
+      Request.fromEndpoint(endpoint.get.in("hello")),
+      Request.fromEndpoint(endpoint.get.in("hello" / path[String]("id")))
+    ).flatten
+
     val expected =
       """import * as cdk from 'aws-cdk-lib';
         |import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -61,10 +66,6 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
         |    rootHelloIdParam.addMethod('GET');
         |  }
         |}""".stripMargin
-      val requests = Seq(
-        Request.fromEndpoint(endpoint.get.in("hello")),
-        Request.fromEndpoint(endpoint.get.in("hello" / path[String]("id")))
-      ).flatten
 
     // expect
     template.flatMap { content =>

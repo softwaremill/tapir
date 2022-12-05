@@ -4,13 +4,13 @@ import scala.language.implicitConversions
 
 package object lambda {
 
-  trait Upcaster[A] { //fixme find out better name (converter)
+  trait Mapper[A] {
     def toV2(a: A): AwsRequest
   }
 
-  implicit val upcasterV1: Upcaster[AwsRequestV1] = (a: AwsRequestV1) => a.toV2
+  implicit val lambdaRequestMapperV1: Mapper[AwsRequestV1] = (a: AwsRequestV1) => a.toV2
 
-  implicit val upcasterV2: Upcaster[AwsRequest] = (a: AwsRequest) => a
+  implicit val lambdaRequestMapperV2: Mapper[AwsRequest] = (a: AwsRequest) => a
 
 
   private[lambda] type LambdaResponseBody = (String, Option[Long])
