@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets
  * [[LambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
  *
  * @tparam F
- *   The effect type constructor used in by the endpoint.
+ *   The effect type constructor used in the endpoint.
  * @tparam R
  *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]].
  *   At the moment mapping is required as there is no support for generating API Gateway V2 definitions with AWS CDK v2.
