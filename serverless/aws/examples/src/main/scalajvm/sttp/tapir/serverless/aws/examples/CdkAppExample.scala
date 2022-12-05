@@ -1,7 +1,6 @@
 package sttp.tapir.serverless.aws.examples
 
 import cats.effect._
-import cats.syntax.all._
 import sttp.tapir.serverless.aws.cdk.{AwsCdkInterpreter, AwsCdkOptions}
 
 import scala.concurrent.duration._

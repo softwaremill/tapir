@@ -70,7 +70,14 @@ To destroy all the created resources run `terraform destroy`.
 
 To run the example using AWS CDK you will need an AWS account, or just Docker if you want to run it locally.
 
-* Run `runMain sttp.tapir.serverless.aws.examples.CdkAppExample` to generate CDK application template.
+* First you need to install two things:
+  * [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
+  * [NPM](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+  * [AWS CDK Toolkit](https://docs.aws.amazon.com/cdk/v2/guide/cli.html)
+* Then run assembly task and `runMain sttp.tapir.serverless.aws.examples.CdkAppExample` to generate CDK application template under `cdk` directory
+* Go to `cdk` and run `npm install`
+* To run locally, simply execute `cdk synth`, and `sam local start-api -t cdk.out/TapirCdkStack.template.json --warm-containers EAGER` 
+* To deploy it to AWS you need to have configured aws cli, and then run `cdk deply`
 
 ## Scala.js interpreter
 
