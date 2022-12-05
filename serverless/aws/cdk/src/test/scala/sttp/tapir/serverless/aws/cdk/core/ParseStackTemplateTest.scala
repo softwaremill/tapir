@@ -35,7 +35,7 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
       Request.fromEndpoint(endpoint.get.in("hello" / path[String]("id")))
     ).flatten
 
-    val expected =
+    val expectedContent =
       """import * as cdk from 'aws-cdk-lib';
         |import * as lambda from 'aws-cdk-lib/aws-lambda';
         |import * as apigw from 'aws-cdk-lib/aws-apigateway';
@@ -71,7 +71,7 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
     template.flatMap { content =>
       ParseStackTemplate
         .apply[IO](content, stackFile, requests)
-        .map(parsedTemplate => parsedTemplate shouldBe expected)
+        .map(parsedTemplate => parsedTemplate shouldBe expectedContent)
     }
   }
 }
