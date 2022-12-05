@@ -8,7 +8,7 @@ import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 case class AwsSamOptions(
     namePrefix: String,
     source: FunctionSource,
-    timeout: FiniteDuration = 20.seconds,
+    timeout: FiniteDuration = 10.seconds,
     memorySize: Int = 256,
     httpApi: Option[HttpApiProperties] = None
 )
