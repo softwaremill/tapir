@@ -10,7 +10,7 @@ object AwsCdkAppTemplate extends IOApp.Simple {
 
   val awsCdkOptions: AwsCdkOptions = AwsCdkOptions(
     codeUri = Paths.get("serverless/aws/cdk-tests/target/jvm-2.13/tapir-aws-cdk-tests.jar").toAbsolutePath.toString,
-    handler = "sttp.tapir.serverless.aws.cdk.tests.LambdaApiV1Example::handleRequest",
+    handler = "sttp.tapir.serverless.aws.cdk.tests.CdkTestLambdaHandler::handleRequest",
     memorySizeInMB = 1024,
     outputDir = "aws-cdk-tests"
   )
