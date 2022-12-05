@@ -18,7 +18,7 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
     .fromAutoCloseable[IO, Source](IO.blocking(Source.fromInputStream(getClass.getResourceAsStream("/app-template/lib/stack-template.ts"))))
     .use(s => IO(s.getLines().mkString(System.lineSeparator())))
 
-  private val values = StackFile(
+  private val stackFile = StackFile(
     apiName = "API",
     lambdaName = "TapirHandler",
     runtime = "lambda.Runtime.JAVA_11",
@@ -67,9 +67,9 @@ class ParseStackTemplateTest extends AsyncFlatSpec with Matchers {
       ).flatten
 
     // expect
-    template.flatMap { t =>
+    template.flatMap { content =>
       ParseStackTemplate
-        .apply[IO](content = t, stackFile = values, rs = requests)
+        .apply[IO](content, stackFile, requests)
         .map(parsedTemplate => parsedTemplate shouldBe expected)
     }
   }
