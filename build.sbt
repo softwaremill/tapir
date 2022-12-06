@@ -1209,7 +1209,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http-server" % Versions.finatra,
-      "org.apache.httpcomponents" % "httpmime" % "4.5.13",
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       // Testing
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
