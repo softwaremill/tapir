@@ -15,7 +15,8 @@ case class AwsSamOptions(
 
 sealed trait FunctionSource
 case class ImageSource(imageUri: String) extends FunctionSource
-case class CodeSource(runtime: String, codeUri: String, handler: String) extends FunctionSource
+case class CodeSource(runtime: String, codeUri: String, handler: String, environment: Map[String, String] = Map.empty)
+    extends FunctionSource
 
 case class HttpApiProperties(cors: Option[Cors])
 object HttpApiProperties {
