@@ -22,9 +22,8 @@ object AwsResponse {
 }
 
 /**
-  * I could NOT managed to enforce CDK to use payload version 2.0 At time of this writing no valuable
-  * documentation of aws/apigateway2 exists
-  * @see https://docs.aws.amazon.com/cdk/api/v1/docs/@aws-cdk_aws-apigatewayv2.PayloadFormatVersion.html
+  * As for this moment, CDK v2 does not provide high level typescript classes for generating stack for Api Gateway v2 with Lambda, this
+  * is why we need to use Api Gateway v1, and translate it's request to v2 by hand.
   */
 case class AwsRequestV1(
     resource: String,
