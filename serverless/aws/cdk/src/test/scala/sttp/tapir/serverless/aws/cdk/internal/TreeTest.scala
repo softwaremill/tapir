@@ -1,9 +1,9 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.serverless.aws.cdk.core.Method._
-import sttp.tapir.serverless.aws.cdk.core.Segment._
+import sttp.tapir.serverless.aws.cdk.internal.Method._
+import sttp.tapir.serverless.aws.cdk.internal.Segment._
 
 class TreeTest extends AnyFunSuite with Matchers {
 

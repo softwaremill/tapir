@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.cdk
 import cats.effect._
 import cats.syntax.all._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.cdk.core.{AppTemplateFiles, ParseStackTemplate, Request, StackFile}
+import sttp.tapir.serverless.aws.cdk.internal.{AppTemplateFiles, ParseStackTemplate, Request, StackFile}
 
 class CdkAppTemplate[F[_]: Sync](es: Set[ServerEndpoint[Any, F]], options: AwsCdkOptions) {
   def generate(): F[Either[Throwable, Unit]] =

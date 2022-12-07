@@ -1,12 +1,12 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
-private[core] case class Node(
+private[internal] case class Node(
     name: Segment,
     methods: List[Method] = List.empty[Method],
     children: List[Node] = List.empty[Node]
 )
 
-private[core] object Tree {
+private[internal] object Tree {
   /* TypeScript CDK library requires to declare endpoints in an cascade approach like below.
      This object responsibility is to build unequivocal tree based on all provided urls
 

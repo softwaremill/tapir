@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
 sealed abstract class Segment protected (value: String) {
   def toString: String

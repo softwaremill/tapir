@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
 private[cdk] object TreeToTypeScript {
   def apply(tree: Tree): Seq[String] =

@@ -1,9 +1,9 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
 import org.scalatest.OptionValues
 import org.scalatest.funsuite.AnyFunSuite
 import sttp.tapir._
-import sttp.tapir.serverless.aws.cdk.core.Method._
+import sttp.tapir.serverless.aws.cdk.internal.Method._
 
 class RequestTest extends AnyFunSuite with OptionValues {
   test("url encoding") {

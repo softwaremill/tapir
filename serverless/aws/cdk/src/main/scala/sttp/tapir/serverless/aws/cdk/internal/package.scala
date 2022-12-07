@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.cdk
 
-package object core {
+package object internal {
   type Tree = List[Node]
 
   implicit final class ListStringOps(private val input: List[String]) {

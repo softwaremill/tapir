@@ -1,11 +1,11 @@
-package sttp.tapir.serverless.aws.cdk.core
+package sttp.tapir.serverless.aws.cdk.internal
 
 import org.scalatest.OptionValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.serverless.aws.cdk.core
-import sttp.tapir.serverless.aws.cdk.core.Segment.Parameter
-import sttp.tapir.serverless.aws.cdk.core.Segment.Fixed
+import sttp.tapir.serverless.aws.cdk.internal
+import sttp.tapir.serverless.aws.cdk.internal.Segment.Parameter
+import sttp.tapir.serverless.aws.cdk.internal.Segment.Fixed
 
 class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
   implicit class StringSeqSyntax(l: Seq[String]) {
@@ -36,7 +36,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
     val tree = List(
       Node(
         name = Fixed("api").value,
-        methods = List(core.Method.GET),
+        methods = List(internal.Method.GET),
         children = List.empty
       )
     )
@@ -61,7 +61,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
         children = List(
           Node(
             name = Fixed("hello").value,
-            methods = List(core.Method.GET)
+            methods = List(internal.Method.GET)
           )
         )
       )
@@ -90,11 +90,11 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
         children = List(
           Node(
             name = Fixed("hello").value,
-            methods = List(core.Method.GET),
+            methods = List(internal.Method.GET),
             children = List(
               Node(
                 name = Parameter("name").value,
-                methods = List(core.Method.POST)
+                methods = List(internal.Method.POST)
               )
             )
           )
@@ -124,12 +124,12 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
     val tree = List(
       Node(
         name = Fixed("api").value,
-        methods = List(core.Method.GET),
+        methods = List(internal.Method.GET),
         children = List.empty
       ),
       Node(
         name = Fixed("health-check").value,
-        methods = List(core.Method.GET),
+        methods = List(internal.Method.GET),
         children = List.empty
       )
     )
@@ -162,7 +162,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
             children = List(
               Node(
                 name = Parameter("name").value,
-                methods = List(core.Method.PUT)
+                methods = List(internal.Method.PUT)
               )
             )
           )
@@ -190,7 +190,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
     val tree = List(
       Node(
         name = Fixed("api").value,
-        methods = List(core.Method.GET, core.Method.PATCH),
+        methods = List(internal.Method.GET, internal.Method.PATCH),
         children = List(
           Node(
             name = Fixed("hello").value,
@@ -198,7 +198,7 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
             children = List(
               Node(
                 name = Parameter("id").value,
-                methods = List(core.Method.POST, core.Method.DELETE)
+                methods = List(internal.Method.POST, internal.Method.DELETE)
               )
             )
           )
@@ -237,13 +237,13 @@ class TreeToTypeScriptTest extends AnyFlatSpec with Matchers with OptionValues {
           Node(
             name = Parameter("id").value,
             children = List(
-              Node(name = Fixed("name").value, methods = List(core.Method.DELETE))
+              Node(name = Fixed("name").value, methods = List(internal.Method.DELETE))
             )
           ),
           Node(
             name = Fixed("id").value,
             children = List(
-              Node(name = Parameter("name").value, methods = List(core.Method.DELETE))
+              Node(name = Parameter("name").value, methods = List(internal.Method.DELETE))
             )
           )
         )
