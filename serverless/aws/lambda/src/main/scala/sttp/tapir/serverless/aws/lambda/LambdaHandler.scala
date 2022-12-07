@@ -11,16 +11,15 @@ import sttp.tapir.server.ServerEndpoint
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 
-/**
- * [[LambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
- *
- * @tparam F
- *   The effect type constructor used in the endpoint.
- * @tparam R
- *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]].
- *   At the moment mapping is required as there is no support for generating API Gateway V2 definitions with AWS CDK v2.
- */
-abstract class LambdaHandler[F[_]: Sync, R: Decoder: Mapper] extends RequestStreamHandler {
+/** [[LambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
+  *
+  * @tparam F
+  *   The effect type constructor used in the endpoint.
+  * @tparam R
+  *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]]. At the moment mapping is required as there is no support for
+  *   generating API Gateway V2 definitions with AWS CDK v2.
+  */
+abstract class LambdaHandler[F[_]: Sync, R: Decoder] extends RequestStreamHandler {
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, F]]
 
@@ -28,16 +27,22 @@ abstract class LambdaHandler[F[_]: Sync, R: Decoder: Mapper] extends RequestStre
     val server: AwsCatsEffectServerInterpreter[F] =
       AwsCatsEffectServerInterpreter(AwsCatsEffectServerOptions.noEncoding[F])
 
-    Sync[F].blocking(input.readAllBytes()).flatMap { allBytes =>
-      (decode[R](new String(allBytes, StandardCharsets.UTF_8)) match {
-        case Right(awsRequest) => server.toRoute(getAllEndpoints)(implicitly[Mapper[R]].toV2(awsRequest))
-        case Left(e)           => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
-      }).flatMap { awsRes =>
-        writerResource(Sync[F].delay(output)).use { writer =>
-          Sync[F].blocking(writer.write(Printer.noSpaces.print(awsRes.asJson)))
-        }
+    for {
+      allBytes <- Sync[F].blocking(input.readAllBytes())
+      decoded <- Sync[F].delay(decode[R](new String(allBytes, StandardCharsets.UTF_8)))
+      response <- decoded match {
+        case Left(e) => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
+        case Right(awsRequest) =>
+          awsRequest match {
+            case r: AwsRequestV1 => server.toRoute(getAllEndpoints)(r.toV2)
+            case r: AwsRequest   => server.toRoute(getAllEndpoints)(r)
+            case r               => Sync[F].raiseError[AwsResponse](new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not suppoerted"))
+          }
       }
-    }
+      _ <- writerResource(Sync[F].delay(output)).use { writer =>
+        Sync[F].blocking(writer.write(Printer.noSpaces.print(response.asJson)))
+      }
+    } yield ()
   }
 
   private val writerResource: F[OutputStream] => Resource[F, BufferedWriter] = output => {

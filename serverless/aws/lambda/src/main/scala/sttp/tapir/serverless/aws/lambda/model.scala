@@ -34,7 +34,29 @@ case class AwsRequestV1(
     body: Option[String],
     requestContext: RequestContext,
     isBase64Encoded: Boolean
-)
+) {
+  def toV2: AwsRequest =
+    AwsRequest(
+      path,
+      queryStringParameters match {
+        case None => ""
+        case Some(x) => x.map { case (key: String, value: String) => s"$key=$value" }.mkString("&")
+      },
+      headers,
+      AwsRequestContext(
+        Some(requestContext.domainName),
+        AwsHttp(
+          requestContext.httpMethod,
+          requestContext.resourcePath,
+          requestContext.protocol,
+          requestContext.identity.sourceIp,
+          requestContext.identity.userAgent
+        )
+      ),
+      body,
+      isBase64Encoded
+    )
+}
 
 case class RequestContext(
     resourceId: String,
