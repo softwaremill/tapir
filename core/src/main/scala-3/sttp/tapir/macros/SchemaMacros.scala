@@ -252,9 +252,15 @@ private[tapir] object SchemaCompanionMacros {
 
       val subclassesSchemas: List[Expr[(String, Schema[_])]] = subclasses.map(subclass =>
         TypeIdent(subclass).tpe.asType match {
-          case '[f] =>
-            val subSchema = Expr.summon[Schema[f]].get
-            '{ ${ Expr(subclass.name) } -> Schema.wrapWithSingleFieldProduct($subSchema)($conf) }
+          case '[f] => {
+            Expr.summon[Schema[f]] match {
+              case Some (subSchema) => '{${Expr (subclass.name)} -> Schema.wrapWithSingleFieldProduct (${subSchema}) ($conf)}
+              case None => {
+                val typeName = TypeRepr.of[f].typeSymbol.name
+                report.errorAndAbort (s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
+             }
+            }
+          }
         }
       )
 

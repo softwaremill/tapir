@@ -13,7 +13,7 @@ import scala.concurrent.Future
 object VertxZioCreateServerStubTest extends CreateServerStubTest[Task, VertxZioServerOptions[Task]] {
   override def customiseInterceptors: CustomiseInterceptors[Task, VertxZioServerOptions[Task]] = VertxZioServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(new RIOMonadError[Any])
-  override def asFuture[A]: Task[A] => Future[A] = task => Unsafe.unsafeCompat(implicit u => Runtime.default.unsafe.runToFuture(task))
+  override def asFuture[A]: Task[A] => Future[A] = task => Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(task))
 }
 
 class VertxZioServerStubTest extends ServerStubTest(VertxZioCreateServerStubTest)

@@ -177,6 +177,10 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
 [![](https://files.softwaremill.com/logo/logo.png "SoftwareMill")](https://softwaremill.com)
 
+## Commercial Support
+
+We offer commercial support for sttp and related technologies, as well as development services. [Contact us](https://softwaremill.com/contact/) to learn more about our offer!
+
 ## Table of contents
 
 ```eval_rst

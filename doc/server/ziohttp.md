@@ -46,7 +46,7 @@ example:
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.{Http, Request, Response}
+import zio.http.{Http, Request, Response}
 import zio._
 
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =
