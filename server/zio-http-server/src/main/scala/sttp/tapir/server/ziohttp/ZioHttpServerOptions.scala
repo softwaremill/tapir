@@ -15,6 +15,8 @@ case class ZioHttpServerOptions[R](
     copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
     copy(interceptors = interceptors :+ i)
+
+  def widen[R2 <: R]: ZioHttpServerOptions[R2] = this.asInstanceOf[ZioHttpServerOptions[R2]]
 }
 
 object ZioHttpServerOptions {

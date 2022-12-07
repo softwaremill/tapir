@@ -19,6 +19,7 @@ val scala2_13 = "2.13.10"
 val scala3 = "3.2.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
+val scala2_13and3Versions = List(scala2_13, scala3)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
@@ -119,7 +120,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.4",
+  "ch.qos.logback" % "logback-classic" % "1.4.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -178,6 +179,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio1.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
+  nettyServerZio.projectRefs ++
+  nettyServerZio1.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -480,13 +483,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.8.0",
+      "org.typelevel" %%% "cats-core" % "2.9.0",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.8.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.9.0" % Test
     )
   )
   .jvmPlatform(
@@ -771,8 +774,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.17.9",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.17.9" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.18.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.18.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -1208,7 +1211,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http-server" % Versions.finatra,
-      "org.apache.httpcomponents" % "httpmime" % "4.5.13",
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       // Testing
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
@@ -1250,28 +1253,34 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final"
-    ) ++ loggerDependencies,
+    libraryDependencies ++= Seq("io.netty" % "netty-all" % Versions.nettyAll)
+      ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-server/cats"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-netty-server-cats",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
-    ) ++ loggerDependencies,
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, nettyServer, cats, serverTests % Test)
+lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", cats)
+  .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
+
+lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
+
+lazy val nettyServerZio1: ProjectMatrix = nettyServerProject("zio1", zio1)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats)
+
+def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
+  ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := s"tapir-netty-server-$proj",
+      libraryDependencies ++= loggerDependencies,
+      // needed because of https://github.com/coursier/coursier/issues/2016
+      useCoursier := false
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(nettyServer, dependency, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
@@ -1331,9 +1340,9 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "io.d11" %% "zhttp" % "2.0.0-RC10")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.3")
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2_13and3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
 
 // serverless
@@ -1470,14 +1479,7 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-client-tests",
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-circe" % Versions.http4s
-    )
-  )
+  .settings(name := "tapir-client-tests")
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,

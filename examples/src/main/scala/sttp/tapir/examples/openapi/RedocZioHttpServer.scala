@@ -6,8 +6,8 @@ import sttp.tapir.json.circe._
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
-import zhttp.http.HttpApp
-import zhttp.service.Server
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault}
 
@@ -28,8 +28,15 @@ object RedocZioHttpServer extends ZIOAppDefault {
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
       printLine("Press any key to exit ...") *>
-      Server.start(8080, petRoutes ++ redocRoutes).fork.flatMap { fiber =>
-        readLine *> fiber.interrupt
-      }
+      Server
+        .serve(petRoutes ++ redocRoutes)
+        .provide(
+          ServerConfig.live(ServerConfig.default.port(8080)),
+          Server.live,
+        )
+        .fork
+        .flatMap { fiber =>
+          readLine *> fiber.interrupt
+        }
   }.exitCode
 }

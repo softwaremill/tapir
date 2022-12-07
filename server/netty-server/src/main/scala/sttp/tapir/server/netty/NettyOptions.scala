@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, ServerChannel}
+import io.netty.handler.ssl.SslContext
 import sttp.tapir.server.netty.NettyOptions.EventLoopConfig
 
 import java.io.File
@@ -33,6 +34,14 @@ case class NettyOptions[SA <: SocketAddress](
 
   def randomPort(implicit saIsInetSocketAddress: SA =:= InetSocketAddress): NettyOptions[InetSocketAddress] =
     copy(new InetSocketAddress(saIsInetSocketAddress(socketAddress).getHostName, 0))
+
+  def sslContext(sslContext: SslContext)(implicit saIsInetSocketAddress: SA =:= InetSocketAddress): NettyOptions[InetSocketAddress] = {
+    val initPipelineWithSslContext: (ChannelPipeline, ChannelHandler) => Unit = { (pipeline, handler) =>
+      pipeline.addLast(sslContext.newHandler(pipeline.channel().alloc()))
+      initPipeline(pipeline, handler)
+    }
+    copy(initPipeline = initPipelineWithSslContext)
+  }
 
   def domainSocketPath(path: Path)(implicit saIsDomainSocketAddres: SA =:= DomainSocketAddress): NettyOptions[DomainSocketAddress] =
     copy(new DomainSocketAddress(path.toFile))

@@ -5,8 +5,8 @@ import sttp.tapir.ztapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.zio._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.HttpApp
-import zhttp.service.Server
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
@@ -38,5 +38,8 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // starting the server
   override def run =
-    Server.start(8090, app).exitCode
+    Server.serve(app).provide(
+      ServerConfig.live(ServerConfig.default.port(8090)),
+      Server.live,
+    ).exitCode
 }
