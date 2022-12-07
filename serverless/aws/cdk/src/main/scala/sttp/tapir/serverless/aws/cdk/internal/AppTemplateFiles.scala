@@ -33,16 +33,18 @@ class AppTemplateFiles[F[_]: Sync](sourceDir: String, outputDir: String) {
       _ <- save(r, outputStackFile)
     } yield ()
 
+  private def copy(from: String, to: String): F[Unit] =
+    for {
+      content <- getContent(sourceDir + "/" + from)
+      destination = outputDir + "/" + to
+      _ <- createDirectories(destination)
+      _ <- save(content, destination)
+    } yield ()
+
   private def getContent(path: String): F[String] =
     Resource
       .fromAutoCloseable[F, Source](Sync[F].blocking(Source.fromInputStream(getClass.getResourceAsStream(path))))
       .use(content => Sync[F].delay(content.getLines().mkString(System.lineSeparator())))
-
-  private def copy(from: String, to: String): F[Unit] = {
-    val bytes = Source.fromInputStream(getClass.getResourceAsStream(sourceDir + "/" + from)).getLines().mkString("\n")
-    val destination = outputDir + "/" + to
-    createDirectories(destination) >> save(bytes, destination)
-  }
 
   private def save(content: String, destination: String): F[Unit] = Sync[F].blocking {
     Files.write(Paths.get(destination), content.getBytes(StandardCharsets.UTF_8))
