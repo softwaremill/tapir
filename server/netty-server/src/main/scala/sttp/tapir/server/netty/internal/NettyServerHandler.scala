@@ -35,56 +35,14 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case Some(response) => response
             case None           => ServerResponse.notFound
           }
-          .map((serverResponse: ServerResponse[NettyResponse]) => {
-            serverResponse.handle(
-              ctx = ctx,
-              byteBufHandler = (channelPromise, byteBuf) => {
-                val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
-
-                res.setHeadersFrom(serverResponse)
-                res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
-                res.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
-              },
-              chunkedStreamHandler = (channelPromise, chunkedStream) => {
-                val resHeader: DefaultHttpResponse =
-                  new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
-
-                resHeader.setHeadersFrom(serverResponse)
-                resHeader.handleContentLengthAndChunkedHeaders(None)
-                resHeader.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.write(resHeader)
-                ctx.writeAndFlush(new HttpChunkedInput(chunkedStream), channelPromise).closeIfNeeded(req)
-              },
-              chunkedFileHandler = (channelPromise, chunkedFile) => {
-                val resHeader: DefaultHttpResponse =
-                  new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
-
-                resHeader.setHeadersFrom(serverResponse)
-                resHeader.handleContentLengthAndChunkedHeaders(Option(chunkedFile.length()))
-                resHeader.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.write(resHeader)
-                // HttpChunkedInput will write the end marker (LastHttpContent) for us.
-                ctx.writeAndFlush(new HttpChunkedInput(chunkedFile), channelPromise).closeIfNeeded(req)
-              },
-              noBodyHandler = () => {
-                val res = new DefaultFullHttpResponse(
-                  req.protocolVersion(),
-                  HttpResponseStatus.valueOf(serverResponse.code.code),
-                  Unpooled.EMPTY_BUFFER
-                )
-
-                res.setHeadersFrom(serverResponse)
-                res.handleContentLengthAndChunkedHeaders(Option(Unpooled.EMPTY_BUFFER.readableBytes()))
-                res.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.writeAndFlush(res).closeIfNeeded(req)
-              }
-            )
-          })
+          .flatMap((serverResponse: ServerResponse[NettyResponse]) =>
+            // in ZIO, exceptions thrown in .map become defects - instead, we want them represented as errors so that
+            // we get the 500 response, instead of dropping the request
+            try handleResponse(ctx, req, serverResponse).unit
+            catch {
+              case e: Exception => me.error[Unit](e)
+            }
+          )
           .handleError { case ex: Exception =>
             logger.error("Error while processing the request", ex)
             // send 500
@@ -100,6 +58,56 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       ()
     }
   }
+
+  private def handleResponse(ctx: ChannelHandlerContext, req: FullHttpRequest, serverResponse: ServerResponse[NettyResponse]): Unit =
+    serverResponse.handle(
+      ctx = ctx,
+      byteBufHandler = (channelPromise, byteBuf) => {
+        val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
+
+        res.setHeadersFrom(serverResponse)
+        res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
+        res.handleCloseAndKeepAliveHeaders(req)
+
+        ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
+      },
+      chunkedStreamHandler = (channelPromise, chunkedStream) => {
+        val resHeader: DefaultHttpResponse =
+          new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
+
+        resHeader.setHeadersFrom(serverResponse)
+        resHeader.handleContentLengthAndChunkedHeaders(None)
+        resHeader.handleCloseAndKeepAliveHeaders(req)
+
+        ctx.write(resHeader)
+        ctx.writeAndFlush(new HttpChunkedInput(chunkedStream), channelPromise).closeIfNeeded(req)
+      },
+      chunkedFileHandler = (channelPromise, chunkedFile) => {
+        val resHeader: DefaultHttpResponse =
+          new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code))
+
+        resHeader.setHeadersFrom(serverResponse)
+        resHeader.handleContentLengthAndChunkedHeaders(Option(chunkedFile.length()))
+        resHeader.handleCloseAndKeepAliveHeaders(req)
+
+        ctx.write(resHeader)
+        // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+        ctx.writeAndFlush(new HttpChunkedInput(chunkedFile), channelPromise).closeIfNeeded(req)
+      },
+      noBodyHandler = () => {
+        val res = new DefaultFullHttpResponse(
+          req.protocolVersion(),
+          HttpResponseStatus.valueOf(serverResponse.code.code),
+          Unpooled.EMPTY_BUFFER
+        )
+
+        res.setHeadersFrom(serverResponse)
+        res.handleContentLengthAndChunkedHeaders(Option(Unpooled.EMPTY_BUFFER.readableBytes()))
+        res.handleCloseAndKeepAliveHeaders(req)
+
+        ctx.writeAndFlush(res).closeIfNeeded(req)
+      }
+    )
 
   private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
     def handle(

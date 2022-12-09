@@ -179,6 +179,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio1.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
+  nettyServerZio.projectRefs ++
+  nettyServerZio1.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -1251,28 +1253,34 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final"
-    ) ++ loggerDependencies,
+    libraryDependencies ++= Seq("io.netty" % "netty-all" % Versions.nettyAll)
+      ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-server/cats"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-netty-server-cats",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
-    ) ++ loggerDependencies,
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, nettyServer, cats, serverTests % Test)
+lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", cats)
+  .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
+
+lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
+
+lazy val nettyServerZio1: ProjectMatrix = nettyServerProject("zio1", zio1)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats)
+
+def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
+  ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := s"tapir-netty-server-$proj",
+      libraryDependencies ++= loggerDependencies,
+      // needed because of https://github.com/coursier/coursier/issues/2016
+      useCoursier := false
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(nettyServer, dependency, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
