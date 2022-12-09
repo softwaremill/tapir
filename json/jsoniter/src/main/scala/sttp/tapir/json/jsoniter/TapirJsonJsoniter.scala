@@ -16,7 +16,7 @@ trait TapirJsonJsoniter {
   )
 
   def jsonQuery[T: JsonValueCodec: Schema](name: String): EndpointInput.Query[T] =
-    anyQuery[T, CodecFormat.Json](name, implicitly)
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>

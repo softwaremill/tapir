@@ -19,7 +19,7 @@ trait TapirJsonZio {
   )
 
   def jsonQuery[T: JsonEncoder: JsonDecoder: Schema](name: String): EndpointInput.Query[T] =
-    anyQuery[T, CodecFormat.Json](name, implicitly)
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def zioCodec[T: JsonEncoder: JsonDecoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>

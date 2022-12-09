@@ -17,7 +17,7 @@ trait TapirJson4s {
     )
 
   def jsonQuery[T: Manifest: Schema](name: String)(implicit formats: Formats, serialization: Serialization): EndpointInput.Query[T] =
-    anyQuery[T, CodecFormat.Json](name, implicitly)
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def json4sCodec[T: Manifest: Schema](implicit formats: Formats, serialization: Serialization): JsonCodec[T] =
     Codec.json[T] { s =>

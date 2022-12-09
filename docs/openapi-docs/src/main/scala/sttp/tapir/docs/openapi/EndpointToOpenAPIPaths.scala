@@ -108,7 +108,10 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     EndpointInputToParameterConverter.from(header, Right(ASchema(ASchemaType.String)))
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = EndpointInputToParameterConverter.from(p, schemas(p.codec))
+
   private def queryToParameter[T](query: EndpointInput.Query[T]) = query.codec.format match {
+    // use `schema` for simple plain text scenarios and `content` for complex serializations, e.g. JSON
+    // see https://swagger.io/docs/specification/describing-parameters/#schema-vs-content
     case CodecFormat.TextPlain() => EndpointInputToParameterConverter.from(query, schemas(query.codec))
     case _ => EndpointInputToParameterConverter.from(query, codecToMediaType(query.codec, query.info.examples, None, Nil))
   }
