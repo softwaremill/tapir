@@ -1,8 +1,8 @@
 ![tapir](https://github.com/softwaremill/tapir/raw/master/banner.png)
 
-# Happy 1.0 birthday, tapir!
+# Welcome!
 
-[![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Ideas, suggestions, problems, questions](https://img.shields.io/badge/Discourse-ask%20question-blue)](https://softwaremill.community/c/tapir)
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
@@ -174,7 +174,7 @@ All suggestions welcome :)
 See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! Or report your own.
 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
-[gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
+[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
 
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
