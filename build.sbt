@@ -567,14 +567,18 @@ lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
     name := "tapir-zio1",
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Versions.zio1,
-      "dev.zio" %% "zio-streams" % Versions.zio1,
-      "dev.zio" %% "zio-test" % Versions.zio1 % Test,
-      "dev.zio" %% "zio-test-sbt" % Versions.zio1 % Test,
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      "dev.zio" %%% "zio" % Versions.zio1,
+      "dev.zio" %%% "zio-streams" % Versions.zio1,
+      "dev.zio" %%% "zio-test" % Versions.zio1 % Test,
+      "dev.zio" %%% "zio-test-sbt" % Versions.zio1 % Test,
+      "com.softwaremill.sttp.shared" %%% "zio1" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
@@ -583,14 +587,18 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     name := "tapir-zio",
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Versions.zio,
-      "dev.zio" %% "zio-streams" % Versions.zio,
-      "dev.zio" %% "zio-test" % Versions.zio % Test,
-      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
+      "dev.zio" %%% "zio" % Versions.zio,
+      "dev.zio" %%% "zio-streams" % Versions.zio,
+      "dev.zio" %%% "zio-test" % Versions.zio % Test,
+      "dev.zio" %%% "zio-test-sbt" % Versions.zio % Test,
+      "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
