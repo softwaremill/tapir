@@ -629,19 +629,19 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     }, {
       import DefaultDecodeFailureHandler.OnDecodeFailure._
       testServer(
-        "Tries next endpoint if path 'shape' matches, but validation fails, using .badRequestOnDecodeFailure",
+        "Tries next endpoint if path 'shape' matches, but validation fails, using .onDecodeFailureNextEndpoint",
         NonEmptyList.of(
           route(
-            endpoint.get
-              .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
-              .out(stringBody)
-              .serverLogic((_: Int) => pureResult("e1".asRight[Unit]))
-          ),
-          route(
-            endpoint.get
-              .in("customer" / path[String]("customer_id"))
-              .out(stringBody)
-              .serverLogic((_: String) => pureResult("e2".asRight[Unit]))
+            List(
+              endpoint.get
+                .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
+                .out(stringBody)
+                .serverLogic((_: Int) => pureResult("e1".asRight[Unit])),
+              endpoint.get
+                .in("customer" / path[String]("customer_id"))
+                .out(stringBody)
+                .serverLogic((_: String) => pureResult("e2".asRight[Unit]))
+            )
           )
         )
       ) { (backend, baseUri) =>
