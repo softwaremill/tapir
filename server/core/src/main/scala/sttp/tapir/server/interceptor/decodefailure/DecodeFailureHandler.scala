@@ -109,11 +109,11 @@ object DefaultDecodeFailureHandler {
       badRequestOnPathInvalidIfPathShapeMatches: Boolean
   ): Option[(StatusCode, List[Header])] = {
     failingInput(ctx) match {
-      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailure(true))  => respondBadRequest
-      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailure(false)) => None
-      case _: EndpointInput.Query[_]                                                                        => respondBadRequest
-      case _: EndpointInput.QueryParams[_]                                                                  => respondBadRequest
-      case _: EndpointInput.Cookie[_]                                                                       => respondBadRequest
+      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(true))  => respondBadRequest
+      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(false)) => None
+      case _: EndpointInput.Query[_]                                                                                 => respondBadRequest
+      case _: EndpointInput.QueryParams[_]                                                                           => respondBadRequest
+      case _: EndpointInput.Cookie[_]                                                                                => respondBadRequest
       case h: EndpointIO.Header[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
       case _: EndpointIO.Header[_] => respondBadRequest
@@ -303,14 +303,14 @@ object DefaultDecodeFailureHandler {
     }
   }
 
-  private[decodefailure] case class OnDecodeFailure(value: Boolean) extends AnyVal
+  private[decodefailure] case class OnDecodeFailureAttribute(value: Boolean) extends AnyVal
 
   object OnDecodeFailure {
-    private[decodefailure] val key: AttributeKey[OnDecodeFailure] = AttributeKey[OnDecodeFailure]
+    private[decodefailure] val key: AttributeKey[OnDecodeFailureAttribute] = AttributeKey[OnDecodeFailureAttribute]
 
     implicit class RichEndpointTransput[ET <: EndpointTransput.Atom[_]](val et: ET) extends AnyVal {
-      def onDecodeFailureBadRequest: ET = et.attribute(key, OnDecodeFailure(true)).asInstanceOf[ET]
-      def onDecodeFailureNextEndpoint: ET = et.attribute(key, OnDecodeFailure(false)).asInstanceOf[ET]
+      def onDecodeFailureBadRequest: ET = et.attribute(key, OnDecodeFailureAttribute(true)).asInstanceOf[ET]
+      def onDecodeFailureNextEndpoint: ET = et.attribute(key, OnDecodeFailureAttribute(false)).asInstanceOf[ET]
     }
   }
 }
