@@ -112,10 +112,9 @@ an error or return a "no match", create error messages and create the response. 
 swapped, e.g. to return responses in a different format (other than plain text), or customise the error messages.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
-leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
-and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
-scaladoc for `DefaultDecodeFailureHandler.default` and the `badRequestOnPathErrorIfPathShapeMatches` and 
-`badRequestOnPathInvalidIfPathShapeMatches` parameters of `DefaultDecodeFailureHandler.response`. For example:
+leading to a `404 Not Found`), when the "shape" of the path matches (that is, the constant parts and number of segments 
+in the request and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
+scaladoc for `DefaultDecodeFailureHandler.default` and parameters of `DefaultDecodeFailureHandler.response`. For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -137,8 +136,8 @@ val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .options
 ```
 
-When using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output basis, 
-by setting an attribute. For example:
+Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output 
+basis, by setting an attribute. For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
