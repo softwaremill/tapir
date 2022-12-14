@@ -144,7 +144,7 @@ import sttp.tapir._
 // bringing into scope the onDecodeFailureBadRequest extension method
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
 
-// be default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
+// by default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
 endpoint.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest)
 ```
 
