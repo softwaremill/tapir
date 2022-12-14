@@ -114,7 +114,20 @@ swapped, e.g. to return responses in a different format (other than plain text),
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
 and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
-`badRequestOnPathErrorIfPathShapeMatches` in `ServerDefaults`.
+scaladoc for `DefaultDecodeFailureHandler.default` and the `badRequestOnPathErrorIfPathShapeMatches` and 
+`badRequestOnPathInvalidIfPathShapeMatches` parameters of `DefaultDecodeFailureHandler.response`.
+
+When using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output basis, 
+by setting an attribute. For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+// bringing into scope the onDecodeFailureBadRequest extension method
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
+
+// be default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
+endpoint.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest)
+```
 
 ## Customising how error messages are rendered
 

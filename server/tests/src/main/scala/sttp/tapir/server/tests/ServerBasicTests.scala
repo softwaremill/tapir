@@ -40,7 +40,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       methodMatchingTests() ++
       pathMatchingTests() ++
       pathMatchingMultipleEndpoints() ++
-      pathShapeMatchingTests() ++
+      customiseDecodeFailureHandlerTests() ++
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
       exceptionTests()
@@ -593,10 +593,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     }
   )
 
-  def pathShapeMatchingTests(): List[Test] = List(
+  def customiseDecodeFailureHandlerTests(): List[Test] = List(
     testServer(
       in_path_fixed_capture_fixed_capture,
-      "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
+      "Returns 400 if path 'shape' matches, but failed to parse a path parameter, using a custom decode failure handler",
       _.decodeFailureHandler(decodeFailureHandlerBadRequestOnPathFailure)
     )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/customer/asd/orders/2").send(backend).map { response =>
@@ -615,6 +615,39 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           .get(uri"$baseUri/customer/asd/orders/2/xyz")
           .send(backend)
           .map(response => response.code shouldBe StatusCode.NotFound)
+    }, {
+      import DefaultDecodeFailureHandler.OnDecodeFailure._
+      testServer(
+        endpoint.get.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest),
+        "Returns 400 if path 'shape' matches, but failed to parse a path parameter, using .badRequestOnDecodeFailure"
+      )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
+        basicRequest.get(uri"$baseUri/customer/asd").send(backend).map { response =>
+          response.body shouldBe Left("Invalid value for: path parameter customer_id")
+          response.code shouldBe StatusCode.BadRequest
+        }
+      }
+    }, {
+      import DefaultDecodeFailureHandler.OnDecodeFailure._
+      testServer(
+        "Tries next endpoint if path 'shape' matches, but validation fails, using .badRequestOnDecodeFailure",
+        NonEmptyList.of(
+          route(
+            endpoint.get
+              .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
+              .out(stringBody)
+              .serverLogic((_: Int) => pureResult("e1".asRight[Unit]))
+          ),
+          route(
+            endpoint.get
+              .in("customer" / path[String]("customer_id"))
+              .out(stringBody)
+              .serverLogic((_: String) => pureResult("e2".asRight[Unit]))
+          )
+        )
+      ) { (backend, baseUri) =>
+        basicStringRequest.get(uri"$baseUri/customer/20").send(backend).map(_.body shouldBe "e1") >>
+          basicStringRequest.get(uri"$baseUri/customer/2").send(backend).map(_.body shouldBe "e2")
+      }
     }
   )
 
