@@ -115,7 +115,27 @@ The default decode failure handler also has the option to return a `400 Bad Requ
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
 and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
 scaladoc for `DefaultDecodeFailureHandler.default` and the `badRequestOnPathErrorIfPathShapeMatches` and 
-`badRequestOnPathInvalidIfPathShapeMatches` parameters of `DefaultDecodeFailureHandler.response`.
+`badRequestOnPathInvalidIfPathShapeMatches` parameters of `DefaultDecodeFailureHandler.response`. For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val myDecodeFailureHandler = DefaultDecodeFailureHandler.default.copy(
+  respond = DefaultDecodeFailureHandler.respond(
+    _,
+    badRequestOnPathErrorIfPathShapeMatches = true,
+    badRequestOnPathInvalidIfPathShapeMatches = true
+  )
+)
+
+val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customiseInterceptors
+  .decodeFailureHandler(myDecodeFailureHandler)
+  .options
+```
 
 When using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output basis, 
 by setting an attribute. For example:
