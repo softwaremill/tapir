@@ -636,11 +636,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
               endpoint.get
                 .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
                 .out(stringBody)
-                .serverLogic((_: Int) => pureResult("e1".asRight[Unit])),
+                .serverLogic[F]((_: Int) => pureResult("e1".asRight[Unit])),
               endpoint.get
                 .in("customer" / path[String]("customer_id"))
                 .out(stringBody)
-                .serverLogic((_: String) => pureResult("e2".asRight[Unit]))
+                .serverLogic[F]((_: String) => pureResult("e2".asRight[Unit]))
             )
           )
         )
