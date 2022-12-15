@@ -61,7 +61,21 @@ object DefaultDecodeFailureHandler {
     * The error messages contain information about the source of the decode error, and optionally the validation error detail that caused
     * the failure.
     *
+    * The default decode failure handler can be customised by providing alternate functions for deciding whether a response should be sent,
+    * creating the error message and creating the response.
+    *
+    * Furthermore, how decode failures are handled can be adjusted globally by changing the flags passed to [[respond]]. By default, if the
+    * shape of the path for an endpoint matches the request, but decoding a path capture causes an error (e.g. a `path[Int]("amount")`
+    * cannot be parsed), the next endpoint is tried. However, if there's a validation error (e.g. a `path[Kind]("kind")`, where `Kind` is an
+    * enum, and a value outside the enumeration values is provided), a 400 response is sent.
+    *
+    * Finally, behavior can be adjusted per-endpoint-input, by setting an attribute. Import the [[OnDecodeFailure]] object and use the
+    * [[OnDecodeFailure.RichEndpointTransput.onDecodeFailureBadRequest]] and
+    * [[OnDecodeFailure.RichEndpointTransput.onDecodeFailureNextEndpoint]] extension methods.
+    *
     * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server logic is invoked.
+    * Exceptions can be either handled by the server logic, and converted to an error output value. Uncaught exceptions can be handled using
+    * the [[sttp.tapir.server.interceptor.exception.ExceptionInterceptor]].
     */
   val default: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
     respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
@@ -95,35 +109,38 @@ object DefaultDecodeFailureHandler {
       badRequestOnPathInvalidIfPathShapeMatches: Boolean
   ): Option[(StatusCode, List[Header])] = {
     failingInput(ctx) match {
-      case _: EndpointInput.Query[_]       => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointInput.QueryParams[_] => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointInput.Cookie[_]      => Some(onlyStatus(StatusCode.BadRequest))
+      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(true))  => respondBadRequest
+      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(false)) => None
+      case _: EndpointInput.Query[_]                                                                                 => respondBadRequest
+      case _: EndpointInput.QueryParams[_]                                                                           => respondBadRequest
+      case _: EndpointInput.Cookie[_]                                                                                => respondBadRequest
       case h: EndpointIO.Header[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && h.name == HeaderNames.ContentType =>
-        Some(onlyStatus(StatusCode.UnsupportedMediaType))
-      case _: EndpointIO.Header[_] => Some(onlyStatus(StatusCode.BadRequest))
+        respondUnsupportedMediaType
+      case _: EndpointIO.Header[_] => respondBadRequest
       case fh: EndpointIO.FixedHeader[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && fh.h.name == HeaderNames.ContentType =>
-        Some(onlyStatus(StatusCode.UnsupportedMediaType))
-      case _: EndpointIO.FixedHeader[_] => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Headers[_]     => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.Body[_, _]     => Some(onlyStatus(StatusCode.BadRequest))
-      case _: EndpointIO.OneOfBody[_, _] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] =>
-        Some(onlyStatus(StatusCode.UnsupportedMediaType))
-      case _: EndpointIO.StreamBodyWrapper[_, _] => Some(onlyStatus(StatusCode.BadRequest))
+        respondUnsupportedMediaType
+      case _: EndpointIO.FixedHeader[_]                                                     => respondBadRequest
+      case _: EndpointIO.Headers[_]                                                         => respondBadRequest
+      case _: EndpointIO.Body[_, _]                                                         => respondBadRequest
+      case _: EndpointIO.OneOfBody[_, _] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] => respondUnsupportedMediaType
+      case _: EndpointIO.StreamBodyWrapper[_, _]                                            => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
       // a path shape mismatch
       case _: EndpointInput.PathCapture[_]
           if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
             (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
-        Some(onlyStatus(StatusCode.BadRequest))
+        respondBadRequest
       // if the failing input contains an authentication input (potentially nested), sending its challenge
       case FirstAuth(a) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
       case _: EndpointInput.Basic[_] => None
       // all other inputs (tuples, mapped) - responding with bad request
-      case _ => Some(onlyStatus(StatusCode.BadRequest))
+      case _ => respondBadRequest
     }
   }
+  private val respondBadRequest = Some(onlyStatus(StatusCode.BadRequest))
+  private val respondUnsupportedMediaType = Some(onlyStatus(StatusCode.UnsupportedMediaType))
 
   def respondNotFoundIfHasAuth(
       ctx: DecodeFailureContext,
@@ -283,6 +300,17 @@ object DefaultDecodeFailureHandler {
     private def size(v: Any): Any = v match {
       case i: Iterable[_] => i.size
       case _              => v
+    }
+  }
+
+  private[decodefailure] case class OnDecodeFailureAttribute(value: Boolean) extends AnyVal
+
+  object OnDecodeFailure {
+    private[decodefailure] val key: AttributeKey[OnDecodeFailureAttribute] = AttributeKey[OnDecodeFailureAttribute]
+
+    implicit class RichEndpointTransput[ET <: EndpointTransput.Atom[_]](val et: ET) extends AnyVal {
+      def onDecodeFailureBadRequest: ET = et.attribute(key, OnDecodeFailureAttribute(true)).asInstanceOf[ET]
+      def onDecodeFailureNextEndpoint: ET = et.attribute(key, OnDecodeFailureAttribute(false)).asInstanceOf[ET]
     }
   }
 }
