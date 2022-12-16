@@ -787,7 +787,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
-        endpoint.post.in(anyQuery[String, CodecFormat.Json]("name", codec).example("alan").default("tom")),
+        endpoint.post.in(queryAnyFormat[String, CodecFormat.Json]("name", codec).example("alan").default("tom")),
         Info("Entities", "1.0")
       )
       .toYaml
