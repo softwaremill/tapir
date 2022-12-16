@@ -6,7 +6,7 @@ If you'd like to contribute, see the list of [issues](https://github.com/softwar
 Or report your own. If you have an idea you'd like to discuss, that's always a good option.
 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
-[gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
+[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and can be improved for the benefit of all.
 
 ## Acknowledgments
