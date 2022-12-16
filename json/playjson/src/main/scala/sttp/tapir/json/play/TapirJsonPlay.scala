@@ -17,6 +17,9 @@ trait TapirJsonPlay {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: Reads: Writes: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
+
   implicit def readsWritesCodec[T: Reads: Writes: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>
       Try(Json.parse(s)) match {

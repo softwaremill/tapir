@@ -3,7 +3,7 @@
 Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
 third-party library to perform the actual json parsing/printing. See below for the list of supported libraries. 
 
-All the integrations, when imported into scope, define a `jsonBody[T]` method. 
+All the integrations, when imported into scope, define `jsonBody[T]` and `jsonQuery[T]` methods. 
 
 Instead of providing the json codec as an implicit value, this method depends on library-specific implicits being in 
 scope, and basing on these values creates a json codec. The derivation also requires 
@@ -258,6 +258,21 @@ import sttp.tapir.json.zio._
 
 Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
 
+## JSON query parameters
+
+You can specify query parameters in JSON format by using the `jsonQuery` method. For example, using Circe:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
+import io.circe.generic.auto._
+
+case class Book(author: String, title: String, year: Int)
+
+val bookQuery: EndpointInput.Query[Book] = jsonQuery[Book]("book")
+```
+
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the
@@ -271,8 +286,8 @@ of [schema derivation](schemas.md) will have to match the configuration of your 
 have different defaults when it comes to a discrimination strategy, so in order to have the schemas (and hence the
 documentation) in sync with how the values are serialised, you will have to configure schema derivation as well.
 
-Schemas are referenced at the point of `jsonBody` usage, so any configuration must be available in the implicit scope
-when this method is called.
+Schemas are referenced at the point of `jsonBody` and `jsonQuery` usage, so any configuration must be available in the implicit scope
+when these methods are called.
 
 ## Next
 
