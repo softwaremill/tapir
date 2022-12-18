@@ -2,19 +2,28 @@
 
 Tapir server endpoints can be packaged and deployed as an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function. To invoke the function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html).
 
-To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/) and [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
+To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/), [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
 
 For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396).
 
+## Runtime
+
+When deploying to Lambda, we need to chose one of the available runtimes provided by AWS.
+Tapir can be deployed, either to custom runtime, or to Java one. There are corresponding classes for each of them:
+  * The `AwsLambdaIORuntime` to implement the Lambda loop of reading the next request, computing and sending the response through [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
+  * The `LambdaHandler` which utilizes [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java) interface for handling requests, response flow inside Java runtime.
+
 ## Serverless interpreters
 
-To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaIORuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
+Each of the aforementioned runtimes uses server interpreter, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`).
 
-Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`). To use, add the following dependency:
+To start using any of above runtimes with the interpreter, add the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
 ```
+
+## Deployment
 
 To configure API Gateway and the Lambda function, you can use:
 
@@ -26,6 +35,7 @@ Add one of the following dependencies:
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "@VERSION@"
 ```
 
 ## Examples
