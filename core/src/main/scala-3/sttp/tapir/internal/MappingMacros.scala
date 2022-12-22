@@ -12,7 +12,6 @@ private[tapir] object MappingMacros {
     val to: In => Out = t =>
       inline erasedValue[In] match {
         case _: Tuple => mc.fromProduct(t.asInstanceOf[Tuple])
-        case EmptyTuple => mc.fromProduct(EmptyTuple)
         case _        => mc.fromProduct(Tuple1(t))
       }
     def from(out: Out): In = Tuple.fromProduct(out) match {

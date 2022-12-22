@@ -322,7 +322,6 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
 
   it should "accept empty case classes when annotated with @endpointInput" in {
     val expectedInput = ("some" / "path").mapTo[TapirRequestTest17]
-    val derived = EndpointInput.derived[TapirRequestTest17]
     compareTransputs(EndpointInput.derived[TapirRequestTest17], expectedInput) shouldBe true
   }
 
