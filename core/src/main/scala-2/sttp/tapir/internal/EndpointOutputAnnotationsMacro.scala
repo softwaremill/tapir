@@ -18,7 +18,9 @@ private[tapir] class EndpointOutputAnnotationsMacro(override val c: blackbox.Con
   def generateEndpointOutput[A: c.WeakTypeTag]: c.Expr[EndpointOutput[A]] = {
     val util = new CaseClassUtil[c.type, A](c, "response endpoint")
     validateCaseClass(util)
-
+    if (util.fields.isEmpty) {
+      c.abort(c.enclosingPosition, "Case class must have at least one field")
+    }
     val outputs = util.fields map { field =>
       val output = util
         .extractOptStringArgFromAnnotation(field, headerType)
