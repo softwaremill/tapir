@@ -22,10 +22,6 @@ private[tapir] class EndpointInputAnnotationsMacro(override val c: blackbox.Cont
     val util = new CaseClassUtil[c.type, A](c, "request endpoint")
     validateCaseClass(util)
 
-    forCaseClass(util)
-  }
-
-  private def forCaseClass[A: c.WeakTypeTag](util: CaseClassUtil[c.type,A]) = {
     val segments = util.classSymbol.annotations
       .map(_.tree)
       .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
