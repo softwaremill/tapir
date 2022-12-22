@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithDefaults'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    ObjectWithDefaults:
+      type: object
+      properties:
+        name:
+          type: string
+          default: foo
+        count:
+          type: integer
+          format: int32
+          default: 12

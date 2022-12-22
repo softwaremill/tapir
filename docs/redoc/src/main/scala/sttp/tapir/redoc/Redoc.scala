@@ -5,54 +5,84 @@ import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 
 object Redoc {
+
+  val defaultRedocVersion = "2.0.0-rc.56"
+
+  def redocHtml(title: String, specUrl: String, redocVersion: String = defaultRedocVersion): String = s"""
+    |<!DOCTYPE html>
+    |<html>
+    |<head>
+    |  <title>$title</title>
+    |  <!-- needed for adaptive design -->
+    |  <meta charset="utf-8"/>
+    |  <meta name="viewport" content="width=device-width, initial-scale=1">
+    |  <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    |
+    |  <!--
+    |  ReDoc doesn't change outer page styles
+    |  -->
+    |  <style>
+    |    body {
+    |      margin: 0;
+    |      padding: 0;
+    |    }
+    |  </style>
+    |</head>
+    |<body>
+    |<redoc spec-url='$specUrl' expand-responses="200,201"></redoc>
+    |<script src="https://cdn.jsdelivr.net/npm/redoc@$redocVersion/bundles/redoc.standalone.js"></script>
+    |</body>
+    |</html>
+    |""".stripMargin
+
   def apply[F[_]](
       title: String,
-      yaml: String,
-      prefix: List[String] = List("docs"),
-      yamlName: String = "docs.yaml",
-      htmlName: String = "index.html",
-      redocVersion: String = "2.0.0-rc.56"
+      spec: String,
+      options: RedocUIOptions
   ): List[ServerEndpoint[Any, F]] = {
-    val html: String =
-      s"""
-         |<!DOCTYPE html>
-         |<html>
-         |<head>
-         |  <title>$title</title>
-         |  <!-- needed for adaptive design -->
-         |  <meta charset="utf-8"/>
-         |  <meta name="viewport" content="width=device-width, initial-scale=1">
-         |  <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-         |
-         |  <!--
-         |  ReDoc doesn't change outer page styles
-         |  -->
-         |  <style>
-         |    body {
-         |      margin: 0;
-         |      padding: 0;
-         |    }
-         |  </style>
-         |</head>
-         |<body>
-         |<redoc spec-url='$yamlName' expand-responses="200,201"></redoc>
-         |<script src="https://cdn.jsdelivr.net/npm/redoc@$redocVersion/bundles/redoc.standalone.js"></script>
-         |</body>
-         |</html>
-         |""".stripMargin
+    val specName = options.specName
+    val htmlName = options.htmlName
 
-    val prefixInput = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
-    val prefixAsPath = prefix.mkString("/")
+    val prefixInput: EndpointInput[Unit] = options.pathPrefix.map(stringToPath).foldLeft(emptyInput)(_.and(_))
 
     val baseEndpoint = infallibleEndpoint.get.in(prefixInput)
-    def contentEndpoint(fileName: String, mediaType: MediaType) =
-      baseEndpoint.in(fileName).out(stringBody).out(header(Header.contentType(mediaType)))
     val redirectOutput = statusCode(StatusCode.PermanentRedirect).and(header[String](HeaderNames.Location))
 
-    val redirectToHtmlEndpoint = baseEndpoint.out(redirectOutput).serverLogicPure[F](_ => Right(s"/$prefixAsPath/$htmlName"))
-    val yamlEndpoint = contentEndpoint(yamlName, MediaType("text", "yaml")).serverLogicPure[F](_ => Right(yaml))
+    def contentEndpoint(fileName: String, mediaType: MediaType) =
+      baseEndpoint.in(fileName).out(stringBody).out(header(Header.contentType(mediaType)))
+
+    val specNameLowerCase = specName.toLowerCase
+    val specMediaType =
+      if (specNameLowerCase.endsWith(".json")) MediaType("application", "json")
+      else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
+      else MediaType("text", "plain")
+
+    val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
+
+    val specPrefix = if (options.useRelativePaths) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
+    val html: String = redocHtml(title, s"$specPrefix/$specName", options.redocVersion)
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
-    List(redirectToHtmlEndpoint, yamlEndpoint, htmlEndpoint)
+    val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)
+
+    val redirectToHtmlEndpoint =
+      baseEndpoint
+        .in(lastSegmentInput)
+        .out(redirectOutput)
+        .serverLogicPure[F] { lastSegment =>
+          if (options.useRelativePaths) {
+            val pathFromLastSegment: String = lastSegment match {
+              case Some(s) if s.nonEmpty => s + "/"
+              case _                     => ""
+            }
+            Right(s"./$pathFromLastSegment$htmlName")
+          } else
+            Right(options.contextPath ++ options.pathPrefix match {
+              case Nil      => s"/$htmlName"
+              case segments => s"/${segments.mkString("/")}/$htmlName"
+            })
+        }
+
+    List(specEndpoint, htmlEndpoint, redirectToHtmlEndpoint)
   }
 }

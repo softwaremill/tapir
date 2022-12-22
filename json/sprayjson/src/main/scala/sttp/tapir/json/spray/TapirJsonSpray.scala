@@ -8,11 +8,17 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
-import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
-  def jsonBody[T: JsonFormat: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsonFormatCodec[T])
+  def jsonBody[T: JsonFormat: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(jsonFormatCodec[T])
+
+  def jsonBodyWithRaw[T: JsonFormat: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
+  def jsonQuery[T: JsonFormat: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>
@@ -24,7 +30,7 @@ trait TapirJsonSpray {
         case Failure(e) =>
           Error(s, JsonDecodeException(errors = List.empty, e))
       }
-    } { t => t.toJson.toString() }
+    } { t => t.toJson.toString }
 
   // JsValue is a coproduct with unknown implementations
   implicit val schemaForSprayJsValue: Schema[JsValue] =

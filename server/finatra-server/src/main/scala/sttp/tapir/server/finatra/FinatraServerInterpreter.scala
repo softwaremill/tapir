@@ -5,12 +5,13 @@ import com.twitter.util.Future
 import com.twitter.util.logging.Logging
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.PathCapture
+import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.{AnyEndpoint, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, noTrailingSlash}
 
 trait FinatraServerInterpreter extends Logging {
 
@@ -18,7 +19,8 @@ trait FinatraServerInterpreter extends Logging {
 
   def toRoute(se: ServerEndpoint[Any, Future]): FinatraRoute = {
     val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
-      List(se),
+      _ => List(se),
+      new FinatraRequestBody(finatraServerOptions),
       new FinatraToResponseBody,
       finatraServerOptions.interceptors,
       finatraServerOptions.deleteFile
@@ -27,7 +29,7 @@ trait FinatraServerInterpreter extends Logging {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
 
-      serverInterpreter(serverRequest, new FinatraRequestBody(request, finatraServerOptions)).map {
+      serverInterpreter(serverRequest).map {
         case RequestResult.Failure(_) => Response(Status.NotFound)
         case RequestResult.Response(response) =>
           val status = Status(response.code.code)
@@ -67,7 +69,14 @@ trait FinatraServerInterpreter extends Logging {
         case EndpointInput.PathsCapture(_, _)    => "/:*"
       }
       .mkString
-    if (p.isEmpty) "/:*" else p
+    if (p.isEmpty) "/:*"
+    // checking if there's an input which rejects trailing slashes; otherwise the default behavior is to accept them
+    else if (
+      input.traverseInputs {
+        case i if i == noTrailingSlash => Vector(())
+      }.isEmpty
+    ) p + "/?"
+    else p
   }
 
   private[finatra] def httpMethod(endpoint: AnyEndpoint): Method = endpoint.method.map(m => Method(m.method)).getOrElse(Method("ANY"))

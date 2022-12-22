@@ -2,13 +2,13 @@ package sttp.tapir
 
 import sttp.capabilities.Streams
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.model.{ContentTypeRange, Method}
+import sttp.model.{ContentTypeRange, MediaType, Method}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.RawBodyType._
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ServerRequest, StatusCodeRange}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
@@ -45,12 +45,40 @@ import scala.concurrent.duration.FiniteDuration
   *     and are always `basic`
   */
 sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
-  private[tapir] type ThisType[X]
+  private[tapir] type ThisType[X] <: EndpointTransput[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
 
+  /** Adds the given validator, and maps to the given higher-level type `U`.
+    *
+    * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are
+    * validation errors, decoding fails. However, the validator is then invoked again on the fully decoded value.
+    *
+    * This is useful to create inputs/outputs for types, which are unrepresentable unless the validator's condition is met, e.g. due to
+    * preconditions in the constructor.
+    *
+    * @see
+    *   [[validate]]
+    */
+  def mapValidate[U](v: Validator[T])(f: T => U)(g: U => T): ThisType[U] = validate(v)
+    .asInstanceOf[this.type] // compiler gets lost with ThisType-s
+    .mapDecode { t =>
+      v(t) match {
+        case Nil    => DecodeResult.Value(f(t))
+        case errors => DecodeResult.InvalidValue(errors)
+      }
+    }(g)
+
+  /** Adds a validator.
+    *
+    * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
+    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    *
+    * @see
+    *   [[mapValidate]]
+    */
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
   def show: String
@@ -73,8 +101,21 @@ object EndpointTransput {
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
 
+    /** Adds a validator which validates the option's element, if it is present.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+
+    /** Adds a validator which validates each element in the collection.
+      *
+      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
+      * results at run-time.
+      */
     def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
       schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
@@ -152,15 +193,21 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): PathsCapture[U] = copy(codec = c, info = i)
-    override def show = s"/..."
+    override def show = s"/*"
   }
 
-  case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Atom[T] {
+  case class Query[T](name: String, flagValue: Option[T], codec: Codec[List[String], T, CodecFormat], info: Info[T]) extends Atom[T] {
     override private[tapir] type ThisType[X] = Query[X]
     override private[tapir] type L = List[String]
-    override private[tapir] type CF = TextPlain
-    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] = copy(codec = c, info = i)
+    override private[tapir] type CF = CodecFormat
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, CodecFormat], i: Info[U]): Query[U] =
+      copy(flagValue = flagValue.map(t => c.decode(codec.encode(t))).collect { case DecodeResult.Value(u) => u }, codec = c, info = i)
     override def show: String = addValidatorShow(s"?$name", codec.schema)
+
+    /** Indicates that this query parameter can be used as a flag in the URI (that is, the query string will contain just the name, without
+      * a value). When used as a flag, its decoded value is `v`.
+      */
+    def flagValue(v: T): Query[T] = copy(flagValue = Some(v))
   }
 
   case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Atom[T] {
@@ -169,7 +216,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[sttp.model.QueryParams, U, TextPlain], i: Info[U]): QueryParams[U] =
       copy(codec = c, info = i)
-    override def show: String = s"?..."
+    override def show: String = s"?*"
   }
 
   case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: Info[T]) extends Atom[T] {
@@ -192,45 +239,81 @@ object EndpointInput extends EndpointInputMacros {
   //
 
   /** An input with authentication credentials metadata, used when generating documentation. */
-  case class Auth[T, INFO <: AuthInfo](
+  case class Auth[T, TYPE <: AuthType](
       input: Single[T],
-      securitySchemeName: Option[String],
       challenge: WWWAuthenticateChallenge,
-      authInfo: INFO
+      authType: TYPE,
+      info: AuthInfo
   ) extends Single[T] {
-    override private[tapir] type ThisType[X] = Auth[X, INFO]
-    override def show: String = authInfo match {
-      case AuthInfo.Http(scheme)       => s"auth($scheme http, via ${input.show})"
-      case AuthInfo.ApiKey()           => s"auth(api key, via ${input.show})"
-      case AuthInfo.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
-      case AuthInfo.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
-      case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
-    }
-    override def map[U](mapping: Mapping[T, U]): Auth[U, INFO] = copy(input = input.map(mapping))
+    override private[tapir] type ThisType[X] = Auth[X, TYPE]
+    override def show: String = if (isInputEmpty) s"auth(-)"
+    else
+      authType match {
+        case AuthType.Http(scheme)       => s"auth($scheme http, via ${input.show})"
+        case AuthType.ApiKey()           => s"auth(api key, via ${input.show})"
+        case AuthType.OAuth2(_, _, _, _) => s"auth(oauth2, via ${input.show})"
+        case AuthType.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
+        case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
+      }
+    override def map[U](mapping: Mapping[T, U]): Auth[U, TYPE] = copy(input = input.map(mapping))
 
-    def securitySchemeName(name: String): Auth[T, INFO] = copy(securitySchemeName = Some(name))
-    def challengeRealm(realm: String): Auth[T, INFO] = copy(challenge = challenge.realm(realm))
-    def requiredScopes(requiredScopes: Seq[String])(implicit ev: INFO =:= AuthInfo.OAuth2): Auth[T, AuthInfo.ScopedOAuth2] =
-      copy(authInfo = authInfo.requiredScopes(requiredScopes))
+    def securitySchemeName: Option[String] = info.securitySchemeName
+    def securitySchemeName(name: String): Auth[T, TYPE] = copy(info = info.securitySchemeName(name))
+    def challengeRealm(realm: String): Auth[T, TYPE] = copy(challenge = challenge.realm(realm))
+    def requiredScopes(requiredScopes: Seq[String])(implicit ev: TYPE =:= AuthType.OAuth2): Auth[T, AuthType.ScopedOAuth2] =
+      copy(authType = authType.requiredScopes(requiredScopes))
+
+    def description(d: String): Auth[T, TYPE] = copy(info = info.description(d))
+
+    def bearerFormat(f: String)(implicit typeIsHttp: TYPE =:= AuthType.Http): Auth[T, AuthType.Http] = copy(info = info.bearerFormat(f))
+
+    /** Authentication inputs in the same group will always become a single security requirement in the documentation (requiring all
+      * authentication methods), even if they are all optional.
+      */
+    def group(g: String): Auth[T, TYPE] = copy(info = info.group(g))
+
+    def attribute[A](k: AttributeKey[A]): Option[A] = info.attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): Auth[T, TYPE] = copy(info = info.attribute(k, v))
+
+    private[tapir] def isInputEmpty: Boolean = input.isInstanceOf[EndpointIO.Empty[T]]
   }
 
-  sealed trait AuthInfo
-  object AuthInfo {
-    case class Http(scheme: String) extends AuthInfo {
+  sealed trait AuthType
+  object AuthType {
+    case class Http(scheme: String) extends AuthType {
       def scheme(s: String): Http = copy(scheme = s)
     }
-    case class ApiKey() extends AuthInfo
+    case class ApiKey() extends AuthType
     case class OAuth2(
         authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
         refreshUrl: Option[String]
-    ) extends AuthInfo {
+    ) extends AuthType {
       def requiredScopes(requiredScopes: Seq[String]): ScopedOAuth2 = ScopedOAuth2(this, requiredScopes)
     }
-    case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthInfo {
+    case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthType {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
     }
+  }
+
+  case class AuthInfo(
+      securitySchemeName: Option[String],
+      description: Option[String],
+      attributes: AttributeMap,
+      group: Option[String],
+      bearerFormat: Option[String]
+  ) {
+    def securitySchemeName(name: String): AuthInfo = copy(securitySchemeName = Some(name))
+    def description(d: String): AuthInfo = copy(description = Some(d))
+    def group(g: String): AuthInfo = copy(group = Some(g))
+    def bearerFormat(format: String): AuthInfo = copy(bearerFormat = Some(format))
+
+    def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
+    def attribute[A](k: AttributeKey[A], v: A): AuthInfo = copy(attributes = attributes.put(k, v))
+  }
+  object AuthInfo {
+    val Empty: AuthInfo = AuthInfo(None, None, AttributeMap.Empty, None, None)
   }
 
   //
@@ -268,7 +351,7 @@ object EndpointOutput extends EndpointOutputMacros {
   //
 
   case class StatusCode[T](
-      documentedCodes: Map[sttp.model.StatusCode, Info[Unit]],
+      documentedCodes: Map[Either[sttp.model.StatusCode, StatusCodeRange], Info[Unit]],
       codec: Codec[sttp.model.StatusCode, T, TextPlain],
       info: Info[T]
   ) extends Atom[T] {
@@ -277,10 +360,16 @@ object EndpointOutput extends EndpointOutputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[sttp.model.StatusCode, U, TextPlain], i: Info[U]): StatusCode[U] =
       copy(codec = c, info = i)
-    override def show: String = s"status code - possible codes ($documentedCodes)"
+    override def show: String =
+      s"status code - possible codes (${documentedCodes.map { case (k, v) => k.fold(_.toString, _.toString) -> v }})"
 
     def description(code: sttp.model.StatusCode, d: String): StatusCode[T] = {
-      val updatedCodes = documentedCodes + (code -> Info.empty[Unit].description(d))
+      val updatedCodes = documentedCodes + (Left(code) -> Info.empty[Unit].description(d))
+      copy(documentedCodes = updatedCodes)
+    }
+
+    def description(range: StatusCodeRange, d: String): StatusCode[T] = {
+      val updatedCodes = documentedCodes + (Right(range) -> Info.empty[Unit].description(d))
       copy(documentedCodes = updatedCodes)
     }
   }
@@ -406,13 +495,23 @@ object EndpointIO {
     override def show: String = wrapped.show
   }
 
-  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Body[_, O])
+  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Either[Body[_, O], StreamBodyWrapper[_, O]]) {
+    def show: String = bodyAsAtom.show
+    def mediaTypeWithCharset: MediaType = body.fold(_.mediaTypeWithCharset, _.mediaTypeWithCharset)
+    def codec: Codec[_, O, _ <: CodecFormat] = bodyAsAtom.codec
+    def info: Info[O] = bodyAsAtom.info
+    private[tapir] def bodyAsAtom: EndpointIO.Atom[O] = body match {
+      case Left(b)  => b
+      case Right(b) => b
+    }
+  }
   case class OneOfBody[O, T](variants: List[OneOfBodyVariant[O]], mapping: Mapping[O, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = OneOfBody[O, X]
     override def show: String = showOneOf(variants.map { variant =>
       val prefix =
-        if ((ContentTypeRange.exactNoCharset(variant.body.codec.format.mediaType)) == variant.range) "" else s"${variant.range} -> "
-      prefix + variant.body.show
+        if (ContentTypeRange.exactNoCharset(variant.codec.format.mediaType) == variant.range) ""
+        else s"${variant.range} -> "
+      prefix + variant.show
     })
     override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))
   }
@@ -471,12 +570,34 @@ object EndpointIO {
 
   //
 
-  case class Example[+T](value: T, name: Option[String], summary: Option[String]) {
+  case class Example[+T](value: T, name: Option[String], summary: Option[String], description: Option[String]) {
+    // required for binary compatibility
+    def this(value: T, name: Option[String], summary: Option[String]) = this(value, name, summary, None)
+
+    def name(name: String): Example[T] = copy(name = Some(name))
+    def summary(summary: String): Example[T] = copy(summary = Some(summary))
+    def description(description: String): Example[T] = copy(description = Some(description))
+
     def map[B](f: T => B): Example[B] = copy(value = f(value))
+
+    // required for binary compatibility
+    def copy[TT](value: TT, name: Option[String], summary: Option[String]): Example[TT] =
+      Example(value, name, summary, description)
+
+    def copy[TT](
+        value: TT = this.value,
+        name: Option[String] = this.name,
+        summary: Option[String] = this.summary,
+        description: Option[String] = this.description
+    ): Example[TT] = Example(value, name, summary, description)
   }
 
   object Example {
-    def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
+    // required for binary compatibility
+    def apply[T](value: T, name: Option[String], summary: Option[String]): Example[T] = new Example(value, name, summary)
+
+    /** To add a description, use the [[Example.description]] method on the result. */
+    def of[T](value: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(value, name, summary)
   }
 
   case class Info[T](
@@ -487,7 +608,7 @@ object EndpointIO {
   ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
-    def example(t: T): Info[T] = example(Example.of(t))
+    def example(value: T): Info[T] = example(Example.of(value))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
@@ -497,8 +618,8 @@ object EndpointIO {
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
         description,
-        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary) =>
-          Example(ee, name, summary)
+        examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary, desc) =>
+          Example(ee, name, summary, desc)
         },
         deprecated,
         attributes
@@ -538,6 +659,7 @@ object EndpointIO {
     class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
     class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
     class securitySchemeName(val name: String) extends StaticAnnotation
+    class customise(val f: EndpointTransput[_] => EndpointTransput[_]) extends StaticAnnotation
 
     /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with
       * `{...}` (curly braces), and reference the name using [[annotations.path]].
@@ -557,8 +679,8 @@ object EndpointIO {
 }
 
 /*
-Streaming body is a special kind of input, as it influences the 4th type parameter of `Endpoint`. Other inputs
-(`EndpointInput`s and `EndpointIO`s aren't parametrised with the type of streams that they use (to make them simpler),
+Streaming body is a special kind of input/output, as it influences the 4th type parameter of `Endpoint`. Other inputs
+(`EndpointInput`s and `EndpointIO`s) aren't parametrised with the type of streams that they use (to make them simpler),
 so we need to pass the streaming information directly between the streaming body input and the endpoint.
 
 That's why the streaming body input is a separate trait, unrelated to `EndpointInput`: it can't be combined with
@@ -566,8 +688,8 @@ other inputs, and the `Endpoint.in(EndpointInput)` method can't be used to add a
 overloaded variant `Endpoint.in(StreamBody)`, which takes into account the streaming type.
 
 Internally, the streaming body is converted into a wrapper `EndpointIO`, which "forgets" about the streaming
-information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
-factory method in `Tapir` which would directly create an instance of it.
+information. This can also be done by the end user with `.toEndpointIO`, if the body should be used e.g. in `oneOf`.
+However, this decreases type safety, as the streaming requirement is lost.
 
 BS == streams.BinaryStream, but we can't express this using dependent types here.
  */
@@ -583,7 +705,12 @@ case class StreamBodyIO[BS, T, S](
   override private[tapir] type CF = CodecFormat
   override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
-  private[tapir] def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
+  /** Lift this streaming body into an [[EndpointIO]], so that it can be used as a regular endpoint input/output, "forgetting" the streaming
+    * requirement. This is useful when using the streaming body in [[Tapir.oneOf]] or [[Tapir.oneOfBody]], however at the expense of type
+    * safety: the fact that the endpoint can only be interpreted by an interpreter supporting the given stream type is lost; in case of a
+    * mismatch, a run-time error will occur.
+    */
+  def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T] = EndpointIO.StreamBodyWrapper(this)
 
   /** Add an example of a "deserialized" stream value. This should be given in an encoded form, e.g. in case of json - as a [[String]], as
     * the stream body doesn't have access to the codec that will be later used for deserialization.
@@ -632,12 +759,13 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
 
   def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
   def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
-  def requestsExamples(examples: List[REQ]): ThisType[T] = copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None))))
+  def requestsExamples(examples: List[REQ]): ThisType[T] =
+    copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None, None))))
 
   def responsesDescription(d: String): ThisType[T] = copy(responsesInfo = responsesInfo.description(d))
   def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
   def responsesExamples(examples: List[RESP]): ThisType[T] =
-    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
+    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None, None))))
 
   /** @param c
     *   If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses` codecs decode will always

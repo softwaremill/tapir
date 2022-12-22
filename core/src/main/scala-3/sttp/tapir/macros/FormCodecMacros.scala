@@ -11,7 +11,7 @@ trait FormCodecMacros {
     ${ FormCodecMacros.formCaseClassCodecImpl[T]('c) }
 }
 
-object FormCodecMacros {
+private[tapir] object FormCodecMacros {
   def formCaseClassCodecImpl[T: Type](
       conf: Expr[Configuration]
   )(using q: Quotes): Expr[Codec[String, T, CodecFormat.XWwwFormUrlencoded]] = {
@@ -95,7 +95,7 @@ object FormCodecMacros {
     '{
       Codec.formSeqUtf8
         .mapDecode($decodeExpr)($encodeExpr)
-        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}].")) })
+        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${Type.show[T]}].")) })
     }
   }
 }

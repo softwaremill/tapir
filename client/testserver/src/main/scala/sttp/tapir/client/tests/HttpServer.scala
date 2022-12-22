@@ -11,7 +11,6 @@ import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder2
-import org.http4s.syntax.kleisli._
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.{multipart, _}
 import org.typelevel.ci.CIString
@@ -154,11 +153,11 @@ class HttpServer(port: Port) {
       else Ok("""{"name":"work"}""")
 
     case GET -> Root / "one-of" :? fruitParam(f) =>
-      if (f == "apple") BadRequest("""{"name":"apple"}""")
-      else if (f == "pear") BadRequest("""{"availableInDays":10}""")
-      else if (f.length < 3) BadRequest(s"""{"length":${f.length}""")
+      if (f == "apple") BadRequest("""{"name":"apple"}""", jsonContentType)
+      else if (f == "pear") BadRequest("""{"availableInDays":10}""", jsonContentType)
+      else if (f.length < 3) BadRequest(s"""{"length":${f.length}""", jsonContentType)
       else if (f == "orange") Ok()
-      else BadRequest("""{"availableFruit":["orange"]}""")
+      else NotFound("""{"availableFruit":["orange"]}""", jsonContentType)
 
     case r @ GET -> Root / "content-negotiation" / "organization" =>
       fromAcceptHeader(r) {
@@ -186,9 +185,10 @@ class HttpServer(port: Port) {
   private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
     r.headers.get[Accept].map(h => f(h.values.head.toString())).getOrElse(NotAcceptable())
 
+  private val jsonContentType = `Content-Type`(MediaType.application.json, Charset.`UTF-8`)
   private val organizationXml = Ok("<name>sml-xml</name>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
-  private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
-  private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
+  private val organizationJson = Ok("{\"name\": \"sml\"}", jsonContentType)
+  private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", jsonContentType)
 
   private def app(wsb: WebSocketBuilder2[IO]): HttpApp[IO] = {
     val corsService = CORS(service(wsb))

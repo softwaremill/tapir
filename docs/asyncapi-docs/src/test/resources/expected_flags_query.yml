@@ -23,8 +23,10 @@ channels:
           properties:
             limit:
               type: integer
+              format: int32
             offset:
               type: integer
+              format: int32
               deprecated: true
 components:
   messages:
@@ -35,4 +37,5 @@ components:
     integer:
       payload:
         type: integer
+        format: int32
       contentType: application/json

@@ -1,13 +1,14 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.StatusCode
+import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.openapi._
 import sttp.tapir._
-import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
-import sttp.tapir.docs.apispec.exampleValue
+import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal._
-import sttp.tapir.openapi._
+import sttp.tapir.model.StatusCodeRange
 
 import scala.collection.immutable.ListMap
 
@@ -23,35 +24,45 @@ private[openapi] class EndpointToOperationResponse(
       outputToResponses(e.errorOutput, ResponsesDefaultKey, None)
   }
 
+  private type StatusCodeKey = Option[Either[StatusCode, StatusCodeRange]]
+
   private def outputToResponses(
       output: EndpointOutput[_],
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
 
-    /** The list of status codes that are defined by the given outputs, or `List(None)` if there are none. */
-    def statusCodesInOutputs(os: Vector[EndpointOutput.Basic[_]]): List[Option[StatusCode]] =
+    /** The list of status codes/status code ranges that are defined by the given outputs, or `List(None)` if there are none. */
+    def statusCodeKeysInOutputs(os: Vector[EndpointOutput.Basic[_]]): List[StatusCodeKey] =
       os.collectFirst {
-        case EndpointOutput.FixedStatusCode(statusCode, _, _)                             => List(Some(statusCode))
+        case EndpointOutput.FixedStatusCode(statusCode, _, _)                             => List(Some(Left(statusCode)))
         case EndpointOutput.StatusCode(documentedCodes, _, _) if documentedCodes.nonEmpty => documentedCodes.keys.map(Some(_)).toList
       }.getOrElse(List(None))
 
     val outputs = output.asBasicOutputsList
 
-    val statusCodeAndOutputs: List[(Option[StatusCode], Vector[EndpointOutput.Basic[_]])] =
-      outputs.flatMap(os => statusCodesInOutputs(os).map(_ -> os))
-    val outputsByStatusCode: Map[Option[StatusCode], List[EndpointOutput.Basic[_]]] =
-      statusCodeAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
+    val statusCodeKeysAndOutputs: List[(StatusCodeKey, Vector[EndpointOutput.Basic[_]])] =
+      outputs.flatMap(os => statusCodeKeysInOutputs(os).map(_ -> os))
+    val outputsByStatusCodeKey: Map[StatusCodeKey, List[EndpointOutput.Basic[_]]] =
+      statusCodeKeysAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
 
-    val statusCodes: List[Option[StatusCode]] = statusCodeAndOutputs.map(_._1).distinct.sortBy(_.map(_.code).getOrElse(Integer.MAX_VALUE))
+    val statusCodeKeys: List[StatusCodeKey] = statusCodeKeysAndOutputs
+      .map(_._1)
+      .distinct
+      .sortBy(_.map(_.fold(_.code, _.range * 100)).getOrElse(Integer.MAX_VALUE))
 
     val docsExtensions = outputs.flatMap(_.flatMap {
       case o: EndpointOutput.Atom[_]         => o.info.docsExtensions
-      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.info.docsExtensions)
+      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.info.docsExtensions)
     })
-    statusCodes.flatMap { sc =>
-      val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-      outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response =>
+    statusCodeKeys.flatMap { sck =>
+      val responseKey = sck
+        .map {
+          case Left(c)  => ResponsesCodeKey(c.code)
+          case Right(r) => ResponsesRangeKey(r.range)
+        }
+        .getOrElse(defaultResponseKey)
+      outputsToResponse(sck, outputsByStatusCodeKey.getOrElse(sck, List())).map(response =>
         (responseKey, Right(response.copy(extensions = DocsExtensions.fromIterable(docsExtensions))))
       )
     } match {
@@ -60,12 +71,12 @@ private[openapi] class EndpointToOperationResponse(
     }
   }
 
-  private def outputsToResponse(sc: Option[sttp.model.StatusCode], outputs: List[EndpointOutput[_]]): Option[Response] = {
+  private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[_]]): Option[Response] = {
     val bodies = collectBodies(outputs)
     val headers = collectHeaders(outputs)
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes, _, _) => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.StatusCode(documentedCodes, _, _) => documentedCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
       case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _)) => Vector(desc)
       case EndpointIO.Empty(_, i) => if (i.description.nonEmpty) Vector(i.description.get) else Vector()
       case _                      => Vector()

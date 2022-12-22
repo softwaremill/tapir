@@ -7,7 +7,6 @@ import eu.timepit.refined.internal.WitnessAs
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
 import eu.timepit.refined.string.{MatchesRegex, Uuid}
-import shapeless.Witness
 import sttp.tapir._
 
 import scala.reflect.ClassTag
@@ -48,10 +47,10 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   implicit val validatorForNonEmptyString: PrimitiveValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
-  implicit def validatorForMatchesRegexp[S <: String](implicit
-      ws: Witness.Aux[S]
+  implicit def validatorForMatchesRegexpString[S <: String](implicit
+      ws: WitnessAs[S, String]
   ): PrimitiveValidatorForPredicate[String, MatchesRegex[S]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.value))
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.snd))
 
   implicit def validatorForMaxSizeOnString[T <: String, NM](implicit
       ws: WitnessAs[NM, Int]
@@ -93,12 +92,12 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
           rightRefinedValidator -> rightPredValidator.validator
         )
           .filter { case (refinedValidator, _) => refinedValidator.notValid(value) }
-          .map { case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value) }
+          .map { case (_, primitiveValidator) => ValidationError[N](primitiveValidator, value) }
           .toList
 
         if (primitivesErrors.isEmpty) {
           // this should not happen
-          List(ValidationError.Custom(value, refinedErrorMessage, List()))
+          List(ValidationError(Validator.Custom((_: N) => ValidationResult.Valid), value, Nil, Some(refinedErrorMessage)))
         } else {
           primitivesErrors
         }
@@ -119,12 +118,12 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
           rightRefinedValidator -> rightPredValidator.validator
         )
           .filter { case (refinedValidator, _) => refinedValidator.notValid(value) }
-          .map { case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value) }
+          .map { case (_, primitiveValidator) => ValidationError[N](primitiveValidator, value) }
           .toList
 
         if (primitivesErrors.isEmpty) {
           // this should not happen
-          List(ValidationError.Custom(value, refinedErrorMessage, List()))
+          List(ValidationError(Validator.Custom((_: N) => ValidationResult.Valid), value, Nil, Some(refinedErrorMessage)))
         } else {
           primitivesErrors
         }
@@ -147,7 +146,7 @@ object ValidatorForPredicate {
     new PrimitiveValidatorForPredicate[V, P] {
       override def validator: Validator.Primitive[V] = primitiveValidator
       override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
-        List(ValidationError.Primitive[V](primitiveValidator, value))
+        List(ValidationError[V](primitiveValidator, value))
     }
 }
 
@@ -158,15 +157,12 @@ trait LowPriorityValidatorForPredicate {
     new ValidatorForPredicate[V, P] {
       override val validator: Validator.Custom[V] = Validator.Custom(
         { v =>
-          if (refinedValidator.isValid(v)) {
-            List.empty
-          } else {
-            List(ValidationError.Custom(v, implicitly[ClassTag[P]].runtimeClass.toString))
-          }
+          if (refinedValidator.isValid(v)) ValidationResult.Valid
+          else ValidationResult.Invalid(implicitly[ClassTag[P]].runtimeClass.toString)
         }
       ) // for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
       override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
-        List(ValidationError.Custom[V](value, refinedErrorMessage))
+        List(ValidationError[V](validator, value, Nil, Some(refinedErrorMessage)))
     }
 }

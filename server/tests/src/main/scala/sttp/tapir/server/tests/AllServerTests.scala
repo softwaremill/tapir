@@ -10,9 +10,9 @@ import sttp.tapir.tests.Test
 /** All server tests in default configurations, except for streaming (which require a streams object) and web socket ones (which need to be
   * subclassed). If a custom configuration is needed, exclude the tests here, and add separately.
   */
-class AllServerTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+class AllServerTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     security: Boolean = true,
     basic: Boolean = true,
@@ -25,7 +25,9 @@ class AllServerTests[F[_], ROUTE](
     reject: Boolean = true,
     staticContent: Boolean = true,
     validation: Boolean = true,
-    oneOfBody: Boolean = true
+    oneOfBody: Boolean = true,
+    cors: Boolean = true,
+    options: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -41,5 +43,7 @@ class AllServerTests[F[_], ROUTE](
       (if (reject) new ServerRejectTests(createServerTest, serverInterpreter).tests() else Nil) ++
       (if (staticContent) new ServerStaticContentTests(serverInterpreter, backend).tests() else Nil) ++
       (if (validation) new ServerValidationTests(createServerTest).tests() else Nil) ++
-      (if (oneOfBody) new ServerOneOfBodyTests(createServerTest).tests() else Nil)
+      (if (oneOfBody) new ServerOneOfBodyTests(createServerTest).tests() else Nil) ++
+      (if (cors) new ServerCORSTests(createServerTest).tests() else Nil) ++
+      (if (options) new ServerOptionsTests(createServerTest, serverInterpreter).tests() else Nil)
 }

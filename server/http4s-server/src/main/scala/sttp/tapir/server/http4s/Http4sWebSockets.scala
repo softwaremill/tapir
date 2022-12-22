@@ -8,7 +8,8 @@ import fs2._
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
 import scodec.bits.ByteVector
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
 private[http4s] object Http4sWebSockets {
@@ -26,7 +27,7 @@ private[http4s] object Http4sWebSockets {
         case None                    => Stream.empty
       }
 
-      autoPongs
+      (autoPongs
         .map {
           case _: WebSocketFrame.Close if !o.decodeCloseRequests => None
           case f =>
@@ -39,7 +40,7 @@ private[http4s] object Http4sWebSockets {
         .through(pipe)
         .map(o.responses.encode)
         .mergeHaltL(Stream.repeatEval(pongs.take))
-        .mergeHaltL(autoPings)
+        .mergeHaltL(autoPings) ++ Stream(WebSocketFrame.close))
         .map(frameToHttp4sFrame)
     }
   }

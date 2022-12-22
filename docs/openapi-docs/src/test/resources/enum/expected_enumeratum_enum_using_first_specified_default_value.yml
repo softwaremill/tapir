@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /fruit-by-type1:
+    get:
+      operationId: getFruit-by-type1
+      parameters:
+        - name: type1
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/FruitType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FruitWithEnum'
+        '400':
+          description: 'Invalid value for: query parameter type1'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /fruit-by-type2:
+    get:
+      operationId: getFruit-by-type2
+      parameters:
+        - name: type2
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/FruitType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FruitWithEnum'
+        '400':
+          description: 'Invalid value for: query parameter type2'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    FruitType:
+      type: string
+      default: PEAR
+      enum:
+        - APPLE
+        - PEAR
+    FruitWithEnum:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+          format: int32
+        fruitType:
+          type: array
+          items:
+            $ref: '#/components/schemas/FruitType'

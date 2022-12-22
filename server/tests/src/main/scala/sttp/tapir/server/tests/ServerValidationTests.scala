@@ -9,8 +9,8 @@ import sttp.tapir.tests.Validation._
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
-class ServerValidationTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE]
+class ServerValidationTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {
@@ -29,13 +29,13 @@ class ServerValidationTests[F[_], ROUTE](
     },
     testServer(in_valid_json, "support jsonBody validation with wrapped type")((_: ValidFruitAmount) => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
-        basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.post(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send(backend).map(_.code shouldBe StatusCode.Ok) >>
           basicRequest
-            .get(uri"$baseUri")
+            .post(uri"$baseUri")
             .body("""{"fruit":"orange","amount":0}""")
             .send(backend)
             .map(_.code shouldBe StatusCode.BadRequest) >>
-          basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send(backend).map(_.code shouldBe StatusCode.Ok)
+          basicRequest.post(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send(backend).map(_.code shouldBe StatusCode.Ok)
     },
     testServer(in_valid_query, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
@@ -47,13 +47,13 @@ class ServerValidationTests[F[_], ROUTE](
       pureResult(().asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
-        .get(uri"$baseUri")
+        .post(uri"$baseUri")
         .body("""{"fruits":[{"fruit":"orange","amount":11}]}""")
         .send(backend)
         .map(_.code shouldBe StatusCode.Ok) >>
-        basicRequest.get(uri"$baseUri").body("""{"fruits": []}""").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
+        basicRequest.post(uri"$baseUri").body("""{"fruits": []}""").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
         basicRequest
-          .get(uri"$baseUri")
+          .post(uri"$baseUri")
           .body("""{fruits":[{"fruit":"orange","amount":0}]}""")
           .send(backend)
           .map(_.code shouldBe StatusCode.BadRequest)

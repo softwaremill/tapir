@@ -47,9 +47,9 @@ openapiObject       TapirGeneratedEndpoints              The name for the genera
 The general usage is;
 
 ```scala
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.generated._
 import sttp.tapir.docs.openapi._
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```

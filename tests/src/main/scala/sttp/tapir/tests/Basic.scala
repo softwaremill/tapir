@@ -2,7 +2,7 @@ package sttp.tapir.tests
 
 import io.circe.generic.auto._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.model.{Header, MediaType, QueryParams, StatusCode}
+import sttp.model.{Header, HeaderNames, MediaType, QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -181,4 +181,19 @@ object Basic {
 
   val in_path_security_no_regular: Endpoint[Unit, Unit, Unit, String, Any] =
     endpoint.securityIn("auth").out(stringBody)
+
+  val out_custom_content_type_empty_body: PublicEndpoint[Int, Unit, String, Any] =
+    endpoint.in(query[Int]("kind")).out(header[String](HeaderNames.ContentType))
+
+  val out_custom_content_type_string_body: PublicEndpoint[Int, Unit, (String, String), Any] =
+    endpoint.in(query[Int]("kind")).out(header[String](HeaderNames.ContentType)).out(stringBody)
+
+  val in_raw_with_json_out_string: PublicEndpoint[(String, FruitAmount), Unit, String, Any] =
+    endpoint.post
+      .in("api" / "echo")
+      .in(jsonBodyWithRaw[FruitAmount])
+      .out(stringBody)
+
+  val in_flag_query_out_string: PublicEndpoint[Option[Boolean], Unit, String, Any] =
+    endpoint.get.in(query[Option[Boolean]]("flag").flagValue(Some(true))).out(stringBody)
 }

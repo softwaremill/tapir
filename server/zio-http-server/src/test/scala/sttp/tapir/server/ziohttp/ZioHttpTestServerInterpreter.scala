@@ -4,49 +4,74 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
-import zhttp.http._
-import zhttp.service.{EventLoopGroup, Server, ServerChannelFactory}
 import zio._
+import zio.http.netty.server.NettyDriver
+import zio.http.service.ServerChannelFactory
+import zio.http._
 import zio.interop.catz._
 
-import java.util.concurrent.atomic.AtomicInteger
+class ZioHttpTestServerInterpreter(eventLoopGroup: zio.http.service.EventLoopGroup, channelFactory: zio.http.service.ServerChannelFactory)(
+    implicit trace: Trace
+) extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
-class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
-    extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response]] {
-
-  override def route(
-      e: ServerEndpoint[ZioStreams, Task],
-      decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Task]]
-  ): Http[Any, Throwable, Request, Response] = {
-    val serverOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customInterceptors
-      .metricsInterceptor(metricsInterceptor)
-      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.default))
-      .options
-    ZioHttpInterpreter(serverOptions).toHttp(e)
+  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
+    val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
+    ZioHttpInterpreter(serverOptions).toHttp(es)
   }
-
-  override def route(
-      es: List[ServerEndpoint[ZioStreams, Task]]
-  ): Http[Any, Throwable, Request, Response] =
-    ZioHttpInterpreter().toHttp(es)
-
-  private val portCounter = new AtomicInteger(0) // no way to dynamically allocate ports
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ ++ _)) ++ Server.maxRequestSize(10000000)
-    val port = ZManaged.fromEffect(UIO.effectTotal(8090 + portCounter.getAndIncrement()))
-    port
-      .tap(p =>
-        Server
-          .make(server ++ Server.port(p))
-          .provide(nettyDeps)
+
+    val makeNettyDriver = {
+      import zio.http.netty.server._
+      import io.netty.bootstrap.ServerBootstrap
+      import io.netty.channel._
+      import io.netty.util.ResourceLeakDetector
+      import zio._
+      import zio.http.netty._
+      import zio.http.service.ServerTime
+      import zio.http.{Driver, Http, HttpApp, Server, ServerConfig}
+
+      import java.net.InetSocketAddress
+      import java.util.concurrent.atomic.AtomicReference
+
+      type ErrorCallbackRef = AtomicReference[Option[Server.ErrorCallback]]
+      type AppRef = AtomicReference[(HttpApp[Any, Throwable], ZEnvironment[Any])]
+      type EnvRef = AtomicReference[ZEnvironment[Any]]
+
+      val app = ZLayer.succeed(
+        new AtomicReference[(HttpApp[Any, Throwable], ZEnvironment[Any])]((Http.empty, ZEnvironment.empty))
       )
-      .toResource[IO]
+      val ecb = ZLayer.succeed(new AtomicReference[Option[Server.ErrorCallback]](Option.empty))
+      val time = ZLayer.succeed(ServerTime.make(1000.millis))
+
+      val nettyRuntime = NettyRuntime.usingSharedThreadPool
+      val serverChannelInitializer = ServerChannelInitializer.layer
+      val serverInboundHandler = ServerInboundHandler.layer
+
+      val serverLayers = app ++
+        ZLayer.succeed(channelFactory) ++
+        (
+          (
+            (time ++ app ++ ecb) ++
+              (ZLayer.succeed(eventLoopGroup) >>> nettyRuntime) >>> serverInboundHandler
+          ) >>> serverChannelInitializer
+        ) ++
+        ecb ++
+        ZLayer.succeed(eventLoopGroup)
+
+      NettyDriver.make.provideSomeLayer[ServerConfig with Scope](serverLayers)
+    }
+
+    val effect: ZIO[Scope, Throwable, Int] =
+      (for {
+        driver <- makeNettyDriver
+        port <- driver.start(trace)
+        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
+      } yield port).provideSome[Scope](ServerConfig.live(ServerConfig.default.port(0).objectAggregator(1000000)))
+
+    Resource.scoped[IO, Any, Int](effect)
   }
 }

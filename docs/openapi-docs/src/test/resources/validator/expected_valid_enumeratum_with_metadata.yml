@@ -1,0 +1,46 @@
+openapi: 3.0.3
+info:
+  title: Numbers
+  version: '1.0'
+paths:
+  /numbers:
+    get:
+      operationId: getNumbers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberWithMsg'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    MyNumber:
+      type: integer
+      description: |-
+        * 1 - One
+        * 2 - Two
+        * 3 - Three
+      format: int32
+      enum:
+        - 1
+        - 2
+        - 3
+    NumberWithMsg:
+      required:
+        - number
+        - msg
+      type: object
+      properties:
+        number:
+          $ref: '#/components/schemas/MyNumber'
+        msg:
+          type: string

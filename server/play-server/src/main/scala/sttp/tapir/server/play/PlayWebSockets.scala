@@ -4,7 +4,8 @@ import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import play.api.http.websocket._
 import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
 private[play] object PlayWebSockets {

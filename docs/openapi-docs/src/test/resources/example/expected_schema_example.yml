@@ -53,6 +53,7 @@ components:
           $ref: '#/components/schemas/Genre'
         year:
           type: integer
+          format: int32
         author:
           $ref: '#/components/schemas/Author'
       example:

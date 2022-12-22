@@ -1,16 +1,18 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
+import org.scalactic.source.Position.here
+import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
-import zhttp.http._
+import zio.http._
+import zio.http.model._
 import zio.{Task, ZIO}
-import org.scalatest.matchers.should.Matchers._
 
 class ZioHttpCompositionTest(
-    createServerTest: CreateServerTest[Task, Any, Http[Any, Throwable, zhttp.http.Request, zhttp.http.Response]]
+    createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zio.http.Request, zio.http.Response]]
 ) {
   import createServerTest._
 
@@ -21,8 +23,8 @@ class ZioHttpCompositionTest(
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
         val route1: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
-        val route2: RHttpApp[Any] = Http.collect { case Method.GET -> Root / "p2" =>
-          zhttp.http.Response.ok
+        val route2: RHttpApp[Any] = Http.collect { case Method.GET -> !! / "p2" =>
+          zio.http.Response.ok
         }
         val route3: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep3)
 

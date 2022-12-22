@@ -2,7 +2,7 @@ package sttp.tapir.macros
 
 import sttp.tapir.MultipartCodec
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.internal.MultipartCodecMacro
+import sttp.tapir.internal.MultipartCodecMacro
 
 trait MultipartCodecMacros {
   implicit def multipartCaseClassCodec[T <: Product with Serializable](implicit

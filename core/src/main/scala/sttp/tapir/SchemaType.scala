@@ -60,7 +60,7 @@ object SchemaType {
     override def as[TT]: SchemaType[TT] = SDateTime()
   }
 
-  trait SProductField[T] {
+  trait SProductField[T] extends Serializable {
     type FieldType
     def name: FieldName
     def schema: Schema[FieldType]
@@ -98,17 +98,32 @@ object SchemaType {
     def empty[T]: SProduct[T] = SProduct(Nil)
   }
 
-  case class SOpenProduct[T, V](valueSchema: Schema[V])(val fieldValues: T => Map[String, V]) extends SchemaType[T] {
+  case class SOpenProduct[T, V](fields: List[SProductField[T]], valueSchema: Schema[V])(val mapFieldValues: T => Map[String, V])
+      extends SchemaType[T] {
+    def required: List[FieldName] = fields.collect { case f if !f.schema.isOptional => f.name }
     override def show: String = s"map"
-    override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(g.andThen(fieldValues))
-    override def as[TT]: SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(_ => Map.empty)
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](
+      fields.map(f => SProductField[TT, f.FieldType](f.name, f.schema, g.andThen(f.get))),
+      valueSchema
+    )(g.andThen(mapFieldValues))
+    override def as[TT]: SchemaType[TT] =
+      SOpenProduct[TT, V](fields.map(f => SProductField[TT, f.FieldType](f.name, f.schema, _ => None)), valueSchema)(_ => Map.empty)
+
+    private[tapir] val fieldsWithValidation: List[SProductField[T]] = fields.collect {
+      case f if f.schema.hasValidation => f
+    }
   }
 
+  case class SchemaWithValue[T](schema: Schema[T], value: T)
+
   case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
-      val subtypeSchema: T => Option[Schema[_]]
+      val subtypeSchema: T => Option[SchemaWithValue[_]]
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
+    /** @param discriminatorSchema
+      *   Schema used when adding the discriminator as a field to a child product schema.
+      */
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
         discriminatorSchema: Schema[D] = Schema.string,
@@ -116,8 +131,9 @@ object SchemaType {
     ): SCoproduct[T] = {
       SCoproduct(
         subtypes.map {
-          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _) =>
-            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
+          case s @ Schema(st: SchemaType.SProduct[Any @unchecked], _, _, _, _, _, _, _, _, _, _)
+              if st.fields.forall(_.name != discriminatorName) =>
+            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[Any, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
         },
         Some(SDiscriminator(discriminatorName, discriminatorMapping))

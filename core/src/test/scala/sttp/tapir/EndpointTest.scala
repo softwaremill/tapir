@@ -38,6 +38,10 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.securityIn(auth.bearer[String]()).securityIn(path[String]("foo")).mapSecurityInTo[Foo]
   }
 
+  it should "compile a path fold" in {
+    endpoint.in(List("a", "b", "c").foldLeft(emptyInput)(_ / _))
+  }
+
   trait TestStreams extends Streams[TestStreams] {
     override type BinaryStream = Vector[Byte]
     override type Pipe[X, Y] = Nothing
@@ -45,9 +49,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBinaryBody(TestStreams)): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBinaryBody(TestStreams))
+      .in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .in(path[Int]): PublicEndpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -60,9 +64,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBinaryBody(TestStreams)): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBinaryBody(TestStreams))
+      .out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .out(header[Int]("h1")): PublicEndpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
@@ -89,8 +93,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.get
       .out(
         sttp.tapir.oneOf(
-          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
-          oneOfVariant(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+          oneOfVariant(StatusCode.Accepted, stringBodyAnyFormat(codec, StandardCharsets.UTF_8)),
+          oneOfVariant(StatusCode.Accepted, stringBodyAnyFormat(codec, StandardCharsets.ISO_8859_1))
         )
       )
   }
@@ -206,7 +210,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1/p2"), "/p1%2Fp2 -> -/-"),
     (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
     (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
-    (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
+    (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /* -> -/-"),
     (
       endpoint.post.in(query[String]("q1")).in(query[Option[Int]]("q2")).in(stringBody).errorOut(stringBody),
       "POST ?q1 ?q2 {body as text/plain (UTF-8)} -> {body as text/plain (UTF-8)}/-"
@@ -236,10 +240,27 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     }
   }
 
+  val showShortTestData = List(
+    endpoint -> "* *",
+    endpoint.in("p1") -> "* /p1",
+    endpoint.in("p1" / "p2") -> "* /p1/p2",
+    endpoint.get.in("p1" / "p2") -> "GET /p1/p2",
+    endpoint.post -> "POST *",
+    endpoint.get.in("p1").in(paths) -> "GET /p1/*",
+    endpoint.get.in("p1" / "p2").name("my endpoint") -> "[my endpoint]"
+  )
+
+  for ((testEndpoint, expectedResult) <- showShortTestData) {
+    s"short show for ${testEndpoint.showDetail}" should s"be $expectedResult" in {
+      testEndpoint.showShort shouldBe expectedResult
+    }
+  }
+
   private val pathAllowedCharacters = Rfc3986.PathSegment.mkString
 
-  val renderTestData = List(
-    (endpoint, "/"),
+  val showPathTemplateTestData = List(
+    (endpoint, "*"),
+    (endpoint.in(""), "/"),
     (endpoint.in("p1"), "/p1"),
     (endpoint.in("p1" / "p2"), "/p1/p2"),
     (endpoint.securityIn("p1").in("p2"), "/p1/p2"),
@@ -251,20 +272,26 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
     (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
     (endpoint.in("p1/p2"), "/p1%2Fp2"),
-    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters)
+    (endpoint.in(pathAllowedCharacters), "/" + pathAllowedCharacters),
+    (endpoint.in("p1" / paths), "/p1/*"),
+    (endpoint.in("p1").in(queryParams), "/p1?*"),
+    (
+      endpoint.in("p1" / "p2".schema(_.hidden(true)) / query[String]("par1") / query[String]("par2").schema(_.hidden(true))),
+      "/p1?par1={par1}"
+    )
   )
 
-  for ((testEndpoint, expectedRenderPath) <- renderTestData) {
-    s"renderPath for ${testEndpoint.showDetail}" should s"be $expectedRenderPath" in {
-      testEndpoint.renderPathTemplate() shouldBe expectedRenderPath
+  for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {
+    s"showPathTemplate for ${testEndpoint.showDetail}" should s"be $expectedShownPath" in {
+      testEndpoint.showPathTemplate() shouldBe expectedShownPath
     }
   }
 
-  "renderPath" should "keep param count in render functions" in {
+  "showPathTemplate" should "keep param count in show functions" in {
     val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
-    testEndpoint.renderPathTemplate(
-      renderPathParam = (index, _) => s"{par$index}",
-      renderQueryParam = Some((index, query) => s"${query.name}={par$index}")
+    testEndpoint.showPathTemplate(
+      showPathParam = (index, _) => s"{par$index}",
+      showQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
   }
 
@@ -347,7 +374,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     // given
     case class Wrapper(i: Int)
     val mapped = query[Int]("q1").mapTo[Wrapper]
-    val codec: Codec[List[String], Wrapper, CodecFormat.TextPlain] = mapped.codec
+    val codec: Codec[List[String], Wrapper, CodecFormat] = mapped.codec
 
     // when
     codec.encode(Wrapper(10)) shouldBe (List("10"))

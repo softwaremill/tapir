@@ -1,6 +1,6 @@
 package sttp.tapir.ztapir
 
-import zio.stream.{Stream, ZTransducer}
+import zio.stream.{Stream, ZPipeline}
 import sttp.model.sse.ServerSentEvent
 import zio.Chunk
 
@@ -15,8 +15,8 @@ object ZioServerSentEvents {
 
   def parseBytesToSSE: Stream[Throwable, Byte] => Stream[Throwable, ServerSentEvent] = stream => {
     stream
-      .aggregate(ZTransducer.utf8Decode)
-      .aggregate(ZTransducer.splitLines)
+      .via(ZPipeline.utf8Decode)
+      .via(ZPipeline.splitLines)
       .mapAccum(List.empty[String]) { case (acc, line) =>
         if (line.isEmpty) (Nil, Some(acc.reverse))
         else (line :: acc, None)

@@ -59,6 +59,7 @@ endpoints can be converted to an akka-http route:
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import akka.http.scaladsl.server.Route
 
 val endpoint1 = endpoint.in("hello").out(stringBody)
@@ -109,6 +110,12 @@ There are also other variants of the methods that can be used to provide the ser
 * `serverLogicError(f: I => F[E])`: similarly for endpoints which always return an error
 * `serverLogicPure(f: I => Either[E, O])`: if the server logic function is pure, that is returns a strict value, not
   a description of side-effects
+* `serverLogicOption(f: I => F[Option[O]])`: if the error type is a `Unit`, a `None` results is treated as an error
+* `serverLogicRightErrorOrSuccess(f: I => F[Either[RE, O]])`: if the error type is an `Either`, e.g. when using 
+  `errorOutEither`, this method accepts server logic that returns either success or the `Right` error type. Use of this 
+  method avoids having to wrap the returned error in `Right`.
+* `serverLogicLeftErrorOrSuccess(f: I => F[Either[LE, O]])`: similarly, this accepts server logic which returns the `Left`
+  error type or success
 
 Similar variants are available to provide the security logic. 
 
@@ -135,7 +142,7 @@ import scala.concurrent.Future
 implicit val ec = scala.concurrent.ExecutionContext.global
 
 case class User(name: String)
-def auth(token: String): Future[Either[Int, User]] = Future {
+def authLogic(token: String): Future[Either[Int, User]] = Future {
   if (token == "secret") Right(User("Spock"))
   else Left(1001) // error code
 }
@@ -144,7 +151,7 @@ val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Fu
   endpoint
     .securityIn(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
-    .serverSecurityLogic(auth)
+    .serverSecurityLogic(authLogic)
 ```
 
 The result is a value of type `PartialServerEndpoint`, which can be extended with further inputs and outputs, just
@@ -165,7 +172,41 @@ val secureHelloWorld1WithLogic: ServerEndpoint[Any, Future] = secureEndpoint.get
   }
 ```
 
+### Security logic with outputs
+
+When using `.serverSecurityLogic`, the result of the security function is treated as an input to the main server logic.
+However, it might be desirable to provide some output as part of the security logic. This is possible using 
+`.serverSecurityLogicWithOutput` and its variants.
+
+The provided security function has to return a value for the output defined so far, and a value that will be provided
+to the main server logic. The security output will contribute directly to the output of the whole endpoint, unless
+an error response is returned. 
+
+Additional outputs can be then added to the resulting partial endpoint. 
+
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
 this can be customised by using a [status code output](../endpoint/ios.md).
+
+## Additional security logic
+
+In some cases, e.g. when using some pre-defined public server endpoints, such as ones for [serving static content](../endpoint/static.md)
+or to expose the [Swagger UI](../docs/openapi.md), it might be necessary to add a security check. One way to achieve
+this is extending the pre-defined endpoint description with security inputs, and then re-using the appropriate server
+logic, with custom security logic, but this requires non-trivial amount of code.
+
+For such situations, a `ServerLogic.prependSecurity` method is provided. It accepts a security input description, along
+with an error output (for security errors) and the security logic to add. This additional security logic is run
+before the security logic defined in the endpoint so far (if any). For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import scala.concurrent.Future
+import sttp.model.StatusCode
+
+val secureFileEndpoints = filesServerEndpoints[Future]("secure")("/home/data")
+  .map(_.prependSecurity(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
+    Future.successful(if (token.startsWith("secret")) Right(()) else Left(()))
+  })
+```

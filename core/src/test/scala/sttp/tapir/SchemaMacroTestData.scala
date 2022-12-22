@@ -1,5 +1,7 @@
 package sttp.tapir
 
+import sttp.tapir.Schema.annotations._
+
 object SchemaMacroTestData {
   case class ArrayWrapper(f1: List[String])
   case class Person(name: String, age: Int)
@@ -27,5 +29,37 @@ object SchemaMacroTestData {
       case "org" => "org"
       case _     => throw new MatchError(s)
     }
+  }
+
+  sealed abstract class Pet {
+    @description("name")
+    def name: String
+  }
+
+  case class Cat(@description("cat name") name: String, @description("cat food") catFood: String) extends Pet
+
+  case class Dog(name: String, @description("dog food") dogFood: String) extends Pet
+
+  sealed trait Rodent extends Pet {
+    @description("likes nuts?")
+    def likesNuts: Boolean
+  }
+
+  case class Hamster(name: String, likesNuts: Boolean) extends Rodent
+
+  @description("country")
+  @default(Countries.PL)
+  @encodedName("country-encoded-name")
+  object Countries extends Enumeration {
+    type Country = Value
+    val PL, NL = Value
+  }
+
+  @description("it's a small alphabet")
+  sealed trait Letters
+  object Letters {
+    case object A extends Letters
+    case object B extends Letters
+    case object C extends Letters
   }
 }

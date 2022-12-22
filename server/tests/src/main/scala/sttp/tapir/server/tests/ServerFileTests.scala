@@ -9,7 +9,7 @@ import sttp.tapir.tests.Test
 
 import java.io.File
 
-class ServerFileTests[F[_], ROUTE](createServerTest: CreateServerTest[F, Any, ROUTE])(implicit m: MonadError[F]) {
+class ServerFileTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =

@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.20.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.2.4"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.20.0-M6" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.2.4" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the object:
@@ -32,6 +32,7 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
+import scala.concurrent.ExecutionContext.Implicits.global
 
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future.successful(Right[Unit, Int](s.length))
@@ -60,6 +61,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server._
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class Special
 def metricsDirective: Directive0 = ???
@@ -106,6 +108,7 @@ import sttp.tapir._
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, serverSentEventsBody}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody)
 

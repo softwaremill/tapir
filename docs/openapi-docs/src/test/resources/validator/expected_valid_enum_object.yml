@@ -28,4 +28,5 @@ components:
             - red
         value:
           type: integer
+          format: int32
   

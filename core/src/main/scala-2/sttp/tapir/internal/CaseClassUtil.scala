@@ -7,7 +7,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
 
   val t: Type = weakTypeOf[T]
   if (!t.typeSymbol.isClass || !t.typeSymbol.asClass.isCaseClass) {
-    c.error(c.enclosingPosition, s"${name.capitalize} can only be generated for a case class, but got: $t.")
+    c.error(c.enclosingPosition, s"${name.capitalize} can only be generated for a case class, but got: ${t.typeSymbol.fullName}.")
   }
 
   lazy val fields: List[Symbol] = t.decls
@@ -18,7 +18,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     .paramLists
     .head
 
-  private lazy val companion: Ident = Ident(TermName(t.typeSymbol.name.decodedName.toString))
+  lazy val companion: Ident = Ident(TermName(t.typeSymbol.name.decodedName.toString))
 
   lazy val instanceFromValues: Tree = if (fields.size == 1) {
     q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
@@ -67,6 +67,16 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
         a.tree.children.tail match {
           case List(t) => t
           case _       => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
+        }
+    }
+  }
+
+  def extractFirstTreeArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Tree] = {
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< annotationType =>
+        a.tree.children.tail match {
+          case List(t, _*) => t
+          case _           => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
   }

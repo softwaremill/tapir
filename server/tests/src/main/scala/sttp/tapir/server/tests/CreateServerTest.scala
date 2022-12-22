@@ -1,6 +1,7 @@
 package sttp.tapir.server.tests
 
 import cats.data.NonEmptyList
+import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
@@ -11,20 +12,23 @@ import sttp.client3._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests._
-import cats.effect.unsafe.implicits.global
 
-trait CreateServerTest[F[_], +R, ROUTE] {
+trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
+  protected type Interceptors = CustomiseInterceptors[F, OPTIONS] => CustomiseInterceptors[F, OPTIONS]
+
   def testServer[I, E, O](
       e: PublicEndpoint[I, E, O, R],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
+      interceptors: Interceptors = identity
   )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 
-  def testServerLogic(e: ServerEndpoint[R, F], testNameSuffix: String = "", decodeFailureHandler: Option[DecodeFailureHandler] = None)(
+  def testServerLogic(
+      e: ServerEndpoint[R, F],
+      testNameSuffix: String = "",
+      interceptors: Interceptors = identity
+  )(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
@@ -33,36 +37,35 @@ trait CreateServerTest[F[_], +R, ROUTE] {
   ): Test
 }
 
-class DefaultCreateServerTest[F[_], +R, ROUTE](
+class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    interpreter: TestServerInterpreter[F, R, ROUTE]
-) extends CreateServerTest[F, R, ROUTE]
+    interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE]
+) extends CreateServerTest[F, R, OPTIONS, ROUTE]
     with StrictLogging {
 
   override def testServer[I, E, O](
       e: PublicEndpoint[I, E, O, R],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None
+      interceptors: Interceptors = identity
   )(
       fn: I => F[Either[E, O]]
   )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, metricsInterceptor))
+      NonEmptyList.of(interpreter.route(e.serverLogic(fn), interceptors))
     )(runTest)
   }
 
   override def testServerLogic(
       e: ServerEndpoint[R, F],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      interceptors: Interceptors = identity
   )(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e, decodeFailureHandler))
+      NonEmptyList.of(interpreter.route(e, interceptors))
     )(runTest)
   }
 

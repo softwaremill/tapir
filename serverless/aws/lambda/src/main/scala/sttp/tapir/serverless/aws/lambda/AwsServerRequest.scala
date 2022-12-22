@@ -1,12 +1,13 @@
 package sttp.tapir.serverless.aws.lambda
 
 import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
 import java.net.{InetSocketAddress, URLDecoder}
 import scala.collection.immutable.Seq
 
-private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerRequest {
+private[lambda] case class AwsServerRequest(request: AwsRequest, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   private val sttpUri: Uri = {
     val queryString = if (request.rawQueryString.nonEmpty) "?" + request.rawQueryString else ""
     Uri.unsafeParse(s"$protocol://${request.requestContext.domainName.getOrElse("")}${request.rawPath}$queryString")
@@ -23,4 +24,10 @@ private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerReques
   override def method: Method = Method.unsafeApply(request.requestContext.http.method)
   override def uri: Uri = sttpUri
   override def headers: Seq[Header] = request.headers.map { case (n, v) => Header(n, v) }.toList
+
+  override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
+  override def attribute[T](k: AttributeKey[T], v: T): AwsServerRequest = copy(attributes = attributes.put(k, v))
+
+  override def withUnderlying(underlying: Any): ServerRequest =
+    AwsServerRequest(request = underlying.asInstanceOf[AwsRequest], attributes)
 }

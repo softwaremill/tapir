@@ -1,56 +1,19 @@
 package sttp.tapir
 
-import sttp.capabilities.Streams
 import sttp.model.Uri._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.SchemaType.SProductField
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
 
-import java.nio.charset.Charset
 import scala.collection.immutable
-import scala.util.{Success, Try}
 
 object TestUtil {
   def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
 
   type Id[X] = X
-
-  object TestRequestBody extends RequestBody[Id, NoStreams] {
-    override val streams: Streams[NoStreams] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
-    override def toStream(): streams.BinaryStream = ???
-  }
-
-  object UnitToResponseBody extends ToResponseBody[Unit, NoStreams] {
-    override val streams: Streams[NoStreams] = NoStreams
-    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Unit = ()
-    override def fromStreamValue(
-        v: streams.BinaryStream,
-        headers: HasHeaders,
-        format: CodecFormat,
-        charset: Option[Charset]
-    ): Unit = ???
-    override def fromWebSocketPipe[REQ, RESP](
-        pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
-    ): Unit = ???
-  }
-
-  object StringToResponseBody extends ToResponseBody[String, NoStreams] {
-    override val streams: Streams[NoStreams] = NoStreams
-    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String =
-      v.asInstanceOf[String]
-    override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): String = ""
-    override def fromWebSocketPipe[REQ, RESP](
-        pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
-    ): String = ""
-  }
 
   implicit val idMonadError: MonadError[Id] = new MonadError[Id] {
     override def unit[T](t: T): Id[T] = t
@@ -60,20 +23,6 @@ object TestUtil {
     override protected def handleWrappedError[T](rt: Id[T])(h: PartialFunction[Throwable, Id[T]]): Id[T] = rt
     override def ensure[T](f: Id[T], e: => Id[Unit]): Id[T] = try f
     finally e
-  }
-
-  implicit val unitBodyListener: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
-    override def onComplete(body: Unit)(cb: Try[Unit] => Id[Unit]): Unit = {
-      cb(Success(()))
-      ()
-    }
-  }
-
-  implicit val stringBodyListener: BodyListener[Id, String] = new BodyListener[Id, String] {
-    override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
-      cb(Success(()))
-      body
-    }
   }
 
   case class PersonsApi(logic: String => Id[Either[String, String]] = PersonsApi.defaultLogic) {
@@ -98,6 +47,9 @@ object TestUtil {
         override def method: Method = Method.GET
         override def uri: Uri = uri"http://example.com/person"
         override def headers: immutable.Seq[Header] = Nil
+        override def attribute[T](k: AttributeKey[T]): Option[T] = None
+        override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
+        override def withUnderlying(underlying: Any): ServerRequest = this
       }
     }
   }

@@ -8,7 +8,14 @@ import tethys._
 import tethys.jackson._
 
 trait TapirJsonTethys {
-  def jsonBody[T: JsonWriter: JsonReader: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(tethysCodec[T])
+  def jsonBody[T: JsonWriter: JsonReader: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(tethysCodec[T])
+
+  def jsonBodyWithRaw[T: JsonWriter: JsonReader: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
+  def jsonQuery[T: JsonWriter: JsonReader: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def tethysCodec[T: JsonReader: JsonWriter: Schema]: JsonCodec[T] =
     Codec.json(s =>

@@ -32,6 +32,12 @@ able to generate documentation). The types, to which the branches should map, ha
 e.g.:
 
 ```scala
+import sttp.model.StatusCode
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
+import io.circe.generic.auto._
+
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
@@ -39,9 +45,9 @@ case class Unknown(code: Int, msg: String) extends ErrorInfo
 
 val baseEndpoint = endpoint.errorOut(
   oneOf(
-    statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
-    statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized]),
-    statusDefaultMapping(jsonBody[Unknown].description("unknown"))
+    oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+    oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized]),
+    oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
   )
 )
 ```

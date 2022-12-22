@@ -5,7 +5,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocketClosed, WebSocketFrame}
 
 import scala.concurrent.{ExecutionContext, Future}

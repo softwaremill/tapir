@@ -46,10 +46,12 @@ components:
           type: string
         amount:
           type: integer
+          format: int32
   messages:
     integer:
       payload:
         type: integer
+        format: int32
       contentType: text/plain
     string:
       payload:

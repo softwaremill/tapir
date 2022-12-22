@@ -4,16 +4,18 @@ The `tapir-zio` module defines type aliases and extension methods which make it 
 [ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http-server` contains an interpreter useful when
 exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http) server.
 
+The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the `*-zio1` suffix.
+
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.20.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.2.4"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.20.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.2.4"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -44,7 +46,7 @@ example:
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.{Http, Request, Response}
+import zio.http.{Http, Request, Response}
 import zio._
 
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =
@@ -53,7 +55,7 @@ def countCharacters(s: String): ZIO[Any, Nothing, Int] =
 val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersHttp: Http[Any, Throwable, Request, Response[Any, Throwable]]  =
+val countCharactersHttp: Http[Any, Throwable, Request, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 

@@ -16,6 +16,7 @@ paths:
               examples:
                 Michal:
                   summary: Some summary
+                  description: Some description
                   value:
                     Person:
                       name: michal
@@ -47,3 +48,4 @@ components:
           type: string
         age:
           type: integer
+          format: int32

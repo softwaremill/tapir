@@ -1,20 +1,20 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.Method
+import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.openapi._
 import sttp.tapir._
-import sttp.tapir.internal._
-import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
+import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
+import sttp.tapir.internal._
 
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
   private val codecToMediaType = new CodecToMediaType(schemas)
   private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
+  private val securityRequirementsForEndpoint = new SecurityRequirementsForEndpoints(securitySchemes)
 
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
@@ -37,7 +37,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       trace = if (method == TRACE) operation else None
     )
 
-    (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
+    (e.showPathTemplate(showQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
@@ -46,40 +46,17 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
     Operation(
-      e.info.tags.toList,
-      e.info.summary,
-      e.info.description,
-      e.info.name.orElse(Some(defaultId)),
-      parameters.map(Right(_)),
-      body.headOption,
-      Responses(responses),
-      if (e.info.deprecated) Some(true) else None,
-      operationSecurity(e),
+      tags = e.info.tags.toList,
+      summary = e.info.summary,
+      description = e.info.description,
+      operationId = e.info.name.orElse(Some(defaultId)),
+      parameters = parameters.map(Right(_)),
+      requestBody = body.headOption,
+      responses = Responses(responses),
+      deprecated = if (e.info.deprecated) Some(true) else None,
+      security = securityRequirementsForEndpoint(e),
       extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
-  }
-
-  private def operationSecurity(e: AnyEndpoint): List[SecurityRequirement] = {
-    val auths = e.auths
-    val securityRequirement: SecurityRequirement = auths.flatMap {
-      case auth @ EndpointInput.Auth(_, _, _, info: EndpointInput.AuthInfo.ScopedOAuth2) =>
-        securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
-      case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
-    }.toListMap
-
-    val securityOptional = auths.flatMap(_.asVectorOfBasicInputs()).forall {
-      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.body.codec.schema.isOptional)
-    }
-
-    if (securityRequirement.isEmpty) List.empty
-    else {
-      if (securityOptional) {
-        List(ListMap.empty: SecurityRequirement, securityRequirement)
-      } else {
-        List(securityRequirement)
-      }
-    }
   }
 
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
@@ -96,12 +73,12 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case EndpointIO.OneOfBody(variants, _) =>
         Right(
           RequestBody(
-            variants.collectFirst { case EndpointIO.OneOfBodyVariant(_, EndpointIO.Body(_, _, EndpointIO.Info(Some(d), _, _, _))) => d },
+            variants.flatMap(_.info.description).headOption,
             variants
-              .flatMap(variant => codecToMediaType(variant.body.codec, variant.body.info.examples, Some(variant.range.toString), Nil))
+              .flatMap(variant => codecToMediaType(variant.codec, variant.info.examples, Some(variant.range.toString), Nil))
               .toListMap,
-            Some(!variants.forall(_.body.codec.schema.isOptional)),
-            DocsExtensions.fromIterable(variants.flatMap(_.body.info.docsExtensions))
+            Some(!variants.forall(_.codec.schema.isOptional)),
+            DocsExtensions.fromIterable(variants.flatMap(_.info.docsExtensions))
           )
         )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
@@ -118,31 +95,37 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case q: EndpointInput.Query[_]       => queryToParameter(q)
-      case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
-      case h: EndpointIO.Header[_]         => headerToParameter(h)
-      case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
+      case q: EndpointInput.Query[_] if !q.codec.schema.hidden       => enrich(q, queryToParameter(q))
+      case p: EndpointInput.PathCapture[_] if !p.codec.schema.hidden => enrich(p, pathCaptureToParameter(p))
+      case h: EndpointIO.Header[_] if !h.codec.schema.hidden         => enrich(h, headerToParameter(h))
+      case c: EndpointInput.Cookie[_] if !c.codec.schema.hidden      => enrich(c, cookieToParameter(c))
+      case f: EndpointIO.FixedHeader[_] if !f.codec.schema.hidden    => enrich(f, fixedHeaderToParameter(f))
     }
   }
 
-  private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    EndpointInputToParameterConverter.from(header, schemas(header.codec))
-  }
-
-  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
+  private def headerToParameter[T](header: EndpointIO.Header[T]) = EndpointInputToParameterConverter.from(header, schemas(header.codec))
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) =
     EndpointInputToParameterConverter.from(header, Right(ASchema(ASchemaType.String)))
+  private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
+  private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = EndpointInputToParameterConverter.from(p, schemas(p.codec))
+
+  private def queryToParameter[T](query: EndpointInput.Query[T]) = query.codec.format match {
+    // use `schema` for simple plain text scenarios and `content` for complex serializations, e.g. JSON
+    // see https://swagger.io/docs/specification/describing-parameters/#schema-vs-content
+    case CodecFormat.TextPlain() => EndpointInputToParameterConverter.from(query, schemas(query.codec))
+    case _ => EndpointInputToParameterConverter.from(query, codecToMediaType(query.codec, query.info.examples, None, Nil))
   }
 
-  private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
-    EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
-  }
+  private def enrich(e: EndpointInput.Atom[_], p: Parameter): Parameter = addExplode(e, p)
 
-  private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p, schemas(p.codec))
-  }
-
-  private def queryToParameter[T](query: EndpointInput.Query[T]) = {
-    EndpointInputToParameterConverter.from(query, schemas(query.codec))
-  }
+  private def addExplode(e: EndpointInput.Atom[_], p: Parameter): Parameter =
+    (e, e.codec.schema.attribute(Schema.Explode.Attribute)) match {
+      // see https://swagger.io/specification/#parameter-object for defaults
+      case ((_: EndpointInput.Query[_]), Some(Schema.Explode(false)))      => p.explode(false)
+      case ((_: EndpointInput.Cookie[_]), Some(Schema.Explode(false)))     => p.explode(false)
+      case ((_: EndpointIO.Header[_]), Some(Schema.Explode(true)))         => p.explode(true)
+      case ((_: EndpointIO.FixedHeader[_]), Some(Schema.Explode(true)))    => p.explode(true)
+      case ((_: EndpointInput.PathCapture[_]), Some(Schema.Explode(true))) => p.explode(true)
+      case _                                                               => p
+    }
 }

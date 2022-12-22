@@ -3,10 +3,11 @@ package sttp.tapir.client.sttp.ws.zio
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.client.sttp.WebSocketToPipe
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocket, WebSocketFrame}
-import zio.Task
-import zio.stream.Stream
+import zio.{Task, ZIO}
+import zio.stream.{Stream, ZStream}
 
 import scala.reflect.ClassTag
 
@@ -18,18 +19,18 @@ class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPip
     (in: Stream[Throwable, REQ]) =>
       val sends = in
         .map(o.requests.encode)
-        .mapM(ws.send(_, isContinuation = false)) // TODO support fragmented frames
+        .mapZIO(ws.send(_, isContinuation = false)) // TODO support fragmented frames
 
       def decode(frame: WebSocketFrame): F[Either[Unit, Option[RESP]]] =
         o.responses.decode(frame) match {
           case failure: DecodeResult.Failure =>
-            Task.fail(new WebSocketFrameDecodeFailure(frame, failure))
+            ZIO.fail(new WebSocketFrameDecodeFailure(frame, failure))
           case DecodeResult.Value(v) =>
-            Task.right[Option[RESP]](Some(v))
+            ZIO.right[Option[RESP]](Some(v))
         }
 
       def raiseBadAccumulator[T](acc: WebSocketFrame, current: WebSocketFrame): F[T] =
-        Task.fail(
+        ZIO.fail(
           new WebSocketFrameDecodeFailure(
             current,
             DecodeResult.Error(
@@ -53,20 +54,20 @@ class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPip
         }).map(None -> _)
         else
           (acc match {
-            case None       => Task.some(frame)
-            case Some(x: A) => Task.some(f(x, frame))
+            case None       => ZIO.some(frame)
+            case Some(x: A) => ZIO.some(f(x, frame))
             case Some(bad)  => raiseBadAccumulator(bad, frame)
           }).map(acc => acc -> Left(()))
 
-      val receives = Stream
-        .repeatEffect(ws.receive())
-        .mapAccumM[Any, Throwable, Option[WebSocketFrame], Either[Unit, Option[RESP]]](
+      val receives = ZStream
+        .repeatZIO(ws.receive())
+        .mapAccumZIO[Any, Throwable, Option[WebSocketFrame], Either[Unit, Option[RESP]]](
           None
         ) { // left - ignore; right - close or response
           case (acc, _: WebSocketFrame.Close) if !o.decodeCloseResponses =>
-            Task.succeed(acc -> Right(None))
+            ZIO.succeed(acc -> Right(None))
           case (acc, _: WebSocketFrame.Pong) if o.ignorePong =>
-            Task.succeed(acc -> Left(()))
+            ZIO.succeed(acc -> Left(()))
           case (acc, WebSocketFrame.Ping(p)) if o.autoPongOnPing =>
             ws.send(WebSocketFrame.Pong(p)).as(acc -> Left(()))
           case (prev, frame @ WebSocketFrame.Text(_, last, _)) =>
@@ -74,7 +75,7 @@ class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPip
           case (prev, frame @ WebSocketFrame.Binary(_, last, _)) =>
             concatOrDecode(prev, frame, last)((l, r) => r.copy(payload = l.payload ++ r.payload))
           case (_, frame) =>
-            Task.fail(
+            ZIO.fail(
               new WebSocketFrameDecodeFailure(
                 frame,
                 DecodeResult.Error(

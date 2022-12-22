@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.{HeaderNames, HttpEntity}
+import play.api.http.{HeaderNames, HttpChunk, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData}
 import sttp.capabilities.akka.AkkaStreams
@@ -42,16 +42,16 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
 
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
-        HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
+        streamOrChunk(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
       case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]
         tapirFile.range
           .flatMap(r =>
             r.startAndEnd
-              .map(s => HttpEntity.Streamed(createSource(tapirFile, s._1, r.contentLength), Some(r.contentLength), contentType))
+              .map(s => streamOrChunk(createSource(tapirFile, s._1, r.contentLength), Some(r.contentLength), contentType))
           )
-          .getOrElse(HttpEntity.Streamed(FileIO.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length()), contentType))
+          .getOrElse(streamOrChunk(FileIO.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length()), contentType))
 
       case m: RawBodyType.MultipartBody =>
         val rawParts = v.asInstanceOf[Seq[RawPart]]
@@ -88,9 +88,9 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
   ): Source[ByteString, Future[IOResult]] =
     FileIO
       .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)
-      .scan(0L, ByteString.empty) { case ((bytesConsumed, _), next) =>
+      .scan((0L, ByteString.empty)) { case ((bytesConsumed, _), next) =>
         val bytesInNext = next.length
-        val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext))
+        val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext.toLong))
         (bytesConsumed + bytesInNext, next.take(bytesFromNext.toInt))
       }
       .takeWhile(_._1 < bytesTotal, inclusive = true)
@@ -102,7 +102,17 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       format: CodecFormat,
       charset: Option[Charset]
   ): PlayResponseBody = {
-    Right(HttpEntity.Streamed(v, headers.contentLength, Option(formatToContentType(format, charset))))
+    Right(streamOrChunk(v, headers.contentLength, Option(headers.contentType.getOrElse(formatToContentType(format, charset)))))
+  }
+
+  private def streamOrChunk(stream: streams.BinaryStream, contentLength: Option[Long], contentType: Option[String]): HttpEntity = {
+    contentLength match {
+      case Some(length) =>
+        HttpEntity.Streamed(stream, Some(length), contentType)
+      case None =>
+        val chunkStream = stream.map(HttpChunk.Chunk.apply)
+        HttpEntity.Chunked(chunkStream, contentType)
+    }
   }
 
   override def fromWebSocketPipe[REQ, RESP](

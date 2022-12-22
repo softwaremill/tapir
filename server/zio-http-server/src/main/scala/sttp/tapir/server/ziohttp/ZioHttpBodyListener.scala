@@ -1,14 +1,23 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.tapir.server.interpreter.BodyListener
-import zio.RIO
+import zio.{RIO, ZIO}
 import zio.stream.ZStream
 
 import scala.util.{Failure, Success, Try}
 
-class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZStream[Any, Throwable, Byte]] {
-  override def onComplete(body: ZStream[Any, Throwable, Byte])(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZStream[Any, Throwable, Byte]] =
-    RIO
-      .access[R]
-      .apply(r => body.onError(cause => cb(Failure(cause.squash)).orDie.provide(r)) ++ ZStream.fromEffect(cb(Success(()))).provide(r).drain)
+class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZioHttpResponseBody] {
+  override def onComplete(body: ZioHttpResponseBody)(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZioHttpResponseBody] =
+    ZIO
+      .environmentWith[R]
+      .apply { r =>
+        val (stream, contentLength) = body
+        (
+          stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
+            .fromZIO(cb(Success(())))
+            .provideEnvironment(r)
+            .drain,
+          contentLength
+        )
+      }
 }

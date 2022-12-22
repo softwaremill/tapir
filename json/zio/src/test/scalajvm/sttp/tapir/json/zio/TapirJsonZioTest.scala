@@ -1,16 +1,15 @@
 package sttp.tapir.json.zio
 
-import sttp.tapir.generic.auto._
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
-import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
-import zio.json.{DeriveJsonCodec, JsonEncoder}
-import zio.json.ast.Json
+import sttp.tapir.generic.auto._
+import sttp.tapir.{DecodeResult, FieldName, Schema}
+import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder}
 
 class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
 
@@ -18,9 +17,12 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
   case class Item(serialNumber: Long, price: Int)
   case class Order(items: Seq[Item], customer: Customer)
 
-  implicit val customerZioCodec: zio.json.JsonCodec[Customer] = DeriveJsonCodec.gen[Customer]
-  implicit val itemZioCodec: zio.json.JsonCodec[Item] = DeriveJsonCodec.gen[Item]
-  implicit val orderZioCodec: zio.json.JsonCodec[Order] = DeriveJsonCodec.gen[Order]
+  implicit val customerZioEncoder: zio.json.JsonEncoder[Customer] = DeriveJsonEncoder.gen[Customer]
+  implicit val customerZioDecoder: zio.json.JsonDecoder[Customer] = DeriveJsonDecoder.gen[Customer]
+  implicit val itemZioEncoder: zio.json.JsonEncoder[Item] = DeriveJsonEncoder.gen[Item]
+  implicit val itemZioDecoder: zio.json.JsonDecoder[Item] = DeriveJsonDecoder.gen[Item]
+  implicit val orderZioEncoder: zio.json.JsonEncoder[Order] = DeriveJsonEncoder.gen[Order]
+  implicit val orderZioDecoder: zio.json.JsonDecoder[Order] = DeriveJsonDecoder.gen[Order]
 
   val customerCodec: JsonCodec[Customer] = zioCodec[Customer]
 
@@ -92,11 +94,5 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
 
   it should "return a coproduct schema for a JsonObject" in {
     schemaForZioJsonObject.schemaType shouldBe a[SProduct[_]]
-  }
-
-  it should "represent big decimals as numbers" in {
-    val n = BigDecimal(10)
-    implicitly[JsonEncoder[BigDecimal]].toJsonAST(n) shouldBe Right(Json.Num(10))
-    implicitly[Schema[BigDecimal]] shouldBe Schema(SchemaType.SNumber())
   }
 }

@@ -41,11 +41,12 @@ case class FunctionCodeProperties(
     Events: Map[String, FunctionHttpApiEvent],
     Runtime: String,
     CodeUri: String,
-    Handler: String
+    Handler: String,
+    Environment: Option[EnvironmentCodeProperties]
 ) extends Properties
     with FunctionProperties
 
-case class HttpProperties(StageName: String) extends Properties
+case class HttpProperties(StageName: String, CorsConfiguration: Option[CorsConfiguration]) extends Properties
 
 case class FunctionHttpApiEvent(Properties: FunctionHttpApiEventProperties)
 
@@ -58,3 +59,14 @@ case class FunctionHttpApiEventProperties(
 )
 
 case class Output(Description: String, Value: Map[String, String])
+
+case class CorsConfiguration(
+    AllowCredentials: Option[Boolean],
+    AllowHeaders: Option[Set[String]],
+    AllowMethods: Option[Set[String]],
+    AllowOrigins: Option[Set[String]],
+    ExposeHeaders: Option[Set[String]],
+    MaxAge: Option[Long]
+)
+
+case class EnvironmentCodeProperties(Variables: Map[String, String])

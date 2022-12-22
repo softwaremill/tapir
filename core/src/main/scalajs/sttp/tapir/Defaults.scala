@@ -4,12 +4,13 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.typedarray.AB2TA
 
-import sttp.tapir.dom.experimental.{File => DomFileWithBody}
+import org.scalajs.dom.BlobPart
+import org.scalajs.dom.File
 
 object Defaults {
   def createTempFile: () => TapirFile = () =>
-    new DomFileWithBody(
-      Array(Array.empty[Byte].toTypedArray.asInstanceOf[js.Any]).toJSArray,
+    new File(
+      Iterable(Array.empty[Byte].toTypedArray.asInstanceOf[BlobPart]).toJSIterable,
       "temp.txt"
     )
 }

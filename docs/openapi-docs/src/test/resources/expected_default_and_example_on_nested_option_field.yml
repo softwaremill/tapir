@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: ClassWithNestedOptionalField
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassWithNestedOptionalField'
+              required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    ClassWithNestedOptionalField:
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/Nested'
+    Nested:
+      required:
+      - nestedValue
+      type: object
+      properties:
+        nestedValue:
+          type: string
+      default:
+        nestedValue: foo
+      example:
+        nestedValue: foo

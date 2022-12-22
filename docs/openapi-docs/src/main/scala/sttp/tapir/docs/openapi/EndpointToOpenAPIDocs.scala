@@ -1,10 +1,10 @@
 package sttp.tapir.docs.openapi
 
+import sttp.apispec.openapi._
 import sttp.tapir._
-import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToNamedSchemas}
-import sttp.tapir.docs.apispec.{DocsExtension, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
+import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToKeyedSchemas}
+import sttp.tapir.docs.apispec.{DocsExtension, DocsExtensions, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
-import sttp.tapir.openapi._
 
 import scala.collection.immutable.ListMap
 
@@ -16,11 +16,11 @@ private[openapi] object EndpointToOpenAPIDocs {
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
-    val toNamedSchemas = new ToNamedSchemas
-    val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, toNamedSchemas, options.markOptionsAsNullable).apply()
+    val toKeyedSchemas = new ToKeyedSchemas
+    val (idToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, toKeyedSchemas, options.markOptionsAsNullable).apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2, apiKeyAuthTypeName = "apiKey")
     val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
-    val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)
+    val componentsCreator = new EndpointToOpenAPIComponents(idToSchema, securitySchemes)
 
     val base = apiToOpenApi(api, componentsCreator, docsExtensions)
 

@@ -12,18 +12,25 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Method, StatusCode}
 import sttp.monad.FutureMonad
-import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
-import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, ServerInterpreter}
+import sttp.tapir.server.interpreter.{
+  BodyListener,
+  DecodeBasicInputs,
+  DecodeBasicInputsResult,
+  DecodeInputsContext,
+  FilterServerEndpoints,
+  ServerInterpreter
+}
+import sttp.tapir.server.model.ServerResponse
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 trait PlayServerInterpreter {
 
   implicit def mat: Materializer
 
-  implicit def executionContext: ExecutionContextExecutor = mat.executionContext
+  implicit def executionContext: ExecutionContext = mat.executionContext
 
   def playServerOptions: PlayServerOptions = PlayServerOptions.default
 
@@ -35,19 +42,19 @@ trait PlayServerInterpreter {
     toRoutes(List(e))
   }
 
-  def toRoutes[I, E, O](
+  def toRoutes(
       serverEndpoints: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
-        val serverRequest = new PlayServerRequest(request, request)
+        val serverRequest = PlayServerRequest(request, request)
         serverEndpoints.exists { se =>
-          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest), matchWholePath = true) match {
+          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest)) match {
             case (DecodeBasicInputsResult.Values(_, _), _) => true
             case (DecodeBasicInputsResult.Failure(input, failure), _) =>
-              playServerOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
+              playServerOptions.decodeFailureHandler(DecodeFailureContext(se.endpoint, input, failure, serverRequest)).isDefined
           }
         }
       }
@@ -70,41 +77,49 @@ trait PlayServerInterpreter {
           request: Request[AkkaStreams.BinaryStream]
       ): Future[Either[Result, Flow[Message, Message, Any]]] = {
         implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
-        val serverRequest = new PlayServerRequest(header, request)
+        val serverRequest = PlayServerRequest(header, request)
         val interpreter = new ServerInterpreter(
-          serverEndpoints,
+          FilterServerEndpoints(serverEndpoints),
+          new PlayRequestBody(playServerOptions),
           new PlayToResponseBody,
           playServerOptions.interceptors,
           playServerOptions.deleteFile
         )
 
-        interpreter(serverRequest, new PlayRequestBody(request, playServerOptions)).map {
-          case RequestResult.Failure(_) =>
-            Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
-          case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
-            val headers: Map[String, String] = response.headers
-              .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
-                if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
-              }
-              .map {
-                // See comment in play.api.mvc.CookieHeaderEncoding
-                case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
-                case (key, value)                                  => (key, value.mkString(", "))
-              }
-              .filterNot(allowToSetExplicitly)
+        interpreter(serverRequest)
+          .map {
+            case RequestResult.Failure(_) =>
+              Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
+            case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
+              val headers: Map[String, String] = response.headers
+                .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
+                  if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
+                }
+                .map {
+                  // See comment in play.api.mvc.CookieHeaderEncoding
+                  case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
+                  case (key, value)                                  => (key, value.mkString(", "))
+                }
+                .filterNot(allowToSetExplicitly)
 
-            val status = response.code.code
-            response.body match {
-              case Some(Left(flow))    => Right(flow)
-              case Some(Right(entity)) => Left(Result(ResponseHeader(status, headers), entity))
-              case None =>
-                if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
-                  Left(
-                    Result(ResponseHeader(status, headers), HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType))
-                  )
-                else Left(Result(ResponseHeader(status, headers), HttpEntity.NoEntity))
-            }
-        }
+              val status = response.code.code
+              response.body match {
+                case Some(Left(flow))    => Right(flow)
+                case Some(Right(entity)) => Left(Result(ResponseHeader(status, headers), entity))
+                case None =>
+                  if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
+                    Left(
+                      Result(
+                        ResponseHeader(status, headers),
+                        HttpEntity.Streamed(Source.empty, response.contentLength, response.contentType)
+                      )
+                    )
+                  else Left(Result(ResponseHeader(status, headers), HttpEntity.Strict(ByteString.empty, response.contentType)))
+              }
+          }
+          .recover { case e: PlayBodyParserException =>
+            Left(e.result)
+          }
       }
     }
   }
@@ -115,7 +130,7 @@ trait PlayServerInterpreter {
       upgrade <- header.headers.get(sttp.model.HeaderNames.Upgrade)
     } yield connection.equalsIgnoreCase("Upgrade") && upgrade.equalsIgnoreCase("websocket")).getOrElse(false)
 
-  private def allowToSetExplicitly[O, E, I](header: (String, String)): Boolean =
+  private def allowToSetExplicitly(header: (String, String)): Boolean =
     List(HeaderNames.CONTENT_TYPE, HeaderNames.CONTENT_LENGTH, HeaderNames.TRANSFER_ENCODING).contains(header._1)
 
 }

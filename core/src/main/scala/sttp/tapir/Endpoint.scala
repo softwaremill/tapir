@@ -3,12 +3,11 @@ package sttp.tapir
 import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.syntax._
-import sttp.tapir.EndpointInput.FixedMethod
+import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
-import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
 import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
@@ -28,48 +27,55 @@ import scala.reflect.ClassTag
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *
-  * @tparam A
-  *   Security input parameter types.
-  * @tparam I
-  *   Input parameter types.
-  * @tparam E
-  *   Error output parameter types.
-  * @tparam O
-  *   Output parameter types.
+  * @tparam SECURITY_INPUT
+  *   Security input parameter types, abbreviated as `A`.
+  * @tparam INPUT
+  *   Input parameter types, abbreviated as `I`.
+  * @tparam ERROR_OUTPUT
+  *   Error output parameter types, abbreviated as `E`.
+  * @tparam OUTPUT
+  *   Output parameter types, abbreviated as `O`.
   * @tparam R
   *   The capabilities that are required by this endpoint's inputs/outputs. This might be `Any` (no requirements),
   *   [[sttp.capabilities.Effect]] (the interpreter must support the given effect type), [[sttp.capabilities.Streams]] (the ability to send
   *   and receive streaming bodies) or [[sttp.capabilities.WebSockets]] (the ability to handle websocket requests).
   */
-case class Endpoint[A, I, E, O, -R](
-    securityInput: EndpointInput[A],
-    input: EndpointInput[I],
-    errorOutput: EndpointOutput[E],
-    output: EndpointOutput[O],
+case class Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, -R](
+    securityInput: EndpointInput[SECURITY_INPUT],
+    input: EndpointInput[INPUT],
+    errorOutput: EndpointOutput[ERROR_OUTPUT],
+    output: EndpointOutput[OUTPUT],
     info: EndpointInfo
-) extends EndpointSecurityInputsOps[A, I, E, O, R]
-    with EndpointInputsOps[A, I, E, O, R]
-    with EndpointErrorOutputsOps[A, I, E, O, R]
-    with EndpointErrorOutputVariantsOps[A, I, E, O, R]
-    with EndpointOutputsOps[A, I, E, O, R]
+) extends EndpointSecurityInputsOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
+    with EndpointInputsOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
+    with EndpointErrorOutputsOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
+    with EndpointErrorOutputVariantsOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
+    with EndpointOutputsOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R]
     with EndpointInfoOps[R]
     with EndpointMetaOps
-    with EndpointServerLogicOps[A, I, E, O, R] { outer =>
+    with EndpointServerLogicOps[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] { outer =>
 
   override type EndpointType[_A, _I, _E, _O, -_R] = Endpoint[_A, _I, _E, _O, _R]
-  override type ThisType[-_R] = Endpoint[A, I, E, O, _R]
-  override private[tapir] def withSecurityInput[A2, R2](securityInput: EndpointInput[A2]): Endpoint[A2, I, E, O, R with R2] =
+  override type ThisType[-_R] = Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, _R]
+  override private[tapir] def withSecurityInput[A2, R2](
+      securityInput: EndpointInput[A2]
+  ): Endpoint[A2, INPUT, ERROR_OUTPUT, OUTPUT, R with R2] =
     this.copy(securityInput = securityInput)
-  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[A, I2, E, O, R with R2] = this.copy(input = input)
-  override private[tapir] def withErrorOutput[E2, R2](errorOutput: EndpointOutput[E2]): Endpoint[A, I, E2, O, R with R2] =
+  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[SECURITY_INPUT, I2, ERROR_OUTPUT, OUTPUT, R with R2] =
+    this.copy(input = input)
+  override private[tapir] def withErrorOutput[E2, R2](
+      errorOutput: EndpointOutput[E2]
+  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R with R2] =
     this.copy(errorOutput = errorOutput)
   override private[tapir] def withErrorOutputVariant[E2, R2](
       errorOutput: EndpointOutput[E2],
-      embedE: E => E2
-  ): Endpoint[A, I, E2, O, R with R2] =
+      embedE: ERROR_OUTPUT => E2
+  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R with R2] =
     this.copy(errorOutput = errorOutput)
-  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[A, I, E, O2, R with R2] = this.copy(output = output)
-  override private[tapir] def withInfo(info: EndpointInfo): Endpoint[A, I, E, O, R] = this.copy(info = info)
+  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, O2, R with R2] =
+    this.copy(output = output)
+  override private[tapir] def withInfo(info: EndpointInfo): Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] =
+    this.copy(info = info)
   override protected def showType: String = "Endpoint"
 }
 
@@ -159,18 +165,16 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
 
-  /** Appends a new error output variant.
-    *
-    * A variant for the current endpoint output will be created using the given [[Tapir.oneOfVariant]]. This is needed to capture the logic
-    * which allows deciding if a run-time value is applicable to a variant. If the erasure of the `E` type is different from `E`, there will
-    * be a compile-time failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a
-    * variant using one of the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
-    *
-    * During encoding/decoding, the new `o` variant will be checked after the current variant.
-    *
-    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
-    *   - the first output variant is the current variant: `oneOfVariant(errorOutput)`
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the current output: `oneOfVariant(errorOutput)`
     *   - the second output variant is the given `o`
+    *
+    * The variant for the current endpoint output will be created using [[Tapir.oneOfVariant]]. Hence, the current output will be used if
+    * the run-time class of the output matches `E`. If the erasure of the `E` type is different from `E`, there will be a compile-time
+    * failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a variant using one of
+    * the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
+    *
+    * During encoding/decoding, the new `o` variant will be considered after the current variant.
     *
     * Usage example:
     *
@@ -196,6 +200,25 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
       o: OneOfVariant[_ <: E2]
   )(implicit ct: ClassTag[E], eEqualToErasure: ErasureSameAsType[E]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), o), identity)
+
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the given `o`
+    *   - the second, default output variant is the current output: `oneOfDefaultVariant(errorOutput)`
+    *
+    * Useful for adding specific error variants, while the more general ones are already covered by the existing error output.
+    *
+    * During encoding/decoding, the new `o` variant will be considered before the current variant.
+    *
+    * Adding error output variants is useful when extending the error outputs in a [[PartialServerEndpoint]], created using
+    * [[EndpointServerLogicOps.serverSecurityLogic]].
+    *
+    * @param o
+    *   The variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
+    * @tparam E2
+    *   A common supertype of the new variant and the current output `E`.
+    */
+  def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf[E2](o, oneOfDefaultVariant(errorOutput)), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
@@ -251,7 +274,7 @@ trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, 
   def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[A, I, E, OP, R with R2] =
     withOutput(output.and(i.toEndpointIO))
 
-  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R] =
+  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R with R2] =
     withOutput(i.toEndpointIO.and(output))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
@@ -296,7 +319,17 @@ trait EndpointMetaOps {
   def output: EndpointOutput[_]
   def info: EndpointInfo
 
-  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.) */
+  /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
+    * string representation of the method (if any) and path, e.g. `POST /books/add`
+    */
+  def showShort: String = info.name match {
+    case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
+    case Some(name) => s"[$name]"
+  }
+
+  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
+    * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
+    */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
@@ -311,7 +344,11 @@ trait EndpointMetaOps {
   }
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined, including mapping
-    * information.
+    * information. E.g.:
+    *
+    * {{{
+    * Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout: {body as text/plain (UTF-8)}, out: -)
+    * }}}
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
@@ -320,7 +357,7 @@ trait EndpointMetaOps {
   /** Equivalent to `.toString`, shows the whole case class structure. */
   def showRaw: String = toString
 
-  /** Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
+  /** Shows endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
     * {{{
     * endpoint.in("p1" / path[String] / query[String]("par2"))
     * }}}
@@ -328,12 +365,21 @@ trait EndpointMetaOps {
     *
     * @param includeAuth
     *   Should authentication inputs be included in the result.
+    * @param showNoPathAs
+    *   How to show the path if the endpoint does not define any path inputs.
+    * @param showPathsAs
+    *   How to show [[Tapir.paths]] inputs (if at all), which capture multiple paths segments
+    * @param showQueryParamsAs
+    *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
-  def renderPathTemplate(
-      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
-  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+  def showPathTemplate(
+      showPathParam: (Int, PathCapture[_]) => String = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}"),
+      showQueryParam: Option[(Int, Query[_]) => String] = Some((_, q) => s"${q.name}={${q.name}}"),
+      includeAuth: Boolean = true,
+      showNoPathAs: String = "*",
+      showPathsAs: Option[String] = Some("*"),
+      showQueryParamsAs: Option[String] = Some("*")
+  ): String = ShowPathTemplate(this)(showPathParam, showQueryParam, includeAuth, showNoPathAs, showPathsAs, showQueryParamsAs)
 
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
@@ -342,9 +388,6 @@ trait EndpointMetaOps {
     import sttp.tapir.internal._
     input.method.orElse(securityInput.method)
   }
-
-  @deprecated("Use method", since = "0.19.0")
-  def httpMethod: Option[Method] = method
 }
 
 trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
@@ -383,11 +426,29 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit)
 
-  /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint errors. */
+  /** Same as [[serverLogic]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint errors. */
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], recoverErrors1[I, E, O, F](f))
+
+  /** Like [[serverLogic]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the result of the
+    * logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverLogicOption[F[_]](
+      f: I => F[Option[O]]
+  )(implicit aIsUnit: A =:= Unit, eIsUnit: E =:= Unit): ServerEndpoint.Full[Unit, Unit, I, Unit, O, R, F] = {
+    import sttp.monad.syntax._
+    ServerEndpoint.public(
+      this.asInstanceOf[Endpoint[Unit, I, Unit, O, R]],
+      implicit m =>
+        i =>
+          f(i).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
 
   //
 
@@ -402,34 +463,108 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     * An example use-case is defining an endpoint with fully-defined errors, and with security logic built-in. Such an endpoint can be then
     * extended by multiple other endpoints, by specifying different inputs, outputs and the main logic.
     */
-  def serverSecurityLogic[U, F[_]](f: A => F[Either[E, U]]): PartialServerEndpoint[A, U, I, E, O, R, F] =
+  def serverSecurityLogic[PRINCIPAL, F[_]](f: A => F[Either[E, PRINCIPAL]]): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
     PartialServerEndpoint(this, _ => f)
 
   /** Like [[serverSecurityLogic]], but specialised to the case when the result is always a success (`Right`), hence when the logic type can
-    * be simplified to `A => F[U]`.
+    * be simplified to `A => F[PRINCIPAL]`.
     */
-  def serverSecurityLogicSuccess[U, F[_]](
-      f: A => F[U]
-  ): PartialServerEndpoint[A, U, I, E, O, R, F] =
+  def serverSecurityLogicSuccess[PRINCIPAL, F[_]](
+      f: A => F[PRINCIPAL]
+  ): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
     PartialServerEndpoint(this, implicit m => a => f(a).map(Right(_)))
 
   /** Like [[serverSecurityLogic]], but specialised to the case when the result is always an error (`Left`), hence when the logic type can
     * be simplified to `A => F[E]`.
     */
-  def serverSecurityLogicError[U, F[_]](
+  def serverSecurityLogicError[PRINCIPAL, F[_]](
       f: A => F[E]
-  ): PartialServerEndpoint[A, U, I, E, O, R, F] =
+  ): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
     PartialServerEndpoint(this, implicit m => a => f(a).map(Left(_)))
 
   /** Like [[serverSecurityLogic]], but specialised to the case when the logic function is pure, that is doesn't have any side effects. */
-  def serverSecurityLogicPure[U, F[_]](f: A => Either[E, U]): PartialServerEndpoint[A, U, I, E, O, R, F] =
+  def serverSecurityLogicPure[PRINCIPAL, F[_]](f: A => Either[E, PRINCIPAL]): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
     PartialServerEndpoint(this, implicit m => a => f(a).unit)
 
-  /** Same as [[serverSecurityLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint errors. */
-  def serverSecurityLogicRecoverErrors[U, F[_]](
-      f: A => F[U]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[A, U, I, E, O, R, F] =
-    PartialServerEndpoint(this, recoverErrors1[A, E, U, F](f))
+  /** Same as [[serverSecurityLogic]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint errors. */
+  def serverSecurityLogicRecoverErrors[PRINCIPAL, F[_]](
+      f: A => F[PRINCIPAL]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[A, PRINCIPAL, I, E, O, R, F] =
+    PartialServerEndpoint(this, recoverErrors1[A, E, PRINCIPAL, F](f))
+
+  /** Like [[serverSecurityLogic]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the result of
+    * the logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverSecurityLogicOption[PRINCIPAL, F[_]](
+      f: A => F[Option[PRINCIPAL]]
+  )(implicit eIsUnit: E =:= Unit): PartialServerEndpoint[A, PRINCIPAL, I, Unit, O, R, F] = {
+    import sttp.monad.syntax._
+    PartialServerEndpoint(
+      this.asInstanceOf[Endpoint[A, I, Unit, O, R]],
+      implicit m =>
+        a =>
+          f(a).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
+
+  //
+
+  /** Like [[serverSecurityLogic]], but allows the security function to contribute to the overall output of the endpoint. A value for the
+    * complete output `O` defined so far has to be provided. The value `PRINCIPAL` will be propagated as an input to the regular logic.
+    */
+  def serverSecurityLogicWithOutput[PRINCIPAL, F[_]](
+      f: A => F[Either[E, (O, PRINCIPAL)]]
+  ): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), _ => f)
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the result is always a success (`Right`), hence when the
+    * logic type can be simplified to `A => F[(O, PRINCIPAL)]`.
+    */
+  def serverSecurityLogicSuccessWithOutput[PRINCIPAL, F[_]](
+      f: A => F[(O, PRINCIPAL)]
+  ): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), implicit m => a => f(a).map(Right(_)))
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the logic function is pure, that is doesn't have any side
+    * effects.
+    */
+  def serverSecurityLogicPureWithOutput[PRINCIPAL, F[_]](
+      f: A => Either[E, (O, PRINCIPAL)]
+  ): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), implicit m => a => f(a).unit)
+
+  /** Same as [[serverSecurityLogicWithOutput]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint
+    * errors.
+    */
+  def serverSecurityLogicRecoverErrorsWithOutput[PRINCIPAL, F[_]](
+      f: A => F[(O, PRINCIPAL)]
+  )(implicit
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, E, O, Unit, R, F] =
+    PartialServerEndpointWithSecurityOutput(this.output, this.copy(output = emptyOutput), recoverErrors1[A, E, (O, PRINCIPAL), F](f))
+
+  /** Like [[serverSecurityLogicWithOutput]], but specialised to the case when the error type is `Unit` (e.g. a fixed status code), and the
+    * result of the logic function is an option. A `None` is then treated as an error response.
+    */
+  def serverSecurityLogicOptionWithOutput[PRINCIPAL, F[_]](
+      f: A => F[Option[(O, PRINCIPAL)]]
+  )(implicit eIsUnit: E =:= Unit): PartialServerEndpointWithSecurityOutput[A, PRINCIPAL, I, Unit, O, Unit, R, F] = {
+    import sttp.monad.syntax._
+    PartialServerEndpointWithSecurityOutput(
+      this.output,
+      this.copy(output = emptyOutput).asInstanceOf[Endpoint[A, I, Unit, Unit, R]],
+      implicit m =>
+        a =>
+          f(a).map {
+            case None    => Left(())
+            case Some(v) => Right(v)
+          }
+    )
+  }
 }
 
 case class EndpointInfo(

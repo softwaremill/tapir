@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.quoted.*
 import scala.deriving.Mirror
 
-class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
+private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   import quotes.reflect.*
 
   private val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
@@ -54,7 +54,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             field.tpe.asType match
               case '[f] =>
                 inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> idx)
-                wrapInput(field, makePathInput[f](field))
+                wrapInput[f](field, makePathInput[f](field))
           case None =>
             report.throwError(s"${caseClass.name}.${fieldName} must have the @path annotation, as it is referenced from @endpointInput.")
         }
@@ -97,7 +97,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
               )
             }
           inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> fieldIdx)
-          wrapInput(field, input)
+          wrapInput[f](field, input)
     }
 
     val result = (pathInputs ::: nonPathInputs).map(_.asTerm).reduceLeft { (left, right) =>
@@ -192,6 +192,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
   private val descriptionAnnotationSymbol = TypeTree.of[EndpointIO.annotations.description].tpe.typeSymbol
   private val exampleAnnotationSymbol = TypeTree.of[EndpointIO.annotations.example].tpe.typeSymbol
+  private val customiseAnnotationSymbol = TypeTree.of[EndpointIO.annotations.customise].tpe.typeSymbol
 
   // schema symbols
   private val schemaDescriptionAnnotationSymbol = TypeTree.of[Schema.annotations.description].tpe.typeSymbol
@@ -350,7 +351,14 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     apikey
       .map(ak =>
         setSecuritySchemeName(
-          '{ EndpointInput.Auth($input, None, ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge, EndpointInput.AuthInfo.ApiKey()) },
+          '{
+            EndpointInput.Auth(
+              $input,
+              ${ ak.asExprOf[EndpointIO.annotations.apikey] }.challenge,
+              EndpointInput.AuthType.ApiKey(),
+              EndpointInput.AuthInfo.Empty
+            )
+          },
           schemeName
         )
       )
@@ -391,7 +399,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
           .getOrElse(t),
       t =>
         field
-          .extractTreeFromAnnotation(schemaDefaultAnnotationSymbol)
+          .extractFirstTreeArgFromAnnotation(schemaDefaultAnnotationSymbol)
           .map(d => addMetadataToAtom(field, t, '{ i => i.default(${ d.asExprOf[f] }) }))
           .getOrElse(t),
       t =>
@@ -406,6 +414,11 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
         field
           .extractTreeFromAnnotation(schemaValidateAnnotationSymbol)
           .map(v => addMetadataToAtom(field, t, '{ i => i.validate(${ v.asExprOf[Validator[f]] }) }))
+          .getOrElse(t),
+      t =>
+        field
+          .extractTreeFromAnnotation(customiseAnnotationSymbol)
+          .map(f => '{ AnnotationsMacros.customise($t, ${ f.asExprOf[EndpointTransput[_] => EndpointTransput[_]] }) })
           .getOrElse(t)
     )
 
@@ -456,3 +469,8 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     }
   }
 }
+
+// TODO: make private[tapir] once Scala3 compilation is fixed
+object AnnotationsMacros:
+  // we assume that the customisation function doesn't return a value of a different type
+  def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]

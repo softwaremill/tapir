@@ -4,16 +4,21 @@ The `tapir-zio` module defines type aliases and extension methods which make it 
 [ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http4s-server` contains an interpreter useful when
 exposing the endpoints using the [http4s](https://http4s.org) server.
 
+The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the `*-zio1` suffix.
+
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.20.0-M6"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.2.4"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.20.0-M6"
+// for zio 2:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.2.4"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "1.2.4"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -57,7 +62,7 @@ To help with type-inference, you first need to call `ZHttp4sServerInterpreter().
 
 Then, call `.toRoutes` to obtain the http4s `HttpRoutes` instance. 
 
-Note that the resulting `HttpRoutes` always require `Clock` and `Blocking` in the environment.
+Note that the resulting `HttpRoutes` always requires `Clock` in the environment.
 
 If you have multiple endpoints with different environmental requirements, the environment must be first widened
 so that it is uniform across all endpoints, using the `.widen` method:
@@ -66,21 +71,18 @@ so that it is uniform across all endpoints, using the `.widen` method:
 import org.http4s.HttpRoutes
 import sttp.tapir.ztapir._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import zio.{Has, RIO, ZIO}
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.interop.catz._
+import zio.RIO
 
 trait Component1
 trait Component2
-type Service1 = Has[Component1]
-type Service2 = Has[Component2]
+type Service1 = Component1
+type Service2 = Component2
 
 val serverEndpoint1: ZServerEndpoint[Service1, Any] = ???                                                            
 val serverEndpoint2: ZServerEndpoint[Service2, Any] = ???
 
 type Env = Service1 with Service2
-val routes: HttpRoutes[RIO[Env with Clock with Blocking, *]] = 
+val routes: HttpRoutes[RIO[Env, *]] =
   ZHttp4sServerInterpreter().from(List(
     serverEndpoint1.widen[Env], 
     serverEndpoint2.widen[Env]
@@ -124,30 +126,30 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
-import zio.{RIO, ZEnv, ZIO}
-import zio.blocking.Blocking
-import zio.clock.Clock
+import zio.{Task, Runtime, ZIO}
 import zio.interop.catz._
 import zio.stream.Stream
+
+def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault // provided by ZIOAppDefault
 
 implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
 val wsEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, String] => Stream[Throwable, String], ZioStreams with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](ZioStreams))
-    
-val wsRoutes: WebSocketBuilder2[RIO[Clock with Blocking, *]] => HttpRoutes[RIO[Clock with Blocking, *]] =
+
+val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
-    
-val serve: ZIO[ZEnv, Throwable, Unit] =
-  ZIO.runtime[ZEnv].flatMap { implicit runtime => 
-    BlazeServerBuilder[RIO[Clock with Blocking, *]]
-      .withExecutionContext(runtime.platform.executor.asEC)
+
+val serve: Task[Unit] =
+  ZIO.executor.flatMap(executor =>
+    BlazeServerBuilder[Task]
+      .withExecutionContext(executor.asExecutionContext)
       .bindHttp(8080, "localhost")
       .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
       .serve
       .compile
       .drain
-  }
+  )
 ```
 
 ## Server Sent Events
@@ -163,17 +165,15 @@ import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEven
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
-import zio.{UIO, RIO}
-import zio.blocking.Blocking
-import zio.clock.Clock
-import zio.stream.Stream
+import zio.{Task, ZIO}
+import zio.stream.{Stream, ZStream}
 
-val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] = 
+val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] =
   endpoint.get.out(serverSentEventsBody)
 
-val routes: HttpRoutes[RIO[Clock with Blocking, *]] =
+val routes: HttpRoutes[Task] =
   ZHttp4sServerInterpreter()
-    .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(ZStream(ServerSentEvent(Some("data"), None, None, None)))))
     .toRoutes
 ```
 

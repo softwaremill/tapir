@@ -2,10 +2,11 @@ package sttp.tapir
 
 import sttp.capabilities.Streams
 import sttp.model._
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.internal._
+import sttp.tapir.macros.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.typelevel.{ErasureSameAsType, MatchType}
@@ -26,8 +27,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     EndpointInput.PathCapture(Some(name), implicitly, EndpointIO.Info.empty)
   def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idPlain(), EndpointIO.Info.empty)
 
+  /** A query parameter in any format, read using the given `codec`. */
+  def queryAnyFormat[T, CF <: CodecFormat](name: String, codec: Codec[List[String], T, CF]): EndpointInput.Query[T] =
+    EndpointInput.Query(name, None, codec, EndpointIO.Info.empty)
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
-    EndpointInput.Query(name, implicitly, EndpointIO.Info.empty)
+    queryAnyFormat[T, TextPlain](name, implicitly)
   def queryParams: EndpointInput.QueryParams[QueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
 
   def header[T: Codec[List[String], *, TextPlain]](name: String): EndpointIO.Header[T] =
@@ -36,7 +40,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header(name, value))
   def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
-  // TODO: cache directives
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
@@ -60,6 +63,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def stringBody(charset: Charset): EndpointIO.Body[String, String] =
     EndpointIO.Body(RawBodyType.StringBody(charset), Codec.string, EndpointIO.Info.empty)
 
+  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
+  def stringBodyUtf8AnyFormat[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
+    stringBodyAnyFormat[T, CF](codec, StandardCharsets.UTF_8)
+
+  /** A body in any format, read using the given `codec`, from a raw string read using `charset`. */
+  def stringBodyAnyFormat[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
+    EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
+
   val htmlBodyUtf8: EndpointIO.Body[String, String] =
     EndpointIO.Body(RawBodyType.StringBody(StandardCharsets.UTF_8), Codec.string.format(CodecFormat.TextHtml()), EndpointIO.Info.empty)
 
@@ -67,8 +78,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
-  @scala.deprecated(message = "Use customJsonBody", since = "0.18.0")
-  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = customJsonBody[T]
+  /** A body in the JSON format, read from a raw string using UTF-8. */
+  def stringJsonBody: EndpointIO.Body[String, String] = stringJsonBody(StandardCharsets.UTF_8)
+
+  /** A body in the JSON format, read from a raw string using `charset`. */
+  def stringJsonBody(charset: Charset): EndpointIO.Body[String, String] =
+    stringBodyAnyFormat(Codec.string.format(CodecFormat.Json()), charset)
 
   /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
     *
@@ -77,10 +92,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * Unless you have defined a custom json codec, the `jsonBody` methods should be used.
     */
-  def customJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+  def customCodecJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(implicitly[Codec[String, T, Json]])
 
   /** Requires an implicit [[Codec.XmlCodec]] in scope. Such a codec can be created using [[Codec.xml]]. */
-  def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
+  def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(implicitly[Codec[String, T, Xml]])
 
   def rawBinaryBody[R](rbt: RawBodyType.Binary[R])(implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
     EndpointIO.Body(rbt, codec, EndpointIO.Info.empty)
@@ -102,23 +117,24 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody(RawBodyType.FileBody).map(_.file)(d => FileRange(d))
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
-    anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)
+    stringBodyUtf8AnyFormat[T, CodecFormat.XWwwFormUrlencoded](implicitly)
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]](charset: Charset): EndpointIO.Body[String, T] =
-    anyFromStringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
+    stringBodyAnyFormat[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
 
   val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[Part[Array[Byte]]]] = multipartBody(MultipartCodec.Default)
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default, but can be later
-    * overridden by providing a custom `Content-Type` header value.
+  /** Creates a stream body with a binary schema.
+    * @param format
+    *   The media type to use by default. Can be later overridden by providing a custom `Content-Type` header.
     * @param s
     *   A supported streams implementation.
     */
   def streamBinaryBody[S](
       s: Streams[S]
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None, Nil)
+  )(format: CodecFormat): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, Schema.binary), EndpointIO.Info.empty, None, Nil)
 
   /** Creates a stream body with a text schema.
     * @param s
@@ -148,8 +164,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset, Nil)
 
-  // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
-  // while the third one (S) can be inferred.
+  // the intermediate class is needed so that the S type parameter can be inferred
   final class WebSocketBodyBuilder[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat] {
     def apply[S](
         s: Streams[S]
@@ -199,14 +214,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       .decodeCloseRequests(true)
       .decodeCloseResponses(true)
       .autoPing(None)
-
-  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
-  def anyFromUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
-    anyFromStringBody[T, CF](codec, StandardCharsets.UTF_8)
-
-  /** A body in any format, read using the given `codec`, from a raw string read using `charset`. */
-  def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
-    EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
   /** Inputs which describe authentication credentials with metadata. */
   def auth: TapirAuth.type = TapirAuth
@@ -270,9 +277,17 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariant[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariant(statusCode(code).and(output))
 
-  @deprecated("Use oneOfVariant", since = "0.19.0")
-  def oneOfMapping[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
-    oneOfVariant(code, output)
+  private val primitiveToBoxedClasses = Map[Class[_], Class[_]](
+    classOf[Byte] -> classOf[java.lang.Byte],
+    classOf[Short] -> classOf[java.lang.Short],
+    classOf[Char] -> classOf[java.lang.Character],
+    classOf[Int] -> classOf[java.lang.Integer],
+    classOf[Long] -> classOf[java.lang.Long],
+    classOf[Float] -> classOf[java.lang.Float],
+    classOf[Double] -> classOf[java.lang.Double],
+    classOf[Boolean] -> classOf[java.lang.Boolean],
+    java.lang.Void.TYPE -> classOf[scala.runtime.BoxedUnit]
+  )
 
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure.
@@ -282,7 +297,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantClassMatcher[T](
       output: EndpointOutput[T],
       runtimeClass: Class[_]
-  ): OneOfVariant[T] = OneOfVariant(output, { (a: Any) => runtimeClass.isInstance(a) })
+  ): OneOfVariant[T] = {
+    // when used with a primitive type or Unit, the class tag will correspond to the primitive type, but at runtime
+    // we'll get boxed values
+    val rc = primitiveToBoxedClasses.getOrElse(runtimeClass, runtimeClass)
+    OneOfVariant(output, { (a: Any) => rc.isInstance(a) })
+  }
 
   /** Create a one-of-variant which uses `output` i the class of the provided value (when interpreting as a server) matches the given
     * `runtimeClass`. Note that this does not take into account type erasure. Adds a fixed status-code output with the given value.
@@ -295,14 +315,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       runtimeClass: Class[_]
   ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
-  @deprecated("Use oneOfVariantClassMatcher", since = "0.19.0")
-  def oneOfMappingClassMatcher[T](
-      code: StatusCode,
-      output: EndpointOutput[T],
-      runtimeClass: Class[_]
-  ): OneOfVariant[T] = oneOfVariantClassMatcher(code, output, runtimeClass)
-
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -311,8 +324,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     OneOfVariant(output, matcher.lift.andThen(_.getOrElse(false)))
 
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate. Adds
-    * a fixed status-code output with the given value.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
+    * Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -320,11 +333,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       matcher: PartialFunction[Any, Boolean]
   ): OneOfVariant[T] =
     OneOfVariant(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
-
-  @deprecated("Use oneOfVariantValueMatcher", since = "0.19.0")
-  def oneOfMappingValueMatcher[T](code: StatusCode, output: EndpointOutput[T])(
-      matcher: PartialFunction[Any, Boolean]
-  ): OneOfVariant[T] = oneOfVariantValueMatcher(code, output)(matcher)
 
   /** Create a one-of-variant which `output` if the provided value exactly matches one of the values provided in the second argument list.
     *
@@ -352,18 +360,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
 
-  @deprecated("Use oneOfVariantExactMatcher", since = "0.19.0")
-  def oneOfMappingExactMatcher[T: ClassTag](
-      code: StatusCode,
-      output: EndpointOutput[T]
-  )(
-      firstExactValue: T,
-      rest: T*
-  ): OneOfVariant[T] = oneOfVariantExactMatcher(code, output)(firstExactValue, rest: _*)
-
-  /** Experimental!
-    *
-    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+  /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure.
     *
@@ -372,9 +369,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantFromMatchType[T: MatchType](output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariantValueMatcher(output)(implicitly[MatchType[T]].partial)
 
-  /** Experimental!
-    *
-    * Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
+  /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
     * erasure. Adds a fixed status-code output with the given value.
     *
@@ -383,17 +378,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(implicitly[MatchType[T]].partial)
 
-  @deprecated("Use oneOfVariantFromMatchType", since = "0.19.0")
-  def oneOfMappingFromMatchType[T: MatchType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
-    oneOfVariantFromMatchType(code, output)
-
   /** Create a fallback variant to be used in [[oneOf]] output descriptions. Multiple such variants can be specified, with different body
     * content types.
     */
   def oneOfDefaultVariant[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
-
-  @deprecated("Use oneOfDefaultVariant", since = "0.19.0")
-  def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfVariant[T] = OneOfVariant(output, _ => true)
 
   /** A body input or output, which can be one of the given variants. All variants should represent `T` instances using different content
     * types. Hence, the content type is used as a discriminator to choose the appropriate variant.
@@ -417,7 +405,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
-      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), b)),
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Left(b))),
+      Mapping.id
+    )
+
+  /** Streaming variant of [[oneOfBody]]. */
+  def oneOfBody[T](first: EndpointIO.StreamBodyWrapper[_, T], others: EndpointIO.StreamBodyWrapper[_, T]*): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T](
+      (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Right(b))),
       Mapping.id
     )
 
@@ -430,16 +425,39 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       first: (ContentTypeRange, EndpointIO.Body[_, T]),
       others: (ContentTypeRange, EndpointIO.Body[_, T])*
   ): EndpointIO.OneOfBody[T, T] =
-    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, b) }, Mapping.id)
+    EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Left(b)) }, Mapping.id)
 
-  /** An empty output. */
-  val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  /** Streaming variant of [[oneOfBody]].
+    *
+    * Allows explicitly specifying the content type range, for which each body will be used, instead of defaulting to the exact media type
+    * as specified by the body's codec. This is only used when choosing which body to decode.
+    */
+  def oneOfBody[T](
+      first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+      // this is needed so that the signature is different from the previous method
+      second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+      others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
+  ): EndpointIO.OneOfBody[T, T] =
+    EndpointIO.OneOfBody[T, T](
+      (first +: second +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) },
+      Mapping.id
+    )
+
+  private val emptyIO: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+
+  val emptyOutput: EndpointOutput.Atom[Unit] = emptyIO
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
-  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyOutput.map(_ => value)(_ => ())
+  def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyIO.map(_ => value)(_ => ())
 
-  private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyInput: EndpointInput[Unit] = emptyIO
+
+  /** An empty authentication input, to express the fact (for documentation) that authentication is optional, even in the presence of
+    * multiple optional authentication inputs (which by default are treated as alternatives).
+    */
+  val emptyAuth: EndpointInput.Auth[Unit, EndpointInput.AuthType.ApiKey] =
+    EndpointInput.Auth(emptyIO, WWWAuthenticateChallenge(""), EndpointInput.AuthType.ApiKey(), EndpointInput.AuthInfo.Empty)
 
   val infallibleEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Unit, Nothing, Unit, Any](

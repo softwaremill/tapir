@@ -4,7 +4,7 @@ import sttp.model.MediaType
 
 import scala.io.Source
 
-object MimeByExtensionDB {
+private[tapir] object MimeByExtensionDB {
   private val mimeTypes: Map[String, MediaType] = {
     val s = Source.fromURL(getClass.getResource("/mimeByExtensions.txt"))
     val pairs =

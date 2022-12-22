@@ -15,8 +15,9 @@ trait TapirStaticContentEndpoints {
 
   private val pathsWithoutDots: EndpointInput[List[String]] =
     paths.mapDecode(ps =>
-      if (ps.exists(p => p == "" || p == "." || p == ".."))
-        DecodeResult.Error(ps.mkString("/"), new RuntimeException(s"Incorrect path: $ps"))
+      // a single path segment might contain / as well
+      if (ps.exists(p => p == "" || p == "." || p == ".." || p.startsWith("../") || p.endsWith("/..") || p.contains("/../")))
+        DecodeResult.Error(ps.mkString("/"), new RuntimeException(s"Incorrect path: ${ps.mkString("/")}"))
       else DecodeResult.Value(ps)
     )(identity)
 
@@ -35,17 +36,17 @@ trait TapirStaticContentEndpoints {
   private val ifModifiedSinceHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.IfModifiedSince)
   private val lastModifiedHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.LastModified)
   private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[MediaType]](HeaderNames.ContentType)
+  private def contentLengthHeader: EndpointIO[Option[Long]] = header[Option[Long]](HeaderNames.ContentLength)
   private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
   private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
+  private def acceptRangesHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptRanges)
   private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
   private def staticGetEndpoint[T](
-      prefix: EndpointInput[Unit],
       body: EndpointOutput[T]
   ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
     endpoint.get
-      .in(prefix)
       .in(
         pathsWithoutDots
           .and(ifNoneMatchHeader)
@@ -82,10 +83,10 @@ trait TapirStaticContentEndpoints {
             StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
-              .and(header[Option[String]](HeaderNames.AcceptRanges))
+              .and(acceptRangesHeader)
               .and(header[Option[String]](HeaderNames.ContentRange))
               .map[StaticOutput.FoundPartial[T]](
                 (t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
@@ -97,7 +98,7 @@ trait TapirStaticContentEndpoints {
             StatusCode.Ok,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
               .and(contentEncodingHeader)
@@ -110,11 +111,8 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  private def staticHeadEndpoint(
-      prefix: EndpointInput[Unit]
-  ): PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
+  private lazy val staticHeadEndpoint: PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
     endpoint.head
-      .in(prefix)
       .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
       .errorOut(
         oneOf[StaticErrorOutput](
@@ -134,8 +132,8 @@ trait TapirStaticContentEndpoints {
         oneOf[HeadOutput](
           oneOfVariantClassMatcher(
             StatusCode.Ok,
-            header[Option[String]](HeaderNames.AcceptRanges)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+            acceptRangesHeader
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType])) => HeadOutput.Found(t._1, t._2, t._3))(fo =>
                 (fo.acceptRanges, fo.contentLength, fo.contentType)
@@ -146,11 +144,13 @@ trait TapirStaticContentEndpoints {
       )
   }
 
+  lazy val filesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(fileRangeBody)
+  lazy val resourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
+    staticGetEndpoint(inputStreamBody)
   def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
-    staticGetEndpoint(prefix, fileRangeBody)
-
+    filesGetEndpoint.prependIn(prefix)
   def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
-    staticGetEndpoint(prefix, inputStreamBody)
+    resourcesGetEndpoint.prependIn(prefix)
 
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
     * path, but it can also contain other inputs. For example:
@@ -161,18 +161,32 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
-  def filesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(filesGetEndpoint(prefix), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def filesGetServerEndpoint[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(filesGetEndpoint(prefix), Files.get(systemPath, options))
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
-  def filesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint(prefix), (m: MonadError[F]) => Files.head(systemPath)(m))
+  def filesHeadServerEndpoint[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Files.head(systemPath, options))
 
-  /** Create pair of endpoints (head, get) for particular file */
-  def fileServerEndpoints[F[_]](prefix: EndpointInput[Unit])(systemPath: String): List[ServerEndpoint[Any, F]] =
-    List(filesHeadServerEndpoint(prefix)(systemPath), filesGetServerEndpoint(prefix)(systemPath))
+  /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
+    * Typically, the prefix is a path, but it can also contain other inputs. For example:
+    *
+    * {{{
+    * filesServerEndpoints("static" / "files")("/home/app/static")
+    * }}}
+    *
+    * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
+    */
+  def filesServerEndpoints[F[_]](
+      prefix: EndpointInput[Unit]
+  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
+    List(filesHeadServerEndpoint(prefix)(systemPath, options), filesGetServerEndpoint(prefix)(systemPath, options))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
@@ -180,8 +194,8 @@ trait TapirStaticContentEndpoints {
     * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
-  def fileGetServerEndpoint[F[_]](path: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(filesGetEndpoint(path)), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
@@ -195,11 +209,11 @@ trait TapirStaticContentEndpoints {
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
-      useGzippedIfAvailable: Boolean = false
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
@@ -211,11 +225,11 @@ trait TapirStaticContentEndpoints {
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
-      useGzippedIfAvailable: Boolean = false
+      options: ResourcesOptions[F] = ResourcesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(resourcesGetEndpoint(prefix)),
-      (m: MonadError[F]) => Resources(classLoader, resourcePath, useGzippedIfAvailable = useGzippedIfAvailable)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
     )
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =

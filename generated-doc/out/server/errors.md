@@ -71,7 +71,7 @@ conventions, that an endpoint is uniquely identified by the method and served pa
 
 * a `405 Method Not Allowed` is returned if multiple endpoints have been interpreted, and for at least one of them
   the path matched, but the method didn't. We assume that all endpoints for that path have been given to the 
-  interpreter, hence the response. This behavior can be customised or turned off using the `RejectInterceptor`
+  interpreter, hence the response. This behavior can be [customised or turned off](#custom-reject-interceptor) using the `RejectInterceptor`
 * an "endpoint doesn't match" result is returned if the request method or path doesn't match. The http library should
   attempt to serve this request with the next endpoint. The path doesn't match if a path segment is missing, there's
   a constant value mismatch or a decoding error (e.g. parsing a segment to an `Int` fails)
@@ -93,6 +93,18 @@ Note that the decode failure handler is used **only** for failures that occur du
 and header parameters - while invoking `Codec.decode`. It does not handle any failures or exceptions that occur
 when invoking the logic of the endpoint.
 
+### Custom reject interceptor
+
+The default reject interceptor can be customised by providing your own reject handler - a case class consisting of:
+- a function to determine the response format (other than the default plain text),
+- a default status code and message to be used if the rejected input was not the HTTP method.
+
+Two default implementations of the reject handler are provided by the `DefaultRejectHandler`:
+- `default` - which returns a `405 Method Not Allowed` when the HTTP method was rejected, and otherwise propagates 
+the rejection to the server interpreter library, 
+- `defaultOrNotFound` - similar, but returns a `404 Not Found` instead of propagating when the rejected input 
+was not the HTTP method.
+
 ### Default failure handler
 
 The default decode failure handler is a case class, consisting of functions which decide whether to respond with
@@ -100,33 +112,66 @@ an error or return a "no match", create error messages and create the response. 
 swapped, e.g. to return responses in a different format (other than plain text), or customise the error messages.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
-leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
-and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
-`badRequestOnPathErrorIfPathShapeMatches` in `ServerDefaults`.
+leading to a `404 Not Found`), when the "shape" of the path matches (that is, the constant parts and number of segments 
+in the request and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
+scaladoc for `DefaultDecodeFailureHandler.default` and parameters of `DefaultDecodeFailureHandler.response`. For example:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val myDecodeFailureHandler = DefaultDecodeFailureHandler.default.copy(
+  respond = DefaultDecodeFailureHandler.respond(
+    _,
+    badRequestOnPathErrorIfPathShapeMatches = true,
+    badRequestOnPathInvalidIfPathShapeMatches = true
+  )
+)
+
+val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customiseInterceptors
+  .decodeFailureHandler(myDecodeFailureHandler)
+  .options
+```
+
+Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output 
+basis, by setting an attribute. For example:
+
+```scala
+import sttp.tapir._
+// bringing into scope the onDecodeFailureBadRequest extension method
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
+
+// by default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
+endpoint.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest)
+```
 
 ## Customising how error messages are rendered
 
-To return error responses in a different format (other than plain text), you can customise both the exception & decode
-failure handlers individually, or use the `CustomInterceptors.errorOutput` method which customises the default ones
-for you. 
+To return error responses in a different format (other than plain text), you can customise both the exception, decode
+failure and reject handlers individually, or use the `CustomiseInterceptors.defaultHandlers` method which customises the 
+default ones for you. 
 
 We'll need to provide both the endpoint output which should be used for error messages, along with the output's value:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 
 val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
-  .customInterceptors
-  .errorOutput(myFailureResponse)
+  .customiseInterceptors
+  .defaultHandlers(myFailureResponse)
   .options
 ```
 

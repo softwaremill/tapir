@@ -1,8 +1,9 @@
 package sttp.tapir.server.akkahttp
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Directives
-import akka.stream.scaladsl.{Flow, Source}
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.server.{Directives, RequestContext}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
@@ -16,6 +17,7 @@ import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
+import sttp.tapir.server.interceptor._
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
@@ -76,6 +78,26 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
               }
             }
             .unsafeToFuture()
+        },
+        Test("replace body using a request interceptor") {
+          val e = endpoint.post.in(stringBody).out(stringBody).serverLogicSuccess[Future](body => Future.successful(body))
+
+          val route = AkkaHttpServerInterpreter(
+            AkkaHttpServerOptions.customiseInterceptors
+              .prependInterceptor(RequestInterceptor.transformServerRequest { request =>
+                val underlying = request.underlying.asInstanceOf[RequestContext]
+                val changedUnderlying = underlying.withRequest(underlying.request.withEntity(HttpEntity("replaced")))
+                Future.successful(request.withUnderlying(changedUnderlying))
+              })
+              .options
+          ).toRoute(e)
+
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
+            }
+            .unsafeToFuture()
         }
       )
 
@@ -83,6 +105,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
+          override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++
         additionalTests()
     }

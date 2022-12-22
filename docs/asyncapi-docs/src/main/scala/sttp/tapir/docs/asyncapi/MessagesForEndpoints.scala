@@ -1,29 +1,26 @@
 package sttp.tapir.docs.asyncapi
 
+import sttp.apispec.asyncapi.{Message, SingleMessage}
 import sttp.model.MediaType
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.Schema.SName
-import sttp.tapir.asyncapi.{Message, SingleMessage}
-import sttp.tapir.docs.apispec.schema.{Schemas, ToNamedSchemas, calculateUniqueKeys}
+import sttp.tapir.docs.apispec.schema.{Schemas, ToKeyedSchemas, calculateUniqueIds}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema}
 import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
 
-private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String, toNamedSchemas: ToNamedSchemas) {
+private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String, toKeyedSchemas: ToKeyedSchemas) {
   private type CodecData = Either[(SName, MediaType), TSchema[_]]
 
   private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, _ <: CodecFormat], info: EndpointIO.Info[T])
 
-  def apply[P[_, _]](
-      wss: Iterable[WebSocketBodyWrapper[_, _]]
-  ): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
-
+  def apply(wss: Iterable[WebSocketBodyWrapper[_, _]]): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
     val codecs: Iterable[CodecWithInfo[_]] = wss.flatMap(ws => codecsFor(ws.wrapped))
     val codecToData: ListMap[CodecWithInfo[_], CodecData] = codecs.toList.map(ci => ci -> toData(ci.codec)).toListMap
 
-    val dataToKey = calculateUniqueKeys(codecToData.values.toSet, dataToName)
+    val dataToKey = calculateUniqueIds(codecToData.values.toSet, dataToName)
     val codecToKey = codecToData.map { case (ci, data) => ci.codec -> dataToKey(data) }.toMap[Codec[_, _, _ <: CodecFormat], String]
     val keyToMessage = codecToData.map { case (ci, data) => dataToKey(data) -> message(ci) }
 
@@ -31,8 +28,8 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName
   }
 
   private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
-    toNamedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
-      case Some(os) => Left((os._1, codec.format.mediaType))
+    toKeyedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
+      case Some(os) => Left((os._1.name, codec.format.mediaType))
       case None     => Right(codec.schema.copy(description = None, deprecated = false))
     }
 

@@ -15,7 +15,7 @@ trait MultipartCodecMacros {
     ${ MultipartCodecMacros.multipartCaseClassCodecImpl[T]('c) }
 }
 
-object MultipartCodecMacros {
+private[tapir] object MultipartCodecMacros {
   def multipartCaseClassCodecImpl[T: Type](conf: Expr[Configuration])(using q: Quotes): Expr[MultipartCodec[T]] = {
     import quotes.reflect.*
     val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
@@ -135,7 +135,7 @@ object MultipartCodecMacros {
       Codec
         .multipart($partCodecs, None)
         .map($decodeExpr)($encodeExpr)
-        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}].")) })
+        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${Type.show[T]}].")) })
     }
   }
 }

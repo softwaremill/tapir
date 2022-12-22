@@ -11,7 +11,7 @@
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "0.20.0-M6")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.2.4")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -47,9 +47,9 @@ openapiObject       TapirGeneratedEndpoints              The name for the genera
 The general usage is;
 
 ```scala
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.generated._
 import sttp.tapir.docs.openapi._
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```

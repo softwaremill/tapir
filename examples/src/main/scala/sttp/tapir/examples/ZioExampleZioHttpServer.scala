@@ -7,11 +7,11 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zhttp.http.HttpApp
-import zhttp.service.Server
-import zio.{App, ExitCode, IO, Task, UIO, URIO, ZIO}
+import zio.http.HttpApp
+import zio.http.{Server, ServerConfig}
+import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
-object ZioExampleZioHttpServer extends App {
+object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -29,20 +29,24 @@ object ZioExampleZioHttpServer extends App {
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[Any, Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
-      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
-      IO.fail("Unknown pet id")
+      ZIO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))
 
-  //
-
-  val swaggerRoutes: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter()
-      .toHttp(SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
+  // Docs
+  val swaggerEndpoints: List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0")
 
   // Starting the server
-  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
-    Server.start(8080, petRoutes <> swaggerRoutes).exitCode
+  val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
+
+  override def run: URIO[Any, ExitCode] =
+    Server
+      .serve(routes)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(8080)),
+        Server.live,
+      )
+      .exitCode
 }

@@ -6,6 +6,6 @@ import sttp.tapir.server.interpreter.BodyListener
 
 import scala.util.{Success, Try}
 
-private[lambda] class AwsBodyListener[F[_]: MonadError] extends BodyListener[F, String] {
-  override def onComplete(body: String)(cb: Try[Unit] => F[Unit]): F[String] = cb(Success(())).map(_ => body)
+private[lambda] class AwsBodyListener[F[_]: MonadError] extends BodyListener[F, LambdaResponseBody] {
+  override def onComplete(body: LambdaResponseBody)(cb: Try[Unit] => F[Unit]): F[LambdaResponseBody] = cb(Success(())).map(_ => body)
 }

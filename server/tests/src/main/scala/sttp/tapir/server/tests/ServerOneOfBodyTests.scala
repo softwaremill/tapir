@@ -15,8 +15,8 @@ import sttp.tapir.tests.OneOfBody.{
 import sttp.tapir.tests._
 import sttp.tapir.tests.data.Fruit
 
-class ServerOneOfBodyTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE]
+class ServerOneOfBodyTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {
@@ -43,7 +43,7 @@ class ServerOneOfBodyTests[F[_], ROUTE](
         post.body("orange").header(Accept, ApplicationXml.toString()).send(backend).map(_.body shouldBe """<f>orange</f>""") >>
         post.body("pear").header(Accept, TextPlain.toString()).send(backend).map(_.body shouldBe "pear") >>
         post.body("apple").send(backend).map(_.body shouldBe """{"f":"apple"}""") >> // default
-        post.body("apple").header(Accept, ApplicationPdf.toString()).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+        post.body("apple").header(Accept, ApplicationPdf.toString()).send(backend).map(_.code shouldBe StatusCode.NotAcceptable)
     }
   )
 }

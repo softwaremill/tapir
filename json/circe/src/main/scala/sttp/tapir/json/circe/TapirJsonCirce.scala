@@ -11,7 +11,14 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 
 trait TapirJsonCirce {
-  def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
+  def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(circeCodec[T])
+
+  def jsonBodyWithRaw[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
+    implicitly[JsonCodec[(String, T)]]
+  )
+
+  def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
 
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
@@ -46,8 +53,4 @@ trait TapirJsonCirce {
     )
 
   implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
-
-  // #321: circe encodes big decimals as numbers - adjusting the schemas (which by default are strings) to that format
-  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
-  implicit val schemaForJBigDecimal: Schema[java.math.BigDecimal] = Schema(SNumber())
 }

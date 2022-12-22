@@ -21,9 +21,9 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
-class ServerBasicTests[F[_], ROUTE](
-    createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+class ServerBasicTests[F[_], OPTIONS, ROUTE](
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,
@@ -40,7 +40,7 @@ class ServerBasicTests[F[_], ROUTE](
       methodMatchingTests() ++
       pathMatchingTests() ++
       pathMatchingMultipleEndpoints() ++
-      pathShapeMatchingTests() ++
+      customiseDecodeFailureHandlerTests() ++
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
       exceptionTests()
@@ -158,6 +158,14 @@ class ServerBasicTests[F[_], ROUTE](
         .send(backend)
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
+    testServer(endpoint.get.in(path[String]("pathParam")).in(queryParams).out(stringBody)) { case (pathParam: String, mqp: QueryParams) =>
+      pureResult(s"pathParam:$pathParam queryParams:${mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&")}".asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri/abc?xyz=123")
+        .send(backend)
+        .map(_.body shouldBe Right("pathParam:abc queryParams:xyz=123"))
+    },
     testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
       pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2.toList}").mkString("&").asRight[Unit])
     ) { (backend, baseUri) =>
@@ -192,7 +200,7 @@ class ServerBasicTests[F[_], ROUTE](
           if (multipleValueHeaderSupport) {
             r.headers.filter(_.is("hh")).map(_.value).toSet shouldBe Set("v3", "v2", "v1", "v0")
           } else {
-            r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
+            r.headers.filter(_.is("hh")).map(_.value).headOption should (contain("v3, v2, v1, v0") or contain("v3,v2,v1,v0"))
           }
         }
     },
@@ -237,7 +245,7 @@ class ServerBasicTests[F[_], ROUTE](
     },
     testServer(in_string_out_content_type_string, "dynamic content type")((b: String) => pureResult((b, "image/png").asRight[Unit])) {
       (backend, baseUri) =>
-        basicStringRequest.get(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
+        basicStringRequest.post(uri"$baseUri/api/echo").body("test").send(backend).map { r =>
           r.contentType shouldBe Some("image/png")
           r.body shouldBe "test"
         }
@@ -332,6 +340,55 @@ class ServerBasicTests[F[_], ROUTE](
         .headers(Header(HeaderNames.ContentType, "multipart/form-data; boundary=abc"))
         .send(backend)
         .map(_.body shouldBe Right("x"))
+    },
+    testServer(out_custom_content_type_empty_body)(k =>
+      pureResult((if (k < 0) MediaType.ApplicationJson.toString() else MediaType.ApplicationXml.toString()).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map(_.contentType shouldBe Some(MediaType.ApplicationJson.toString())) >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map(_.contentType shouldBe Some(MediaType.ApplicationXml.toString()))
+    },
+    testServer(out_custom_content_type_string_body)(k =>
+      pureResult((if (k < 0) (MediaType.ApplicationJson.toString(), "{}") else (MediaType.ApplicationXml.toString(), "<>")).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .get(uri"$baseUri?kind=-1")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("{}")
+          r.contentType shouldBe Some(MediaType.ApplicationJson.toString())
+        } >>
+        basicRequest
+          .get(uri"$baseUri?kind=1")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("<>")
+            r.contentType shouldBe Some(MediaType.ApplicationXml.toString())
+          }
+    },
+    testServer(in_raw_with_json_out_string) { case (s: String, fa: FruitAmount) =>
+      pureResult((s.length + " " + fa.amount).asRight[Unit])
+    } { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .body("""{"fruit":"orange","amount":11}""")
+        .send(backend)
+        .map(_.body shouldBe Right("30 11"))
+    },
+    testServer(in_flag_query_out_string) { input => pureResult(input.toString.asRight[Unit]) } { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?flag").send(backend).map(_.body shouldBe Right("Some(true)")) >>
+        basicRequest.get(uri"$baseUri?flag=false").send(backend).map(_.body shouldBe Right("Some(false)")) >>
+        basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("None"))
+    },
+    testServer(in_query_out_string, "should contain the content-length header")((fruit: String) =>
+      pureResult(s"fruit: $fruit".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.contentLength shouldBe Some(13))
     }
   )
 
@@ -522,14 +579,25 @@ class ServerBasicTests[F[_], ROUTE](
           r.code shouldBe StatusCode.Ok
           r.body shouldBe Right("ok1")
         }
+    },
+    testServer(
+      "two endpoints, same path prefix, one without trailing slashes, second accepting trailing slashes",
+      NonEmptyList.of(
+        route(endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
+        route(endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit])))
+      )
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e1") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2/").send(backend).map(_.body shouldBe "e2") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2/p3").send(backend).map(_.body shouldBe "e2")
     }
   )
 
-  def pathShapeMatchingTests(): List[Test] = List(
+  def customiseDecodeFailureHandlerTests(): List[Test] = List(
     testServer(
       in_path_fixed_capture_fixed_capture,
-      "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
-      Some(decodeFailureHandlerBadRequestOnPathFailure)
+      "Returns 400 if path 'shape' matches, but failed to parse a path parameter, using a custom decode failure handler",
+      _.decodeFailureHandler(decodeFailureHandlerBadRequestOnPathFailure)
     )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/customer/asd/orders/2").send(backend).map { response =>
         response.body shouldBe Left("Invalid value for: path parameter customer_id")
@@ -539,7 +607,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(
       in_path_fixed_capture_fixed_capture,
       "Returns 404 if path 'shape' doesn't match",
-      Some(decodeFailureHandlerBadRequestOnPathFailure)
+      _.decodeFailureHandler(decodeFailureHandlerBadRequestOnPathFailure)
     )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/customer").send(backend).map(response => response.code shouldBe StatusCode.NotFound) >>
         basicRequest.get(uri"$baseUri/customer/asd").send(backend).map(response => response.code shouldBe StatusCode.NotFound) >>
@@ -547,6 +615,39 @@ class ServerBasicTests[F[_], ROUTE](
           .get(uri"$baseUri/customer/asd/orders/2/xyz")
           .send(backend)
           .map(response => response.code shouldBe StatusCode.NotFound)
+    }, {
+      import DefaultDecodeFailureHandler.OnDecodeFailure._
+      testServer(
+        endpoint.get.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest),
+        "Returns 400 if path 'shape' matches, but failed to parse a path parameter, using .badRequestOnDecodeFailure"
+      )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
+        basicRequest.get(uri"$baseUri/customer/asd").send(backend).map { response =>
+          response.body shouldBe Left("Invalid value for: path parameter customer_id")
+          response.code shouldBe StatusCode.BadRequest
+        }
+      }
+    }, {
+      import DefaultDecodeFailureHandler.OnDecodeFailure._
+      testServer(
+        "Tries next endpoint if path 'shape' matches, but validation fails, using .onDecodeFailureNextEndpoint",
+        NonEmptyList.of(
+          route(
+            List(
+              endpoint.get
+                .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
+                .out(stringBody)
+                .serverLogic[F]((_: Int) => pureResult("e1".asRight[Unit])),
+              endpoint.get
+                .in("customer" / path[String]("customer_id"))
+                .out(stringBody)
+                .serverLogic[F]((_: String) => pureResult("e2".asRight[Unit]))
+            )
+          )
+        )
+      ) { (backend, baseUri) =>
+        basicStringRequest.get(uri"$baseUri/customer/20").send(backend).map(_.body shouldBe "e1") >>
+          basicStringRequest.get(uri"$baseUri/customer/2").send(backend).map(_.body shouldBe "e2")
+      }
     }
   )
 

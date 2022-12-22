@@ -24,9 +24,9 @@ object Validation {
   }
 
   val in_valid_json: PublicEndpoint[ValidFruitAmount, Unit, Unit, Any] = {
-    implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-    implicit val schemaForStringWrapper: Schema[StringWrapper] =
-      Schema.string.validate(Validator.minLength(4).contramap(_.v))
+    implicit val schemaForIntWrapper: Schema[IntWrapper] =
+      Schema(SchemaType.SInteger(), format = Some("int32")).validate(Validator.min(1).contramap(_.v))
+    implicit val schemaForStringWrapper: Schema[StringWrapper] = Schema.string.validate(Validator.minLength(4).contramap(_.v))
     implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
@@ -35,9 +35,9 @@ object Validation {
   }
 
   val in_valid_optional_json: PublicEndpoint[Option[ValidFruitAmount], Unit, Unit, Any] = {
-    implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-    implicit val schemaForStringWrapper: Schema[StringWrapper] =
-      Schema.string.validate(Validator.minLength(4).contramap(_.v))
+    implicit val schemaForIntWrapper: Schema[IntWrapper] =
+      Schema(SchemaType.SInteger(), format = Some("int32")).validate(Validator.min(1).contramap(_.v))
+    implicit val schemaForStringWrapper: Schema[StringWrapper] = Schema.string.validate(Validator.minLength(4).contramap(_.v))
     implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
@@ -52,12 +52,12 @@ object Validation {
   }
 
   val in_valid_json_collection: PublicEndpoint[BasketOfFruits, Unit, Unit, Any] = {
-    implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
+    implicit val schemaForIntWrapper: Schema[IntWrapper] =
+      Schema(SchemaType.SInteger(), format = Some("int32")).validate(Validator.min(1).contramap(_.v))
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
 
-    implicit val schemaForStringWrapper: Schema[StringWrapper] =
-      Schema.string.validate(Validator.minLength(4).contramap(_.v))
+    implicit val schemaForStringWrapper: Schema[StringWrapper] = Schema.string.validate(Validator.minLength(4).contramap(_.v))
     implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
     implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
 
@@ -76,7 +76,8 @@ object Validation {
     implicit val encoderForStringWrapper: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
     implicit val decoderForStringWrapper: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
 
-    implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
+    implicit val schemaForIntWrapper: Schema[IntWrapper] =
+      Schema(SchemaType.SInteger(), format = Some("int32")).validate(Validator.min(1).contramap(_.v))
     implicit val encoderForIntWrapper: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decoderForIntWrapper: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
@@ -133,7 +134,7 @@ object Validation {
 
   val in_valid_int_array: PublicEndpoint[List[IntWrapper], Unit, Unit, Any] = {
     implicit val schemaForIntWrapper: Schema[IntWrapper] =
-      Schema(SchemaType.SInteger()).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
+      Schema(SchemaType.SInteger(), format = Some("int32")).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     endpoint.in(jsonBody[List[IntWrapper]])
