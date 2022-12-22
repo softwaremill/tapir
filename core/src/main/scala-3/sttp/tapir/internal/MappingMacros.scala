@@ -25,10 +25,9 @@ private[tapir] object MappingMacros {
 
   inline def checkFields[A, B](using m: Mirror.ProductOf[A]): Unit =
     inline (erasedValue[m.MirroredElemTypes], erasedValue[B]) match {
-      case _: (EmptyTuple, B)      => ()
+      case _: (EmptyTuple, Unit)   => ()
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B)               => ()
-      case _: EmptyTuple           => ()
       case e                       => ComplietimeErrors.reportIncorrectMapping[B, A]
     }
 }
