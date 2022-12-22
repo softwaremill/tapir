@@ -17,21 +17,21 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   private val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
 
   def deriveEndpointInputImpl: Expr[EndpointInput[T]] = {
-    if (caseClass.fields.isEmpty) {
-      val path = caseClass
-        .extractOptStringArgFromAnnotation(endpointInputAnnotationSymbol)
-        .flatten
-
-      if (path.exists(path => path.contains('{') && path.contains('}'))) {
-        report.throwError(s"${caseClass.name} is empty but @endpointInput contains a path variable")
-      } else {
-        '{
-          stringToPath(${
-            Expr(path.headOption.getOrElse(""))
-          }).mapTo[T]
-        }
-      }
-    }
+//    if (caseClass.fields.isEmpty) {
+//      val path = caseClass
+//        .extractOptStringArgFromAnnotation(endpointInputAnnotationSymbol)
+//        .flatten
+//
+//      if (path.exists(path => path.contains('{') && path.contains('}'))) {
+//        report.throwError(s"${caseClass.name} is empty but @endpointInput contains a path variable")
+//      } else {
+//        '{
+//          stringToPath(${
+//            Expr(path.headOption.getOrElse(""))
+//          }).mapTo[T]
+//        }
+//      }
+//    }
     // the path inputs must be defined in the order as they appear in the argument to @endpointInput
     val pathSegments = caseClass
       .extractOptStringArgFromAnnotation(endpointInputAnnotationSymbol)
@@ -462,7 +462,9 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       Select.unique(tExpr.asTerm, field.name).asExprOf[Any]
     }
 
-    if (inputIdxToFieldIdx.size > 1) {
+    if (inputIdxToFieldIdx.size == 0) {
+      '{ (t: T) => ().asInstanceOf[A] }
+    } else if (inputIdxToFieldIdx.size > 1) {
       '{ (t: T) => ${ Expr.ofTupleFromSeq(tupleArgs('t)) }.asInstanceOf[A] }
     } else {
       '{ (t: T) => ${ tupleArgs('t).head }.asInstanceOf[A] }
