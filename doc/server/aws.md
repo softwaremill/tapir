@@ -6,18 +6,15 @@ To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](h
 
 For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396).
 
-## Runtime
+## Runtime & Server interpreters
 
-When deploying to Lambda, we need to chose one of the available runtimes provided by AWS.
-Tapir can be deployed, either to custom runtime, or to Java one. There are corresponding classes for each of them:
-  * The `AwsLambdaIORuntime` to implement the Lambda loop of reading the next request, computing and sending the response through [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
-  * The `LambdaHandler` which utilizes [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java) interface for handling requests, response flow inside Java runtime.
+Tapir supports three of the AWS Lambda runtimes: custom runtime, Java, and NodeJS. Below you have a list of classes that can be used as an entry point to your Lambda application depending on runtime of your choice. Each one of them uses server interpreter, which responsibility is to transform Tapir endpoints with associated server logic to function like `AwsRequest => F[AwsResponse]` in case of custom and Java runtime, or `AwsJsRequest => Future[AwsJsResponse]` in case of NodeJS runtime. Currently, two server interpreters are available, the first one is using cats-effect (`AwsCatsEffectServerInterpreter`), and the other one is using Scala Future (`AwsFutureServerInterpreter`). Custom runtime, and Java runtime are using only cats-effect interpreter, where NodeJS runtime can be used with both interpreters.
+These are corresponding classes for each of the supported runtime:
+  * The `AwsLambdaIORuntime` for custom runtime. Implement the Lambda loop of reading the next request, computing and sending the response through [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
+  * The `LambdaHandler` for Java runtime, which utilizes [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java) interface for handling requests, response flow inside Java runtime.
+  * The `AwsJsRouteHandler` for NodeJS runtime. The main benefit is the reduced deployment time. Initialization of JVM-based application (with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
 
-## Serverless interpreters
-
-Each of the aforementioned runtimes uses server interpreter, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`).
-
-To start using any of above runtimes with the interpreter, add the following dependency:
+To start using any of the above add the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
@@ -25,10 +22,8 @@ To start using any of above runtimes with the interpreter, add the following dep
 
 ## Deployment
 
-To configure API Gateway and the Lambda function, you can use:
-
-* the `AwsSamInterpreter` which interprets tapir `Endpoints` into an AWS SAM template file
-* or the `AwsTerraformInterpreter` which interprets `Endpoints` into terraform configuration file.
+To make it possible, to call your endpoints, you will need to deploy your application to Lambda, and configure Amazon API Gateway.
+Tapir leverages few ways of doing it, you can choose from: AWS SAM template file, terraform configuration, and AWS CDK application. 
 
 Add one of the following dependencies:
 
