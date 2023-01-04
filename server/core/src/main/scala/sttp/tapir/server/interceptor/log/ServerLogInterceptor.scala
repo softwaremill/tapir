@@ -14,12 +14,13 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
   ): RequestHandler[F, R, B] = {
-    val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, serverLog.requestToken))
+    val token = serverLog.requestToken
+    val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, token))
     new RequestHandler[F, R, B] {
       override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
           monad: MonadError[F]
       ): F[RequestResult[B]] = {
-        serverLog.requestReceived(request).flatMap(_ => delegate(request, endpoints))
+        serverLog.requestReceived(request, token).flatMap(_ => delegate(request, endpoints))
       }
     }
   }
