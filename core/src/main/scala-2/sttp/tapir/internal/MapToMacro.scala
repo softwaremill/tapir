@@ -34,8 +34,9 @@ private[tapir] object MapToMacro {
     val caseClassUtil = new CaseClassUtil[c.type, CASE_CLASS](c, "mapTo mapping")
     val tupleType = weakTypeOf[TUPLE]
     val tupleTypeArgs = tupleType.dealias.typeArgs
-
-    if (caseClassUtil.fields.size == 1) {
+    if (caseClassUtil.fields.size == 0) {
+      q"(t: ${tupleType.dealias}) => ${caseClassUtil.className}()"
+    } else if (caseClassUtil.fields.size == 1) {
       verifySingleFieldCaseClass(c)(caseClassUtil, tupleType)
       // Compilation failure if `CaseClass` gets passed as `[Wrapper.CaseClass]` caused by invalid `className`
       // retrieval below, workaround available (see: https://github.com/softwaremill/tapir/issues/2540)
@@ -54,10 +55,8 @@ private[tapir] object MapToMacro {
 
     val caseClassUtil = new CaseClassUtil[c.type, CASE_CLASS](c, "mapTo mapping")
     val tupleType = weakTypeOf[TUPLE]
-
     if (caseClassUtil.fields.size == 1) {
       verifySingleFieldCaseClass(c)(caseClassUtil, tupleType)
-
     } else {
       verifyCaseClassMatchesTuple(c)(caseClassUtil, tupleType, tupleType.dealias.typeArgs)
     }
@@ -85,7 +84,7 @@ private[tapir] object MapToMacro {
       tupleTypeArgs: List[c.Type]
   ): Unit = {
     val tupleSymbol = tupleType.typeSymbol
-    if (!tupleSymbol.fullName.startsWith("scala.Tuple")) {
+    if (!tupleSymbol.fullName.startsWith("scala.Tuple") && caseClassUtil.fields.nonEmpty) {
       c.abort(c.enclosingPosition, s"Expected source type to be a tuple, but got: $tupleType")
     }
 

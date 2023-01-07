@@ -182,6 +182,9 @@ object TapirRequestTest16 {
   val testAttributeKey: AttributeKey[String] = AttributeKey[String]
 }
 
+@endpointInput("some/path")
+final case class TapirRequestTest17()
+
 class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
@@ -315,6 +318,11 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
     it should s"derive correct input for $body body" in {
       compareTransputs(derived, expected) shouldBe true
     }
+  }
+
+  it should "accept empty case classes when annotated with @endpointInput" in {
+    val expectedInput = ("some" / "path").mapTo[TapirRequestTest17]
+    compareTransputs(EndpointInput.derived[TapirRequestTest17], expectedInput) shouldBe true
   }
 
   it should "not compile if there is field without annotation" in {
