@@ -1683,7 +1683,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
