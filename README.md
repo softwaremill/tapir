@@ -194,6 +194,23 @@ You can test only server/client/doc/other projects using `testServers`, `testCli
 To verify that the code snippet in docs compile, run `compileDocumentation`. A full mdoc run is done during a release
 (when the documentation is generated).
 
+### Importing into IntelliJ
+
+By default, when importing to IntelliJ, only the Scala 2.13/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
+
+If you'd like to work on a different platform or Scala version, simply change this setting temporarily so that the correct subprojects are imported. For example:
+
+```
+// import only Scala 2.13, JS projects
+ideSkipProject := (scalaVersion.value != scala2_13) || !thisProjectRef.value.project.contains("JS")
+
+// import only Scala 3, JVM projects
+ideSkipProject := (scalaVersion.value != scala3) || thisProjectRef.value.project.contains("JS") || thisProjectRef.value.project.contains("Native"),
+
+// import only Scala 2.13, Native projects
+ideSkipProject := (scalaVersion.value != scala2_13) || !thisProjectRef.value.project.contains("Native")
+```
+
 ## Commercial Support
 
 We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!

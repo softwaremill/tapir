@@ -13,7 +13,8 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
-private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
+private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R])
+    extends EndpointToSttpClientExtensions {
   def toSttpRequest[A, E, O, I](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri]): A => I => Request[DecodeResult[Either[E, O]], R] = {
     aParams => iParams =>
       val (uri1, req1) =
@@ -40,7 +41,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
       val isWebSocket = bodyIsWebSocket(e.output)
 
-      def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == StatusCode.SwitchingProtocols else meta.isSuccess
+      def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == webSocketSuccessStatusCode else meta.isSuccess
 
       val responseAs = fromMetadata(
         responseAsFromOutputs(e.errorOutput, isWebSocket = false),
