@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.2.5"
 ```
 
 Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
@@ -140,7 +140,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.2.5"
 ```
 
 And the following imports:
@@ -195,7 +195,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "1.2.5"
 ```
 
 Imports:
@@ -266,7 +266,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.2.5"
 ```
 
 ### Shadowed endpoints
