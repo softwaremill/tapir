@@ -44,13 +44,6 @@ trait TapirJsonPlay {
       }
     } { t => Json.stringify(Json.toJson(t)) }
 
-  // JsValue is a coproduct with unknown implementations
-  implicit val schemaForPlayJsValue: Schema[JsValue] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForPlayJsObject: Schema[JsObject] =
-    Schema(SProduct(Nil), Some(SName("play.api.libs.json.JsObject")))
+  implicit val schemaForPlayJsValue: Schema[JsValue] = Schema.any
+  implicit val schemaForPlayJsObject: Schema[JsObject] = Schema.anyObject[JsObject].name(SName("play.api.libs.json.JsObject"))
 }
