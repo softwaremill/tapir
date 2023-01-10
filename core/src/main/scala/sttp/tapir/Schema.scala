@@ -377,6 +377,18 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     */
   def wrapWithSingleFieldProduct[T](schema: Schema[T])(implicit conf: Configuration): Schema[T] =
     wrapWithSingleFieldProduct(schema, FieldName(conf.toDiscriminatorValue(schema.name.getOrElse(SName.Unit))))
+
+  /** A schema allowing anything: a number, string, object, etc. A [[SCoproduct]] with no specified subtypes.
+    * @see
+    *   [[anyObject]]
+    */
+  def any[T]: Schema[T] = Schema(SCoproduct(Nil, None)(_ => None), None)
+
+  /** A schema allowing any object. A [[SProduct]] with no specified fields.
+    * @see
+    *   [[any]]
+    */
+  def anyObject[T]: Schema[T] = Schema(SProduct(Nil), None)
 }
 
 trait LowPrioritySchema {

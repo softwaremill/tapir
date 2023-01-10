@@ -45,12 +45,6 @@ trait TapirJsonCirce {
 
   def jsonPrinter: Printer = Printer.noSpaces
 
-  // Json is a coproduct with unknown implementations
-  implicit val schemaForCirceJson: Schema[Json] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
+  implicit val schemaForCirceJson: Schema[Json] = Schema.any
+  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema.anyObject[JsonObject].name(SName("io.circe.JsonObject"))
 }
