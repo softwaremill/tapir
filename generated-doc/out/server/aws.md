@@ -13,7 +13,7 @@ To implement the Lambda function, a server interpreter is available, which takes
 Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`). To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.2.5"
 ```
 
 To configure API Gateway and the Lambda function, you can use:
@@ -24,8 +24,8 @@ To configure API Gateway and the Lambda function, you can use:
 Add one of the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.2.4"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.2.4"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.2.5"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.2.5"
 ```
 
 ## Examples
