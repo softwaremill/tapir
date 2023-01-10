@@ -527,11 +527,17 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
     libraryDependencies ++= Seq(
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
-    )
+    ),
+    Test/scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Seq("-Yretain-trees")
+        case _ => Seq()
+      }
+    }
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
