@@ -448,7 +448,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.0" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.4" % "test",
       "io.gatling" % "gatling-test-framework" % "3.8.4" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
