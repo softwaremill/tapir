@@ -528,7 +528,7 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
     ),
-    scalacOptions ++= {
+    Test/scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq("-Yretain-trees")
         case _ => Seq()
