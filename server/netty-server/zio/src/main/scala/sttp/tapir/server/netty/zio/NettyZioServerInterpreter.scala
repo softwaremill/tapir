@@ -9,7 +9,7 @@ import zio.{CancelableFuture, RIO, Runtime, Unsafe, ZIO}
 trait NettyZioServerInterpreter[R] {
   def nettyServerOptions: NettyZioServerOptions[R, _]
 
-  def toRoute(ses: List[ZServerEndpoint[R, Any]]): RIO[R, Route[RIO[R, *]]] = ZIO.runtime.map { runtime: Runtime[R] =>
+  def toRoute(ses: List[ZServerEndpoint[R, Any]]): RIO[R, Route[RIO[R, *]]] = ZIO.runtime.map { (runtime: Runtime[R]) =>
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
     val runAsync = new ZioRunAsync(runtime)
     NettyServerInterpreter
