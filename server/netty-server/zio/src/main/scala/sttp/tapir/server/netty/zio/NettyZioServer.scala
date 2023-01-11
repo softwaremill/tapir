@@ -88,7 +88,7 @@ case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[RIO[R, Route[RI
 }
 
 object NettyZioServer {
-  def apply[R]: NettyZioServer[R, InetSocketAddress] =
+  def apply[R](): NettyZioServer[R, InetSocketAddress] =
     apply(NettyZioServerOptions.default[R])
 
   def apply[R, SA <: SocketAddress](options: NettyZioServerOptions[R, SA]): NettyZioServer[R, SA] =
