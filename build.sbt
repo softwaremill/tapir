@@ -528,10 +528,10 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
     ),
-    Test/scalacOptions ++= {
+    Test / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq("-Yretain-trees")
-        case _ => Seq()
+        case _            => Seq()
       }
     }
   )
@@ -788,8 +788,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.20.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.20.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.20.3",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.20.3" % Test,
       scalaTest.value % Test
     )
   )
