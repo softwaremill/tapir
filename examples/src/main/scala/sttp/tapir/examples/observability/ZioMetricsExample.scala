@@ -40,7 +40,7 @@ object ZioMetricsExample extends ZIOAppDefault {
     } yield serverPort)
       .provide(
         ServerConfig.live(ServerConfig.default.port(port)),
-        Server.live,
+        Server.live
       )
       .exitCode
   }

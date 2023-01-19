@@ -38,8 +38,11 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // starting the server
   override def run =
-    Server.serve(app).provide(
-      ServerConfig.live(ServerConfig.default.port(8090)),
-      Server.live,
-    ).exitCode
+    Server
+      .serve(app)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(8090)),
+        Server.live
+      )
+      .exitCode
 }

@@ -45,14 +45,14 @@ object ZioMetrics {
     Boundaries.fromChunk(Chunk(.005, .01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 15, 30, 45, 60))
 
   /** Using the default namespace and labels, registers the following metrics:
-   *
-   *   - `tapir_request_active{path, method}` (gauge)
-   *   - `tapir_request_total{path, method, status}` (counter)
-   *   - `tapir_request_duration_seconds{path, method, status, phase}` (histogram)
-   *
-   * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
-   * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
-   */
+    *
+    *   - `tapir_request_active{path, method}` (gauge)
+    *   - `tapir_request_total{path, method, status}` (counter)
+    *   - `tapir_request_duration_seconds{path, method, status, phase}` (histogram)
+    *
+    * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
+    * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
+    */
   def default[F[_]](namespace: String = DefaultNamespace, labels: MetricLabels = MetricLabels.Default): ZioMetrics[F] = ZioMetrics(
     namespace,
     List(
@@ -74,7 +74,6 @@ object ZioMetrics {
   /** Histogram buckets in seconds. */
   def getRequestDurationHistogram(namespace: String): zio.metrics.Metric.Histogram[Double] =
     zio.metrics.Metric.histogram(s"${namespace}_request_duration_seconds", DurationBoundaries)
-
 
   /** ZIO Unsafe Run Wrapper */
   private def unsafeRun[T](task: Task[T]): T = Unsafe.unsafe { implicit u =>

@@ -32,7 +32,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
         .serve(petRoutes ++ redocRoutes)
         .provide(
           ServerConfig.live(ServerConfig.default.port(8080)),
-          Server.live,
+          Server.live
         )
         .fork
         .flatMap { fiber =>
