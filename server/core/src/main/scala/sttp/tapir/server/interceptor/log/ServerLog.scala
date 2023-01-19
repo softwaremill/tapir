@@ -44,13 +44,7 @@ trait ServerLog[F[_]] {
   def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit]
 }
 
-/** Default implementation of ServerLog which is used if user hasn't provided custom one.
-  *
-  * Be aware of using it, some of unexpected behaviors are:
-  *   - doLogAllDecodeFailures despite its name is being called only for unhandled decoding failures. If you want to log unhandled ones too
-  *     you should specify doLogWhenHandled as well. Better option might be to create your own implementation of ServerLog which has full
-  *     control of formatting arguments. See examples of how one can do that
-  */
+/** Default implementation of ServerLog which is used if user hasn't provided custom one. */
 case class DefaultServerLog[F[_]](
     doLogWhenReceived: String => F[Unit],
     doLogWhenHandled: (String, Option[Throwable]) => F[Unit],
@@ -104,8 +98,8 @@ case class DefaultServerLog[F[_]](
     else noLog
 
   override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_], token: TOKEN): F[Unit] =
-    if (logWhenHandled)
-      doLogWhenHandled(
+    if (logAllDecodeFailures)
+      doLogAllDecodeFailures(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(
             ctx.endpoint
           )}${took(token)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; response: ${showResponse(response)}",

@@ -66,8 +66,8 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
         decodeHandler
           .onDecodeFailure(ctx)
           .flatMap {
-            case r @ None =>
-              serverLog.decodeFailureNotHandled(ctx, token).map(_ => r: Option[ServerResponse[B]])
+            case None =>
+              serverLog.decodeFailureNotHandled(ctx, token).map(_ => Option.empty[ServerResponse[B]])
             case r @ Some(response) =>
               serverLog
                 .decodeFailureHandled(ctx, response, token)
