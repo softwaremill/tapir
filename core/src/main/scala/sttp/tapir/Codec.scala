@@ -569,9 +569,9 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }
   }(_.toString)
 
-   implicit val contentRange: Codec[String, ContentRange, CodecFormat.TextPlain] = Codec.string.mapDecode { v => 
-    DecodeResult.fromEitherString(v, ContentRange.parse(v)) 
-   }(_.toString)
+  implicit val contentRange: Codec[String, ContentRange, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+    DecodeResult.fromEitherString(v, ContentRange.parse(v))
+  }(_.toString)
 
   implicit val cacheDirective: Codec[String, List[CacheDirective], CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     @tailrec

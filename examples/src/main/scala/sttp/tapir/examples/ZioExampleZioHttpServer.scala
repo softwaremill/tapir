@@ -46,7 +46,7 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
       .serve(routes)
       .provide(
         ServerConfig.live(ServerConfig.default.port(8080)),
-        Server.live,
+        Server.live
       )
       .exitCode
 }
