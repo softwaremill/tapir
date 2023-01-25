@@ -12,21 +12,21 @@ import zio.{CancelableFuture, Runtime, Task, Unsafe}
 import java.net.InetSocketAddress
 
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
-    extends TestServerInterpreter[Task, Any, NettyZioServerOptions[Any, InetSocketAddress], Route[Task]] {
-  implicit val runtime: Runtime[R] = Runtime.default.asInstanceOf[Runtime[R]]
-
-  override def route(es: List[ServerEndpoint[Any, Task]], interceptors: Interceptors): Route[Task] = {
+    extends TestServerInterpreter[Task, Any, NettyZioServerOptions[Any, InetSocketAddress], Task[Route[Task]]] {
+  override def route(es: List[ServerEndpoint[Any, Task]], interceptors: Interceptors): Task[Route[Task]] = {
     val serverOptions: NettyZioServerOptions[Any, InetSocketAddress] = interceptors(
       NettyZioServerOptions.customiseInterceptors
     ).options
     NettyZioServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def server(routes: NonEmptyList[Route[Task]]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[Task[Route[Task]]]): Resource[IO, Port] = {
     val options =
       NettyZioServerOptions
         .default[R]
         .nettyOptions(NettyOptions.default.eventLoopGroup(eventLoopGroup).randomPort.noShutdownOnClose)
+
+    val runtime: Runtime[R] = Runtime.default.asInstanceOf[Runtime[R]]
 
     val server: CancelableFuture[NettyZioServerBinding[R, InetSocketAddress]] =
       Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(NettyZioServer(options).addRoutes(routes.toList).start()))
