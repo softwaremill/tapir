@@ -1713,6 +1713,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioHttpServer,
     nettyServer,
     nettyServerCats,
+    nettyServerZio,
     sttpStubServer,
     playJson,
     prometheusMetrics,
