@@ -528,10 +528,10 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
     ),
-    Test/scalacOptions ++= {
+    Test / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq("-Yretain-trees")
-        case _ => Seq()
+        case _            => Seq()
       }
     }
   )
@@ -1354,7 +1354,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.3")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
   .jvmPlatform(scalaVersions = scala2_13and3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
