@@ -101,7 +101,13 @@ val enableMimaSettings = Seq(
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
+  Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
+      case _            => Seq.empty[String]
+    }
+  }
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -528,10 +534,10 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
     ),
-    Test/scalacOptions ++= {
+    Test / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq("-Yretain-trees")
-        case _ => Seq()
+        case _            => Seq()
       }
     }
   )
