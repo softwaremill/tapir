@@ -8,17 +8,17 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
-import zio.http.{Body, Handler, Http, Request, Response}
+import zio.http.{App, Body, Handler, Http, Request, Response}
 import zio.http.model.{Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
 import zio._
 
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams]): Http[R & R2, Throwable, Request, Response] =
-    toHttp(List(se))
+  def toApp[R2](se: ZServerEndpoint[R2, ZioStreams]): App[R & R2] =
+    toApp(List(se))
 
-  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams]]): Http[R & R2, Throwable, Request, Response] = {
+  def toApp[R2](ses: List[ZServerEndpoint[R2, ZioStreams]]): App[R & R2] = {
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
     val widenedSes = ses.map(_.widen[R & R2])
@@ -60,6 +60,7 @@ trait ZioHttpInterpreter[R] {
             }
           )
       }
+      .withDefaultErrorResponse
   }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] = {
