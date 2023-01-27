@@ -9,6 +9,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+import sttp.monad.syntax._
 
 package object internal {
   // some definitions are intentionally left public as they are used in server/client interpreters
@@ -352,4 +353,15 @@ package object internal {
     case null          => true
     case _             => false
   }
+
+  implicit class SequenceSupport[F[_], T](lt: List[F[T]])(implicit me: MonadError[F]) {
+    def sequence(): F[List[T]] = {
+      def sequence(lt: List[F[T]]): F[List[T]] = lt match {
+        case Nil          => (Nil: List[T]).unit
+        case head :: tail => head.flatMap(ht => sequence(tail).map(ht :: _))
+      }
+      sequence(lt)
+    }
+  }
+
 }

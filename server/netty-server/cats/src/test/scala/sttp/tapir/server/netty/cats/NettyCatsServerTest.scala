@@ -20,7 +20,8 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
           val interpreter = new NettyCatsTestServerInterpreter(eventLoopGroup, dispatcher)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests()
+          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
+            new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
