@@ -14,7 +14,7 @@ object Versions {
   val akkaStreams = "2.6.20"
   val swaggerUi = "4.15.5"
   val upickle = "2.0.0"
-  val playJson = "2.9.3"
+  val playJson = "2.9.4"
   val finatra = "22.12.0"
   val catbird = "21.12.0"
   val json4s = "4.0.6"
