@@ -8,8 +8,9 @@ sealed trait NettyResponseContent {
   def channelPromise: ChannelPromise
 }
 
-object  NettyResponseContent{
+object NettyResponseContent {
   final case class ByteBufNettyResponseContent(channelPromise: ChannelPromise, byteBuf: ByteBuf) extends NettyResponseContent
-  final case class ChunkedStreamNettyResponseContent(channelPromise: ChannelPromise, chunkedStream: ChunkedStream) extends NettyResponseContent
+  final case class ChunkedStreamNettyResponseContent(channelPromise: ChannelPromise, chunkedStream: ChunkedStream)
+      extends NettyResponseContent
   final case class ChunkedFileNettyResponseContent(channelPromise: ChannelPromise, chunkedFile: ChunkedFile) extends NettyResponseContent
 }

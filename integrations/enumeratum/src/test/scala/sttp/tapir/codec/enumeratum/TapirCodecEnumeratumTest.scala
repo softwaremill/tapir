@@ -95,7 +95,9 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     }
   }
 
-  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit `enum`: E): Unit = {
+  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](
+      codec: PlainCodec[EE]
+  )(implicit `enum`: E): Unit = {
     `enum`.values.foreach { v =>
       codec.encode(v) shouldBe v.value.toString
       codec.decode(v.value.toString) shouldBe DecodeResult.Value(v)

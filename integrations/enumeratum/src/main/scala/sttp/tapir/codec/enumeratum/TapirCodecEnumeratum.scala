@@ -14,7 +14,9 @@ trait TapirCodecEnumeratum {
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit annotations: SchemaAnnotations[E], `enum`: Enum[E]): Schema[E] =
     annotations.enrich(Schema[E](SchemaType.SString()).validate(validatorEnumEntry))
 
-  def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit `enum`: Enum[E]): Codec[String, E, CodecFormat.TextPlain] = {
+  def plainCodecEnumEntryUsing[E <: EnumEntry](
+      f: String => Option[E]
+  )(implicit `enum`: Enum[E]): Codec[String, E, CodecFormat.TextPlain] = {
     val validator = validatorEnumEntry
     Codec.string
       .mapDecode { s =>
@@ -47,7 +49,10 @@ trait TapirCodecEnumeratum {
   implicit def schemaForShortEnumEntry[E <: ShortEnumEntry](implicit annotations: SchemaAnnotations[E], `enum`: ShortEnum[E]): Schema[E] =
     annotations.enrich(Schema[E](SchemaType.SInteger()).validate(validatorValueEnumEntry[Short, E]))
 
-  implicit def schemaForStringEnumEntry[E <: StringEnumEntry](implicit annotations: SchemaAnnotations[E], `enum`: StringEnum[E]): Schema[E] =
+  implicit def schemaForStringEnumEntry[E <: StringEnumEntry](implicit
+      annotations: SchemaAnnotations[E],
+      `enum`: StringEnum[E]
+  ): Schema[E] =
     annotations.enrich(Schema[E](SchemaType.SString()).validate(validatorValueEnumEntry[String, E]))
 
   implicit def schemaForByteEnumEntry[E <: ByteEnumEntry](implicit annotations: SchemaAnnotations[E], `enum`: ByteEnum[E]): Schema[E] =
