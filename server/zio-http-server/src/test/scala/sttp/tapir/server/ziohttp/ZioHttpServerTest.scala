@@ -30,17 +30,18 @@ class ZioHttpServerTest extends TestSuite {
         (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.fromConfig)
       }.build)
       .map { nettyDeps =>
-        val eventLoopGroup = nettyDeps.get[zio.http.service.EventLoopGroup]
-        val channelFactory = nettyDeps.get[zio.http.service.ServerChannelFactory]
+        val eventLoopGroup = ZLayer.succeed(nettyDeps.get[zio.http.service.EventLoopGroup])
+        val channelFactory = ZLayer.succeed(nettyDeps.get[zio.http.service.ServerChannelFactory])
         val interpreter = new ZioHttpTestServerInterpreter(eventLoopGroup, channelFactory)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
         def additionalTests(): List[Test] = List(
           // https://github.com/softwaremill/tapir/issues/1914
-          Test("zio http route can be used as a function") {
+          Test("zio http route can be called with runZIO") {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
             val route = ZioHttpInterpreter().toHttp(ep)
-            val test: UIO[Assertion] = route(Request.get(url = URL.apply(Path.empty / "p1")))
+            val test: UIO[Assertion] = route
+              .runZIO(Request.get(url = URL.apply(Path.empty / "p1")))
               .flatMap(response => response.body.asString)
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
