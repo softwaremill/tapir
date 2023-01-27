@@ -3,7 +3,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir.ZServerEndpoint
-import zio.http.HttpApp
+import zio.http.App
 import zio.http.{Server, ServerConfig}
 import zio.{Task, ZIO, _}
 
@@ -29,7 +29,7 @@ object ZioMetricsExample extends ZIOAppDefault {
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
-    val app: HttpApp[Any, Throwable] = ZioHttpInterpreter(serverOptions).toHttp(all)
+    val app: App[Any] = ZioHttpInterpreter(serverOptions).toApp(all)
 
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
@@ -40,7 +40,7 @@ object ZioMetricsExample extends ZIOAppDefault {
     } yield serverPort)
       .provide(
         ServerConfig.live(ServerConfig.default.port(port)),
-        Server.live,
+        Server.live
       )
       .exitCode
   }

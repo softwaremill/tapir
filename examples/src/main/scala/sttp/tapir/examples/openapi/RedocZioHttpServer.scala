@@ -6,7 +6,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
-import zio.http.HttpApp
+import zio.http.App
 import zio.http.{Server, ServerConfig}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault}
@@ -20,10 +20,10 @@ object RedocZioHttpServer extends ZIOAppDefault {
       else ZIO.fail("Unknown pet id")
     }
 
-  val petRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(petEndpoint)
+  val petRoutes: App[Any] = ZioHttpInterpreter().toApp(petEndpoint)
 
-  val redocRoutes: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
+  val redocRoutes: App[Any] =
+    ZioHttpInterpreter().toApp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
@@ -32,7 +32,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
         .serve(petRoutes ++ redocRoutes)
         .provide(
           ServerConfig.live(ServerConfig.default.port(8080)),
-          Server.live,
+          Server.live
         )
         .fork
         .flatMap { fiber =>
