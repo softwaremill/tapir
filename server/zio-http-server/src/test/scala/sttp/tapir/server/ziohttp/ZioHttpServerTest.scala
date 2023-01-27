@@ -39,7 +39,7 @@ class ZioHttpServerTest extends TestSuite {
           // https://github.com/softwaremill/tapir/issues/1914
           Test("zio http route can be called with runZIO") {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
-            val route = ZioHttpInterpreter().toHttp(ep)
+            val route = ZioHttpInterpreter().toApp(ep)
             val test: UIO[Assertion] = route
               .runZIO(Request.get(url = URL.apply(Path.empty / "p1")))
               .flatMap(response => response.body.asString)
