@@ -197,7 +197,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "@VERSION@"
 ```
 
 Imports:
