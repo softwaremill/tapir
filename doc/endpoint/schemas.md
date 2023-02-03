@@ -64,13 +64,15 @@ implicit lazy val sParent: Schema[Parent] = Schema.derived
 Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
 values must be `lazy val`s.
 
-```eval_rst
-.. note::
+## Debugging schema derivation
 
-  When deriving schemas using ``Schema.derived``, the diagnostic information as to schemas for which types is
-  much richer. Hence, this method may be used when debugging the derivation of a schema which gives compilation errors,
-  even when otherwise auto derivation is used. 
-```
+When deriving schemas using `Schema.derived[T]`, in case derivation fails, you'll get information for which part of `T` 
+the schema cannot be found (e.g. a specific field, or a trait subtype). Given this diagnostic information you can drill
+down, and try to derive the schema (again using `Schema.derived`) for the problematic part. Eventually, you'll find the 
+lowest-level type for which the schema cannot be derived. You might need to provide it manually, or use some kind of
+integration layer.
+
+This method may be used both with automatic and semi-automatic derivation. 
 
 ## Derivation for recursive types in Scala3
 
