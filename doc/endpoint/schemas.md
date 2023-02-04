@@ -38,7 +38,7 @@ If you have a case class which contains some non-standard types (other than stri
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
 Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
-enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
+enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
