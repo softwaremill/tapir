@@ -49,53 +49,32 @@ You can start by adding one of the following dependencies to your project, and t
 
 ### Examples
 
-Go ahead and clone tapir project, and select `project awsExamples` from sbt shell.
-To deploy you application to AWS you will need to have an AWS account
+Go ahead and clone tapir project. To deploy you application to AWS you will need to have an AWS account
 and [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
 
 #### SAM
 
-##### Java Runtime
+SAM can be deployed using Java runtime or NodeJS runtime. For each of these cases first you will have to install [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html), and create a S3 bucket, that will be used during deployment. Before going further, open sbt shell, as it will be needed for both runtimes.
 
-1. Install  [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
-2. Run `assembly` task, and `runMain sttp.tapir.serverless.aws.examples.SamTemplateExample`, this will generate `template.yaml` sam file in main directory
-3. Before deploying, if you want to test your application locally, you will need Docker
-   and [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
-   , then execute `sam local start-api --warm-containers EAGER`
-4. Getting back to deploying, you will need to create s3 bucket with name of you choice, or use existing one 
-5. To deploy it to AWS, run `sam deploy --template-file template.yaml --stack-name sam-app --capabilities CAPABILITY_IAM --s3-bucket [name of your bucket]`. At the end of the execution you will see url of the application, just add `/api/hello` to the end of it, and you should see `Hello!` message. Be aware the first call can take a little longer as the application takes some time to start, but consecutive calls will be much faster.
-6. When you want to rollback changes made on AWS, run `sam delete --stack-name sam-app`
+For Java runtime, use sbt to run `assembly` task, and then `runMain sttp.tapir.serverless.aws.examples.SamTemplateExample`, this will generate `template.yaml` sam file in main directory 
 
-##### NodeJS Runtime
+For NodeJS runtime, first generate AWS Lambda yaml file by execution inside sbt shell command `awsExamples/runMain sttp.tapir.serverless.aws.examples.SamJsTemplateExample`, and then build Node.js module with `awsExamplesJS/fastLinkJS`, it will create all-in-one JS file under `tapir/serverless/aws/examples/target/js-2.13/tapir-aws-examples-fastopt/main.js`
 
-`LambdaApiJsExample` and `LambdaApiJsResourceExample` demonstrate how to create an API route,
-that can be built into Node.js module with Scala.js plugin.
-Such module can be deployed as an AWS Lambda function with Node.js runtime.
-The main benefit is the reduced deployment time.
-Initialization of JVM-based application (with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
-
-`LambdaApiJsExample` uses `AwsFutureServerInterpreter` and `JsRoute[Future]`,
-which is an alias for the route function `AwsJsRequest => Future[AwsJsResponse]`.
-
-`LambdaApiJsResourceExample` builds a `cats.effect.Resource` and uses `AwsCatsEffectServerInterpreter` and `JsRoute[IO]`.
-
-SAM template and application module can be generated and deployed locally with following commands:
-
-* to generate AWS Lambda yaml file run `sbt "project awsExamples; runMain sttp.tapir.serverless.aws.examples.SamJsTemplateExample"`
-* to build Node.js module run `sbt "project awsExamplesJS; fastLinkJS"`, it will create all-in-one JS file
-  under `tapir/serverless/aws/examples/target/js-2.13/tapir-aws-examples-fastopt/main.js`
-* open a terminal and in tapir root directory run `sam local start-api --warm-containers EAGER`
+From now the steps for both runtimes are the same:
+1. Before deploying, if you want to test your application locally, you will need Docker. Execute `sam local start-api --warm-containers EAGER`, there will be a link displayed at the console output
+2. To deploy it to AWS, run `sam deploy --template-file template.yaml --stack-name sam-app --capabilities CAPABILITY_IAM --s3-bucket [name of your bucket]`. The console output should print url of the application, just add `/api/hello` to the end of it, and you should see `Hello!` message. Be aware in case of Java runtime, the first call can take a little longer as the application takes some time to start, but consecutive calls will be much faster.
+3. When you want to rollback changes made on AWS, run `sam delete --stack-name sam-app`
 
 ### Terraform
 
 Terraform deployment requires you to have a S3 bucket.
 
 1. Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-2. Run `assembly` task
+2. Run `assembly` task inside sbt shell
 3. Open a terminal in `tapir/serverless/aws/examples/target/jvm-2.13` directory. That's where the fat jar is saved. You
    need to upload it into your s3 bucket. Using command line
    tools: `aws s3 cp tapir-aws-examples.jar s3://{your-bucket}/{your-key}`.
-4. Run `runMain sttp.tapir.serverless.aws.examples.TerraformConfigExample {your-aws-region} {your-bucket} {your-key}`
+4. Run `runMain sttp.tapir.serverless.aws.examples.TerraformConfigExample {your-aws-region} {your-bucket} {your-key}` inside sbt shell
 5. Open terminal in tapir root directory, run `terraform init` and `terraform apply`
 
 That will create `api_gateway.tf.json` configuration and deploy Api Gateway and lambda function to AWS. Terraform will
@@ -108,7 +87,7 @@ To destroy all the created resources run `terraform destroy`.
 1. First you need to install:
     * [NPM](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
     * [AWS CDK Toolkit](https://docs.aws.amazon.com/cdk/v2/guide/cli.html)
-2. Then run `assembly` task, and execute `runMain sttp.tapir.serverless.aws.examples.CdkAppExample` to generate CDK application template under `cdk`
+2. Open sbt shell, then run `assembly` task, and execute `runMain sttp.tapir.serverless.aws.examples.CdkAppExample` to generate CDK application template under `cdk`
    directory
 3. Go to `cdk` and run `npm install`, it will create all files needed for the deployment
 4. Before deploying, if you want to test your application locally, you will need Docker

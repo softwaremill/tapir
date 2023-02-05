@@ -20,7 +20,7 @@ object LambdaApiJsResourceExample {
   val route: Resource[IO, Route[IO]] =
     Resource.pure(AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)) // for demonstration purposes only
 
-  @JSExportTopLevel(name = "handler")
+  @JSExportTopLevel(name = "LambdaApiJsResourceExampleHandler")
   def handler(event: AwsJsRequest, context: Any): scala.scalajs.js.Promise[AwsJsResponse] =
     AwsJsRouteHandler.catsResourceHandler(event, route)
 }
