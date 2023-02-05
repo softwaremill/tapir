@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.17"
 val scala2_13 = "2.13.10"
-val scala3 = "3.2.1"
+val scala3 = "3.2.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2_13and3Versions = List(scala2_13, scala3)
@@ -101,7 +101,13 @@ val enableMimaSettings = Seq(
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
+  Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
+      case _            => Seq.empty[String]
+    }
+  }
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -179,6 +185,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio1.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
+  nettyServerZio.projectRefs ++
+  nettyServerZio1.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -350,7 +358,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.0")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.6")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -448,7 +456,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.4" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.8.4" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.9.0" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -526,11 +534,17 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
     libraryDependencies ++= Seq(
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
-    )
+    ),
+    Test / scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Seq("-Yretain-trees")
+        case _            => Seq()
+      }
+    }
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -566,14 +580,18 @@ lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
     name := "tapir-zio1",
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Versions.zio1,
-      "dev.zio" %% "zio-streams" % Versions.zio1,
-      "dev.zio" %% "zio-test" % Versions.zio1 % Test,
-      "dev.zio" %% "zio-test-sbt" % Versions.zio1 % Test,
-      "com.softwaremill.sttp.shared" %% "zio1" % Versions.sttpShared
+      "dev.zio" %%% "zio" % Versions.zio1,
+      "dev.zio" %%% "zio-streams" % Versions.zio1,
+      "dev.zio" %%% "zio-test" % Versions.zio1 % Test,
+      "dev.zio" %%% "zio-test-sbt" % Versions.zio1 % Test,
+      "com.softwaremill.sttp.shared" %%% "zio1" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
@@ -582,14 +600,18 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     name := "tapir-zio",
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Versions.zio,
-      "dev.zio" %% "zio-streams" % Versions.zio,
-      "dev.zio" %% "zio-test" % Versions.zio % Test,
-      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
+      "dev.zio" %%% "zio" % Versions.zio,
+      "dev.zio" %%% "zio-streams" % Versions.zio,
+      "dev.zio" %%% "zio-test" % Versions.zio % Test,
+      "dev.zio" %%% "zio-test-sbt" % Versions.zio % Test,
+      "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
@@ -773,8 +795,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.18.1",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.18.1" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.20.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.20.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -1210,7 +1232,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http-server" % Versions.finatra,
-      "org.apache.httpcomponents" % "httpmime" % "4.5.13",
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       // Testing
       "com.twitter" %% "inject-server" % Versions.finatra % Test,
       "com.twitter" %% "inject-app" % Versions.finatra % Test,
@@ -1252,28 +1274,34 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final"
-    ) ++ loggerDependencies,
+    libraryDependencies ++= Seq("io.netty" % "netty-all" % Versions.nettyAll)
+      ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerCats: ProjectMatrix = (projectMatrix in file("server/netty-server/cats"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-netty-server-cats",
-    libraryDependencies ++= Seq(
-      "io.netty" % "netty-all" % "4.1.82.Final",
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
-    ) ++ loggerDependencies,
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
-  )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, nettyServer, cats, serverTests % Test)
+lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", cats)
+  .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
+
+lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
+
+lazy val nettyServerZio1: ProjectMatrix = nettyServerProject("zio1", zio1)
+  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats)
+
+def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
+  ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := s"tapir-netty-server-$proj",
+      libraryDependencies ++= loggerDependencies,
+      // needed because of https://github.com/coursier/coursier/issues/2016
+      useCoursier := false
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(nettyServer, dependency, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
@@ -1333,7 +1361,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.3")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
   .jvmPlatform(scalaVersions = scala2_13and3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1632,7 +1660,11 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
+        "com.softwaremill.sttp.client3" %%% "fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %%% "zio" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
       )
     )
   )
@@ -1752,7 +1784,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
@@ -1776,6 +1808,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioHttpServer,
     nettyServer,
     nettyServerCats,
+    nettyServerZio,
     sttpStubServer,
     playJson,
     prometheusMetrics,

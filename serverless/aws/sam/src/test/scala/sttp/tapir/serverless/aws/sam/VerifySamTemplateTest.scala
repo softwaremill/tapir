@@ -61,7 +61,12 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
           )
         )
       ),
-      source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest"),
+      source = CodeSource(
+        runtime = "java11",
+        codeUri = "/somewhere/pet-api.jar",
+        "pet.api.Handler::handleRequest",
+        environment = Map("myEnv" -> "foo", "otherEnv" -> "bar")
+      ),
       memorySize = 1024
     )
 

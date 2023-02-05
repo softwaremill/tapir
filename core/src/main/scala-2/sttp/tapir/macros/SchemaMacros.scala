@@ -83,5 +83,3 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     */
   implicit def derivedEnumerationValue[T <: scala.Enumeration#Value]: Schema[T] = macro SchemaEnumerationMacro.derivedEnumerationValue[T]
 }
-
-

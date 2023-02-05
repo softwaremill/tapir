@@ -21,6 +21,7 @@ object AwsSamTemplateEncoders {
   }
 
   implicit val encoderCorsConfiguration: Encoder[CorsConfiguration] = deriveEncoder[CorsConfiguration]
+  implicit val encoderEnvironmentCodeProperties: Encoder[EnvironmentCodeProperties] = deriveEncoder[EnvironmentCodeProperties]
   implicit val encoderHttpProperties: Encoder[HttpProperties] = deriveEncoder[HttpProperties]
   implicit val encoderFunctionImageProperties: Encoder[FunctionImageProperties] = deriveEncoder[FunctionImageProperties]
   implicit val encoderFunctionCodeProperties: Encoder[FunctionCodeProperties] = deriveEncoder[FunctionCodeProperties]

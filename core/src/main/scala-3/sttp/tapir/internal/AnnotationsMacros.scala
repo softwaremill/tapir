@@ -447,7 +447,9 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       Select.unique(tExpr.asTerm, field.name).asExprOf[Any]
     }
 
-    if (inputIdxToFieldIdx.size > 1) {
+    if (inputIdxToFieldIdx.size == 0) {
+      '{ (t: T) => ().asInstanceOf[A] }
+    } else if (inputIdxToFieldIdx.size > 1) {
       '{ (t: T) => ${ Expr.ofTupleFromSeq(tupleArgs('t)) }.asInstanceOf[A] }
     } else {
       '{ (t: T) => ${ tupleArgs('t).head }.asInstanceOf[A] }

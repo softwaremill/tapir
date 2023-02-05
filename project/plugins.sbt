@@ -1,4 +1,4 @@
-val sbtSoftwareMillVersion = "2.0.9"
+val sbtSoftwareMillVersion = "2.0.12"
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-common" % sbtSoftwareMillVersion)
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % sbtSoftwareMillVersion)
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-browser-test-js" % sbtSoftwareMillVersion)
@@ -10,10 +10,10 @@ addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.9.0")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.12.0")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.0.0")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.1.0")
 addSbtPlugin("io.gatling" % "gatling-sbt" % "4.2.4")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
-addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.9")
+addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.10")
 addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.4")
 
 addDependencyTreePlugin

@@ -1,8 +1,8 @@
 ![tapir](https://github.com/softwaremill/tapir/raw/master/banner.png)
 
-# Happy 1.0 birthday, tapir!
+# Welcome!
 
-[![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Ideas, suggestions, problems, questions](https://img.shields.io/badge/Discourse-ask%20question-blue)](https://softwaremill.community/c/tapir)
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
@@ -128,7 +128,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.7"
 ```
 
 Then, import:
@@ -174,7 +174,7 @@ All suggestions welcome :)
 See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! Or report your own.
 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
-[gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
+[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
 
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
@@ -193,6 +193,23 @@ You can test only server/client/doc/other projects using `testServers`, `testCli
 
 To verify that the code snippet in docs compile, run `compileDocumentation`. A full mdoc run is done during a release
 (when the documentation is generated).
+
+### Importing into IntelliJ
+
+By default, when importing to IntelliJ, only the Scala 2.13/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
+
+If you'd like to work on a different platform or Scala version, simply change this setting temporarily so that the correct subprojects are imported. For example:
+
+```
+// import only Scala 2.13, JS projects
+ideSkipProject := (scalaVersion.value != scala2_13) || !thisProjectRef.value.project.contains("JS")
+
+// import only Scala 3, JVM projects
+ideSkipProject := (scalaVersion.value != scala3) || thisProjectRef.value.project.contains("JS") || thisProjectRef.value.project.contains("Native"),
+
+// import only Scala 2.13, Native projects
+ideSkipProject := (scalaVersion.value != scala2_13) || !thisProjectRef.value.project.contains("Native")
+```
 
 ## Commercial Support
 

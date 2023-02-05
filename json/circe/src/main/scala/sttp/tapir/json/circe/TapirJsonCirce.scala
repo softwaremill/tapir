@@ -17,6 +17,9 @@ trait TapirJsonCirce {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
+
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decodeAccumulating[T](s) match {
@@ -42,12 +45,6 @@ trait TapirJsonCirce {
 
   def jsonPrinter: Printer = Printer.noSpaces
 
-  // Json is a coproduct with unknown implementations
-  implicit val schemaForCirceJson: Schema[Json] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
+  implicit val schemaForCirceJson: Schema[Json] = Schema.any
+  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema.anyObject[JsonObject].name(SName("io.circe.JsonObject"))
 }

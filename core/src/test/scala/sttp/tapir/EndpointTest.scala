@@ -382,7 +382,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     // given
     case class Wrapper(i: Int)
     val mapped = query[Int]("q1").mapTo[Wrapper]
-    val codec: Codec[List[String], Wrapper, CodecFormat.TextPlain] = mapped.codec
+    val codec: Codec[List[String], Wrapper, CodecFormat] = mapped.codec
 
     // when
     codec.encode(Wrapper(10)) shouldBe (List("10"))

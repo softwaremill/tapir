@@ -3,7 +3,7 @@
 Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
 third-party library to perform the actual json parsing/printing. See below for the list of supported libraries. 
 
-All the integrations, when imported into scope, define a `jsonBody[T]` method. 
+All the integrations, when imported into scope, define `jsonBody[T]` and `jsonQuery[T]` methods. 
 
 Instead of providing the json codec as an implicit value, this method depends on library-specific implicits being in 
 scope, and basing on these values creates a json codec. The derivation also requires 
@@ -45,7 +45,7 @@ stringJsonBody.schema(implicitly[Schema[MyBody]].as[String])
 To use [Circe](https://github.com/circe/circe), add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.md)):
@@ -118,7 +118,7 @@ Now the above JSON object will render as
 To use [µPickle](http://www.lihaoyi.com/upickle/) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
@@ -153,7 +153,7 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 To use [Play JSON](https://github.com/playframework/play-json) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
@@ -169,7 +169,7 @@ Play JSON requires `Reads` and `Writes` implicit values in scope for each type y
 To use [Spray JSON](https://github.com/spray/spray-json) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
@@ -185,7 +185,7 @@ Spray JSON requires a `JsonFormat` implicit value in scope for each type you wan
 To use [Tethys JSON](https://github.com/tethys-json/tethys) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
@@ -201,7 +201,7 @@ Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for 
 To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.2.7"
 ```
 
 Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
@@ -217,7 +217,7 @@ Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type y
 To use [json4s](https://github.com/json4s/json4s) add the following dependencies to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-json4s" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-json4s" % "1.2.7"
 ```
 
 And one of the implementations:
@@ -248,7 +248,7 @@ implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeH
 To use [zio-json](https://github.com/zio/zio-json), add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "1.2.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "1.2.7"
 ```
 Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
 
@@ -257,6 +257,21 @@ import sttp.tapir.json.zio._
 ```
 
 Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
+
+## JSON query parameters
+
+You can specify query parameters in JSON format by using the `jsonQuery` method. For example, using Circe:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
+import io.circe.generic.auto._
+
+case class Book(author: String, title: String, year: Int)
+
+val bookQuery: EndpointInput.Query[Book] = jsonQuery[Book]("book")
+```
 
 ## Other JSON libraries
 
@@ -271,8 +286,8 @@ of [schema derivation](schemas.md) will have to match the configuration of your 
 have different defaults when it comes to a discrimination strategy, so in order to have the schemas (and hence the
 documentation) in sync with how the values are serialised, you will have to configure schema derivation as well.
 
-Schemas are referenced at the point of `jsonBody` usage, so any configuration must be available in the implicit scope
-when this method is called.
+Schemas are referenced at the point of `jsonBody` and `jsonQuery` usage, so any configuration must be available in the implicit scope
+when these methods are called.
 
 ## Next
 

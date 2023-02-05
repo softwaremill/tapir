@@ -781,6 +781,20 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("should add application/json content for json query parameter") {
+    val expectedYaml = load("expected_json_query_param.yml")
+    val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(
+        endpoint.post.in(queryAnyFormat[String, CodecFormat.Json]("name", codec).example("alan").default("tom")),
+        Info("Entities", "1.0")
+      )
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlTest {

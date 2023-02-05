@@ -51,8 +51,8 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](implicitly[Schema[TestCharEnumEntry]].validator)
   }
 
-  private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]): Unit = {
-    enum.values.foreach { v =>
+  private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit `enum`: Enum[E]): Unit = {
+    `enum`.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
         case Validator.Enumeration(_, Some(encode), name) =>
@@ -64,9 +64,9 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit
-      enum: E
+      `enum`: E
   ): Unit = {
-    enum.values.foreach { v =>
+    `enum`.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
         case Validator.Enumeration(_, Some(encode), name) =>
@@ -88,15 +88,17 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     testValueEnumPlainCodec[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[PlainCodec[TestByteEnumEntry]])
   }
 
-  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit enum: Enum[E]): Unit = {
-    enum.values.foreach { v =>
+  private def testEnumPlainCodec[E <: EnumEntry](codec: PlainCodec[E])(implicit `enum`: Enum[E]): Unit = {
+    `enum`.values.foreach { v =>
       codec.encode(v) shouldBe v.entryName
       codec.decode(v.entryName) shouldBe DecodeResult.Value(v)
     }
   }
 
-  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](codec: PlainCodec[EE])(implicit enum: E): Unit = {
-    enum.values.foreach { v =>
+  private def testValueEnumPlainCodec[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](
+      codec: PlainCodec[EE]
+  )(implicit `enum`: E): Unit = {
+    `enum`.values.foreach { v =>
       codec.encode(v) shouldBe v.value.toString
       codec.decode(v.value.toString) shouldBe DecodeResult.Value(v)
     }
@@ -112,8 +114,10 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   it should "create schema with custom discriminator based on enumeratum enum" in {
     // given
     sealed trait OfferType extends EnumEntry with Snakecase
-    object OfferType {
+    object OfferType extends Enum[OfferType] {
       case object OfferOne extends OfferType
+
+      override def values: scala.collection.immutable.IndexedSeq[OfferType] = findValues
     }
 
     sealed trait CreateOfferRequest {

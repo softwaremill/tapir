@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      parameters:
+        - name: name
+          in: query
+          required: false
+          content:
+            application/json:
+              schema:
+                type: string
+                default: tom
+              example: alan
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: query parameter name'
+          content:
+            text/plain:
+              schema:
+                type: string

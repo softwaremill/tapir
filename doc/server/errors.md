@@ -112,9 +112,41 @@ an error or return a "no match", create error messages and create the response. 
 swapped, e.g. to return responses in a different format (other than plain text), or customise the error messages.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
-leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
-and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
-`badRequestOnPathErrorIfPathShapeMatches` in `ServerDefaults`.
+leading to a `404 Not Found`), when the "shape" of the path matches (that is, the constant parts and number of segments 
+in the request and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
+scaladoc for `DefaultDecodeFailureHandler.default` and parameters of `DefaultDecodeFailureHandler.response`. For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val myDecodeFailureHandler = DefaultDecodeFailureHandler.default.copy(
+  respond = DefaultDecodeFailureHandler.respond(
+    _,
+    badRequestOnPathErrorIfPathShapeMatches = true,
+    badRequestOnPathInvalidIfPathShapeMatches = true
+  )
+)
+
+val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customiseInterceptors
+  .decodeFailureHandler(myDecodeFailureHandler)
+  .options
+```
+
+Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output 
+basis, by setting an attribute. For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+// bringing into scope the onDecodeFailureBadRequest extension method
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
+
+// by default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
+endpoint.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest)
+```
 
 ## Customising how error messages are rendered
 

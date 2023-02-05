@@ -17,6 +17,9 @@ trait TapirJsonPlay {
     implicitly[JsonCodec[(String, T)]]
   )
 
+  def jsonQuery[T: Reads: Writes: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
+
   implicit def readsWritesCodec[T: Reads: Writes: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>
       Try(Json.parse(s)) match {
@@ -41,13 +44,6 @@ trait TapirJsonPlay {
       }
     } { t => Json.stringify(Json.toJson(t)) }
 
-  // JsValue is a coproduct with unknown implementations
-  implicit val schemaForPlayJsValue: Schema[JsValue] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForPlayJsObject: Schema[JsObject] =
-    Schema(SProduct(Nil), Some(SName("play.api.libs.json.JsObject")))
+  implicit val schemaForPlayJsValue: Schema[JsValue] = Schema.any
+  implicit val schemaForPlayJsObject: Schema[JsObject] = Schema.anyObject[JsObject].name(SName("play.api.libs.json.JsObject"))
 }
