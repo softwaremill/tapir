@@ -65,7 +65,7 @@ From now the steps for both runtimes are the same:
 2. To deploy it to AWS, run `sam deploy --template-file template.yaml --stack-name sam-app --capabilities CAPABILITY_IAM --s3-bucket [name of your bucket]`. The console output should print url of the application, just add `/api/hello` to the end of it, and you should see `Hello!` message. Be aware in case of Java runtime, the first call can take a little longer as the application takes some time to start, but consecutive calls will be much faster.
 3. When you want to rollback changes made on AWS, run `sam delete --stack-name sam-app`
 
-### Terraform
+#### Terraform
 
 Terraform deployment requires you to have a S3 bucket.
 
@@ -82,7 +82,7 @@ output the url of the created API Gateway which you can call followed by `/api/h
 
 To destroy all the created resources run `terraform destroy`.
 
-### CDK
+#### CDK
 
 1. First you need to install:
     * [NPM](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
