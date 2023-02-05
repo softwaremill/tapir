@@ -62,12 +62,9 @@ and [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/us
 3. Before deploying, if you want to test your application locally, you will need Docker
    and [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
    , then execute `sam local start-api --warm-containers EAGER`
-4. To deploy it to AWS, run `sam deploy --guided`
-5. When you want to rollback changes made on AWS, run `sam delete`
-
-That will create `template.yaml` and start up AWS Api Gateway locally. Hello endpoint will be available
-under `curl http://127.0.0.1:3000/api/hello`. First invocation will take a while but subsequent ones will be faster
-since the created container will be reused.
+4. Getting back to deploying, you will need to create s3 bucket with name of you choice, or use existing one 
+5. To deploy it to AWS, run `sam deploy --template-file template.yaml --stack-name sam-app --capabilities CAPABILITY_IAM --s3-bucket [name of your bucket]`. At the end of the execution you will see url of the application, just add `/api/hello` to the end of it, and you should see `Hello!` message. Be aware the first call can take a little longer as the application takes some time to start, but consecutive calls will be much faster.
+6. When you want to rollback changes made on AWS, run `sam delete --stack-name sam-app`
 
 ##### NodeJS Runtime
 
