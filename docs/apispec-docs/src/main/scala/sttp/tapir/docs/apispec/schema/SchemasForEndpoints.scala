@@ -11,12 +11,15 @@ class SchemasForEndpoints(
     es: Iterable[AnyEndpoint],
     schemaName: SName => String,
     toKeyedSchemas: ToKeyedSchemas,
-    markOptionsAsNullable: Boolean
+    markOptionsAsNullable: Boolean,
+    additionalOutputs: List[EndpointOutput[_]]
 ) {
 
   def apply(): (ListMap[SchemaId, ReferenceOr[ASchema]], Schemas) = {
     val keyedSchemas = ToKeyedSchemas.unique(
-      es.flatMap(e => forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+      es.flatMap(e =>
+        forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)
+      ) ++ additionalOutputs.flatMap(forOutput(_))
     )
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
 
