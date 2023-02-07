@@ -3,7 +3,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir.ZServerEndpoint
-import zio.http.App
+import zio.http.HttpApp
 import zio.http.{Server, ServerConfig}
 import zio.{Task, ZIO, _}
 
@@ -29,12 +29,12 @@ object ZioMetricsExample extends ZIOAppDefault {
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
-    val app: App[Any] = ZioHttpInterpreter(serverOptions).toApp(all)
+    val app: HttpApp[Any, Throwable] = ZioHttpInterpreter(serverOptions).toHttp(all)
 
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
     (for {
-      serverPort <- Server.install(app)
+      serverPort <- Server.install(app.withDefaultErrorResponse)
       _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
       _ <- Console.readLine
     } yield serverPort)

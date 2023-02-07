@@ -16,14 +16,14 @@ class ZioHttpTestServerInterpreter(
     channelFactory: ZLayer[Any, Nothing, zio.http.service.ServerChannelFactory]
 )(implicit
     trace: Trace
-) extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Response, Request, Response]] {
+) extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
-  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Response, Request, Response] = {
+  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
-    ZioHttpInterpreter(serverOptions).toApp(es)
+    ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  override def server(routes: NonEmptyList[Http[Any, Response, Request, Response]]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
 
     val effect: ZIO[Scope, Throwable, Int] =
