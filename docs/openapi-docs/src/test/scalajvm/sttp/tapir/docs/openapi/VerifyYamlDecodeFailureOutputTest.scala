@@ -47,7 +47,6 @@ class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("decode_failure_output/expected_response_defined_in_options.yml")
 
     val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(fallibleEndpoint, Info("Entities", "1.0")).toYaml
-    println(actualYaml)
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
