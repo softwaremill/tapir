@@ -72,7 +72,7 @@ trait ZioHttpInterpreter[R] {
                       body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
                     )
                   )
-                case RequestResult.Failure(f) => ZIO.fail(new Throwable("Unhandled")) // HttpError.NotFound("Not Found").toResponse)
+                case RequestResult.Failure(f) => ZIO.succeed(HttpError.NotFound("Not Found").toResponse)
               }
             )
         }
