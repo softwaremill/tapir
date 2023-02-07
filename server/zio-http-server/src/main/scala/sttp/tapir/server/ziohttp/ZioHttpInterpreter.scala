@@ -38,6 +38,34 @@ trait ZioHttpInterpreter[R] {
       zioHttpServerOptions.deleteFile
     )
 
+    def handleRequest(req: Request) = {
+      Handler.fromZIO {
+        interpreter
+          .apply(ZioHttpServerRequest(req))
+          .foldZIO(
+            error => ZIO.fail(error),
+            {
+              case RequestResult.Response(resp) =>
+                val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
+                val allHeaders = resp.body match {
+                  case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
+                    ZioHttpHeader(HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
+                  case _ => baseHeaders
+                }
+
+                ZIO.succeed(
+                  Response(
+                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                    headers = ZioHttpHeaders(allHeaders),
+                    body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
+                  )
+                )
+              case RequestResult.Failure(_) => ZIO.succeed(HttpError.NotFound("Not Found").toResponse)
+            }
+          )
+      }
+    }
+
     val routes = new PartialFunction[Request, Handler[R & R2, Throwable, Request, Response]] {
       override def isDefinedAt(request: Request): Boolean = {
         val serverRequest = ZioHttpServerRequest(request)
@@ -50,36 +78,39 @@ trait ZioHttpInterpreter[R] {
         }
       }
 
-      override def apply(req: Request) = {
-        Handler.fromZIO {
-          interpreter
-            .apply(ZioHttpServerRequest(req))
-            .foldZIO(
-              error => ZIO.fail(error),
-              {
-                case RequestResult.Response(resp) =>
-                  val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
-                  val allHeaders = resp.body match {
-                    case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
-                      ZioHttpHeader(HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
-                    case _ => baseHeaders
-                  }
+      override def apply(req: Request) = handleRequest(req)
+    }
 
-                  ZIO.succeed(
+    val default = Http
+      .fromOptionalHandlerZIO[Request] { req =>
+        interpreter
+          .apply(ZioHttpServerRequest(req))
+          .foldZIO(
+            error => ZIO.fail(Some(error)),
+            {
+              case RequestResult.Response(resp) =>
+                val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
+                val allHeaders = resp.body match {
+                  case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
+                    ZioHttpHeader(HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
+                  case _ => baseHeaders
+                }
+
+                ZIO.succeed(
+                  Handler.response(
                     Response(
                       status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
                       headers = ZioHttpHeaders(allHeaders),
                       body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
                     )
                   )
-                case RequestResult.Failure(f) => ZIO.succeed(HttpError.NotFound("Not Found").toResponse)
-              }
-            )
-        }
+                )
+              case RequestResult.Failure(_) => ZIO.fail(None)
+            }
+          )
       }
-    }
 
-    Http.collectHandler[Request](routes)
+    Http.collectHandler[Request](routes).defaultWith(default)
   }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] = {
