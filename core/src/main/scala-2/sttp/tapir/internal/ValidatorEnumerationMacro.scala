@@ -42,13 +42,11 @@ private[tapir] object ValidatorEnumerationMacro {
       val enumNameComponents = weakTypeT.toString.split("\\.").dropRight(1)
       val enumeration = enumNameComponents.toList match {
         case head :: tail => tail.foldLeft[Tree](Ident(TermName(head))) { case (tree, nextName) => Select(tree, TermName(nextName)) }
-        case Nil => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
+        case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${
-        enumNameComponents
-          .mkString(".")
-      })))"
+      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
+          .mkString(".")})))"
     }
   }
 }

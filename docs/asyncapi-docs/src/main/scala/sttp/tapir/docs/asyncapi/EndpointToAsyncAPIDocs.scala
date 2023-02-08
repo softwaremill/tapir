@@ -18,7 +18,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
     val toKeyedSchemas = new ToKeyedSchemas
     val (keyToSchema, schemas) =
-      new SchemasForEndpoints(wsEndpoints, options.schemaName, toKeyedSchemas, markOptionsAsNullable = false).apply()
+      new SchemasForEndpoints(wsEndpoints, options.schemaName, toKeyedSchemas, markOptionsAsNullable = false, additionalOutputs = Nil)
+        .apply()
     val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas, options.schemaName, toKeyedSchemas)(
       wsEndpointsWithWrapper.map(_._2)
     )

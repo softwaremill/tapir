@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.17"
 val scala2_13 = "2.13.10"
-val scala3 = "3.2.1"
+val scala3 = "3.2.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2_13and3Versions = List(scala2_13, scala3)
@@ -101,7 +101,13 @@ val enableMimaSettings = Seq(
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
+  Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
+      case _            => Seq.empty[String]
+    }
+  }
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -528,10 +534,10 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
     ),
-    Test/scalacOptions ++= {
+    Test / scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq("-Yretain-trees")
-        case _ => Seq()
+        case _            => Seq()
       }
     }
   )
@@ -1354,7 +1360,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.3")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
   .jvmPlatform(scalaVersions = scala2_13and3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1713,6 +1719,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioHttpServer,
     nettyServer,
     nettyServerCats,
+    nettyServerZio,
     sttpStubServer,
     playJson,
     prometheusMetrics,
