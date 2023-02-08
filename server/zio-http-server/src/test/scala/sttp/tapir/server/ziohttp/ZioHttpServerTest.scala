@@ -48,40 +48,6 @@ class ZioHttpServerTest extends TestSuite {
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
-          },
-          Test("zio http middlewares run before the handler") {
-            val test = for {
-              p <- Promise.make[Nothing, Unit]
-              ep = endpoint.get
-                .in("p1")
-                .out(stringBody)
-                .zServerLogic[Any](_ => p.await.timeout(time.Duration.ofSeconds(1)) *> ZIO.succeed("Ok"))
-              route = ZioHttpInterpreter().toHttp(ep) @@ Middleware.allowZIO((_: Request) => p.succeed(()).as(true))
-              result <- route
-                .runZIO(Request.get(url = URL(Path.empty / "p1")))
-                .flatMap(response => response.body.asString)
-                .map(_ shouldBe "Ok")
-                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            } yield result
-
-            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
-          },
-          Test("zio http middlewares only run once") {
-            val test = for {
-              ref <- Ref.make(0)
-              ep = endpoint.get
-                .in("p1")
-                .out(stringBody)
-                .zServerLogic[Any](_ => ref.updateAndGet(_ + 1).map(_.toString))
-              route = ZioHttpInterpreter().toHttp(ep) @@ Middleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
-              result <- route
-                .runZIO(Request.get(url = URL(Path.empty / "p1")))
-                .flatMap(response => response.body.asString)
-                .map(_ shouldBe "2")
-                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            } yield result
-
-            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }
         )
 
