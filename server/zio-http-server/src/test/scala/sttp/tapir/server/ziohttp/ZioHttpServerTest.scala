@@ -12,7 +12,9 @@ import sttp.tapir.ztapir.{RIOMonadError, RichZEndpoint}
 import zio.http.{Path, Request, URL}
 import zio.http.netty.{ChannelType, EventLoopGroups, ChannelFactories}
 import zio.interop.catz._
-import zio.{Runtime, Task, UIO, Unsafe, ZIO, ZEnvironment, ZLayer}
+import zio.{Runtime, Promise, Ref, Task, UIO, Unsafe, ZIO, ZEnvironment, ZLayer}
+import zio.http.Middleware
+import java.time
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -45,6 +47,40 @@ class ZioHttpServerTest extends TestSuite {
               .flatMap(response => response.body.asString)
               .map(_ shouldBe "response")
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
+          Test("zio http middlewares run before the handler") {
+            val test = for {
+              p <- Promise.make[Nothing, Unit]
+              ep = endpoint.get
+                .in("p1")
+                .out(stringBody)
+                .zServerLogic[Any](_ => p.await.timeout(time.Duration.ofSeconds(1)) *> ZIO.succeed("Ok"))
+              route = ZioHttpInterpreter().toHttp(ep) @@ Middleware.allowZIO((_: Request) => p.succeed(()).as(true))
+              result <- route
+                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "Ok")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            } yield result
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
+          Test("zio http middlewares only run once") {
+            val test = for {
+              ref <- Ref.make(0)
+              ep = endpoint.get
+                .in("p1")
+                .out(stringBody)
+                .zServerLogic[Any](_ => ref.updateAndGet(_ + 1).map(_.toString))
+              route = ZioHttpInterpreter().toHttp(ep) @@ Middleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
+              result <- route
+                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "2")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            } yield result
+
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }
         )
