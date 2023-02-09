@@ -14,7 +14,8 @@ case class StaticInput(
 )
 
 case class HeadInput(
-    path: List[String]
+    path: List[String],
+    acceptEncoding: Option[String]
 )
 
 trait StaticErrorOutput
@@ -26,7 +27,7 @@ object StaticErrorOutput {
 
 trait HeadOutput
 object HeadOutput {
-  case class Found(acceptRanges: Option[String], contentLength: Option[Long], contentType: Option[MediaType]) extends HeadOutput
+  case class Found(acceptRanges: Option[String], contentLength: Option[Long], contentType: Option[MediaType], contentEncoding: Option[String]) extends HeadOutput
 }
 
 trait StaticOutput[+T]

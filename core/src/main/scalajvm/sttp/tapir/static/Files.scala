@@ -24,11 +24,17 @@ object Files {
           if (!options.fileFilter(input.path)) {
             Left(StaticErrorOutput.NotFound)
           } else {
-            resolveRealPath(Paths.get(systemPath).toRealPath(), input.path, options.defaultFile) match {
+            resolveRealPath(Paths.get(systemPath).toRealPath(), input.path, options.defaultFile, useGzippedIfAvailable(options, input.acceptEncoding)) match {
               case Left(error) => Left(error)
               case Right(resolved) =>
                 val file = resolved.toFile
-                Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
+                Right(
+                  HeadOutput.Found(
+                    Some(ContentRangeUnits.Bytes),
+                    Some(file.length()),
+                    getFileNameFromPath(input.path).map(contentTypeFromName),
+                    contentEncodingFromName(file.getName))
+                )
             }
           }
         }
@@ -49,7 +55,7 @@ object Files {
       }
 
   private def files[F[_]](realSystemPath: Path, options: FilesOptions[F])(
-      filesInput: StaticInput
+      filesInput: StaticInput,
   )(implicit
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
@@ -57,7 +63,7 @@ object Files {
       if (!options.fileFilter(filesInput.path))
         (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
       else {
-        resolveRealPath(realSystemPath, filesInput.path, options.defaultFile) match {
+        resolveRealPath(realSystemPath, filesInput.path, options.defaultFile, useGzippedIfAvailable(options, filesInput.acceptEncoding)) match {
           case Left(error) => (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
           case Right(realResolvedPath) =>
             filesInput.range match {
@@ -74,13 +80,39 @@ object Files {
     })
   }
 
+  private def appendExtensionToFilePath(path: List[String], extension: String): List[String] = {
+    path.lastOption.fold(path) { fileName =>
+      path.dropRight(1) :+ s"$fileName.$extension"
+    }
+  }
+
+  private def useGzippedIfAvailable[F[_]](options: FilesOptions[F], acceptEncoding: Option[String]): Boolean = {
+    options.useGzippedIfAvailable && acceptEncoding.exists(_.contains("gzip"))
+  }
+
+  private def getFileNameFromPath(path: List[String]): Option[String] = {
+    path.lastOption
+  }
+
   @tailrec
-  private def resolveRealPath(realSystemPath: Path, path: List[String], default: Option[List[String]]): Either[StaticErrorOutput, Path] = {
-    val resolved = path.foldLeft(realSystemPath)(_.resolve(_))
+  private def resolveRealPath(realSystemPath: Path, path: List[String], default: Option[List[String]],
+                              useGzippedIfAvailable: Boolean): Either[StaticErrorOutput, Path] = {
+
+    val pathResolved = path.foldLeft(realSystemPath)(_.resolve(_))
+    val resolved = if (useGzippedIfAvailable) {
+      val gzipResolved = appendExtensionToFilePath(path, "gz").foldLeft(realSystemPath)(_.resolve(_))
+      if (!java.nio.file.Files.exists(gzipResolved, LinkOption.NOFOLLOW_LINKS)) {
+        pathResolved
+      } else {
+        gzipResolved
+      }
+    } else {
+      pathResolved
+    }
 
     if (!java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
       default match {
-        case Some(defaultPath) => resolveRealPath(realSystemPath, defaultPath, None)
+        case Some(defaultPath) => resolveRealPath(realSystemPath, defaultPath, None, useGzippedIfAvailable)
         case None              => Left(StaticErrorOutput.NotFound)
       }
     } else {
@@ -89,7 +121,7 @@ object Files {
       if (!realRequestedPath.startsWith(realSystemPath))
         Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, Path]
       else if (realRequestedPath.toFile.isDirectory) {
-        resolveRealPath(realSystemPath, path :+ "index.html", default)
+        resolveRealPath(realSystemPath, path :+ "index.html", default, useGzippedIfAvailable)
       } else {
         Right(realRequestedPath)
       }
@@ -108,7 +140,7 @@ object Files {
           FileRange(file.toFile, Some(range)),
           Some(Instant.ofEpochMilli(lastModified)),
           Some(range.contentLength),
-          Some(contentTypeFromName(file.toFile.getName)),
+          getFileNameFromPath(filesInput.path).map(contentTypeFromName),
           etag,
           Some(ContentRangeUnits.Bytes),
           Some(range.toContentRange.toString())
@@ -126,9 +158,9 @@ object Files {
         FileRange(file.toFile),
         Some(Instant.ofEpochMilli(lastModified)),
         Some(fileLength),
-        Some(contentTypeFromName(file.toFile.getName)),
+        getFileNameFromPath(filesInput.path).map(contentTypeFromName),
         etag,
-        None
+        contentEncodingFromName(file.toFile.getName)
       )
   )
 
@@ -160,7 +192,8 @@ object Files {
 case class FilesOptions[F[_]](
     calculateETag: MonadError[F] => File => F[Option[ETag]],
     fileFilter: List[String] => Boolean,
-    defaultFile: Option[List[String]]
+    defaultFile: Option[List[String]],
+    useGzippedIfAvailable: Boolean
 ) {
   def calculateETag(f: File => F[Option[ETag]]): FilesOptions[F] = copy(calculateETag = _ => f)
 
@@ -171,7 +204,10 @@ case class FilesOptions[F[_]](
     * isn't found. This is useful for SPA apps, where the same main application file needs to be returned regardless of the path.
     */
   def defaultFile(d: List[String]): FilesOptions[F] = copy(defaultFile = Some(d))
+
+  def withUseGzippedIfAvailable: FilesOptions[F] = copy(useGzippedIfAvailable = true)
+
 }
 object FilesOptions {
-  def default[F[_]]: FilesOptions[F] = FilesOptions(Files.defaultEtag, _ => true, None)
+  def default[F[_]]: FilesOptions[F] = FilesOptions(Files.defaultEtag, _ => true, None, useGzippedIfAvailable = false)
 }

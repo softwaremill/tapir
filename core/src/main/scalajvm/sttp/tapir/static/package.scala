@@ -26,4 +26,11 @@ package object static {
     val ext = name.substring(name.lastIndexOf(".") + 1)
     MimeByExtensionDB(ext).getOrElse(MediaType.ApplicationOctetStream)
   }
+
+  private[tapir] def contentEncodingFromName(name: String): Option[String] = {
+    val ext = name.substring(name.lastIndexOf(".") + 1)
+    MimeByExtensionDB(ext).collect {
+      case MediaType.ApplicationGzip => MediaType.ApplicationGzip.subType
+    }
+  }
 }

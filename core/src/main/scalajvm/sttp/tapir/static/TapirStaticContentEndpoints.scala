@@ -113,7 +113,11 @@ trait TapirStaticContentEndpoints {
 
   private lazy val staticHeadEndpoint: PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
     endpoint.head
-      .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
+      .in(
+        pathsWithoutDots
+          .and(acceptRangesHeader)
+          .map[HeadInput]((t: (List[String], Option[String])) => HeadInput(t._1, t._2)
+        )(fo => (fo.path, fo.acceptEncoding)))
       .errorOut(
         oneOf[StaticErrorOutput](
           oneOfVariantClassMatcher(
@@ -135,8 +139,9 @@ trait TapirStaticContentEndpoints {
             acceptRangesHeader
               .and(contentLengthHeader)
               .and(contentTypeHeader)
-              .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType])) => HeadOutput.Found(t._1, t._2, t._3))(fo =>
-                (fo.acceptRanges, fo.contentLength, fo.contentType)
+              .and(contentEncodingHeader)
+              .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType], Option[String])) => HeadOutput.Found(t._1, t._2, t._3, t._4))(fo =>
+                (fo.acceptRanges, fo.contentLength, fo.contentType, fo.contentEncoding)
               ),
             classOf[HeadOutput.Found]
           )

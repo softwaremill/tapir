@@ -16,7 +16,7 @@ import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests._
 
 import java.io.File
-import java.nio.file.{Files, StandardOpenOption}
+import java.nio.file.{Files, StandardOpenOption, StandardCopyOption}
 import java.util.Comparator
 import scala.concurrent.Future
 
@@ -48,6 +48,21 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
                 get(port, "f2" :: Nil).map(_.body shouldBe "f2 content") >>
                 get(port, "d1" :: "f3" :: Nil).map(_.body shouldBe "f3 content") >>
                 get(port, "d1" :: "d2" :: "f4" :: Nil).map(_.body shouldBe "f4 content")
+            }
+            .unsafeToFuture()
+        }
+      },
+      Test("should server single gzipped file") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(filesGetServerEndpoint[F](emptyInput)(testDir.getAbsolutePath, FilesOptions.default.withUseGzippedIfAvailable))
+            .use { port =>
+              get(port, "f6.txt" :: Nil)
+                .map(r => {
+                  r.code shouldBe StatusCode.Ok
+                  r.body shouldBe "Gzipped resource"
+                  r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+                  r.headers contains Header(HeaderNames.ContentType, MediaType.TextPlain.toString()) shouldBe true
+                })
             }
             .unsafeToFuture()
         }
@@ -528,6 +543,8 @@ class ServerStaticContentTests[F[_], OPTIONS, ROUTE](
     Files.write(parent.resolve("d1/index.html"), "index content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/d2/f4"), "f4 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("f5"), ("x" * 300000).getBytes, StandardOpenOption.CREATE_NEW)
+    Files.copy(classLoader.getResourceAsStream("test/r3.txt.gz"), parent.resolve("f6.txt.gz"), StandardCopyOption.REPLACE_EXISTING)
+
     parent.toFile.deleteOnExit()
 
     import scala.concurrent.ExecutionContext.Implicits.global
