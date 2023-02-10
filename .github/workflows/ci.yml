@@ -30,6 +30,14 @@ jobs:
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
+    - name: Install NPM
+      run: |
+        sudo apt install npm
+        npm --version
+    - name: Install AWS CDK
+      run: |
+        npm install -g aws-cdk 
+        cdk --version
     - name: Install libidn2-dev libcurl3-dev
       if: matrix.target-platform == 'Native'
       run: |
