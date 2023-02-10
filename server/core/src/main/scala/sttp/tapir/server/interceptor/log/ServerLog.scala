@@ -44,6 +44,7 @@ trait ServerLog[F[_]] {
   def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit]
 }
 
+/** Default implementation of ServerLog which is used if user hasn't provided custom one. */
 case class DefaultServerLog[F[_]](
     doLogWhenReceived: String => F[Unit],
     doLogWhenHandled: (String, Option[Throwable]) => F[Unit],
@@ -66,12 +67,16 @@ case class DefaultServerLog[F[_]](
   def doLogAllDecodeFailures(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogAllDecodeFailures = f)
   def doLogExceptions(f: (String, Throwable) => F[Unit]): DefaultServerLog[F] = copy(doLogExceptions = f)
   def noLog(f: F[Unit]): DefaultServerLog[F] = copy(noLog = f)
+
+  def logWhenReceived(doLog: Boolean): DefaultServerLog[F] = copy(logWhenReceived = doLog)
   def logWhenHandled(doLog: Boolean): DefaultServerLog[F] = copy(logWhenHandled = doLog)
   def logAllDecodeFailures(doLog: Boolean): DefaultServerLog[F] = copy(logAllDecodeFailures = doLog)
   def logLogicExceptions(doLog: Boolean): DefaultServerLog[F] = copy(logLogicExceptions = doLog)
+
   def showEndpoint(s: AnyEndpoint => String): DefaultServerLog[F] = copy(showEndpoint = s)
   def showRequest(s: ServerRequest => String): DefaultServerLog[F] = copy(showRequest = s)
   def showResponse(s: ServerResponse[_] => String): DefaultServerLog[F] = copy(showResponse = s)
+
   def includeTiming(doInclude: Boolean): DefaultServerLog[F] = copy(includeTiming = doInclude)
   def clock(c: Clock): DefaultServerLog[F] = copy(clock = c)
 
@@ -93,8 +98,8 @@ case class DefaultServerLog[F[_]](
     else noLog
 
   override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_], token: TOKEN): F[Unit] =
-    if (logWhenHandled)
-      doLogWhenHandled(
+    if (logAllDecodeFailures)
+      doLogAllDecodeFailures(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(
             ctx.endpoint
           )}${took(token)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; response: ${showResponse(response)}",
