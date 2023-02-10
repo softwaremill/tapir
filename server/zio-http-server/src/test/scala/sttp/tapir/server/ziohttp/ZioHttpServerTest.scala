@@ -49,7 +49,6 @@ class ZioHttpServerTest extends TestSuite {
               .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
-          // TODO: Re-enable these tests when Middleware.allowZIO works with Scala 3
           Test("zio http middlewares run before the handler") {
             val test: UIO[Assertion] = for {
               p <- Promise.make[Nothing, Unit]
