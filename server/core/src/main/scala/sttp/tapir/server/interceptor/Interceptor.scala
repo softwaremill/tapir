@@ -63,6 +63,46 @@ object RequestInterceptor {
       }
   }
 
+  trait RequestResultTransform[F[_]] {
+    def apply[B](request: ServerRequest, result: RequestResult[B]): F[RequestResult[B]]
+  }
+
+  /** Create a request interceptor which transforms the result, which might be either a response, or a list of endpoint decoding failures.
+    */
+  def transformResult[F[_]](f: RequestResultTransform[F]): RequestInterceptor[F] = new RequestInterceptor[F] {
+    override def apply[R, B](
+        responder: Responder[F, B],
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+    ): RequestHandler[F, R, B] =
+      new RequestHandler[F, R, B] {
+        override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+            monad: MonadError[F]
+        ): F[RequestResult[B]] =
+          requestHandler(EndpointInterceptor.noop)(request, endpoints).flatMap(f(request, _))
+      }
+  }
+
+  trait RequestResultEffectTransform[F[_]] {
+    def apply[B](request: ServerRequest, result: F[RequestResult[B]]): F[RequestResult[B]]
+  }
+
+  /** Create a request interceptor which transforms the *effect* which computes the result (either a response, or a list of endpoint
+    * decoding failures), that is the `F[RequestResult[B]]` value. To transform the result itself, it might be easier to use
+    * [[transformResult]].
+    */
+  def transformResultEffect[F[_]](f: RequestResultEffectTransform[F]): RequestInterceptor[F] = new RequestInterceptor[F] {
+    override def apply[R, B](
+        responder: Responder[F, B],
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+    ): RequestHandler[F, R, B] =
+      new RequestHandler[F, R, B] {
+        override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+            monad: MonadError[F]
+        ): F[RequestResult[B]] =
+          f(request, requestHandler(EndpointInterceptor.noop)(request, endpoints))
+      }
+  }
+
   trait ServerEndpointFilter[F[_]] {
     def apply[R](endpoints: List[ServerEndpoint[R, F]]): F[List[ServerEndpoint[R, F]]]
   }
@@ -83,6 +123,20 @@ object RequestInterceptor {
         }
       }
     }
+
+  /** Run an effect when a request is received. */
+  def effect[F[_]](f: ServerRequest => F[Unit]): RequestInterceptor[F] = new RequestInterceptor[F] {
+    override def apply[R, B](
+        responder: Responder[F, B],
+        requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
+    ): RequestHandler[F, R, B] =
+      new RequestHandler[F, R, B] {
+        override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
+            monad: MonadError[F]
+        ): F[RequestResult[B]] =
+          f(request).flatMap(_ => requestHandler(EndpointInterceptor.noop)(request, endpoints))
+      }
+  }
 }
 
 /** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been decoded successfully, or when

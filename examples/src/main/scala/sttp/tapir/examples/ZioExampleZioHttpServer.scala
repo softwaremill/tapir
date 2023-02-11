@@ -43,10 +43,10 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
 
   override def run: URIO[Any, ExitCode] =
     Server
-      .serve(routes)
+      .serve(routes.withDefaultErrorResponse)
       .provide(
         ServerConfig.live(ServerConfig.default.port(8080)),
-        Server.live,
+        Server.live
       )
       .exitCode
 }

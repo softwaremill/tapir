@@ -12,7 +12,8 @@ import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, VertxStreams, VertxFutureServerOptions, Router => Route] {
+class VertxTestServerInterpreter(vertx: Vertx)
+    extends TestServerInterpreter[Future, VertxStreams, VertxFutureServerOptions, Router => Route] {
   import VertxTestServerInterpreter._
 
   override def route(es: List[ServerEndpoint[VertxStreams, Future]], interceptors: Interceptors): Router => Route = { router =>

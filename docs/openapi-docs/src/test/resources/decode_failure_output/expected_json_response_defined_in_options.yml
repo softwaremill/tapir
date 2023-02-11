@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: amount
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fail'
+components:
+  schemas:
+    Fail:
+      required:
+        - msg
+      type: object
+      properties:
+        msg:
+          type: string

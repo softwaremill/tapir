@@ -42,13 +42,6 @@ trait TapirJsonZio {
     }
   }
 
-  // JsValue is a coproduct with unknown implementations
-  implicit val schemaForZioJsonValue: Schema[Json] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForZioJsonObject: Schema[Obj] =
-    Schema(SProduct(Nil), Some(SName("zio.json.ast.Json.Obj")))
+  implicit val schemaForZioJsonValue: Schema[Json] = Schema.any
+  implicit val schemaForZioJsonObject: Schema[Obj] = Schema.anyObject[Obj].name(SName("zio.json.ast.Json.Obj"))
 }

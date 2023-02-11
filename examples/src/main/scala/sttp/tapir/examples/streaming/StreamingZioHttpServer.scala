@@ -42,10 +42,10 @@ object StreamingZioHttpServer extends ZIOAppDefault {
   // Test using: curl http://localhost:8080/receive
   override def run: URIO[Any, ExitCode] =
     Server
-      .serve(routes)
+      .serve(routes.withDefaultErrorResponse)
       .provide(
         ServerConfig.live(ServerConfig.default.port(8080)),
-        Server.live,
+        Server.live
       )
       .exitCode
 }

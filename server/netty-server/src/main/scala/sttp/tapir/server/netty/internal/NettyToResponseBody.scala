@@ -8,7 +8,11 @@ import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ChunkedFileNettyResponseContent, ChunkedStreamNettyResponseContent}
+import sttp.tapir.server.netty.NettyResponseContent.{
+  ByteBufNettyResponseContent,
+  ChunkedFileNettyResponseContent,
+  ChunkedStreamNettyResponseContent
+}
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{InputStream, RandomAccessFile}

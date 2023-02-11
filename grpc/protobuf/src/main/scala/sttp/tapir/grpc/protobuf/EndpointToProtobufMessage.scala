@@ -77,7 +77,6 @@ class EndpointToProtobufMessage {
           }
           List(ProtobufProductMessage(toMessageName(name), protoFields))
         case SCoproduct(subtypes, discriminator) =>
-
           List(
             ProtobufCoproductMessage(
               toMessageName(name),

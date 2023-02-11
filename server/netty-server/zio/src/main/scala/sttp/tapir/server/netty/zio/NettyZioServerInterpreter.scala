@@ -4,12 +4,12 @@ import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
-import zio.{CancelableFuture, RIO, Runtime, Unsafe}
+import zio.{CancelableFuture, RIO, Runtime, Unsafe, ZIO}
 
 trait NettyZioServerInterpreter[R] {
   def nettyServerOptions: NettyZioServerOptions[R, _]
 
-  def toRoute(ses: List[ZServerEndpoint[R, Any]])(implicit runtime: Runtime[R]): Route[RIO[R, *]] = {
+  def toRoute(ses: List[ZServerEndpoint[R, Any]]): RIO[R, Route[RIO[R, *]]] = ZIO.runtime.map { (runtime: Runtime[R]) =>
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
     val runAsync = new ZioRunAsync(runtime)
     NettyServerInterpreter

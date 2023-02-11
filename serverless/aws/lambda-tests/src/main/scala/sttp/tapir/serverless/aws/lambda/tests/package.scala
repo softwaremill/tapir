@@ -2,14 +2,11 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.effect.IO
 import cats.implicits._
-import sttp.model.Header
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Mapping.in_4query_out_4header_extended
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
-import sttp.tapir.tests._
-import sttp.tapir.tests.data.FruitAmount
 
 import java.io.{ByteArrayInputStream, InputStream}
 

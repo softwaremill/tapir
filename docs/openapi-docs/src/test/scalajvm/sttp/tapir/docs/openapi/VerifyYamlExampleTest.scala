@@ -152,6 +152,20 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("support schema examples with multiple values") { // https://github.com/softwaremill/sttp-apispec/issues/49
+    val expectedYaml = load("example/expected_schema_example_multiple_value.yml")
+
+    implicit val testSchema: Schema[List[Int]] = Schema.schemaForInt.asIterable[List].encodedExample(List(1, 2, 3))
+    case class ContainsList(l: List[Int])
+
+    val e = endpoint.post.in(jsonBody[ContainsList])
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should support encoded examples for streaming bodies") {
     val expectedYaml = load("example/expected_stream_example.yml")
 

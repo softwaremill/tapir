@@ -34,13 +34,13 @@ object ZioMetricsExample extends ZIOAppDefault {
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
     (for {
-      serverPort <- Server.install(app)
+      serverPort <- Server.install(app.withDefaultErrorResponse)
       _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
       _ <- Console.readLine
     } yield serverPort)
       .provide(
         ServerConfig.live(ServerConfig.default.port(port)),
-        Server.live,
+        Server.live
       )
       .exitCode
   }

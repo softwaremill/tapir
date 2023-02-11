@@ -211,7 +211,7 @@ class ProtoRendererTest extends AnyFlatSpec with ProtobufMatchers {
           "Format",
           List(
             ProtobufMessageField(ProtobufMessageRef(SName("Epub")), "epub", None),
-            ProtobufMessageField(ProtobufMessageRef(SName("Paper")), "paper", None),
+            ProtobufMessageField(ProtobufMessageRef(SName("Paper")), "paper", None)
           )
         ),
         ProtobufProductMessage(

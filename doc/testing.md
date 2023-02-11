@@ -80,6 +80,8 @@ class MySpec extends AsyncFlatSpec with Matchers {
 The `.backend` method creates the enriched `SttpBackendStub`, using the provided server endpoints and their
 behaviors. Any requests will be handled by a stub server interpreter, using the complete request handling logic.
 
+Projects generated using [adopt-tapir](https://adopt-tapir.softwaremill.com) include a test which uses the above approach.
+
 ### Custom interpreters
 
 Custom interpreters can be provided to the stub. For example, to test custom exception handling, we might have the
@@ -195,7 +197,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "@VERSION@"
 ```
 
 Imports:
@@ -312,7 +314,7 @@ res.toString
 
 Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
 decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
-[`DecodeFailureHandler`](server/errors.md#decode-failures) used.
+[`DecodeFailureHandler`](server/errors.html#decode-failures) used.
 
 ### Incorrect path at endpoint
 

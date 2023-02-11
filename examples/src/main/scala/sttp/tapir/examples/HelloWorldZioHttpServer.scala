@@ -33,13 +33,16 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // converting the endpoint descriptions to the Http type
   val app: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) <>
+    ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) ++
       ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 
   // starting the server
   override def run =
-    Server.serve(app).provide(
-      ServerConfig.live(ServerConfig.default.port(8090)),
-      Server.live,
-    ).exitCode
+    Server
+      .serve(app.withDefaultErrorResponse)
+      .provide(
+        ServerConfig.live(ServerConfig.default.port(8090)),
+        Server.live
+      )
+      .exitCode
 }

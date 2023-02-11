@@ -21,9 +21,10 @@ import scala.annotation.{StaticAnnotation, implicitNotFound}
   */
 @implicitNotFound(
   msg = """Could not find Schema for type ${T}.
-Automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
-You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#schema-derivation
-When using datatypes integration remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
+Schemas can be derived automatically by adding: `import sttp.tapir.generic.auto._`, or manually using `Schema.derived[T]`.
+The latter is also useful for debugging derivation errors.
+You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html
+When integrating with a third-party datatype library remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
 )
 case class Schema[T](
     schemaType: SchemaType[T],
@@ -377,6 +378,18 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     */
   def wrapWithSingleFieldProduct[T](schema: Schema[T])(implicit conf: Configuration): Schema[T] =
     wrapWithSingleFieldProduct(schema, FieldName(conf.toDiscriminatorValue(schema.name.getOrElse(SName.Unit))))
+
+  /** A schema allowing anything: a number, string, object, etc. A [[SCoproduct]] with no specified subtypes.
+    * @see
+    *   [[anyObject]]
+    */
+  def any[T]: Schema[T] = Schema(SCoproduct(Nil, None)(_ => None), None)
+
+  /** A schema allowing any object. A [[SProduct]] with no specified fields.
+    * @see
+    *   [[any]]
+    */
+  def anyObject[T]: Schema[T] = Schema(SProduct(Nil), None)
 }
 
 trait LowPrioritySchema {

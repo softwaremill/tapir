@@ -20,6 +20,7 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
     val samOptions: AwsSamOptions = AwsSamOptions(
       "PetApi",
       source = ImageSource("image.repository:pet-api"),
+      timeout = 10.seconds,
       memorySize = 1024
     )
 
@@ -34,6 +35,7 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
     val samOptions: AwsSamOptions = AwsSamOptions(
       "PetApi",
       source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest"),
+      timeout = 10.seconds,
       memorySize = 1024
     )
 
@@ -61,7 +63,13 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
           )
         )
       ),
-      source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest", environment = Map("myEnv" -> "foo", "otherEnv" -> "bar")),
+      source = CodeSource(
+        runtime = "java11",
+        codeUri = "/somewhere/pet-api.jar",
+        "pet.api.Handler::handleRequest",
+        environment = Map("myEnv" -> "foo", "otherEnv" -> "bar")
+      ),
+      timeout = 10.seconds,
       memorySize = 1024
     )
 

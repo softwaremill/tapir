@@ -4,7 +4,7 @@ The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/ma
 
 ## Generate a tapir project
 
-You can generate a simple project using tapir using [adopt-tapir](https://adopt-tapir.softwaremill.com).
+You can generate a simple tapir-based project using chosen features, build tool and effect system using [adopt-tapir](https://adopt-tapir.softwaremill.com).
 
 ## Third-party examples
 

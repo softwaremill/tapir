@@ -12,7 +12,12 @@ import zio.http.model._
 import zio.{Task, ZIO}
 
 class ZioHttpCompositionTest(
-    createServerTest: CreateServerTest[Task, Any, ZioHttpServerOptions[Any], Http[Any, Throwable, zio.http.Request, zio.http.Response]]
+    createServerTest: CreateServerTest[
+      Task,
+      Any,
+      ZioHttpServerOptions[Any],
+      Http[Any, Throwable, zio.http.Request, zio.http.Response]
+    ]
 ) {
   import createServerTest._
 
@@ -22,11 +27,11 @@ class ZioHttpCompositionTest(
         val ep1 = endpoint.get.in("p1").zServerLogic[Any](_ => ZIO.unit)
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
-        val route1: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
-        val route2: RHttpApp[Any] = Http.collect { case Method.GET -> !! / "p2" =>
+        val route1: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep1)
+        val route2: HttpApp[Any, Nothing] = Http.collect { case Method.GET -> !! / "p2" =>
           zio.http.Response.ok
         }
-        val route3: RHttpApp[Any] = ZioHttpInterpreter().toHttp(ep3)
+        val route3: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep3)
 
         NonEmptyList.of(route3, route1, route2)
       }

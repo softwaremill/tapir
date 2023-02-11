@@ -32,14 +32,18 @@ object ZioMetricsTest extends ZIOSpecDefault {
           )
 
         // when
-        val active: Counter[Long] = ZioMetrics.getActiveRequestCounter("tapir").tagged(
-          Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"))
-        )
+        val active: Counter[Long] = ZioMetrics
+          .getActiveRequestCounter("tapir")
+          .tagged(
+            Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"))
+          )
 
         for {
-          _ <- ZIO.succeed({
-            interpreter.apply(PersonsApi.request("Jacob"))
-          }).fork
+          _ <- ZIO
+            .succeed({
+              interpreter.apply(PersonsApi.request("Jacob"))
+            })
+            .fork
           _ <- ZIO.succeed(Thread.sleep(100))
           state <- active.value
           _ <- ZIO.succeed(Thread.sleep(150))
@@ -63,13 +67,17 @@ object ZioMetricsTest extends ZIOSpecDefault {
           )
 
         // when
-        val counter: Counter[Long] = ZioMetrics.getRequestsTotalCounter("tapir").tagged(
-          Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"),MetricLabel("status", "2xx"))
-        )
+        val counter: Counter[Long] = ZioMetrics
+          .getRequestsTotalCounter("tapir")
+          .tagged(
+            Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"), MetricLabel("status", "2xx"))
+          )
 
-        val missedCounter: Counter[Long] = ZioMetrics.getRequestsTotalCounter("tapir").tagged(
-          Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"), MetricLabel("status", "4xx"))
-        )
+        val missedCounter: Counter[Long] = ZioMetrics
+          .getRequestsTotalCounter("tapir")
+          .tagged(
+            Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"), MetricLabel("status", "4xx"))
+          )
         for {
           _ <- ZIO.succeed({
             interpreter.apply(PersonsApi.request("Jacob"))
@@ -80,10 +88,10 @@ object ZioMetricsTest extends ZIOSpecDefault {
           })
           state <- counter.value
           stateMissed <- missedCounter.value
-        } yield assertTrue(state == MetricState.Counter(3D)) &&
-          assertTrue(stateMissed == MetricState.Counter(2D))
+        } yield assertTrue(state == MetricState.Counter(3d)) &&
+          assertTrue(stateMissed == MetricState.Counter(2d))
       },
-      test ("can collect requests duration") {
+      test("can collect requests duration") {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
@@ -98,9 +106,11 @@ object ZioMetricsTest extends ZIOSpecDefault {
           )
 
         // when
-        val histogram: Metric[MetricKeyType.Histogram, Double, MetricState.Histogram] = ZioMetrics.getRequestDurationHistogram("tapir").tagged(
-          Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"), MetricLabel("status", "2xx"), MetricLabel("phase", "headers"))
-        )
+        val histogram: Metric[MetricKeyType.Histogram, Double, MetricState.Histogram] = ZioMetrics
+          .getRequestDurationHistogram("tapir")
+          .tagged(
+            Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"), MetricLabel("status", "2xx"), MetricLabel("phase", "headers"))
+          )
 
         for {
           _ <- ZIO.succeed({
@@ -109,8 +119,8 @@ object ZioMetricsTest extends ZIOSpecDefault {
           state <- histogram.value
         } yield assertTrue(state.buckets.exists(_._2 > 0L)) &&
           assertTrue(state.count == 1L) &&
-          assertTrue(state.min > 0D) &&
-          assertTrue(state.max > 0D)
+          assertTrue(state.min > 0d) &&
+          assertTrue(state.max > 0d)
       }
     )
   }

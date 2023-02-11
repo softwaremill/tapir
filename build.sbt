@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.17"
 val scala2_13 = "2.13.10"
-val scala3 = "3.2.1"
+val scala3 = "3.2.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2_13and3Versions = List(scala2_13, scala3)
@@ -101,7 +101,13 @@ val enableMimaSettings = Seq(
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
+  Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
+      case _            => Seq.empty[String]
+    }
+  }
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -202,7 +208,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   openapiCodegenSbt.projectRefs ++
   openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
-  derevo.projectRefs
+  derevo.projectRefs ++
+  awsCdk.projectRefs
 
 lazy val allAggregates: Seq[ProjectReference] = {
   if (sys.env.isDefinedAt("STTP_NATIVE")) {
@@ -351,7 +358,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.0")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.6")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -449,7 +456,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.8.4" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.8.4" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.9.0" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -527,11 +534,17 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
     libraryDependencies ++= Seq(
       "com.beachape" %%% "enumeratum" % Versions.enumeratum,
       scalaTest.value % Test
-    )
+    ),
+    Test / scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Seq("-Yretain-trees")
+        case _            => Seq()
+      }
+    }
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -782,8 +795,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.20.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.20.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.20.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.20.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -1348,7 +1361,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.3")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
   .jvmPlatform(scalaVersions = scala2_13and3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1361,7 +1374,8 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp,
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1375,7 +1389,6 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-tests",
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
@@ -1424,6 +1437,77 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, serverTests)
 
+// integration tests for aws cdk interpreter
+// it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
+// runs sam local cmd line tool to start AWS Api Gateway with lambda proxy
+lazy val awsCdkTests: ProjectMatrix = (projectMatrix in file("serverless/aws/cdk-tests"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-cdk-tests",
+    assembly / assemblyJarName := "tapir-aws-cdk-tests.jar",
+    assembly / test := {}, // no tests before building jar
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+      case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
+    },
+    Test / test := {
+      if (scalaVersion.value == scala2_13) { // only one test can run concurrently, as it starts a local sam instance
+        (Test / test)
+          .dependsOn(
+            Def.sequential(
+              (Compile / runMain).toTask(" sttp.tapir.serverless.aws.cdk.tests.AwsCdkAppTemplate"),
+              assembly
+            )
+          )
+          .value
+      }
+    },
+    Test / testOptions ++= {
+      val log = sLog.value
+      val awsCdkTestAppDir = "aws-cdk-tests"
+      // processes use files which are generated by `AwsCdkAppTemplate` called above
+      lazy val nmpInstall = Process("npm i", new java.io.File(awsCdkTestAppDir)).run()
+      lazy val cdkSynth = Process("cdk synth", new java.io.File(awsCdkTestAppDir)).run()
+      lazy val sam = Process(s"sam local start-api -t $awsCdkTestAppDir/cdk.out/TapirCdkStack.template.json -p 3010 --warm-containers EAGER").run()
+      Seq(
+        Tests.Setup(() => {
+          val npmExit = nmpInstall.exitValue()
+          if (npmExit != 0) {
+            log.error(s"Failed to run npm install for aws cdk tests (exit code: $npmExit)")
+          } else {
+            val cdkExit = cdkSynth.exitValue()
+            if (cdkExit != 0) {
+              log.error(s"Failed to run cdk synth for aws cdk tests (exit code: $cdkExit)")
+            } else {
+              val samReady = PollingUtils.poll(60.seconds, 1.second) {
+                sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3010/health"))
+              }
+              if (!samReady) {
+                sam.destroy()
+                val exit = sam.exitValue()
+                log.error(s"failed to start sam local within 60 seconds (exit code: $exit)")
+              }
+            }
+          }
+        }),
+        Tests.Cleanup(() => {
+          sam.destroy()
+          val exit = sam.exitValue()
+          log.info(s"stopped sam local (exit code: $exit)")
+
+          val deleted = new scala.reflect.io.Directory(new File(awsCdkTestAppDir).getAbsoluteFile).deleteRecursively()
+          log.info(s"Removed tmp files: $deleted")
+        }),
+      )
+    },
+    Test / parallelExecution := false
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(core, cats, circeJson, awsCdk, serverTests)
+
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)
   .settings(
@@ -1435,6 +1519,22 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, tests % Test)
+
+lazy val awsCdk: ProjectMatrix = (projectMatrix in file("serverless/aws/cdk"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-cdk",
+    assembly / assemblyJarName := "tapir-aws-cdk.jar",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %%% "circe-parser" % Versions.circe,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, tests % Test, awsLambda)
 
 lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
   .settings(commonJvmSettings)
@@ -1466,6 +1566,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
         case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
         case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
         case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+        case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
         case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
       },
       libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
@@ -1480,8 +1581,8 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   )
   .dependsOn(awsLambda)
 
-lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12))
-lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13))
+lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
+lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
 
 // client
 
@@ -1559,7 +1660,11 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
+        "com.softwaremill.sttp.client3" %%% "fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %%% "zio" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
       )
     )
   )
@@ -1679,7 +1784,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
       scalaTest.value
@@ -1703,6 +1808,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioHttpServer,
     nettyServer,
     nettyServerCats,
+    nettyServerZio,
     sttpStubServer,
     playJson,
     prometheusMetrics,

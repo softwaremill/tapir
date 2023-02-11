@@ -25,14 +25,16 @@ object RedocZioHttpServer extends ZIOAppDefault {
   val redocRoutes: HttpApp[Any, Throwable] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
+  val app = (petRoutes ++ redocRoutes).withDefaultErrorResponse
+
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
       printLine("Press any key to exit ...") *>
       Server
-        .serve(petRoutes ++ redocRoutes)
+        .serve(app)
         .provide(
           ServerConfig.live(ServerConfig.default.port(8080)),
-          Server.live,
+          Server.live
         )
         .fork
         .flatMap { fiber =>

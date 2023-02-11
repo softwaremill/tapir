@@ -57,5 +57,4 @@ object NettyZioServerOptions {
   private def debugLog[R](msg: String, exOpt: Option[Throwable]): RIO[R, Unit] =
     ZIO.succeed(NettyDefaults.debugLog(log, msg, exOpt))
 
-
 }
