@@ -113,8 +113,12 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
       override def schema: Schema[H] = s2
       override def format: CF = outer.format
     }
-  def schema(s2: Option[Schema[H]]): Codec[L, H, CF] = s2.map(schema).getOrElse(this)
-  def schema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema(modify(schema))
+
+  def schema(s2: Option[Schema[H]]): Codec[L, H, CF] =
+    s2.map(schema).getOrElse(this)
+
+  def schema(modify: Schema[H] => Schema[H], modifiers: (Schema[H] => Schema[H])*): Codec[L, H, CF] =
+    schema((modify +: modifiers).reduce(_ andThen _)(schema))
 
   def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] =
     new Codec[L, H, CF2] {

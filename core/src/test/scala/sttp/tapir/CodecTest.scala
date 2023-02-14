@@ -56,6 +56,16 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     codec.decode(List("y", "z")) shouldBe DecodeResult.Multiple(List("y", "z"))
   }
 
+  it should "apply multiple schema modifiers" in {
+    val codec: Codec[List[String], String, TextPlain] = implicitly[Codec[List[String], String, TextPlain]].schema(
+      _.default("X"),
+      _.hidden(true)
+    )
+
+    codec.schema.hidden shouldBe true
+    codec.schema.default shouldBe Some("X", None)
+  }
+
   it should "correctly encode and decode Date" in {
     // while Date works on Scala.js, ScalaCheck tests involving Date use java.util.Calendar which doesn't - hence here a normal test
     val codec = implicitly[Codec[String, Date, TextPlain]]

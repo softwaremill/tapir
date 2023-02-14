@@ -97,9 +97,14 @@ object EndpointTransput {
 
     override def map[U](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
 
-    def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
-    def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
-    def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
+    def schema(s: Schema[T]): ThisType[T] =
+      copyWith(codec.schema(s), info)
+
+    def schema(s: Option[Schema[T]]): ThisType[T] =
+      copyWith(codec.schema(s), info)
+
+    def schema(modify: Schema[T] => Schema[T], modifiers: (Schema[T] => Schema[T])*): ThisType[T] =
+      copyWith(codec.schema(modify, modifiers: _*), info)
 
     /** Adds a validator which validates the option's element, if it is present.
       *
