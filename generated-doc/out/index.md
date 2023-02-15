@@ -99,9 +99,9 @@ Thank you!
 <a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<span />
+<div></div>
 <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
-<span />
+<div></div>
 </div>
 
 ## Code teaser
