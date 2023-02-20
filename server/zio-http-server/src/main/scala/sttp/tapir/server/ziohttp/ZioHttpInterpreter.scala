@@ -23,18 +23,20 @@ trait ZioHttpInterpreter[R] {
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
     val widenedSes = ses.map(_.widen[R & R2])
     val widenedServerOptions = zioHttpServerOptions.widen[R & R2]
-    val serverEndpointsFilter = FilterServerEndpoints[ZioStreams, RIO[R & R2, *]](widenedSes)
+    val zioHttpRequestBody = new ZioHttpRequestBody(widenedServerOptions)
+    val zioHttpResponseBody = new ZioHttpToResponseBody
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R & R2, *], ZioHttpResponseBody, ZioStreams](
-      serverEndpointsFilter,
-      new ZioHttpRequestBody(widenedServerOptions),
-      new ZioHttpToResponseBody,
-      RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
-      zioHttpServerOptions.deleteFile
-    )
-
-    def handleRequest(req: Request) = {
+    def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams]]) = {
       Handler.fromZIO {
+        val interpreter = new ServerInterpreter[ZioStreams, RIO[R & R2, *], ZioHttpResponseBody, ZioStreams](
+          _ => filteredEndpoints,
+          zioHttpRequestBody,
+          zioHttpResponseBody,
+          interceptors,
+          zioHttpServerOptions.deleteFile
+        )
+
         interpreter
           .apply(ZioHttpServerRequest(req))
           .foldZIO(
@@ -69,12 +71,15 @@ trait ZioHttpInterpreter[R] {
       }
     }
 
-    val routes = new PartialFunction[Request, Handler[R & R2, Throwable, Request, Response]] {
-      override def isDefinedAt(request: Request): Boolean = serverEndpointsFilter.apply(ZioHttpServerRequest(request)).nonEmpty
-      override def apply(req: Request): Handler[R & R2, Throwable, Any, Response] = handleRequest(req)
+    val serverEndpointsFilter = FilterServerEndpoints[ZioStreams, RIO[R & R2, *]](widenedSes)
+    Http.fromOptionalHandlerZIO { request =>
+      // pre-filtering the endpoints by shape to determine, if this request should be handled by tapir
+      val filteredEndpoints = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
+      filteredEndpoints match {
+        case Nil => ZIO.fail(None)
+        case _   => ZIO.succeed(handleRequest(request, filteredEndpoints))
+      }
     }
-
-    Http.collectHandler[Request](routes)
   }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] = {
