@@ -7,7 +7,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.http.App
+import zio.http.HttpApp
 import zio.http.{Server, ServerConfig}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
@@ -18,8 +18,8 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: App[Any] =
-    ZioHttpInterpreter().toApp(
+  val petRoutes: HttpApp[Any, Throwable] =
+    ZioHttpInterpreter().toHttp(
       petEndpoint.zServerLogic(petId =>
         if (petId == 35) ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
         else ZIO.fail("Unknown pet id")
@@ -39,11 +39,11 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   val swaggerEndpoints: List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0")
 
   // Starting the server
-  val routes: App[Any] = ZioHttpInterpreter().toApp(List(petServerEndpoint) ++ swaggerEndpoints)
+  val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
 
   override def run: URIO[Any, ExitCode] =
     Server
-      .serve(routes)
+      .serve(routes.withDefaultErrorResponse)
       .provide(
         ServerConfig.live(ServerConfig.default.port(8080)),
         Server.live

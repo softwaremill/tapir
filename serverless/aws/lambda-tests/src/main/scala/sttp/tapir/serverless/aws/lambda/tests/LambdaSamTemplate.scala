@@ -14,7 +14,7 @@ object LambdaSamTemplate extends App {
     source = CodeSource(
       "java11",
       jarPath,
-      "sttp.tapir.serverless.aws.lambda.tests.LambdaHandler::handleRequest"
+      "sttp.tapir.serverless.aws.lambda.tests.IOLambdaHandlerV2::handleRequest"
     ),
     memorySize = 1024
   )

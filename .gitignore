@@ -4,6 +4,8 @@
 .cache
 .history
 .lib/
+/cdk
+/aws-cdk-tests
 .vscode/
 dist/*
 target/

@@ -278,7 +278,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (
       endpoint.in("p1" / "p2".schema(_.hidden(true)) / query[String]("par1") / query[String]("par2").schema(_.hidden(true))),
       "/p1?par1={par1}"
-    )
+    ),
+    (endpoint.in("not" / "allowed" / "chars" / "hi?hello"), "/not/allowed/chars/hi%3Fhello")
   )
 
   for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {
@@ -293,6 +294,13 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       showPathParam = (index, _) => s"{par$index}",
       showQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
+  }
+
+  "showPathTemplate" should "skip query parameters" in {
+    val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
+    testEndpoint.showPathTemplate(
+      showQueryParam = None
+    ) shouldBe "/p1/{param1}"
   }
 
   "validate" should "accumulate validators" in {

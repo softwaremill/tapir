@@ -18,7 +18,7 @@ object SamJsTemplateExample extends App {
       CodeSource(
         runtime = "nodejs14.x",
         codeUri = jsPath,
-        handler = "main.handler"
+        handler = "main.LambdaApiJsResourceExampleHandler"
       )
   )
 
