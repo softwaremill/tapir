@@ -40,8 +40,7 @@ class VerifyYamlDecodeFailureOutputTest extends AnyFunSuite with Matchers {
 
   test("should include json response defined in options if input decoding may fail") {
     val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(
-      defaultDecodeFailureOutput =
-        _ => Some(statusCode(StatusCode.BadRequest).and(jsonBody[Fail]))
+      defaultDecodeFailureOutput = _ => Some(statusCode(StatusCode.BadRequest).and(jsonBody[Fail]))
     )
 
     val expectedYaml = load("decode_failure_output/expected_json_response_defined_in_options.yml")
