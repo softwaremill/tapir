@@ -2,12 +2,12 @@ package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import zio._
-import zio.http.netty.server.NettyDriver
 import zio.http._
 import zio.interop.catz._
 
@@ -33,7 +33,7 @@ class ZioHttpTestServerInterpreter(
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _).withDefaultErrorResponse, ZEnvironment())
       } yield port)
         .provideSome[Scope](
-          NettyDriver.manual,
+          zio.test.driver,
           eventLoopGroup,
           channelFactory,
           ServerConfig.live(ServerConfig.default.port(0).objectAggregator(1000000))
