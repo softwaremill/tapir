@@ -19,7 +19,6 @@ val scala2_13 = "2.13.10"
 val scala3 = "3.2.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
-val scala2_13and3Versions = List(scala2_13, scala3)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
@@ -1363,7 +1362,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
     name := "tapir-zio-http-server",
     libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
-  .jvmPlatform(scalaVersions = scala2_13and3Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
 
 // serverless
