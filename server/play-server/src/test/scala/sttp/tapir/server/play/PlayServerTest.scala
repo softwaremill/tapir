@@ -6,7 +6,9 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
+import play.api.http.HttpVerbs.GET
 import play.api.http.ParserConfiguration
+import play.api.mvc.Result
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.model.{MediaType, Part, StatusCode}
@@ -109,8 +111,7 @@ class PlayServerTest extends TestSuite {
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, reject = false, options = false)
-          .tests() ++
+        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
