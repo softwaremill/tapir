@@ -2,7 +2,7 @@ package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{HeaderNames, Header => SttpHeader}
+import sttp.model.{HeaderNames, Method, Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
@@ -72,12 +72,24 @@ trait ZioHttpInterpreter[R] {
     }
 
     val serverEndpointsFilter = FilterServerEndpoints[ZioStreams, RIO[R & R2, *]](widenedSes)
+    val singleEndpoint = widenedSes.size == 1
+
     Http.fromOptionalHandlerZIO { request =>
       // pre-filtering the endpoints by shape to determine, if this request should be handled by tapir
       val filteredEndpoints = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
-      filteredEndpoints match {
+      val filteredEndpoints2 = if (singleEndpoint) {
+        // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
+        // we refuse to handle the request, allowing other ZIO Http routes to handle it. Otherwise even if the method
+        // doesn't match, this will be handled by the RejectInterceptor
+        filteredEndpoints.filter { e =>
+          val m = e.endpoint.method
+          m.isEmpty || m.contains(Method(request.method.toString()))
+        }
+      } else filteredEndpoints
+
+      filteredEndpoints2 match {
         case Nil => ZIO.fail(None)
-        case _   => ZIO.succeed(handleRequest(request, filteredEndpoints))
+        case _   => ZIO.succeed(handleRequest(request, filteredEndpoints2))
       }
     }
   }

@@ -41,9 +41,23 @@ trait PlayServerInterpreter {
     implicit val monad: FutureMonad = new FutureMonad()
 
     val filterServerEndpoints = FilterServerEndpoints(serverEndpoints)
+    val singleEndpoint = serverEndpoints.size == 1
 
     new PartialFunction[RequestHeader, Handler] {
-      override def isDefinedAt(request: RequestHeader): Boolean = filterServerEndpoints(PlayServerRequest(request, request)).nonEmpty
+      override def isDefinedAt(request: RequestHeader): Boolean = {
+        val filtered = filterServerEndpoints(PlayServerRequest(request, request))
+        if (singleEndpoint) {
+          // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
+          // we refuse to handle the request, allowing other Play routes to handle it. Otherwise even if the method
+          // doesn't match, this will be handled by the RejectInterceptor
+          filtered.exists { e =>
+            val m = e.endpoint.method
+            m.isEmpty || m.contains(Method(request.method))
+          }
+        } else {
+          filtered.nonEmpty
+        }
+      }
 
       override def apply(header: RequestHeader): Handler =
         if (isWebSocket(header))
