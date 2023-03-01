@@ -190,5 +190,33 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
     actual shouldEqual Success(Value(Right(sampleOut)))
   }
 
+  it should "match json null body" in {
+    import TapirJsonCirceWithDropNullEnabled.jsonBody
+
+    val orderEndpoint = endpoint
+      .in("api" / "v1" / "order")
+      .get
+      .errorOut(jsonBody[ApiError])
+      .out(jsonBody[OrderCreatedEvent])
+
+    val sampleOut = OrderCreatedEvent(id = uuid(), name = "John", total = None)
+
+    val actual = for {
+      _ <- mockServerClient
+        .whenInputMatches(orderEndpoint)((), None)
+        .thenSuccess(sampleOut)
+
+      resp <- SttpClientInterpreter()
+        .toRequest(orderEndpoint, baseUri = Some(baseUri))
+        .apply(None)
+        .send(backend)
+
+      _ <- mockServerClient
+        .verifyRequest(orderEndpoint, VerificationTimes.exactlyOnce)((), None)
+    } yield resp.body
+
+    actual shouldEqual Success(Value(Right(sampleOut)))
+  }
+
   private def uuid(): String = UUID.randomUUID().toString
 }
