@@ -81,12 +81,30 @@ private[mockserver] object JsonCodecs {
       }
   }
 
-  private implicit val expectationRequestDefinitionCodec: Codec[ExpectationRequestDefinition] = deriveCodec[ExpectationRequestDefinition]
-  private implicit val expectationResponseDefinitionCodec: Codec[ExpectationResponseDefinition] = deriveCodec[ExpectationResponseDefinition]
-  private implicit val expectationTimesCodec: Codec[ExpectationTimes] = deriveCodec[ExpectationTimes]
-  private implicit val expectationTimeToLiveCodec: Codec[ExpectationTimeToLive] = deriveCodec[ExpectationTimeToLive]
+  private def deriveCodecDropNull[T](implicit encoder: Encoder[T], decoder: Decoder[T]): Codec[T] =
+    Codec.from(decoder, encoder.mapJson(_.dropNullValues))
 
-  private implicit val verificationTimesDefinitionCodec: Codec[VerificationTimesDefinition] = deriveCodec[VerificationTimesDefinition]
+  private implicit val expectationRequestDefinitionCodec: Codec[ExpectationRequestDefinition] = {
+    implicit val codec = deriveCodec[ExpectationRequestDefinition]
+    deriveCodecDropNull[ExpectationRequestDefinition]
+  }
+  private implicit val expectationResponseDefinitionCodec: Codec[ExpectationResponseDefinition] = {
+    implicit val codec = deriveCodec[ExpectationResponseDefinition]
+    deriveCodecDropNull[ExpectationResponseDefinition]
+  }
+  private implicit val expectationTimesCodec: Codec[ExpectationTimes] = {
+    implicit val codec = deriveCodec[ExpectationTimes]
+    deriveCodecDropNull[ExpectationTimes]
+  }
+  private implicit val expectationTimeToLiveCodec: Codec[ExpectationTimeToLive] = {
+    implicit val codec = deriveCodec[ExpectationTimeToLive]
+    deriveCodecDropNull[ExpectationTimeToLive]
+  }
+
+  private implicit val verificationTimesDefinitionCodec: Codec[VerificationTimesDefinition] = {
+    implicit val codec = deriveCodec[VerificationTimesDefinition]
+    deriveCodecDropNull[VerificationTimesDefinition]
+  }
 
   implicit val createExpectationRequestEncoder: Encoder[CreateExpectationRequest] = deriveEncoder[CreateExpectationRequest]
   implicit val verifyExpectationRequestEncoder: Encoder[VerifyExpectationRequest] = deriveEncoder[VerifyExpectationRequest]
