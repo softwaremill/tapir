@@ -2,13 +2,13 @@ package sttp.tapir.server.vertx.zio
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
-import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
-import sttp.tapir.ztapir._
+import sttp.tapir._
 import _root_.zio.{Task, ZIO}
+import _root_.zio.stream.ZStream
 import org.scalatest.OptionValues
 import sttp.client3.basicRequest
 import sttp.tapir.ztapir.RIOMonadError
@@ -22,9 +22,7 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
     vertxResource.map { implicit vertx =>
       implicit val m: MonadError[Task] = new RIOMonadError[Any]
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
-      val createServerTest =
-        new DefaultCreateServerTest(backend, interpreter)
-          .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route]]
+      val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
         createServerTest.testServer(
@@ -41,7 +39,11 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++ additionalTests() ++
-        new ServerStreamingTests(createServerTest, ZioStreams).tests()
+        new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+        new ServerWebSocketTests(createServerTest, ZioStreams) {
+          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+          override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
+        }.tests()
     }
   }
 }
