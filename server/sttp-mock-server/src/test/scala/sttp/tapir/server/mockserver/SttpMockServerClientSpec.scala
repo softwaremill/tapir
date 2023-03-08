@@ -203,16 +203,16 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
     val actual = for {
       _ <- mockServerClient
-        .whenInputMatches(orderEndpoint)((), None)
+        .whenInputMatches(orderEndpoint)((), ())
         .thenSuccess(sampleOut)
 
       resp <- SttpClientInterpreter()
         .toRequest(orderEndpoint, baseUri = Some(baseUri))
-        .apply(None)
+        .apply(())
         .send(backend)
 
       _ <- mockServerClient
-        .verifyRequest(orderEndpoint, VerificationTimes.exactlyOnce)((), None)
+        .verifyRequest(orderEndpoint, VerificationTimes.exactlyOnce)((), ())
     } yield resp.body
 
     actual shouldEqual Success(Value(Right(sampleOut)))
