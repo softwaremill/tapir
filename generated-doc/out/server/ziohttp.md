@@ -9,13 +9,13 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.2.9"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.2.10"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.2.9"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.2.10"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -63,7 +63,7 @@ val countCharactersHttp: HttpApp[Any, Throwable] =
 .. note::
 
   A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
-  routing implementation in ZIO Http, the shape of the paths that tapir/ZIO-Http-native handlers serve should not 
+  routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
   overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
   will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
   diverges a bit comparing to other interpreters.
