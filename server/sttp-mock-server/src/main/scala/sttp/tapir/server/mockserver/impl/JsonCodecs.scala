@@ -1,8 +1,10 @@
 package sttp.tapir.server.mockserver.impl
 
+import io.circe.generic.codec.DerivedAsObjectCodec
 import io.circe.{Codec, CursorOp, Decoder, DecodingFailure, Encoder, Json, JsonObject}
-import io.circe.generic.semiauto.{deriveCodec, deriveDecoder, deriveEncoder}
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.syntax._
+import shapeless.Lazy
 import sttp.model.{MediaType, Method, StatusCode, Uri}
 import sttp.tapir.server.mockserver.ExpectationBodyDefinition.JsonMatchType
 import sttp.tapir.server.mockserver.{
@@ -81,12 +83,17 @@ private[mockserver] object JsonCodecs {
       }
   }
 
-  private implicit val expectationRequestDefinitionCodec: Codec[ExpectationRequestDefinition] = deriveCodec[ExpectationRequestDefinition]
-  private implicit val expectationResponseDefinitionCodec: Codec[ExpectationResponseDefinition] = deriveCodec[ExpectationResponseDefinition]
-  private implicit val expectationTimesCodec: Codec[ExpectationTimes] = deriveCodec[ExpectationTimes]
-  private implicit val expectationTimeToLiveCodec: Codec[ExpectationTimeToLive] = deriveCodec[ExpectationTimeToLive]
+  private def deriveCodecDropNull[A](implicit codec: Lazy[DerivedAsObjectCodec[A]]): Codec[A] =
+    Codec.from(codec.value, codec.value.mapJson(_.dropNullValues))
 
-  private implicit val verificationTimesDefinitionCodec: Codec[VerificationTimesDefinition] = deriveCodec[VerificationTimesDefinition]
+  private implicit val expectationRequestDefinitionCodec: Codec[ExpectationRequestDefinition] =
+    deriveCodecDropNull[ExpectationRequestDefinition]
+  private implicit val expectationResponseDefinitionCodec: Codec[ExpectationResponseDefinition] =
+    deriveCodecDropNull[ExpectationResponseDefinition]
+  private implicit val expectationTimesCodec: Codec[ExpectationTimes] = deriveCodecDropNull[ExpectationTimes]
+  private implicit val expectationTimeToLiveCodec: Codec[ExpectationTimeToLive] = deriveCodecDropNull[ExpectationTimeToLive]
+  private implicit val verificationTimesDefinitionCodec: Codec[VerificationTimesDefinition] =
+    deriveCodecDropNull[VerificationTimesDefinition]
 
   implicit val createExpectationRequestEncoder: Encoder[CreateExpectationRequest] = deriveEncoder[CreateExpectationRequest]
   implicit val verifyExpectationRequestEncoder: Encoder[VerifyExpectationRequest] = deriveEncoder[VerifyExpectationRequest]
