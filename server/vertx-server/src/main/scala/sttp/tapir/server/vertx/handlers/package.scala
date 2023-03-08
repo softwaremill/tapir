@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx
 import io.vertx.core.Handler
 import io.vertx.ext.web.{Route, RoutingContext}
 import io.vertx.ext.web.handler.BodyHandler
-import sttp.tapir.{Endpoint, EndpointIO}
+import sttp.tapir.{Endpoint, EndpointIO, EndpointOutput}
 import sttp.tapir.RawBodyType.MultipartBody
 import sttp.tapir.internal._
 
@@ -22,6 +22,10 @@ package object handlers {
   }
 
   private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route): Route = {
+    val mbWebsocketType = e.output.traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] {
+      case body: EndpointOutput.WebSocketBodyWrapper[_, _] => Vector(body)
+    }
+
     val bodyType = e.asVectorOfBasicInputs().flatMap {
       case body: EndpointIO.Body[_, _]              => Vector(body.bodyType)
       case EndpointIO.OneOfBody(variants, _)        => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
@@ -29,9 +33,10 @@ package object handlers {
       case _                                        => Vector.empty
     }
 
-    bodyType.headOption match {
+    mbWebsocketType.headOption.orElse(bodyType.headOption) match {
       case Some(MultipartBody(_, _))                   => route.handler(multipartHandler)
       case Some(_: EndpointIO.StreamBodyWrapper[_, _]) => route.handler(streamPauseHandler)
+      case Some(_: EndpointOutput.WebSocketBodyWrapper[_, _]) => route.handler(streamPauseHandler)
       case Some(_)                                     => route.handler(bodyHandler)
       case None                                        => ()
     }

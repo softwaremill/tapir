@@ -1,6 +1,5 @@
 package sttp.tapir.server.vertx.streams
 
-import io.vertx.core.buffer.Buffer
 import io.vertx.core.Handler
 
 import scala.collection.immutable.{Queue => SQueue}
@@ -104,17 +103,17 @@ private[vertx] final case class ReadStreamState[F[_], C](
   }
 }
 
-private[vertx] final case class StreamState[F[_]](
+private[vertx] final case class StreamState[F[_], T](
     paused: Option[DeferredLike[F, Unit]],
-    handler: Handler[Buffer],
+    handler: Handler[T],
     errorHandler: Handler[Throwable],
     endHandler: Handler[Void]
 )
 
 private[vertx] object StreamState {
-  def empty[F[_]](promise: DeferredLike[F, Unit]) = StreamState(
+  def empty[F[_], T](promise: DeferredLike[F, Unit]) = StreamState(
     Some(promise),
-    (_: Buffer) => (),
+    (_: T) => (),
     (_: Throwable) => (),
     (_: Void) => ()
   )

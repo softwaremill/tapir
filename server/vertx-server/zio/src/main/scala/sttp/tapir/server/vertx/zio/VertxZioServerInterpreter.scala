@@ -2,6 +2,7 @@ package sttp.tapir.server.vertx.zio
 
 import io.vertx.core.{Future, Handler, Promise}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
+import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
   def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
 
-  def route(e: ZServerEndpoint[R, ZioStreams])(implicit
+  def route(e: ZServerEndpoint[R, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
@@ -28,14 +29,14 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
   }
 
   private def endpointHandler(
-      e: ZServerEndpoint[R, ZioStreams]
+      e: ZServerEndpoint[R, ZioStreams with WebSockets]
   )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R]
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] =
       new VertxBodyListener[RIO[R, *]](new ZioRunAsync(runtime))
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
-    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
       _ => List(e),
       new VertxRequestBody[RIO[R, *], ZioStreams](vertxZioServerOptions, fromVFuture)(zioReadStream),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
