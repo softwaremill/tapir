@@ -96,7 +96,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream =
     readStreamCompatible
-      .fromReadStream(routingContext(serverRequest).request.asInstanceOf[ReadStream[Buffer]])
+      .fromReadStream(routingContext(serverRequest).request)
       .asInstanceOf[streams.BinaryStream]
 
   private def extractStringPart[B](part: String, bodyType: RawBodyType[B]): Option[Any] = {

@@ -4,8 +4,6 @@ import io.circe.{Codec, Printer}
 import io.circe.generic.semiauto.deriveCodec
 import sttp.tapir.json.circe.TapirJsonCirce
 
-import java.util.UUID
-
 case class CreatePersonCommand(name: String, age: Int)
 
 object CreatePersonCommand {

@@ -106,7 +106,6 @@ class ZioHttpServerTest extends TestSuite {
             staticContent = false,
             multipart = false,
             file = false,
-            reject = false,
             options = false
           ).tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++

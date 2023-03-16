@@ -21,9 +21,8 @@ object AwsResponse {
     AwsResponse(isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, body)
 }
 
-/**
-  * As for this moment, CDK v2 does not provide high level typescript classes for generating stack for Api Gateway v2 with Lambda, this
-  * is why we need to use Api Gateway v1, and translate it's request to v2 by hand.
+/** As for this moment, CDK v2 does not provide high level typescript classes for generating stack for Api Gateway v2 with Lambda, this is
+  * why we need to use Api Gateway v1, and translate it's request to v2 by hand.
   */
 case class AwsRequestV1(
     resource: String,
@@ -39,7 +38,7 @@ case class AwsRequestV1(
     AwsRequest(
       path,
       queryStringParameters match {
-        case None => ""
+        case None    => ""
         case Some(x) => x.map { case (key: String, value: String) => s"$key=$value" }.mkString("&")
       },
       headers,

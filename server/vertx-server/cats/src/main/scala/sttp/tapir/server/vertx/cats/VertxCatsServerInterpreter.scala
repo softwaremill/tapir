@@ -6,7 +6,7 @@ import cats.syntax.all._
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
-import sttp.capabilities.Streams
+import sttp.capabilities.{Streams, WebSockets}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
@@ -36,21 +36,21 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     *   A function, that given a router, will attach this endpoint to it
     */
   def route(
-      e: ServerEndpoint[Fs2Streams[F], F]
+      e: ServerEndpoint[Fs2Streams[F] with WebSockets, F]
   ): Router => Route = { router =>
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
   private def endpointHandler[S <: Streams[S]](
-      e: ServerEndpoint[Fs2Streams[F], F],
+      e: ServerEndpoint[Fs2Streams[F] with WebSockets, F],
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = {
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] =
       new VertxBodyListener[F](new CatsRunAsync(vertxCatsServerOptions.dispatcher))
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Future[Void], S] = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Fs2Streams[F] with WebSockets, F, RoutingContext => Future[Void], S] = new ServerInterpreter(
       _ => List(e),
       new VertxRequestBody(vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),

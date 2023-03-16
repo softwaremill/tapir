@@ -19,7 +19,6 @@ val scala2_13 = "2.13.10"
 val scala3 = "3.2.2"
 
 val scala2Versions = List(scala2_12, scala2_13)
-val scala2_13and3Versions = List(scala2_13, scala3)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
@@ -358,7 +357,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.6")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.0")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -455,8 +454,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.1" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.9.1" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.2" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.9.2" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -1363,7 +1362,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
     name := "tapir-zio-http-server",
     libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
   )
-  .jvmPlatform(scalaVersions = scala2_13and3Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
 
 // serverless

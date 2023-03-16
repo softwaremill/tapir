@@ -63,7 +63,7 @@ val countCharactersHttp: HttpApp[Any, Throwable] =
 .. note::
 
   A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
-  routing implementation in ZIO Http, the shape of the paths that tapir/ZIO-Http-native handlers serve should not 
+  routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
   overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
   will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
   diverges a bit comparing to other interpreters.

@@ -93,5 +93,5 @@ To destroy all the created resources run `terraform destroy`.
 4. Before deploying, if you want to test your application locally, you will need Docker
    and [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
    , then execute `cdk synth`, and `sam local start-api -t cdk.out/TapirCdkStack.template.json --warm-containers EAGER`
-5. To deploy it to AWS simply run `cdk deply`
+5. To deploy it to AWS simply run `cdk deploy`
 6. When you want to rollback changes made on AWS, run `cdk destroy`

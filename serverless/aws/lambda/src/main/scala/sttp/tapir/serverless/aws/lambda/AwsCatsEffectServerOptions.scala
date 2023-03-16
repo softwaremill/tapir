@@ -8,8 +8,7 @@ object AwsCatsEffectServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[F[_]: Monad]: CustomiseInterceptors[F, AwsServerOptions[F]] =
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[F, AwsServerOptions[F]]) =>
-        AwsServerOptions(encodeResponseBody = true, ci.interceptors)
+      createOptions = (ci: CustomiseInterceptors[F, AwsServerOptions[F]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
     )
 
   def default[F[_]: Monad]: AwsServerOptions[F] = customiseInterceptors.options

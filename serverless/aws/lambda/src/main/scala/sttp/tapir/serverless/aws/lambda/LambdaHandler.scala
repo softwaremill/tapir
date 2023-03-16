@@ -36,7 +36,10 @@ abstract class LambdaHandler[F[_]: Sync, R: Decoder] extends RequestStreamHandle
           awsRequest match {
             case r: AwsRequestV1 => server.toRoute(getAllEndpoints)(r.toV2)
             case r: AwsRequest   => server.toRoute(getAllEndpoints)(r)
-            case r               => Sync[F].raiseError[AwsResponse](new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not suppoerted"))
+            case r =>
+              Sync[F].raiseError[AwsResponse](
+                new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not suppoerted")
+              )
           }
       }
       _ <- writerResource(Sync[F].delay(output)).use { writer =>

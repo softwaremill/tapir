@@ -9,9 +9,8 @@ import sttp.tapir.serverless.aws.lambda._
 
 import java.io.{InputStream, OutputStream}
 
-/**
- * Used by [[AwsCdkAppTemplate]] for integration tests
- */
+/** Used by [[AwsCdkAppTemplate]] for integration tests
+  */
 object CdkTestLambdaHandler extends LambdaHandler[IO, AwsRequestV1] {
   override protected def getAllEndpoints: List[ServerEndpoint[Any, IO]] = allEndpoints.toList
 
