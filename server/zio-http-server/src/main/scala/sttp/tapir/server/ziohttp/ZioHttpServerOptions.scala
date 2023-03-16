@@ -22,7 +22,6 @@ case class ZioHttpServerOptions[R](
 }
 
 object ZioHttpServerOptions {
-
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], ZioHttpServerOptions[R]] =
     CustomiseInterceptors(
