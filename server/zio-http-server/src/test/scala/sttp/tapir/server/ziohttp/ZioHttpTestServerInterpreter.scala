@@ -12,8 +12,8 @@ import zio.http._
 import zio.interop.catz._
 
 class ZioHttpTestServerInterpreter(
-    eventLoopGroup: ZLayer[Any, Nothing, zio.http.service.EventLoopGroup],
-    channelFactory: ZLayer[Any, Nothing, zio.http.service.ServerChannelFactory]
+    eventLoopGroup: ZLayer[Any, Nothing, EventLoopGroup],
+    channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
 )(implicit
     trace: Trace
 ) extends TestServerInterpreter[Task, ZioStreams, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
