@@ -31,7 +31,7 @@ object Versions {
   val zio = "2.0.10"
   val zioInteropCats = "3.3.0"
   val zioInteropReactiveStreams = "2.0.1"
-  val zioJson = "0.4.2"
+  val zioJson = "0.5.0"
   val playClient = "2.1.10"
   val playServer = "2.8.19"
   val tethys = "0.26.0"
