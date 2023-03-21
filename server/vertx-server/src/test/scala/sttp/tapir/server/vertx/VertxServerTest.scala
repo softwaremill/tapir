@@ -26,35 +26,35 @@ class VertxServerTest extends TestSuite {
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
-        ).tests() ++ new ServerStreamingTests(createServerTest, VertxStreams).tests()++
-      (new ServerWebSocketTests(createServerTest, VertxStreams) {
-        override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in,f)
-        override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()
-      }).tests()
+        ).tests() ++ new ServerStreamingTests(createServerTest, VertxStreams).tests() ++
+        (new ServerWebSocketTests(createServerTest, VertxStreams) {
+          override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
+          override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()
+        }).tests()
     }
   }
 }
 
-class EmptyReadStream[B]() extends ReadStream[B]  {
+class EmptyReadStream[B]() extends ReadStream[B] {
   private var endHandler: Handler[Void] = _
-  def endHandler(handler: Handler[Void]): ReadStream[B] ={
+  def endHandler(handler: Handler[Void]): ReadStream[B] = {
     endHandler = handler
     this
   }
-  def exceptionHandler(handler: Handler[Throwable]): ReadStream[B] ={
+  def exceptionHandler(handler: Handler[Throwable]): ReadStream[B] = {
     this
   }
-  def fetch(x: Long): ReadStream[B] ={
+  def fetch(x: Long): ReadStream[B] = {
     endHandler.handle(null)
     this
   }
   def handler(handler: io.vertx.core.Handler[B]): ReadStream[B] = {
     this
   }
-  def pause(): ReadStream[B] ={
+  def pause(): ReadStream[B] = {
     this
   }
-  def resume(): ReadStream[B] ={
+  def resume(): ReadStream[B] = {
     this
   }
 }

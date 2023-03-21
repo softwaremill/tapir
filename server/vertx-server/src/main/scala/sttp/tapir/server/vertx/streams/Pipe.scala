@@ -157,7 +157,7 @@ object Pipe {
         case Pong(payload) =>
           writeFrame(VertxWebSocketFrame.pongFrame(Buffer.buffer(payload)))
         case Close(statusCode, _) =>
-          socket.close(statusCode.toShort, { _ => ()})
+          socket.close(statusCode.toShort, { _ => () })
       }
 
       if (!socket.isClosed && socket.writeQueueFull()) {

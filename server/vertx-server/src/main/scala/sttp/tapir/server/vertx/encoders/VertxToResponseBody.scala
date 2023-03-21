@@ -53,14 +53,16 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
   ): RoutingContext => Future[Void] = { rc =>
-    rc.request
-      .toWebSocket
+    rc.request.toWebSocket
       .flatMap({ (websocket: ServerWebSocket) =>
-        Pipe(readStreamCompatible.webSocketPipe[REQ, RESP](
-          wrapWebSocket(websocket),
-          pipe.asInstanceOf[readStreamCompatible.streams.Pipe[REQ, RESP]],
-          o.asInstanceOf[WebSocketBodyOutput[readStreamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]]
-        ), websocket)
+        Pipe(
+          readStreamCompatible.webSocketPipe[REQ, RESP](
+            wrapWebSocket(websocket),
+            pipe.asInstanceOf[readStreamCompatible.streams.Pipe[REQ, RESP]],
+            o.asInstanceOf[WebSocketBodyOutput[readStreamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]]
+          ),
+          websocket
+        )
         websocket.accept()
         Future.succeededFuture[Void]()
       })

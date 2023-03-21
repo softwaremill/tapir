@@ -22,38 +22,44 @@ package object streams {
       readStream
 
     override def webSocketPipe[REQ, RESP](
-      readStream: ReadStream[WebSocketFrame],
-      pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, VertxStreams]
+        readStream: ReadStream[WebSocketFrame],
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, VertxStreams]
     ): ReadStream[WebSocketFrame] = {
       val stream0 = optionallyContatenateFrames(readStream, o.concatenateFragmentedFrames)
       val stream1 = optionallyIgnorePong(stream0, o.ignorePong)
       val stream2 = optionallyAutoPing(stream1, o.autoPing)
 
-      val stream3 = new ReadStreamMapping(stream2, { (frame:WebSocketFrame) =>
-        o.requests.decode(frame) match {
-          case failure: DecodeResult.Failure =>
-            throw (new WebSocketFrameDecodeFailure(frame, failure))
-          case DecodeResult.Value(v) => v
+      val stream3 = new ReadStreamMapping(
+        stream2,
+        { (frame: WebSocketFrame) =>
+          o.requests.decode(frame) match {
+            case failure: DecodeResult.Failure =>
+              throw (new WebSocketFrameDecodeFailure(frame, failure))
+            case DecodeResult.Value(v) => v
+          }
         }
-      })
+      )
 
       new ReadStreamMapping(pipe(stream3), o.responses.encode)
     }
   }
 
   private def optionallyContatenateFrames(rs: ReadStream[WebSocketFrame], doConcatenate: Boolean): ReadStream[WebSocketFrame] = {
-    //TODO implement this
+    // TODO implement this
     rs
   }
 
   private def optionallyIgnorePong(rs: ReadStream[WebSocketFrame], ignore: Boolean): ReadStream[WebSocketFrame] = {
-    //TODO implement this
-      rs
-    }
+    // TODO implement this
+    rs
+  }
 
-  private def optionallyAutoPing(rs:ReadStream[WebSocketFrame], autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]): ReadStream[WebSocketFrame] = {
-    //TODO implement this
+  private def optionallyAutoPing(
+      rs: ReadStream[WebSocketFrame],
+      autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]
+  ): ReadStream[WebSocketFrame] = {
+    // TODO implement this
     rs
   }
 }
@@ -81,7 +87,7 @@ class ReadStreamMapping[A, B](source: ReadStream[A], mapping: A => B) extends Re
   override def resume(): ReadStream[B] = {
     fetch(Long.MaxValue)
   }
-  override def  fetch(amount:Long): ReadStream[B] = {
+  override def fetch(amount: Long): ReadStream[B] = {
     source.fetch(amount)
     this
   }
