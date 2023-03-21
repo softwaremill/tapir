@@ -3,12 +3,14 @@ package sttp.tapir.server.ziohttp
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{Cause, RIO, Task, ZIO}
 
 case class ZioHttpServerOptions[R](
     createFile: ServerRequest => Task[TapirFile],
     deleteFile: TapirFile => RIO[R, Unit],
+    decodeFailureHandler: DecodeFailureHandler,
     interceptors: List[Interceptor[RIO[R, *]]]
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
@@ -20,7 +22,6 @@ case class ZioHttpServerOptions[R](
 }
 
 object ZioHttpServerOptions {
-
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], ZioHttpServerOptions[R]] =
     CustomiseInterceptors(
@@ -28,6 +29,7 @@ object ZioHttpServerOptions {
         ZioHttpServerOptions(
           defaultCreateFile,
           defaultDeleteFile,
+          ci.decodeFailureHandler,
           ci.interceptors
         )
     ).serverLog(defaultServerLog[R])

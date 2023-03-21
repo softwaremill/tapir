@@ -10,18 +10,11 @@ import play.api.mvc._
 import play.api.routing.Router.Routes
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.{Method, StatusCode}
+import sttp.model.Method
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
-import sttp.tapir.server.interpreter.{
-  BodyListener,
-  DecodeBasicInputs,
-  DecodeBasicInputsResult,
-  DecodeInputsContext,
-  FilterServerEndpoints,
-  ServerInterpreter
-}
+import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,15 +40,22 @@ trait PlayServerInterpreter {
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
+    val filterServerEndpoints = FilterServerEndpoints(serverEndpoints)
+    val singleEndpoint = serverEndpoints.size == 1
+
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
-        val serverRequest = PlayServerRequest(request, request)
-        serverEndpoints.exists { se =>
-          DecodeBasicInputs(se.securityInput.and(se.input), DecodeInputsContext(serverRequest)) match {
-            case (DecodeBasicInputsResult.Values(_, _), _) => true
-            case (DecodeBasicInputsResult.Failure(input, failure), _) =>
-              playServerOptions.decodeFailureHandler(DecodeFailureContext(se.endpoint, input, failure, serverRequest)).isDefined
+        val filtered = filterServerEndpoints(PlayServerRequest(request, request))
+        if (singleEndpoint) {
+          // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
+          // we refuse to handle the request, allowing other Play routes to handle it. Otherwise even if the method
+          // doesn't match, this will be handled by the RejectInterceptor
+          filtered.exists { e =>
+            val m = e.endpoint.method
+            m.isEmpty || m.contains(Method(request.method))
           }
+        } else {
+          filtered.nonEmpty
         }
       }
 
@@ -79,7 +79,7 @@ trait PlayServerInterpreter {
         implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
         val serverRequest = PlayServerRequest(header, request)
         val interpreter = new ServerInterpreter(
-          FilterServerEndpoints(serverEndpoints),
+          filterServerEndpoints,
           new PlayRequestBody(playServerOptions),
           new PlayToResponseBody,
           playServerOptions.interceptors,
@@ -89,7 +89,12 @@ trait PlayServerInterpreter {
         interpreter(serverRequest)
           .map {
             case RequestResult.Failure(_) =>
-              Left(Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity))
+              throw new RuntimeException(
+                s"The path: ${request.path} matches the shape of some endpoint, but none of the " +
+                  s"endpoints decoded the request successfully, and the decode failure handler didn't provide a " +
+                  s"response. Play requires that if the path shape matches some endpoints, the request " +
+                  s"should be handled by tapir."
+              )
             case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
               val headers: Map[String, String] = response.headers
                 .foldLeft(Map.empty[String, List[String]]) { (a, b) =>

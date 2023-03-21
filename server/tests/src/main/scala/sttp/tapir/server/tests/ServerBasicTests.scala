@@ -12,6 +12,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.TestUtil._
@@ -583,8 +584,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints, same path prefix, one without trailing slashes, second accepting trailing slashes",
       NonEmptyList.of(
-        route(endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
-        route(endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit])))
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+            endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e1") >>

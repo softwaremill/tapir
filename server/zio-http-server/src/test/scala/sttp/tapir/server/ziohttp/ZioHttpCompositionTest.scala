@@ -7,7 +7,7 @@ import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
-import zio.http._
+import zio.http.{endpoint => _, _}
 import zio.http.model._
 import zio.{Task, ZIO}
 
@@ -16,7 +16,7 @@ class ZioHttpCompositionTest(
       Task,
       Any,
       ZioHttpServerOptions[Any],
-      Http[Any, zio.http.Response, zio.http.Request, zio.http.Response]
+      Http[Any, Throwable, zio.http.Request, zio.http.Response]
     ]
 ) {
   import createServerTest._
@@ -27,11 +27,11 @@ class ZioHttpCompositionTest(
         val ep1 = endpoint.get.in("p1").zServerLogic[Any](_ => ZIO.unit)
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
-        val route1: App[Any] = ZioHttpInterpreter().toApp(ep1)
-        val route2: App[Any] = Http.collect { case Method.GET -> !! / "p2" =>
+        val route1: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep1)
+        val route2: HttpApp[Any, Nothing] = Http.collect { case Method.GET -> !! / "p2" =>
           zio.http.Response.ok
         }
-        val route3: App[Any] = ZioHttpInterpreter().toApp(ep3)
+        val route3: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep3)
 
         NonEmptyList.of(route3, route1, route2)
       }
