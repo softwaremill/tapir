@@ -1,6 +1,6 @@
 package sttp.tapir.json.circe
 
-import io.circe.Errors
+import io.circe.{Errors, JsonObject}
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -61,5 +61,15 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
   it should "return a product schema for a JsonObject" in {
     schemaForCirceJsonObject.schemaType shouldBe a[SProduct[_]]
+  }
+
+  it should "properly define a json query input" in {
+    jsonQuery[Option[JsonObject]]("content").codec.decode(Nil) shouldBe DecodeResult.Value(None)
+    jsonQuery[Option[JsonObject]]("content").codec.decode(List("")) shouldBe DecodeResult.Value(None)
+    jsonQuery[Option[JsonObject]]("content").codec.decode(List("{}")) shouldBe DecodeResult.Value(Some(JsonObject.empty))
+
+    jsonQuery[JsonObject]("content").codec.decode(Nil) shouldBe DecodeResult.Missing
+    jsonQuery[JsonObject]("content").codec.decode(List("")) shouldBe a[DecodeResult.Error]
+    jsonQuery[JsonObject]("content").codec.decode(List("{}")) shouldBe DecodeResult.Value(JsonObject.empty)
   }
 }

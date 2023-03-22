@@ -8,7 +8,6 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType._
 
 trait TapirJsonCirce {
   def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(circeCodec[T])
@@ -18,7 +17,7 @@ trait TapirJsonCirce {
   )
 
   def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
-    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
+    queryAnyFormat[T, CodecFormat.Json](name, sttp.tapir.Codec.jsonQuery(circeCodec))
 
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>

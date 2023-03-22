@@ -25,7 +25,7 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
     case Segment.Root       => Nil
   }.toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams.toMap)
-  override lazy val method: SttpMethod = SttpMethod(req.method.toJava.name().toUpperCase)
+  override lazy val method: SttpMethod = SttpMethod(req.method.name.toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.encode)
   override lazy val headers: Seq[SttpHeader] = req.headers.toList.map { h => SttpHeader(h.key.toString, h.value.toString) }
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
