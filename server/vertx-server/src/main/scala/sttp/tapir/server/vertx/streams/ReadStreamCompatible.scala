@@ -12,9 +12,9 @@ trait ReadStreamCompatible[S <: Streams[S]] {
   def fromReadStream(s: ReadStream[Buffer]): streams.BinaryStream
 
   def webSocketPipe[REQ, RESP](
-    readStream: ReadStream[WebSocketFrame],
-    pipe: streams.Pipe[REQ, RESP],
-    o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
+      readStream: ReadStream[WebSocketFrame],
+      pipe: streams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
   ): ReadStream[WebSocketFrame]
 }
 

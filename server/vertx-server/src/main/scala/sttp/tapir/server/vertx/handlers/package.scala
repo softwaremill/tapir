@@ -34,11 +34,11 @@ package object handlers {
     }
 
     mbWebsocketType.headOption.orElse(bodyType.headOption) match {
-      case Some(MultipartBody(_, _))                   => route.handler(multipartHandler)
-      case Some(_: EndpointIO.StreamBodyWrapper[_, _]) => route.handler(streamPauseHandler)
+      case Some(MultipartBody(_, _))                          => route.handler(multipartHandler)
+      case Some(_: EndpointIO.StreamBodyWrapper[_, _])        => route.handler(streamPauseHandler)
       case Some(_: EndpointOutput.WebSocketBodyWrapper[_, _]) => route.handler(streamPauseHandler)
-      case Some(_)                                     => route.handler(bodyHandler)
-      case None                                        => ()
+      case Some(_)                                            => route.handler(bodyHandler)
+      case None                                               => ()
     }
 
     route
