@@ -14,7 +14,16 @@ private[tapir] object ValidatorEnumerationMacro {
     if (!symbol.isClass || !symbol.isSealed) {
       c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
     } else {
-      val subclasses = symbol.knownDirectSubclasses.toList.sortBy(_.name.encodedName.toString)
+
+      def flatChildren(s: ClassSymbol): List[ClassSymbol] = s.knownDirectSubclasses.toList.map(_.asClass).flatMap { child =>
+        if (child.isModuleClass)
+          List(child)
+        else if (child.isSealed)
+          flatChildren(child)
+        else
+          c.abort(c.enclosingPosition, "All children must be objects or enum cases, or sealed parent of such.")
+      }
+      val subclasses = flatChildren(symbol).sortBy(_.name.encodedName.toString).distinct
       if (!subclasses.forall(_.isModuleClass)) {
         c.abort(c.enclosingPosition, "All children must be objects.")
       } else {

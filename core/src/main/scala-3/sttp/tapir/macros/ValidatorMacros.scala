@@ -36,11 +36,13 @@ private[tapir] object ValidatorMacros {
       } else List(c)
     }
 
-    val instances = flatChildren(symbol).distinct.sortBy(_.name).map(x =>
-      tpe.memberType(x).asType match {
-        case '[f] => Ref(x).asExprOf[f]
-      }
-    )
+    val instances = flatChildren(symbol).distinct
+      .sortBy(_.name)
+      .map(x =>
+        tpe.memberType(x).asType match {
+          case '[f] => Ref(x).asExprOf[f]
+        }
+      )
     val name = '{ Option(Schema.SName(${ Expr(symbol.fullName) })) }
 
     '{

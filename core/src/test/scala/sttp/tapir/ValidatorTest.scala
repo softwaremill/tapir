@@ -182,6 +182,17 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     Validator.derivedEnumeration[Color].possibleValues should contain theSameElementsAs List(Blue, Red)
   }
 
+  it should "derive for branched sealed traits where all leafs are objects" in {
+    Validator.derivedEnumeration[ColorShades].possibleValues should contain theSameElementsAs Vector(
+      ColorShades.LightGrey,
+      ColorShades.DarkGrey,
+      ColorShades.White,
+      ColorShades.Black,
+      ColorShades.LightYellow,
+      ColorShades.DarkBlue
+    )
+  }
+
   it should "not compile for malformed coproduct enum" in {
     assertDoesNotCompile("""
       Validator.derivedEnumeration[InvalidColorEnum]
@@ -204,4 +215,23 @@ sealed trait InvalidColorEnum
 object InvalidColorEnum {
   case object Blue extends InvalidColorEnum
   case class Red(s: String) extends InvalidColorEnum
+}
+
+sealed trait ColorShades
+
+object ColorShades {
+
+  sealed trait BW extends ColorShades
+  sealed trait Colorful extends ColorShades
+
+  sealed trait Dark extends ColorShades
+  sealed trait Light extends ColorShades
+
+  case object LightGrey extends Light with BW
+  case object DarkGrey extends Dark with BW
+  case object White extends Light with BW
+  case object Black extends Dark with BW
+
+  case object LightYellow extends Light with Colorful
+  case object DarkBlue extends Dark with Colorful
 }
