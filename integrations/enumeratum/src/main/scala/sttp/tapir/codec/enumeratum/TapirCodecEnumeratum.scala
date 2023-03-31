@@ -8,24 +8,20 @@ import sttp.tapir._
 trait TapirCodecEnumeratum {
   // Regular enums
 
-  def validatorEnumEntry[E <: EnumEntry](implicit `enum`: Enum[E]): Validator.Enumeration[E] =
+  def validatorEnumEntry[E <: EnumEntry](implicit `enum`: Enum[E]): Validator[E] =
     Validator.enumeration(`enum`.values.toList, v => Some(v.entryName), Some(SName(fullName(`enum`))))
 
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit annotations: SchemaAnnotations[E], `enum`: Enum[E]): Schema[E] =
     annotations.enrich(Schema[E](SchemaType.SString()).validate(validatorEnumEntry))
 
-  def plainCodecEnumEntryUsing[E <: EnumEntry](
-      f: String => Option[E]
-  )(implicit `enum`: Enum[E]): Codec[String, E, CodecFormat.TextPlain] = {
-    val validator = validatorEnumEntry
+  def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit `enum`: Enum[E]): Codec[String, E, CodecFormat.TextPlain] =
     Codec.string
       .mapDecode { s =>
         f(s)
           .map(DecodeResult.Value(_))
-          .getOrElse(DecodeResult.InvalidValue(List(ValidationError(validator, s))))
+          .getOrElse(DecodeResult.Mismatch(s"One of: ${`enum`.values.map(_.entryName).mkString(", ")}", s))
       }(_.entryName)
       .validate(validatorEnumEntry)
-  }
 
   def plainCodecEnumEntryDecodeCaseInsensitive[E <: EnumEntry](implicit `enum`: Enum[E]): Codec.PlainCodec[E] = plainCodecEnumEntryUsing(
     `enum`.withNameInsensitiveOption
