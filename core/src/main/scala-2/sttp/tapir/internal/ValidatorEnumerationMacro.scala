@@ -21,7 +21,7 @@ private[tapir] object ValidatorEnumerationMacro {
         else if (child.isSealed)
           flatChildren(child)
         else
-          c.abort(c.enclosingPosition, "All children must be objects or enum cases, or sealed parent of such.")
+          c.abort(c.enclosingPosition, "All children must be objects or sealed parent of such.")
       }
       val subclasses = flatChildren(symbol).sortBy(_.name.encodedName.toString).distinct
       if (!subclasses.forall(_.isModuleClass)) {
