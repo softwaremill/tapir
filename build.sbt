@@ -110,7 +110,22 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+val commonJsSettings = commonSettings ++ browserGeckoTestSettings ++ Seq(
+  Compile / scalacOptions ++= {
+    if (isSnapshot.value) Seq.empty
+    else
+      Seq {
+        val mapSourcePrefix =
+          if (ScalaArtifacts.isScala3(scalaVersion.value))
+            "-scalajs-mapSourceURI"
+          else
+            "-P:scalajs:mapSourceURI"
+        val dir = project.base.toURI.toString.replaceFirst("[^/]+/?$", "")
+        val url = "https://raw.githubusercontent.com/softwaremill/tapir"
+        s"$mapSourcePrefix:$dir->$url/v${version.value}/"
+      }
+  }
+)
 
 val commonNativeSettings = commonSettings
 
