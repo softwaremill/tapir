@@ -169,9 +169,9 @@ package object streams {
         .fold(throw _, identity)
 
     override def webSocketPipe[REQ, RESP](
-      readStream: ReadStream[WebSocketFrame],
-      pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
+        readStream: ReadStream[WebSocketFrame],
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
     ): ReadStream[WebSocketFrame] = {
       val stream0 = fromReadStreamInternal(readStream)
       val stream1 = optionallyContatenateFrames(stream0, o.concatenateFragmentedFrames)
@@ -206,7 +206,10 @@ package object streams {
         runtime.unsafe.run(task)
       }
 
-    private def optionallyContatenateFrames(s: Stream[Throwable, WebSocketFrame], doConcatenate: Boolean): Stream[Throwable, WebSocketFrame] =
+    private def optionallyContatenateFrames(
+        s: Stream[Throwable, WebSocketFrame],
+        doConcatenate: Boolean
+    ): Stream[Throwable, WebSocketFrame] =
       if (doConcatenate) {
         s.mapAccum(None: Accumulator)(concatenateFrames).collect { case Some(f) => f }
       } else {
