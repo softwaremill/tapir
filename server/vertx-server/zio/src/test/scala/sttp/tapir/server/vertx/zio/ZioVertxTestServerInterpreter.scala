@@ -6,6 +6,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
+import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
@@ -13,10 +14,10 @@ import _root_.zio.{Runtime, Task}
 import sttp.tapir.server.vertx.VertxTestServerInterpreter
 
 class ZioVertxTestServerInterpreter(vertx: Vertx)
-    extends TestServerInterpreter[Task, ZioStreams, VertxZioServerOptions[Task], Router => Route] {
+    extends TestServerInterpreter[Task, ZioStreams with WebSockets, VertxZioServerOptions[Task], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Router => Route = { router =>
+  override def route(es: List[ServerEndpoint[ZioStreams with WebSockets, Task]], interceptors: Interceptors): Router => Route = { router =>
     val options: VertxZioServerOptions[Task] = interceptors(VertxZioServerOptions.customiseInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
     es.map(interpreter.route(_)(runtime)(router)).last

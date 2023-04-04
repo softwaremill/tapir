@@ -40,7 +40,7 @@ object PlayServerOptions {
           ci.decodeFailureHandler,
           ci.interceptors
         )
-    ).serverLog(defaultServerLog).rejectHandler(None)
+    ).serverLog(defaultServerLog)
 
   def defaultDeleteFile(file: TapirFile)(implicit ec: ExecutionContext): Future[Unit] = {
     Future(blocking(Defaults.deleteFile()(file)))

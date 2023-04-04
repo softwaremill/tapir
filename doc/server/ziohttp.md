@@ -24,7 +24,7 @@ Next, instead of the usual `import sttp.tapir._`, you should import (or extend t
 import sttp.tapir.ztapir._
 ```
 
-This brings into scope all of the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
+This brings into scope all the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
 
 ```eval_rst
 .. note::
@@ -57,6 +57,16 @@ val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   
 val countCharactersHttp: HttpApp[Any, Throwable] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
+```
+
+```eval_rst
+.. note::
+
+  A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
+  routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
+  overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
+  will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
+  diverges a bit comparing to other interpreters.
 ```
 
 ## Server logic

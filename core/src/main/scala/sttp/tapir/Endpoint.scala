@@ -303,11 +303,24 @@ trait EndpointInfoOps[-R] {
   def name(n: String): ThisType[R] = withInfo(info.name(n))
   def summary(s: String): ThisType[R] = withInfo(info.summary(s))
   def description(d: String): ThisType[R] = withInfo(info.description(d))
-  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
-  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
   def attribute[T](k: AttributeKey[T]): Option[T] = info.attribute(k)
   def attribute[T](k: AttributeKey[T], v: T): ThisType[R] = withInfo(info.attribute(k, v))
+
+  /** Append `ts` to the existing tags. */
+  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
+
+  /** Append `t` to the existing tags. */
+  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
+
+  /** Overwrite the existing tags with `ts`. */
+  def withTags(ts: List[String]): ThisType[R] = withInfo(info.withTags(ts))
+
+  /** Overwrite the existing tags with a single tag `t`. */
+  def withTag(t: String): ThisType[R] = withInfo(info.withTag(t))
+
+  /** Remove all tags from this endpoint. */
+  def withoutTags: ThisType[R] = withInfo(info.withoutTags)
 
   def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
@@ -578,9 +591,16 @@ case class EndpointInfo(
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
   def description(d: String): EndpointInfo = copy(description = Some(d))
-  def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
-  def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
   def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   def attribute[T](k: AttributeKey[T], v: T): EndpointInfo = copy(attributes = attributes.put(k, v))
+
+  /** Append to the existing tags * */
+  def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
+  def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
+
+  /** Overwrite the existing tags * */
+  def withTags(ts: List[String]): EndpointInfo = copy(tags = ts.toVector)
+  def withTag(t: String): EndpointInfo = copy(tags = Vector(t))
+  def withoutTags: EndpointInfo = copy(tags = Vector.empty)
 }

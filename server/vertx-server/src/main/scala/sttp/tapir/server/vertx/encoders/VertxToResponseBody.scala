@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.encoders
 
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.http.{HttpHeaders, HttpServerResponse}
+import io.vertx.core.http.{HttpHeaders, HttpServerResponse, ServerWebSocket}
 import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
@@ -52,7 +52,21 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
-  ): RoutingContext => Future[Void] = throw new UnsupportedOperationException()
+  ): RoutingContext => Future[Void] = { rc =>
+    rc.request.toWebSocket
+      .flatMap({ (websocket: ServerWebSocket) =>
+        Pipe(
+          readStreamCompatible.webSocketPipe[REQ, RESP](
+            wrapWebSocket(websocket),
+            pipe.asInstanceOf[readStreamCompatible.streams.Pipe[REQ, RESP]],
+            o.asInstanceOf[WebSocketBodyOutput[readStreamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]]
+          ),
+          websocket
+        )
+        websocket.accept()
+        Future.succeededFuture[Void]()
+      })
+  }
 
   private def handleMultipleBodyParts[CF <: CodecFormat, R](
       multipart: RawBodyType[R] with RawBodyType.MultipartBody,
