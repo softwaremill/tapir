@@ -155,6 +155,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   monixNewtype.projectRefs ++
   zioPrelude.projectRefs ++
   circeJson.projectRefs ++
+  files.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
@@ -415,6 +416,19 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
+lazy val files: ProjectMatrix = (projectMatrix in file("files"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-files",
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .settings(commonSettings)
   .settings(
@@ -446,7 +460,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings
   )
-  .dependsOn(core, circeJson, cats)
+  .dependsOn(core, files, circeJson, cats)
 
 val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
 val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
@@ -1022,7 +1036,7 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
     libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core)
+  .dependsOn(core, files)
 
 lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-bundle"))
   .settings(commonJvmSettings)
