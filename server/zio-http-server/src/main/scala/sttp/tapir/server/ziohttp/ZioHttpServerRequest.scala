@@ -11,14 +11,12 @@ import scala.collection.immutable.Seq
 
 case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   override def protocol: String = "HTTP/1.1" // missing field in request
-
-  private def remote: Option[InetSocketAddress] =
-    for {
-      host <- req.url.host
-      port <- req.url.port
-    } yield new InetSocketAddress(host, port)
-
-  override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, remote, None)
+  override lazy val connectionInfo: ConnectionInfo =
+    ConnectionInfo(
+      None,
+      req.remoteAddress.map(remote => new InetSocketAddress(remote, 0)),
+      None
+    )
   override def underlying: Any = req
   override lazy val pathSegments: List[String] = req.url.path.segments.flatMap {
     case Segment.Text(text) => List(text)
