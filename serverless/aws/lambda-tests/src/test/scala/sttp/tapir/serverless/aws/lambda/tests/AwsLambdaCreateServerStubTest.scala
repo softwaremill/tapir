@@ -11,7 +11,7 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{ByteArrayBody, ByteBufferBody, InputStreamBody, NoBody, Request, Response, StringBody, SttpBackend, _}
 import sttp.model.{Header, StatusCode, Uri}
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.serverless.aws.lambda._

@@ -6,7 +6,7 @@ import cats.syntax.all._
 import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
 import sttp.monad.MonadError
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.Route

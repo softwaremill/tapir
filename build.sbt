@@ -504,8 +504,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.9.0",
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      "org.typelevel" %%% "cats-core" % Versions.catsCore,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
@@ -538,6 +537,28 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
+  )
+  .dependsOn(core)
+
+lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-effect"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-cats-effect",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % Versions.catsCore,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -1138,7 +1159,7 @@ lazy val armeriaServerCats: ProjectMatrix =
       )
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
-    .dependsOn(armeriaServer % CompileAndTest, cats, serverTests % Test)
+    .dependsOn(armeriaServer % CompileAndTest, cats, catsEffect, serverTests % Test)
 
 lazy val armeriaServerZio: ProjectMatrix =
   (projectMatrix in file("server/armeria-server/zio"))
@@ -1185,7 +1206,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
       Test / skip := true
     )
   )
-  .dependsOn(serverCore, cats)
+  .dependsOn(serverCore, cats, catsEffect)
 
 lazy val http4sServer2_12 = http4sServer.jvm(scala2_12).dependsOn(serverTests.jvm(scala2_12) % Test)
 lazy val http4sServer2_13 = http4sServer.jvm(scala2_13).dependsOn(serverTests.jvm(scala2_13) % Test)
@@ -1267,7 +1288,7 @@ lazy val finatraServerCats: ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(name := "tapir-finatra-server-cats")
     .jvmPlatform(scalaVersions = scala2Versions)
-    .dependsOn(finatraServer % CompileAndTest, cats, serverTests % Test)
+    .dependsOn(finatraServer % CompileAndTest, cats, catsEffect, serverTests % Test)
 
 lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"))
   .settings(commonJvmSettings)
@@ -1296,7 +1317,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", cats)
+lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
@@ -1394,7 +1415,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2Versions)
-  .dependsOn(serverCore, cats, circeJson, tests % "test")
+  .dependsOn(serverCore, cats, catsEffect, circeJson, tests % "test")
 
 // integration tests for lambda interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
