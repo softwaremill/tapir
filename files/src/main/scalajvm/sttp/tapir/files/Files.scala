@@ -106,6 +106,8 @@ object Files {
       m: MonadError[F]
   ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
     m.flatten(m.blocking {
+      // Asking for range implies Transfer-Encoding instead of Content-Encoding, because the byte range has to be compressed individually
+      // Therefore we cannot take the preGzipped file in this case
       val useGzippedIfAvailable =
         filesInput.range.isEmpty && options.useGzippedIfAvailable && filesInput.acceptEncoding.exists(_.equals("gzip"))
       if (!options.fileFilter(filesInput.path))

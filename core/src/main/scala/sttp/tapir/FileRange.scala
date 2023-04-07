@@ -3,7 +3,14 @@ package sttp.tapir
 import sttp.model.ContentRangeUnits
 import sttp.model.headers.ContentRange
 
-case class FileRange(file: TapirFile, range: Option[RangeValue] = None)
+import java.io.InputStream
+import java.net.URL
+
+sealed trait StaticResource {
+  def range: Option[RangeValue]
+}
+
+case class FileRange(file: TapirFile, range: Option[RangeValue] = None) extends StaticResource
 
 case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
   def toContentRange: ContentRange =
@@ -23,3 +30,5 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
     case _                          => None
   }
 }
+
+case class ResourceRange(url: URL, range: Option[RangeValue] = None) extends StaticResource
