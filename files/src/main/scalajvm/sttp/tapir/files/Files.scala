@@ -41,32 +41,6 @@ object Files {
         }
     }
 
-  def head2[F[_]](
-      systemPath: Path,
-      options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = implicit monad =>
-    input => {
-      MonadError[F]
-        .blocking {
-          if (!options.fileFilter(input.path)) {
-            Left(StaticErrorOutput.NotFound)
-          } else {
-            resolveRealPath(systemPath.toRealPath(), input.path, options.defaultFile, options.useGzippedIfAvailable) match {
-              case Left(error) => Left(error)
-              case Right((resolved, _)) =>
-                val file = resolved.toFile
-                Right(
-                  HeadOutput.Found(
-                    Some(ContentRangeUnits.Bytes),
-                    Some(file.length()),
-                    Some(contentTypeFromName(file.getName))
-                  )
-                )
-            }
-          }
-        }
-    }
-
   def get[F[_]](
       systemPath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
@@ -74,31 +48,14 @@ object Files {
     MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, options)(filesInput))
   }
 
-  def get2[F[_]](
-      systemPath: Path,
-      options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
-    MonadError[F].blocking(systemPath).flatMap(path => files(path, options)(filesInput))
-  }
-
-  def getRes2[F[_]](
-      res: URL,
-      systemPath: Path,
-      options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
-    if (res.getProtocol == "jar") {
-      val fs = FileSystems.newFileSystem(new File(res.getPath).toPath)
-      fs.getPath(res.getPath)
+  def defaultEtag[F[_]]: MonadError[F] => Option[RangeValue] => URL => F[Option[ETag]] = monad => { range => url =>
+    monad.blocking {
+      val connection = url.openConnection()
+      val lastModified = connection.getLastModified
+      val length = connection.getContentLengthLong
+      Some(defaultETag(lastModified, range, length))
     }
-    MonadError[F].blocking(systemPath.toRealPath()).flatMap(path => files(path, options)(filesInput))
   }
-
-  def defaultEtag[F[_]]: MonadError[F] => File => F[Option[ETag]] = monad =>
-    file =>
-      monad.blocking {
-        if (file.isFile) Some(defaultETag(file.lastModified(), file.length()))
-        else None
-      }
 
   private def files[F[_]](realSystemPath: Path, options: FilesOptions[F])(
       filesInput: StaticInput
@@ -123,11 +80,12 @@ object Files {
             filesInput.range match {
               case Some(range) =>
                 val fileSize = realResolvedPath.toFile.length()
-                if (range.isValid(fileSize))
-                  rangeFileOutput(filesInput, realResolvedPath, options.calculateETag(m), RangeValue(range.start, range.end, fileSize))
+                if (range.isValid(fileSize)) {
+                  val rangeValue = RangeValue(range.start, range.end, fileSize)
+                  rangeFileOutput(filesInput, realResolvedPath, options.calculateETag(m)(Some(rangeValue)), rangeValue)
                     .map(Right(_))
-                else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-              case None => wholeFileOutput(filesInput, realResolvedPath, options.calculateETag(m), contentEncoding).map(Right(_))
+                } else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+              case None => wholeFileOutput(filesInput, realResolvedPath, options.calculateETag(m)(None), contentEncoding).map(Right(_))
             }
         }
       }
@@ -169,7 +127,12 @@ object Files {
     }
   }
 
-  private def rangeFileOutput[F[_]](filesInput: StaticInput, file: Path, calculateETag: File => F[Option[ETag]], range: RangeValue)(implicit
+  private def rangeFileOutput[F[_]](
+      filesInput: StaticInput,
+      file: Path,
+      calculateETag: URL => F[Option[ETag]],
+      range: RangeValue
+  )(implicit
       m: MonadError[F]
   ): F[StaticOutput[FileRange]] =
     fileOutput(
@@ -191,7 +154,7 @@ object Files {
   private def wholeFileOutput[F[_]](
       filesInput: StaticInput,
       file: Path,
-      calculateETag: File => F[Option[ETag]],
+      calculateETag: URL => F[Option[ETag]],
       contentEncoding: Option[String]
   )(implicit
       m: MonadError[F]
@@ -213,12 +176,12 @@ object Files {
   private def fileOutput[F[_]](
       filesInput: StaticInput,
       file: Path,
-      calculateETag: File => F[Option[ETag]],
+      calculateETag: URL => F[Option[ETag]],
       result: (Long, Long, Option[ETag]) => StaticOutput[FileRange]
   )(implicit
       m: MonadError[F]
   ): F[StaticOutput[FileRange]] = for {
-    etag <- calculateETag(file.toFile)
+    etag <- calculateETag(file.toUri.toURL)
     lastModified <- m.blocking(file.toFile.lastModified())
     result <-
       if (isModified(filesInput, etag, lastModified))
@@ -236,14 +199,14 @@ object Files {
   *   isn't found. This is useful for SPA apps, where the same main application file needs to be returned regardless of the path.
   */
 case class FilesOptions[F[_]](
-    calculateETag: MonadError[F] => File => F[Option[ETag]],
+    calculateETag: MonadError[F] => Option[RangeValue] => URL => F[Option[ETag]],
     fileFilter: List[String] => Boolean,
     useGzippedIfAvailable: Boolean = false,
     defaultFile: Option[List[String]]
 ) {
   def withUseGzippedIfAvailable: FilesOptions[F] = copy(useGzippedIfAvailable = true)
 
-  def calculateETag(f: File => F[Option[ETag]]): FilesOptions[F] = copy(calculateETag = _ => f)
+  def calculateETag(f: Option[RangeValue] => URL => F[Option[ETag]]): FilesOptions[F] = copy(calculateETag = _ => f)
 
   /** A file will be exposed only if this function returns `true`. */
   def fileFilter(f: List[String] => Boolean): FilesOptions[F] = copy(fileFilter = f)

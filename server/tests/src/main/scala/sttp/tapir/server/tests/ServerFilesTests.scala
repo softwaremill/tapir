@@ -476,17 +476,31 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           }
           .unsafeToFuture()
       },
-      Test("should serve a resource from a jar") {
+      Test("playground") {
         val res = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api")
+        val res2 = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/")
+
         println(res.getProtocol)
+        val conn = res.openConnection()
+        println(s">>>>>>>>>>>>>>>>> ${conn.getContentLengthLong}")
+        println(s">>>>>>>>>>>>>>>>> res2 ${res2}")
+        IO(1 shouldBe 1).unsafeToFuture()
+      },
+      Test("should serve a resource from a jar") {
+        val res = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/pom.properties")
+
+        println(res.getProtocol)
+        val conn = res.openConnection()
+        println(s">>>>>>>>>>>>>>>>> ${conn.getContentLengthLong}")
 //        val fs = FileSystems.newFileSystem(
 //          Paths.get("/home/kc/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.4/slf4j-api-2.0.4.jar")
 //        )
 //        println(Files.readAllBytes(fs.getPath(res.getPath)))
 //
 //        fs.close()
-        val resourceAsPath = Paths.get(classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api").getPath)
-
+        val resourceAsPath = Paths.get(classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/pom.properties").getPath)
+        val zippedFile = resourceAsPath.toFile
+        println(zippedFile.exists())
         serveRoute(pathGetServerEndpoint22[F](noPrefix)(resourceAsPath))
           .use { port =>
             get(port, List("pom.properties")).map(_.body should include("groupId=org.slf4j"))
