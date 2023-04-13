@@ -22,6 +22,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.ByteBufferBody      => ME.unit(RawValue(ByteBuffer.wrap(bytes)))
           case RawBodyType.InputStreamBody     => ME.unit(RawValue(new ByteArrayInputStream(bytes)))
           case RawBodyType.FileBody            => ME.error(new UnsupportedOperationException)
+          case RawBodyType.ResourceBody        => ME.error(new UnsupportedOperationException)
           case _: RawBodyType.MultipartBody    => ME.error(new UnsupportedOperationException)
         }
       case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")

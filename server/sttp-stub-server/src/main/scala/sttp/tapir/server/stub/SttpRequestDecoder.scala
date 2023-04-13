@@ -60,6 +60,7 @@ private[stub] object SttpRequestDecoder {
       case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(asByteArray)
       case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
       case RawBodyType.FileBody            => throw new UnsupportedOperationException
+      case RawBodyType.ResourceBody        => throw new UnsupportedOperationException
       case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
     }
   }

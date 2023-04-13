@@ -1,3 +1,4 @@
+
 package sttp.tapir.server.tests
 
 import cats.data.NonEmptyList
@@ -11,12 +12,13 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.files._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.files.FilesOptions
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests._
 
 import java.io.File
-import java.nio.file.{FileSystems, Files, Path, Paths, StandardOpenOption}
+import java.nio.file.{Files, StandardOpenOption}
 import java.util.Comparator
 import scala.concurrent.Future
 
@@ -36,13 +38,13 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     .response(asStringAlways)
     .send(backend)
 
-  private val classLoader = classOf[ServerFilesTests[F, OPTIONS, ROUTE]].getClassLoader
+  private val classLoader = classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader
 
   def tests(): List[Test] = {
     val baseTests = List(
       Test("should serve files from the given system path") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](noPrefix)(testDir))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath))
             .use { port =>
               get(port, "f1" :: Nil).map(_.body shouldBe "f1 content") >>
                 get(port, "f2" :: Nil).map(_.body shouldBe "f2 content") >>
@@ -54,7 +56,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should serve files from the given system path with a prefix") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("static" / "content")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("static" / "content")(testDir.getAbsolutePath))
             .use { port =>
               get(port, "static" :: "content" :: "f1" :: Nil).map(_.body shouldBe "f1 content") >>
                 get(port, "static" :: "content" :: "d1" :: "f3" :: Nil).map(_.body shouldBe "f3 content")
@@ -64,7 +66,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should serve index.html when a directory is requested") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](noPrefix)(testDir))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath))
             .use { port =>
               get(port, List("d1")).map(_.body shouldBe "index content")
             }
@@ -74,7 +76,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       Test("should serve files from the given system path with filter") {
         withTestFilesDirectory { testDir =>
           serveRoute(
-            filesGetServerEndpoint22[F](noPrefix)(testDir, FilesOptions.default.fileFilter(_.exists(_.contains("2"))))
+            filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath, FilesOptions.default.fileFilter(_.exists(_.contains("2"))))
           )
             .use { port =>
               get(port, "f1" :: Nil).map(_.code shouldBe StatusCode.NotFound) >>
@@ -85,10 +87,10 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .unsafeToFuture()
         }
       },
-      Test("should return acceptRanges for head request") {
+      Test("should return acceptRanges for file head request") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f1").toFile
-          serveRoute(filesHeadServerEndpoint22("test")(testDir))
+          serveRoute(filesHeadServerEndpoint("test")(testDir.getAbsolutePath))
             .use { port =>
               head(port, List("test", "f1"))
                 .map { r =>
@@ -100,10 +102,22 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("should return acceptRanges for resource head request") {
+          serveRoute(resourcesHeadServerEndpoint2(emptyInput)(classLoader, "test/r3.txt"))
+            .use { port =>
+              head(port, List(""))
+                .map { r =>
+                  r.code shouldBe StatusCode.Ok
+                  r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
+                  r.headers contains Header(HeaderNames.ContentLength, "10") shouldBe true
+                }
+            }
+            .unsafeToFuture()
+      },
       Test("should create head and get endpoints") {
         withTestFilesDirectory { testDir =>
           val file = testDir.toPath.resolve("f2").toFile
-          val headAndGetEndpoint = filesServerEndpoints22[F]("test")(testDir)
+          val headAndGetEndpoint = filesServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serverInterpreter
             .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
             .use { port =>
@@ -130,14 +144,14 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return 404 when files are not found") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port => get(port, List("test")).map(_.code shouldBe StatusCode.NotFound) }
             .unsafeToFuture()
         }
       },
       Test("should return 404 for HEAD request and not existing file ") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesHeadServerEndpoint22(noPrefix)(testDir))
+          serveRoute(filesHeadServerEndpoint(emptyInput)(testDir.getAbsolutePath))
             .use { port => head(port, List("test")).map(_.code shouldBe StatusCode.NotFound) }
             .unsafeToFuture()
         }
@@ -145,7 +159,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       Test("should return default file when file is not found") {
         withTestFilesDirectory { testDir =>
           serveRoute(
-            filesGetServerEndpoint22[F]("test")(testDir, FilesOptions.default.defaultFile(List("d1", "index.html")))
+            filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath, FilesOptions.default.defaultFile(List("d1", "index.html")))
           )
             .use { port =>
               get(port, List("test", "f10")).map(_.body shouldBe "index content") >>
@@ -156,21 +170,21 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return whole while file if range header not present") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port => get(port, List("test", "f2")).map(_.body shouldBe "f2 content") }
             .unsafeToFuture()
         }
       },
       Test("should return 200 status code for whole file") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port => get(port, List("test", "f2")).map(_.code shouldBe StatusCode.Ok) }
             .unsafeToFuture()
         }
       },
       Test("should return 416 if over range") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=0-11"))
@@ -184,7 +198,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return content range header with matching bytes") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=1-3"))
@@ -198,7 +212,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return 206 status code for partial content") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=1-3"))
@@ -212,7 +226,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return bytes 4-7 from file") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=4-7"))
@@ -226,7 +240,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return bytes 100000-200000 from file") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=100000-200000"))
@@ -243,7 +257,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return bytes from 100000 from file") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=100000-"))
@@ -260,7 +274,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return last 100000 bytes from file") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=-100000"))
@@ -277,7 +291,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should fail for incorrect range") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir))
+          serveRoute(filesGetServerEndpoint2[F]("test")(testDir.getAbsolutePath))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=-"))
@@ -291,7 +305,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("if an etag is present, should only return the file if it doesn't match the etag") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](emptyInput)(testDir))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath))
             .use { port =>
               def get(etag: Option[String]) = basicRequest
                 .get(uri"http://localhost:$port/f1")
@@ -315,7 +329,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return file metadata") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](emptyInput)(testDir))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath))
             .use { port =>
               get(port, List("img.gif")) map { r =>
                 r.contentLength shouldBe Some(11)
@@ -332,27 +346,25 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should not return a file outside of the system path") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](noPrefix)(testDir.toPath.resolve("/d1").toFile))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath + "/d1"))
             .use { port => get(port, List("..", "f1")).map(_.body should not be "f1 content") }
             .unsafeToFuture()
         }
       },
       Test("should not return a file outside of the system path, when the path is given as a single segment") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F](noPrefix)(testDir.toPath.resolve("/d1").toFile))
+          serveRoute(filesGetServerEndpoint2[F](emptyInput)(testDir.getAbsolutePath + "/d1"))
             .use { port => get(port, List("../f1")).map(_.body should not be "f1 content") }
             .unsafeToFuture()
         }
       },
       Test("should serve a single resource") {
-        val resourceAsFile = new File(classLoader.getResource("test/r1.txt").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourceGetServerEndpoint2[F](emptyInput)(classLoader, "test/r1.txt"))
           .use { port => get(port, Nil).map(_.body shouldBe "Resource 1") }
           .unsafeToFuture()
       },
       Test("should serve single gzipped resource") {
-        val resourceAsFile = new File(classLoader.getResource("test/r3.txt").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile, FilesOptions.default.withUseGzippedIfAvailable))
+        serveRoute(resourceGetServerEndpoint2[F](emptyInput)(classLoader, "test/r3.txt", FilesOptions.default.withUseGzippedIfAvailable))
           .use { port =>
             emptyRequest
               .acceptEncoding("gzip")
@@ -361,16 +373,26 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
               .send(backend)
               .map(r => {
                 r.code shouldBe StatusCode.Ok
-                r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
-                r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
                 r.body shouldBe "Gzipped resource"
+                r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+                r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
               })
           }
           .unsafeToFuture()
       },
+      Test("should return 404 for resources without extension") {
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
+          .use { port =>
+            emptyRequest
+              .get(uri"http://localhost:$port/r3")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.code shouldBe StatusCode.NotFound)
+          }
+          .unsafeToFuture()
+      },
       Test("should serve resource at path for preGzipped endpoint without correct header") {
-        val resourceAsFile = new File(classLoader.getResource("test/r3.txt").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile, FilesOptions.default.withUseGzippedIfAvailable))
+        serveRoute(resourceGetServerEndpoint2[F](emptyInput)(classLoader, "test/r3.txt", FilesOptions.default.withUseGzippedIfAvailable))
           .use { port =>
             emptyRequest
               .get(uri"http://localhost:$port")
@@ -381,20 +403,17 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           .unsafeToFuture()
       },
       Test("should not return a resource outside of the resource prefix directory") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("..", "test", "r5.txy")).map(_.body should not be "Resource 5") }
           .unsafeToFuture()
       },
       Test("should not return a resource outside of the resource prefix directory, when the path is given as a single segment") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("../test2/r5.txt")).map(_.body should not be "Resource 5") }
           .unsafeToFuture()
       },
       Test("should serve resources") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port =>
             get(port, "r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
               get(port, "r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
@@ -404,11 +423,10 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           .unsafeToFuture()
       },
       Test("should serve resources with filter") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-
         serveRoute(
-          filesGetServerEndpoint22[F](noPrefix)(
-            resourceAsFile,
+          resourcesGetServerEndpoint2[F](emptyInput)(
+            classLoader,
+            "test",
             FilesOptions.default.fileFilter(_.exists(_.contains("2")))
           )
         )
@@ -421,16 +439,13 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           .unsafeToFuture()
       },
       Test("should return 404 when a resource is not found") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port => get(port, List("r3")).map(_.code shouldBe StatusCode.NotFound) }
           .unsafeToFuture()
       },
       Test("should return default resource when resource is not found") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-
         serveRoute(
-          filesGetServerEndpoint22[F]("test")(resourceAsFile, FilesOptions.default.defaultFile(List("d1", "r3.txt")))
+          resourcesGetServerEndpoint2[F]("test")(classLoader, "test", FilesOptions.default.defaultFile(List("d1", "r3.txt")))
         )
           .use { port =>
             get(port, List("test", "r10.txt")).map(_.body shouldBe "Resource 3") >>
@@ -440,14 +455,13 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should serve a single file from the given system path") {
         withTestFilesDirectory { testDir =>
-          serveRoute(filesGetServerEndpoint22[F]("test")(testDir.toPath.resolve("f1").toFile))
+          serveRoute(fileGetServerEndpoint2[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
             .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
             .unsafeToFuture()
         }
       },
       Test("if an etag is present, should only return the resource if it doesn't match the etag") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port =>
             def get(etag: Option[String]) = basicRequest
               .get(uri"http://localhost:$port/r1.txt")
@@ -469,47 +483,21 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           .unsafeToFuture()
       },
       Test("should serve index.html when a resource directory is requested (from file)") {
-        val resourceAsFile = new File(classLoader.getResource("test").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "test"))
           .use { port =>
             get(port, List("d1")).map(_.body shouldBe "Index resource")
           }
           .unsafeToFuture()
       },
-      Test("playground") {
-        val res = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api")
-        val res2 = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/")
-
-        println(res.getProtocol)
-        val conn = res.openConnection()
-        println(s">>>>>>>>>>>>>>>>> ${conn.getContentLengthLong}")
-        println(s">>>>>>>>>>>>>>>>> res2 ${res2}")
-        IO(1 shouldBe 1).unsafeToFuture()
-      },
       Test("should serve a resource from a jar") {
-        val res = classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/pom.properties")
-
-        println(res.getProtocol)
-        val conn = res.openConnection()
-        println(s">>>>>>>>>>>>>>>>> ${conn.getContentLengthLong}")
-//        val fs = FileSystems.newFileSystem(
-//          Paths.get("/home/kc/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.4/slf4j-api-2.0.4.jar")
-//        )
-//        println(Files.readAllBytes(fs.getPath(res.getPath)))
-//
-//        fs.close()
-        val resourceAsPath = Paths.get(classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api/pom.properties").getPath)
-        val zippedFile = resourceAsPath.toFile
-        println(zippedFile.exists())
-        serveRoute(pathGetServerEndpoint22[F](noPrefix)(resourceAsPath))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "META-INF/maven/org.slf4j/slf4j-api"))
           .use { port =>
             get(port, List("pom.properties")).map(_.body should include("groupId=org.slf4j"))
           }
           .unsafeToFuture()
       },
       Test("should return 404 when a resource directory is requested from jar and index.html does not exist") {
-        val resourceAsFile = new File(classLoader.getResource("META-INF/maven/org.slf4j/slf4j-api").getPath)
-        serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+        serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classLoader, "META-INF/maven/org.slf4j/slf4j-api"))
           .use { port =>
             get(port, Nil).map(_.code shouldBe StatusCode.NotFound)
           }
@@ -517,9 +505,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       }
     )
     val resourceMetadataTest = Test("should return resource metadata") {
-      val resourceAsFile = new File(classOf[ServerFilesTests[F, OPTIONS, ROUTE]].getClassLoader.getResource("test").getPath)
-
-      serveRoute(filesGetServerEndpoint22[F](noPrefix)(resourceAsFile))
+      serveRoute(resourcesGetServerEndpoint2[F](emptyInput)(classOf[ServerStaticContentTests[F, OPTIONS, ROUTE]].getClassLoader, "test"))
         .use { port =>
           get(port, List("r1.txt")).map { r =>
             r.contentLength shouldBe Some(10)

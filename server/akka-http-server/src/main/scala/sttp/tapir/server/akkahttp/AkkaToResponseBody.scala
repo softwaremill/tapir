@@ -55,6 +55,7 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
       case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
+      case RawBodyType.ResourceBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r.url.openStream()))
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range

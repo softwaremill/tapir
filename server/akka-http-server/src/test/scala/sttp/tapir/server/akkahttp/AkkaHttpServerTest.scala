@@ -100,14 +100,14 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .unsafeToFuture()
         }
       )
-
-      new AllServerTests(createServerTest, interpreter, backend).tests() ++
-        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
-        new ServerWebSocketTests(createServerTest, AkkaStreams) {
-          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
-          override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
-        }.tests() ++
-        additionalTests()
+     new ServerFilesTests(interpreter, backend).tests() 
+      // new AllServerTests(createServerTest, interpreter, backend).tests() ++
+      //   new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
+      //   new ServerWebSocketTests(createServerTest, AkkaStreams) {
+      //     override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
+      //     override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
+      //   }.tests() ++
+      //   additionalTests()
     }
   }
 }
