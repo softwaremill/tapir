@@ -72,11 +72,8 @@ object Files {
       else {
         resolveRealPath(realSystemPath, filesInput.path, options.defaultFile, useGzippedIfAvailable) match {
           case Left(error) =>
-            println(s">>>>>>>>>>> err")
-
             (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
           case Right((realResolvedPath, contentEncoding)) =>
-            println(s">>>>>>>>>>> ${realResolvedPath}")
             filesInput.range match {
               case Some(range) =>
                 val fileSize = realResolvedPath.toFile.length()
