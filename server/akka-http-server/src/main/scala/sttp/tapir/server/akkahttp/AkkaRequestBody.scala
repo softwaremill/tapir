@@ -10,9 +10,11 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart}
+import sttp.tapir.{FileRange, RawBodyType, RawPart, ResourceRange}
 
+import java.net.{URL, URLConnection, URLStreamHandler}
 import java.io.ByteArrayInputStream
+
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(implicit
@@ -26,17 +28,27 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
 
   private def akkeRequestEntity(request: ServerRequest) = request.underlying.asInstanceOf[RequestContext].request.entity
 
+  private def byteArrayToUrl(byteArray: Array[Byte]): URL = 
+    new URL(null, "mem:temp", new URLStreamHandler {
+      override def openConnection(url: URL): URLConnection = new URLConnection(url) {
+        override def connect(): Unit = {}
+        override def getInputStream: ByteArrayInputStream = new ByteArrayInputStream(byteArray)
+      }
+  })
+
   private def toRawFromEntity[R](request: ServerRequest, body: HttpEntity, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     bodyType match {
       case RawBodyType.StringBody(_)  => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
       case RawBodyType.ByteArrayBody  => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
-      case RawBodyType.InputStreamBody | RawBodyType.ResourceBody =>
+      case RawBodyType.InputStreamBody =>
         implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(b => RawValue(new ByteArrayInputStream(b)))
       case RawBodyType.FileBody =>
         serverOptions
           .createFile(request)
           .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map(f => RawValue(f, Seq(f))))
+      case RawBodyType.ResourceBody =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(byteArrayToUrl).map(ResourceRange(_)).map(RawValue(_))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts
