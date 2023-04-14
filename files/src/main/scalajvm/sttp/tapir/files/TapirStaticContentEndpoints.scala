@@ -184,6 +184,15 @@ trait TapirStaticContentEndpoints {
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
     ServerEndpoint.public(filesGetEndpoint.prependIn(prefix), Files.get(systemPath, options))
 
+  /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
+    *
+    * {{{
+    * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
+    * }}}
+    */
+  def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
+
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
@@ -191,23 +200,6 @@ trait TapirStaticContentEndpoints {
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
     ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Files.head(systemPath, options))
-
-    /** Create a pair of endpoints (head, get) for exposing resources available from the given `classLoader`, using the given `prefix`.
-      * Typically, the prefix is a path, but it can also contain other inputs. For example:
-      *
-      * {{{
-      * resourcesServerEndpoints("static" / "files")(classOf[App].getClassLoader, "app")
-      * }}}
-      *
-      * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
-      */
-  def resourcesServerEndpoints[F[_]](
-      prefix: EndpointInput[Unit]
-  )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
-    List(
-      resourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options),
-      resourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options)
-    )
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
@@ -222,15 +214,6 @@ trait TapirStaticContentEndpoints {
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
     List(filesHeadServerEndpoint(prefix)(systemPath, options), filesGetServerEndpoint(prefix)(systemPath, options))
-
-  /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
-    *
-    * {{{
-    * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
-    * }}}
-    */
-  def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
@@ -276,4 +259,21 @@ trait TapirStaticContentEndpoints {
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
     e.mapIn(i => i.copy(path = Nil))(i => i.copy(path = Nil))
+
+  /** Create a pair of endpoints (head, get) for exposing resources available from the given `classLoader`, using the given `prefix`.
+    * Typically, the prefix is a path, but it can also contain other inputs. For example:
+    *
+    * {{{
+    * resourcesServerEndpoints("static" / "files")(classOf[App].getClassLoader, "app")
+    * }}}
+    *
+    * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
+    */
+  def resourcesServerEndpoints[F[_]](
+      prefix: EndpointInput[Unit]
+  )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
+    List(
+      resourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options),
+      resourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options)
+    )
 }
