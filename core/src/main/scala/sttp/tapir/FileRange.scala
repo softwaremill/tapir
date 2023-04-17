@@ -30,5 +30,7 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
     case _                          => None
   }
 }
-
-case class ResourceRange(url: URL, range: Option[RangeValue] = None) extends StaticResource
+trait InputStreamSupplier {
+  def openStream(): InputStream
+}
+case class ResourceRange(inputStreamSupplier: InputStreamSupplier, range: Option[RangeValue] = None) extends StaticResource

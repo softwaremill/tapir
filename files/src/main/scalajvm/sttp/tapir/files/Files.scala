@@ -4,11 +4,13 @@ import sttp.model.ContentRangeUnits
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.{FileRange, RangeValue}
+import sttp.tapir.FileRange
+import sttp.tapir.RangeValue
 
-import java.io.File
 import java.net.URL
-import java.nio.file.{FileSystems, LinkOption, Path, Paths}
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import scala.annotation.tailrec
 

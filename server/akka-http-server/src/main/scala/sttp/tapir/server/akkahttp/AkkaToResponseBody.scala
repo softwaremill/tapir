@@ -9,8 +9,7 @@ import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
-
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, ResourceRange, WebSocketBodyOutput}
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -55,7 +54,9 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
       case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
-      case RawBodyType.ResourceBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r.url.openStream()))
+      case RawBodyType.ResourceBody    => 
+        val resource = r.asInstanceOf[ResourceRange]
+        streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => resource.inputStreamSupplier.openStream()))
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         tapirFile.range

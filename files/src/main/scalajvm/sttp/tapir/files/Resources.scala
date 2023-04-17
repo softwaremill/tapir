@@ -8,11 +8,13 @@ import sttp.monad.syntax._
 import java.io.File
 import java.time.Instant
 import java.io.FileNotFoundException
+import sttp.tapir.InputStreamSupplier
 import sttp.tapir.ResourceRange
 import sttp.tapir.RangeValue
 import java.net.URL
 
 import sttp.model.ContentRangeUnits
+import java.io.InputStream
 
 object Resources {
 
@@ -154,7 +156,7 @@ object Resources {
       (lastModified, fileLength, etag) =>
         StaticOutput
           .Found(
-            ResourceRange(url, Some(range)),
+            ResourceRange(UrlStreamSupplier(url), Some(range)),
             Some(Instant.ofEpochMilli(lastModified)),
             Some(fileLength),
             Some(contentType),
@@ -177,7 +179,7 @@ object Resources {
       (lastModified, fileLength, etag) =>
         StaticOutput
           .Found(
-            ResourceRange(url, None),
+            ResourceRange(UrlStreamSupplier(url), None),
             Some(Instant.ofEpochMilli(lastModified)),
             Some(fileLength),
             Some(contentType),
@@ -186,4 +188,7 @@ object Resources {
           )
     )
 
+  case class UrlStreamSupplier(url: URL) extends InputStreamSupplier {
+    override def openStream(): InputStream = url.openStream()
+  }
 }
