@@ -144,6 +144,13 @@ class CodecTestDateTime extends AnyFlatSpec with Matchers with Checkers {
     codec.decode(encoded) == Value(d) && Date.from(Instant.parse(encoded)) == d
   }
 
+  it should "correctly encode and decode zone-id" in {
+    val codec = implicitly[Codec[String, ZoneId, TextPlain]]
+    val z = ZoneId.of("Europe/Berlin")
+    val encoded = codec.encode(z)
+    codec.decode(encoded) == Value(z) && encoded == "Europe/Berlin"
+  }
+
   def checkEncodeDecodeToString[T: Arbitrary](implicit c: Codec[String, T, TextPlain], ct: ClassTag[T]): Assertion =
     withClue(s"Test for ${ct.runtimeClass.getName}") {
       check((a: T) => {
