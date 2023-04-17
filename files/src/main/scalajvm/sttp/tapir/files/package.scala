@@ -10,7 +10,6 @@ package object files extends TapirStaticContentEndpoints {
     ETag(s"${lastModified.toHexString}-${length.toHexString}$rangeSuffix")
   }
 
-  val noPrefix: EndpointInput[Unit] = emptyInput
   private[tapir] def isModified(staticInput: StaticInput, etag: Option[ETag], lastModified: Long): Boolean = {
     etag match {
       case None => isModifiedByModifiedSince(staticInput, lastModified)
@@ -30,11 +29,5 @@ package object files extends TapirStaticContentEndpoints {
     val ext = name.substring(name.lastIndexOf(".") + 1)
     MimeByExtensionDB(ext).getOrElse(MediaType.ApplicationOctetStream)
   }
-
-  private[tapir] def contentEncodingFromName(name: String): Option[String] = {
-    val ext = name.substring(name.lastIndexOf(".") + 1)
-    MimeByExtensionDB(ext).collect { case MediaType.ApplicationGzip =>
-      MediaType.ApplicationGzip.subType
-    }
-  }
 }
+
