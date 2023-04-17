@@ -157,46 +157,48 @@ trait TapirStaticContentEndpoints {
 
   def resourceRangeBody: EndpointIO.Body[ResourceRange, ResourceRange] = rawBinaryBody(RawBodyType.ResourceBody)
 
-  lazy val filesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(
+  lazy val staticFilesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(
     fileRangeBody
   )
 
-  lazy val resourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
+  lazy val staticResourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
     staticGetEndpoint(resourceRangeBody)
 
-  def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
-    filesGetEndpoint.prependIn(prefix)
+  def staticFilesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
+    staticFilesGetEndpoint.prependIn(prefix)
 
-  def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
-    resourcesGetEndpoint.prependIn(prefix)
+  def staticResourcesGetEndpoint(
+      prefix: EndpointInput[Unit]
+  ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
+    staticResourcesGetEndpoint.prependIn(prefix)
 
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
     * path, but it can also contain other inputs. For example:
     *
     * {{{
-    * filesGetServerEndpoint("static" / "files")("/home/app/static")
+    * staticFilesGetServerEndpoint("static" / "files")("/home/app/static")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
-  def filesGetServerEndpoint[F[_]](
+  def staticFilesGetServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(filesGetEndpoint.prependIn(prefix), Files.get(systemPath, options))
+    ServerEndpoint.public(staticFilesGetEndpoint.prependIn(prefix), Files.get(systemPath, options))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
     * {{{
-    * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
+    * staticFileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
-  def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def staticFileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(removePath(staticFilesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
-  def filesHeadServerEndpoint[F[_]](
+  def staticFilesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
     ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Files.head(systemPath, options))
@@ -205,54 +207,54 @@ trait TapirStaticContentEndpoints {
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
     *
     * {{{
-    * filesServerEndpoints("static" / "files")("/home/app/static")
+    * staticFilesServerEndpoints("static" / "files")("/home/app/static")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
-  def filesServerEndpoints[F[_]](
+  def staticFilesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
-    List(filesHeadServerEndpoint(prefix)(systemPath, options), filesGetServerEndpoint(prefix)(systemPath, options))
+    List(staticFilesHeadServerEndpoint(prefix)(systemPath, options), staticFilesGetServerEndpoint(prefix)(systemPath, options))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
     *
     * {{{
-    * resourcesGetServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
+    * staticResourcesGetServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
-  def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+  def staticResourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
       options: FilesOptions[F] = FilesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any, F](
-      resourcesGetEndpoint(prefix),
+      staticResourcesGetEndpoint(prefix),
       (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
     *
     * {{{
-    * resourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
+    * staticResourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
     * }}}
     */
-  def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+  def staticResourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
-      removePath(resourcesGetEndpoint(prefix)),
+      removePath(staticResourcesGetEndpoint(prefix)),
       (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
     )
 
   /** A server endpoint, which can be used to verify the existence of a resource under given path.
     */
-  def resourcesHeadServerEndpoint[F[_]](
+  def staticResourcesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
     ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Resources.head(classLoader, resourcePath, options))
@@ -269,11 +271,11 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
-  def resourcesServerEndpoints[F[_]](
+  def staticResourcesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
   )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
     List(
-      resourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options),
-      resourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options)
+      staticResourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options),
+      staticResourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options)
     )
 }
