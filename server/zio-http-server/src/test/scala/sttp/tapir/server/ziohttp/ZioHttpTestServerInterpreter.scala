@@ -29,14 +29,14 @@ class ZioHttpTestServerInterpreter(
     val effect: ZIO[Scope, Throwable, Int] =
       (for {
         driver <- ZIO.service[Driver]
-        port <- driver.start(trace)
+        result <- driver.start(trace)
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _).withDefaultErrorResponse, ZEnvironment())
-      } yield port)
+      } yield result.port)
         .provideSome[Scope](
           zio.test.driver,
           eventLoopGroup,
           channelFactory,
-          ServerConfig.live(ServerConfig.default.port(0).objectAggregator(1000000))
+          ZLayer.succeed(Server.Config.default.port(0))
         )
 
     Resource.scoped[IO, Any, Int](effect)

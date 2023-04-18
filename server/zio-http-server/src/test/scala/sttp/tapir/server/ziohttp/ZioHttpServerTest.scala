@@ -48,7 +48,7 @@ class ZioHttpServerTest extends TestSuite {
         })
 
         val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
-        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.fromConfig)
+        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.live)
       }.build)
       .map { nettyDeps =>
         val eventLoopGroup = ZLayer.succeed(nettyDeps.get[EventLoopGroup])

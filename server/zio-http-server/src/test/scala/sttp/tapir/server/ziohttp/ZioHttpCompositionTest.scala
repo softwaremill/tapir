@@ -8,7 +8,6 @@ import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
 import zio.http.{endpoint => _, _}
-import zio.http.model._
 import zio.{Task, ZIO}
 
 class ZioHttpCompositionTest(
