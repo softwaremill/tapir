@@ -14,6 +14,7 @@ import sttp.tapir.files.FilesOptions
 import sttp.tapir.server.ServerEndpoint
 
 import java.time.Instant
+import sttp.tapir.files.StaticInput
 
 /** Static content endpoints, including files and resources. */
 trait TapirStaticContentEndpoints {
@@ -107,19 +108,30 @@ trait TapirStaticContentEndpoints {
               .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
+              .and(acceptRangesHeader)
               .and(contentEncodingHeader)
-              .map[StaticOutput.Found[T]]((t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String])) =>
-                StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6)
-              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.contentEncoding)),
+              .map[StaticOutput.Found[T]](
+                (t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                  StaticOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6, t._7)
+              )(fo => (fo.body, fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentEncoding)),
             classOf[StaticOutput.Found[T]]
           )
         )
       )
   }
 
-  private lazy val staticHeadEndpoint: PublicEndpoint[HeadInput, StaticErrorOutput, HeadOutput, Any] = {
+  private lazy val staticHeadEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, HeadOutput, Any] = {
     endpoint.head
-      .in(pathsWithoutDots.map[HeadInput](t => HeadInput(t))(_.path))
+      .in(
+        pathsWithoutDots
+          .and(ifNoneMatchHeader)
+          .and(ifModifiedSinceHeader)
+          .and(rangeHeader)
+          .and(acceptEncodingHeader)
+          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range], Option[String])) =>
+            StaticInput(t._1, t._2, t._3, t._4, t._5)
+          )(fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range, fi.acceptEncoding))
+      )
       .errorOut(
         oneOf[StaticErrorOutput](
           oneOfVariantClassMatcher(
@@ -136,14 +148,33 @@ trait TapirStaticContentEndpoints {
       )
       .out(
         oneOf[HeadOutput](
+          oneOfVariantClassMatcher(StatusCode.NotModified, emptyOutputAs(HeadOutput.NotModified), HeadOutput.NotModified.getClass),
           oneOfVariantClassMatcher(
-            StatusCode.Ok,
-            acceptRangesHeader
+            StatusCode.PartialContent,
+            lastModifiedHeader
               .and(contentLengthHeader)
               .and(contentTypeHeader)
-              .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType])) => HeadOutput.Found(t._1, t._2, t._3))(fo =>
-                (fo.acceptRanges, fo.contentLength, fo.contentType)
-              ),
+              .and(etagHeader)
+              .and(acceptRangesHeader)
+              .and(header[Option[String]](HeaderNames.ContentRange))
+              .map[HeadOutput.FoundPartial](
+                (t: (Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                  HeadOutput.FoundPartial(t._1, t._2, t._3, t._4, t._5, t._6)
+              )(fo => (fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
+            classOf[HeadOutput.FoundPartial]
+          ),
+          oneOfVariantClassMatcher(
+            StatusCode.Ok,
+            lastModifiedHeader
+              .and(contentLengthHeader)
+              .and(contentTypeHeader)
+              .and(etagHeader)
+              .and(acceptRangesHeader)
+              .and(contentEncodingHeader)
+              .map[HeadOutput.Found](
+                (t: (Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
+                  HeadOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6)
+              )(fo => (fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentEncoding)),
             classOf[HeadOutput.Found]
           )
         )
@@ -233,7 +264,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any, F](
       staticResourcesGetEndpoint(prefix),
-      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
+      (m: MonadError[F]) => Resources.get(classLoader, resourcePrefix, options)(m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
@@ -249,7 +280,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(staticResourcesGetEndpoint(prefix)),
-      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
+      (m: MonadError[F]) => Resources.get(classLoader, resourcePath, options)(m)
     )
 
   /** A server endpoint, which can be used to verify the existence of a resource under given path.

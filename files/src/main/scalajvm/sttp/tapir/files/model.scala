@@ -11,11 +11,10 @@ case class StaticInput(
     ifModifiedSince: Option[Instant],
     range: Option[Range],
     acceptEncoding: Option[String]
-)
+) {
 
-case class HeadInput(
-    path: List[String]
-)
+  def acceptGzip: Boolean = acceptEncoding.contains("gzip")
+}
 
 trait StaticErrorOutput
 object StaticErrorOutput {
@@ -26,11 +25,33 @@ object StaticErrorOutput {
 
 trait HeadOutput
 object HeadOutput {
-  case class Found(
-      acceptRanges: Option[String],
+  case object NotModified extends HeadOutput
+  case class FoundPartial(
+      lastModified: Option[Instant],
       contentLength: Option[Long],
-      contentType: Option[MediaType]
+      contentType: Option[MediaType],
+      etag: Option[ETag],
+      acceptRanges: Option[String],
+      contentRange: Option[String]
   ) extends HeadOutput
+  case class Found(
+      lastModified: Option[Instant],
+      contentLength: Option[Long],
+      contentType: Option[MediaType],
+      etag: Option[ETag],
+      acceptRanges: Option[String],
+      contentEncoding: Option[String]
+  ) extends HeadOutput
+
+  def fromStaticOutput(output: StaticOutput[_]): HeadOutput =
+    (output: @unchecked) match {
+      case StaticOutput.FoundPartial(_, lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding) =>
+        HeadOutput.FoundPartial(lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding)
+      case StaticOutput.Found(_, lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding) =>
+        HeadOutput.Found(lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding)
+      case StaticOutput.NotModified =>
+        HeadOutput.NotModified
+    }
 }
 
 trait StaticOutput[+T]
@@ -51,6 +72,7 @@ object StaticOutput {
       contentLength: Option[Long],
       contentType: Option[MediaType],
       etag: Option[ETag],
+      acceptRanges: Option[String],
       contentEncoding: Option[String]
   ) extends StaticOutput[T]
 }

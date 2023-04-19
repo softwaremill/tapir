@@ -1,53 +1,44 @@
 package sttp.tapir.files
 
 import sttp.model.ContentRangeUnits
+import sttp.model.MediaType
 import sttp.model.headers.ETag
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.FileRange
 import sttp.tapir.RangeValue
+import sttp.tapir.files.HeadOutput
+import sttp.tapir.files.StaticInput
 
+import java.io.File
 import java.net.URL
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.{Files => JFiles}
 import java.time.Instant
 import scala.annotation.tailrec
 
 object Files {
 
-  // inspired by org.http4s.server.staticcontent.FileService
   def head[F[_]](
       systemPath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => HeadInput => F[Either[StaticErrorOutput, HeadOutput]] = implicit monad =>
-    input => {
-      MonadError[F]
-        .blocking {
-          if (!options.fileFilter(input.path)) {
-            Left(StaticErrorOutput.NotFound)
-          } else {
-            resolveRealPath(Paths.get(systemPath).toRealPath(), input.path, options.defaultFile, options.useGzippedIfAvailable) match {
-              case Left(error) => Left(error)
-              case Right((resolved, _)) =>
-                val file = resolved.toFile
-                Right(
-                  HeadOutput.Found(
-                    Some(ContentRangeUnits.Bytes),
-                    Some(file.length()),
-                    Some(contentTypeFromName(file.getName))
-                  )
-                )
-            }
-          }
-        }
-    }
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, HeadOutput]] = { implicit monad => filesInput =>
+    get(systemPath, options)(monad)(filesInput)
+      .map(_.map(staticOutput => HeadOutput.fromStaticOutput(staticOutput)))
+  }
 
   def get[F[_]](
       systemPath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
   ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
-    MonadError[F].blocking(Paths.get(systemPath).toRealPath()).flatMap(path => files(path, options)(filesInput))
+    MonadError[F]
+      .blocking(Paths.get(systemPath).toRealPath())
+      .flatMap(path => {
+        val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
+        files(filesInput, options, resolveUrlFn, fileRangeFromUrl _)
+      })
   }
 
   def defaultEtag[F[_]]: MonadError[F] => Option[RangeValue] => URL => F[Option[ETag]] = monad => { range => url =>
@@ -59,136 +50,157 @@ object Files {
     }
   }
 
-  private def files[F[_]](realSystemPath: Path, options: FilesOptions[F])(
-      filesInput: StaticInput
-  )(implicit
-      m: MonadError[F]
-  ): F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
-    m.flatten(m.blocking {
-      // Asking for range implies Transfer-Encoding instead of Content-Encoding, because the byte range has to be compressed individually
-      // Therefore we cannot take the preGzipped file in this case
-      val useGzippedIfAvailable =
-        filesInput.range.isEmpty && options.useGzippedIfAvailable && filesInput.acceptEncoding.exists(_.equals("gzip"))
-      if (!options.fileFilter(filesInput.path))
-        (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-      else {
-        resolveRealPath(realSystemPath, filesInput.path, options.defaultFile, useGzippedIfAvailable) match {
-          case Left(error) =>
-            (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-          case Right((realResolvedPath, contentEncoding)) =>
-            filesInput.range match {
-              case Some(range) =>
-                val fileSize = realResolvedPath.toFile.length()
-                if (range.isValid(fileSize)) {
-                  val rangeValue = RangeValue(range.start, range.end, fileSize)
-                  rangeFileOutput(filesInput, realResolvedPath, options.calculateETag(m)(Some(rangeValue)), rangeValue)
-                    .map(Right(_))
-                } else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
-              case None => wholeFileOutput(filesInput, realResolvedPath, options.calculateETag(m)(None), contentEncoding).map(Right(_))
-            }
-        }
-      }
-    })
-  }
-  @tailrec
-  private def resolveRealPath(
-      realSystemPath: Path,
-      path: List[String],
-      default: Option[List[String]],
-      useGzippedIfAvailable: Boolean
-  ): Either[StaticErrorOutput, (Path, Option[String])] = {
-    val resolved = path.foldLeft(realSystemPath)(_.resolve(_))
-    val resolvedGzipped = resolved.resolveSibling(realSystemPath.getFileName.toString + ".gz")
+  private def fileRangeFromUrl(
+      url: URL,
+      range: Option[RangeValue]
+  ): FileRange = FileRange(
+    new File(url.toURI),
+    range
+  )
 
-    if (useGzippedIfAvailable && java.nio.file.Files.exists(resolvedGzipped, LinkOption.NOFOLLOW_LINKS)) {
-      val realRequestedPath = resolvedGzipped.toRealPath(LinkOption.NOFOLLOW_LINKS)
-      if (!realRequestedPath.startsWith(realSystemPath.resolveSibling(realSystemPath.getFileName.toString + ".gz")))
-        Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, (Path, Option[String])]
-      else
-        Right((realRequestedPath, Some("gzip")))
-    } else {
-      if (!java.nio.file.Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
-        default match {
-          case Some(defaultPath) => resolveRealPath(realSystemPath, defaultPath, None, useGzippedIfAvailable)
-          case None              => Left(StaticErrorOutput.NotFound)
-        }
+  /** TODO a solid explanation what it does
+    *
+    * @param path
+    * @param default
+    * @return
+    */
+  private def resolveSystemPathUrl[F[_]](input: StaticInput, options: FilesOptions[F], systemPath: Path): ResolveUrlFn = {
+
+    @tailrec
+    def resolveRec(path: List[String], default: Option[List[String]]): Either[StaticErrorOutput, (URL, MediaType, Option[String])] = {
+      val resolved = path.foldLeft(systemPath)(_.resolve(_))
+      val resolvedGzipped = resolveGzipSibling(resolved)
+      if (useGzippedIfAvailable(input, options) && JFiles.exists(resolvedGzipped, LinkOption.NOFOLLOW_LINKS)) {
+        val realRequestedPath = resolvedGzipped.toRealPath(LinkOption.NOFOLLOW_LINKS)
+        if (!realRequestedPath.startsWith(resolveGzipSibling(systemPath)))
+          LeftUrlNotFound
+        else
+          Right((realRequestedPath.toUri.toURL, MediaType.ApplicationGzip, Some("gzip")))
       } else {
-        val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
-
-        if (!realRequestedPath.startsWith(realSystemPath))
-          Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, (Path, Option[String])]
-        else if (realRequestedPath.toFile.isDirectory) {
-          resolveRealPath(realSystemPath, path :+ "index.html", default, useGzippedIfAvailable)
+        if (!JFiles.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
+          default match {
+            case Some(defaultPath) => resolveRec(defaultPath, None)
+            case None              => LeftUrlNotFound
+          }
         } else {
-          Right((realRequestedPath, None))
+          val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
+
+          if (!realRequestedPath.startsWith(systemPath))
+            LeftUrlNotFound
+          else if (realRequestedPath.toFile.isDirectory) {
+            resolveRec(path :+ "index.html", default)
+          } else {
+            Right((realRequestedPath.toUri.toURL, contentTypeFromName(realRequestedPath.getFileName.toString), None))
+          }
         }
       }
     }
+
+    if (!options.fileFilter(input.path))
+      (_, _) => LeftUrlNotFound
+    else
+      resolveRec _
   }
 
-  private def rangeFileOutput[F[_]](
-      filesInput: StaticInput,
-      file: Path,
-      calculateETag: URL => F[Option[ETag]],
-      range: RangeValue
+  private[files] def files[F[_], R](
+      input: StaticInput,
+      options: FilesOptions[F],
+      resolveUrlFn: ResolveUrlFn,
+      urlToResultFn: (URL, Option[RangeValue]) => R
   )(implicit
       m: MonadError[F]
-  ): F[StaticOutput[FileRange]] =
+  ): F[Either[StaticErrorOutput, StaticOutput[R]]] = {
+    m.flatten(m.blocking {
+      resolveUrlFn(input.path, options.defaultFile) match {
+        case Left(error) =>
+          (Left(error): Either[StaticErrorOutput, StaticOutput[R]]).unit
+        case Right((url, contentType, contentEncoding)) =>
+          input.range match {
+            case Some(range) =>
+              val fileSize = url.openConnection().getContentLengthLong()
+              if (range.isValid(fileSize)) {
+                val rangeValue = RangeValue(range.start, range.end, fileSize)
+                rangeFileOutput(input, url, options.calculateETag(m)(Some(rangeValue)), rangeValue, contentType, urlToResultFn)
+                  .map(Right(_))
+              } else (Left(StaticErrorOutput.RangeNotSatisfiable): Either[StaticErrorOutput, StaticOutput[R]]).unit
+            case None =>
+              wholeFileOutput(input, url, options.calculateETag(m)(None), contentType, contentEncoding, urlToResultFn).map(Right(_))
+          }
+      }
+    })
+  }
+
+  private def resolveGzipSibling(path: Path): Path =
+    path.resolveSibling(path.getFileName.toString + ".gz")
+
+  private def rangeFileOutput[F[_], R](
+      filesInput: StaticInput,
+      url: URL,
+      calculateETag: URL => F[Option[ETag]],
+      range: RangeValue,
+      contentType: MediaType,
+      urlToResult: (URL, Option[RangeValue]) => R
+  )(implicit
+      m: MonadError[F]
+  ): F[StaticOutput[R]] =
     fileOutput(
       filesInput,
-      file,
+      url,
       calculateETag,
       (lastModified, _, etag) =>
         StaticOutput.FoundPartial(
-          FileRange(file.toFile, Some(range)),
+          urlToResult(url, Some(range)),
           Some(Instant.ofEpochMilli(lastModified)),
           Some(range.contentLength),
-          Some(contentTypeFromName(file.toFile.getName)),
+          Some(contentType),
           etag,
           Some(ContentRangeUnits.Bytes),
           Some(range.toContentRange.toString())
         )
     )
 
-  private def wholeFileOutput[F[_]](
+  private def wholeFileOutput[F[_], R](
       filesInput: StaticInput,
-      file: Path,
+      url: URL,
       calculateETag: URL => F[Option[ETag]],
-      contentEncoding: Option[String]
+      contentType: MediaType,
+      contentEncoding: Option[String],
+      urlToResult: (URL, Option[RangeValue]) => R
   )(implicit
       m: MonadError[F]
-  ): F[StaticOutput[FileRange]] = fileOutput(
+  ): F[StaticOutput[R]] = fileOutput(
     filesInput,
-    file,
+    url,
     calculateETag,
     (lastModified, fileLength, etag) =>
       StaticOutput.Found(
-        FileRange(file.toFile),
+        urlToResult(url, None),
         Some(Instant.ofEpochMilli(lastModified)),
         Some(fileLength),
-        Some(contentTypeFromName(file.toFile.getName)),
+        Some(contentType),
         etag,
+        Some(ContentRangeUnits.Bytes),
         contentEncoding
       )
   )
 
-  private def fileOutput[F[_]](
+  private def fileOutput[F[_], R](
       filesInput: StaticInput,
-      file: Path,
+      url: URL,
       calculateETag: URL => F[Option[ETag]],
-      result: (Long, Long, Option[ETag]) => StaticOutput[FileRange]
+      result: (Long, Long, Option[ETag]) => StaticOutput[R]
   )(implicit
       m: MonadError[F]
-  ): F[StaticOutput[FileRange]] = for {
-    etag <- calculateETag(file.toUri.toURL)
-    lastModified <- m.blocking(file.toFile.lastModified())
-    result <-
-      if (isModified(filesInput, etag, lastModified))
-        m.blocking(file.toFile.length())
-          .map(fileLength => result(lastModified, fileLength, etag))
-      else StaticOutput.NotModified.unit
-  } yield result
-
+  ): F[StaticOutput[R]] =
+    for {
+      etagOpt <- calculateETag(url)
+      urlConnection <- m.blocking(url.openConnection())
+      lastModified <- m.blocking(urlConnection.getLastModified())
+      resourceResult <-
+        if (isModified(filesInput, etagOpt, lastModified))
+          m.blocking(urlConnection.getContentLengthLong).map(fileLength => result(lastModified, fileLength, etagOpt))
+        else StaticOutput.NotModified.unit
+    } yield resourceResult
 }
 
 /** @param fileFilter

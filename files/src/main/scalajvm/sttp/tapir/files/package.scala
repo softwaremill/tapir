@@ -3,6 +3,7 @@ package sttp.tapir
 import sttp.model.MediaType
 import sttp.model.headers.ETag
 import sttp.tapir.internal.MimeByExtensionDB
+import java.net.URL
 
 package object files extends TapirStaticContentEndpoints {
   def defaultETag(lastModified: Long, range: Option[RangeValue], length: Long): ETag = {
@@ -29,5 +30,16 @@ package object files extends TapirStaticContentEndpoints {
     val ext = name.substring(name.lastIndexOf(".") + 1)
     MimeByExtensionDB(ext).getOrElse(MediaType.ApplicationOctetStream)
   }
-}
 
+  // Asking for range implies Transfer-Encoding instead of Content-Encoding, because the byte range has to be compressed individually
+  // Therefore we cannot take the preGzipped file in this case
+  private[tapir] def useGzippedIfAvailable[F[_]](
+      input: StaticInput,
+      options: FilesOptions[F]
+  ): Boolean =
+    input.range.isEmpty && options.useGzippedIfAvailable && input.acceptGzip
+  
+    private[tapir] def LeftUrlNotFound = Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, (URL, MediaType, Option[String])]
+
+  private[tapir] type ResolveUrlFn = (List[String], Option[List[String]]) => Either[StaticErrorOutput, (URL, MediaType, Option[String])]
+}
