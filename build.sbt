@@ -28,7 +28,13 @@ lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpre
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+concurrentRestrictions in Global ++= Seq(
+  Tags.limit(Tags.Test, 1),
+  // By default dependencies of test can be run in parallel, it includeds Scala Native/Scala.js linkers
+  // Limit them to lower memory usage, especially when targetting LLVM
+  Tags.limit(NativeTags.Link, 1),
+  Tags.limit(ScalaJSTags.Link, 1)
+)
 
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
