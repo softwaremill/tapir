@@ -18,9 +18,9 @@ object Resources {
       classLoader: ClassLoader,
       resourcePrefix: String,
       options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, HeadOutput]] = { implicit monad => filesInput =>
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[Unit]]] = { implicit monad => filesInput =>
     get(classLoader, resourcePrefix, options)(monad)(filesInput)
-      .map(_.map(staticOutput => HeadOutput.fromStaticOutput(staticOutput)))
+      .map(_.map(_.withoutBody))
   }
 
   def get[F[_]](

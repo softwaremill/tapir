@@ -18,7 +18,7 @@ import sttp.tapir.files.StaticInput
 
 /** Static content endpoints, including files and resources. */
 trait TapirStaticContentEndpoints {
-  // we can't use oneOfVariant and mapTo since they are macros, defined in the same compilation unit
+  // we can't use oneOfVariant and mapTo, since mapTo doesn't work with body fields of type T
 
   private val pathsWithoutDots: EndpointInput[List[String]] =
     paths.mapDecode(ps =>
@@ -50,10 +50,11 @@ trait TapirStaticContentEndpoints {
   private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
-  private def staticGetEndpoint[T](
+  private def staticEndpoint[T](
+      method: Endpoint[Unit, Unit, Unit, Unit, Any],
       body: EndpointOutput[T]
   ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[T], Any] = {
-    endpoint.get
+    method
       .in(
         pathsWithoutDots
           .and(ifNoneMatchHeader)
@@ -120,66 +121,8 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  private lazy val staticHeadEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, HeadOutput, Any] = {
-    endpoint.head
-      .in(
-        pathsWithoutDots
-          .and(ifNoneMatchHeader)
-          .and(ifModifiedSinceHeader)
-          .and(rangeHeader)
-          .and(acceptEncodingHeader)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range], Option[String])) =>
-            StaticInput(t._1, t._2, t._3, t._4, t._5)
-          )(fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range, fi.acceptEncoding))
-      )
-      .errorOut(
-        oneOf[StaticErrorOutput](
-          oneOfVariantClassMatcher(
-            StatusCode.BadRequest,
-            emptyOutputAs(StaticErrorOutput.BadRequest),
-            StaticErrorOutput.BadRequest.getClass
-          ),
-          oneOfVariantClassMatcher(
-            StatusCode.NotFound,
-            emptyOutputAs(StaticErrorOutput.NotFound),
-            StaticErrorOutput.NotFound.getClass
-          )
-        )
-      )
-      .out(
-        oneOf[HeadOutput](
-          oneOfVariantClassMatcher(StatusCode.NotModified, emptyOutputAs(HeadOutput.NotModified), HeadOutput.NotModified.getClass),
-          oneOfVariantClassMatcher(
-            StatusCode.PartialContent,
-            lastModifiedHeader
-              .and(contentLengthHeader)
-              .and(contentTypeHeader)
-              .and(etagHeader)
-              .and(acceptRangesHeader)
-              .and(header[Option[String]](HeaderNames.ContentRange))
-              .map[HeadOutput.FoundPartial](
-                (t: (Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
-                  HeadOutput.FoundPartial(t._1, t._2, t._3, t._4, t._5, t._6)
-              )(fo => (fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentRange)),
-            classOf[HeadOutput.FoundPartial]
-          ),
-          oneOfVariantClassMatcher(
-            StatusCode.Ok,
-            lastModifiedHeader
-              .and(contentLengthHeader)
-              .and(contentTypeHeader)
-              .and(etagHeader)
-              .and(acceptRangesHeader)
-              .and(contentEncodingHeader)
-              .map[HeadOutput.Found](
-                (t: (Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
-                  HeadOutput.Found(t._1, t._2, t._3, t._4, t._5, t._6)
-              )(fo => (fo.lastModified, fo.contentLength, fo.contentType, fo.etag, fo.acceptRanges, fo.contentEncoding)),
-            classOf[HeadOutput.Found]
-          )
-        )
-      )
-  }
+  private lazy val staticHeadEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[Unit], Any] =
+    staticEndpoint(endpoint.head, emptyOutput)
 
   implicit lazy val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
 
@@ -188,12 +131,13 @@ trait TapirStaticContentEndpoints {
 
   def resourceRangeBody: EndpointIO.Body[InputStreamRange, InputStreamRange] = rawBinaryBody(RawBodyType.InputStreamRangeBody)
 
-  lazy val staticFilesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(
+  lazy val staticFilesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticEndpoint(
+    endpoint.get,
     fileRangeBody
   )
 
   lazy val staticResourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any] =
-    staticGetEndpoint(resourceRangeBody)
+    staticEndpoint(endpoint.get, resourceRangeBody)
 
   def staticFilesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     staticFilesGetEndpoint.prependIn(prefix)

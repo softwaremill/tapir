@@ -26,38 +26,17 @@ object StaticErrorOutput {
   case object RangeNotSatisfiable extends StaticErrorOutput
 }
 
-trait HeadOutput
-object HeadOutput {
-  case object NotModified extends HeadOutput
-  case class FoundPartial(
-      lastModified: Option[Instant],
-      contentLength: Option[Long],
-      contentType: Option[MediaType],
-      etag: Option[ETag],
-      acceptRanges: Option[String],
-      contentRange: Option[String]
-  ) extends HeadOutput
-  case class Found(
-      lastModified: Option[Instant],
-      contentLength: Option[Long],
-      contentType: Option[MediaType],
-      etag: Option[ETag],
-      acceptRanges: Option[String],
-      contentEncoding: Option[String]
-  ) extends HeadOutput
-
-  def fromStaticOutput(output: StaticOutput[_]): HeadOutput =
-    (output: @unchecked) match {
-      case StaticOutput.FoundPartial(_, lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding) =>
-        HeadOutput.FoundPartial(lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding)
-      case StaticOutput.Found(_, lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding) =>
-        HeadOutput.Found(lastModified, contentLength, contentType, etag, acceptRanges, contentEncoding)
-      case StaticOutput.NotModified =>
-        HeadOutput.NotModified
+sealed trait StaticOutput[+T] {
+  def withoutBody: StaticOutput[Unit] =
+    this match {
+      case StaticOutput.NotModified => StaticOutput.NotModified
+      case o: StaticOutput.FoundPartial[T] => 
+        o.copy(body = ())
+      case o: StaticOutput.Found[T] =>
+        o.copy(body = ())
     }
 }
 
-trait StaticOutput[+T]
 object StaticOutput {
   case object NotModified extends StaticOutput[Nothing]
   case class FoundPartial[T](
