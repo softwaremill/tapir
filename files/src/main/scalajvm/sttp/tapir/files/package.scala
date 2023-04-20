@@ -38,8 +38,8 @@ package object files extends TapirStaticContentEndpoints {
       options: FilesOptions[F]
   ): Boolean =
     input.range.isEmpty && options.useGzippedIfAvailable && input.acceptGzip
-  
-    private[tapir] def LeftUrlNotFound = Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, (URL, MediaType, Option[String])]
+
+  private[tapir] def LeftUrlNotFound = Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, (URL, MediaType, Option[String])]
 
   private[tapir] type ResolveUrlFn = (List[String], Option[List[String]]) => Either[StaticErrorOutput, (URL, MediaType, Option[String])]
 }

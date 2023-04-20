@@ -58,8 +58,8 @@ object Resources {
                        else None)
         .orElse(Option(classLoader.getResource(name)).map((_, contentTypeFromName(name), None)))
         .orElse(default match {
-          case None              => None
-          case Some(defaultPath) => 
+          case None => None
+          case Some(defaultPath) =>
             resolveRec(path = defaultPath, default = None)
         })
         // making sure that the resulting path contains the original requested path
