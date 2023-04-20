@@ -51,21 +51,21 @@ object Resources {
 
     val nameComponents = resourcePrefix ++ input.path
 
-    def resolveRec(path: List[String], default: Option[List[String]]): Option[(URL, MediaType, Option[String])] = {
+    def resolveRec(path: List[String], default: Option[List[String]]): Option[ResolvedUrl] = {
       val name = (resourcePrefix ++ path).mkString("/")
       val resultOpt = (if (useGzippedIfAvailable(input, options))
-                         Option(classLoader.getResource(name + ".gz")).map((_, MediaType.ApplicationGzip, Some("gzip")))
+                         Option(classLoader.getResource(name + ".gz")).map(ResolvedUrl(_, MediaType.ApplicationGzip, Some("gzip")))
                        else None)
-        .orElse(Option(classLoader.getResource(name)).map((_, contentTypeFromName(name), None)))
+        .orElse(Option(classLoader.getResource(name)).map(ResolvedUrl(_, contentTypeFromName(name), None)))
         .orElse(default match {
           case None => None
           case Some(defaultPath) =>
             resolveRec(path = defaultPath, default = None)
         })
         // making sure that the resulting path contains the original requested path
-        .filter(_._1.toURI.toString.contains(resourcePrefix.mkString("/")))
+        .filter(_.url.toURI.toString.contains(resourcePrefix.mkString("/")))
 
-      if (resultOpt.exists(r => isDirectory(classLoader, name, r._1)))
+      if (resultOpt.exists(r => isDirectory(classLoader, name, r.url)))
         resolveRec(path :+ "index.html", default)
       else resultOpt
     }

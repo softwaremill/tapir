@@ -67,7 +67,7 @@ object Files {
   private def resolveSystemPathUrl[F[_]](input: StaticInput, options: FilesOptions[F], systemPath: Path): ResolveUrlFn = {
 
     @tailrec
-    def resolveRec(path: List[String], default: Option[List[String]]): Either[StaticErrorOutput, (URL, MediaType, Option[String])] = {
+    def resolveRec(path: List[String], default: Option[List[String]]): Either[StaticErrorOutput, ResolvedUrl] = {
       val resolved = path.foldLeft(systemPath)(_.resolve(_))
       val resolvedGzipped = resolveGzipSibling(resolved)
       if (useGzippedIfAvailable(input, options) && JFiles.exists(resolvedGzipped, LinkOption.NOFOLLOW_LINKS)) {
@@ -75,7 +75,7 @@ object Files {
         if (!realRequestedPath.startsWith(resolveGzipSibling(systemPath)))
           LeftUrlNotFound
         else
-          Right((realRequestedPath.toUri.toURL, MediaType.ApplicationGzip, Some("gzip")))
+          Right(ResolvedUrl(realRequestedPath.toUri.toURL, MediaType.ApplicationGzip, Some("gzip")))
       } else {
         if (!JFiles.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
           default match {
@@ -90,7 +90,7 @@ object Files {
           else if (realRequestedPath.toFile.isDirectory) {
             resolveRec(path :+ "index.html", default)
           } else {
-            Right((realRequestedPath.toUri.toURL, contentTypeFromName(realRequestedPath.getFileName.toString), None))
+            Right(ResolvedUrl(realRequestedPath.toUri.toURL, contentTypeFromName(realRequestedPath.getFileName.toString), None))
           }
         }
       }
@@ -114,7 +114,7 @@ object Files {
       resolveUrlFn(input.path, options.defaultFile) match {
         case Left(error) =>
           (Left(error): Either[StaticErrorOutput, StaticOutput[R]]).unit
-        case Right((url, contentType, contentEncoding)) =>
+        case Right(ResolvedUrl(url, contentType, contentEncoding)) =>
           input.range match {
             case Some(range) =>
               val fileSize = url.openConnection().getContentLengthLong()

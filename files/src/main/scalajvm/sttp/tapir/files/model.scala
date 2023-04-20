@@ -3,7 +3,10 @@ package sttp.tapir.files
 import sttp.model.MediaType
 import sttp.model.headers.{ETag, Range}
 
+import java.net.URL
 import java.time.Instant
+
+private[tapir] case class ResolvedUrl(url: URL, mediaType: MediaType, contentEncoding: Option[String])
 
 case class StaticInput(
     path: List[String],
