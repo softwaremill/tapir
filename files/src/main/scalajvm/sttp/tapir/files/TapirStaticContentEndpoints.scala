@@ -61,9 +61,7 @@ trait TapirStaticContentEndpoints {
           .and(ifModifiedSinceHeader)
           .and(rangeHeader)
           .and(acceptEncodingHeader)
-          .map[StaticInput]((t: (List[String], Option[List[ETag]], Option[Instant], Option[Range], Option[String])) =>
-            StaticInput(t._1, t._2, t._3, t._4, t._5)
-          )(fi => (fi.path, fi.ifNoneMatch, fi.ifModifiedSince, fi.range, fi.acceptEncoding))
+          .mapTo[StaticInput]
       )
       .errorOut(
         oneOf[StaticErrorOutput](
