@@ -181,18 +181,18 @@ trait TapirStaticContentEndpoints {
       )
   }
 
-  implicit lazy val schemaForResourceRange: Schema[ResourceRange] = Schema(SchemaType.SBinary())
+  implicit lazy val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
 
-  implicit lazy val codecForResourceRange: Codec[ResourceRange, ResourceRange, OctetStream] =
-    Codec.id[ResourceRange, OctetStream](OctetStream(), schemaForResourceRange)
+  implicit lazy val codecForInputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
+    Codec.id[InputStreamRange, OctetStream](OctetStream(), schemaForInputStreamRange)
 
-  def resourceRangeBody: EndpointIO.Body[ResourceRange, ResourceRange] = rawBinaryBody(RawBodyType.ResourceBody)
+  def resourceRangeBody: EndpointIO.Body[InputStreamRange, InputStreamRange] = rawBinaryBody(RawBodyType.InputStreamRangeBody)
 
   lazy val staticFilesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(
     fileRangeBody
   )
 
-  lazy val staticResourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
+  lazy val staticResourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any] =
     staticGetEndpoint(resourceRangeBody)
 
   def staticFilesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
@@ -200,7 +200,7 @@ trait TapirStaticContentEndpoints {
 
   def staticResourcesGetEndpoint(
       prefix: EndpointInput[Unit]
-  ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any] =
+  ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any] =
     staticResourcesGetEndpoint.prependIn(prefix)
 
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
@@ -262,7 +262,7 @@ trait TapirStaticContentEndpoints {
       resourcePrefix: String,
       options: FilesOptions[F] = FilesOptions.default[F]
   ): ServerEndpoint[Any, F] =
-    ServerEndpoint.public[StaticInput, StaticErrorOutput, StaticOutput[ResourceRange], Any, F](
+    ServerEndpoint.public[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any, F](
       staticResourcesGetEndpoint(prefix),
       (m: MonadError[F]) => Resources.get(classLoader, resourcePrefix, options)(m)
     )

@@ -2,6 +2,7 @@ package sttp.tapir.server.stub
 
 import sttp.client3.{ByteArrayBody, ByteBufferBody, FileBody, InputStreamBody, MultipartBody, NoBody, Request, StreamBody, StringBody}
 import sttp.monad.MonadError
+import sttp.tapir.InputStreamRange
 import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -17,13 +18,13 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {
-          case RawBodyType.StringBody(charset) => ME.unit(RawValue(new String(bytes, charset)))
-          case RawBodyType.ByteArrayBody       => ME.unit(RawValue(bytes))
-          case RawBodyType.ByteBufferBody      => ME.unit(RawValue(ByteBuffer.wrap(bytes)))
-          case RawBodyType.InputStreamBody     => ME.unit(RawValue(new ByteArrayInputStream(bytes)))
-          case RawBodyType.FileBody            => ME.error(new UnsupportedOperationException)
-          case RawBodyType.ResourceBody        => ME.error(new UnsupportedOperationException)
-          case _: RawBodyType.MultipartBody    => ME.error(new UnsupportedOperationException)
+          case RawBodyType.StringBody(charset)  => ME.unit(RawValue(new String(bytes, charset)))
+          case RawBodyType.ByteArrayBody        => ME.unit(RawValue(bytes))
+          case RawBodyType.ByteBufferBody       => ME.unit(RawValue(ByteBuffer.wrap(bytes)))
+          case RawBodyType.InputStreamBody      => ME.unit(RawValue(new ByteArrayInputStream(bytes)))
+          case RawBodyType.FileBody             => ME.error(new UnsupportedOperationException)
+          case RawBodyType.InputStreamRangeBody => ME.unit(RawValue(InputStreamRange(() => new ByteArrayInputStream(bytes))))
+          case _: RawBodyType.MultipartBody     => ME.error(new UnsupportedOperationException)
         }
       case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
     }

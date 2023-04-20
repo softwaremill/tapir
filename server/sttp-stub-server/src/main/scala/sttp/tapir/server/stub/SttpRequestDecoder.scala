@@ -4,6 +4,7 @@ import sttp.client3.testing._
 import sttp.client3.{Request, StreamBody}
 import sttp.model._
 import sttp.tapir.internal.RichOneOfBody
+import sttp.tapir.InputStreamRange
 import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, DecodeInputsContext, RawValue}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, RawBodyType}
 
@@ -55,13 +56,13 @@ private[stub] object SttpRequestDecoder {
   private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): RAW = {
     val asByteArray = request.forceBodyAsByteArray
     body.bodyType match {
-      case RawBodyType.StringBody(charset) => new String(asByteArray, charset)
-      case RawBodyType.ByteArrayBody       => asByteArray
-      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(asByteArray)
-      case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
-      case RawBodyType.FileBody            => throw new UnsupportedOperationException
-      case RawBodyType.ResourceBody        => throw new UnsupportedOperationException
-      case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
+      case RawBodyType.StringBody(charset)  => new String(asByteArray, charset)
+      case RawBodyType.ByteArrayBody        => asByteArray
+      case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(asByteArray)
+      case RawBodyType.InputStreamBody      => new ByteArrayInputStream(asByteArray)
+      case RawBodyType.FileBody             => throw new UnsupportedOperationException
+      case RawBodyType.InputStreamRangeBody => new InputStreamRange(() => new ByteArrayInputStream(asByteArray))
+      case _: RawBodyType.MultipartBody     => throw new UnsupportedOperationException
     }
   }
 }

@@ -5,12 +5,10 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 
 import java.io.File
-import sttp.tapir.InputStreamSupplier
-import sttp.tapir.ResourceRange
+import sttp.tapir.InputStreamRange
 import sttp.tapir.RangeValue
 import java.net.URL
 
-import java.io.InputStream
 import sttp.tapir.files.StaticInput
 import Files._
 
@@ -29,16 +27,16 @@ object Resources {
       classLoader: ClassLoader,
       resourcePrefix: String,
       options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[ResourceRange]]] = { implicit monad => filesInput =>
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[InputStreamRange]]] = { implicit monad => filesInput =>
     val resolveUrlFn: ResolveUrlFn = resolveResourceUrl(classLoader, resourcePrefix.split("/").toList, filesInput, options)
-    files(filesInput, options, resolveUrlFn, resourceRangeFromUrl _)
+    files(filesInput, options, resolveUrlFn, resourceRangeFromUrl)
   }
 
   private def resourceRangeFromUrl(
       url: URL,
       range: Option[RangeValue]
-  ): ResourceRange = ResourceRange(
-    UrlStreamSupplier(url),
+  ): InputStreamRange = InputStreamRange(
+    () => url.openStream(),
     range
   )
 
@@ -82,7 +80,4 @@ object Resources {
     else classLoader.getResource(name + "/") != null
   }
 
-  case class UrlStreamSupplier(url: URL) extends InputStreamSupplier {
-    override def openStream(): InputStream = url.openStream()
-  }
 }

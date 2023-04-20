@@ -8,10 +8,9 @@ import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
-import sttp.tapir.InputStreamSupplier
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart, ResourceRange}
+import sttp.tapir.{FileRange, RawBodyType, RawPart, InputStreamRange}
 
 import java.io.{ByteArrayInputStream, InputStream}
 
@@ -39,14 +38,10 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
         serverOptions
           .createFile(request)
           .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map(f => RawValue(f, Seq(f))))
-      case RawBodyType.ResourceBody =>
+      case RawBodyType.InputStreamRangeBody =>
         implicitly[FromEntityUnmarshaller[Array[Byte]]]
           .apply(body)
-          .map(b =>
-            RawValue(ResourceRange(new InputStreamSupplier {
-              override def openStream(): InputStream = new ByteArrayInputStream(b)
-            }))
-          )
+          .map(b => RawValue(InputStreamRange(() => new ByteArrayInputStream(b))))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts
