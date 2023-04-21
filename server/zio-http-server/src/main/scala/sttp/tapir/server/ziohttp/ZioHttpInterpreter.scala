@@ -1,6 +1,5 @@
 package sttp.tapir.server.ziohttp
 
-import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.{HeaderNames, Method, Header => SttpHeader}
 import sttp.monad.MonadError
@@ -49,10 +48,11 @@ trait ZioHttpInterpreter[R] {
                     ZioHttpHeader(HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
                   case _ => baseHeaders
                 }
+                val statusCode = resp.code.code
 
                 ZIO.succeed(
                   Response(
-                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                    status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
                     headers = ZioHttpHeaders(allHeaders),
                     body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
                   )

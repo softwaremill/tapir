@@ -201,6 +201,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
   implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
   implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
   implicit val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
   implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
@@ -535,6 +536,22 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
 
   def json[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
     anyString(CodecFormat.Json())(_rawDecode)(_encode)
+  }
+
+  private[tapir] def jsonQuery[T](baseCodec: JsonCodec[T]): Codec[List[String], T, CodecFormat.Json] = {
+    // we can't implicitly lift the `baseCodec` (String <-> T) to `List[String] <-> T`, as we don't know if `T` is optional
+    // (that info is lost due to the indirect codec derivation). In that case, we'd use the implicit `listHeadOption`
+    // instead of `listHead`. Hence, handling this case by hand.
+    id[List[String], CodecFormat.Json](CodecFormat.Json(), Schema.binary)
+      .mapDecode({
+        // #2786: if the query parameter is optional, the base json codec will already properly handle the optionality
+        // in json codecs (typically used for bodies), an empty input string means that the optional value is absent
+        case Nil if baseCodec.schema.isOptional => baseCodec.decode("")
+        case Nil                                => DecodeResult.Missing
+        case List(e)                            => baseCodec.decode(e)
+        case l                                  => DecodeResult.Multiple(l)
+      })(e => List(baseCodec.encode(e)))
+      .schema(baseCodec.schema)
   }
 
   def xml[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {

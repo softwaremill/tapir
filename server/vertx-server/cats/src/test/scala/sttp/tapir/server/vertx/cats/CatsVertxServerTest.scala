@@ -1,6 +1,7 @@
 package sttp.tapir.server.vertx.cats
 
 import cats.effect.{IO, Resource}
+import fs2.Stream
 import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
@@ -25,7 +26,11 @@ class CatsVertxServerTest extends TestSuite {
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests()
+        new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests() ++
+        new ServerWebSocketTests(createServerTest, Fs2Streams.apply[IO]) {
+          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+          override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty
+        }.tests()
     }
   }
 }

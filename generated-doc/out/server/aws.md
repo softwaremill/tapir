@@ -31,7 +31,7 @@ These are corresponding classes for each of the supported runtime:
 To start using any of the above add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.2.9"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.2.12"
 ```
 
 ## Deployment
@@ -42,9 +42,9 @@ Tapir leverages ways of doing it provided by AWS, you can choose from: AWS SAM t
 You can start by adding one of the following dependencies to your project, and then follow examples:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.2.9"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.2.9"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.2.9"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.2.12"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.2.12"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.2.12"
 ```
 
 ### Examples
@@ -93,5 +93,5 @@ To destroy all the created resources run `terraform destroy`.
 4. Before deploying, if you want to test your application locally, you will need Docker
    and [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
    , then execute `cdk synth`, and `sam local start-api -t cdk.out/TapirCdkStack.template.json --warm-containers EAGER`
-5. To deploy it to AWS simply run `cdk deply`
+5. To deploy it to AWS simply run `cdk deploy`
 6. When you want to rollback changes made on AWS, run `cdk destroy`

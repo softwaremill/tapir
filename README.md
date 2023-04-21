@@ -129,7 +129,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.9"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.12"
 ```
 
 Then, import:
@@ -218,4 +218,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2022 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2023 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

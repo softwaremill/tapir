@@ -28,7 +28,13 @@ lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpre
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+concurrentRestrictions in Global ++= Seq(
+  Tags.limit(Tags.Test, 1),
+  // By default dependencies of test can be run in parallel, it includeds Scala Native/Scala.js linkers
+  // Limit them to lower memory usage, especially when targetting LLVM
+  Tags.limit(NativeTags.Link, 1),
+  Tags.limit(ScalaJSTags.Link, 1)
+)
 
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
@@ -110,7 +116,22 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+val commonJsSettings = commonSettings ++ browserGeckoTestSettings ++ Seq(
+  Compile / scalacOptions ++= {
+    if (isSnapshot.value) Seq.empty
+    else
+      Seq {
+        val mapSourcePrefix =
+          if (ScalaArtifacts.isScala3(scalaVersion.value))
+            "-scalajs-mapSourceURI"
+          else
+            "-P:scalajs:mapSourceURI"
+        val dir = project.base.toURI.toString.replaceFirst("[^/]+/?$", "")
+        val url = "https://raw.githubusercontent.com/softwaremill/tapir"
+        s"$mapSourcePrefix:$dir->$url/v${version.value}/"
+      }
+  }
+)
 
 val commonNativeSettings = commonSettings
 
@@ -125,7 +146,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.5",
+  "ch.qos.logback" % "logback-classic" % "1.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -357,7 +378,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.2.7")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.0")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.2",
@@ -1360,7 +1381,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.4")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.5")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)

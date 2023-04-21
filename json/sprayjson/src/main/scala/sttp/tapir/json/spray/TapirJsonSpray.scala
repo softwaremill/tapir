@@ -18,7 +18,7 @@ trait TapirJsonSpray {
   )
 
   def jsonQuery[T: JsonFormat: Schema](name: String): EndpointInput.Query[T] =
-    queryAnyFormat[T, CodecFormat.Json](name, implicitly)
+    queryAnyFormat[T, CodecFormat.Json](name, Codec.jsonQuery(jsonFormatCodec))
 
   implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>

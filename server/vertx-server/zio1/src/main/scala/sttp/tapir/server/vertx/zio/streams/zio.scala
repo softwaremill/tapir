@@ -6,8 +6,13 @@ import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.vertx.streams.ReadStreamState._
-import sttp.tapir.server.vertx.streams.{Queue, _}
+import sttp.tapir.server.vertx.streams._
+import sttp.tapir.server.vertx.streams.websocket._
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
+import sttp.ws.WebSocketFrame
+import zio.clock.Clock
 
 import scala.collection.immutable.{Queue => SQueue}
 import scala.language.postfixOps
@@ -25,15 +30,22 @@ package object streams {
   def zioReadStreamCompatible[F[_]](opts: VertxZioServerOptions[F])(implicit
       runtime: Runtime[Any]
   ): ReadStreamCompatible[ZioStreams] = new ReadStreamCompatible[ZioStreams] {
+
     override val streams: ZioStreams = ZioStreams
 
     override def asReadStream(stream: Stream[Throwable, Byte]): ReadStream[Buffer] =
+      mapToReadStream[Chunk[Byte], Buffer](
+        stream.mapChunks(chunk => Chunk.single(chunk)),
+        chunk => Buffer.buffer(chunk.toArray)
+      )
+
+    private def mapToReadStream[I, O](stream: Stream[Throwable, I], fn: I => O): ReadStream[O] =
       runtime
         .unsafeRunSync(for {
           promise <- Promise.make[Nothing, Unit]
-          state <- Ref.make(StreamState.empty(promise))
-          _ <- stream.foreachChunk { chunk =>
-            val buffer = Buffer.buffer(chunk.toArray)
+          state <- Ref.make(StreamState.empty[UIO, O](promise))
+          _ <- stream.foreach { chunk =>
+            val buffer = fn(chunk)
             state.get.flatMap {
               case StreamState(None, handler, _, _) =>
                 ZIO.effect(handler.handle(buffer))
@@ -59,26 +71,26 @@ package object streams {
                   .catchAll(cause2 => ZIO.effect(state.errorHandler.handle(cause2)).either)
               }
           } forkDaemon
-        } yield new ReadStream[Buffer] { self =>
-          override def handler(handler: Handler[Buffer]): ReadStream[Buffer] =
+        } yield new ReadStream[O] { self =>
+          override def handler(handler: Handler[O]): ReadStream[O] =
             runtime
               .unsafeRunSync(state.update(_.copy(handler = handler)))
               .toEither
               .fold(throw _, _ => self)
 
-          override def exceptionHandler(handler: Handler[Throwable]): ReadStream[Buffer] =
+          override def exceptionHandler(handler: Handler[Throwable]): ReadStream[O] =
             runtime
               .unsafeRunSync(state.update(_.copy(errorHandler = handler)))
               .toEither
               .fold(throw _, _ => self)
 
-          override def endHandler(handler: Handler[Void]): ReadStream[Buffer] =
+          override def endHandler(handler: Handler[Void]): ReadStream[O] =
             runtime
               .unsafeRunSync(state.update(_.copy(endHandler = handler)))
               .toEither
               .fold(throw _, _ => self)
 
-          override def pause(): ReadStream[Buffer] =
+          override def pause(): ReadStream[O] =
             runtime
               .unsafeRunSync(for {
                 promise <- Promise.make[Nothing, Unit]
@@ -92,7 +104,7 @@ package object streams {
               .toEither
               .fold(throw _, identity)
 
-          override def resume(): ReadStream[Buffer] =
+          override def resume(): ReadStream[O] =
             runtime
               .unsafeRunSync(for {
                 oldState <- state.getAndUpdate(_.copy(paused = None))
@@ -101,20 +113,22 @@ package object streams {
               .toEither
               .fold(throw _, identity)
 
-          override def fetch(x: Long): ReadStream[Buffer] =
+          override def fetch(x: Long): ReadStream[O] =
             self
-
         })
         .toEither
         .fold(throw _, identity)
 
     override def fromReadStream(readStream: ReadStream[Buffer]): Stream[Throwable, Byte] =
+      fromReadStreamInternal(readStream).mapConcatChunk(buffer => Chunk.fromArray(buffer.getBytes))
+
+    private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[Throwable, T] =
       runtime
         .unsafeRunSync(for {
-          stateRef <- Ref.make(ReadStreamState[UIO, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))
-          stream = ZStream.unfoldChunkM(()) { _ =>
+          stateRef <- Ref.make(ReadStreamState[UIO, T](Queued(SQueue.empty), Queued(SQueue.empty)))
+          stream = ZStream.unfoldM(()) { _ =>
             for {
-              dfd <- Promise.make[Nothing, WrappedBuffer[Chunk[Byte]]]
+              dfd <- Promise.make[Nothing, WrappedBuffer[T]]
               tuple <- stateRef.modify(_.dequeueBuffer(dfd).swap)
               (mbBuffer, mbAction) = tuple
               _ <- ZIO.foreach(mbAction)(identity)
@@ -164,10 +178,9 @@ package object streams {
               .fold(c => throw c.squash, identity)
           }
           readStream.handler { buffer =>
-            val chunk = Chunk.fromArray(buffer.getBytes)
             val maxSize = opts.maxQueueSizeForReadStream
             runtime
-              .unsafeRunSync(stateRef.modify(_.enqueue(chunk, maxSize).swap).flatMap(ZIO.foreach_(_)(identity)))
+              .unsafeRunSync(stateRef.modify(_.enqueue(buffer, maxSize).swap).flatMap(ZIO.foreach_(_)(identity)))
               .fold(c => throw c.squash, identity)
           }
 
@@ -175,5 +188,54 @@ package object streams {
         })
         .toEither
         .fold(throw _, identity)
+
+    override def webSocketPipe[REQ, RESP](
+        readStream: ReadStream[WebSocketFrame],
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
+    ): ReadStream[WebSocketFrame] = {
+      val stream0 = fromReadStreamInternal(readStream)
+      val stream1 = optionallyContatenateFrames(stream0, o.concatenateFragmentedFrames)
+      val stream2 = optionallyIgnorePong(stream1, o.ignorePong)
+      val autoPings = o.autoPing match {
+        case Some((interval, frame)) =>
+          ZStream.tick(duration.Duration.fromScala(interval)).as(frame).provideLayer(Clock.live)
+        case None =>
+          ZStream.empty
+      }
+
+      val stream3 = stream2
+        .mapM { frame =>
+          o.requests.decode(frame) match {
+            case failure: DecodeResult.Failure =>
+              ZIO.fail(new WebSocketFrameDecodeFailure(frame, failure))
+            case DecodeResult.Value(v) =>
+              ZIO.succeed(v)
+          }
+        }
+
+      val stream4 = pipe(stream3)
+        .map(o.responses.encode)
+        .mergeTerminateLeft(autoPings)
+        .concat(ZStream(WebSocketFrame.close))
+
+      mapToReadStream[WebSocketFrame, WebSocketFrame](stream4, identity)
+    }
+
+    private def optionallyContatenateFrames(
+        s: Stream[Throwable, WebSocketFrame],
+        doConcatenate: Boolean
+    ): Stream[Throwable, WebSocketFrame] =
+      if (doConcatenate) {
+        s.mapAccum(None: Accumulator)(concatenateFrames).collect { case Some(f) => f }
+      } else {
+        s
+      }
+
+    private def optionallyIgnorePong(
+        s: Stream[Throwable, WebSocketFrame],
+        ignore: Boolean
+    ): Stream[Throwable, WebSocketFrame] =
+      if (ignore) s.filterNot(isPong) else s
   }
 }

@@ -83,7 +83,7 @@ conventions, that an endpoint is uniquely identified by the method and served pa
   or if the decoding a path capture causes a validation error.
 
 The behavior described in the latter three points can be customised by providing a custom
-`sttp.tapir.server.DecodeFailureHandler` when creating the server options. This handler, basing on the request, 
+`sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler` when creating the server options. This handler, basing on the request, 
 failing input and failure description can decide, whether to return a "no match" or a specific response.
 
 Only the first failure encountered for a specific endpoint is passed to the `DecodeFailureHandler`. Inputs are decoded 
