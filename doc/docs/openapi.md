@@ -209,6 +209,11 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
   ```scala
   OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput = _ => None)
   ```
+* `markOptionsAsNullable`: by default, optional fields are not marked as `nullable` in the OpenAPI schema. If your
+  codec allows `null` values, you can explicitly specify this in documentation by changing this option.
+* `schemaName`: specifies how schema names are created from the full type name. By default, this takes the last
+  component of a dot-separated type name. Suffixes might be added at a later stage to disambiguate between different
+  schemas with same names.
 
 ## Inlined and referenced schemas
 
