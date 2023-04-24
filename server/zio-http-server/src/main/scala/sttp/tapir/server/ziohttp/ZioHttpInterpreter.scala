@@ -1,7 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{HeaderNames, Method, Header => SttpHeader}
+import sttp.model.{Method, Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
@@ -93,9 +93,8 @@ trait ZioHttpInterpreter[R] {
     }
   }
 
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] = {
-    hl._2.map(h => ZioHttpHeader.Custom(h.name, h.value)).toList
-  }
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] =
+    List(ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", ")))
 }
 
 object ZioHttpInterpreter {
