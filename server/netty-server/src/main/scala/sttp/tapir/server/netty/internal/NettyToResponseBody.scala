@@ -13,11 +13,18 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ChunkedFileNettyResponseContent,
   ChunkedStreamNettyResponseContent
 }
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{InputStream, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.io.PushbackInputStream
+
+private[internal] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
+
+  override def isEndOfInput(): Boolean =
+    super.isEndOfInput || transferredBytes == length    
+}
 
 class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
@@ -40,12 +47,23 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         val stream = v.asInstanceOf[InputStream]
         (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(stream))
 
+      case RawBodyType.InputStreamRangeBody =>
+        val streamRange = v.asInstanceOf[InputStreamRange]
+        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(streamRange))
+
       case RawBodyType.FileBody =>
         val fileRange = v.asInstanceOf[FileRange]
         (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(fileRange))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
+  }
+
+  private def wrap(streamRange: InputStreamRange): ChunkedStream = {
+    streamRange
+      .range
+      .map(r => new RangedChunkedStream(streamRange.inputStreamFromRangeStart(), r.contentLength))
+      .getOrElse(new ChunkedStream(streamRange.inputStream()))
   }
 
   private def wrap(content: InputStream): ChunkedStream = {
