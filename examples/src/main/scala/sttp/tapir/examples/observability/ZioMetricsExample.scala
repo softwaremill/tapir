@@ -1,10 +1,12 @@
+package sttp.tapir.examples.observability
+
 import sttp.tapir._
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.http.HttpApp
-import zio.http.{Server, ServerConfig}
+import zio.http.Server
 import zio.{Task, ZIO, _}
 
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
@@ -39,7 +41,7 @@ object ZioMetricsExample extends ZIOAppDefault {
       _ <- Console.readLine
     } yield serverPort)
       .provide(
-        ServerConfig.live(ServerConfig.default.port(port)),
+        ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
       .exitCode
