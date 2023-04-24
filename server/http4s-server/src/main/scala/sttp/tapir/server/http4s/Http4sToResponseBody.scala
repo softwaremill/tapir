@@ -1,6 +1,6 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.Async
+import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.io.file.Files
 import fs2.{Chunk, Stream}
@@ -12,8 +12,9 @@ import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
+import java.io.InputStream
 import java.nio.charset.Charset
 
 private[http4s] class Http4sToResponseBody[F[_]: Async](
@@ -42,16 +43,15 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
         (fs2.Stream.chunk(Chunk.array(bytes)), Some(bytes.length))
-      case RawBodyType.ByteArrayBody  => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
-      case RawBodyType.ByteBufferBody => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
-      case RawBodyType.InputStreamBody =>
-        (
-          fs2.io.readInputStream(
-            r.pure[F],
-            serverOptions.ioChunkSize
-          ),
-          None
-        )
+      case RawBodyType.ByteArrayBody   => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
+      case RawBodyType.ByteBufferBody  => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
+      case RawBodyType.InputStreamBody => (inputStreamToFs2(() => r), None)
+      case RawBodyType.InputStreamRangeBody =>
+        val resource = r.asInstanceOf[InputStreamRange]
+        val fs2Stream = resource.range
+          .map(range => inputStreamToFs2(resource.inputStreamFromRangeStart).take(range.contentLength))
+          .getOrElse(inputStreamToFs2(resource.inputStream))
+        (fs2Stream, None)
       case RawBodyType.FileBody =>
         val tapirFile = r.asInstanceOf[FileRange]
         val stream = tapirFile.range
@@ -64,6 +64,12 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
         (body, None)
     }
   }
+
+  private def inputStreamToFs2(inputStream: () => InputStream) =
+    fs2.io.readInputStream(
+      Sync[F].delay(inputStream()),
+      serverOptions.ioChunkSize
+    )
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
