@@ -36,7 +36,7 @@ object Files {
       .blocking(Paths.get(systemPath).toRealPath())
       .flatMap(path => {
         val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
-        files(filesInput, options, resolveUrlFn, fileRangeFromUrl _)
+        files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
       })
   }
 
