@@ -36,7 +36,7 @@ class ZioHttpTestServerInterpreter(
           zio.test.driver,
           eventLoopGroup,
           channelFactory,
-          ZLayer.succeed(Server.Config.default.port(0))
+          ZLayer.succeed(Server.Config.default.port(0).enableRequestStreaming)
         )
 
     Resource.scoped[IO, Any, Int](effect)
