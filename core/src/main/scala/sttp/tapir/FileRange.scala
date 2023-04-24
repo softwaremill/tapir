@@ -30,4 +30,13 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
     case _                          => None
   }
 }
-case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeValue] = None) extends StaticResource
+case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeValue] = None) extends StaticResource {
+  def inputStreamFromRangeStart: () => InputStream = range.flatMap(_.start) match {
+    case Some(start) =>
+      () =>
+        val openedStream = inputStream()
+        openedStream.skip(start)
+        openedStream
+    case None => inputStream
+  }
+}
