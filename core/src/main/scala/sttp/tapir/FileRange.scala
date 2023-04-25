@@ -37,9 +37,9 @@ case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeV
         val openedStream = inputStream()
         val skipped = openedStream.skip(start)
         if (skipped == start)
-        openedStream
-      else 
-        throw new IllegalArgumentException(s"Illegal range start: $start, could skip only $skipped bytes")
+          openedStream
+        else
+          throw new IllegalArgumentException(s"Illegal range start: $start, could skip only $skipped bytes")
     case _ => inputStream
   }
 }
