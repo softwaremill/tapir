@@ -8,8 +8,8 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
 import zio.http.HttpApp
-import zio.http.{Server, ServerConfig}
-import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
+import zio.http.Server
+import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, ZLayer}
 
 object ZioExampleZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -45,7 +45,7 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
     Server
       .serve(routes.withDefaultErrorResponse)
       .provide(
-        ServerConfig.live(ServerConfig.default.port(8080)),
+        ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
       .exitCode

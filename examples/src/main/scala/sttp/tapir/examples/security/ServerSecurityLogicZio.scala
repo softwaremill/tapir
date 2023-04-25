@@ -5,8 +5,8 @@ import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.model.HeaderNames
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
-import zio.http.{HttpApp, Server, ServerConfig}
-import zio.{Console, ExitCode, IO, Scope, Task, ZIO, ZIOAppDefault}
+import zio.http.{HttpApp, Server}
+import zio.{Console, ExitCode, IO, Scope, Task, ZIO, ZIOAppDefault, ZLayer}
 
 object ServerSecurityLogicZio extends ZIOAppDefault {
   // authentication data structure & logic
@@ -76,7 +76,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
       _ <- testWith(backend, port, "hello", "Hello", "smurf").map(r => assert(r == "Not saying hello to Gargamel!"))
     } yield ()).exitCode
       .provideSome(
-        ServerConfig.live(ServerConfig.default.port(8080)),
+        ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
   }
