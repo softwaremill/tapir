@@ -24,10 +24,11 @@ private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) exte
         val r = if (options.encodeResponseBody) Base64.getEncoder.encodeToString(bytes) else new String(bytes)
         (r, Some(bytes.length.toLong))
 
-      case RawBodyType.ByteBufferBody   => throw new UnsupportedOperationException
-      case RawBodyType.InputStreamBody  => throw new UnsupportedOperationException
-      case RawBodyType.FileBody         => throw new UnsupportedOperationException
-      case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
+      case RawBodyType.ByteBufferBody       => throw new UnsupportedOperationException
+      case RawBodyType.InputStreamBody      => throw new UnsupportedOperationException
+      case RawBodyType.InputStreamRangeBody => throw new UnsupportedOperationException
+      case RawBodyType.FileBody             => throw new UnsupportedOperationException
+      case _: RawBodyType.MultipartBody     => throw new UnsupportedOperationException
     }
 
   override def fromStreamValue(
