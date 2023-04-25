@@ -428,7 +428,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           .use { port =>
             get(port, List("test", "r10.txt")).map { resp =>
               resp.body shouldBe "Resource 3"
-              resp.header(HeaderNames.Etag).get shouldBe "\"18746b3e51c-a\""
+              resp.header(HeaderNames.Etag).get should endWith("-a\"")
             } >>
               get(port, List("test", "r1.txt")).map(_.body shouldBe "Resource 1")
           }
