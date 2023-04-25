@@ -32,11 +32,14 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
 }
 case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeValue] = None) extends StaticResource {
   def inputStreamFromRangeStart: () => InputStream = range.flatMap(_.start) match {
-    case Some(start) =>
+    case Some(start) if start > 0 =>
       () =>
         val openedStream = inputStream()
-        openedStream.skip(start)
+        val skipped = openedStream.skip(start)
+        if (skipped == start)
         openedStream
-    case None => inputStream
+      else 
+        throw new IllegalArgumentException(s"Illegal range start: $start, could skip only $skipped bytes")
+    case _ => inputStream
   }
 }

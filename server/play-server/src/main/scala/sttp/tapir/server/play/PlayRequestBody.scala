@@ -10,12 +10,11 @@ import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart}
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
@@ -55,6 +54,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       case RawBodyType.ByteArrayBody   => bodyAsByteString().map(b => RawValue(b.toArray))
       case RawBodyType.ByteBufferBody  => bodyAsByteString().map(b => RawValue(b.toByteBuffer))
       case RawBodyType.InputStreamBody => bodyAsByteString().map(b => RawValue(new ByteArrayInputStream(b.toArray)))
+      case RawBodyType.InputStreamRangeBody =>
+        bodyAsByteString().map(b => RawValue(new InputStreamRange(() => new ByteArrayInputStream(b.toArray))))
       case RawBodyType.FileBody =>
         bodyAsFile match {
           case Some(file) =>

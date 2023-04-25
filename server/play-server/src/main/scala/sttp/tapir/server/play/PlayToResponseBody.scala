@@ -10,7 +10,7 @@ import play.api.mvc.{Codec, MultipartFormData}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -24,6 +24,8 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): PlayResponseBody = {
     Right(fromRawValue(v, headers, bodyType))
   }
+
+  private val ChunkSize = 8192
 
   private def fromRawValue[R](v: R, headers: HasHeaders, bodyType: RawBodyType[R]): HttpEntity = {
     val contentType = headers.contentType
@@ -44,12 +46,20 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
         val stream = v.asInstanceOf[InputStream]
         streamOrChunk(StreamConverters.fromInputStream(() => stream), headers.contentLength, contentType)
 
+      case RawBodyType.InputStreamRangeBody =>
+        val resource = v.asInstanceOf[InputStreamRange]
+        val initialStream = StreamConverters.fromInputStream(resource.inputStreamFromRangeStart, ChunkSize)
+        println(s">>>>>>>>>>>>> ${headers.contentLength}")
+        resource.range
+          .map(r => streamOrChunk(toRangedStream(initialStream, bytesTotal = r.contentLength), Some(r.contentLength), contentType))
+          .getOrElse(streamOrChunk(initialStream, headers.contentLength, contentType))
+
       case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]
         tapirFile.range
           .flatMap(r =>
             r.startAndEnd
-              .map(s => streamOrChunk(createSource(tapirFile, s._1, r.contentLength), Some(r.contentLength), contentType))
+              .map(s => streamOrChunk(createFileSource(tapirFile, s._1, r.contentLength), Some(r.contentLength), contentType))
           )
           .getOrElse(streamOrChunk(FileIO.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length()), contentType))
 
@@ -81,13 +91,15 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
     }
   }
 
-  private def createSource[R, CF <: CodecFormat](
+  private def createFileSource(
       tapirFile: FileRange,
       start: Long,
       bytesTotal: Long
-  ): Source[ByteString, Future[IOResult]] =
-    FileIO
-      .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)
+  ): AkkaStreams.BinaryStream =
+    toRangedStream(FileIO.fromPath(tapirFile.file.toPath, ChunkSize, startPosition = start), bytesTotal)
+
+  private def toRangedStream(initialStream: AkkaStreams.BinaryStream, bytesTotal: Long): AkkaStreams.BinaryStream =
+    initialStream
       .scan((0L, ByteString.empty)) { case ((bytesConsumed, _), next) =>
         val bytesInNext = next.length
         val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext.toLong))
@@ -95,6 +107,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       }
       .takeWhile(_._1 < bytesTotal, inclusive = true)
       .map(_._2)
+
 
   override def fromStreamValue(
       v: streams.BinaryStream,
