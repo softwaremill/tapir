@@ -29,18 +29,16 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
         case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(v.asInstanceOf[Array[Byte]]))
         case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
         case RawBodyType.InputStreamBody =>
-          inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx, byteLimit = None).flatMap(resp.end)
+          inputStreamToBuffer(v, rc.vertx, byteLimit = None).flatMap(resp.end)
         case RawBodyType.InputStreamRangeBody =>
-          val resource = v.asInstanceOf[InputStreamRange]
-          resource.range
-            .map(r => inputStreamToBuffer(resource.inputStreamFromRangeStart(), rc.vertx, Some(r.contentLength)))
-            .getOrElse(inputStreamToBuffer(resource.inputStream(), rc.vertx, byteLimit = None))
+          v.range
+            .map(r => inputStreamToBuffer(v.inputStreamFromRangeStart(), rc.vertx, Some(r.contentLength)))
+            .getOrElse(inputStreamToBuffer(v.inputStream(), rc.vertx, byteLimit = None))
             .flatMap(resp.end)
         case RawBodyType.FileBody =>
-          val tapirFile = v.asInstanceOf[FileRange]
-          tapirFile.range
-            .flatMap(r => r.startAndEnd.map(s => resp.sendFile(tapirFile.file.toPath.toString, s._1, r.contentLength)))
-            .getOrElse(resp.sendFile(tapirFile.file.toString))
+          v.range
+            .flatMap(r => r.startAndEnd.map(s => resp.sendFile(v.file.toPath.toString, s._1, r.contentLength)))
+            .getOrElse(resp.sendFile(v.file.toString))
         case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
       }
   }

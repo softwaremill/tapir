@@ -12,7 +12,7 @@ import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -47,13 +47,12 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
       case RawBodyType.ByteBufferBody  => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
       case RawBodyType.InputStreamBody => (inputStreamToFs2(() => r), None)
       case RawBodyType.InputStreamRangeBody =>
-        val resource = r.asInstanceOf[InputStreamRange]
-        val fs2Stream = resource.range
-          .map(range => inputStreamToFs2(resource.inputStreamFromRangeStart).take(range.contentLength))
-          .getOrElse(inputStreamToFs2(resource.inputStream))
+        val fs2Stream = r.range
+          .map(range => inputStreamToFs2(r.inputStreamFromRangeStart).take(range.contentLength))
+          .getOrElse(inputStreamToFs2(r.inputStream))
         (fs2Stream, None)
       case RawBodyType.FileBody =>
-        val tapirFile = r.asInstanceOf[FileRange]
+        val tapirFile = r
         val stream = tapirFile.range
           .flatMap(r => r.startAndEnd.map(s => Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, s._1, s._2)))
           .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))

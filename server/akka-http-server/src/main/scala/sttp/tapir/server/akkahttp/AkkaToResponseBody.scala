@@ -9,7 +9,7 @@ import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, InputStreamRange, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -56,13 +56,13 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
       case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case RawBodyType.InputStreamRangeBody =>
-        val resource = r.asInstanceOf[InputStreamRange]
+        val resource = r
         val initialStream = StreamConverters.fromInputStream(resource.inputStreamFromRangeStart, ChunkSize)
         resource.range
           .map(r => streamToEntity(ct, contentLength, toRangedStream(initialStream, bytesTotal = r.contentLength)))
           .getOrElse(streamToEntity(ct, contentLength, initialStream))
       case RawBodyType.FileBody =>
-        val tapirFile = r.asInstanceOf[FileRange]
+        val tapirFile = r
         tapirFile.range
           .flatMap(r => r.startAndEnd.map(s => HttpEntity(ct, createFileSource(tapirFile, s._1, r.contentLength))))
           .getOrElse(HttpEntity.fromPath(ct, tapirFile.file.toPath))
