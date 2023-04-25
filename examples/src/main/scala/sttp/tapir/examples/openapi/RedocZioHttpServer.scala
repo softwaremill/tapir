@@ -7,9 +7,9 @@ import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
 import zio.http.HttpApp
-import zio.http.{Server, ServerConfig}
+import zio.http.Server
 import zio.Console.{printLine, readLine}
-import zio.{Task, ZIO, ZIOAppDefault}
+import zio.{Task, ZIO, ZIOAppDefault, ZLayer}
 
 object RedocZioHttpServer extends ZIOAppDefault {
   case class Pet(species: String, url: String)
@@ -33,7 +33,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
       Server
         .serve(app)
         .provide(
-          ServerConfig.live(ServerConfig.default.port(8080)),
+          ZLayer.succeed(Server.Config.default.port(8080)),
           Server.live
         )
         .fork

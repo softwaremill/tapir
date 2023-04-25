@@ -1,15 +1,14 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{HeaderNames, Method, Header => SttpHeader}
+import sttp.model.{Method, Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.ztapir._
 import zio._
-import zio.http._
-import zio.http.model.{Status, Header => ZioHttpHeader, Headers => ZioHttpHeaders}
+import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
@@ -45,7 +44,7 @@ trait ZioHttpInterpreter[R] {
                 val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
                 val allHeaders = resp.body match {
                   case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
-                    ZioHttpHeader(HeaderNames.ContentLength, contentLength.toString) :: baseHeaders
+                    ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
                   case _ => baseHeaders
                 }
                 val statusCode = resp.code.code
@@ -94,9 +93,8 @@ trait ZioHttpInterpreter[R] {
     }
   }
 
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] = {
-    hl._2.map(h => ZioHttpHeader(h.name, h.value)).toList
-  }
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] =
+    List(ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", ")))
 }
 
 object ZioHttpInterpreter {

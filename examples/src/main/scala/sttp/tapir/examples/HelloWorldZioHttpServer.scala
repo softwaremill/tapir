@@ -6,7 +6,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.zio._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.HttpApp
-import zio.http.{Server, ServerConfig}
+import zio.http.Server
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
@@ -41,7 +41,7 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
     Server
       .serve(app.withDefaultErrorResponse)
       .provide(
-        ServerConfig.live(ServerConfig.default.port(8090)),
+        ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
       .exitCode

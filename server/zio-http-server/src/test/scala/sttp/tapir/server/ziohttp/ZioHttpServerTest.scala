@@ -3,7 +3,7 @@ package sttp.tapir.server.ziohttp
 import cats.effect.{IO, Resource}
 import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
 import org.scalatest.matchers.should.Matchers._
-import org.scalatest.{Assertion, Canceled, Exceptional, Failed, FutureOutcome}
+import org.scalatest.{Assertion, Exceptional, FutureOutcome}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -48,7 +48,7 @@ class ZioHttpServerTest extends TestSuite {
         })
 
         val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
-        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.fromConfig)
+        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.live)
       }.build)
       .map { nettyDeps =>
         val eventLoopGroup = ZLayer.succeed(nettyDeps.get[EventLoopGroup])
