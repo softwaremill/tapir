@@ -32,7 +32,7 @@ package object encoders {
 
     @tailrec
     def readRec(buffer: Buffer, readSoFar: Long): Buffer =
-      if (byteLimit.exists(_ <= readSoFar) || is.available() <= 0) 
+      if (byteLimit.exists(_ <= readSoFar) || is.available() <= 0)
         buffer
       else {
         val bytes = is.readNBytes(bufferSize)
@@ -40,7 +40,8 @@ package object encoders {
         val lengthToWrite: Int = byteLimit.map(limit => Math.min(limit - readSoFar, length)).getOrElse(length).toInt
         readRec(buffer.appendBytes(bytes, 0, lengthToWrite), readSoFar = readSoFar + lengthToWrite)
       }
-      readRec(buffer, readSoFar = 0L)
+
+    readRec(buffer, readSoFar = 0L)
   }
 
   def wrapWebSocket(websocket: ServerWebSocket): ReadStream[WebSocketFrame] =
