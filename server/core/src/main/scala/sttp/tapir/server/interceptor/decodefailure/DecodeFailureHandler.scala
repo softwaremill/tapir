@@ -127,7 +127,7 @@ object DefaultDecodeFailureHandler {
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
       // a path shape mismatch
-      case _: EndpointInput.PathCapture[_]
+      case _: EndpointInput.PathCapture[_] | _: EndpointInput.PathsCapture[_]
           if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
             (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
         respondBadRequest
