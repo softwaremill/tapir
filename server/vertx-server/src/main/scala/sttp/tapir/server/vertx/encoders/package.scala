@@ -9,6 +9,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.{ServerWebSocket, WebSocketFrameType}
 import io.vertx.core.streams.ReadStream
 import sttp.ws.WebSocketFrame
+import scala.annotation.tailrec
 
 package object encoders {
 
@@ -17,23 +18,29 @@ package object encoders {
   /** README: Tests are using a ByteArrayInputStream, which is totally fine, but other blocking implementations like FileInputStream etc.
     * must maybe be wrapped in executeBlocking
     */
-  private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx): Future[Buffer] = {
+  private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx, byteLimit: Option[Long]): Future[Buffer] = {
     is match {
       case _: ByteArrayInputStream =>
-        Future.succeededFuture(inputStreamToBufferUnsafe(is))
+        Future.succeededFuture(inputStreamToBufferUnsafe(is, byteLimit))
       case _ =>
-        vertx.executeBlocking { promise => promise.complete(inputStreamToBufferUnsafe(is)) }
+        vertx.executeBlocking { promise => promise.complete(inputStreamToBufferUnsafe(is, byteLimit)) }
     }
   }
 
-  private def inputStreamToBufferUnsafe(is: InputStream): Buffer = {
+  private def inputStreamToBufferUnsafe(is: InputStream, byteLimit: Option[Long]): Buffer = {
     val buffer = Buffer.buffer()
-    val buf = new Array[Byte](bufferSize)
-    while (is.available() > 0) {
-      val read = is.read(buf)
-      buffer.appendBytes(buf, 0, read)
-    }
-    buffer
+
+    @tailrec
+    def readRec(buffer: Buffer, readSoFar: Long): Buffer =
+      if (byteLimit.exists(_ <= readSoFar) || is.available() <= 0) 
+        buffer
+      else {
+        val bytes = is.readNBytes(bufferSize)
+        val length = bytes.length.toLong
+        val lengthToWrite: Int = byteLimit.map(limit => Math.min(limit - readSoFar, length)).getOrElse(length).toInt
+        readRec(buffer.appendBytes(bytes, 0, lengthToWrite), readSoFar = readSoFar + lengthToWrite)
+      }
+      readRec(buffer, readSoFar = 0L)
   }
 
   def wrapWebSocket(websocket: ServerWebSocket): ReadStream[WebSocketFrame] =

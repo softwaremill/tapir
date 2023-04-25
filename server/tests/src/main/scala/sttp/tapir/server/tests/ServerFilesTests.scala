@@ -603,7 +603,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should not return resource metadata outside of the resource prefix directory") {
         serveRoute(staticResourcesHeadServerEndpoint[F](emptyInput)(classLoader, "test"))
-          .use { port => get(port, List("..", "test", "r5.txy")).map(_.code shouldBe StatusCode.NotFound) }
+          .use { port => head(port, List("..", "test", "r5.txy")).map(_.code shouldBe StatusCode.NotFound) }
           .unsafeToFuture()
       }
     )
