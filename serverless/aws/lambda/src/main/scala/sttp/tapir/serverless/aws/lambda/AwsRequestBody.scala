@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.lambda
 import sttp.capabilities
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.RawBodyType
+import sttp.tapir.{InputStreamRange, RawBodyType}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -23,12 +23,13 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     def asByteArray: Array[Byte] = decoded.fold(identity[Array[Byte]], _.getBytes())
 
     RawValue(bodyType match {
-      case RawBodyType.StringBody(charset) => decoded.fold(new String(_, charset), identity[String])
-      case RawBodyType.ByteArrayBody       => asByteArray
-      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(asByteArray)
-      case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
-      case RawBodyType.FileBody            => throw new UnsupportedOperationException
-      case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
+      case RawBodyType.StringBody(charset)  => decoded.fold(new String(_, charset), identity[String])
+      case RawBodyType.ByteArrayBody        => asByteArray
+      case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(asByteArray)
+      case RawBodyType.InputStreamBody      => new ByteArrayInputStream(asByteArray)
+      case RawBodyType.InputStreamRangeBody => InputStreamRange(() => new ByteArrayInputStream(asByteArray))
+      case RawBodyType.FileBody             => throw new UnsupportedOperationException
+      case _: RawBodyType.MultipartBody     => throw new UnsupportedOperationException
     }).asInstanceOf[RawValue[R]].unit
   }
 
