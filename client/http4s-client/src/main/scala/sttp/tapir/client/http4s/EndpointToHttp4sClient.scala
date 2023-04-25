@@ -1,7 +1,7 @@
 package sttp.tapir.client.http4s
 
 import cats.Applicative
-import cats.effect.Async
+import cats.effect.{Async, Sync}
 import cats.implicits._
 import fs2.Chunk
 import fs2.io.file.Files
@@ -32,6 +32,7 @@ import sttp.tapir.{
 
 import java.io.{InputStream}
 import java.nio.ByteBuffer
+import java.io.ByteArrayInputStream
 
 private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions) {
 
@@ -150,7 +151,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(entityEncoder)
       case RawBodyType.InputStreamRangeBody =>
         val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream]
-        req.withEntity(Applicative[F].pure(encoded.inputStream()))(entityEncoder)
+        req.withEntity(Sync[F].delay(encoded.asInstanceOf[InputStreamRange].inputStream()))(entityEncoder)
       case RawBodyType.FileBody =>
         val entityEncoder = EntityEncoder.fileEncoder[F]
         req.withEntity(encoded.asInstanceOf[FileRange].file)(entityEncoder)
@@ -229,10 +230,11 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
             case RawBodyType.ByteBufferBody =>
               response.body.compile.toVector.map(_.toArray).map(java.nio.ByteBuffer.wrap).map(_.asInstanceOf[Any])
             case RawBodyType.InputStreamBody =>
-              response.body.through(fs2.io.toInputStream).head.compile.lastOrError.map(_.asInstanceOf[Any])
+              response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_)).map(_.asInstanceOf[Any])
             case RawBodyType.InputStreamRangeBody =>
-              response.body.through(fs2.io.toInputStream).head.compile.lastOrError.map(is => new InputStreamRange(() => is))
-              .map(_.asInstanceOf[Any])
+              response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_))
+                .map(stream => InputStreamRange(() => stream))
+                .map(_.asInstanceOf[Any])
             case RawBodyType.FileBody =>
               val file = clientOptions.createFile()
               response.body.through(Files[F].writeAll(file.toPath)).compile.drain.map(_ => FileRange(file))
