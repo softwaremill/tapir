@@ -15,6 +15,7 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
