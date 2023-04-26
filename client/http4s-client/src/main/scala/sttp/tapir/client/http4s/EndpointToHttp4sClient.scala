@@ -151,7 +151,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(entityEncoder)
       case RawBodyType.InputStreamRangeBody =>
         val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream]
-        req.withEntity(Sync[F].delay(encoded.asInstanceOf[InputStreamRange].inputStream()))(entityEncoder)
+        req.withEntity(Sync[F].blocking(encoded.asInstanceOf[InputStreamRange].inputStream()))(entityEncoder)
       case RawBodyType.FileBody =>
         val entityEncoder = EntityEncoder.fileEncoder[F]
         req.withEntity(encoded.asInstanceOf[FileRange].file)(entityEncoder)
@@ -232,7 +232,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
             case RawBodyType.InputStreamBody =>
               response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_)).map(_.asInstanceOf[Any])
             case RawBodyType.InputStreamRangeBody =>
-              response.body.compile.toVector.map(_.toArray).map(new ByteArrayInputStream(_))
+              response.body.compile.toVector
+                .map(_.toArray)
+                .map(new ByteArrayInputStream(_))
                 .map(stream => InputStreamRange(() => stream))
                 .map(_.asInstanceOf[Any])
             case RawBodyType.FileBody =>

@@ -66,7 +66,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
 
   private def inputStreamToFs2(inputStream: () => InputStream) =
     fs2.io.readInputStream(
-      Sync[F].delay(inputStream()),
+      Sync[F].blocking(inputStream()),
       serverOptions.ioChunkSize
     )
 
