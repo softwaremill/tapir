@@ -122,20 +122,13 @@ trait TapirStaticContentEndpoints {
   private lazy val staticHeadEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[Unit], Any] =
     staticEndpoint(endpoint.head, emptyOutput)
 
-  implicit lazy val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
-
-  implicit lazy val codecForInputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
-    Codec.id[InputStreamRange, OctetStream](OctetStream(), schemaForInputStreamRange)
-
-  def resourceRangeBody: EndpointIO.Body[InputStreamRange, InputStreamRange] = rawBinaryBody(RawBodyType.InputStreamRangeBody)
-
   lazy val staticFilesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticEndpoint(
     endpoint.get,
     fileRangeBody
   )
 
   lazy val staticResourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any] =
-    staticEndpoint(endpoint.get, resourceRangeBody)
+    staticEndpoint(endpoint.get, inputStreamRangeBody)
 
   def staticFilesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     staticFilesGetEndpoint.prependIn(prefix)

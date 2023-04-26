@@ -231,6 +231,10 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     id[Array[Byte], OctetStream](OctetStream(), Schema.schemaForByteArray)
   implicit val inputStream: Codec[InputStream, InputStream, OctetStream] =
     id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
+  implicit lazy val inputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
+    id[InputStreamRange, OctetStream](OctetStream(), Schema.schemaForInputStreamRange)
+  implicit lazy val inputStreamToRange: Codec[InputStreamRange, InputStream, OctetStream] =
+    inputStreamRange.map(_.inputStream())(is => InputStreamRange(() => is))
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
   implicit val fileRange: Codec[FileRange, FileRange, OctetStream] =
