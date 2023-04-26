@@ -144,11 +144,18 @@ trait TapirStaticContentEndpoints {
       )
   }
 
+  @deprecated("Use sttp.tapir.files.staticFilesGetEndpoint")
   lazy val filesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(fileRangeBody)
+
+  @deprecated("Use sttp.tapir.files.staticResourcesGetEndpoint")
   lazy val resourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticGetEndpoint(inputStreamBody)
+
+  @deprecated("Use sttp.tapir.files.staticFilesGetEndpoint")
   def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     filesGetEndpoint.prependIn(prefix)
+  
+  @deprecated("Use sttp.tapir.files.staticResourcesGetEndpoint")
   def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     resourcesGetEndpoint.prependIn(prefix)
 
@@ -161,6 +168,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
+  @deprecated("Use sttp.tapir.files.staticFilesGetServerEndpoint")
   def filesGetServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
@@ -169,6 +177,7 @@ trait TapirStaticContentEndpoints {
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
+  @deprecated("Use sttp.tapir.files.staticFilesHeadServerEndpoint")
   def filesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
@@ -183,6 +192,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
+  @deprecated("Use sttp.tapir.files.staticFilesServerEndpoints")
   def filesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
@@ -194,6 +204,7 @@ trait TapirStaticContentEndpoints {
     * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
+  @deprecated("Use sttp.tapir.files.staticFileGetServerEndpoint")
   def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
     ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
@@ -206,6 +217,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
+  @deprecated("Use sttp.tapir.files.staticResourcesGetServerEndpoint")
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
@@ -222,6 +234,7 @@ trait TapirStaticContentEndpoints {
     * resourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
     * }}}
     */
+  @deprecated("Use sttp.tapir.files.staticResourceGetServerEndpoint")
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
