@@ -611,16 +611,10 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     else baseTests
   }
 
-  val decodeFailureHandler: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
-    DefaultDecodeFailureHandler.respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true),
-    DefaultDecodeFailureHandler.FailureMessages.failureMessage,
-    DefaultDecodeFailureHandler.failureResponse
-  )
-
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
       NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(decodeFailureHandler))
+        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
       )
     )
 
