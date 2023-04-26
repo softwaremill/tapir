@@ -40,6 +40,26 @@ object Resources {
     range
   )
 
+  /** Creates a function of type ResolveUrlFn, which is capable of taking a relative path as a list of string segments, and finding the
+    * actual full Url of a file available as a resource under a classLoader, considering additional parameters. For example, with a root
+    * resource prefix of /config/files/ it can create a function which takies List("dir1", "dir2", "file.txt") and tries to resolve
+    * /config/files/dir1/dir2/file.txt into a resource Url. The final resolved file may also be resolved to a pre-gzipped sibling, an
+    * index.html file, or a default file given as a fallback, all depending on additional parameters. See also Files.resolveSystemPathUrl
+    * for an equivalent of this function but for files from the filesystem.
+    *
+    * @param classLoader
+    *   the class loader that will be used to call .getResource
+    * @param resourcePrefix
+    *   root resource path prefix represented as string segments
+    * @param input
+    *   request input parameters like path and headers, used together with options to apply filtering and look for possible pre-gzipped
+    *   files if they are accepted
+    * @param options
+    *   additional options of the endpoint, defining filtering rules and pre-gzipped file support
+    * @return
+    *   a function which can be used in general file resolution logic. This function takes path segments and an optional default fallback
+    *   path segments and tries to resolve the file, then returns its full Url.
+    */
   private def resolveResourceUrl[F[_]](
       classLoader: ClassLoader,
       resourcePrefix: List[String],
