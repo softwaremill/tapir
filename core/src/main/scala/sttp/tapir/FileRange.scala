@@ -6,11 +6,7 @@ import sttp.model.headers.ContentRange
 import java.io.InputStream
 import java.net.URL
 
-sealed trait StaticResource {
-  def range: Option[RangeValue]
-}
-
-case class FileRange(file: TapirFile, range: Option[RangeValue] = None) extends StaticResource
+case class FileRange(file: TapirFile, range: Option[RangeValue] = None)
 
 case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
   def toContentRange: ContentRange =
@@ -30,7 +26,8 @@ case class RangeValue(start: Option[Long], end: Option[Long], fileSize: Long) {
     case _                          => None
   }
 }
-case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeValue] = None) extends StaticResource {
+
+case class InputStreamRange(inputStream: () => InputStream, range: Option[RangeValue] = None) {
   def inputStreamFromRangeStart: () => InputStream = range.flatMap(_.start) match {
     case Some(start) if start > 0 =>
       () =>
