@@ -201,6 +201,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
   implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
   implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
   implicit val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
   implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)

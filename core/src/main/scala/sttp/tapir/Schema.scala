@@ -284,6 +284,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString())
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate())
   implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString())
+  implicit val schemaForZoneId: Schema[ZoneId] = Schema(SString())
   implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString())
   implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
   implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())

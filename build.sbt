@@ -28,7 +28,13 @@ lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpre
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 
-concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+concurrentRestrictions in Global ++= Seq(
+  Tags.limit(Tags.Test, 1),
+  // By default dependencies of test can be run in parallel, it includeds Scala Native/Scala.js linkers
+  // Limit them to lower memory usage, especially when targetting LLVM
+  Tags.limit(NativeTags.Link, 1),
+  Tags.limit(ScalaJSTags.Link, 1)
+)
 
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
@@ -64,6 +70,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
+  bspEnabled := !ideSkipProject.value,
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
@@ -140,7 +147,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.6",
+  "ch.qos.logback" % "logback-classic" % "1.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -483,8 +490,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.2" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.9.2" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.3" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.9.3" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -1389,7 +1396,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.5")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "3.0.0-RC1")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)

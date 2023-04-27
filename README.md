@@ -129,7 +129,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.11"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.2.13"
 ```
 
 Then, import:
@@ -174,21 +174,24 @@ All suggestions welcome :)
 
 See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! Or report your own.
 
-If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
-[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or 
+If you are having doubts on the _why_ or _how_ something works, don't hesitate to ask a question on
+[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or
 code is unclear and be improved for the benefit of all.
-
+In order to develop the documentation, you can use the `doc/watch.sh` script, which runs Sphinx using Python.
+Use `doc/requirements.txt` to set up your Python environment with `pip`. If you're using Nix, you can just run `nix develop`
+in the `doc` directory to set up a working shell with all the dependencies.
+n
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
-you can run `core/mimaReportBinaryIssues` from the sbt console. 
+you can run `core/mimaReportBinaryIssues` from the sbt console.
 
 ### Testing locally
 
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
 causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
 
-* run only tests for a specific Scala version and platform using `testScoped 2.13 JS` (supported versions: 2.12, 2.13, 3; supported platforms: JVM, JS, Native)
-* test single JS projects
-* use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
+- run only tests for a specific Scala version and platform using `testScoped 2.13 JS` (supported versions: 2.12, 2.13, 3; supported platforms: JVM, JS, Native)
+- test single JS projects
+- use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 
 You can test only server/client/doc/other projects using `testServers`, `testClients`, `testDocs` and `testOther`.
 
