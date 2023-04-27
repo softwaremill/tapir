@@ -153,6 +153,7 @@ lazy val loggerDependencies = Seq(
 lazy val rawAllAggregates = core.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
+  catsEffect.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   zio1.projectRefs ++
