@@ -70,6 +70,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
+  bspEnabled := !ideSkipProject.value,
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
