@@ -57,17 +57,23 @@ object Files {
     range
   )
 
-  /** Creates a function of type ResolveUrlFn, which is capable of taking a relative path as a list of string segments,
-   *  and finding the actual full system path, considering additional parameters. For example, with a root system path
-   *  of /home/user/files/ it can create a function which takies List("dir1", "dir2", "file.txt") and tries to resolve
-   *  /home/user/files/dir1/dir2/file.txt into a Url. The final resolved file may also be resolved to a pre-gzipped
-   *  sibling, an index.html file, or a default file given as a fallback, all depending on additional parameters.
-   *  See also Resources.resolveResourceUrl for an equivalent of this function but for resources under a classloader.
-   *
-   * @param input request input parameters like path and headers, used together with options to apply filtering and look for possible pre-gzipped files if they are accepted
-    * @param options additional options of the endpoint, defining filtering rules and pre-gzipped file support
-    * @param systemPath the root system path where file resolution should happen
-    * @return a function which can be used in general file resolution logic. This function takes path segments and an optional default fallback path segments and tries to resolve the file, then returns its full Url.
+  /** Creates a function of type ResolveUrlFn, which is capable of taking a relative path as a list of string segments, and finding the
+    * actual full system path, considering additional parameters. For example, with a root system path of /home/user/files/ it can create a
+    * function which takies List("dir1", "dir2", "file.txt") and tries to resolve /home/user/files/dir1/dir2/file.txt into a Url. The final
+    * resolved file may also be resolved to a pre-gzipped sibling, an index.html file, or a default file given as a fallback, all depending
+    * on additional parameters. See also Resources.resolveResourceUrl for an equivalent of this function but for resources under a
+    * classloader.
+    *
+    * @param input
+    *   request input parameters like path and headers, used together with options to apply filtering and look for possible pre-gzipped
+    *   files if they are accepted
+    * @param options
+    *   additional options of the endpoint, defining filtering rules and pre-gzipped file support
+    * @param systemPath
+    *   the root system path where file resolution should happen
+    * @return
+    *   a function which can be used in general file resolution logic. This function takes path segments and an optional default fallback
+    *   path segments and tries to resolve the file, then returns its full Url.
     */
   private def resolveSystemPathUrl[F[_]](input: StaticInput, options: FilesOptions[F], systemPath: Path): ResolveUrlFn = {
 
@@ -77,7 +83,7 @@ object Files {
       val resolvedGzipped = resolveGzipSibling(resolved)
       if (useGzippedIfAvailable(input, options) && JFiles.exists(resolvedGzipped, LinkOption.NOFOLLOW_LINKS)) {
         val realRequestedPath = resolvedGzipped.toRealPath(LinkOption.NOFOLLOW_LINKS)
-        if (!realRequestedPath.startsWith(resolveGzipSibling(systemPath)))
+        if (!realRequestedPath.startsWith(resolvedGzipped))
           LeftUrlNotFound
         else
           Right(ResolvedUrl(realRequestedPath.toUri.toURL, MediaType.ApplicationGzip, Some("gzip")))

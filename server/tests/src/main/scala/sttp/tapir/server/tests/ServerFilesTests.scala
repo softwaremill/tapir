@@ -20,6 +20,8 @@ import java.io.File
 import java.nio.file.{Files, StandardOpenOption}
 import java.util.Comparator
 import scala.concurrent.Future
+import java.io.ByteArrayOutputStream
+import java.util.zip.GZIPOutputStream
 
 class ServerFilesTests[F[_], OPTIONS, ROUTE](
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
@@ -150,6 +152,27 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .use { port =>
               get(port, List("test", "f10")).map(_.body shouldBe "index content") >>
                 get(port, List("test", "f1")).map(_.body shouldBe "f1 content")
+            }
+            .unsafeToFuture()
+        }
+      },
+      Test("should return pre-gzipped files") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(
+            staticFilesGetServerEndpoint[F]("test")(testDir.getAbsolutePath, FilesOptions.default.withUseGzippedIfAvailable)
+          )
+            .use { port =>
+              emptyRequest
+                .acceptEncoding("gzip")
+                .get(uri"http://localhost:$port/test/img.gif")
+                .response(asStringAlways)
+                .send(backend)
+                .map(r => {
+                  r.code shouldBe StatusCode.Ok
+                  r.body shouldBe "img gzipped content"
+                  r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+                  r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
+                })
             }
             .unsafeToFuture()
         }
@@ -337,7 +360,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           }
           .unsafeToFuture()
       },
-      Test("should serve single gzipped resource") {
+      Test("should serve single pre-gzipped resource") {
         serveRoute(
           staticResourceGetServerEndpoint[F](emptyInput)(classLoader, "test/r3.txt", FilesOptions.default.withUseGzippedIfAvailable)
         )
@@ -436,7 +459,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should serve a single file from the given system path") {
         withTestFilesDirectory { testDir =>
-          serveRoute(fileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
+          serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
             .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
             .unsafeToFuture()
         }
@@ -618,6 +641,14 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       )
     )
 
+  def gzipCompress(input: String): Array[Byte] = {
+    val outputStream = new ByteArrayOutputStream()
+    val gzipOutputStream = new GZIPOutputStream(outputStream)
+    gzipOutputStream.write(input.getBytes("UTF-8"))
+    gzipOutputStream.close()
+    outputStream.toByteArray
+  }
+
   def withTestFilesDirectory[T](t: File => Future[T]): Future[T] = {
     val parent = Files.createTempDirectory("tapir-tests")
 
@@ -626,6 +657,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     Files.write(parent.resolve("f1"), "f1 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("f2"), "f2 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("img.gif"), "img content".getBytes, StandardOpenOption.CREATE_NEW)
+    Files.write(parent.resolve("img.gif.gz"), gzipCompress("img gzipped content"), StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/f3"), "f3 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/index.html"), "index content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/d2/f4"), "f4 content".getBytes, StandardOpenOption.CREATE_NEW)
