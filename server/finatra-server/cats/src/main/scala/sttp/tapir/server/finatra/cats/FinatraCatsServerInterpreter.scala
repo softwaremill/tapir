@@ -5,7 +5,7 @@ import cats.effect.std.Dispatcher
 import cats.~>
 import com.twitter.util.Future
 import sttp.monad.MonadError
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError

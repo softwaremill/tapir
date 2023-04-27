@@ -4,6 +4,7 @@
 
 - Static content endpoints from `sttp.tapir.static._` are deprecated in favor of the new `tapir-files` module. New methods are in `sttp.tapir.files._`: `staticFilesGetServerEndpoint`, `staticFilesHeadServerEndpoint`, `staticFilesServerEndpoints`, `staticResourcesGetServerEndpoint`, `staticResourcesHeadServerEndpoint`, `staticResourcesServerEndpoints`, etc. See the [updated documentation](endpoint/static.md).
 - Respectively, use `sttp.tapir.files.FilesOptions` instead of `sttp.tapir.static.FilesOptions`
+- the `cats` integration module has been split into `cats` and `cats-effect`, with the latter containing the `CatsMonadError` class, providing a bridge between the sttp-internal `MonadError` and the cats-effect `Sync` typeclass. If you've been using this directly, you might need to update your dependencies.
 
 ## From 0.20 to 1.0
 

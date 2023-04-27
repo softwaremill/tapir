@@ -10,7 +10,7 @@ import io.circe.syntax._
 import sttp.client3._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.serverless.aws.lambda.{AwsRequest, AwsResponse, Route}
 
 import scala.concurrent.duration.DurationInt

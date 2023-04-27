@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s.ztapir
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3.testing.SttpBackendStub
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}

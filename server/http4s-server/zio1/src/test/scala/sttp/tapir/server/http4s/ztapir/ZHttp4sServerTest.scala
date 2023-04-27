@@ -7,7 +7,7 @@ import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.MonadError
 import sttp.tapir._
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.{RIO, UIO}
