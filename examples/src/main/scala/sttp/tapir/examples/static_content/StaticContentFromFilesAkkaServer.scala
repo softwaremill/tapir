@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.model.{ContentRangeUnits, Header, HeaderNames, StatusCode}
 import sttp.tapir._
+import sttp.tapir.files._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import java.nio.file.{Files, Path, StandardOpenOption}
@@ -20,7 +21,7 @@ object StaticContentFromFilesAkkaServer extends App {
   val exampleDirectory: Path = Files.createTempDirectory("akka-static-example")
   Files.write(exampleDirectory.resolve("f1"), content.getBytes, StandardOpenOption.CREATE_NEW)
 
-  val fileEndpoints = filesServerEndpoints[Future]("range-example")(exampleDirectory.toFile.getAbsolutePath)
+  val fileEndpoints = staticFilesServerEndpoints[Future]("range-example")(exampleDirectory.toFile.getAbsolutePath)
   val route: Route = AkkaHttpServerInterpreter().toRoute(fileEndpoints)
 
   // starting the server

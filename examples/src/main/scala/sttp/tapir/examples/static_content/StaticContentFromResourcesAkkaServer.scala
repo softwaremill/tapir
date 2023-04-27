@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.tapir._
+import sttp.tapir.files._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import sttp.tapir.static.ResourcesOptions
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -16,10 +16,10 @@ object StaticContentFromResourcesAkkaServer extends App {
   import actorSystem.dispatcher
 
   // we're pretending to be a SPA application, that is we serve index.html if the requested resource cannot be found
-  val resourceEndpoints = resourcesGetServerEndpoint[Future](emptyInput)(
+  val resourceEndpoints = staticResourcesGetServerEndpoint[Future](emptyInput)(
     StaticContentFromResourcesAkkaServer.getClass.getClassLoader,
     "webapp",
-    ResourcesOptions.default.defaultResource(List("index.html"))
+    FilesOptions.default.defaultFile(List("index.html"))
   )
   val route: Route = AkkaHttpServerInterpreter().toRoute(resourceEndpoints)
 
