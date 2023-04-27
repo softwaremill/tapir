@@ -70,6 +70,37 @@ Similarly, the `staticResourcesGetServerEndpoint` can be used to expose the appl
 
 A single resource can be exposed using `staticResourceGetServerEndpoint`.
 
+## FileOptions
+
+Endpoint constructor methods for files and resources can receive optional `FileOptions`, which allow to configure additional settings:
+
+
+```scala mdoc:compile-only
+import sttp.model.headers.ETag
+import sttp.tapir.emptyInput
+import sttp.tapir._
+import sttp.tapir.files._
+
+import scala.concurrent.Future
+
+import java.net.URL
+
+val customETag: Option[RangeValue] => URL => Future[Option[ETag]] = ???
+val customFileFilter: List[String] => Boolean = ???
+
+val options: FilesOptions[Future] = 
+  FilesOptions
+    .default
+    // serves file.txt.gz instead of file.txt if available and Accept-Encoding contains "gzip"
+    .withUseGzippedIfAvailable     
+    .calculateETag(customETag)
+    .fileFilter(customFileFilter)
+    .defaultFile(List("default.md"))
+
+val endpoint = staticFilesGetServerEndpoint(emptyInput)("/var/www", options)
+```
+
+
 ## Endpoint description and server logic
 
 The descriptions of endpoints which should serve static data, and the server logic which implements the actual
