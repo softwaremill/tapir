@@ -4,7 +4,7 @@ import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
 import io.netty.handler.codec.http.FullHttpRequest
 import sttp.capabilities
 import sttp.monad.MonadError
-import sttp.tapir.{FileRange, RawBodyType, TapirFile}
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
@@ -30,6 +30,8 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
       case RawBodyType.ByteArrayBody       => monadError.unit(RawValue(requestContentAsByteArray))
       case RawBodyType.ByteBufferBody      => monadError.unit(RawValue(ByteBuffer.wrap(requestContentAsByteArray)))
       case RawBodyType.InputStreamBody     => monadError.unit(RawValue(new ByteBufInputStream(nettyRequest(serverRequest).content())))
+      case RawBodyType.InputStreamRangeBody =>
+        monadError.unit(RawValue(InputStreamRange(() => new ByteBufInputStream(nettyRequest(serverRequest).content()))))
       case RawBodyType.FileBody =>
         createFile(serverRequest)
           .map(file => {

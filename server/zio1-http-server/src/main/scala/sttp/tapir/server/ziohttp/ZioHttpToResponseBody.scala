@@ -37,14 +37,24 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStrea
       case RawBodyType.ByteArrayBody   => (Stream.fromChunk(Chunk.fromArray(r)), Some((r: Array[Byte]).length.toLong))
       case RawBodyType.ByteBufferBody  => (Stream.fromChunk(Chunk.fromByteBuffer(r)), None)
       case RawBodyType.InputStreamBody => (ZStream.fromInputStream(r).provideLayer(Blocking.live), None)
-      case RawBodyType.FileBody =>
-        val tapirFile = r.asInstanceOf[FileRange]
-        val stream = tapirFile.range
-          .flatMap(r =>
-            r.startAndEnd.map(s => ZStream.fromFile(tapirFile.file.toPath).drop(s._1).take(r.contentLength).provideLayer(Blocking.live))
+      case RawBodyType.InputStreamRangeBody =>
+        r.range
+          .map(range =>
+            (
+              ZStream.fromInputStream(r.inputStreamFromRangeStart()).take(range.contentLength).provideLayer(Blocking.live),
+              Some(range.contentLength)
+            )
           )
-          .getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
-        (stream, Some(tapirFile.file.length))
+          .getOrElse((ZStream.fromInputStream(r.inputStream()).provideLayer(Blocking.live), None))
+      case RawBodyType.FileBody =>
+        val tapirFile = r: FileRange
+        tapirFile.range
+          .flatMap(r =>
+            r.startAndEnd.map(s =>
+              (ZStream.fromFile(tapirFile.file.toPath).drop(s._1).take(r.contentLength).provideLayer(Blocking.live), Some(r.contentLength))
+            )
+          )
+          .getOrElse((ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live), Some(tapirFile.file.length)))
       case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
     }
   }

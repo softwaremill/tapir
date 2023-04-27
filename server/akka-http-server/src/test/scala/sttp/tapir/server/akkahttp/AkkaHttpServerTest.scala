@@ -100,7 +100,6 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .unsafeToFuture()
         }
       )
-
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {

@@ -9,7 +9,7 @@ import sttp.model.{Header, Part}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart}
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
@@ -45,6 +45,9 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
       case RawBodyType.ByteArrayBody   => Future.value[R](asByteArray).map(RawValue(_))
       case RawBodyType.ByteBufferBody  => Future.value[R](asByteBuffer).map(RawValue(_))
       case RawBodyType.InputStreamBody => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
+      case RawBodyType.InputStreamRangeBody =>
+        Future.value[R](InputStreamRange(() => new ByteArrayInputStream(asByteArray))).map(RawValue(_))
+
       case RawBodyType.FileBody => serverOptions.createFile(asByteArray).map(f => FileRange(f)).map(file => RawValue(file, Seq(file)))
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m).map(RawValue.fromParts)
     }

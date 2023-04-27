@@ -8,6 +8,7 @@ import java.io.{File, FileNotFoundException, InputStream}
 import java.net.URL
 import java.time.Instant
 
+@deprecated("Use sttp.tapir.files.Resources", since = "1.3.0")
 object Resources {
   def apply[F[_]: MonadError](
       classLoader: ClassLoader,
@@ -100,6 +101,7 @@ object Resources {
   *   the user isn't found. This is useful for SPA apps, where the same main application resource needs to be returned regardless of the
   *   path.
   */
+@deprecated("Use new files API and FileOptions, see sttp.tapir.files.Resources", since = "1.3.0")
 case class ResourcesOptions[F[_]](
     useETags: Boolean,
     useGzippedIfAvailable: Boolean,

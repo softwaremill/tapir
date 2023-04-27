@@ -113,6 +113,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody(RawBodyType.ByteArrayBody)
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody(RawBodyType.ByteBufferBody)
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody(RawBodyType.InputStreamBody)
+  def inputStreamRangeBody: EndpointIO.Body[InputStreamRange, InputStreamRange] = rawBinaryBody(RawBodyType.InputStreamRangeBody)
   def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody(RawBodyType.FileBody)
   def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody(RawBodyType.FileBody).map(_.file)(d => FileRange(d))
 

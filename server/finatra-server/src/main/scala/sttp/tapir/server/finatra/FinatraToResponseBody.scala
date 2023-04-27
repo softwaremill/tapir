@@ -7,7 +7,7 @@ import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, Multipart
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -22,12 +22,17 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
       case RawBodyType.ByteArrayBody   => FinatraContentBuf(Buf.ByteArray.Owned(v))
       case RawBodyType.ByteBufferBody  => FinatraContentBuf(Buf.ByteBuffer.Owned(v))
       case RawBodyType.InputStreamBody => FinatraContentReader(Reader.fromStream(v))
+      case RawBodyType.InputStreamRangeBody =>
+        val stream =
+          v.range
+            .flatMap(_.startAndEnd.map(s => RangeInputStream(v.inputStream(), s._1, s._2)))
+            .getOrElse(v.inputStream())
+        FinatraContentReader(Reader.fromStream(stream))
       case RawBodyType.FileBody =>
-        val tapirFile = v.asInstanceOf[FileRange]
         FileChunk
-          .prepare(tapirFile)
+          .prepare(v)
           .map(s => FinatraContentReader(Reader.fromStream(s)))
-          .getOrElse(FinatraContentReader(Reader.fromFile(tapirFile.file)))
+          .getOrElse(FinatraContentReader(Reader.fromFile(v.file)))
       case m: RawBodyType.MultipartBody =>
         val entity = MultipartEntityBuilder.create()
         v.flatMap(rawPartToFormBodyPart(m, _)).foreach { formBodyPart: FormBodyPart => entity.addPart(formBodyPart) }
@@ -53,9 +58,11 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
         new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
       case RawBodyType.FileBody =>
         part.fileName match {
-          case Some(filename) => new FileBody(r.asInstanceOf[FileRange].file, ContentType.create(contentType), filename)
-          case None           => new FileBody(r.asInstanceOf[FileRange].file, ContentType.create(contentType))
+          case Some(filename) => new FileBody(r.file, ContentType.create(contentType), filename)
+          case None           => new FileBody(r.file, ContentType.create(contentType))
         }
+      case RawBodyType.InputStreamRangeBody =>
+        new InputStreamBody(r.inputStream(), ContentType.create(contentType), part.fileName.get)
       case RawBodyType.InputStreamBody =>
         new InputStreamBody(r, ContentType.create(contentType), part.fileName.get)
       case _: RawBodyType.MultipartBody =>
