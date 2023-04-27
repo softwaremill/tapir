@@ -20,6 +20,13 @@ datatypes as well as additional syntax:
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
 - `import sttp.tapir.integ.cats.syntax._` - brings additional syntax for `tapir` types
 
+Additionally, the `tapir-cats-effect` module contains an implementation of the `CatsMonadError` class, providing a bridge 
+between the sttp-internal `MonadError` and the cats-effect `Sync` typeclass:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-cats-effect" % "@VERSION@"
+```
+
 ## Refined integration
 
 If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` module will provide implicit codecs and
