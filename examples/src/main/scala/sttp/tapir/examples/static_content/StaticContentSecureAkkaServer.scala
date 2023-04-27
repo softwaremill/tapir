@@ -6,6 +6,7 @@ import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir._
+import sttp.tapir.files._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import java.nio.file.{Files, Path, StandardOpenOption}
@@ -21,7 +22,7 @@ object StaticContentSecureAkkaServer extends App {
   import actorSystem.dispatcher
 
   // defining the endpoints
-  val secureFileEndpoints = filesServerEndpoints[Future]("secure")(exampleDirectory.toFile.getAbsolutePath)
+  val secureFileEndpoints = staticFilesServerEndpoints[Future]("secure")(exampleDirectory.toFile.getAbsolutePath)
     .map(_.prependSecurityPure(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
       // Right means success, Left - an error, here mapped to a constant status code
       if (token.startsWith("secret")) Right(()) else Left(())

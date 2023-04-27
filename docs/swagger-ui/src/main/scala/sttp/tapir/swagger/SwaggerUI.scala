@@ -2,6 +2,7 @@ package sttp.tapir.swagger
 
 import sttp.model.{HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
+import sttp.tapir.files._
 import sttp.tapir.server.ServerEndpoint
 
 import java.util.Properties
@@ -56,7 +57,7 @@ object SwaggerUI {
     val swaggerInitializerJsEndpoint =
       baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
 
-    val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
+    val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
