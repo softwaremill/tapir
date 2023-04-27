@@ -52,9 +52,9 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
           case nb: ContentType.NonBinary => HttpEntity(nb, r)
           case _                         => HttpEntity(ct, r.getBytes(charset))
         }
-      case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
-      case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
-      case RawBodyTtype.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r), ChunkSize)
+      case RawBodyType.ByteArrayBody     => HttpEntity(ct, r)
+      case RawBodyType.ByteBufferBody    => HttpEntity(ct, ByteString(r))
+      case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r, ChunkSize))
       case RawBodyType.InputStreamRangeBody =>
         val resource = r
         val initialStream = StreamConverters.fromInputStream(resource.inputStreamFromRangeStart, ChunkSize)
