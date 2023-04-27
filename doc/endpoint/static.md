@@ -3,8 +3,11 @@
 Tapir contains predefined endpoints, server logic and server endpoints which allow serving static content, originating
 from local files or application resources. These endpoints respect etags, byte ranges as well as if-modified-since headers.
 
-> ⚠️ **Warning** Since Tapir 1.3.0, static content is supported via the new `tapir-files` module. If you're looking for
-> the API documentation of the old static content API, switch documentation to an older version.
+```eval_rst
+.. note::
+  Since Tapir 1.3.0, static content is supported via the new `tapir-files` module. If you're looking for
+  the API documentation of the old static content API, switch documentation to an older version.
+```
 
 In order to use static content endpoints, add the module to your dependencies:
 
@@ -14,7 +17,7 @@ In order to use static content endpoints, add the module to your dependencies:
 
 ## Files
 
-The easiest way to expose static content from the local filesystem is to use the `staticfilesServerEndpoint`. This method
+The easiest way to expose static content from the local filesystem is to use the `staticFilesServerEndpoint`. This method
 is parametrised with the path, at which the content should be exposed, as well as the local system path, from which
 to read the data.
 
@@ -74,7 +77,6 @@ A single resource can be exposed using `staticResourceGetServerEndpoint`.
 
 Endpoint constructor methods for files and resources can receive optional `FileOptions`, which allow to configure additional settings:
 
-
 ```scala mdoc:compile-only
 import sttp.model.headers.ETag
 import sttp.tapir.emptyInput
@@ -88,18 +90,17 @@ import java.net.URL
 val customETag: Option[RangeValue] => URL => Future[Option[ETag]] = ???
 val customFileFilter: List[String] => Boolean = ???
 
-val options: FilesOptions[Future] = 
+val options: FilesOptions[Future] =
   FilesOptions
     .default
     // serves file.txt.gz instead of file.txt if available and Accept-Encoding contains "gzip"
-    .withUseGzippedIfAvailable     
+    .withUseGzippedIfAvailable
     .calculateETag(customETag)
     .fileFilter(customFileFilter)
     .defaultFile(List("default.md"))
 
 val endpoint = staticFilesGetServerEndpoint(emptyInput)("/var/www", options)
 ```
-
 
 ## Endpoint description and server logic
 
