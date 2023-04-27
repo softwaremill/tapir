@@ -23,6 +23,7 @@ Such an endpoint has to be interpreted using your server interpreter. For exampl
 ```scala mdoc:compile-only
 import akka.http.scaladsl.server.Route
 
+import sttp.tapir._
 import sttp.tapir.files._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
@@ -43,6 +44,7 @@ below exposes the content of `/var/www` at `http://localhost:8080`:
 ```scala mdoc:compile-only
 import sttp.tapir.server.netty.NettyFutureServer
 import sttp.tapir.emptyInput
+import sttp.tapir._
 import sttp.tapir.files._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,7 +52,7 @@ import scala.concurrent.Future
 
 NettyFutureServer()
   .port(8080)
-  .addEndpoints(staticFilesGetServerEndpoint[Future](emptyInput)("/var/www"))
+  .addEndpoint(staticFilesGetServerEndpoint[Future](emptyInput)("/var/www"))
   .start()
   .flatMap(_ => Future.never)
 ```
@@ -86,6 +88,7 @@ The content of [WebJars](https://www.webjars.org) that are available on the clas
 following routes (here using the `/resources` context path):
 
 ```scala mdoc:compile-only
+import sttp.tapir._
 import sttp.tapir.files._
 
 import scala.concurrent.Future
