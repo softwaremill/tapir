@@ -14,6 +14,7 @@ import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import sttp.tapir.InputStreamRange
 
 class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptions[F])(implicit
     val readStreamCompatible: ReadStreamCompatible[S]
@@ -28,12 +29,16 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
         case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(v.asInstanceOf[Array[Byte]]))
         case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
         case RawBodyType.InputStreamBody =>
-          inputStreamToBuffer(v.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
+          inputStreamToBuffer(v, rc.vertx, byteLimit = None).flatMap(resp.end)
+        case RawBodyType.InputStreamRangeBody =>
+          v.range
+            .map(r => inputStreamToBuffer(v.inputStreamFromRangeStart(), rc.vertx, Some(r.contentLength)))
+            .getOrElse(inputStreamToBuffer(v.inputStream(), rc.vertx, byteLimit = None))
+            .flatMap(resp.end)
         case RawBodyType.FileBody =>
-          val tapirFile = v.asInstanceOf[FileRange]
-          tapirFile.range
-            .flatMap(r => r.startAndEnd.map(s => resp.sendFile(tapirFile.file.toPath.toString, s._1, r.contentLength)))
-            .getOrElse(resp.sendFile(tapirFile.file.toString))
+          v.range
+            .flatMap(r => r.startAndEnd.map(s => resp.sendFile(v.file.toPath.toString, s._1, r.contentLength)))
+            .getOrElse(resp.sendFile(v.file.toString))
         case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
       }
   }
@@ -129,7 +134,11 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           case RawBodyType.ByteBufferBody =>
             resp.write(Buffer.buffer.setBytes(0, r.asInstanceOf[ByteBuffer]))
           case RawBodyType.InputStreamBody =>
-            inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
+            inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx, byteLimit = None).flatMap(resp.write)
+          case RawBodyType.InputStreamRangeBody =>
+            val resource = r.asInstanceOf[InputStreamRange]
+            val byteLimit = resource.range.map(_.contentLength)
+            inputStreamToBuffer(resource.inputStream(), rc.vertx, byteLimit).flatMap(resp.end)
           case RawBodyType.FileBody =>
             val file = r.asInstanceOf[FileRange].file
             rc.vertx.fileSystem

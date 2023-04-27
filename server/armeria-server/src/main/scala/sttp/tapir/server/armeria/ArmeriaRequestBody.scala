@@ -8,7 +8,7 @@ import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType}
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 
 import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
@@ -45,6 +45,11 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
           .aggregate()
           .thenApply[RawValue[R]](agg => RawValue(new ByteArrayInputStream(agg.content().array())))
           .toScala
+      case RawBodyType.InputStreamRangeBody =>
+        request
+          .aggregate()
+          .thenApply[RawValue[R]](agg => RawValue(InputStreamRange(() => new ByteArrayInputStream(agg.content().array()))))
+          .toScala
       case RawBodyType.FileBody =>
         val bodyStream = request.filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]]
         for {
@@ -74,10 +79,11 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
 
   private def toRawFromHttpData[R](ctx: ServiceRequestContext, body: HttpData, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_)   => Future.successful(RawValue(body.toStringUtf8))
-      case RawBodyType.ByteArrayBody   => Future.successful(RawValue(body.array()))
-      case RawBodyType.ByteBufferBody  => Future.successful(RawValue(body.byteBuf().nioBuffer()))
-      case RawBodyType.InputStreamBody => Future.successful(RawValue(new ByteArrayInputStream(body.array())))
+      case RawBodyType.StringBody(_)        => Future.successful(RawValue(body.toStringUtf8))
+      case RawBodyType.ByteArrayBody        => Future.successful(RawValue(body.array()))
+      case RawBodyType.ByteBufferBody       => Future.successful(RawValue(body.byteBuf().nioBuffer()))
+      case RawBodyType.InputStreamBody      => Future.successful(RawValue(new ByteArrayInputStream(body.array())))
+      case RawBodyType.InputStreamRangeBody => Future.successful(RawValue(InputStreamRange(() => new ByteArrayInputStream(body.array()))))
       case RawBodyType.FileBody =>
         for {
           file <- futureConversion.to(serverOptions.createFile())

@@ -14,6 +14,7 @@ The modules are categorised using the following levels:
 | core (Scala 3) | stabilising |
 | server-core    | stabilising |
 | client-core    | stabilising |
+| files          | stabilising |
 
 ## Server interpreters
 

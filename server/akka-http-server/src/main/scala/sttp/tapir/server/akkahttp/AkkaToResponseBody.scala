@@ -1,8 +1,8 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model._
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
-import akka.stream.{IOResult, Materializer}
+import akka.stream.scaladsl.{FileIO, StreamConverters}
+import akka.stream.Materializer
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
@@ -10,14 +10,14 @@ import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
-
 import java.nio.charset.{Charset, StandardCharsets}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: ExecutionContext)
     extends ToResponseBody[AkkaResponseBody, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
+  private val ChunkSize = 8192
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): AkkaResponseBody =
     Right(
@@ -52,13 +52,19 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
           case nb: ContentType.NonBinary => HttpEntity(nb, r)
           case _                         => HttpEntity(ct, r.getBytes(charset))
         }
-      case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
-      case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
-      case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
+      case RawBodyType.ByteArrayBody     => HttpEntity(ct, r)
+      case RawBodyType.ByteBufferBody    => HttpEntity(ct, ByteString(r))
+      case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r, ChunkSize))
+      case RawBodyType.InputStreamRangeBody =>
+        val resource = r
+        val initialStream = StreamConverters.fromInputStream(resource.inputStreamFromRangeStart, ChunkSize)
+        resource.range
+          .map(r => streamToEntity(ct, contentLength, toRangedStream(initialStream, bytesTotal = r.contentLength)))
+          .getOrElse(streamToEntity(ct, contentLength, initialStream))
       case RawBodyType.FileBody =>
-        val tapirFile = r.asInstanceOf[FileRange]
+        val tapirFile = r
         tapirFile.range
-          .flatMap(r => r.startAndEnd.map(s => HttpEntity(ct, createSource(tapirFile, s._1, r.contentLength))))
+          .flatMap(r => r.startAndEnd.map(s => HttpEntity(ct, createFileSource(tapirFile, s._1, r.contentLength))))
           .getOrElse(HttpEntity.fromPath(ct, tapirFile.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
@@ -67,13 +73,15 @@ private[akkahttp] class AkkaToResponseBody(implicit m: Materializer, ec: Executi
     }
   }
 
-  private def createSource[R, CF <: CodecFormat](
+  private def createFileSource(
       tapirFile: FileRange,
       start: Long,
       bytesTotal: Long
-  ): Source[ByteString, Future[IOResult]] =
-    FileIO
-      .fromPath(tapirFile.file.toPath, chunkSize = 8192, startPosition = start)
+  ): AkkaStreams.BinaryStream =
+    toRangedStream(FileIO.fromPath(tapirFile.file.toPath, ChunkSize, startPosition = start), bytesTotal)
+
+  private def toRangedStream(initialStream: AkkaStreams.BinaryStream, bytesTotal: Long): AkkaStreams.BinaryStream =
+    initialStream
       .scan((0L, ByteString.empty)) { case ((bytesConsumed, _), next) =>
         val bytesInNext = next.length
         val bytesFromNext = Math.max(0, Math.min(bytesTotal - bytesConsumed, bytesInNext.toLong))

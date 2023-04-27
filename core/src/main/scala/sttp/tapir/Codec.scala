@@ -232,6 +232,8 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     id[Array[Byte], OctetStream](OctetStream(), Schema.schemaForByteArray)
   implicit val inputStream: Codec[InputStream, InputStream, OctetStream] =
     id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
+  implicit val inputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
+    id[InputStreamRange, OctetStream](OctetStream(), Schema.schemaForInputStreamRange)
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
   implicit val fileRange: Codec[FileRange, FileRange, OctetStream] =
@@ -735,6 +737,7 @@ object RawBodyType {
   case object ByteBufferBody extends Binary[ByteBuffer]
   case object InputStreamBody extends Binary[InputStream]
   case object FileBody extends Binary[FileRange]
+  case object InputStreamRangeBody extends Binary[InputStreamRange]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)

@@ -2,7 +2,7 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.FileRange
+import sttp.tapir.{FileRange, InputStreamRange}
 import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
@@ -23,6 +23,8 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
     case RawBodyType.ByteArrayBody              => asByteArray(serverRequest).map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray(serverRequest).map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
     case RawBodyType.InputStreamBody            => asByteArray(serverRequest).map(new ByteArrayInputStream(_)).map(RawValue(_))
+    case RawBodyType.InputStreamRangeBody =>
+      asByteArray(serverRequest).map(bytes => new InputStreamRange(() => new ByteArrayInputStream(bytes))).map(RawValue(_))
     case RawBodyType.FileBody =>
       for {
         tmpFile <- serverOptions.createFile(serverRequest)
