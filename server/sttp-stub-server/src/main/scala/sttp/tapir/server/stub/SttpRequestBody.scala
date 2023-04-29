@@ -30,7 +30,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = body(serverRequest) match {
-    case Right(stream) => ME.unit(RawValue(stream))
+    case Right(stream) => stream
     case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
   }
 
