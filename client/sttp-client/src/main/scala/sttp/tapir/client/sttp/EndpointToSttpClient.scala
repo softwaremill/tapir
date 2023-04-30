@@ -162,11 +162,12 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   ): PartialAnyRequest = {
     val encoded = codec.encode(v)
     val req2 = bodyType match {
-      case RawBodyType.StringBody(charset) => req.body(encoded, charset.name())
-      case RawBodyType.ByteArrayBody       => req.body(encoded)
-      case RawBodyType.ByteBufferBody      => req.body(encoded)
-      case RawBodyType.InputStreamBody     => req.body(encoded)
-      case RawBodyType.FileBody            => req.body(encoded.asInstanceOf[FileRange].file)
+      case RawBodyType.StringBody(charset)  => req.body(encoded, charset.name())
+      case RawBodyType.ByteArrayBody        => req.body(encoded)
+      case RawBodyType.ByteBufferBody       => req.body(encoded)
+      case RawBodyType.InputStreamBody      => req.body(encoded)
+      case RawBodyType.FileBody             => req.body(encoded.file)
+      case RawBodyType.InputStreamRangeBody => req.body(encoded.inputStream())
       case m: RawBodyType.MultipartBody =>
         val parts: Seq[Part[RequestBody[Any]]] = (encoded: Seq[RawPart]).flatMap { p =>
           m.partType(p.name).map { partType =>
@@ -189,12 +190,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
   private def partToSttpPart[T](p: Part[T], bodyType: RawBodyType[T]): Part[RequestBody[Any]] =
     bodyType match {
-      case RawBodyType.StringBody(charset) => multipart(p.name, p.body, charset.toString)
-      case RawBodyType.ByteArrayBody       => multipart(p.name, p.body)
-      case RawBodyType.ByteBufferBody      => multipart(p.name, p.body)
-      case RawBodyType.InputStreamBody     => multipart(p.name, p.body)
-      case RawBodyType.FileBody            => multipartFile(p.name, p.body.asInstanceOf[FileRange].file)
-      case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
+      case RawBodyType.StringBody(charset)  => multipart(p.name, p.body, charset.toString)
+      case RawBodyType.ByteArrayBody        => multipart(p.name, p.body)
+      case RawBodyType.ByteBufferBody       => multipart(p.name, p.body)
+      case RawBodyType.InputStreamBody      => multipart(p.name, p.body)
+      case RawBodyType.FileBody             => multipartFile(p.name, p.body.asInstanceOf[FileRange].file)
+      case RawBodyType.InputStreamRangeBody => multipart(p.name, p.body.inputStream())
+      case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
   private def responseAsFromOutputs(out: EndpointOutput[_], isWebSocket: Boolean): ResponseAs[Any, Any] = {
@@ -204,12 +206,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case (None, false) =>
         out.bodyType
           .map {
-            case RawBodyType.StringBody(charset) => asStringAlways(charset.name())
-            case RawBodyType.ByteArrayBody       => asByteArrayAlways
-            case RawBodyType.ByteBufferBody      => asByteArrayAlways.map(ByteBuffer.wrap)
-            case RawBodyType.InputStreamBody     => asByteArrayAlways.map(new ByteArrayInputStream(_))
-            case RawBodyType.FileBody            => asFileAlways(clientOptions.createFile()).map(d => FileRange(d))
-            case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
+            case RawBodyType.StringBody(charset)  => asStringAlways(charset.name())
+            case RawBodyType.ByteArrayBody        => asByteArrayAlways
+            case RawBodyType.ByteBufferBody       => asByteArrayAlways.map(ByteBuffer.wrap)
+            case RawBodyType.InputStreamBody      => asByteArrayAlways.map(new ByteArrayInputStream(_))
+            case RawBodyType.FileBody             => asFileAlways(clientOptions.createFile()).map(d => FileRange(d))
+            case RawBodyType.InputStreamRangeBody => asByteArrayAlways.map(b => InputStreamRange(() => new ByteArrayInputStream(b)))
+            case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(ignore)
     }).asInstanceOf[ResponseAs[Any, Any]]

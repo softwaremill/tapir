@@ -276,6 +276,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary())
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
+  implicit val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
   implicit val schemaForInstant: Schema[Instant] = Schema(SDateTime())
   implicit val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime())
   implicit val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime())

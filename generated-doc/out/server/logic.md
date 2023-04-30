@@ -202,10 +202,11 @@ before the security logic defined in the endpoint so far (if any). For example:
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.files._
 import scala.concurrent.Future
 import sttp.model.StatusCode
 
-val secureFileEndpoints = filesServerEndpoints[Future]("secure")("/home/data")
+val secureFileEndpoints = staticFilesServerEndpoints[Future]("secure")("/home/data")
   .map(_.prependSecurity(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
     Future.successful(if (token.startsWith("secret")) Right(()) else Left(()))
   })

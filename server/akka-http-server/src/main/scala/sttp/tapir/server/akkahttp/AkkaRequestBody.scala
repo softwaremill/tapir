@@ -10,9 +10,10 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart}
+import sttp.tapir.{FileRange, RawBodyType, RawPart, InputStreamRange}
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, InputStream}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(implicit
@@ -37,6 +38,10 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
         serverOptions
           .createFile(request)
           .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map(f => RawValue(f, Seq(f))))
+      case RawBodyType.InputStreamRangeBody =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]]
+          .apply(body)
+          .map(b => RawValue(InputStreamRange(() => new ByteArrayInputStream(b))))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts

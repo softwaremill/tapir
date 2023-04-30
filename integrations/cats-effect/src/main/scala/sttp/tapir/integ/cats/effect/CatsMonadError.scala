@@ -1,4 +1,4 @@
-package sttp.tapir.integ.cats
+package sttp.tapir.integ.cats.effect
 
 import cats.effect.Sync
 import sttp.monad.MonadError

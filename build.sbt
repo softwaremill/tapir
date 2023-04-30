@@ -70,6 +70,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
+  bspEnabled := !ideSkipProject.value,
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
@@ -153,6 +154,7 @@ lazy val loggerDependencies = Seq(
 lazy val rawAllAggregates = core.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
+  catsEffect.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   zio1.projectRefs ++
@@ -161,6 +163,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   monixNewtype.projectRefs ++
   zioPrelude.projectRefs ++
   circeJson.projectRefs ++
+  files.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
@@ -421,6 +424,19 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
+lazy val files: ProjectMatrix = (projectMatrix in file("files"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-files",
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core)
+
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .settings(commonSettings)
   .settings(
@@ -452,7 +468,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     scalaVersions = scala2And3Versions,
     settings = commonNativeSettings
   )
-  .dependsOn(core, circeJson, cats)
+  .dependsOn(core, files, circeJson, cats)
 
 val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
 val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
@@ -475,8 +491,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.2" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.9.2" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.3" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.9.3" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -510,8 +526,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.9.0",
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      "org.typelevel" %%% "cats-core" % Versions.catsCore,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
@@ -544,6 +559,28 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
+  )
+  .dependsOn(core)
+
+lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-effect"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-cats-effect",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % Versions.catsCore,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -1028,7 +1065,7 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
     libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(core)
+  .dependsOn(core, files)
 
 lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-bundle"))
   .settings(commonJvmSettings)
@@ -1144,7 +1181,7 @@ lazy val armeriaServerCats: ProjectMatrix =
       )
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
-    .dependsOn(armeriaServer % CompileAndTest, cats, serverTests % Test)
+    .dependsOn(armeriaServer % CompileAndTest, cats, catsEffect, serverTests % Test)
 
 lazy val armeriaServerZio: ProjectMatrix =
   (projectMatrix in file("server/armeria-server/zio"))
@@ -1191,7 +1228,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
       Test / skip := true
     )
   )
-  .dependsOn(serverCore, cats)
+  .dependsOn(serverCore, cats, catsEffect)
 
 lazy val http4sServer2_12 = http4sServer.jvm(scala2_12).dependsOn(serverTests.jvm(scala2_12) % Test)
 lazy val http4sServer2_13 = http4sServer.jvm(scala2_13).dependsOn(serverTests.jvm(scala2_13) % Test)
@@ -1273,7 +1310,7 @@ lazy val finatraServerCats: ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(name := "tapir-finatra-server-cats")
     .jvmPlatform(scalaVersions = scala2Versions)
-    .dependsOn(finatraServer % CompileAndTest, cats, serverTests % Test)
+    .dependsOn(finatraServer % CompileAndTest, cats, catsEffect, serverTests % Test)
 
 lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"))
   .settings(commonJvmSettings)
@@ -1302,7 +1339,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", cats)
+lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
@@ -1344,7 +1381,7 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test, catsEffect % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
@@ -1381,7 +1418,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
-    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "0.0.5")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test, "dev.zio" %% "zio-http" % "3.0.0-RC1")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1400,7 +1437,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2Versions)
-  .dependsOn(serverCore, cats, circeJson, tests % "test")
+  .dependsOn(serverCore, cats, catsEffect, circeJson, tests % "test")
 
 // integration tests for lambda interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources

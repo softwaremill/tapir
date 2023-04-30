@@ -1,20 +1,48 @@
 package sttp.tapir.server.ziohttp
 
-import cats.effect.{IO, Resource}
-import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
+import cats.effect.IO
+import cats.effect.Resource
+import io.netty.channel.ChannelFactory
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.ServerChannel
+import org.scalatest.Assertion
+import org.scalatest.Exceptional
+import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
-import org.scalatest.{Assertion, Canceled, Exceptional, Failed, FutureOutcome}
 import sttp.capabilities.zio.ZioStreams
+import sttp.client3._
+import sttp.client3.testing.SttpBackendStub
+import sttp.model.MediaType
 import sttp.monad.MonadError
+import sttp.tapir.PublicEndpoint
 import sttp.tapir._
+import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.server.tests._
-import sttp.tapir.tests.{Test, TestSuite}
-import sttp.tapir.ztapir.{RIOMonadError, RichZEndpoint}
-import zio.http.netty.{ChannelFactories, ChannelType, EventLoopGroups}
-import zio.http.{HttpAppMiddleware, Path, Request, URL}
+import sttp.tapir.tests.Test
+import sttp.tapir.tests.TestSuite
+import sttp.tapir.ztapir.RIOMonadError
+import sttp.tapir.ztapir.RichZEndpoint
+import zio.Promise
+import zio.Ref
+import zio.Runtime
+import zio.Task
+import zio.UIO
+import zio.Unsafe
+import zio.ZEnvironment
+import zio.ZIO
+import zio.ZLayer
+import zio.http.HttpAppMiddleware
+import zio.http.Path
+import zio.http.Request
+import zio.http.URL
+import zio.http.netty.ChannelFactories
+import zio.http.netty.ChannelType
+import zio.http.netty.EventLoopGroups
 import zio.interop.catz._
-import zio.{Promise, Ref, Runtime, Task, UIO, Unsafe, ZEnvironment, ZIO, ZLayer}
+import zio.stream.ZPipeline
+import zio.stream.ZStream
 
+import java.nio.charset.Charset
 import java.time
 import scala.concurrent.Future
 
@@ -48,7 +76,7 @@ class ZioHttpServerTest extends TestSuite {
         })
 
         val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
-        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.fromConfig)
+        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.live)
       }.build)
       .map { nettyDeps =>
         val eventLoopGroup = ZLayer.succeed(nettyDeps.get[EventLoopGroup])
@@ -101,6 +129,65 @@ class ZioHttpServerTest extends TestSuite {
                 .map(_ shouldBe "2")
                 .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             } yield result
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
+          // https://github.com/softwaremill/tapir/issues/2849
+          Test("Streaming works through the stub backend") {
+            // given
+            val CsvCodecFormat = new CodecFormat {
+              override def mediaType: MediaType = MediaType.TextCsv
+            }
+
+            val backendStub: TapirStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStubInterpreter[Task, ZioStreams](SttpBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+
+            val endpointModel: PublicEndpoint[ZStream[Any, Throwable, Byte], Unit, ZStream[Any, Throwable, Byte], ZioStreams] =
+              endpoint.post
+                .in("hello")
+                .in(streamBinaryBody(ZioStreams)(CsvCodecFormat))
+                .out(streamBinaryBody(ZioStreams)(CsvCodecFormat))
+
+            val streamingEndpoint: sttp.tapir.ztapir.ZServerEndpoint[Any, ZioStreams] =
+              endpointModel
+                .zServerLogic(stream =>
+                  ZIO.succeed({
+                    stream
+                      .via(ZPipeline.utf8Decode)
+                      .via(ZPipeline.splitLines)
+                      .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
+                      .via(ZPipeline.utf8Encode)
+                  })
+                )
+            val inputStrings = List("Hello,how,are,you", "I,am,good,thanks")
+            val input: ZStream[Any, Nothing, Byte] =
+              ZStream(inputStrings: _*)
+                .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
+                .mapConcat(_.getBytes(Charset.forName("UTF-8")))
+
+            val makeRequest = sttp.client3.basicRequest
+              .streamBody(ZioStreams)(input)
+              .post(uri"/hello")
+              .response(asStreamAlwaysUnsafe(ZioStreams))
+
+            val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
+
+            // when
+            val test: ZIO[Any, Throwable, Assertion] =
+              makeRequest
+                .send(backend)
+                .flatMap(response =>
+                  response.body
+                    .via(ZPipeline.utf8Decode)
+                    .via(ZPipeline.splitLines)
+                    .runCollect
+                    .map(_.toList)
+                )
+                // then
+                .map(_ shouldBe inputStrings)
+                .catchAll { _ =>
+                  ZIO.succeed(fail("Unable to extract body from Http response"))
+                }
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }

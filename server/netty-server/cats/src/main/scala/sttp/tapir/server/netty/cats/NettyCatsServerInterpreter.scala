@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.cats
 import cats.effect.Async
 import cats.effect.std.Dispatcher
 import sttp.monad.MonadError
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}

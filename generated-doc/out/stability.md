@@ -14,6 +14,7 @@ The modules are categorised using the following levels:
 | core (Scala 3) | stabilising |
 | server-core    | stabilising |
 | client-core    | stabilising |
+| files          | stabilising |
 
 ## Server interpreters
 
@@ -54,17 +55,18 @@ The modules are categorised using the following levels:
 
 ## Integration modules
 
-| Module           | Level        |
-|------------------|--------------|
-| cats             | stabilising  |
-| derevo           | stabilising  |
-| enumeratum       | stabilising  |
-| newtype          | stabilising  |
-| monix-newtype    | stabilising  |
-| refined          | stabilising  |
-| zio              | experimental |
-| zio1             | stabilising  |
-| zio-prelude      | experimental |
+| Module        | Level        |
+|---------------|--------------|
+| cats          | stabilising  |
+| cats-effect   | stabilising  |
+| derevo        | stabilising  |
+| enumeratum    | stabilising  |
+| newtype       | stabilising  |
+| monix-newtype | stabilising  |
+| refined       | stabilising  |
+| zio           | experimental |
+| zio1          | stabilising  |
+| zio-prelude   | experimental |
 
 ## JSON modules
 

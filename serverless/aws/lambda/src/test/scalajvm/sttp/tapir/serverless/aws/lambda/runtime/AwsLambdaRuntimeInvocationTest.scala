@@ -9,7 +9,7 @@ import sttp.client3._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.{Header, StatusCode}
 import sttp.tapir._
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeInvocationTest._
 import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsCatsEffectServerOptions, AwsServerOptions}
 

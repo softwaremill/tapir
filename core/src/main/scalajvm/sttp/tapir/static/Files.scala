@@ -11,6 +11,7 @@ import java.nio.file.{LinkOption, Path, Paths}
 import java.time.Instant
 import scala.annotation.tailrec
 
+@deprecated("Use sttp.tapir.files.Files", since = "1.3.0")
 object Files {
 
   // inspired by org.http4s.server.staticcontent.FileService
@@ -157,6 +158,7 @@ object Files {
   *   path segments (relative to the system path from which files are read) of the file to return in case the one requested by the user
   *   isn't found. This is useful for SPA apps, where the same main application file needs to be returned regardless of the path.
   */
+@deprecated("Use sttp.tapir.files.FilesOptions", since = "1.3.0")
 case class FilesOptions[F[_]](
     calculateETag: MonadError[F] => File => F[Option[ETag]],
     fileFilter: List[String] => Boolean,

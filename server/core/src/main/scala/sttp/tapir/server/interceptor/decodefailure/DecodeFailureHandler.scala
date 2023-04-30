@@ -131,6 +131,7 @@ object DefaultDecodeFailureHandler {
           if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
             (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
         respondBadRequest
+      case _: EndpointInput.PathsCapture[_] => respondBadRequest
       // if the failing input contains an authentication input (potentially nested), sending its challenge
       case FirstAuth(a) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)

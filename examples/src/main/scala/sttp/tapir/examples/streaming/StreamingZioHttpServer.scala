@@ -6,8 +6,8 @@ import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.HttpApp
-import zio.http.{Server, ServerConfig}
-import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault}
+import zio.http.Server
+import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault, ZLayer}
 import zio.stream._
 
 import java.nio.charset.StandardCharsets
@@ -44,7 +44,7 @@ object StreamingZioHttpServer extends ZIOAppDefault {
     Server
       .serve(routes.withDefaultErrorResponse)
       .provide(
-        ServerConfig.live(ServerConfig.default.port(8080)),
+        ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
       .exitCode

@@ -5,7 +5,6 @@ import com.linecorp.armeria.common.stream.StreamMessage
 import com.linecorp.armeria.common.{ContentDisposition, HttpData, HttpHeaders}
 import com.linecorp.armeria.internal.shaded.guava.io.ByteStreams
 import io.netty.buffer.Unpooled
-import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import sttp.capabilities.Streams
@@ -48,9 +47,18 @@ private[armeria] final class ArmeriaToResponseBody[S <: Streams[S]](streamCompat
         Right(HttpData.wrap(Unpooled.wrappedBuffer(byteBuffer)))
 
       case RawBodyType.InputStreamBody =>
-        val is = v.asInstanceOf[InputStream]
         // TODO(ikhoon): Add StreamMessage.of(InputStream)
-        Right(HttpData.wrap(ByteStreams.toByteArray(is)))
+        Right(HttpData.wrap(ByteStreams.toByteArray(v)))
+
+      case RawBodyType.InputStreamRangeBody =>
+        val bytes = v.range // TODO Add StreamMessage.of(InputStream)
+          .map { r =>
+            val array = new Array[Byte](r.contentLength.toInt)
+            ByteStreams.read(v.inputStreamFromRangeStart(), array, 0, r.contentLength.toInt)
+            array
+          }
+          .getOrElse(ByteStreams.toByteArray(v.inputStream()))
+          Right(HttpData.wrap(bytes))
 
       case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]
