@@ -4,7 +4,7 @@ object Versions {
   val http4sBlazeClient = "0.23.14"
   val catsCore = "2.9.0"
   val catsEffect = "3.4.10"
-  val circe = "0.14.3"
+  val circe = "0.14.5"
   val circeGenericExtras = "0.14.3"
   val circeYaml = "0.14.2"
   val sttp = "3.8.15"
