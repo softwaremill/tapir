@@ -15,8 +15,9 @@ case class StaticInput(
     range: Option[Range],
     acceptEncoding: Option[String]
 ) {
-
-  def acceptGzip: Boolean = acceptEncoding.contains("gzip")
+  val acceptedEncodings: List[String] =
+    acceptEncoding.map(_.split(",").map(_.trim).toList).getOrElse(List.empty)
+  def acceptGzip: Boolean = acceptedEncodings.exists(_.contains("gzip"))
 }
 
 trait StaticErrorOutput
@@ -30,7 +31,7 @@ sealed trait StaticOutput[+T] {
   def withoutBody: StaticOutput[Unit] =
     this match {
       case StaticOutput.NotModified => StaticOutput.NotModified
-      case o: StaticOutput.FoundPartial[T] => 
+      case o: StaticOutput.FoundPartial[T] =>
         o.copy(body = ())
       case o: StaticOutput.Found[T] =>
         o.copy(body = ())

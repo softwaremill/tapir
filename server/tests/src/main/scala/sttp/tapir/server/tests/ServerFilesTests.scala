@@ -3,6 +3,7 @@ package sttp.tapir.server.tests
 import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
+import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -157,22 +158,26 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
         }
       },
       Test("should return pre-gzipped files") {
+        // https://github.com/softwaremill/tapir/issues/2869
         withTestFilesDirectory { testDir =>
           serveRoute(
             staticFilesGetServerEndpoint[F]("test")(testDir.getAbsolutePath, FilesOptions.default.withUseGzippedIfAvailable)
           )
             .use { port =>
-              emptyRequest
-                .acceptEncoding("gzip")
-                .get(uri"http://localhost:$port/test/img.gif")
-                .response(asStringAlways)
-                .send(backend)
-                .map(r => {
-                  r.code shouldBe StatusCode.Ok
-                  r.body shouldBe "img gzipped content"
-                  r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
-                  r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
-                })
+              val testCases =
+                for (acceptEncodingValue <- List("gzip, deflate", "gzip", "deflate, gzip;q=1.0, *;q=0.5"))
+                  yield emptyRequest
+                    .acceptEncoding(acceptEncodingValue)
+                    .get(uri"http://localhost:$port/test/img.gif")
+                    .response(asStringAlways)
+                    .send(backend)
+                    .map(r => {
+                      r.code shouldBe StatusCode.Ok
+                      r.body shouldBe "img gzipped content"
+                      r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
+                      r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
+                    })
+              testCases.sequence.map(_.last)
             }
             .unsafeToFuture()
         }
