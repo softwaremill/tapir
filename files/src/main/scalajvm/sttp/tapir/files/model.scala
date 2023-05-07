@@ -13,11 +13,9 @@ case class StaticInput(
     ifNoneMatch: Option[List[ETag]],
     ifModifiedSince: Option[Instant],
     range: Option[Range],
-    acceptEncoding: Option[String]
+    acceptEncoding: List[String]
 ) {
-  val acceptedEncodings: List[String] =
-    acceptEncoding.map(_.split(",").map(_.trim).toList).getOrElse(List.empty)
-  def acceptGzip: Boolean = acceptedEncodings.exists(_.contains("gzip"))
+  def acceptGzip: Boolean = acceptEncoding.exists(_.contains("gzip"))
 }
 
 trait StaticErrorOutput
