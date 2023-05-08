@@ -7,7 +7,6 @@ import sttp.model.StatusCode
 import sttp.model.headers.ETag
 import sttp.model.headers.Range
 import sttp.monad.MonadError
-import sttp.tapir.CodecFormat.OctetStream
 import sttp.tapir.FileRange
 import sttp.tapir._
 import sttp.tapir.files.FilesOptions
@@ -34,6 +33,12 @@ trait TapirStaticContentEndpoints {
       case Some(h) => DecodeResult.fromEitherString(h, ETag.parseList(h)).map(Some(_))
     }(_.map(es => ETag.toString(es)))
 
+  private val acceptEncodingHeader: EndpointIO[List[String]] = 
+    header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[List[String]] {
+      case None => DecodeResult.Value(List.empty)
+      case Some(str) => DecodeResult.Value(str.split(",").map(_.trim).toList)
+    }(es => Option(es.mkString(",")).filter(_.nonEmpty))
+
   private def optionalHttpDateHeader(headerName: String): EndpointIO[Option[Instant]] =
     header[Option[String]](headerName).mapDecode[Option[Instant]] {
       case None    => DecodeResult.Value(None)
@@ -47,7 +52,6 @@ trait TapirStaticContentEndpoints {
   private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
   private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
   private def acceptRangesHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptRanges)
-  private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
   private def staticEndpoint[T](
