@@ -4,10 +4,10 @@ import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 import scala.collection.mutable.ListBuffer
 
-class ToKeyedSchemas {
-  def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
+private[docs] class ToKeyedSchemas {
+  private[docs] def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
 
-  def apply(schema: TSchema[_]): List[KeyedSchema] = {
+  private[docs] def apply(schema: TSchema[_]): List[KeyedSchema] = {
     val thisSchema = SchemaKey(schema).map(_ -> schema).toList
     val nestedSchemas = schema match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _)            => apply(o)

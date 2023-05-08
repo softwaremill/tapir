@@ -2,7 +2,7 @@ package sttp.tapir.docs.asyncapi
 
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.Schema.SName
-import sttp.tapir.docs.apispec.defaultSchemaName
+import sttp.tapir.docs.apispec.schema.defaultSchemaName
 
 case class AsyncAPIDocsOptions(
     subscribeOperationId: (Vector[String], AnyEndpoint) => String,
