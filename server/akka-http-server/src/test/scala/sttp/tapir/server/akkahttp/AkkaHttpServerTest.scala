@@ -24,6 +24,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
   private def randomUUID = Some(UUID.randomUUID().toString)
@@ -98,6 +99,33 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
             .unsafeToFuture()
+        },
+        // https://github.com/softwaremill/tapir/issues/2778
+        Test("handle MetricsRequestInterceptor without changing response to chunked") {
+          // given
+          val options = AkkaHttpServerOptions.customiseInterceptors
+            .metricsInterceptor(new MetricsRequestInterceptor[Future](metrics = List(), ignoreEndpoints = Nil))
+            .options
+
+          val route = AkkaHttpServerInterpreter(options).toRoute(
+            endpoint.get.in("").out(stringBody).serverLogicSuccess(_ => Future.successful("hello, tapir2778"))
+          )
+
+          // when
+          val result = interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port").send(backend)
+            }
+            .unsafeToFuture()
+
+          // then
+          result.map { r =>
+            r.body shouldBe Right("hello, tapir2778")
+            r.header("Content-Length") shouldBe 16
+            r.header("Transfer-Encoding") shouldBe None
+          }
+
         }
       )
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
