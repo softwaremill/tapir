@@ -18,13 +18,13 @@ import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
   private def randomUUID = Some(UUID.randomUUID().toString)
@@ -101,7 +101,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .unsafeToFuture()
         },
         // https://github.com/softwaremill/tapir/issues/2778
-        Test("handle MetricsRequestInterceptor without changing response to chunked") {
+        Test("handle MetricsRequestInterceptor on Strict body without changing response to chunked") {
           // given
           val options = AkkaHttpServerOptions.customiseInterceptors
             .metricsInterceptor(new MetricsRequestInterceptor[Future](metrics = List(), ignoreEndpoints = Nil))
@@ -122,10 +122,34 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           // then
           result.map { r =>
             r.body shouldBe Right("hello, tapir2778")
-            r.header("Content-Length") shouldBe 16
+            r.header("Content-Length") shouldBe Some("16")
             r.header("Transfer-Encoding") shouldBe None
           }
+        },
+        Test("handle MetricsRequestInterceptor on Empty body without changing response to chunked") {
+          // given
+          val options = AkkaHttpServerOptions.customiseInterceptors
+            .metricsInterceptor(new MetricsRequestInterceptor[Future](metrics = List(), ignoreEndpoints = Nil))
+            .options
 
+          val route = AkkaHttpServerInterpreter(options).toRoute(
+            endpoint.get.in("").out(emptyOutput).serverLogicSuccess(_ => Future.successful(()))
+          )
+
+          // when
+          val result = interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port").send(backend)
+            }
+            .unsafeToFuture()
+
+          // then
+          result.map { r =>
+            r.body shouldBe Right("")
+            r.header("Content-Length") shouldBe Some("0")
+            r.header("Transfer-Encoding") shouldBe None
+          }
         }
       )
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
