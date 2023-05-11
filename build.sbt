@@ -190,6 +190,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
   akkaGrpcServer.projectRefs ++
+  pekkoHttpServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
@@ -1146,6 +1147,21 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-http-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-pekko-http-server",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekkoHttp,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams,
+      "org.apache.pekko" %% "pekko-slf4j" % Versions.pekkoStreams,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(serverCore, serverTests % Test)
+
 lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1853,6 +1869,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
+    pekkoHttpServer,
     armeriaServer,
     http4sServer,
     http4sServerZio,
@@ -1936,6 +1953,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     core % "compile->test",
     testing,
     akkaHttpServer,
+    pekkoHttpServer,
     armeriaServer,
     armeriaServerCats,
     armeriaServerZio,
