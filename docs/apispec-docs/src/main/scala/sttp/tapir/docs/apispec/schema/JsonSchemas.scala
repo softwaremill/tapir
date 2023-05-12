@@ -16,16 +16,17 @@ object JsonSchemas {
       metaSchema: Option[MetaSchema] = None,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): JsonSchemas = {
+
     val toKeyedSchemas = new ToKeyedSchemas
-    val (nonKeyedSchemas, keyedSchemasNested) =
-      schemas.partitionMap { topLevelSchema =>
-        val asKeyedSchemas = toKeyedSchemas(topLevelSchema)
+    val (nonKeyedSchemas, keyedSchemas) =
+      schemas.foldLeft((List.empty[TSchema[_]], List.empty[KeyedSchema])) { case ((accNonKeyedSchemas, accKeyedSchemas), currentSchema) =>
+        val asKeyedSchemas = toKeyedSchemas(currentSchema)
         if (asKeyedSchemas.isEmpty)
-          Left(topLevelSchema)
+          (accNonKeyedSchemas :+ currentSchema, accKeyedSchemas)
         else
-          Right(ToKeyedSchemas.unique(asKeyedSchemas))
+          (accNonKeyedSchemas, accKeyedSchemas ++ ToKeyedSchemas.unique(asKeyedSchemas))
       }
-    val keyedSchemas = keyedSchemasNested.flatten
+
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
     val toSchemaReference = new ToSchemaReference(keysToIds)
     val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
