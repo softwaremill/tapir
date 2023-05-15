@@ -27,7 +27,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
 
     // then
     println(Printer.spaces2.print(result.asJson.deepDropNullValues))
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"description":"desc!","$$defs":{"Child":{"required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""
 
   }
 
@@ -55,8 +55,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val result = JsonSchemas(tSchema, markOptionsAsNullable = true)
 
     // then
-    println(Printer.spaces2.print(result.asJson.deepDropNullValues))
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField","childDetails"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"childDetails":{"$$ref":"#/$$defs/Child1"}},"$$defs":{"Child":{"required":["childName"],"type":"object","properties":{"childName":{"type":"string"}}},"Child1":{"required":["age","height"],"type":"object","properties":{"age":{"type":"integer","format":"int32"},"height":{"type":"integer","format":"int32"}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField","childDetails"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"childDetails":{"$$ref":"#/$$defs/Child1"}},"$$defs":{"Child":{"required":["childName"],"type":"object","properties":{"childName":{"type":"string"}}},"Child1":{"required":["age"],"type":"object","properties":{"age":{"type":"integer","format":"int32"},"height":{"type":["integer", "null"],"format":"int32"}}}}}"""
   }
 
   it should "handle options as not nullable" in {
