@@ -1,47 +1,44 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.apispec.{Schema => ASchema, _}
-import sttp.tapir.{Schema => TSchema}
+import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.internal.IterableToListMap
-
+import sttp.tapir.{Schema => TSchema}
 import scala.collection.immutable.ListMap
-
-case class JsonSchemas(schemas: ListMap[SchemaId, ASchema])
 
 object JsonSchemas {
 
-  def apply(
-      schemas: Iterable[TSchema[_]],
-      markOptionsAsNullable: Boolean,
-      metaSchema: Option[MetaSchema] = None,
-      schemaName: TSchema.SName => String = defaultSchemaName
-  ): JsonSchemas = {
+  private val toKeyedSchemas = new ToKeyedSchemas
 
-    val toKeyedSchemas = new ToKeyedSchemas
-    val (nonKeyedSchemas, keyedSchemas) =
-      schemas.foldLeft((List.empty[TSchema[_]], List.empty[KeyedSchema])) { case ((accNonKeyedSchemas, accKeyedSchemas), currentSchema) =>
-        val asKeyedSchemas = toKeyedSchemas(currentSchema)
-        if (asKeyedSchemas.isEmpty)
-          (accNonKeyedSchemas :+ currentSchema, accKeyedSchemas)
-        else
-          (accNonKeyedSchemas, accKeyedSchemas ++ ToKeyedSchemas.unique(asKeyedSchemas))
-      }
+  def apply(
+      schema: TSchema[_],
+      markOptionsAsNullable: Boolean,
+      metaSchema: MetaSchema = MetaSchemaDraft04,
+      schemaName: TSchema.SName => String = defaultSchemaName
+  ): ASchema = {
+
+    val asKeyedSchemas = toKeyedSchemas(schema).drop(1)
+    val keyedSchemas = ToKeyedSchemas.unique(asKeyedSchemas)
 
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
-    val toSchemaReference = new ToSchemaReference(keysToIds)
+    val toSchemaReference = new ToSchemaReference(keysToIds, refRoot = "#/$defs/")
     val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
-    val convertedNonKeyedSchemas: Iterable[(String, ReferenceOr[ASchema])] =
-      nonKeyedSchemas.map(s => tschemaToASchema(s)).zipWithIndex.map { case (aSchema, index) =>
-        (s"TapirTopLevelRawSchema$index", aSchema)
-      }
     val keysToSchemas = keyedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
     val schemaIds = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
-    val allSchemas = (schemaIds.values ++ convertedNonKeyedSchemas)
-    JsonSchemas(
-      allSchemas.collect { case (k, Right(schema: ASchema)) =>
-        (k, schema.copy(`$schema` = metaSchema.map(_.schemaId)))
+    val nestedKeyedSchemas = (schemaIds.values)
+    // TODO proper handling of ref input schema
+    val rootApiSpecSchema: ASchema = tschemaToASchema(schema) match {
+      case Right(apiSpecSchema) => apiSpecSchema
+      case Left(_) => throw new IllegalArgumentException(s"Input schema $schema is a ref")
+    }
+    val defsList: ListMap[SchemaId, ASchema] =
+      nestedKeyedSchemas.collect { case (k, Right(nestedSchema: ASchema)) =>
+        (k, nestedSchema)
       }.toListMap
-    )
+
+    rootApiSpecSchema.copy(
+      `$schema` = Some(metaSchema.schemaId),
+      `$defs` = if (defsList.nonEmpty) Some(defsList) else None
+  )
   }
 }
