@@ -21,7 +21,7 @@ object Versions {
   val json4s = "4.0.6"
   val sprayJson = "1.3.6"
   val scalaCheck = "1.17.0"
-  val scalaTest = "3.2.15"
+  val scalaTest = "3.2.16"
   val scalaTestPlusScalaCheck = "3.2.15.0"
   val refined = "0.10.3"
   val enumeratum = "1.7.2"
