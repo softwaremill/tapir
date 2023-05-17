@@ -69,8 +69,13 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
       case _                      => false
     }
 
-    result
-      .map(s => if (nullable) s.copy(nullable = Some(true)) else s)
+    val resultWithNullable = result match {
+      case Left(ref) if nullable     => Right(new ASchema(nullable = Some(true), allOf = List(Left(ref))))
+      case Right(schema) if nullable => Right(schema.copy(nullable = Some(true)))
+      case other                     => other
+    }
+
+    resultWithNullable
       .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }
