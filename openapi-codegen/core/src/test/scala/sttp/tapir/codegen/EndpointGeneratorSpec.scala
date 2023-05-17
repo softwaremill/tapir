@@ -22,9 +22,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           "test/{asd}",
           Seq(
             OpenapiPathMethod(
-              "get",
-              Seq(OpenapiParameter("asd", "path", true, None, OpenapiSchemaString(false))),
-              Seq(
+              methodType = "get",
+              parameters = Seq(OpenapiParameter("asd", "path", true, None, OpenapiSchemaString(false))),
+              responses = Seq(
                 OpenapiResponse(
                   "200",
                   "",
@@ -32,7 +32,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
                 ),
                 OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
               ),
-              None
+              requestBody = None,
+              summary = None,
+              tags = Some(Seq("Tag 1", "Tag 2", "Tag 1")),
             )
           )
         )
