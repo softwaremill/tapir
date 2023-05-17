@@ -34,6 +34,7 @@ class EndpointGenerator {
             |  ${urlMapper(p.url, m.parameters)}
             |${indent(2)(ins(m.parameters, m.requestBody))}
             |${indent(2)(outs(m.responses))}
+            |${indent(2)(tags(m.tags))}
             |""".stripMargin
 
       val name = m.methodType + p.url.split('/').map(_.replace("{", "").replace("}", "").toLowerCase.capitalize).mkString
@@ -86,6 +87,12 @@ class EndpointGenerator {
 
     params + rqBody
   }
+
+  private def tags(openapiTags: Option[Seq[String]]): String = {
+    // .tags(List("A", "B"))
+    openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
+  }
+
 
   private def outs(responses: Seq[OpenapiResponse]) = {
     // .errorOut(stringBody)
