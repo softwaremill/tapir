@@ -143,7 +143,7 @@ object FinatraCatsServerInterpreter {
   private def convertResponder[F[_]: Async, B](original: Responder[Future, B]): Responder[F, B] =
     new Responder[F, B] {
       override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] =
-        original(request, output).asF
+        fromFuture(original(request, output))
     }
 
   private def convertInterceptor[F[_]: Async: Dispatcher: MonadError](original: Interceptor[F]): Interceptor[Future] = {
@@ -151,7 +151,7 @@ object FinatraCatsServerInterpreter {
       override def apply[A](f: F[A]): Future[A] = f.asTwitterFuture
     }
     val futureToF = new (Future ~> F) {
-      override def apply[A](future: Future[A]): F[A] = future.asF
+      override def apply[A](future: Future[A]): F[A] = fromFuture(future)
     }
 
     def convertRequestInterceptor(interceptor: RequestInterceptor[F]): RequestInterceptor[Future] = new RequestInterceptor[Future] {
@@ -166,12 +166,14 @@ object FinatraCatsServerInterpreter {
                 override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
                     monad: MonadError[F]
                 ): F[RequestResult[B]] =
-                  original(convertEndpointInterceptor(interceptorF))(
-                    request,
-                    endpoints.map(convertEndpoint[F, Future, R](_, fToFuture)(monad))
-                  )(
-                    FutureMonadError
-                  ).asF
+                  fromFuture(
+                    original(convertEndpointInterceptor(interceptorF))(
+                      request,
+                      endpoints.map(convertEndpoint[F, Future, R](_, fToFuture)(monad))
+                    )(
+                      FutureMonadError
+                    )
+                  )
               }
             }
 

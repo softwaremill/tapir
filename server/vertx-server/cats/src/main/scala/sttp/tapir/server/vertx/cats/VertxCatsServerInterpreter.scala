@@ -133,15 +133,17 @@ object VertxCatsServerInterpreter {
 
   implicit class VertxFutureToCatsF[A](f: => Future[A]) {
     def asF[F[_]: Async]: F[A] = {
-      Async[F].async_ { cb =>
-        f.onComplete({ handler =>
-          if (handler.succeeded()) {
-            cb(Right(handler.result()))
-          } else {
-            cb(Left(handler.cause()))
-          }
-        })
-        ()
+      Async[F].async { cb =>
+        Sync[F].delay {
+          f.onComplete({ handler =>
+            if (handler.succeeded()) {
+              cb(Right(handler.result()))
+            } else {
+              cb(Left(handler.cause()))
+            }
+          })
+          Some(().pure[F])
+        }
       }
     }
   }

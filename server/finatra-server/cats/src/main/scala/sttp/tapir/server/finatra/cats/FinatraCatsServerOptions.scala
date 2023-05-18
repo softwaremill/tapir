@@ -22,19 +22,19 @@ object FinatraCatsServerOptions extends Logging {
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[F[_]: Async](dispatcher: Dispatcher[F]): CustomiseInterceptors[F, FinatraCatsServerOptions[F]] = {
     def finatraCatsServerLog(finatraServerLog: DefaultServerLog[Future]): DefaultServerLog[F] = DefaultServerLog[F](
-      doLogWhenReceived = m => finatraServerLog.doLogWhenReceived(m).asF,
-      doLogWhenHandled = (m, e) => finatraServerLog.doLogWhenHandled(m, e).asF,
-      doLogAllDecodeFailures = (m, e) => finatraServerLog.doLogAllDecodeFailures(m, e).asF,
-      doLogExceptions = (m, e) => finatraServerLog.doLogExceptions(m, e).asF,
-      noLog = finatraServerLog.noLog.asF
+      doLogWhenReceived = m => fromFuture(finatraServerLog.doLogWhenReceived(m)),
+      doLogWhenHandled = (m, e) => fromFuture(finatraServerLog.doLogWhenHandled(m, e)),
+      doLogAllDecodeFailures = (m, e) => fromFuture(finatraServerLog.doLogAllDecodeFailures(m, e)),
+      doLogExceptions = (m, e) => fromFuture(finatraServerLog.doLogExceptions(m, e)),
+      noLog = fromFuture(finatraServerLog.noLog)
     )
 
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[F, FinatraCatsServerOptions[F]]) =>
         FinatraCatsServerOptions[F](
           dispatcher,
-          FinatraServerOptions.defaultCreateFile(FinatraServerOptions.futurePool)(_).asF,
-          FinatraServerOptions.defaultDeleteFile(FinatraServerOptions.futurePool)(_).asF,
+          bs => fromFuture(FinatraServerOptions.defaultCreateFile(FinatraServerOptions.futurePool)(bs)),
+          file => fromFuture(FinatraServerOptions.defaultDeleteFile(FinatraServerOptions.futurePool)(file)),
           ci.interceptors
         )
     ).serverLog(finatraCatsServerLog(FinatraServerOptions.defaultServerLog)).rejectHandler(None)

@@ -64,17 +64,22 @@ object ArmeriaCatsServerOptions {
     })
 
   private def blocking[F[_], T](body: => T)(implicit F: Async[F]): F[T] = {
-    F.async_ { cb =>
-      CommonPools
-        .blockingTaskExecutor()
-        .execute(() => {
-          try {
-            cb(Right(body))
-          } catch {
-            case NonFatal(ex) =>
-              cb(Left(ex))
-          }
-        })
+    F.async { cb =>
+      F.delay {
+        val javaFuture = CommonPools
+          .blockingTaskExecutor()
+          .submit(new Runnable { 
+            override def run(): Unit = {
+              try {
+                cb(Right(body))
+              } catch {
+                case NonFatal(ex) =>
+                  cb(Left(ex))
+              }
+            }
+          })
+        Some(F.void(F.delay { javaFuture.cancel(true) }))
+      }
     }
   }
 }
