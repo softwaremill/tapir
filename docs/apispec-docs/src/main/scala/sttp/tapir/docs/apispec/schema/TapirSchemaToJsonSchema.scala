@@ -1,11 +1,11 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.apispec.{Schema => ASchema}
+import sttp.apispec.{ReferenceOr, Schema => ASchema}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Schema => TSchema}
 import scala.collection.immutable.ListMap
 
-object JsonSchemas {
+object TapirSchemaToJsonSchema {
 
   private val toKeyedSchemas = new ToKeyedSchemas
 
@@ -14,7 +14,7 @@ object JsonSchemas {
       markOptionsAsNullable: Boolean,
       metaSchema: MetaSchema = MetaSchemaDraft04,
       schemaName: TSchema.SName => String = defaultSchemaName
-  ): ASchema = {
+  ): ReferenceOr[ASchema] = {
 
     val asKeyedSchemas = toKeyedSchemas(schema).drop(1)
     val keyedSchemas = ToKeyedSchemas.unique(asKeyedSchemas)
@@ -26,19 +26,18 @@ object JsonSchemas {
     val schemaIds = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
     val nestedKeyedSchemas = (schemaIds.values)
-    // TODO proper handling of ref input schema
-    val rootApiSpecSchema: ASchema = tschemaToASchema(schema) match {
-      case Right(apiSpecSchema) => apiSpecSchema
-      case Left(_) => throw new IllegalArgumentException(s"Input schema $schema is a ref")
-    }
+    val rootApiSpecSchemaOrRef: ReferenceOr[ASchema] = tschemaToASchema(schema)
+
     val defsList: ListMap[SchemaId, ASchema] =
       nestedKeyedSchemas.collect { case (k, Right(nestedSchema: ASchema)) =>
         (k, nestedSchema)
       }.toListMap
 
-    rootApiSpecSchema.copy(
-      `$schema` = Some(metaSchema.schemaId),
-      `$defs` = if (defsList.nonEmpty) Some(defsList) else None
-  )
+    rootApiSpecSchemaOrRef.map(
+      _.copy(
+        `$schema` = Some(metaSchema.schemaId),
+        `$defs` = if (defsList.nonEmpty) Some(defsList) else None
+      )
+    )
   }
 }

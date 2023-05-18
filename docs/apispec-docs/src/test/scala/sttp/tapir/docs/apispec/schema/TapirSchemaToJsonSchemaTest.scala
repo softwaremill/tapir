@@ -14,7 +14,7 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 
 class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with EitherValues with Inside {
-  behavior of "JsonSchemas"
+  behavior of "TapirSchemaToJsonSchema"
 
   it should "Represent schema as JSON" in {
     // given
@@ -23,10 +23,9 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val tSchema = implicitly[Schema[Parent]]
 
     // when
-    val result: ASchema = JsonSchemas(tSchema, markOptionsAsNullable = true)
+    val result: ASchema = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true).value
 
     // then
-    println(Printer.spaces2.print(result.asJson.deepDropNullValues))
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""
 
   }
@@ -36,7 +35,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val tSchema = implicitly[Schema[List[Int]]]
 
     // when
-    val result = JsonSchemas(tSchema, markOptionsAsNullable = true)
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true).value
 
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","type":"array","items":{"type":"integer","format":"int32"}}"""
@@ -52,7 +51,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val tSchema = implicitly[Schema[Parent]]
 
     // when
-    val result = JsonSchemas(tSchema, markOptionsAsNullable = true)
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true).value
 
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField","childDetails"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"childDetails":{"$$ref":"#/$$defs/Child1"}},"$$defs":{"Child":{"required":["childName"],"type":"object","properties":{"childName":{"type":"string"}}},"Child1":{"required":["age"],"type":"object","properties":{"age":{"type":"integer","format":"int32"},"height":{"type":["integer", "null"],"format":"int32"}}}}}"""
@@ -65,7 +64,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val tSchema = implicitly[Schema[Parent]]
 
     // when
-    val result = JsonSchemas(tSchema, markOptionsAsNullable = false)
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false).value
 
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"type":"object","properties":{"childName":{"type":"string"}}}}}"""
@@ -79,7 +78,7 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     val tSchema = implicitly[Schema[Parent]]
 
     // when
-    val result = JsonSchemas(tSchema, markOptionsAsNullable = true)
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true).value
 
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
