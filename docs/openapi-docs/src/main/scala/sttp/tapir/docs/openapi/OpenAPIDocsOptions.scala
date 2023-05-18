@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
-import sttp.tapir.docs.apispec.defaultSchemaName
+import sttp.tapir.docs.apispec.schema.defaultSchemaName
 import sttp.tapir.docs.openapi.EndpointInputToDecodeFailureOutput.defaultBadRequestDescription
 import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointOutput, statusCode, stringBody}
 

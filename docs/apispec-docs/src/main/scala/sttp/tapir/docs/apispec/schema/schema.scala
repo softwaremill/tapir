@@ -3,6 +3,11 @@ package sttp.tapir.docs.apispec
 import sttp.tapir.{SchemaType => TSchemaType, Schema => TSchema}
 
 package object schema {
+
+  private[docs] val defaultSchemaName: TSchema.SName => String = info => {
+    val shortName = info.fullName.split('.').last
+    (shortName +: info.typeParameterShortNames).mkString("_")
+  }
   /*
   SchemaId - used in the documentation to identify a schema in the components section, and to use in in references
   SchemaKey - used as a key to differentiate between schemas when collecting all used schemas within an endpoint
