@@ -100,8 +100,8 @@ Thank you!
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
 <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a>
-<a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
 <div></div>
+<a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
 </div>
 
 ## Code teaser
