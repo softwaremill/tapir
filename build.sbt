@@ -1438,6 +1438,13 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2Versions,
+    Seq(
+      // Cross compiles only on JVM and Native
+      Test / unmanagedSources / excludeFilter ~= { _ || "AwsLambdaRuntimeInvocationTest.scala" }
+    )
+  )
   .nativePlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, cats, catsEffect, circeJson, tests % "test")
 
