@@ -1433,12 +1433,12 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %%% "fs2" % Versions.sttp,
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .jsPlatform(scalaVersions = scala2Versions)
+  .nativePlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, cats, catsEffect, circeJson, tests % "test")
 
 // integration tests for lambda interpreter
