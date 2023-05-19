@@ -1646,6 +1646,10 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
       scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) }
     )
   )
+  .nativePlatform(
+    scalaVersions = scala2Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(awsLambda)
 
 lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
