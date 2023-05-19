@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda.runtime
 
 import cats.effect.{Resource, Sync}
 import cats.syntax.either._
-import com.typesafe.scalalogging.StrictLogging
+import PlatformCompat.StrictLogging
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
