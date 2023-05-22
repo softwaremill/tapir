@@ -1,6 +1,6 @@
 # Generating JSON Schema
 
-Since Tapir v1.4.0 you can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
+You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-apispecs-docs" % "@VERSION@"
