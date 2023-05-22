@@ -24,8 +24,8 @@ import sttp.tapir.generic.auto._
   val jsonSchema: ReferenceOr[ASchema] = TapirSchemaToJsonSchema(
     tSchema,
     markOptionsAsNullable = true,
-    metaSchema = MetaSchemaDraft04, // default
-    schemaName = defaultSchemaName // default
+    metaSchema = MetaSchemaDraft04 // default
+    // schemaName = sttp.atpir.docs.apispec.defaultSchemaName // default
 )
 ```
 
