@@ -36,7 +36,6 @@ In order to generate a JSON representation of the schema, you can use Circe. For
 
 ```scala
 "com.softwaremill.sttp.apispec" %% "jsonschema-circe" % "..."
-"io.circe" %% "circe-literal" % "..."
 ```
 
 you will get a codec for `sttp.apispec.Schema`:
