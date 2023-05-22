@@ -157,7 +157,7 @@ class ZioHttpServerTest extends TestSuite {
               result <- route
                 .runZIO(Request.get(url = URL(Path.empty / "test" / "123")))
                 .flatMap(response => ZIO.succeed(response.status))
-                .map(_ shouldBe zio.http.Status.NotFound)
+                .map(_ shouldBe zio.http.Status.BadRequest)
                 .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             } yield result
 

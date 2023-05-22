@@ -5,6 +5,8 @@ import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{Cause, RIO, Task, ZIO}
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 case class ZioHttpServerOptions[R](
     createFile: ServerRequest => Task[TapirFile],
@@ -50,5 +52,15 @@ object ZioHttpServerOptions {
       case Some(ex) => ZIO.logDebugCause(msg, Cause.fail(ex))
     }
 
-  def default[R]: ZioHttpServerOptions[R] = customiseInterceptors.options
+  def default[R]: ZioHttpServerOptions[R] = {
+    val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
+      DefaultDecodeFailureHandler.default.copy(
+        respond = DefaultDecodeFailureHandler.respond(
+          _,
+          badRequestOnPathErrorIfPathShapeMatches = true,
+          badRequestOnPathInvalidIfPathShapeMatches = true
+        )
+      )
+    customiseInterceptors[R].copy(decodeFailureHandler = decodeFailureHandlerBadRequestOnPathFailure).options
+  }
 }
