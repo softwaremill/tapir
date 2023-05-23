@@ -19,7 +19,6 @@ import sttp.tapir.tests.{Test, TestSuite}
 import scala.concurrent.Future
 import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 
 sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
 
@@ -39,11 +38,7 @@ class PlayServerTest extends TestSuite {
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
-      def newInterpreter(decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default) =
-        new PlayTestServerInterpreter(decodeFailureHandler)(actorSystem)
-
-      val interpreter = newInterpreter()
-
+      val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
