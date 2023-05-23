@@ -1,6 +1,6 @@
 # Migrating
 
-## From 1.3. to 1.4
+## From 1.4 to 1.5
 
 - `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. In Tapir 1.3, keeping defaults (`false` and `true` respectively for these flags) meant **TODO** From 1.4 tapir defaults to HTTP Bad Request (400) on all path errors if shape matches. This means that:
 - If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in Tapir 1.4, it is the new default.
