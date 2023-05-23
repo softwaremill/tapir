@@ -1,14 +1,13 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
+import enumeratum._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
-import play.api.http.HttpVerbs.GET
 import play.api.http.ParserConfiguration
-import play.api.mvc.Result
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.model.{MediaType, Part, StatusCode}
@@ -18,6 +17,18 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
+import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
+
+sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
+
+object Animal extends Enum[Animal] with TapirCodecEnumeratum {
+  case object Dog extends Animal
+  case object Cat extends Animal
+
+  override def values: IndexedSeq[Animal] = findValues
+}
 
 class PlayServerTest extends TestSuite {
 
@@ -28,7 +39,11 @@ class PlayServerTest extends TestSuite {
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
-      val interpreter = new PlayTestServerInterpreter()(actorSystem)
+      def newInterpreter(decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default) =
+        new PlayTestServerInterpreter(decodeFailureHandler)(actorSystem)
+
+      val interpreter = newInterpreter()
+
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
@@ -97,6 +112,43 @@ class PlayServerTest extends TestSuite {
                 .handleErrorWith {
                   case _: SttpClientException.ReadException => IO.pure(succeed)
                   case e                                    => IO.raiseError(e)
+                }
+            }
+            .unsafeToFuture()
+        },
+        // https://github.com/softwaremill/tapir/issues/2811
+        Test("try other paths on decode failure if onDecodeFailureNextEndpoint") {
+          // given
+          import DefaultDecodeFailureHandler.OnDecodeFailure._
+
+          val endpoints = List(
+            endpoint.get
+              .in("animal")
+              .in(path[Animal]("animal").onDecodeFailureNextEndpoint)
+              .out(stringBody)
+              .serverLogicSuccess[Future] {
+                case Animal.Dog => Future.successful("This is a dog")
+                case Animal.Cat => Future.successful("This is a cat")
+              },
+            endpoint.post
+              .in("animal")
+              .in("bird")
+              .out(stringBody)
+              .serverLogicSuccess[Future] { _ =>
+                Future.successful("This is a bird")
+              }
+          )
+          val serverResource = interpreter.server(NonEmptyList.of(PlayServerInterpreter().toRoutes(endpoints)))
+
+          // when
+          serverResource
+            .use { port =>
+              basicRequest
+                .post(uri"http://localhost:$port/animal/bird")
+                .send(backend)
+                .map { response =>
+                  response.code shouldBe StatusCode.Ok
+                  response.body shouldBe Right("This is a bird")
                 }
             }
             .unsafeToFuture()
