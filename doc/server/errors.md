@@ -122,6 +122,20 @@ import sttp.tapir._
 // bringing into scope the onDecodeFailureBadRequest extension method
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
 
+case class UserId(value: String)
+object UserId {
+  implicit val codec: Codec[String, UserId, CodecFormat.TextPlain] = Codec.string.mapDecode(raw =>
+    UserId.make(raw) match {
+      case Left(error) =>
+        DecodeResult.Error(raw, new IllegalArgumentException(s"Invalid User value ($raw), failed with $error"))
+      case Right(result) => DecodeResult.Value(result)
+    })(_.value)
+
+  def make(in: String): Either[String, UserId] =
+    if (in.length > 5) Right(new UserId(in))
+    else Left("Too short")
+}
+
 // If your codec for UserId fails, allow checking other endpoints for possible matches, like /customer/some_special_case
 endpoint.in("customer" / path[UserId]("user_id").onDecodeFailureNextEndpoint)
 // Another endpoint, tried after matching for the previous one fails on decoding of a UserId
