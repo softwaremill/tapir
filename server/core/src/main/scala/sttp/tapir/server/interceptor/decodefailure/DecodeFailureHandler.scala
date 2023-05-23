@@ -96,13 +96,6 @@ object DefaultDecodeFailureHandler {
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
     server.model.ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
 
-  /** @param badRequestOnPathErrorIfPathShapeMatches
-    *   Should a status 400 be returned if the shape of the path of the request matches, but decoding some path segment fails with a
-    *   [[DecodeResult.Error]].
-    * @param badRequestOnPathInvalidIfPathShapeMatches
-    *   Should a status 400 be returned if the shape of the path of the request matches, but decoding some path segment fails with a
-    *   [[DecodeResult.InvalidValue]].
-    */
   def respond(
       ctx: DecodeFailureContext
   ): Option[(StatusCode, List[Header])] = {
