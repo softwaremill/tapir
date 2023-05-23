@@ -80,7 +80,8 @@ conventions, that an endpoint is uniquely identified by the method and served pa
   to hide the endpoint
 - otherwise, we assume that this is the correct endpoint to serve the request, but the parameters are somehow
   malformed. A `400 Bad Request` response is returned if a query parameter, header or body causes any decode failure,
-  or if the decoding a path capture causes a validation error.
+  or if the decoding a path capture causes a validation error. It is also the default result on path segment decoding failures,
+  for example if parsing such a segment to an `Int` fails, or there's an incorrect Enumeratum Enum value passed.
 
 The behavior described in the latter three points can be customised by providing a custom
 `sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler` when creating the server options. This handler, basing on the request,
@@ -121,8 +122,10 @@ import sttp.tapir._
 // bringing into scope the onDecodeFailureBadRequest extension method
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
 
-// by default, when the customer_id is not an int, the next endpoint would be tried; here, we always return a bad request
-endpoint.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest)
+// If your codec for UserId fails, allow checking other endpoints for possible matches, like /customer/some_special_case
+endpoint.in("customer" / path[UserId]("user_id").onDecodeFailureNextEndpoint)
+// Another endpoint, tried after matching for the previous one fails on decoding of a UserId
+endpoint.in("customer" / "some_special_case")
 ```
 
 ## Customising how error messages are rendered

@@ -192,7 +192,7 @@ class ZioHttpServerTest extends TestSuite {
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
           // https://github.com/softwaremill/tapir/issues/2764
-          Test("decode path failures result with 404") {
+          Test("decode path failures result with 400") {
             final case class Example private (value: String)
             object Example {
               implicit val exampleCodec: Codec[String, Example, CodecFormat.TextPlain] = Codec.string.mapDecode(raw =>
