@@ -254,6 +254,7 @@ We offer commercial support for sttp and related technologies, as well as develo
 
    docs/openapi
    docs/asyncapi
+   docs/json-schema
 
 .. toctree::
    :maxdepth: 2
