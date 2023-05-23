@@ -177,4 +177,3 @@ val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
 
 If you want to customise anything beyond the rendering of the error message, or use non-default implementations of the
 exception handler / decode failure handler, you'll still have to customise each by hand.
-
