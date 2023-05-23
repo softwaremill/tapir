@@ -2,9 +2,9 @@
 
 ## From 1.3. to 1.4
 
-- `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. In Tapir 1.3, keeping defaults (`false` and `true` respectively for these flags) meant that if path shape matches, but path param decoding fails, next endpoint should be tried, typically failing as Not Found 404. From 1.4 tapir defaults to HTTP Bad Request (400) on such decoding errors. This means that:
+- `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. In Tapir 1.3, keeping defaults (`false` and `true` respectively for these flags) meant **TODO** From 1.4 tapir defaults to HTTP Bad Request (400) on all path errors if shape matches. This means that:
 - If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in Tapir 1.4, it is the new default.
-- If your code doesn't change this parameter and you update Tapir, you should expect path decoding failures to become 400s instead of 404s (when path shape matches).
+- If your code doesn't change this parameter and you update Tapir, you should expect shape-matched path decoding failures to always become 400s.
 - If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](server/errors.html#default-failure-handler) for details.
 
 ## From 1.2 to 1.3
