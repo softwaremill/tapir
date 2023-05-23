@@ -78,7 +78,7 @@ object DefaultDecodeFailureHandler {
     * the [[sttp.tapir.server.interceptor.exception.ExceptionInterceptor]].
     */
   val default: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
-    respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+    respond(_),
     FailureMessages.failureMessage,
     failureResponse
   )
@@ -104,38 +104,35 @@ object DefaultDecodeFailureHandler {
     *   [[DecodeResult.InvalidValue]].
     */
   def respond(
-      ctx: DecodeFailureContext,
-      badRequestOnPathErrorIfPathShapeMatches: Boolean,
-      badRequestOnPathInvalidIfPathShapeMatches: Boolean
+      ctx: DecodeFailureContext
   ): Option[(StatusCode, List[Header])] = {
-    failingInput(ctx) match {
-      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(true))  => respondBadRequest
-      case i: EndpointTransput.Atom[_] if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(false)) => None
-      case _: EndpointInput.Query[_]                                                                                 => respondBadRequest
-      case _: EndpointInput.QueryParams[_]                                                                           => respondBadRequest
-      case _: EndpointInput.Cookie[_]                                                                                => respondBadRequest
-      case h: EndpointIO.Header[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && h.name == HeaderNames.ContentType =>
+    (failingInput(ctx), ctx.failure) match {
+      case (i: EndpointTransput.Atom[_], _) if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(true)) =>
+        respondBadRequest
+      case (i: EndpointTransput.Atom[_], _) if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureAttribute(false)) => None
+      case (_: EndpointInput.Query[_], _)       => respondBadRequest
+      case (_: EndpointInput.QueryParams[_], _) => respondBadRequest
+      case (_: EndpointInput.Cookie[_], _)      => respondBadRequest
+      case (h: EndpointIO.Header[_], _: DecodeResult.Mismatch) if h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
-      case _: EndpointIO.Header[_] => respondBadRequest
-      case fh: EndpointIO.FixedHeader[_] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] && fh.h.name == HeaderNames.ContentType =>
+      case (_: EndpointIO.Header[_], _) => respondBadRequest
+      case (fh: EndpointIO.FixedHeader[_], _: DecodeResult.Mismatch) if fh.h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
-      case _: EndpointIO.FixedHeader[_]                                                     => respondBadRequest
-      case _: EndpointIO.Headers[_]                                                         => respondBadRequest
-      case _: EndpointIO.Body[_, _]                                                         => respondBadRequest
-      case _: EndpointIO.OneOfBody[_, _] if ctx.failure.isInstanceOf[DecodeResult.Mismatch] => respondUnsupportedMediaType
-      case _: EndpointIO.StreamBodyWrapper[_, _]                                            => respondBadRequest
+      case (_: EndpointIO.FixedHeader[_], _)                         => respondBadRequest
+      case (_: EndpointIO.Headers[_], _)                             => respondBadRequest
+      case (_: EndpointIO.Body[_, _], _)                             => respondBadRequest
+      case (_: EndpointIO.OneOfBody[_, _], _: DecodeResult.Mismatch) => respondUnsupportedMediaType
+      case (_: EndpointIO.StreamBodyWrapper[_, _], _)                => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
       // a path shape mismatch
-      case _: EndpointInput.PathCapture[_]
-          if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
-            (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
+      case (_: EndpointInput.PathCapture[_], _: DecodeResult.Error | _: DecodeResult.InvalidValue) =>
         respondBadRequest
-      case _: EndpointInput.PathsCapture[_] => respondBadRequest
+      case (_: EndpointInput.PathsCapture[_], _) => respondBadRequest
       // if the failing input contains an authentication input (potentially nested), sending its challenge
-      case FirstAuth(a) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
+      case (FirstAuth(a), _) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
-      case _: EndpointInput.Basic[_] => None
+      case (_: EndpointInput.Basic[_], _) => None
       // all other inputs (tuples, mapped) - responding with bad request
       case _ => respondBadRequest
     }
