@@ -21,7 +21,7 @@ better error reporting, in case one of the components required to create the jso
 
 ## Implicit json codecs
 
-If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customJsonBody[T]` method instead. 
+If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customCodecJsonBody[T]` method instead. 
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
 the json codec that is in scope.
 
