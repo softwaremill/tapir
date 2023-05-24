@@ -26,7 +26,7 @@ object Animal extends Enum[Animal] with TapirCodecEnumeratum {
   case object Dog extends Animal
   case object Cat extends Animal
 
-  override def values: IndexedSeq[Animal] = findValues
+  override def values = findValues
 }
 
 class PlayServerTest extends TestSuite {
