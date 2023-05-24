@@ -40,10 +40,11 @@ The modules are categorised using the following levels:
 
 ## Documentation interpreters
 
-| Module   | Level       |
-|----------|-------------|
-| openapi  | stabilising |
-| asyncapi | stabilising |
+| Module      | Level        |
+|-------------|--------------|
+| openapi     | stabilising  |
+| asyncapi    | stabilising  |
+| json-schema | experimental |
 
 ## Serverless interpreters
 
