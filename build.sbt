@@ -1327,7 +1327,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
-  .dependsOn(serverCore, serverTests % Test)
+  .dependsOn(serverCore, serverTests % Test, enumeratum % Test)
 
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
   .settings(commonJvmSettings)
