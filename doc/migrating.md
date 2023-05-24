@@ -2,9 +2,10 @@
 
 ## From 1.4 to 1.5
 
-- `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. In Tapir 1.3, keeping defaults (`false` and `true` respectively for these flags) meant **TODO** From 1.4 tapir defaults to HTTP Bad Request (400) on all path errors if shape matches. This means that:
-- If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in Tapir 1.4, it is the new default.
-- If your code doesn't change this parameter and you update Tapir, you should expect shape-matched path decoding failures to always become 400s.
+- `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. Before tapir 1.5, keeping defaults (`false` and `true` respectively for these flags) meant that some path segment decoding failures (specifically, errors - when an exception has been thrown during decoding, but not for e.g. enumeration mismatches) were translated to a "no-match", meaning that the next endpoint was attempted. From 1.5, tapir defaults to a 400 Bad Request response to be sent instead, on all path decoding failures.
+- If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in tapir 1.5, it is the new default.
+- Similarly, if your code sets '.badRequestOnDecodeFailure' on endpoint path input, just remove this attribute.
+- If your code doesn't change this parameter and you update tapir, you should expect shape-matched path decoding failures to always become 400s, without attempting the next endpoint unless explicitly specified.
 - If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](server/errors.html#default-failure-handler) for details.
 
 ## From 1.2 to 1.3

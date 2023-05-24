@@ -621,8 +621,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     }, {
       import DefaultDecodeFailureHandler.OnDecodeFailure._
       testServer(
-        endpoint.get.in("customer" / path[Int]("customer_id").onDecodeFailureBadRequest),
-        "Returns 400 if path 'shape' matches, but failed to parse a path parameter, using .badRequestOnDecodeFailure"
+        endpoint.get.in("customer" / path[Int]("customer_id")),
+        "Returns 400 if path 'shape' matches, but failed to parse a path parameter"
       )(_ => pureResult(Either.right[Unit, Unit](()))) { (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/customer/asd").send(backend).map { response =>
           response.body shouldBe Left("Invalid value for: path parameter customer_id")

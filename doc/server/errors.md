@@ -119,7 +119,7 @@ basis, by setting an attribute. For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-// bringing into scope the onDecodeFailureBadRequest extension method
+// bringing into scope the onDecodeFailureNextEndpoint extension method
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
 
 case class UserId(value: String)

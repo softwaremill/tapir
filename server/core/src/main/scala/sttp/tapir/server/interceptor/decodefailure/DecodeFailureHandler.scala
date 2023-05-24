@@ -70,8 +70,7 @@ object DefaultDecodeFailureHandler {
     * enum, and a value outside the enumeration values is provided), a 400 response is sent.
     *
     * Finally, behavior can be adjusted per-endpoint-input, by setting an attribute. Import the [[OnDecodeFailure]] object and use the
-    * [[OnDecodeFailure.RichEndpointTransput.onDecodeFailureBadRequest]] and
-    * [[OnDecodeFailure.RichEndpointTransput.onDecodeFailureNextEndpoint]] extension methods.
+    * [[OnDecodeFailure.RichEndpointTransput.onDecodeFailureNextEndpoint]] extension method.
     *
     * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server logic is invoked.
     * Exceptions can be either handled by the server logic, and converted to an error output value. Uncaught exceptions can be handled using
@@ -300,7 +299,6 @@ object DefaultDecodeFailureHandler {
     private[decodefailure] val key: AttributeKey[OnDecodeFailureAttribute] = AttributeKey[OnDecodeFailureAttribute]
 
     implicit class RichEndpointTransput[ET <: EndpointTransput.Atom[_]](val et: ET) extends AnyVal {
-      def onDecodeFailureBadRequest: ET = et.attribute(key, OnDecodeFailureAttribute(true)).asInstanceOf[ET]
       def onDecodeFailureNextEndpoint: ET = et.attribute(key, OnDecodeFailureAttribute(false)).asInstanceOf[ET]
     }
   }
