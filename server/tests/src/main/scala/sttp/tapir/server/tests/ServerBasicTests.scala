@@ -13,6 +13,7 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.TestUtil._
@@ -21,6 +22,9 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
+import sttp.tapir.server.interceptor.log.DefaultServerLog
+import cats.effect.kernel.Ref
+import java.util.concurrent.atomic.AtomicInteger
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
@@ -652,6 +656,69 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       ) { (backend, baseUri) =>
         basicStringRequest.get(uri"$baseUri/customer/20").send(backend).map(_.body shouldBe "e1") >>
           basicStringRequest.get(uri"$baseUri/customer/2").send(backend).map(_.body shouldBe "e2")
+      }
+    }, {
+      val logHandledCounter = new AtomicInteger(0)
+      val logErrorCounter = new AtomicInteger(0)
+      val incLogHandled: (String, Option[Throwable]) => F[Unit] = (_, _) =>
+        m.eval {
+          val _ = logHandledCounter.incrementAndGet()
+        }
+      val incLogException: (String, Throwable) => F[Unit] = (_, _) =>
+        m.eval {
+          val _ = logErrorCounter.incrementAndGet()
+        }
+      val silentEndpoint1 = endpoint.get
+        .in("silent_hello_2827")
+        .out(stringBody)
+
+      val silentEndpoint2 = endpoint.get
+        .in("silent_hello2_2827")
+        .out(stringBody)
+
+      val serverLog = DefaultServerLog(
+        doLogWhenReceived = _ => m.unit(()),
+        doLogAllDecodeFailures = (_, _) => m.unit(()),
+        noLog = m.unit(()),
+        doLogWhenHandled = incLogHandled,
+        doLogExceptions = incLogException,
+        ignoreEndpoints = Seq(silentEndpoint1, silentEndpoint2)
+      )
+      // https://github.com/softwaremill/tapir/issues/2827
+      testServer(
+        "Log events with provided functions, skipping certain endpoints",
+        NonEmptyList.of(
+          route(
+            List(
+              endpoint.get
+                .in("hello_2827")
+                .out(stringBody)
+                .serverLogic[F](_ => pureResult("result-hello".asRight[Unit])),
+              silentEndpoint1
+                .serverLogic[F](_ => pureResult("result-silent_hello".asRight[Unit])),
+              silentEndpoint2
+                .serverLogic[F](_ => m.error(new Exception("Boom!")))
+            ),
+            (_: CustomiseInterceptors[F, OPTIONS])
+              .serverLog(serverLog)
+          )
+        )
+      ) { (backend, baseUri) =>
+        basicStringRequest.get(uri"$baseUri/hello_2827").send(backend).map{ _ => 
+          logHandledCounter.get() shouldBe 1
+        } >>
+        basicStringRequest.get(uri"$baseUri/silent_hello_2827").send(backend).map { _ =>
+          logHandledCounter.get() shouldBe 1
+          logErrorCounter.get() shouldBe 0
+        } >>
+        basicStringRequest.get(uri"$baseUri/silent_hello2_2827").send(backend).map { _ =>
+          logHandledCounter.get() shouldBe 1
+          logErrorCounter.get() shouldBe 1
+        } >>
+        basicStringRequest.get(uri"$baseUri/hello_2827").send(backend).map { _ =>
+          logHandledCounter.get() shouldBe 2
+          logErrorCounter.get() shouldBe 1
+        }
       }
     }
   )
