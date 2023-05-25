@@ -599,17 +599,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         basicStringRequest.get(uri"$baseUri/p1/p2/p3").send(backend).map(_.body shouldBe "e2")
     }, {
       // https://github.com/softwaremill/tapir/issues/2811
-
       import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
-      sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
-
-      object Animal extends Enum[Animal] with TapirCodecEnumeratum {
-        case object Dog extends Animal
-        case object Cat extends Animal
-
-        override def values = findValues
-      }
-
       testServer(
         "try other paths on decode failure if onDecodeFailureNextEndpoint",
         NonEmptyList.of(
@@ -765,4 +755,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       case "banana" => suspendResult(throw FruitError("no bananas", 102))
       case n        => suspendResult(throw new IllegalArgumentException(n))
     }
+}
+sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
+
+object Animal extends Enum[Animal] with TapirCodecEnumeratum {
+  case object Dog extends Animal
+  case object Cat extends Animal
+
+  override def values = findValues
 }
