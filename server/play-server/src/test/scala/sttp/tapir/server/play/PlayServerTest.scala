@@ -20,15 +20,6 @@ import scala.concurrent.Future
 import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
-sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
-
-object Animal extends Enum[Animal] with TapirCodecEnumeratum {
-  case object Dog extends Animal
-  case object Cat extends Animal
-
-  override def values = findValues
-}
-
 class PlayServerTest extends TestSuite {
 
   def actorSystemResource: Resource[IO, ActorSystem] =
@@ -107,43 +98,6 @@ class PlayServerTest extends TestSuite {
                 .handleErrorWith {
                   case _: SttpClientException.ReadException => IO.pure(succeed)
                   case e                                    => IO.raiseError(e)
-                }
-            }
-            .unsafeToFuture()
-        },
-        // https://github.com/softwaremill/tapir/issues/2811
-        Test("try other paths on decode failure if onDecodeFailureNextEndpoint") {
-          // given
-          import DefaultDecodeFailureHandler.OnDecodeFailure._
-
-          val endpoints = List(
-            endpoint.get
-              .in("animal")
-              .in(path[Animal]("animal").onDecodeFailureNextEndpoint)
-              .out(stringBody)
-              .serverLogicSuccess[Future] {
-                case Animal.Dog => Future.successful("This is a dog")
-                case Animal.Cat => Future.successful("This is a cat")
-              },
-            endpoint.post
-              .in("animal")
-              .in("bird")
-              .out(stringBody)
-              .serverLogicSuccess[Future] { _ =>
-                Future.successful("This is a bird")
-              }
-          )
-          val serverResource = interpreter.server(NonEmptyList.of(PlayServerInterpreter().toRoutes(endpoints)))
-
-          // when
-          serverResource
-            .use { port =>
-              basicRequest
-                .post(uri"http://localhost:$port/animal/bird")
-                .send(backend)
-                .map { response =>
-                  response.code shouldBe StatusCode.Ok
-                  response.body shouldBe Right("This is a bird")
                 }
             }
             .unsafeToFuture()

@@ -3,6 +3,7 @@ package sttp.tapir.server.tests
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
+import enumeratum._
 import io.circe.generic.auto._
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
@@ -10,10 +11,11 @@ import sttp.model._
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.monad.MonadError
 import sttp.tapir._
+import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
@@ -595,6 +597,45 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e1") >>
         basicStringRequest.get(uri"$baseUri/p1/p2/").send(backend).map(_.body shouldBe "e2") >>
         basicStringRequest.get(uri"$baseUri/p1/p2/p3").send(backend).map(_.body shouldBe "e2")
+    }, {
+      // https://github.com/softwaremill/tapir/issues/2811
+
+      import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
+      sealed trait Animal extends EnumEntry with EnumEntry.Lowercase
+
+      object Animal extends Enum[Animal] with TapirCodecEnumeratum {
+        case object Dog extends Animal
+        case object Cat extends Animal
+
+        override def values = findValues
+      }
+
+      testServer(
+        "try other paths on decode failure if onDecodeFailureNextEndpoint",
+        NonEmptyList.of(
+          route(
+            List[ServerEndpoint[Any, F]](
+              endpoint.get
+                .in("animal")
+                .in(path[Animal]("animal").onDecodeFailureNextEndpoint)
+                .out(stringBody)
+                .serverLogicSuccess[F] {
+                  case Animal.Dog => m.unit("This is a dog")
+                  case Animal.Cat => m.unit("This is a cat")
+                },
+              endpoint.post
+                .in("animal")
+                .in("bird")
+                .out(stringBody)
+                .serverLogicSuccess[F] { _ =>
+                  m.unit("This is a bird")
+                }
+            )
+          )
+        )
+      ) { (backend, baseUri) =>
+        basicStringRequest.post(uri"$baseUri/animal/bird").send(backend).map(_.body shouldBe "This is a bird")
+      }
     }
   )
 
