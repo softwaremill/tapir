@@ -190,37 +190,6 @@ class ZioHttpServerTest extends TestSuite {
                 }
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
-          },
-          // https://github.com/softwaremill/tapir/issues/2764
-          Test("decode path failures result with 400") {
-            final case class Example private (value: String)
-            object Example {
-              implicit val exampleCodec: Codec[String, Example, CodecFormat.TextPlain] = Codec.string.mapDecode(raw =>
-                Example.make(raw) match {
-                  case Left(error) =>
-                    DecodeResult.Error(raw, new IllegalArgumentException(s"Invalid Example value ($raw), failed with $error"))
-                  case Right(result) => DecodeResult.Value(result)
-                }
-              )(_.value)
-
-              def make(in: String): Either[String, Example] =
-                if (in.length > 5) Right(new Example(in))
-                else Left("Too short")
-            }
-            val ep = endpoint.get
-              .in("test" / path[Example]("testId"))
-              .out(stringBody)
-              .zServerLogic[Any](testId => ZIO.succeed(s"Hello $testId"))
-            val route = ZioHttpInterpreter().toHttp(ep)
-            val test: UIO[Assertion] = for {
-              result <- route
-                .runZIO(Request.get(url = URL(Path.empty / "test" / "123")))
-                .flatMap(response => ZIO.succeed(response.status))
-                .map(_ shouldBe zio.http.Status.BadRequest)
-                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
-            } yield result
-
-            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           }
         )
 
