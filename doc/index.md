@@ -27,6 +27,7 @@ input and output parameters. An endpoint specification can be interpreted as:
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md)
   * [AsyncAPI](docs/asyncapi.md)
+  * [Json Schema](docs/json-schema.md)
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
