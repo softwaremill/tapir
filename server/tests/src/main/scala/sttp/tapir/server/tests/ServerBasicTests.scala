@@ -650,7 +650,6 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           .send(backend)
           .map(response => response.code shouldBe StatusCode.NotFound)
     }, {
-      import DefaultDecodeFailureHandler.OnDecodeFailure._
       testServer(
         endpoint.get.in("customer" / path[Int]("customer_id")),
         "Returns 400 if path 'shape' matches, but failed to parse a path parameter"
