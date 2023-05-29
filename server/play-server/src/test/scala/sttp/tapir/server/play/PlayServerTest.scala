@@ -1,14 +1,13 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
+import enumeratum._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
-import play.api.http.HttpVerbs.GET
 import play.api.http.ParserConfiguration
-import play.api.mvc.Result
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.model.{MediaType, Part, StatusCode}
@@ -18,6 +17,8 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
+import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 class PlayServerTest extends TestSuite {
 

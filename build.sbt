@@ -1130,7 +1130,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
       "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
     )
   )
-  .dependsOn(tests, sttpStubServer)
+  .dependsOn(tests, sttpStubServer, enumeratum)
   .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
