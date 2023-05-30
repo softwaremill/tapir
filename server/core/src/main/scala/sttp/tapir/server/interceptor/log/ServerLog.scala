@@ -43,9 +43,10 @@ trait ServerLog[F[_]] {
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit]
 
-  /** Allows defining a list of endpoints which should not log requestHandled. Exceptions, decode failures and security failures will still be logged.
+  /** Allows defining a list of endpoints which should not log requestHandled. Exceptions, decode failures and security failures will still
+    * be logged.
     */
-  def ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty
+  def ignoreEndpoints: Set[AnyEndpoint] = Set.empty
 }
 
 case class DefaultServerLog[F[_]](
@@ -63,7 +64,7 @@ case class DefaultServerLog[F[_]](
     showResponse: ServerResponse[_] => String = _.showShort,
     includeTiming: Boolean = true,
     clock: Clock = Clock.systemUTC(),
-    override val ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty
+    override val ignoreEndpoints: Set[AnyEndpoint] = Set.empty
 ) extends ServerLog[F] {
 
   def doLogWhenReceived(f: String => F[Unit]): DefaultServerLog[F] = copy(doLogWhenReceived = f)
@@ -79,7 +80,7 @@ case class DefaultServerLog[F[_]](
   def showResponse(s: ServerResponse[_] => String): DefaultServerLog[F] = copy(showResponse = s)
   def includeTiming(doInclude: Boolean): DefaultServerLog[F] = copy(includeTiming = doInclude)
   def clock(c: Clock): DefaultServerLog[F] = copy(clock = c)
-  def ignoreEndpoints(es: Seq[AnyEndpoint]): DefaultServerLog[F] = copy(ignoreEndpoints = es)
+  def ignoreEndpoints(es: Seq[AnyEndpoint]): DefaultServerLog[F] = copy(ignoreEndpoints = es.toSet)
 
   //
 
