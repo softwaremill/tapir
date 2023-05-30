@@ -27,7 +27,7 @@ class ZioHttpCompositionTest(
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
         val route1: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep1)
-        val route2: HttpApp[Any, Nothing] = Http.collect { case Method.GET -> !! / "p2" =>
+        val route2: HttpApp[Any, Nothing] = Http.collect { case Method.GET -> Root / "p2" =>
           zio.http.Response.ok
         }
         val route3: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep3)
