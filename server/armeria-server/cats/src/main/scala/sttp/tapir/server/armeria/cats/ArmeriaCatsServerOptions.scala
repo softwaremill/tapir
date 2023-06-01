@@ -68,7 +68,7 @@ object ArmeriaCatsServerOptions {
       F.delay {
         val javaFuture = CommonPools
           .blockingTaskExecutor()
-          .submit(new Runnable { 
+          .submit(new Runnable {
             override def run(): Unit = {
               try {
                 cb(Right(body))

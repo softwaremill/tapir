@@ -58,7 +58,7 @@ private[armeria] final class ArmeriaToResponseBody[S <: Streams[S]](streamCompat
             array
           }
           .getOrElse(ByteStreams.toByteArray(v.inputStream()))
-          Right(HttpData.wrap(bytes))
+        Right(HttpData.wrap(bytes))
 
       case RawBodyType.FileBody =>
         val tapirFile = v.asInstanceOf[FileRange]

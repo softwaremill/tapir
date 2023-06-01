@@ -139,7 +139,8 @@ object OpenapiModels {
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
+    implicit val InnerDecoder
+        : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
       (c: HCursor) =>
         for {
           parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
@@ -154,12 +155,13 @@ object OpenapiModels {
     for {
       methods <- c.as[
         Map[
-          String, (
-            Seq[OpenapiParameter],
-            Seq[OpenapiResponse],
-            Option[OpenapiRequestBody],
-            Option[String],
-            Option[Seq[String]]
+          String,
+          (
+              Seq[OpenapiParameter],
+              Seq[OpenapiResponse],
+              Option[OpenapiRequestBody],
+              Option[String],
+              Option[Seq[String]]
           )
         ]
       ]
