@@ -26,10 +26,10 @@ object conversions {
 
   /** Convert from a Twitter Future to some F with Async capabilities. Based on https://typelevel.org/cats-effect/docs/typeclasses/async
     */
-   private[cats] def fromFuture[F[_]: Async, A](f: => Future[A]): F[A] = Async[F].async { cb =>
-      Sync[F].delay {
-        val fut = f.onSuccess(f => cb(Right(f))).onFailure(e => cb(Left(e)))
-        Some(Sync[F].delay(fut.raise(new InterruptedException("Fiber canceled"))).void)
-      } 
+  private[cats] def fromFuture[F[_]: Async, A](f: => Future[A]): F[A] = Async[F].async { cb =>
+    Sync[F].delay {
+      val fut = f.onSuccess(f => cb(Right(f))).onFailure(e => cb(Left(e)))
+      Some(Sync[F].delay(fut.raise(new InterruptedException("Fiber canceled"))).void)
     }
+  }
 }

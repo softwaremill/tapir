@@ -34,7 +34,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               ),
               requestBody = None,
               summary = None,
-              tags = Some(Seq("Tag 1", "Tag 2", "Tag 1")),
+              tags = Some(Seq("Tag 1", "Tag 2", "Tag 1"))
             )
           )
         )

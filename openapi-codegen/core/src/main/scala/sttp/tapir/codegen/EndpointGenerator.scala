@@ -93,7 +93,6 @@ class EndpointGenerator {
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
 
-
   private def outs(responses: Seq[OpenapiResponse]) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
