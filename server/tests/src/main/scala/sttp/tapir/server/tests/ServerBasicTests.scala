@@ -630,8 +630,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints with different methods, first one with path parsing",
       NonEmptyList.of(
-        route(endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit]))),
-        route(endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit])))
+        route(
+          List(
+            endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit])),
+            endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1/123").send(backend).map(_.code shouldBe StatusCode.Ok) >>
