@@ -23,6 +23,8 @@ import java.util.Comparator
 import scala.concurrent.Future
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
+import java.util.zip.GZIPInputStream
+import java.io.ByteArrayInputStream
 
 class ServerFilesTests[F[_], OPTIONS, ROUTE](
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
@@ -159,6 +161,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return pre-gzipped files") {
         // https://github.com/softwaremill/tapir/issues/2869
+        // https://github.com/softwaremill/tapir/issues/2929
         withTestFilesDirectory { testDir =>
           serveRoute(
             staticFilesGetServerEndpoint[F]("test")(testDir.getAbsolutePath, FilesOptions.default.withUseGzippedIfAvailable)
@@ -174,8 +177,32 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                     .map(r => {
                       r.code shouldBe StatusCode.Ok
                       r.body shouldBe "img gzipped content"
-                      r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
-                      r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
+                      r.headers should contain(Header(HeaderNames.ContentEncoding, "gzip"))
+                      r.headers should contain(Header(HeaderNames.ContentType, MediaType.ImageGif.toString()))
+                    })
+              testCases.sequence.map(_.last)
+            }
+            .unsafeToFuture()
+        }
+      },
+      Test("should return compressed file directly") {
+        // https://github.com/softwaremill/tapir/issues/2929
+        withTestFilesDirectory { testDir =>
+          serveRoute(
+            staticFilesGetServerEndpoint[F]("test")(testDir.getAbsolutePath, FilesOptions.default.withUseGzippedIfAvailable)
+          )
+            .use { port =>
+              val testCases =
+                for (acceptEncodingValue <- List("gzip, deflate", "gzip", "deflate, gzip;q=1.0, *;q=0.5"))
+                  yield emptyRequest
+                    .acceptEncoding(acceptEncodingValue)
+                    .get(uri"http://localhost:$port/test/img.gif.gz")
+                    .response(asByteArrayAlways)
+                    .send(backend)
+                    .map(r => {
+                      r.code shouldBe StatusCode.Ok
+                      decompress(r.body) shouldBe "img gzipped content"
+                      r.headers should contain(Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()))
                     })
               testCases.sequence.map(_.last)
             }
@@ -378,8 +405,8 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
               .map(r => {
                 r.code shouldBe StatusCode.Ok
                 r.body shouldBe "Gzipped resource"
-                r.headers contains Header(HeaderNames.ContentEncoding, "gzip") shouldBe true
-                r.headers contains Header(HeaderNames.ContentType, MediaType.ApplicationGzip.toString()) shouldBe true
+                r.headers should contain(Header(HeaderNames.ContentEncoding, "gzip"))
+                r.headers should contain (Header(HeaderNames.ContentType, MediaType.TextPlain.toString()))
               })
           }
           .unsafeToFuture()
@@ -652,6 +679,13 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     gzipOutputStream.write(input.getBytes("UTF-8"))
     gzipOutputStream.close()
     outputStream.toByteArray
+  }
+
+  def decompress(bytes: Array[Byte]): String = {
+    val inputStream = new GZIPInputStream(new ByteArrayInputStream(bytes))
+    val outputStream = new ByteArrayOutputStream()
+    inputStream.transferTo(outputStream)
+    outputStream.toString("UTF-8")
   }
 
   def withTestFilesDirectory[T](t: File => Future[T]): Future[T] = {
