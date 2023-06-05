@@ -631,7 +631,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       "two endpoints with different methods, first one with path parsing",
       NonEmptyList.of(
         route(
-          List(
+          List[ServerEndpoint[Any, F]](
             endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit])),
             endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit]))
           )
