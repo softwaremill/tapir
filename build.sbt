@@ -412,7 +412,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     )
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = {
       commonNativeSettings ++ Seq(
         libraryDependencies ++= Seq(
@@ -434,7 +434,7 @@ lazy val files: ProjectMatrix = (projectMatrix in file("files"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions)
-  .nativePlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = List(scala3))
   .dependsOn(core)
 
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
@@ -445,7 +445,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -465,7 +465,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings
   )
   .dependsOn(core, files, circeJson, cats)
@@ -553,7 +553,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
     )
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -579,7 +579,7 @@ lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-e
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings
   )
   .dependsOn(core)
@@ -755,7 +755,7 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings
   )
   .dependsOn(core)
@@ -824,7 +824,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     )
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
@@ -863,7 +863,7 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings
   )
   .dependsOn(core)
@@ -1120,7 +1120,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .dependsOn(core % CompileAndTest)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
@@ -1225,7 +1225,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     )
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings ++ Seq(
       Test / skip := true
     )
@@ -1655,7 +1655,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings
   )
   .dependsOn(tests)
@@ -1669,7 +1669,7 @@ lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions)
-  .nativePlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = List(scala3))
   .dependsOn(core)
 
 lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-client"))
@@ -1729,7 +1729,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .nativePlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test,
