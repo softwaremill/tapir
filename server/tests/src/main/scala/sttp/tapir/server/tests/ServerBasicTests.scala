@@ -626,6 +626,22 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       ) { (backend, baseUri) =>
         basicStringRequest.post(uri"$baseUri/animal/bird").send(backend).map(_.body shouldBe "This is a bird")
       }
+    },
+    testServer(
+      "two endpoints with different methods, first one with path parsing",
+      NonEmptyList.of(
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit])),
+            endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit]))
+          )
+        )
+      )
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/p1/123").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.get(uri"$baseUri/p1/abc").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
+        basicRequest.post(uri"$baseUri/p1/123").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.post(uri"$baseUri/p1/abc").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 

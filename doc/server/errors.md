@@ -88,7 +88,7 @@ The behavior described in the latter three points can be customised by providing
 failing input and failure description can decide, whether to return a "no match" or a specific response.
 
 Only the first failure encountered for a specific endpoint is passed to the `DecodeFailureHandler`. Inputs are decoded
-in the following order: path, method, query, header, body.
+in the following order: method, path, query, header, body.
 
 Note that the decode failure handler is used **only** for failures that occur during decoding of path, query, body
 and header parameters - while invoking `Codec.decode`. It does not handle any failures or exceptions that occur

@@ -208,20 +208,6 @@ alternative name for cookie. Can only be applied for field represented as `Cooki
 * `@setCookies` sends several `Set-Cookie` headers. Can only be applied for field represented as `List[Cookie]`
 * `@statusCode` sets status code for response. Can only be applied for field represented as `StatusCode`
 
-## Path matching
-
-By default (as with all other types of inputs), if no path input/path segments are defined, any path will match.
-
-If any path input/path segment is defined, the path must match *exactly* - any remaining path segments will cause the
-endpoint not to match the request. For example, `endpoint.in("api")` will match `/api`, `/api/`, but won't match
-`/`, `/api/users`.
-
-To match only the root path, use an empty string: `endpoint.in("")` will match `http://server.com/` and
-`http://server.com`.
-
-To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
-`paths`, e.g.: `endpoint.in("api" / "download").in(paths)`.
-
 ## Status codes 
 
 ### Arbitrary status codes
