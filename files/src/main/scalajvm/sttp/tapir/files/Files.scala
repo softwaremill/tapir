@@ -86,7 +86,7 @@ object Files {
         if (!realRequestedPath.startsWith(resolvedGzipped))
           LeftUrlNotFound
         else
-          Right(ResolvedUrl(realRequestedPath.toUri.toURL, MediaType.ApplicationGzip, Some("gzip")))
+          Right(ResolvedUrl(realRequestedPath.toUri.toURL, contentTypeFromName(resolved.getFileName.toString), Some("gzip")))
       } else {
         if (!JFiles.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
           default match {
