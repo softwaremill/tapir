@@ -235,6 +235,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    server/armeria
    server/aws
    server/options
+   server/path
    server/interceptors
    server/logic
    server/observability
