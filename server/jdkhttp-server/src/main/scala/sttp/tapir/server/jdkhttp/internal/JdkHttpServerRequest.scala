@@ -36,7 +36,7 @@ private[jdkhttp] case class JdkHttpServerRequest(
 
   override def pathSegments: List[String] = {
     println(s"raw path: ${exchange.getRequestURI.getPath}")
-    wrap("pathSegments", exchange.getRequestURI.getPath.split("/").filter(_.nonEmpty).toList)
+    wrap("pathSegments", uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList)
   }
 
   override def queryParameters: QueryParams = wrap("query params", uri.params)

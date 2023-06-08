@@ -4,7 +4,7 @@ import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, InputStreamRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{ByteArrayInputStream, FileInputStream, InputStream}
 import java.nio.ByteBuffer
