@@ -54,10 +54,14 @@ trait JdkHttpServerInterpreter {
             exchange.close()
           }
 
-        case RequestResult.Failure(t) =>
+        case RequestResult.Failure(t) => // TODO should empty List == 404?
           println(s"got failure from interpreter: $t")
           try { // TODO drop
-            exchange.sendResponseHeaders(500, 0)
+            if (t.isEmpty) {
+              exchange.sendResponseHeaders(404, 0)
+            } else {
+              exchange.sendResponseHeaders(500, 0)
+            }
             exchange.close()
           } catch { // TODO drop
             case t: Throwable => t.printStackTrace()
