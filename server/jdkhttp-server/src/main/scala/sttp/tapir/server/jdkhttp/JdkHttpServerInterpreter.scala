@@ -69,11 +69,7 @@ trait JdkHttpServerInterpreter {
         case RequestResult.Failure(t) => // TODO should empty List == 404?
           println(s"got failure from interpreter: $t")
           try {
-            if (t.isEmpty) {
-              exchange.sendResponseHeaders(404, 0)
-            } else {
-              exchange.sendResponseHeaders(500, 0)
-            }
+            exchange.sendResponseHeaders(404, -1)
           } catch {
             case t: Throwable =>
               t.printStackTrace() // TODO drop
