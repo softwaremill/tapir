@@ -1,6 +1,7 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.{HttpExchange, HttpHandler}
+import sttp.model.{Header, HeaderNames, Headers}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -40,7 +41,18 @@ trait JdkHttpServerInterpreter {
             exchange.getResponseHeaders.putAll(
               response.headers.groupBy(_.name).view.mapValues(_.map(_.value).asJava).toMap.asJava
             )
-            exchange.sendResponseHeaders(response.code.code, 0)
+
+            val contentLength = response.headers
+              .find {
+                case Header(HeaderNames.ContentLength, _) => true
+                case _                                    => false
+              }
+              .map(_.value.toInt)
+              .getOrElse(0)
+
+            println(s"content length from response: $contentLength")
+
+            exchange.sendResponseHeaders(response.code.code, contentLength)
             response.body.foreach { is =>
               val os = exchange.getResponseBody
               try {
