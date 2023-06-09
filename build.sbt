@@ -1334,9 +1334,9 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-jdkhttp-server",
-    libraryDependencies ++= loggerDependencies,
+    libraryDependencies ++= loggerDependencies
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = List(scala2_13, scala3))
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
