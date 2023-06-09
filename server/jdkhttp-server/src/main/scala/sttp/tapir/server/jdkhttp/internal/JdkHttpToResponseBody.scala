@@ -1,33 +1,54 @@
-package sttp.tapir.server.jdkhttp.internal
+package sttp.tapir.server.jdkhttp
+package internal
 
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{ByteArrayInputStream, FileInputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[InputStream, NoStreams] {
+private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[JdkHttpResponseBody, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): InputStream = {
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): JdkHttpResponseBody = {
     bodyType match {
-      case RawBodyType.InputStreamRangeBody => v.inputStreamFromRangeStart()
-      case RawBodyType.StringBody(charset)  => new ByteArrayInputStream(v.getBytes(charset))
-      case RawBodyType.ByteArrayBody        => new ByteArrayInputStream(v)
-      case RawBodyType.ByteBufferBody       => new ByteBufferBackedInputStream(v)
-      case RawBodyType.InputStreamBody      => v
+      case RawBodyType.StringBody(charset) =>
+        val bytes = v.asInstanceOf[String].getBytes(charset)
+        (new ByteArrayInputStream(bytes), Some(bytes.length.toLong))
+      case RawBodyType.ByteArrayBody =>
+        val arr = v.asInstanceOf[Array[Byte]]
+        (new ByteArrayInputStream(arr), Some(arr.length.toLong))
+      case RawBodyType.ByteBufferBody =>
+        (new ByteBufferBackedInputStream(v.asInstanceOf[ByteBuffer]), None) // TODO can't we provide the length?
+      case RawBodyType.InputStreamBody =>
+        (v.asInstanceOf[InputStream], None)
+      case RawBodyType.InputStreamRangeBody =>
+        v.asInstanceOf[InputStreamRange]
+          .range
+          .map { range =>
+            val is = v.asInstanceOf[InputStreamRange].inputStreamFromRangeStart()
+            (new LimitedInputStream(is, range.contentLength), Some(range.contentLength))
+          }
+          .getOrElse {
+            (v.asInstanceOf[InputStreamRange].inputStream(), None)
+          }
       case RawBodyType.FileBody =>
-        val base = new FileInputStream(v.file)
-        v.range.flatMap(_.startAndEnd) match {
-          case Some((start, end)) =>
-            base.skip(start)
-            new LimitedInputStream(base, end - start)
-          case None => base
-        }
+        val tapirFile = v.asInstanceOf[FileRange]
+        val base = new FileInputStream(tapirFile.file)
+        tapirFile.range
+          .flatMap { r =>
+            r.startAndEnd.map { case (start, end) =>
+              base.skip(start)
+              (new LimitedInputStream(base, r.contentLength), Some(r.contentLength))
+            }
+          }
+          .getOrElse {
+            (base, Some(tapirFile.file.length()))
+          }
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException("MultipartBody is not supported")
     }
   }
@@ -37,12 +58,12 @@ private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[InputStream,
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): InputStream = throw new UnsupportedOperationException
+  ): JdkHttpResponseBody = throw new UnsupportedOperationException
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
-  ): InputStream = throw new UnsupportedOperationException
+  ): JdkHttpResponseBody = throw new UnsupportedOperationException
 }
 
 // https://stackoverflow.com/questions/4332264/wrapping-a-bytebuffer-with-an-inputstream

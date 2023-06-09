@@ -22,9 +22,9 @@ trait JdkHttpServerInterpreter {
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(jdkHttpServerOptions.interceptors, ses)
 
     (exchange: HttpExchange) => {
-      implicit val bodyListener: BodyListener[Id, InputStream] = new JdkHttpBodyListener(exchange)
+      implicit val bodyListener: BodyListener[Id, JdkHttpResponseBody] = new JdkHttpBodyListener(exchange)
 
-      val serverInterpreter = new ServerInterpreter[Any, Id, InputStream, NoStreams](
+      val serverInterpreter = new ServerInterpreter[Any, Id, JdkHttpResponseBody, NoStreams](
         filteredEndpoints,
         requestBody,
         responseBody,
@@ -42,7 +42,7 @@ trait JdkHttpServerInterpreter {
               response.headers.groupBy(_.name).view.mapValues(_.map(_.value).asJava).toMap.asJava
             )
 
-            val contentLength = response.headers
+            val contentLengthFromHeader = response.headers
               .find {
                 case Header(HeaderNames.ContentLength, _) => true
                 case _                                    => false
@@ -50,17 +50,27 @@ trait JdkHttpServerInterpreter {
               .map(_.value.toInt)
               .getOrElse(0)
 
-            println(s"content length from response: $contentLength")
+            println(s"content length from response: $contentLengthFromHeader")
 
-            exchange.sendResponseHeaders(response.code.code, contentLength)
-            response.body.foreach { is =>
-              val os = exchange.getResponseBody
-              try {
-                is.transferTo(os)
-              } finally {
-                os.close()
-                is.close()
-              }
+            response.body match {
+              case Some((is, Some(contentLength))) =>
+                exchange.sendResponseHeaders(response.code.code, contentLength)
+                val os = exchange.getResponseBody
+                try is.transferTo(os)
+                finally {
+                  is.close()
+                  os.close()
+                }
+              case Some((is, None)) =>
+                exchange.sendResponseHeaders(response.code.code, contentLengthFromHeader)
+                val os = exchange.getResponseBody
+                try is.transferTo(os)
+                finally {
+                  is.close()
+                  os.close()
+                }
+              case None =>
+                exchange.sendResponseHeaders(response.code.code, contentLengthFromHeader)
             }
           } finally {
             exchange.close()
