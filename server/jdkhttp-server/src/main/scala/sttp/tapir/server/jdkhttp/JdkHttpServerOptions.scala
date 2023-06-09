@@ -7,10 +7,16 @@ import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 import java.util.logging.{Level, Logger}
 
+/** @param send404WhenRequestNotHandled
+  *   Should a 404 response be sent, when the request hasn't been handled. This is a safe default, but if there are multiple handlers for
+  *   the same context path, this should be set to `false`. In that case, you can verify if the request has been handled using
+  *   [[JdkHttpServerInterpreter.isRequestHandled]].
+  */
 case class JdkHttpServerOptions(
     interceptors: List[Interceptor[Id]],
     createFile: ServerRequest => TapirFile,
-    deleteFile: TapirFile => Unit
+    deleteFile: TapirFile => Unit,
+    send404WhenRequestNotHandled: Boolean
 ) {
   def prependInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = interceptors :+ i)
@@ -20,7 +26,7 @@ object JdkHttpServerOptions {
   val Default: JdkHttpServerOptions = customiseInterceptors.options
 
   private def default(interceptors: List[Interceptor[Id]]): JdkHttpServerOptions =
-    JdkHttpServerOptions(interceptors, _ => Defaults.createTempFile(), Defaults.deleteFile())
+    JdkHttpServerOptions(interceptors, _ => Defaults.createTempFile(), Defaults.deleteFile(), send404WhenRequestNotHandled = true)
 
   def customiseInterceptors: CustomiseInterceptors[Id, JdkHttpServerOptions] =
     CustomiseInterceptors(

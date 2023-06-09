@@ -22,6 +22,9 @@ trait JdkHttpServerInterpreter {
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(jdkHttpServerOptions.interceptors, ses)
 
     (exchange: HttpExchange) => {
+      // the exchange objects seem to be reused, hence always resetting the handled flag
+      JdkHttpServerInterpreter.setRequestHandled(exchange, v = false)
+
       implicit val bodyListener: BodyListener[Id, JdkHttpResponseBody] = new JdkHttpBodyListener(exchange)
 
       val serverInterpreter = new ServerInterpreter[Any, Id, JdkHttpResponseBody, NoStreams](
@@ -73,19 +76,15 @@ trait JdkHttpServerInterpreter {
                 exchange.sendResponseHeaders(response.code.code, contentLengthFromHeader)
             }
           } finally {
+            JdkHttpServerInterpreter.setRequestHandled(exchange, v = true)
             exchange.close()
           }
 
-        case RequestResult.Failure(t) => // TODO should empty List == 404?
-          println(s"got failure from interpreter: $t")
-          try {
-            exchange.sendResponseHeaders(404, -1)
-          } catch {
-            case t: Throwable =>
-              t.printStackTrace() // TODO drop
-              throw t // TODO drop
-          } finally {
-            exchange.close()
+        case RequestResult.Failure(_) =>
+          if (jdkHttpServerOptions.send404WhenRequestNotHandled) {
+            JdkHttpServerInterpreter.setRequestHandled(exchange, v = true)
+            try exchange.sendResponseHeaders(404, -1)
+            finally exchange.close()
           }
       }
     }
@@ -97,4 +96,8 @@ object JdkHttpServerInterpreter {
     new JdkHttpServerInterpreter {
       override def jdkHttpServerOptions: JdkHttpServerOptions = serverOptions
     }
+
+  private val handledAttribute = "TAPIR_REQUEST_HANDLED"
+  private[jdkhttp] def setRequestHandled(exchange: HttpExchange, v: Boolean): Unit = exchange.setAttribute(handledAttribute, v)
+  def isRequestHandled(exchange: HttpExchange): Boolean = exchange.getAttribute(handledAttribute) == true
 }
