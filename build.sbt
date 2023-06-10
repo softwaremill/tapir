@@ -1866,6 +1866,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .dependsOn(
     akkaHttpServer,
     armeriaServer,
+    jdkhttpServer,
     http4sServer,
     http4sServerZio,
     http4sClient,

@@ -1,10 +1,12 @@
 package sttp.tapir.server.jdkhttp
 
+import com.sun.net.httpserver.HttpsConfigurator
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
+import java.util.concurrent.Executor
 import java.util.logging.{Level, Logger}
 
 /** @param send404WhenRequestNotHandled
@@ -16,8 +18,15 @@ case class JdkHttpServerOptions(
     interceptors: List[Interceptor[Id]],
     createFile: ServerRequest => TapirFile,
     deleteFile: TapirFile => Unit,
-    send404WhenRequestNotHandled: Boolean
+    send404WhenRequestNotHandled: Boolean = true,
+    basePath: String = "/",
+    port: Int = 0,
+    host: String = "0.0.0.0",
+    executor: Option[Executor] = None,
+    httpsConfigurator: Option[HttpsConfigurator] = None,
+    backlogSize: Int = 0
 ) {
+  require(0 <= port && port <= 65535, "Port has to be in 1-65535 range or 0 if random!")
   def prependInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = interceptors :+ i)
 }
@@ -26,7 +35,7 @@ object JdkHttpServerOptions {
   val Default: JdkHttpServerOptions = customiseInterceptors.options
 
   private def default(interceptors: List[Interceptor[Id]]): JdkHttpServerOptions =
-    JdkHttpServerOptions(interceptors, _ => Defaults.createTempFile(), Defaults.deleteFile(), send404WhenRequestNotHandled = true)
+    JdkHttpServerOptions(interceptors, _ => Defaults.createTempFile(), Defaults.deleteFile())
 
   def customiseInterceptors: CustomiseInterceptors[Id, JdkHttpServerOptions] =
     CustomiseInterceptors(
