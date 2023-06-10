@@ -1,7 +1,7 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.{HttpExchange, HttpHandler}
-import sttp.model.{Header, HeaderNames, Headers}
+import sttp.model.{Header, HeaderNames}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -9,7 +9,6 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.jdkhttp.internal._
 
-import java.io.InputStream
 import scala.jdk.CollectionConverters._
 
 trait JdkHttpServerInterpreter {
@@ -21,26 +20,24 @@ trait JdkHttpServerInterpreter {
     val responseBody = new JdkHttpToResponseBody
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(jdkHttpServerOptions.interceptors, ses)
 
+    implicit val bodyListener: BodyListener[Id, JdkHttpResponseBody] = new JdkHttpBodyListener
+
+    val serverInterpreter = new ServerInterpreter[Any, Id, JdkHttpResponseBody, NoStreams](
+      filteredEndpoints,
+      requestBody,
+      responseBody,
+      interceptors,
+      jdkHttpServerOptions.deleteFile
+    )
+
     (exchange: HttpExchange) => {
       // the exchange objects seem to be reused, hence always resetting the handled flag
       JdkHttpServerInterpreter.setRequestHandled(exchange, v = false)
 
-      implicit val bodyListener: BodyListener[Id, JdkHttpResponseBody] = new JdkHttpBodyListener(exchange)
-
-      val serverInterpreter = new ServerInterpreter[Any, Id, JdkHttpResponseBody, NoStreams](
-        filteredEndpoints,
-        requestBody,
-        responseBody,
-        interceptors,
-        jdkHttpServerOptions.deleteFile
-      )
-
       val req = JdkHttpServerRequest(exchange)
-      println("running serverInterpreter")
       serverInterpreter(req) match {
         case RequestResult.Response(response) =>
           try {
-            println(s"got response from interpreter $response")
             exchange.getResponseHeaders.putAll(
               response.headers.groupBy(_.name).view.mapValues(_.map(_.value).asJava).toMap.asJava
             )
@@ -50,22 +47,13 @@ trait JdkHttpServerInterpreter {
                 case Header(HeaderNames.ContentLength, _) => true
                 case _                                    => false
               }
-              .map(_.value.toInt)
-              .getOrElse(0)
-
-            println(s"content length from response: $contentLengthFromHeader")
+              .map(_.value.toLong)
+              .getOrElse(0L)
 
             response.body match {
-              case Some((is, Some(contentLength))) =>
+              case Some((is, maybeContentLength)) =>
+                val contentLength = maybeContentLength.getOrElse(contentLengthFromHeader)
                 exchange.sendResponseHeaders(response.code.code, contentLength)
-                val os = exchange.getResponseBody
-                try is.transferTo(os)
-                finally {
-                  is.close()
-                  os.close()
-                }
-              case Some((is, None)) =>
-                exchange.sendResponseHeaders(response.code.code, contentLengthFromHeader)
                 val os = exchange.getResponseBody
                 try is.transferTo(os)
                 finally {
