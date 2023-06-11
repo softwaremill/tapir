@@ -1953,6 +1953,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     armeriaServerCats,
     armeriaServerZio,
     armeriaServerZio1,
+    jdkhttpServer,
     circeJson,
     enumeratum,
     finatraServer,
