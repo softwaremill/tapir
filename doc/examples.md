@@ -6,6 +6,8 @@ The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/ma
 
 You can generate a simple tapir-based project using chosen features, build tool and effect system using [adopt-tapir](https://adopt-tapir.softwaremill.com).
 
+Alternatively, you can create a stub of application using tapir directly from commandline with `sbt new softwaremill/tapir.g8`.
+
 ## Third-party examples
 
 * http4s interpreter: [todo-backend](https://github.com/lolgab/snunit-tapir-example)
