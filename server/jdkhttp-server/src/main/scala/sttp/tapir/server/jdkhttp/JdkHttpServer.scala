@@ -2,36 +2,79 @@ package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.jdkhttp.JdkHttpServer.combinedHandler
 
 import java.net.InetSocketAddress
+import java.util.concurrent.Executor
 
 case class JdkHttpServer(
-    handlers: Vector[HttpHandler] = Vector.empty,
+    endpoints: Vector[ServerEndpoint[Any, Id]] = Vector.empty,
     options: JdkHttpServerOptions = JdkHttpServerOptions.Default
 ) {
 
+  /** Sets the port to which the server will be bound.
+    *
+    * @param port
+    *   Int
+    * @return
+    */
   def port(port: Int): JdkHttpServer = copy(options = options.copy(port = port))
 
+  /** Sets the hostname to which the server will be bound.
+    *
+    * @param host
+    *   String
+    * @return
+    */
   def host(host: String): JdkHttpServer = copy(options = options.copy(host = host))
+
+  /** Allows you to configure the Executor which will be used to handle HTTP requests. By default com.sun.net.httpserver.HttpServer uses a
+    * single thread (a calling thread executor to be precise) executor to handle traffic which might be fine for local toy projects.
+    *
+    * If you intend to use this HTTP server for any deployments that will run under load it's absolutely necessary to set an executor that
+    * will use proper thread pool to handle the load. Recommended approach is to use `JdkHttpServerOptions.httpExecutor` method to create a
+    * ThreadPoolExecutor that will scale under load. You can also use an Executor returned from any of the constructors in the
+    * `java.util.concurrent.Executors` class.
+    *
+    * Alternatively, if running with a JDK 19+ you can leverage Project Loom and use `Executors.newVirtualThreadPerTaskExecutor()` to run
+    * each request on a virtual thread. This however means it is possible for your server to be overloaded with work as each request will be
+    * given a thread with no backpressure on how many should be executed in parallel.
+    */
+  def executor(executor: Executor): JdkHttpServer = copy(options = options.copy(executor = Some(executor)))
+
+  /** Sets the base path under which your endpoints will be mounted, so if you have an endpoint configured to respond to /hello path and
+    * base path set to /api your endpoint will in fact respond under /api/hello path.
+    *
+    * The default base path is "/".
+    */
+  def basePath(path: String): JdkHttpServer = copy(options = options.copy(basePath = path))
+
+  /** Sets the size of server's tcp connection backlog. This is the maximum number of queued incoming connections to allow on the listening
+    * socket. Queued TCP connections exceeding this limit may be rejected by the TCP implementation. If set to 0 or less the system default
+    * for backlog size will be used. Default is 0.
+    *
+    * @param size
+    *   Int
+    * @return
+    */
+  def backlogSize(size: Int): JdkHttpServer = copy(options = options.copy(backlogSize = size))
+
+  /** Takes an instance of [[com.sun.net.httpserver.HttpsConfigurator]], which is a thin wrapper around [[javax.net.ssl.SSLContext]] to
+    * configure the SSL termination for this server.
+    *
+    * @param httpsConfigurator
+    *   com.sun.net.httpserver.HttpsConfigurator
+    * @return
+    */
+  def https(httpsConfigurator: HttpsConfigurator): JdkHttpServer =
+    copy(options = options.copy(httpsConfigurator = Some(httpsConfigurator)))
 
   def addEndpoint(se: ServerEndpoint[Any, Id]): JdkHttpServer = addEndpoints(List(se))
 
-  def addEndpoint(se: ServerEndpoint[Any, Id], overrideOptions: JdkHttpServerOptions): JdkHttpServer =
-    addEndpoints(List(se), overrideOptions)
+  def addEndpoints(ses: List[ServerEndpoint[Any, Id]]): JdkHttpServer =
+    copy(endpoints = endpoints ++ ses)
 
-  def addEndpoints(ses: List[ServerEndpoint[Any, Id]]): JdkHttpServer = addHandler(
-    JdkHttpServerInterpreter(options).toHandler(ses)
-  )
-
-  def addEndpoints(ses: List[ServerEndpoint[Any, Id]], overrideOptions: JdkHttpServerOptions): JdkHttpServer =
-    addHandler(JdkHttpServerInterpreter(overrideOptions).toHandler(ses))
-
-  def addHandler(r: HttpHandler): JdkHttpServer = copy(handlers = handlers :+ r)
-
-  def addHandlers(r: Iterable[HttpHandler]): JdkHttpServer = copy(handlers = handlers ++ r)
-
-  /** Use this if you want to add more routes manually, outside of the routes defined with tapir.
+  /** Use this if you want to add more routes manually, outside of the routes defined with tapir. Afterwards it is necessary to call
+    * `HttpServer.start()` to actually start the server.
     *
     * @return
     *   com.sun.net.httpserver.HttpServer
@@ -47,7 +90,7 @@ case class JdkHttpServer(
         HttpServer.create(socketAddress, options.backlogSize)
     }
 
-    val handler = combinedHandler(handlers)
+    val handler = JdkHttpServerInterpreter(options).toHandler(endpoints.toList)
 
     options.executor.foreach { executor => server.setExecutor(executor) }
 
@@ -56,7 +99,7 @@ case class JdkHttpServer(
     server
   }
 
-  /** Setup and start the server.
+  /** Setup and start the server in the background.
     *
     * @return
     *   com.sun.net.httpserver.HttpServer
@@ -66,24 +109,4 @@ case class JdkHttpServer(
     server.start()
     server
   }
-}
-
-object JdkHttpServer {
-  import scala.annotation.tailrec
-
-  private def combinedHandler(routes: Vector[HttpHandler]): HttpHandler =
-    (exchange: HttpExchange) => {
-      @tailrec
-      def doCombine(rs: List[HttpHandler]): Unit = rs match {
-        case Nil =>
-          try exchange.sendResponseHeaders(404, -1)
-          finally exchange.close()
-        case head :: tail =>
-          head.handle(exchange)
-          if (!JdkHttpServerInterpreter.isRequestHandled(exchange)) doCombine(tail)
-      }
-
-      doCombine(routes.toList)
-    }
-
 }

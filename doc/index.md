@@ -17,6 +17,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
+  * [JDK HTTP](server/jdkhttp.md) `HttpHandler` (simple, synchronous API only)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
   * [gRPC](grpc.md)
 * a client, which is a function from input parameters to output parameters.
