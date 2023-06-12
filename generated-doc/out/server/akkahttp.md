@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.5.2"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.5.3"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.5.2" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.5.3" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the object:
@@ -118,5 +118,6 @@ val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint.serverLogicSuccess[
 ```
 
 ## Configuration
+
 The interpreter can be configured by providing an `AkkaHttpServerOptions` value, see
 [server options](options.md) for details.

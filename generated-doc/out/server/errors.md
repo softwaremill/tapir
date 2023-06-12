@@ -22,7 +22,7 @@ For example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.NettyFutureServerInterpreter
 import scala.concurrent.Future
 import scala.util._
 
@@ -38,7 +38,7 @@ def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
       Success(Left(e.getMessage))
   }
 
-AkkaHttpServerInterpreter().toRoute(
+NettyFutureServerInterpreter().toRoute(
   endpoint
     .errorOut(plainBody[ErrorInfo])
     .out(plainBody[Int])
@@ -54,8 +54,8 @@ value of type `ErrorInfo`.
 Following the convention, the left side of the `Either[ErrorInfo, T]` represents an error, and the right side success.
 
 Alternatively, errors can be recovered from failed effects and mapped to the error output - provided that the `E` type
-in the endpoint description is itself a subclass of exception. This can be done using the `toRouteRecoverErrors` method
-(or similar for other interpreters).
+in the endpoint description is itself a subclass of exception. This can be done by using the `serverLogicRecoverErrors` 
+to specify the server logic, see the dedicated [section](logic.md) for more information.
 
 ## Failed effects: unhandled exceptions
 
@@ -153,17 +153,17 @@ We'll need to provide both the endpoint output which should be used for error me
 ```scala
 import sttp.tapir._
 import sttp.tapir.server.model.ValuedEndpointOutput
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.netty.NettyFutureServerOptions
+import java.net.InetSocketAddress
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 
-val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+val myServerOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
   .customiseInterceptors
   .defaultHandlers(myFailureResponse)
   .options

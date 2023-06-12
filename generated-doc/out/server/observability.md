@@ -49,19 +49,18 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.5.2"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.5.3"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
 well as an endpoint definition to read the metrics & expose them to the Prometheus server.
 
-For example, using `AkkaServerInterpeter`:
+For example, using `NettyFutureServerInterpreter`:
 
 ```scala
-import akka.http.scaladsl.server.Route
-import io.prometheus.client.CollectorRegistry
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, NettyFutureServerOptions, FutureRoute}
+import java.net.InetSocketAddress
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -70,13 +69,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val prometheusMetrics = PrometheusMetrics.default[Future]()
 
 // enable metrics collection
-val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+val serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
   .customiseInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
 
 // route which exposes the current metrics values
-val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
+val routes: FutureRoute = NettyFutureServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
 ```
 
 By default, the following metrics are exposed:
@@ -130,7 +129,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.5.2"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.5.3"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -157,7 +156,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.5.2"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.5.3"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -224,7 +223,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.5.2"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.5.3"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.

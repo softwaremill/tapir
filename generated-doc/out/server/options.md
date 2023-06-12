@@ -10,21 +10,22 @@ Each interpreter can be configured using an options object, which includes:
 * additional user-provided [interceptors](interceptors.md)
 
 To use custom server options pass them as an argument to the interpreter's `apply` method.
-For example, for `NettyFutureServerOptions` and `NettyFutureServerInterpreter`:
+For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
 
 ```scala
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
-import sttp.tapir.server.netty.{NettyFutureServerOptions, NettyFutureServerInterpreter}
-import java.net.InetSocketAddress
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import scala.concurrent.ExecutionContext.Implicits.global
 
 val customDecodeFailureHandler: DecodeFailureHandler = ???
 
-val customServerOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
+val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customiseInterceptors
   .decodeFailureHandler(customDecodeFailureHandler)
   .options
-
-NettyFutureServerInterpreter(customServerOptions)
+  
+AkkaHttpServerInterpreter(customServerOptions)
 ```
 
 ## Hiding authenticated endpoints
@@ -33,19 +34,20 @@ By default, if authentication credentials are missing for an endpoint which defi
 a `401 Unauthorized` response is returned.
 
 If you would instead prefer to hide the fact that such an endpoint exists from the client, a `404 Not Found` can be 
-returned instead by using a different decode failure handler. For example, using Netty:
+returned instead by using a different decode failure handler. For example, using akka-http:
 
 ```scala
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.netty.{NettyFutureServerOptions, NettyFutureServerInterpreter}
-import java.net.InetSocketAddress
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import scala.concurrent.ExecutionContext.Implicits.global
 
-val customServerOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
+val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customiseInterceptors
   .decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
   .options
-
-NettyFutureServerInterpreter(customServerOptions)
+  
+AkkaHttpServerInterpreter(customServerOptions)
 ```
 
 Note however, that it can still be possible to discover the existence of certain endpoints using timing attacks.
