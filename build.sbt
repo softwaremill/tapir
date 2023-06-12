@@ -104,6 +104,16 @@ val enableMimaSettings = Seq(
   )
 )
 
+// using Scala 3.3, docs generation fails sometimes in "readTasty" when processing compile-time annotations used by libraries
+val disableScaladocSettingsWhenScala3 = Seq(
+  Compile / packageDoc / publishArtifact := {
+    if (scalaVersion.value == scala3) false else (Compile / packageDoc / publishArtifact).value
+  },
+  Compile / doc / sources := {
+    if (scalaVersion.value == scala3) Seq.empty else (Compile / doc / sources).value
+  }
+)
+
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
@@ -360,6 +370,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     clientTestServerPort := 51823,
     startClientTestServer := reStart.toTask("").value
   )
+  .settings(disableScaladocSettingsWhenScala3)
   .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
@@ -1414,6 +1425,7 @@ lazy val vertxServerZio1: ProjectMatrix = (projectMatrix in file("server/vertx-s
       "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats % Test
     )
   )
+  .settings(disableScaladocSettingsWhenScala3)
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTest, zio1, serverTests % Test)
 
