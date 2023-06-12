@@ -191,7 +191,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
 
-// add to your akka routes
+// add to your netty routes
 val swaggerUIRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 

@@ -53,7 +53,7 @@ val aServerEndpoint: ServerEndpoint[Any, Future] = anEndpoint.serverLogic((logic
 ## Interpreting as a server
 
 Both a single server endpoint, and multiple endpoints can be interpreted as a server. As an example, a list of server 
-endpoints can be converted to an Netty route:
+endpoints can be converted to a Netty route:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
