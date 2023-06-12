@@ -8,7 +8,6 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType._
 
 trait TapirJsonCirce {
   def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(circeCodec[T])
@@ -16,6 +15,9 @@ trait TapirJsonCirce {
   def jsonBodyWithRaw[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
     implicitly[JsonCodec[(String, T)]]
   )
+
+  def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
+    queryAnyFormat[T, CodecFormat.Json](name, sttp.tapir.Codec.jsonQuery(circeCodec))
 
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
@@ -42,12 +44,6 @@ trait TapirJsonCirce {
 
   def jsonPrinter: Printer = Printer.noSpaces
 
-  // Json is a coproduct with unknown implementations
-  implicit val schemaForCirceJson: Schema[Json] =
-    Schema(
-      SCoproduct(Nil, None)(_ => None),
-      None
-    )
-
-  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
+  implicit val schemaForCirceJson: Schema[Json] = Schema.any
+  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema.anyObject[JsonObject].name(SName("io.circe.JsonObject"))
 }

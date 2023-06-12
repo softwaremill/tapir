@@ -1,7 +1,8 @@
 package sttp.tapir.swagger
 
-import sttp.model.{HeaderNames, QueryParams, StatusCode}
+import sttp.model.{HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
+import sttp.tapir.files._
 import sttp.tapir.server.ServerEndpoint
 
 import java.util.Properties
@@ -41,7 +42,10 @@ object SwaggerUI {
 
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
-      .out(stringBody)
+      .out(stringBodyUtf8AnyFormat(Codec.string.format(new CodecFormat {
+        // #2396: although application/yaml is not official, that's what swagger ui sends in the accept header
+        override def mediaType: MediaType = MediaType("application", "yaml")
+      })))
       .serverLogicPure[F](_ => Right(yaml))
 
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
@@ -53,7 +57,7 @@ object SwaggerUI {
     val swaggerInitializerJsEndpoint =
       baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
 
-    val resourcesEndpoint = resourcesGetServerEndpoint[F](prefixInput)(
+    val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )

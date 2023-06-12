@@ -1,10 +1,10 @@
 package sttp.tapir.server.armeria.zio
 
-import _root_.zio.{RIO, Task, URIO}
+import _root_.zio.{RIO, ZIO}
 import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir.server.armeria.ArmeriaServerOptions
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -43,30 +43,30 @@ object ArmeriaZioServerOptions {
 
   def defaultDeleteFile[R](file: TapirFile): RIO[R, Unit] = blocking(Defaults.deleteFile()(file))
 
-  def defaultServerLog[R]: ServerLog[RIO[R, *]] = DefaultServerLog(
+  def defaultServerLog[R]: DefaultServerLog[RIO[R, *]] = DefaultServerLog(
     doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[R],
     doLogAllDecodeFailures = debugLog[R],
-    doLogExceptions = (msg: String, ex: Throwable) => URIO.succeed { logger.warn(msg, ex) },
-    noLog = URIO.unit
+    doLogExceptions = (msg: String, ex: Throwable) => ZIO.succeed { logger.warn(msg, ex) },
+    noLog = ZIO.unit
   )
 
   private def debugLog[R](msg: String, exOpt: Option[Throwable]): RIO[R, Unit] =
-    URIO.succeed(exOpt match {
+    ZIO.succeed(exOpt match {
       case None     => logger.debug(msg)
       case Some(ex) => logger.debug(msg, ex)
     })
 
   private def blocking[R, T](body: => T): RIO[R, T] = {
-    Task.async { cb =>
+    ZIO.async { cb =>
       CommonPools
         .blockingTaskExecutor()
         .execute(() => {
           try {
-            cb(Task.succeed(body))
+            cb(ZIO.succeed(body))
           } catch {
             case NonFatal(ex) =>
-              cb(Task.fail(ex))
+              cb(ZIO.fail(ex))
           }
         })
     }

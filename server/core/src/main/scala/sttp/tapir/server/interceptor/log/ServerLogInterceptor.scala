@@ -7,6 +7,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.AnyEndpoint
 
 /** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
@@ -14,12 +15,13 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
   ): RequestHandler[F, R, B] = {
-    val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, serverLog.requestToken))
+    val token = serverLog.requestToken
+    val delegate = requestHandler(new ServerLogEndpointInterceptor[F, serverLog.TOKEN](serverLog, token))
     new RequestHandler[F, R, B] {
       override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
           monad: MonadError[F]
       ): F[RequestResult[B]] = {
-        serverLog.requestReceived(request).flatMap(_ => delegate(request, endpoints))
+        serverLog.requestReceived(request, token).flatMap(_ => delegate(request, endpoints))
       }
     }
   }
@@ -35,7 +37,10 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
         decodeHandler
           .onDecodeSuccess(ctx)
           .flatMap { response =>
-            serverLog.requestHandled(ctx, response, token).map(_ => response)
+            if (serverLog.ignoreEndpoints.contains(ctx.endpoint))
+              response.unit
+            else
+              serverLog.requestHandled(ctx, response, token).map(_ => response)
           }
           .handleError { case e: Throwable =>
             serverLog

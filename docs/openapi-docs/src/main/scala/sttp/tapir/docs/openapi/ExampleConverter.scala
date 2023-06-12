@@ -1,9 +1,9 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.apispec._
+import sttp.apispec._
+import sttp.apispec.openapi.Example
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.IterableToListMap
-import sttp.tapir.openapi.Example
 import sttp.tapir.{Codec, EndpointIO, Schema => TSchema}
 
 import scala.collection.immutable.ListMap
@@ -24,17 +24,21 @@ private[openapi] object ExampleConverter {
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {
     examples match {
-      case (example @ EndpointIO.Example(_, None, None)) :: Nil =>
+      case (example @ EndpointIO.Example(_, None, None, None)) :: Nil =>
         Examples(exampleValue(example.value), ListMap.empty)
-      case (example @ EndpointIO.Example(_, _, _)) :: Nil if example.name.isDefined || example.summary.isDefined =>
+      case (example @ EndpointIO.Example(_, _, _, _)) :: Nil if example.name.isDefined || example.summary.isDefined =>
         Examples(
           None,
-          ListMap(example.name.getOrElse("Example") -> Right(Example(summary = example.summary, value = exampleValue(example.value))))
+          ListMap(
+            example.name.getOrElse("Example") -> Right(
+              Example(summary = example.summary, description = example.description, value = exampleValue(example.value))
+            )
+          )
         )
       case examples =>
         val exampleValues = examples.zipWithIndex.map { case (example, i) =>
           example.name.getOrElse(s"Example$i") ->
-            Right(Example(summary = example.summary, value = exampleValue(example.value)))
+            Right(Example(summary = example.summary, description = example.description, value = exampleValue(example.value)))
         }.toListMap
         Examples(None, exampleValues)
     }

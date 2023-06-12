@@ -1,22 +1,27 @@
 # Schema derivation
 
+A schema describes the shape of a value, how the low-level representation should be structured. Schemas are primarily
+used when generating [documentation](../docs/openapi.md) and when [validating](validation.md) incoming values.
+
+Schemas are typically defined as implicit values. They are part of [codecs](codecs.md), and are looked up in the 
+implicit scope during codec derivation, as well as when using [json](json.md) or [form](forms.md) bodies.
+
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
-For case classes, `Schema[_]` values can be derived automatically using
-[Magnolia](https://github.com/softwaremill/magnolia), given that schemas are defined for all the case class's fields.
+For case classes and sealed hierarchies, `Schema[_]` values can be derived automatically using
+[Magnolia](https://github.com/softwaremill/magnolia), given that implicit schemas are available for all the case class's
+fields, or all of the implementations of the `enum`/`sealed trait`/`sealed class`.
 
-There are two policies of custom type derivation are available:
+Two policies of custom type derivation are available:
 
 * automatic derivation
 * semi automatic derivation
 
 ## Automatic derivation
 
-Case classes, traits and their children are recursively derived by Magnolia.
-
-Importing `sttp.tapir.generic.auto._` (or extending the `SchemaDerivation` trait) enables fully automatic derivation
-for `Schema`:
+Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto._` 
+(or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
 
 ```scala
 import sttp.tapir.Schema
@@ -32,8 +37,8 @@ implicitly[Schema[Parent]]
 If you have a case class which contains some non-standard types (other than strings, number, other case classes,
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
-Note that when using [datatypes integrations](integrations.md), respective codecs must also be imported to enable the
-derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
+Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
+enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
@@ -58,6 +63,16 @@ implicit lazy val sParent: Schema[Parent] = Schema.derived
 
 Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
 values must be `lazy val`s.
+
+## Debugging schema derivation
+
+When deriving schemas using `Schema.derived[T]`, in case derivation fails, you'll get information for which part of `T` 
+the schema cannot be found (e.g. a specific field, or a trait subtype). Given this diagnostic information you can drill
+down, and try to derive the schema (again using `Schema.derived`) for the problematic part. Eventually, you'll find the 
+lowest-level type for which the schema cannot be derived. You might need to provide it manually, or use some kind of
+integration layer.
+
+This method may be used both with automatic and semi-automatic derivation. 
 
 ## Derivation for recursive types in Scala3
 
@@ -103,8 +118,18 @@ implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaT
 
 ## Sealed traits / coproducts
 
-Schema derivation for coproduct types (sealed trait hierarchies) is supported as well. By default, such hierarchies
-will be represented as a coproduct which contains a list of child schemas, without any discriminator field.
+Schema derivation for coproduct types (sealed hierarchies) is supported as well. By default, such hierarchies
+will be represented as a coproduct which contains a list of child schemas, without any discriminators.
+
+```eval_rst
+.. note::
+
+  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
+  encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
+  configured in the json library, matching the configuration of the schema.  
+```
+
+### Field discriminators
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used
 during automatic and semi-automatic derivation:
@@ -116,18 +141,49 @@ implicit val customConfiguration: Configuration =
   Configuration.default.withDiscriminator("who_am_i")
 ```
 
-Alternatively, derived schemas can be customised (see below), and a discriminator can be added by calling
-the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, maping)` method.
+The discriminator will be added as a field to all coproduct child schemas, if it's not yet present. The schema of
+the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and
+the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
+
+Alternatively, derived schemas can be customised (see also below), and a discriminator can be added by calling
+the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, maping)` method. This method is useful when using
+semi-automatic or automatic derivation; in both cases a custom implicit has to be defined, basing on the derived
+one:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
+
+sealed trait MyCoproduct 
+case class Child1(s: String) extends MyCoproduct
+// ... implementations of MyCoproduct ...
+
+implicit val myCoproductSchema: Schema[MyCoproduct] = {
+  val derived = implicitly[Derived[Schema[MyCoproduct]]].value
+  derived.schemaType match {
+    case s: SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
+      FieldName("myField"),
+      Schema.string,
+      Map(
+        "value1" -> SchemaType.SRef(Schema.SName("com.myproject.Child1")),
+        // ... other mappings ...
+      )
+    ))
+    case _ => ???
+  }
+}
+```
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
-schemas can be specified using `Schema.oneOfUsingField`, for example (this will also generate the appropriate
-mappings):
+schemas can be specified as a custom implicit value using the `Schema.oneOfUsingField` macro, 
+for example (this will also generate the appropriate mappings):
 
 ```scala
 sealed trait Entity {
   def kind: String
 } 
-case class Person(firstName:String, lastName:String) extends Entity { 
+case class Person(firstName: String, lastName: String) extends Entity { 
   def kind: String = "person"
 }
 case class Organization(name: String) extends Entity {
@@ -139,8 +195,29 @@ import sttp.tapir._
 val sPerson = Schema.derived[Person]
 val sOrganization = Schema.derived[Organization]
 implicit val sEntity: Schema[Entity] = 
-    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
+    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)(
+      "person" -> sPerson, "org" -> sOrganization)
 ```
+
+### Wrapper object discriminators
+
+Another discrimination strategy uses a wrapper object. Such an object contains a single field, with its name 
+corresponding to the discriminator value. A schema can be automatically generated using the `Schema.oneOfWrapped`
+macro, for example:
+
+```scala
+sealed trait Entity
+case class Person(firstName: String, lastName: String) extends Entity
+case class Organization(name: String) extends Entity 
+
+import sttp.tapir._
+import sttp.tapir.generic.auto._ // to derive child schemas
+
+implicit val sEntity: Schema[Entity] = Schema.oneOfWrapped[Entity]
+```
+
+The names of the field in the wrapper object will be generated using the implicit `Configuration`. If for some reason
+this is insufficient, you can generate schemas for individual wrapper objects using `Schema.wrapWithSingleFieldProduct`.
 
 ## Customising derived schemas
 
@@ -227,4 +304,4 @@ val e: PublicEndpoint[FruitAmount, Unit, Unit, Nothing] =
 
 ## Next
 
-Read on about [validation](validation.md).
+Read on about [enumerations](enumerations.md).

@@ -1,6 +1,7 @@
 package sttp.tapir.server.tests
 
 import cats.implicits._
+import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
@@ -20,6 +21,12 @@ import java.util.concurrent.atomic.AtomicInteger
 class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit m: MonadError[F]) {
   import createServerTest._
 
+  // increase the patience for `eventually` for slow CI tests
+  implicit val patienceConfig: Eventually.PatienceConfig = Eventually.PatienceConfig(
+    timeout = org.scalatest.time.Span(15, org.scalatest.time.Seconds),
+    interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
+  )
+
   def tests(): List[Test] = List(
     {
       val reqCounter = newRequestCounter[F]
@@ -36,8 +43,8 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
           .send(backend)
           .map { r =>
             r.body shouldBe Right("""{"fruit":"apple","amount":1}""")
-            eventually {
-              reqCounter.metric.value.get() shouldBe 1
+            reqCounter.metric.value.get() shouldBe 1
+            eventually { // the response metric is invoked *after* the body is sent, so we might have to wait
               resCounter.metric.value.get() shouldBe 1
             }
           } >> basicRequest // onDecodeFailure path
@@ -45,8 +52,8 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
           .body("""{"invalid":"body",}""")
           .send(backend)
           .map { _ =>
+            reqCounter.metric.value.get() shouldBe 2
             eventually {
-              reqCounter.metric.value.get() shouldBe 2
               resCounter.metric.value.get() shouldBe 2
             }
           }
@@ -119,8 +126,8 @@ object ServerMetricsTest {
   }
 
   def newRequestCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onEndpointRequest { _ => m.eval(c.++()) }) })
 
   def newResponseCounter[F[_]]: Metric[F, Counter] =
-    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponseBody { (_, _) => m.unit(c.++()) }) })
+    Metric[F, Counter](Counter(), onRequest = { (_, c, m) => m.unit(EndpointMetric().onResponseBody { (_, _) => m.eval(c.++()) }) })
 }

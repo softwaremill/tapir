@@ -11,8 +11,8 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir._
-import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
 import zio.interop.catz._
+import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
 
 object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
   // Domain classes, services, layers
@@ -30,9 +30,9 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
         override def find(petId: Int): IO[String, Pet] = {
           Console.printLine(s"Got request for pet: $petId").mapError(_.getMessage) zipRight {
             if (petId == 35) {
-              IO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+              ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
             } else {
-              IO.fail("Unknown pet id")
+              ZIO.fail("Unknown pet id")
             }
           }
         }
@@ -61,13 +61,16 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
 
   // Starting the server
   val serve: ZIO[PetService, Throwable, Unit] = {
-    BlazeServerBuilder[RIO[PetService, *]]
-      .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
-      .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
-      .serve
-      .compile
-      .drain
+    ZIO.executor.flatMap(executor =>
+      BlazeServerBuilder[RIO[PetService, *]]
+        .withExecutionContext(executor.asExecutionContext)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
+        .serve
+        .compile
+        .drain
+    )
+
   }
 
   override def run =

@@ -13,7 +13,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
@@ -67,7 +67,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
       createServerTest.testServer(
-        endpoint.out(streamBinaryBody(Fs2Streams[IO])),
+        endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
         IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(10.seconds)))

@@ -36,8 +36,10 @@ trait TapirStaticContentEndpoints {
   private val ifModifiedSinceHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.IfModifiedSince)
   private val lastModifiedHeader: EndpointIO[Option[Instant]] = optionalHttpDateHeader(HeaderNames.LastModified)
   private val contentTypeHeader: EndpointIO[Option[MediaType]] = header[Option[MediaType]](HeaderNames.ContentType)
+  private def contentLengthHeader: EndpointIO[Option[Long]] = header[Option[Long]](HeaderNames.ContentLength)
   private val etagHeader: EndpointIO[Option[ETag]] = header[Option[ETag]](HeaderNames.Etag)
   private val rangeHeader: EndpointIO[Option[Range]] = header[Option[Range]](HeaderNames.Range)
+  private def acceptRangesHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptRanges)
   private val acceptEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.AcceptEncoding)
   private val contentEncodingHeader: EndpointIO[Option[String]] = header[Option[String]](HeaderNames.ContentEncoding)
 
@@ -81,10 +83,10 @@ trait TapirStaticContentEndpoints {
             StatusCode.PartialContent,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
-              .and(header[Option[String]](HeaderNames.AcceptRanges))
+              .and(acceptRangesHeader)
               .and(header[Option[String]](HeaderNames.ContentRange))
               .map[StaticOutput.FoundPartial[T]](
                 (t: (T, Option[Instant], Option[Long], Option[MediaType], Option[ETag], Option[String], Option[String])) =>
@@ -96,7 +98,7 @@ trait TapirStaticContentEndpoints {
             StatusCode.Ok,
             body
               .and(lastModifiedHeader)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .and(etagHeader)
               .and(contentEncodingHeader)
@@ -130,8 +132,8 @@ trait TapirStaticContentEndpoints {
         oneOf[HeadOutput](
           oneOfVariantClassMatcher(
             StatusCode.Ok,
-            header[Option[String]](HeaderNames.AcceptRanges)
-              .and(header[Option[Long]](HeaderNames.ContentLength))
+            acceptRangesHeader
+              .and(contentLengthHeader)
               .and(contentTypeHeader)
               .map[HeadOutput.Found]((t: (Option[String], Option[Long], Option[MediaType])) => HeadOutput.Found(t._1, t._2, t._3))(fo =>
                 (fo.acceptRanges, fo.contentLength, fo.contentType)
@@ -142,11 +144,18 @@ trait TapirStaticContentEndpoints {
       )
   }
 
+  @deprecated("Use sttp.tapir.files.staticFilesGetEndpoint", since = "1.3.0")
   lazy val filesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] = staticGetEndpoint(fileRangeBody)
+
+  @deprecated("Use sttp.tapir.files.staticResourcesGetEndpoint", since = "1.3.0")
   lazy val resourcesGetEndpoint: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     staticGetEndpoint(inputStreamBody)
+
+  @deprecated("Use sttp.tapir.files.staticFilesGetEndpoint", since = "1.3.0")
   def filesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[FileRange], Any] =
     filesGetEndpoint.prependIn(prefix)
+
+  @deprecated("Use sttp.tapir.files.staticResourcesGetEndpoint", since = "1.3.0")
   def resourcesGetEndpoint(prefix: EndpointInput[Unit]): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStream], Any] =
     resourcesGetEndpoint.prependIn(prefix)
 
@@ -159,6 +168,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
+  @deprecated("Use sttp.tapir.files.staticFilesGetServerEndpoint", since = "1.3.0")
   def filesGetServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
@@ -167,6 +177,7 @@ trait TapirStaticContentEndpoints {
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
+  @deprecated("Use sttp.tapir.files.staticFilesHeadServerEndpoint", since = "1.3.0")
   def filesHeadServerEndpoint[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
@@ -181,6 +192,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
+  @deprecated("Use sttp.tapir.files.staticFilesServerEndpoints", since = "1.3.0")
   def filesServerEndpoints[F[_]](
       prefix: EndpointInput[Unit]
   )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
@@ -192,6 +204,7 @@ trait TapirStaticContentEndpoints {
     * fileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
+  @deprecated("Use sttp.tapir.files.staticFileGetServerEndpoint", since = "1.3.0")
   def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
     ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
 
@@ -204,6 +217,7 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
+  @deprecated("Use sttp.tapir.files.staticResourcesGetServerEndpoint", since = "1.3.0")
   def resourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
@@ -220,6 +234,7 @@ trait TapirStaticContentEndpoints {
     * resourceGetServerEndpoint("static" / "hello.html")(classOf[App].getClassLoader, "app/data.html")
     * }}}
     */
+  @deprecated("Use sttp.tapir.files.staticResourceGetServerEndpoint", since = "1.3.0")
   def resourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,

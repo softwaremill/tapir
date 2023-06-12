@@ -6,7 +6,7 @@ import com.linecorp.armeria.common.CommonPools
 import org.slf4j.{Logger, LoggerFactory}
 import scala.util.control.NonFatal
 import sttp.tapir.server.armeria.ArmeriaServerOptions
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -47,7 +47,7 @@ object ArmeriaCatsServerOptions {
 
   def defaultDeleteFile[F[_]: Async](file: TapirFile): F[Unit] = blocking(Defaults.deleteFile()(file))
 
-  def defaultServerLog[F[_]: Async]: ServerLog[F] = DefaultServerLog[F](
+  def defaultServerLog[F[_]: Async]: DefaultServerLog[F] = DefaultServerLog[F](
     doLogWhenReceived = debugLog(_, None),
     doLogWhenHandled = debugLog[F],
     doLogAllDecodeFailures = debugLog[F],
@@ -64,17 +64,22 @@ object ArmeriaCatsServerOptions {
     })
 
   private def blocking[F[_], T](body: => T)(implicit F: Async[F]): F[T] = {
-    F.async_ { cb =>
-      CommonPools
-        .blockingTaskExecutor()
-        .execute(() => {
-          try {
-            cb(Right(body))
-          } catch {
-            case NonFatal(ex) =>
-              cb(Left(ex))
-          }
-        })
+    F.async { cb =>
+      F.delay {
+        val javaFuture = CommonPools
+          .blockingTaskExecutor()
+          .submit(new Runnable {
+            override def run(): Unit = {
+              try {
+                cb(Right(body))
+              } catch {
+                case NonFatal(ex) =>
+                  cb(Left(ex))
+              }
+            }
+          })
+        Some(F.void(F.delay { javaFuture.cancel(true) }))
+      }
     }
   }
 }

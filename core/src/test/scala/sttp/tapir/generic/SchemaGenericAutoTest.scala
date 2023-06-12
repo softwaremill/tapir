@@ -100,13 +100,14 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for map" in {
     val schema = implicitly[Schema[Map[String, Int]]]
     schema.name shouldBe Some(SName("Map", List("Int")))
-    schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](intSchema)(identity)
+    schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](Nil, intSchema)(identity)
   }
 
   it should "find schema for map of products" in {
     val schema = implicitly[Schema[Map[String, D]]]
     schema.name shouldBe Some(SName("Map", List("D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
+      Nil,
       Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.generic.D")))
     )(identity)
   }
@@ -115,6 +116,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitly[Schema[Map[String, H[D]]]]
     schema.name shouldBe Some(SName("Map", List("H", "D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, H[D]], H[D]](
+      Nil,
       Schema(
         SProduct[H[D]](
           List(
@@ -381,33 +383,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
   }
 
-  it should "derive schema for enumeration and enrich schema" in {
-    val expected = Schema[Countries.Country](SString())
-      .validate(
-        Validator.enumeration[Countries.Country](
-          Countries.values.toList,
-          (v: Countries.Country) => Option(v),
-          Some(SName("sttp.tapir.generic.Countries"))
-        )
-      )
-      .description("country")
-      .default(Countries.PL)
-      .name(SName("country-encoded-name"))
-
-    val actual = implicitly[Schema[Countries.Country]]
-
-    (actual.validator, expected.validator) match {
-      case (Validator.Enumeration(va, Some(ea), Some(na)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
-        va shouldBe ve
-        ea(Countries.PL) shouldBe ee(Countries.PL)
-        na shouldBe ne
-      case _ => Assertions.fail()
-    }
-    actual.description shouldBe expected.description
-    actual.default shouldBe expected.default
-    actual.name shouldBe expected.name
-  }
-
   it should "add validators for collection and option elements" in {
     case class ValidateEachTest(
         @validateEach(Validator.min(5))
@@ -435,12 +410,7 @@ object SchemaGenericAutoTest {
 
   // comparing recursive schemas without validators
   private[generic] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
-    case SProduct(fields) =>
-      s.copy(schemaType =
-        SProduct(
-          fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
-        )
-      )
+    case SProduct(fields) => s.copy(schemaType = SProduct(convertToSProductField(fields)))
     case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(
@@ -448,11 +418,21 @@ object SchemaGenericAutoTest {
           discriminator
         )(st.subtypeSchema)
       )
-    case st @ SOpenProduct(valueSchema) => s.copy(schemaType = SOpenProduct(removeValidators(valueSchema))(st.fieldValues))
-    case st @ SArray(element)           => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
-    case st @ SOption(element)          => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
-    case _                              => s
+    case st @ SOpenProduct(fields, valueSchema) =>
+      s.copy(schemaType =
+        SOpenProduct(
+          fields = convertToSProductField(fields),
+          valueSchema = removeValidators(valueSchema)
+        )(st.mapFieldValues)
+      )
+    case st @ SArray(element)  => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
+    case st @ SOption(element) => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
+    case _                     => s
   }).copy(validator = Validator.pass)
+
+  private def convertToSProductField[T](fields: List[SProductField[T]]) = {
+    fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
+  }
 }
 
 case class StringValueClass(value: String) extends AnyVal
@@ -520,11 +500,3 @@ sealed trait Entity
 case class Person(first: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 case object UnknownEntity extends Entity
-
-@description("country")
-@default(Countries.PL)
-@encodedName("country-encoded-name")
-object Countries extends Enumeration {
-  type Country = Value
-  val PL, NL = Value
-}

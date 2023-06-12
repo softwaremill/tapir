@@ -8,7 +8,6 @@ import scala.reflect.macros.blackbox
 
 private[tapir] object OneOfMacro {
   // http://onoffswitch.net/extracting-scala-method-names-objects-macros/
-
   def generateOneOfUsingField[E: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
   )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(
@@ -42,11 +41,6 @@ private[tapir] object OneOfMacro {
     val weakTypeE = weakTypeOf[E]
     val weakTypeV = weakTypeOf[V]
 
-    def extractTypeArguments(weakType: c.Type): List[String] = {
-      def allTypeArguments(tn: c.Type): Seq[c.Type] = tn.typeArgs.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
-      allTypeArguments(weakType).map(_.typeSymbol.name.decodedName.toString).toList
-    }
-
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
 
     val schemaForE =
@@ -67,7 +61,7 @@ private[tapir] object OneOfMacro {
               }
               .toMap
             
-            val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
+            val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
             // cast needed because of Scala 2.12
             val subtypes = mappingAsList.map(_._2)
             Schema((SCoproduct[$weakTypeE](subtypes, None) { e => 
@@ -80,5 +74,56 @@ private[tapir] object OneOfMacro {
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)
     c.Expr[Schema[E]](schemaForE)
+  }
+
+  def generateOneOfWrapped[E: c.WeakTypeTag](c: blackbox.Context)(conf: c.Expr[Configuration]): c.Expr[Schema[E]] = {
+    import c.universe._
+
+    val weakTypeE = weakTypeOf[E]
+
+    val symbol = weakTypeE.typeSymbol.asClass
+    if (!symbol.isClass || !symbol.isSealed) {
+      c.abort(c.enclosingPosition, "Can only generate a coproduct schema for a sealed trait or class.")
+    } else {
+      val subclasses = symbol.knownDirectSubclasses.toList.sortBy(_.name.encodedName.toString)
+
+      val subclassesSchemas = subclasses.map(subclass =>
+        q"${subclass.name.encodedName.toString} -> Schema.wrapWithSingleFieldProduct(implicitly[Schema[${subclass.asType}]])($conf)"
+      )
+
+      val subclassesSchemaCases = subclasses.map { subclass =>
+        cq"""v: ${subclass.asType} => Some(SchemaWithValue(subclassNameToSchemaMap(${subclass.name.encodedName.toString}).asInstanceOf[Schema[Any]], v))"""
+      }
+
+      val schemaForE = q"""{
+        import _root_.sttp.tapir.Schema
+        import _root_.sttp.tapir.Schema._
+        import _root_.sttp.tapir.SchemaType._
+        import _root_.scala.collection.immutable.{List, Map}
+        
+        val subclassNameToSchema: List[(String, Schema[_])] = List($subclassesSchemas: _*)
+        val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
+        
+        val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
+        // cast needed because of Scala 2.12
+        val subtypes = subclassNameToSchema.map(_._2)
+        Schema(
+          schemaType = SCoproduct[$weakTypeE](subtypes, None) { e => 
+            e match {
+              case ..$subclassesSchemaCases
+            }
+          }, 
+          name = Some(sname)
+        )
+      }"""
+
+      Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)
+      c.Expr[Schema[E]](schemaForE)
+    }
+  }
+
+  private def extractTypeArguments(c: blackbox.Context)(weakType: c.Type): List[String] = {
+    def allTypeArguments(tn: c.Type): Seq[c.Type] = tn.typeArgs.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
+    allTypeArguments(weakType).map(_.typeSymbol.name.decodedName.toString).toList
   }
 }

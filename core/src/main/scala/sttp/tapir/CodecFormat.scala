@@ -14,6 +14,10 @@ object CodecFormat {
     override val mediaType: MediaType = MediaType.ApplicationJson
   }
 
+  case class Grpc() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.unsafeApply(mainType = "application", subType = "grpc")
+  }
+
   case class Xml() extends CodecFormat {
     override val mediaType: MediaType = MediaType.ApplicationXml
   }

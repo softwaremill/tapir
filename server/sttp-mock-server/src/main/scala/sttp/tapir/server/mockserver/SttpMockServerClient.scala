@@ -206,7 +206,7 @@ object SttpMockServerClient {
     if (headers.isEmpty) None
     else Some(headers.groupBy(_.name).map { case (name, values) => name -> values.map(_.value).toList })
 
-  private val printer = Printer.noSpaces.copy(dropNullValues = true)
+  private val printer = Printer.noSpaces
 
   private def handleSimpleResponse(response: Response[Either[String, String]]): Either[Throwable, Unit] = {
     response.body.left.map(error => MockServerException.UnexpectedError(response.code, error)).map(_ => ())

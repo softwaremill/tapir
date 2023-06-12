@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import sttp.tapir.{Validator, Schema, SchemaType}
+import sttp.tapir.{Validator, Schema, SchemaAnnotations, SchemaType}
 import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
 import magnolia1._
@@ -12,6 +12,11 @@ trait SchemaMacros[T] { this: Schema[T] =>
 
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
+    *
+    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * correspond to the type `T`, but to some lower-level representation of the type.
+    *
+    * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
     */
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${
     SchemaMacros.modifyImpl[T, U]('this)('path)('modification)
@@ -101,7 +106,15 @@ trait SchemaCompanionMacros extends SchemaMacroDerivation {
     SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[V]] }, 'keyToString)
   }
 
-  /** @param discriminatorSchema
+  /** Create a coproduct schema (e.g. for a `sealed trait`), where the value of the discriminator between child types is a read of a field
+    * of the base type. The field, if not yet present, is added to each child schema.
+    *
+    * The schemas of the child types have to be provided explicitly with their value mappings in `mapping`.
+    *
+    * Note that if the discriminator value is some transformation of the child's type name (obtained using the implicit [[Configuration]]),
+    * the coproduct schema can be derived automatically or semi-automatically.
+    *
+    * @param discriminatorSchema
     *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
     */
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
@@ -110,31 +123,43 @@ trait SchemaCompanionMacros extends SchemaMacroDerivation {
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf, 'discriminatorSchema)
   }
 
-  /** Create a schema for scala `Enumeration` and the `Validator` instance based on possible enumeration values */
-  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] = ${
-    SchemaCompanionMacros.derivedEnumerationValue[T]
+  /** Create a coproduct schema for an `enum`, `sealed trait` or `sealed abstract class`, where to discriminate between child types a
+    * wrapper product is used. The name of the sole field in this product corresponds to the type's name, transformed using the implicit
+    * [[Configuration]].
+    *
+    * See also [[Schema.wrapWithSingleFieldProduct]], which creates the wrapper product given a schema.
+    */
+  inline def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = ${ SchemaCompanionMacros.generateOneOfWrapped[E]('conf) }
+
+  /** Create a schema for an [[Enumeration]], where the validator is created using the enumeration's values. The low-level representation of
+    * the enum is a `String`, and the enum values in the documentation will be encoded using `.toString`.
+    */
+  implicit inline def derivedEnumerationValue[T <: Enumeration#Value]: Schema[T] =
+    derivedEnumerationValueCustomise[T].defaultStringBased
+
+  /** Creates a schema for an [[Enumeration]], where the validator is created using the enumeration's values. Unlike the default
+    * [[derivedEnumerationValue]] method, which provides the schema implicitly, this variant allows customising how the schema is created.
+    * This is useful if the low-level representation of the schema is different than a `String`, or if the enumeration's values should be
+    * encoded in a different way than using `.toString`.
+    *
+    * Because of technical limitations of macros, the customisation arguments can't be given here directly, instead being delegated to
+    * [[CreateDerivedEnumerationSchema]].
+    */
+  inline def derivedEnumerationValueCustomise[T <: scala.Enumeration#Value]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(derivedEnumerationValueValidator[T], SchemaAnnotations.derived[T])
+
+  private inline def derivedEnumerationValueValidator[T <: Enumeration#Value]: Validator.Enumeration[T] = ${
+    SchemaCompanionMacros.derivedEnumerationValueValidator[T]
   }
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that all subtypes of the sealed hierarchy `T` must be `object`s.
+    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object`s.
     *
-    * @param encode
-    *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
-    *   `schemaType`). This encoding will be used when generating documentation.
-    * @param schemaType
-    *   The low-level representation of the enumeration. Defaults to a string.
+    * This method cannot be implicit, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
+    * that this would be invoked only when necessary.
     */
-  inline def derivedEnumeration[T](
-      encode: Option[T => Any] = None,
-      schemaType: SchemaType[T] = SchemaType.SString[T](),
-      default: Option[T] = None
-  ): Schema[T] = {
-    val v0 = Validator.derivedEnumeration[T]
-    val v = encode.fold(v0)(e => v0.encode(e))
-
-    val s0 = Schema.string.validate(v)
-    default.fold(s0)(d => s0.default(d, encode.map(e => e(d))))
-  }
+  inline def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] =
+    new CreateDerivedEnumerationSchema(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
 }
 
 private[tapir] object SchemaCompanionMacros {
@@ -157,7 +182,7 @@ private[tapir] object SchemaCompanionMacros {
 
     '{
       Schema(
-        SOpenProduct[Map[K, V], V](${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
+        SOpenProduct[Map[K, V], V](Nil, ${ schemaForV })(_.map { case (k, v) => ($keyToString(k), v) }),
         Some(Schema.SName("Map", ${ Expr(genericTypeParameters) }))
       )
     }
@@ -213,8 +238,74 @@ private[tapir] object SchemaCompanionMacros {
     }
   }
 
-  def derivedEnumerationValue[T: Type](using q: Quotes): Expr[Schema[T]] = {
-    import sttp.tapir.SchemaAnnotations
+  def generateOneOfWrapped[E: Type](conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
+    import q.reflect.*
+
+    val tpe = TypeRepr.of[E]
+    val symbol = tpe.typeSymbol
+    val typeParams = SNameMacros.extractTypeArguments(tpe)
+
+    if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
+      report.errorAndAbort("Can only generate a coproduct schema for an enum, sealed trait or class.")
+    } else {
+      val subclasses = symbol.children.toList.sortBy(_.name)
+
+      val subclassesSchemas: List[Expr[(String, Schema[_])]] = subclasses.map(subclass =>
+        TypeIdent(subclass).tpe.asType match {
+          case '[f] => {
+            Expr.summon[Schema[f]] match {
+              case Some(subSchema) => '{ ${ Expr(subclass.name) } -> Schema.wrapWithSingleFieldProduct(${ subSchema })($conf) }
+              case None => {
+                val typeName = TypeRepr.of[f].typeSymbol.name
+                report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
+              }
+            }
+          }
+        }
+      )
+
+      def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[_]]]) = {
+        val eIdent = e.asTerm match {
+          case Inlined(_, _, ei: Ident) => ei
+          case ei: Ident                => ei
+        }
+
+        val t = Match(
+          eIdent,
+          subclasses.map { subclass =>
+            CaseDef(
+              Typed(Wildcard(), TypeIdent(subclass)),
+              None,
+              Block(Nil, '{ Some(SchemaWithValue($map(${ Expr(subclass.name) }).asInstanceOf[Schema[Any]], $e)) }.asTerm)
+            )
+          }
+        )
+
+        t.asExprOf[Option[SchemaWithValue[_]]]
+      }
+
+      '{
+        import _root_.sttp.tapir.internal._
+        import _root_.sttp.tapir.Schema
+        import _root_.sttp.tapir.Schema._
+        import _root_.sttp.tapir.SchemaType._
+        import _root_.scala.collection.immutable.{List, Map}
+
+        val subclassNameToSchema: List[(String, Schema[_])] = List(${ Varargs(subclassesSchemas) }: _*)
+        val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
+
+        val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
+        Schema(
+          schemaType = SCoproduct[E](subclassNameToSchema.map(_._2), None) { e =>
+            ${ subtypeSchema('e, 'subclassNameToSchemaMap) }
+          },
+          name = Some(sname)
+        )
+      }
+    }
+  }
+
+  def derivedEnumerationValueValidator[T: Type](using q: Quotes): Expr[Validator.Enumeration[T]] = {
     import q.reflect.*
 
     val Enumeration = TypeTree.of[scala.Enumeration].tpe
@@ -223,30 +314,25 @@ private[tapir] object SchemaCompanionMacros {
 
     val owner = tpe.typeSymbol.owner.tree
 
-    if (owner.symbol != Enumeration.typeSymbol) {
-      report.errorAndAbort("Can only derive Schema for values owned by scala.Enumeration")
-    } else {
-
+    if (tpe <:< TypeRepr.of[Enumeration#Value]) {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
       val enumeration = Symbol.requiredModule(enumerationPath)
 
-      val sName = '{ Some(Schema.SName(${ Expr(enumerationPath) })) }
+      val sName = '{
+        Some(Schema.SName(${
+          Expr(enumerationPath)
+        }))
+      }
 
       '{
-        SchemaAnnotations
-          .derived[T]
-          .enrich(
-            Schema
-              .string[T]
-              .validate(
-                Validator.enumeration(
-                  ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
-                  v => Option(v),
-                  $sName
-                )
-              )
-          )
+        Validator.enumeration(
+          ${ Ref(enumeration).asExprOf[scala.Enumeration] }.values.toList.asInstanceOf[List[T]],
+          v => Option(v),
+          $sName
+        )
       }
+    } else {
+      report.errorAndAbort(s"Can only derive Schema for values owned by scala.Enumeration")
     }
   }
 }

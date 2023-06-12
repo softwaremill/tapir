@@ -3,19 +3,19 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.5.1"
 ```
 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.15"
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.19"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.15"
+"com.typesafe.play" %% "play-netty-server" % "2.8.19"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.
@@ -46,6 +46,16 @@ val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: Routes = 
   PlayServerInterpreter().toRoutes(countCharactersEndpoint.serverLogic(countCharacters _))
+```
+
+```eval_rst
+.. note::
+
+  A single Play application can contain both tapir-managed and Play-managed routes. However, because of the 
+  routing implementation in Play, the shape of the paths that tapir and other Play handlers serve should not 
+  overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
+  will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
+  diverges a bit comparing to other interpreters.
 ```
 
 ## Bind the routes

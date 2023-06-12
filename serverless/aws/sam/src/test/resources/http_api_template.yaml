@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  PetApiFunction:
+    Properties:
+      Timeout: 10
+      MemorySize: 1024
+      Events:
+        GetApiPetsId:
+          Properties:
+            ApiId: !Ref 'PetApiHttpApi'
+            Method: GET
+            Path: /api/pets/{id}
+            TimeoutInMillis: 10000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        PostApiPets:
+          Properties:
+            ApiId: !Ref 'PetApiHttpApi'
+            Method: POST
+            Path: /api/pets
+            TimeoutInMillis: 10000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiCutepets:
+          Properties:
+            ApiId: !Ref 'PetApiHttpApi'
+            Method: GET
+            Path: /api/cute-pets
+            TimeoutInMillis: 10000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Runtime: java11
+      CodeUri: /somewhere/pet-api.jar
+      Handler: pet.api.Handler::handleRequest
+      Environment:
+        Variables:
+          myEnv: foo
+          otherEnv: bar
+    Type: AWS::Serverless::Function
+  PetApiHttpApi:
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+        AllowOrigins:
+          - '*'
+        MaxAge: 0
+    Type: AWS::Serverless::HttpApi
+Outputs:
+  PetApiUrl:
+    Description: Base URL of your endpoints
+    Value:
+      Fn::Sub: https://${PetApiHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}

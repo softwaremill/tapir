@@ -4,26 +4,14 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.StatusCode
+import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.docs.openapi.VerifyYamlOneOfTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.model.StatusCodeRange
-import sttp.tapir.openapi.Info
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.ContentNegotiation
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  Schema,
-  SchemaType,
-  emptyOutput,
-  endpoint,
-  header,
-  oneOfDefaultVariant,
-  oneOfVariant,
-  plainBody,
-  statusCode
-}
+import sttp.tapir.{Codec, CodecFormat, emptyOutput, endpoint, header, oneOfDefaultVariant, oneOfVariant, plainBody, statusCode}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
@@ -148,7 +136,4 @@ object VerifyYamlOneOfTest {
   case class NotFound(what: String) extends ErrorInfo
   case class Unauthorized(realm: String) extends ErrorInfo
   case class Unknown(code: Int, msg: String) extends ErrorInfo
-
-  // work-around for #10: unsupported sealed trait families
-  implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(Nil), Some(Schema.SName("ErrorInfo")))
 }

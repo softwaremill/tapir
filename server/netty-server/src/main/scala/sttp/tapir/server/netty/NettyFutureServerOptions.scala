@@ -1,60 +1,62 @@
 package sttp.tapir.server.netty
 
 import com.typesafe.scalalogging.Logger
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
+import java.net.{InetSocketAddress, SocketAddress}
 import scala.concurrent.{Future, blocking}
 
-case class NettyFutureServerOptions(
-    host: String,
-    port: Int,
+case class NettyFutureServerOptions[SA <: SocketAddress](
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    nettyOptions: NettyOptions
+    nettyOptions: NettyOptions[SA]
 ) {
-  def host(s: String): NettyFutureServerOptions = copy(host = s)
-  def port(p: Int): NettyFutureServerOptions = copy(port = p)
-  def randomPort: NettyFutureServerOptions = port(0)
-  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
-  def nettyOptions(o: NettyOptions): NettyFutureServerOptions = copy(nettyOptions = o)
+  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[SA] = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[SA] = copy(interceptors = interceptors :+ i)
+  def nettyOptions[SA2 <: SocketAddress](o: NettyOptions[SA2]): NettyFutureServerOptions[SA2] = copy(nettyOptions = o)
 }
 
 object NettyFutureServerOptions {
-  val default: NettyFutureServerOptions = customiseInterceptors.options
 
-  def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions = NettyFutureServerOptions(
-    NettyDefaults.DefaultHost,
-    NettyDefaults.DefaultPort,
-    interceptors,
-    _ => {
-      import scala.concurrent.ExecutionContext.Implicits.global
-      Future(blocking(Defaults.createTempFile()))
-    },
-    file => {
-      import scala.concurrent.ExecutionContext.Implicits.global
-      Future(blocking(Defaults.deleteFile()(file)))
-    },
-    NettyOptions.default
-  )
+  /** Default options, using TCP sockets (the most common case). This can be later customised using
+    * [[NettyFutureServerOptions#nettyOptions()]].
+    */
+  def default: NettyFutureServerOptions[InetSocketAddress] = customiseInterceptors.options
 
-  def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
+  private def default[SA <: SocketAddress](
+      interceptors: List[Interceptor[Future]],
+      nettyOptions: NettyOptions[SA]
+  ): NettyFutureServerOptions[SA] =
+    NettyFutureServerOptions(
+      interceptors,
+      _ => {
+        import scala.concurrent.ExecutionContext.Implicits.global
+        Future(blocking(Defaults.createTempFile()))
+      },
+      file => {
+        import scala.concurrent.ExecutionContext.Implicits.global
+        Future(blocking(Defaults.deleteFile()(file)))
+      },
+      nettyOptions
+    )
+
+  /** Customise the interceptors that are being used when exposing endpoints as a server. By default uses TCP sockets (the most common
+    * case), but this can be later customised using [[NettyFutureServerOptions#nettyOptions()]].
+    */
+  def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions[InetSocketAddress]] = {
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
+      createOptions =
+        (ci: CustomiseInterceptors[Future, NettyFutureServerOptions[InetSocketAddress]]) => default(ci.interceptors, NettyOptions.default)
     ).serverLog(defaultServerLog)
   }
 
   private val log = Logger[NettyFutureServerInterpreter]
 
-  lazy val defaultServerLog: ServerLog[Future] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    implicit val monadError: MonadError[Future] = new FutureMonad
-
+  lazy val defaultServerLog: DefaultServerLog[Future] = {
     DefaultServerLog(
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,

@@ -10,6 +10,8 @@ trait EndpointHandler[F[_], B] {
   /** Called when the request has been successfully decoded into data, and when the security logic succeeded. This is captured by the `ctx`
     * parameter.
     *
+    * Called at most once per request.
+    *
     * @tparam A
     *   The type of the endpoint's security inputs.
     * @tparam U
@@ -26,6 +28,8 @@ trait EndpointHandler[F[_], B] {
   /** Called when the security inputs have been successfully decoded into data, but the security logic failed (either with an error result
     * or an exception). This is captured by the `ctx` parameter.
     *
+    * Called at most once per request.
+    *
     * @tparam A
     *   The type of the endpoint's security inputs.
     * @return
@@ -37,6 +41,8 @@ trait EndpointHandler[F[_], B] {
 
   /** Called when the given request hasn't been successfully decoded, because of the given failure on the given input. This is captured by
     * the `ctx` parameter.
+    *
+    * Might be called multiple times per request.
     *
     * @return
     *   An effect, describing the optional server response. If `None`, the next endpoint will be tried (if any).

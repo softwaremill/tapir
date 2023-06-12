@@ -27,7 +27,8 @@ object OpenapiModels {
       parameters: Seq[OpenapiParameter],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
-      summary: Option[String] = None
+      summary: Option[String] = None,
+      tags: Option[Seq[String]] = None
   )
 
   case class OpenapiParameter(
@@ -138,21 +139,34 @@ object OpenapiModels {
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String])] = {
+    implicit val InnerDecoder
+        : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
       (c: HCursor) =>
         for {
           parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
           responses <- c.downField("responses").as[Seq[OpenapiResponse]]
           requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
           summary <- c.downField("summary").as[Option[String]]
+          tags <- c.downField("tags").as[Option[Seq[String]]]
         } yield {
-          (parameters, responses, requestBody, summary)
+          (parameters, responses, requestBody, summary, tags)
         }
     }
     for {
-      methods <- c.as[Map[String, (Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String])]]
+      methods <- c.as[
+        Map[
+          String,
+          (
+              Seq[OpenapiParameter],
+              Seq[OpenapiResponse],
+              Option[OpenapiRequestBody],
+              Option[String],
+              Option[Seq[String]]
+          )
+        ]
+      ]
     } yield {
-      methods.map { case (t, (p, r, rb, s)) => OpenapiPathMethod(t, p, r, rb, s) }.toSeq
+      methods.map { case (t, (p, r, rb, s, tg)) => OpenapiPathMethod(t, p, r, rb, s, tg) }.toSeq
     }
   }
 

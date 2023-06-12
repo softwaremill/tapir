@@ -27,8 +27,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     EndpointInput.PathCapture(Some(name), implicitly, EndpointIO.Info.empty)
   def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idPlain(), EndpointIO.Info.empty)
 
+  /** A query parameter in any format, read using the given `codec`. */
+  def queryAnyFormat[T, CF <: CodecFormat](name: String, codec: Codec[List[String], T, CF]): EndpointInput.Query[T] =
+    EndpointInput.Query(name, None, codec, EndpointIO.Info.empty)
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
-    EndpointInput.Query(name, None, implicitly, EndpointIO.Info.empty)
+    queryAnyFormat[T, TextPlain](name, implicitly)
   def queryParams: EndpointInput.QueryParams[QueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
 
   def header[T: Codec[List[String], *, TextPlain]](name: String): EndpointIO.Header[T] =
@@ -75,6 +78,13 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
+  /** A body in the JSON format, read from a raw string using UTF-8. */
+  def stringJsonBody: EndpointIO.Body[String, String] = stringJsonBody(StandardCharsets.UTF_8)
+
+  /** A body in the JSON format, read from a raw string using `charset`. */
+  def stringJsonBody(charset: Charset): EndpointIO.Body[String, String] =
+    stringBodyAnyFormat(Codec.string.format(CodecFormat.Json()), charset)
+
   /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
     *
     * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with various json libraries
@@ -103,6 +113,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody(RawBodyType.ByteArrayBody)
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody(RawBodyType.ByteBufferBody)
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody(RawBodyType.InputStreamBody)
+  def inputStreamRangeBody: EndpointIO.Body[InputStreamRange, InputStreamRange] = rawBinaryBody(RawBodyType.InputStreamRangeBody)
   def fileRangeBody: EndpointIO.Body[FileRange, FileRange] = rawBinaryBody(RawBodyType.FileBody)
   def fileBody: EndpointIO.Body[FileRange, TapirFile] = rawBinaryBody(RawBodyType.FileBody).map(_.file)(d => FileRange(d))
 
@@ -115,15 +126,16 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default, but can be later
-    * overridden by providing a custom `Content-Type` header value.
+  /** Creates a stream body with a binary schema.
+    * @param format
+    *   The media type to use by default. Can be later overridden by providing a custom `Content-Type` header.
     * @param s
     *   A supported streams implementation.
     */
   def streamBinaryBody[S](
       s: Streams[S]
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None, Nil)
+  )(format: CodecFormat): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, Schema.binary), EndpointIO.Info.empty, None, Nil)
 
   /** Creates a stream body with a text schema.
     * @param s
@@ -153,8 +165,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset, Nil)
 
-  // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
-  // while the third one (S) can be inferred.
+  // the intermediate class is needed so that the S type parameter can be inferred
   final class WebSocketBodyBuilder[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat] {
     def apply[S](
         s: Streams[S]
@@ -305,7 +316,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       runtimeClass: Class[_]
   ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -314,8 +325,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     OneOfVariant(output, matcher.lift.andThen(_.getOrElse(false)))
 
-  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate. Adds
-    * a fixed status-code output with the given value.
+  /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
+    * Adds a fixed status-code output with the given value.
     *
     * Should be used in [[oneOf]] output descriptions.
     */

@@ -29,14 +29,11 @@ Currently, the following authentication inputs are available (assuming `import s
 cookie or a query parameter
 * `auth.basic[T]`: reads data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a 
 base64-encoded username/password combination, use: `basic[UsernamePassword]`.
-* `auth.bearer[T]`: reads data from the `Authorization` header, removing the `Bearer ` prefix. To get the string
-as a token, use: `bearer[String]`.
-* `auth.oauth2.authorizationCode(authorizationUrl, tokenUrl, scopes, refreshUrl): EndpointInput[String]`: creates an 
+* `auth.bearer[T]`: reads data from the `Authorization` header, removing the `Bearer ` prefix. To get the token
+as a string, use: `bearer[String]`.
+* `auth.oauth2.authorizationCode(authorizationUrl, scopes, tokenUrl, refreshUrl): EndpointInput[String]`: creates an 
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
-the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../openapi.md))
-
-Optional and multiple authentication inputs have some additional rules as to how hey map to documentation, see the 
-[OpenAPI](../docs/openapi.md) page for details.
+the `oauth2-redirect.html`, see [Generating OpenAPI documentation](..docs/openapi.md))
 
 ## Authentication challenges
 
@@ -46,6 +43,11 @@ status codes when authentication is missing, the decode failure handler can [be 
 
 For example, if you define `endpoint.get.securityIn("path").securityIn(auth.basic[UsernamePassword]())` then the browser
 will show you a password prompt.
+
+## Grouping authentication inputs in docs
+
+Optional and multiple authentication inputs have some additional rules as to how hey map to documentation, see the
+["Authentication inputs and security requirements"](../docs/openapi.md) section in the OpenAPI docs for details.
 
 ## Next
 

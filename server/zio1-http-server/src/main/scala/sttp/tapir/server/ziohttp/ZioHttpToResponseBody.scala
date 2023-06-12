@@ -10,10 +10,10 @@ import zio.stream.{Stream, ZStream}
 
 import java.nio.charset.Charset
 
-class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte], ZioStreams] {
+class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStreams] {
   override val streams: ZioStreams = ZioStreams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ZStream[Any, Throwable, Byte] =
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ZioHttpResponseBody =
     rawValueToEntity(bodyType, v)
 
   override def fromStreamValue(
@@ -21,28 +21,41 @@ class ZioHttpToResponseBody extends ToResponseBody[ZStream[Any, Throwable, Byte]
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): ZStream[Any, Throwable, Byte] = v
+  ): ZioHttpResponseBody = (v, None)
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
-  ): ZStream[Any, Throwable, Byte] =
-    Stream.empty // TODO
+  ): ZioHttpResponseBody =
+    (Stream.empty, None) // TODO
 
-  private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): ZStream[Any, Throwable, Byte] = {
+  private def rawValueToEntity[R](bodyType: RawBodyType[R], r: R): ZioHttpResponseBody = {
     bodyType match {
-      case RawBodyType.StringBody(charset) => ZStream.fromIterable(r.toString.getBytes(charset))
-      case RawBodyType.ByteArrayBody       => Stream.fromChunk(Chunk.fromArray(r))
-      case RawBodyType.ByteBufferBody      => Stream.fromChunk(Chunk.fromByteBuffer(r))
-      case RawBodyType.InputStreamBody     => ZStream.fromInputStream(r).provideLayer(Blocking.live)
+      case RawBodyType.StringBody(charset) =>
+        val bytes = r.toString.getBytes(charset)
+        (ZStream.fromIterable(bytes), Some(bytes.length.toLong))
+      case RawBodyType.ByteArrayBody   => (Stream.fromChunk(Chunk.fromArray(r)), Some((r: Array[Byte]).length.toLong))
+      case RawBodyType.ByteBufferBody  => (Stream.fromChunk(Chunk.fromByteBuffer(r)), None)
+      case RawBodyType.InputStreamBody => (ZStream.fromInputStream(r).provideLayer(Blocking.live), None)
+      case RawBodyType.InputStreamRangeBody =>
+        r.range
+          .map(range =>
+            (
+              ZStream.fromInputStream(r.inputStreamFromRangeStart()).take(range.contentLength).provideLayer(Blocking.live),
+              Some(range.contentLength)
+            )
+          )
+          .getOrElse((ZStream.fromInputStream(r.inputStream()).provideLayer(Blocking.live), None))
       case RawBodyType.FileBody =>
-        val tapirFile = r.asInstanceOf[FileRange]
+        val tapirFile = r: FileRange
         tapirFile.range
           .flatMap(r =>
-            r.startAndEnd.map(s => ZStream.fromFile(tapirFile.file.toPath).drop(s._1).take(r.contentLength).provideLayer(Blocking.live))
+            r.startAndEnd.map(s =>
+              (ZStream.fromFile(tapirFile.file.toPath).drop(s._1).take(r.contentLength).provideLayer(Blocking.live), Some(r.contentLength))
+            )
           )
-          .getOrElse(ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live))
-      case RawBodyType.MultipartBody(_, _) => Stream.empty
+          .getOrElse((ZStream.fromFile(tapirFile.file.toPath).provideLayer(Blocking.live), Some(tapirFile.file.length)))
+      case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
     }
   }
 }

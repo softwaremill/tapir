@@ -3,9 +3,10 @@ package sttp.tapir
 import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
+import sttp.tapir.model.Delimited
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
@@ -20,9 +21,10 @@ import scala.annotation.{StaticAnnotation, implicitNotFound}
   */
 @implicitNotFound(
   msg = """Could not find Schema for type ${T}.
-Since 0.17.0 automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
-You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#schema-derivation
-When using datatypes integration remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
+Schemas can be derived automatically by adding: `import sttp.tapir.generic.auto._`, or manually using `Schema.derived[T]`.
+The latter is also useful for debugging derivation errors.
+You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/schemas.html
+When integrating with a third-party datatype library remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
 )
 case class Schema[T](
     schemaType: SchemaType[T],
@@ -123,17 +125,30 @@ case class Schema[T](
   def show: String = s"schema is $schemaType"
 
   def showValidators: Option[String] = {
+    def showFieldValidators(fields: List[SProductField[T]]) = {
+      fields.map(f => f.schema.showValidators.map(fvs => s"${f.name.name}->($fvs)")).collect { case Some(s) => s } match {
+        case Nil => None
+        case l   => Some(l.mkString(","))
+      }
+    }
+
     if (hasValidation) {
       val thisValidator = validator.show
       val childValidators = schemaType match {
         case SOption(element) => element.showValidators.map(esv => s"elements($esv)")
         case SArray(element)  => element.showValidators.map(esv => s"elements($esv)")
-        case SProduct(fields) =>
-          fields.map(f => f.schema.showValidators.map(fvs => s"${f.name.name}->($fvs)")).collect { case Some(s) => s } match {
-            case Nil => None
-            case l   => Some(l.mkString(","))
+        case SProduct(fields) => showFieldValidators(fields)
+        case SOpenProduct(fields, valueSchema) =>
+          val fieldValidators = showFieldValidators(fields)
+          val elementsValidators = valueSchema.showValidators.map(esv => s"elements($esv)")
+
+          (fieldValidators, elementsValidators) match {
+            case (None, None)       => None
+            case (None, Some(_))    => elementsValidators
+            case (Some(_), None)    => fieldValidators
+            case (Some(f), Some(e)) => Some(f + " " + e)
           }
-        case SOpenProduct(valueSchema) => valueSchema.showValidators.map(esv => s"elements($esv)")
+
         case SCoproduct(subtypes, _) =>
           subtypes.map(s => s.showValidators.map(svs => s.name.fold(svs)(n => s"${n.show}->($svs)"))) match {
             case Nil => None
@@ -150,22 +165,30 @@ case class Schema[T](
     } else None
   }
 
+  /** See [[modify]]: instead of a path expressed using code, accepts a path a sequence of `String`s. */
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
     fieldPath match {
       case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
       case f :: fs =>
+        def modifyFieldsAtPath(fields: List[SProductField[T]]) = {
+          fields.map { field =>
+            if (field.name.name == f) SProductField[T, field.FieldType](field.name, field.schema.modifyAtPath(fs, modify), field.get)
+            else field
+          }
+        }
+
         val schemaType2 = schemaType match {
           case s @ SArray(element) if f == Schema.ModifyCollectionElements  => SArray(element.modifyAtPath(fs, modify))(s.toIterable)
           case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toOption)
           case s @ SProduct(fields) =>
-            s.copy(fields = fields.map { field =>
-              if (field.name.name == f) SProductField[T, field.FieldType](field.name, field.schema.modifyAtPath(fs, modify), field.get)
-              else field
-            })
-          case s @ SOpenProduct(valueSchema) if f == Schema.ModifyCollectionElements =>
-            s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))(s.fieldValues)
+            s.copy(fields = modifyFieldsAtPath(fields))
+          case s @ SOpenProduct(fields, valueSchema) if f == Schema.ModifyCollectionElements =>
+            s.copy(
+              fields = modifyFieldsAtPath(fields),
+              valueSchema = valueSchema.modifyAtPath(fs, modify)
+            )(s.mapFieldValues)
           case s @ SCoproduct(subtypes, _) =>
             s.copy(subtypes = subtypes.map(_.modifyAtPath(fieldPath, modify)))(s.subtypeSchema)
           case _ => schemaType
@@ -192,15 +215,19 @@ case class Schema[T](
   private def applyValidation(t: T, objects: Map[SName, Schema[_]]): List[ValidationError[_]] = {
     val objects2 = name.fold(objects)(n => objects + (n -> this))
 
+    def applyFieldsValidation(fields: List[SProductField[T]]) = {
+      fields.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
+    }
+
     // we avoid running validation for structures where there are no validation rules applied (recursively)
     if (hasValidation) {
       validator(t) ++ (schemaType match {
         case s @ SOption(element) => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
         case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
-        case s @ SProduct(_) =>
-          s.fieldsWithValidation.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
-        case s @ SOpenProduct(valueSchema) =>
-          s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
+        case s @ SProduct(_)      => applyFieldsValidation(s.fieldsWithValidation)
+        case s @ SOpenProduct(_, valueSchema) =>
+          applyFieldsValidation(s.fieldsWithValidation) ++
+            s.mapFieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
         case s @ SCoproduct(_, _) =>
           s.subtypeSchema(t)
             .map { case SchemaWithValue(s, v) => s.applyValidation(v, objects2) }
@@ -213,13 +240,13 @@ case class Schema[T](
 
   private[tapir] def hasValidation: Boolean = {
     (validator != Validator.pass) || (schemaType match {
-      case SOption(element)          => element.hasValidation
-      case SArray(element)           => element.hasValidation
-      case s: SProduct[T]            => s.fieldsWithValidation.nonEmpty
-      case SOpenProduct(valueSchema) => valueSchema.hasValidation
-      case SCoproduct(subtypes, _)   => subtypes.exists(_.hasValidation)
-      case SRef(_)                   => true
-      case _                         => false
+      case SOption(element)                 => element.hasValidation
+      case SArray(element)                  => element.hasValidation
+      case s: SProduct[T]                   => s.fieldsWithValidation.nonEmpty
+      case s @ SOpenProduct(_, valueSchema) => s.fieldsWithValidation.nonEmpty || valueSchema.hasValidation
+      case SCoproduct(subtypes, _)          => subtypes.exists(_.hasValidation)
+      case SRef(_)                          => true
+      case _                                => false
     })
   }
 
@@ -249,6 +276,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary())
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
+  implicit val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
   implicit val schemaForInstant: Schema[Instant] = Schema(SDateTime())
   implicit val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime())
   implicit val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime())
@@ -256,6 +284,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString())
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate())
   implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString())
+  implicit val schemaForZoneId: Schema[ZoneId] = Schema(SString())
   implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString())
   implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
   implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
@@ -285,6 +314,15 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     )
   }
 
+  implicit def schemaForDelimited[D <: String, T](implicit tSchema: Schema[T]): Schema[Delimited[D, T]] =
+    tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.Attribute, Explode(false))
+
+  /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values. */
+  case class Explode(explode: Boolean)
+  object Explode {
+    val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
+  }
+
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
   }
@@ -294,19 +332,19 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 
   /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using [[Schema.derived]]. */
   object annotations {
-    class description(val text: String) extends StaticAnnotation
-    class encodedExample(val example: Any) extends StaticAnnotation
-    class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation
-    class format(val format: String) extends StaticAnnotation
-    class deprecated extends StaticAnnotation
-    class hidden extends StaticAnnotation
-    class encodedName(val name: String) extends StaticAnnotation
+    class description(val text: String) extends StaticAnnotation with Serializable
+    class encodedExample(val example: Any) extends StaticAnnotation with Serializable
+    class default[T](val default: T, val encoded: Option[Any] = None) extends StaticAnnotation with Serializable
+    class format(val format: String) extends StaticAnnotation with Serializable
+    class deprecated extends StaticAnnotation with Serializable
+    class hidden extends StaticAnnotation with Serializable
+    class encodedName(val name: String) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
       * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or
       * [[Option]]s, use [[validateEach]].
       */
-    class validate[T](val v: Validator[T]) extends StaticAnnotation
+    class validate[T](val v: Validator[T]) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validators to elements of the schema, when the annotated class or field is a collection or [[Option]]. The type of the
       * validator must match exactly the type of the collection's elements. This is not checked at compile-time, and might cause run-time
@@ -318,9 +356,42 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * )
       * }}}
       */
-    class validateEach[T](val v: Validator[T]) extends StaticAnnotation
-    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation
+    class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
   }
+
+  /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T], fieldName: FieldName): Schema[T] = Schema(
+    schemaType = SchemaType.SProduct(List(SchemaType.SProductField[T, T](fieldName, schema, t => Some(t))))
+  )
+
+  /** Wraps the given schema with a single-field product, where a field computed using the implicit [[Configuration]] maps to `schema`.
+    *
+    * The resulting schema has no name.
+    *
+    * Useful when generating one-of schemas for coproducts, where to discriminate between child types a wrapper product is used. To
+    * automatically derive such a schema for a sealed hierarchy, see [[Schema.oneOfWrapped]].
+    */
+  def wrapWithSingleFieldProduct[T](schema: Schema[T])(implicit conf: Configuration): Schema[T] =
+    wrapWithSingleFieldProduct(schema, FieldName(conf.toDiscriminatorValue(schema.name.getOrElse(SName.Unit))))
+
+  /** A schema allowing anything: a number, string, object, etc. A [[SCoproduct]] with no specified subtypes.
+    * @see
+    *   [[anyObject]]
+    */
+  def any[T]: Schema[T] = Schema(SCoproduct(Nil, None)(_ => None), None)
+
+  /** A schema allowing any object. A [[SProduct]] with no specified fields.
+    * @see
+    *   [[any]]
+    */
+  def anyObject[T]: Schema[T] = Schema(SProduct(Nil), None)
 }
 
 trait LowPrioritySchema {

@@ -26,7 +26,8 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     staticContent: Boolean = true,
     validation: Boolean = true,
     oneOfBody: Boolean = true,
-    cors: Boolean = true
+    cors: Boolean = true,
+    options: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -40,8 +41,9 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (multipart) new ServerMultipartTests(createServerTest).tests() else Nil) ++
       (if (oneOf) new ServerOneOfTests(createServerTest).tests() else Nil) ++
       (if (reject) new ServerRejectTests(createServerTest, serverInterpreter).tests() else Nil) ++
-      (if (staticContent) new ServerStaticContentTests(serverInterpreter, backend).tests() else Nil) ++
+      (if (staticContent) new ServerFilesTests(serverInterpreter, backend).tests() else Nil) ++
       (if (validation) new ServerValidationTests(createServerTest).tests() else Nil) ++
       (if (oneOfBody) new ServerOneOfBodyTests(createServerTest).tests() else Nil) ++
-      (if (cors) new ServerCORSTests(createServerTest).tests() else Nil)
+      (if (cors) new ServerCORSTests(createServerTest).tests() else Nil) ++
+      (if (options) new ServerOptionsTests(createServerTest, serverInterpreter).tests() else Nil)
 }

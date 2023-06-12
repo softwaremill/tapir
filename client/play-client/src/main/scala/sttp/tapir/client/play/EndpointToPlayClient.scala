@@ -18,6 +18,7 @@ import sttp.tapir.{
   EndpointInput,
   EndpointOutput,
   FileRange,
+  InputStreamRange,
   Mapping,
   RawBodyType,
   StreamBodyIO,
@@ -189,6 +190,11 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         // For some reason, Play comes with a Writeable for Supplier[InputStream] but not InputStream directly
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
+      case RawBodyType.InputStreamRangeBody =>
+        val inputStreamSupplier: Supplier[InputStream] = new Supplier[InputStream] {
+          override def get(): InputStream = encoded.inputStream()
+        }
+        req.withBody(inputStreamSupplier)
       case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[FileRange].file)
       case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
@@ -224,7 +230,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
             case RawBodyType.ByteArrayBody   => response.body[Array[Byte]]
             case RawBodyType.ByteBufferBody  => response.body[ByteBuffer]
             case RawBodyType.InputStreamBody => new ByteArrayInputStream(response.body[Array[Byte]])
-            case RawBodyType.FileBody        =>
+            case RawBodyType.InputStreamRangeBody =>
+              InputStreamRange(() => new ByteArrayInputStream(response.body[Array[Byte]]))
+            case RawBodyType.FileBody =>
               // TODO Consider using bodyAsSource to not load the whole content in memory
               val f = clientOptions.createFile()
               val outputStream = Files.newOutputStream(f.toPath)

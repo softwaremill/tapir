@@ -71,6 +71,8 @@ object TestHelpers {
       |                type: array
       |                items:
       |                  $ref: '#/components/schemas/Book'
+      |      tags:
+      |        - Bookshop
       |    get:
       |      operationId: getBooksGenreYear
       |      parameters:
@@ -110,6 +112,8 @@ object TestHelpers {
       |            text/plain:
       |              schema:
       |                type: string
+      |      tags:
+      |        - Bookshop
       |components:
       |  schemas:
       |    Book:
@@ -129,21 +133,21 @@ object TestHelpers {
         "/books/{genre}/{year}",
         Seq(
           OpenapiPathMethod(
-            "post",
-            Seq(
+            methodType = "post",
+            parameters = Seq(
               OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
               OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
               OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
               OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
             ),
-            Seq(
+            responses = Seq(
               OpenapiResponse(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               )
             ),
-            Option(
+            requestBody = Option(
               OpenapiRequestBody(
                 required = true,
                 content = Seq(
@@ -155,17 +159,18 @@ object TestHelpers {
                 description = Some("Book to add")
               )
             ),
-            None
+            summary = None,
+            tags = Some(Seq("Bookshop"))
           ),
           OpenapiPathMethod(
-            "get",
-            Seq(
+            methodType = "get",
+            parameters = Seq(
               OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
               OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
               OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
               OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
             ),
-            Seq(
+            responses = Seq(
               OpenapiResponse(
                 "200",
                 "",
@@ -173,7 +178,9 @@ object TestHelpers {
               ),
               OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
             ),
-            None
+            requestBody = None,
+            summary = None,
+            tags = Some(Seq("Bookshop"))
           )
         )
       )

@@ -1,6 +1,6 @@
 package sttp.tapir.json.circe
 
-import io.circe.Errors
+import io.circe.{Errors, JsonObject}
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -31,8 +31,8 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
       List(
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("name"))),
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("yearOfBirth")))
+        JsonError("Missing required field", List(FieldName("name"))),
+        JsonError("Missing required field", List(FieldName("yearOfBirth")))
       )
   }
 
@@ -49,8 +49,8 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual
       List(
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("serialNumber"))),
-        JsonError("Attempt to decode value on failed cursor", List(FieldName("[0]"), FieldName("price")))
+        JsonError("Missing required field", List(FieldName("[0]"), FieldName("serialNumber"))),
+        JsonError("Missing required field", List(FieldName("[0]"), FieldName("price")))
       )
     error.underlying shouldBe a[Errors]
   }
@@ -61,5 +61,15 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
   it should "return a product schema for a JsonObject" in {
     schemaForCirceJsonObject.schemaType shouldBe a[SProduct[_]]
+  }
+
+  it should "properly define a json query input" in {
+    jsonQuery[Option[JsonObject]]("content").codec.decode(Nil) shouldBe DecodeResult.Value(None)
+    jsonQuery[Option[JsonObject]]("content").codec.decode(List("")) shouldBe DecodeResult.Value(None)
+    jsonQuery[Option[JsonObject]]("content").codec.decode(List("{}")) shouldBe DecodeResult.Value(Some(JsonObject.empty))
+
+    jsonQuery[JsonObject]("content").codec.decode(Nil) shouldBe DecodeResult.Missing
+    jsonQuery[JsonObject]("content").codec.decode(List("")) shouldBe a[DecodeResult.Error]
+    jsonQuery[JsonObject]("content").codec.decode(List("{}")) shouldBe DecodeResult.Value(JsonObject.empty)
   }
 }

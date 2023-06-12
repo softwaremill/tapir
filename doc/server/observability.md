@@ -151,3 +151,135 @@ val metrics = OpenTelemetryMetrics.default[Future](meter)
 
 val metricsInterceptor = metrics.metricsInterceptor() // add to your server options
 ```
+
+## Datadog Metrics
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "@VERSION@"
+```
+
+Datadog metrics are sent as Datadog custom metrics through
+[DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) protocol.
+
+`DatadogMetrics` uses `StatsDClient` to send the metrics, and its settings such as host, port, etc. depend on it.
+For example:
+
+```scala mdoc:compile-only
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
+import sttp.tapir.server.metrics.datadog.DatadogMetrics
+import scala.concurrent.Future
+
+val statsdClient: StatsDClient = new NonBlockingStatsDClientBuilder()
+  .hostname("localhost")   // Datadog Agent's hostname
+  .port(8125)              // Datadog Agent's port (UDP)
+  .build()
+
+val metrics = DatadogMetrics.default[Future](statsdClient)
+```
+
+### Custom Metrics
+
+To create and add custom metrics:
+
+```scala mdoc:compile-only
+import com.timgroup.statsd.{NonBlockingStatsDClientBuilder, StatsDClient}
+import sttp.tapir.server.metrics.datadog.DatadogMetrics
+import sttp.tapir.server.metrics.datadog.DatadogMetrics.Counter
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
+import scala.concurrent.Future
+
+val statsdClient: StatsDClient = new NonBlockingStatsDClientBuilder()
+  .hostname("localhost")
+  .port(8125)
+  .build()
+
+// Metric for counting responses labeled by path, method and status code
+val responsesTotal = Metric[Future, Counter](
+  Counter("tapir.responses_total.count")(statsdClient),
+  onRequest = (req, counter, _) =>
+    Future.successful(
+      EndpointMetric()
+        .onResponseBody { (ep, res) =>
+          Future.successful {
+            val labels = List(
+              s"path:${ep.showPathTemplate()}", 
+              s"method:${req.method.method}",
+              s"status:${res.code.toString()}"
+            )
+            counter.increment(labels)
+          }
+        }
+    )
+)
+
+val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
+  .addCustom(responsesTotal)
+```
+
+
+## Zio Metrics
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "@VERSION@"
+```
+
+Metrics have been integrated into ZIO core in ZIO2.
+
+[Monitoring a ZIO Application Using ZIO's Built-in Metric System](https://zio.dev/guides/tutorials/monitor-a-zio-application-using-zio-built-in-metric-system/).
+
+### Collecting Metrics
+```scala mdoc:compile-only
+import sttp.tapir.server.metrics.zio.ZioMetrics
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import zio.{Task, ZIO}
+
+val metrics: ZioMetrics[Task] = ZioMetrics.default[Task]()
+val metricsInterceptor: MetricsRequestInterceptor[Task] = metrics.metricsInterceptor()
+```
+
+### Example Publishing Metrics Endpoint
+
+Zio metrics publishing functionality is provided by the zio ecosystem library [zio-metrics-connectors](https://github.com/zio/zio-metrics-connectors).  
+
+[Dependencies/Examples](https://zio.dev/guides/tutorials/monitor-a-zio-application-using-zio-built-in-metric-system/#adding-dependencies-to-the-project)
+```scala
+libraryDependencies += "dev.zio" %% "zio-metrics-connectors" % "2.0.0-RC6"
+```
+
+Example zio metrics prometheus publisher style tapir metrics endpoint.
+```scala
+import sttp.tapir.{endpoint, stringBody}
+import zio._
+import zio.metrics.connectors.MetricsConfig
+import zio.metrics.connectors.prometheus.{PrometheusPublisher, prometheusLayer, publisherLayer}
+import zio.metrics.jvm.DefaultJvmMetrics
+
+
+object ZioEndpoint {
+  
+  /** DefaultJvmMetrics.live.orDie >+> is optional if you want JVM metrics */
+  private val layer = DefaultJvmMetrics.live.orDie >+> ZLayer.make[PrometheusPublisher](
+    ZLayer.succeed(MetricsConfig(1.seconds)),
+    prometheusLayer,
+    publisherLayer
+  )
+  
+  private val unsafeLayers = Unsafe.unsafe { implicit u =>
+    Runtime.unsafe.fromLayer(layer)
+  }
+
+  def getMetricsEffect: ZIO[Any, Nothing, String] =
+    Unsafe.unsafe { implicit u =>
+      unsafeLayers.run(ZIO
+        .serviceWithZIO[PrometheusPublisher](_.get)
+      )
+    }
+
+  val metricsEndpoint =
+    endpoint.get.in("metrics").out(stringBody).serverLogicSuccess(_ => getMetricsEffect)
+}
+```

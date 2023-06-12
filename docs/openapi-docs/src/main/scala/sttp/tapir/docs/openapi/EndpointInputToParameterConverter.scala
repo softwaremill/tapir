@@ -1,10 +1,12 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.apispec.{ReferenceOr, Schema}
+import sttp.apispec.{ReferenceOr, Schema}
+import sttp.apispec.openapi.{MediaType, Parameter, ParameterIn}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
 import sttp.tapir.docs.apispec.DocsExtensions
-import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
+
+import scala.collection.immutable.ListMap
 
 private[openapi] object EndpointInputToParameterConverter {
   def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema]): Parameter = {
@@ -23,6 +25,19 @@ private[openapi] object EndpointInputToParameterConverter {
       allowEmptyValue = query.flagValue.fold(None: Option[Boolean])(_ => Some(true))
     )
   }
+
+  def from[T](query: EndpointInput.Query[T], content: ListMap[String, MediaType]): Parameter =
+    Parameter(
+      name = query.name,
+      in = ParameterIn.Query,
+      description = query.info.description,
+      required = Some(!query.codec.schema.isOptional),
+      deprecated = if (query.info.deprecated) Some(true) else None,
+      schema = None,
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions),
+      content = content,
+      allowEmptyValue = query.flagValue.fold(None: Option[Boolean])(_ => Some(true))
+    )
 
   def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(pathCapture.codec, pathCapture.info.examples)
@@ -58,7 +73,7 @@ private[openapi] object EndpointInputToParameterConverter {
     val examples =
       if (baseExamples.multipleExamples.nonEmpty) baseExamples
       else
-        ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None)))
+        ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None, None)))
     Parameter(
       name = header.h.name,
       in = ParameterIn.Header,

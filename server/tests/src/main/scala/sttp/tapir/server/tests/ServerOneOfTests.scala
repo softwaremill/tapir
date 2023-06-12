@@ -13,7 +13,9 @@ import sttp.tapir.tests.OneOf.{
   in_string_out_status_from_string,
   in_string_out_status_from_string_one_empty,
   in_string_out_status_from_type_erasure_using_partial_matcher,
-  out_json_or_default_json
+  out_empty_or_default_json_output,
+  out_json_or_default_json,
+  out_json_or_empty_output_no_content
 }
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
@@ -117,6 +119,22 @@ class ServerOneOfTests[F[_], OPTIONS, ROUTE](
           r.body.left.value should include("\"availableFruit\"")
         } >>
         basicRequest.get(uri"$baseUri?y=1").header("token", "secret").send(backend).map(_.body.left.value should include("\"name\""))
+    },
+    testServer(out_empty_or_default_json_output)((s: Int) =>
+      pureResult {
+        s match {
+          case 1 => Right(CustomError.NotFound)
+          case 2 => Right(CustomError.Default("unknown"))
+        }
+      }
+    ) { (backend, baseUri) =>
+      basicRequest.response(asStringAlways).get(uri"$baseUri/status?statusOut=1").send(backend).map { r =>
+        r.code shouldBe StatusCode.NotFound
+        r.body shouldBe ""
+      } >> basicRequest.response(asStringAlways).get(uri"$baseUri/status?statusOut=2").send(backend).map { r =>
+        r.code shouldBe StatusCode.BadRequest
+        r.body shouldBe """{"msg":"unknown"}"""
+      }
     }
   )
 }

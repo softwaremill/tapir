@@ -4,6 +4,9 @@
 .cache
 .history
 .lib/
+/cdk
+/aws-cdk-tests
+.vscode/
 dist/*
 target/
 lib_managed/
@@ -12,10 +15,13 @@ project/boot/
 project/plugins/project/
 .bloop
 .metals
+metals.sbt
+template.yaml
 
 .bsp
 .idea*
 metals.sbt
 .vscode
+.java-version
 
 file-uploads

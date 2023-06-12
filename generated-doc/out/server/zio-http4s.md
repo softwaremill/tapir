@@ -9,13 +9,16 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.5.1"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "1.0.0-M9"
+// for zio 2:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.5.1"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "1.5.1"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -123,7 +126,7 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
-import zio.{Task, Runtime}
+import zio.{Task, Runtime, ZIO}
 import zio.interop.catz._
 import zio.stream.Stream
 
@@ -138,13 +141,15 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
 
 val serve: Task[Unit] =
-  BlazeServerBuilder[Task]
-    .withExecutionContext(runtime.runtimeConfig.executor.asExecutionContext)
-    .bindHttp(8080, "localhost")
-    .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-    .serve
-    .compile
-    .drain
+  ZIO.executor.flatMap(executor =>
+    BlazeServerBuilder[Task]
+      .withExecutionContext(executor.asExecutionContext)
+      .bindHttp(8080, "localhost")
+      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+      .serve
+      .compile
+      .drain
+  )
 ```
 
 ## Server Sent Events
@@ -161,14 +166,14 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import org.http4s.HttpRoutes
 import zio.{Task, ZIO}
-import zio.stream.Stream
+import zio.stream.{Stream, ZStream}
 
 val sseEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent], ZioStreams] =
   endpoint.get.out(serverSentEventsBody)
 
 val routes: HttpRoutes[Task] =
   ZHttp4sServerInterpreter()
-    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+    .from(sseEndpoint.zServerLogic(_ => ZIO.succeed(ZStream(ServerSentEvent(Some("data"), None, None, None)))))
     .toRoutes
 ```
 

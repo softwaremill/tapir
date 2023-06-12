@@ -111,6 +111,11 @@ There are also other variants of the methods that can be used to provide the ser
 * `serverLogicPure(f: I => Either[E, O])`: if the server logic function is pure, that is returns a strict value, not
   a description of side-effects
 * `serverLogicOption(f: I => F[Option[O]])`: if the error type is a `Unit`, a `None` results is treated as an error
+* `serverLogicRightErrorOrSuccess(f: I => F[Either[RE, O]])`: if the error type is an `Either`, e.g. when using 
+  `errorOutEither`, this method accepts server logic that returns either success or the `Right` error type. Use of this 
+  method avoids having to wrap the returned error in `Right`.
+* `serverLogicLeftErrorOrSuccess(f: I => F[Either[LE, O]])`: similarly, this accepts server logic which returns the `Left`
+  error type or success
 
 Similar variants are available to provide the security logic. 
 
@@ -197,10 +202,11 @@ before the security logic defined in the endpoint so far (if any). For example:
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.files._
 import scala.concurrent.Future
 import sttp.model.StatusCode
 
-val secureFileEndpoints = filesServerEndpoints[Future]("secure")("/home/data")
+val secureFileEndpoints = staticFilesServerEndpoints[Future]("secure")("/home/data")
   .map(_.prependSecurity(auth.bearer[String](), statusCode(StatusCode.Forbidden)) { token =>
     Future.successful(if (token.startsWith("secret")) Right(()) else Left(()))
   })

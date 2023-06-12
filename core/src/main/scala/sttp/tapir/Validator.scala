@@ -60,11 +60,13 @@ object Validator extends ValidatorMacros {
   // enum
   /** Create an enumeration validator, with the given possible values.
     *
-    * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be done: * by using the
-    * overloaded [[enumeration]] method with an `encode` parameter * by adding an encode function on an [[Validator.Enumeration]] instance
-    * using one of the `.encode` functions * by adding the validator directly to a codec (see [[Mapping.addEncodeToEnumValidator]] * when
-    * the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present, when being added to
-    * the schema, see [[Schema.validate]]
+    * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be done:
+    *
+    *   - by using the overloaded [[enumeration]] method with an `encode` parameter
+    *   - by adding an encode function on an [[Validator.Enumeration]] instance using one of the `.encode` functions
+    *   - by adding the validator directly to a codec (see [[Mapping.addEncodeToEnumValidator]])
+    *   - when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present, when being
+    *     added to the schema, see [[Schema.validate]]
     */
   def enumeration[T](possibleValues: List[T]): Validator.Enumeration[T] = Enumeration(possibleValues, None, None)
 
@@ -90,8 +92,12 @@ object Validator extends ValidatorMacros {
   sealed trait Primitive[T] extends Validator[T] {
     def doValidate(t: T): ValidationResult
     override def apply(t: T): List[ValidationError[T]] = doValidate(t) match {
-      case ValidationResult.Valid                  => Nil
-      case ValidationResult.Invalid(customMessage) => List(ValidationError(this, t, Nil, customMessage))
+      case ValidationResult.Valid => Nil
+      case ValidationResult.Invalid(customMessages) =>
+        customMessages match {
+          case Nil => List(ValidationError(this, t, Nil, None))
+          case l   => l.map(m => ValidationError(this, t, Nil, Some(m)))
+        }
     }
   }
   case class Min[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
@@ -152,18 +158,25 @@ object Validator extends ValidatorMacros {
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
+
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       val results = validators.map(_.apply(t))
       if (results.exists(_.isEmpty)) {
         List.empty
-      } else {
+      } else if (validators.nonEmpty) {
         results.flatten.toList
+      } else {
+        List(ValidationError[T](Any.PrimitiveRejectValidator, t))
       }
     }
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
+  }
+  object Any {
+    private val _primitiveRejectValidator: Primitive[scala.Any] = Custom(_ => ValidationResult.Invalid("Validation rejected"))
+    private[tapir] def PrimitiveRejectValidator[T]: Primitive[T] = _primitiveRejectValidator.asInstanceOf[Primitive[T]]
   }
 
   //
@@ -199,9 +212,10 @@ object Validator extends ValidatorMacros {
 sealed trait ValidationResult
 object ValidationResult {
   case object Valid extends ValidationResult
-  case class Invalid(customMessage: Option[String] = None) extends ValidationResult
+  case class Invalid(customMessage: List[String] = Nil) extends ValidationResult
   object Invalid {
-    def apply(customMessage: String): Invalid = Invalid(Some(customMessage))
+    def apply(customMessage: String): Invalid = Invalid(List(customMessage))
+    def apply(customMessage: String, customMessages: String*): Invalid = Invalid(customMessage :: customMessages.toList)
   }
 
   def validWhen(condition: Boolean): ValidationResult = if (condition) Valid else Invalid()
@@ -209,7 +223,7 @@ object ValidationResult {
 
 case class ValidationError[T](
     validator: Validator.Primitive[T],
-    invalidValue: T,
+    invalidValue: Any, // this isn't T, as we might want to report that a value can't be decoded as an enumeration member
     path: List[FieldName] = Nil,
     customMessage: Option[String] = None
 ) {

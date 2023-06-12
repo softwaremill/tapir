@@ -40,7 +40,7 @@ abstract class ClientOutputParams {
               case None | Some(Left(_)) => mappings
               case Some(Right(content)) =>
                 val mappingsForContentType = mappings.collect {
-                  case m if m.output.hasBodyMatchingContent(content) => m
+                  case m if m.output.hasOptionalBodyMatchingContent(content) => m
                 }
                 // if there are no mappings for the content type from the response, try all
                 if (mappingsForContentType.isEmpty) mappings else mappingsForContentType

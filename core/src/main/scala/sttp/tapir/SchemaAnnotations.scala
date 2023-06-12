@@ -37,4 +37,6 @@ final case class SchemaAnnotations[T](
   }
 }
 
-object SchemaAnnotations extends SchemaAnnotationsMacros
+object SchemaAnnotations extends SchemaAnnotationsMacros {
+  def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil)
+}

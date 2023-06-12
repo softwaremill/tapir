@@ -1,9 +1,31 @@
 # Custom types
 
-To support a custom type, you'll need to provide an implicit `Codec` for that type.
+To support a custom type, you'll need to provide an implicit `Codec` for that type, or the components to create such
+a codec. 
 
-This can be done by writing a codec from scratch, mapping over an existing codec, or automatically deriving one.
+Most commonly, you'll be defining a custom codec so that a custom type can be used in inputs/outputs such as query 
+parameters, path segments or headers. [Json](json.md) and [forms](forms.md) bodies have dedicated support for 
+creating codecs, see the appropriate sections.
+
+A custom codec can be created by writing one from scratch, mapping over an existing codec, or automatically deriving one.
 Which of these approaches can be taken, depends on the context in which the codec will be used.
+
+## Automatically deriving codecs
+
+In some cases, codecs can be automatically derived:
+
+* for supported [json](json.md) libraries
+* for urlencoded and multipart [forms](forms.md)
+* for value classes (extending `AnyVal`)
+
+Automatic codec derivation usually requires other implicits, such as:
+
+* json encoders/decoders from the json library
+* codecs for individual form fields
+* schema of the custom type, through the `Schema[T]` implicits (see the [next section on schemas](schemas.md))
+
+Note that derivation of e.g. circe json encoders/decoders and tapir schemas are separate processes, and must be
+configured separately.
 
 ## Creating an implicit codec by hand
 
@@ -14,7 +36,7 @@ information:
 * schema (for documentation and validation)
 * codec format (`text/plain`, `application/json` etc.)
 
-This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
+This might be quite a lot of work; that's why it's usually easier to map over an existing codec. To do that, you'll 
 need to provide two mappings: 
 
 * a `decode` method which decodes the lower-level type into the custom type, optionally reporting decode failures 
@@ -66,30 +88,13 @@ implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode
   usually better to define a codec for that type. 
 ```
 
-Then, you can use the new codec e.g. to obtain an id from a query parameter, or a path segment:
+Then, you can use the new codec; e.g. to obtain an id from a query parameter, or a path segment:
 
 ```scala
 endpoint.in(query[MyId]("myId"))
 // or
 endpoint.in(path[MyId])
 ```
-
-## Automatically deriving codecs
-
-In some cases, codecs can be automatically derived:
-
-* for supported [json](json.md) libraries
-* for urlencoded and multipart [forms](forms.md)
-* for value classes (extending `AnyVal`)
-
-Automatic codec derivation usually requires other implicits, such as:
-
-* json encoders/decoders from the json library
-* codecs for individual form fields
-* schema of the custom type, through the `Schema[T]` implicits (see the next section)
-
-Note the derivation of e.g. circe json encoders/decoders and tapir schemas are separate processes, and must be 
-configured separately.
 
 ## Next
 

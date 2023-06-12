@@ -1,4 +1,36 @@
-# tapir, or Typed API descRiptions
+# tapir
+
+Declarative, type-safe web endpoints library.
+
+## Intro
+
+With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
+input and output parameters. An endpoint specification can be interpreted as:
+
+* a server, given the "business logic": a function, which computes output parameters based on input parameters. 
+  Currently supported: 
+  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
+  * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
+  * [Netty](server/netty.md) (using `Future`s, cats-effect or ZIO)
+  * [Finatra](server/finatra.md) `http.Controller`
+  * [Play](server/play.md) `Route`
+  * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
+  * [ZIO Http](server/ziohttp.md) `Http`
+  * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
+  * [aws](server/aws.md) through Lambda/SAM/Terraform
+  * [gRPC](grpc.md)
+* a client, which is a function from input parameters to output parameters.
+  Currently supported:
+  * [sttp](client/sttp.md)
+  * [Play](client/play.md)
+  * [Http4s](client/http4s.md)
+* documentation. Currently supported:
+  * [OpenAPI](docs/openapi.md)
+  * [AsyncAPI](docs/asyncapi.md)
+  * [Json Schema](docs/json-schema.md)
+
+Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
+for a more detailed description of how tapir works!
 
 ## Why tapir?
 
@@ -9,40 +41,30 @@
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
 * **library, not a framework**: integrates with your stack
 
-## Intro
+## Adopt a tapir
 
-With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
-input and output parameters. An endpoint specification can be interpreted as:
+```eval_rst
+.. raw:: html
 
-* a server, given the "business logic": a function, which computes output parameters based on input parameters. 
-  Currently supported: 
-  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
-  * [Http4s](server/http4s.md) `HttpRoutes[F]`
-  * [Netty](server/netty.md)
-  * [Finatra](server/finatra.md) `http.Controller`
-  * [Play](server/play.md) `Route`
-  * [ZIO Http](server/ziohttp.md) `Http`
-  * [Armeria](server/armeria.md) `HttpServiceWithRoutes`
-  * [aws](server/aws.md) through Lambda/SAM/Terraform
-* a client, which is a function from input parameters to output parameters.
-  Currently supported:
-  * [sttp](client/sttp.md)
-  * [Play](client/play.md)
-  * [Http4s](client/http4s.md)
-* documentation. Currently supported:
-  * [OpenAPI](docs/openapi.md)
-  * [AsyncAPI](docs/asyncapi.md)
+   <iframe
+     frameborder=0
+     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
+     src="https://adopt-tapir.softwaremill.com/embedded-form"
+     width="100%"
+     height="603"
+   ></iframe>
+```
 
-Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
-
-Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
-for a more detailed description of how tapir works!
+## Availability
 
 Tapir is available:
 
-* all modules - Scala 2.12 and 2.13 on the JVM
-* selected modules (core; http4s, vertx, netty, aws servers; sttp and http4s clients; openapi; some js and datatype integrations) - Scala 3 on the JVM  
-* selected modules (aws server; sttp client; some js and datatype integrations) - Scala 2.12, 2.13 and 3 using Scala.JS.
+* all modules - Scala 2.12 and 2.13 on the JVM (Java 11+)
+* selected modules - Scala 3 on the JVM (Java 11+)
+* selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
+* selected modules - Scala 2.12, 2.13 and 3 using Scala Native
+
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 ## Adopters
 
@@ -50,11 +72,11 @@ Is your company already using tapir? We're continually expanding the "adopters" 
 
 Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest.
 
-We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, the additional confidence boost for newcomers will help us to build tapir's ecosystem and make it thrive. Thank you! :)
+Thank you!
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.adobe.com" title="Adobe"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/adobe.png" alt="Adobe" width="160"/></a>
-<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
+<a href="https://swisscom.com" title="Swisscom"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swisscom.svg" alt="Swisscom" width="160"/></a>
 <a href="https://swissborg.com" title="Swissborg"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swissborg.png" alt="Swissborg" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -69,8 +91,18 @@ We're seeing tapir's download numbers going steadily up; as we're nearing 1.0, t
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
-<span></span>
+<a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
 <a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<a href="http://www.broad.app/" title="Broad"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a>
+<a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a>
+<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a>
+<div></div>
+<a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
 </div>
 
 ## Code teaser
@@ -83,16 +115,16 @@ import io.circe.generic.auto._
 
 type Limit = Int
 type AuthToken = String
-case class BooksFromYear(genre: String, year: Int)
+case class BooksQuery(genre: String, year: Int)
 case class Book(title: String)
 
 
 // Define an endpoint
 
-val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksQuery])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -101,8 +133,8 @@ val booksListing: PublicEndpoint[(BooksFromYear, Limit, AuthToken), String, List
 
 // Generate OpenAPI documentation
 
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.openapi.circe.yaml._
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
@@ -115,7 +147,7 @@ import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-def bookListingLogic(bfy: BooksFromYear,
+def bookListingLogic(bfy: BooksQuery,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
@@ -132,7 +164,7 @@ import sttp.client3._
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
-    .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
+    .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Other sttp projects
@@ -142,6 +174,8 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
 * sttp tapir: this project
 * [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+* [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
+* [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
 ## Sponsors
 
@@ -149,7 +183,11 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
 [![](https://files.softwaremill.com/logo/logo.png "SoftwareMill")](https://softwaremill.com)
 
-# Table of contents
+## Commercial Support
+
+We offer commercial support for sttp and related technologies, as well as development services. [Contact us](https://softwaremill.com/contact/) to learn more about our offer!
+
+## Table of contents
 
 ```eval_rst
 .. toctree::
@@ -158,7 +196,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    quickstart
    examples
-   goals
+   stability
 
 .. toctree::
    :maxdepth: 2
@@ -170,9 +208,11 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/codecs
    endpoint/customtypes
    endpoint/schemas
+   endpoint/enumerations
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/xml
    endpoint/forms
    endpoint/security
    endpoint/streaming
@@ -195,6 +235,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/armeria
    server/aws
    server/options
+   server/path
    server/interceptors
    server/logic
    server/observability
@@ -215,6 +256,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    docs/openapi
    docs/asyncapi
+   docs/json-schema
 
 .. toctree::
    :maxdepth: 2
@@ -234,7 +276,9 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    other_interpreters
    mytapir
+   grpc
    troubleshooting
    migrating
+   goals
    contributing
 

@@ -1,28 +1,36 @@
 package sttp.tapir.server.armeria
 
+import com.linecorp.armeria.common.ExchangeType
 import com.linecorp.armeria.server.Route
 import sttp.tapir.EndpointIO.{Body, StreamBodyWrapper}
 import sttp.tapir.EndpointInput.{FixedPath, PathCapture, PathsCapture}
 import sttp.tapir.RawBodyType.FileBody
-import sttp.tapir.internal.{RichEndpoint, RichEndpointOutput}
-import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType}
+import sttp.tapir.internal.{RichEndpoint, RichEndpointInput, RichEndpointOutput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType, noTrailingSlash}
 
 private[armeria] object RouteMapping {
 
-  def toRoute(e: AnyEndpoint): List[(Route, ExchangeType.Value)] = {
+  def toRoute(e: AnyEndpoint): List[(Route, ExchangeType)] = {
     val inputs: Seq[EndpointInput.Basic[_]] = e.asVectorOfBasicInputs()
 
     val outputsList = e.output.asBasicOutputsList
     val requestStreaming = inputs.exists(isStreaming)
     val responseStreaming = outputsList.exists(_.exists(isStreaming))
     val exchangeType = (requestStreaming, responseStreaming) match {
-      case (false, false) => ExchangeType.Unary
-      case (true, false)  => ExchangeType.RequestStreaming
-      case (false, true)  => ExchangeType.ResponseStreaming
-      case (true, true)   => ExchangeType.BidiStreaming
+      case (false, false) => ExchangeType.UNARY
+      case (true, false)  => ExchangeType.REQUEST_STREAMING
+      case (false, true)  => ExchangeType.RESPONSE_STREAMING
+      case (true, true)   => ExchangeType.BIDI_STREAMING
     }
 
-    toPathPatterns(inputs).map { path =>
+    val hasNoTrailingSlash = e.securityInput
+      .and(e.input)
+      .traverseInputs {
+        case i if i == noTrailingSlash => Vector(())
+      }
+      .nonEmpty
+
+    toPathPatterns(inputs, hasNoTrailingSlash).map { path =>
       // Allows all HTTP method to handle invalid requests by RejectInterceptor
       val routeBuilder =
         Route
@@ -44,7 +52,7 @@ private[armeria] object RouteMapping {
     case _ => false
   }
 
-  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]]): List[String] = {
+  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]], hasNoTrailingSlash: Boolean): List[String] = {
     var idxUsed = 0
     var capturePaths = false
     val fragments = inputs.collect {
@@ -68,14 +76,12 @@ private[armeria] object RouteMapping {
       if (capturePaths) {
         List(pathPattern)
       } else {
-        // endpoint.in("api") should match both '/api', '/api/'
-        List(pathPattern, s"$pathPattern/")
+        if (hasNoTrailingSlash) List(pathPattern)
+        else {
+          // endpoint.in("api") should match both '/api', '/api/'
+          List(pathPattern, s"$pathPattern/")
+        }
       }
     }
   }
-}
-
-private[armeria] object ExchangeType extends Enumeration {
-  type ExchangeType = Value
-  val Unary, RequestStreaming, ResponseStreaming, BidiStreaming = Value
 }

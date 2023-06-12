@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.0.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "1.0.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.5.1"
+"com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -14,9 +14,9 @@ An endpoint can be converted to an instance of the model by using the `sttp.tapi
 object:
 
 ```scala
+import sttp.apispec.asyncapi.AsyncAPI
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
-import sttp.tapir.asyncapi.AsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -32,14 +32,14 @@ val docs: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(echoWS, "Echo web socket",
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `AsyncAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
-The documentation is generated in a large part basing on [schemas](../endpoint/codecs.md#schemas). Schemas can be
+The documentation is generated in a large part basing on [schemas](../endpoint/codecs.html#schemas). Schemas can be
 [automatically derived and customised](../endpoint/schemas.md).
 
 Quite often, you'll need to define the servers, through which the API can be reached. Any servers provided to the 
 `.toAsyncAPI` invocation will be supplemented with security requirements, as specified by the endpoints:
 
 ```scala
-import sttp.tapir.asyncapi.Server
+import sttp.apispec.asyncapi.Server
 
 val docsWithServers: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(
   echoWS, 
@@ -56,7 +56,7 @@ Multiple endpoints can be converted to an `AsyncAPI` instance by calling the met
 The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import sttp.tapir.asyncapi.circe.yaml._
+import sttp.apispec.asyncapi.circe.yaml._
 
 println(docs.toYaml)
 ```

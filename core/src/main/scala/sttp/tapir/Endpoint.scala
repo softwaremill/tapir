@@ -165,18 +165,16 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
 
-  /** Appends a new error output variant.
-    *
-    * A variant for the current endpoint output will be created using the given [[Tapir.oneOfVariant]]. This is needed to capture the logic
-    * which allows deciding if a run-time value is applicable to a variant. If the erasure of the `E` type is different from `E`, there will
-    * be a compile-time failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a
-    * variant using one of the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
-    *
-    * During encoding/decoding, the new `o` variant will be checked after the current variant.
-    *
-    * More specifically, the current error output is replaced with a [[Tapir.oneOf]] output, where:
-    *   - the first output variant is the current variant: `oneOfVariant(errorOutput)`
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the current output: `oneOfVariant(errorOutput)`
     *   - the second output variant is the given `o`
+    *
+    * The variant for the current endpoint output will be created using [[Tapir.oneOfVariant]]. Hence, the current output will be used if
+    * the run-time class of the output matches `E`. If the erasure of the `E` type is different from `E`, there will be a compile-time
+    * failure, as no such run-time check is possible. In this case, use [[errorOutVariantsFromCurrent]] and create a variant using one of
+    * the other variant factory methods (e.g. [[Tapir.oneOfVariantValueMatcher]]).
+    *
+    * During encoding/decoding, the new `o` variant will be considered after the current variant.
     *
     * Usage example:
     *
@@ -202,6 +200,25 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
       o: OneOfVariant[_ <: E2]
   )(implicit ct: ClassTag[E], eEqualToErasure: ErasureSameAsType[E]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), o), identity)
+
+  /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
+    *   - the first output variant is the given `o`
+    *   - the second, default output variant is the current output: `oneOfDefaultVariant(errorOutput)`
+    *
+    * Useful for adding specific error variants, while the more general ones are already covered by the existing error output.
+    *
+    * During encoding/decoding, the new `o` variant will be considered before the current variant.
+    *
+    * Adding error output variants is useful when extending the error outputs in a [[PartialServerEndpoint]], created using
+    * [[EndpointServerLogicOps.serverSecurityLogic]].
+    *
+    * @param o
+    *   The variant to add. Can be created given an output with one of the [[Tapir.oneOfVariant]] methods.
+    * @tparam E2
+    *   A common supertype of the new variant and the current output `E`.
+    */
+  def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
+    withErrorOutputVariant(oneOf[E2](o, oneOfDefaultVariant(errorOutput)), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
@@ -286,11 +303,24 @@ trait EndpointInfoOps[-R] {
   def name(n: String): ThisType[R] = withInfo(info.name(n))
   def summary(s: String): ThisType[R] = withInfo(info.summary(s))
   def description(d: String): ThisType[R] = withInfo(info.description(d))
-  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
-  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
   def attribute[T](k: AttributeKey[T]): Option[T] = info.attribute(k)
   def attribute[T](k: AttributeKey[T], v: T): ThisType[R] = withInfo(info.attribute(k, v))
+
+  /** Append `ts` to the existing tags. */
+  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
+
+  /** Append `t` to the existing tags. */
+  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
+
+  /** Overwrite the existing tags with `ts`. */
+  def withTags(ts: List[String]): ThisType[R] = withInfo(info.withTags(ts))
+
+  /** Overwrite the existing tags with a single tag `t`. */
+  def withTag(t: String): ThisType[R] = withInfo(info.withTag(t))
+
+  /** Remove all tags from this endpoint. */
+  def withoutTags: ThisType[R] = withInfo(info.withoutTags)
 
   def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
@@ -561,9 +591,16 @@ case class EndpointInfo(
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
   def description(d: String): EndpointInfo = copy(description = Some(d))
-  def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
-  def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
   def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   def attribute[T](k: AttributeKey[T], v: T): EndpointInfo = copy(attributes = attributes.put(k, v))
+
+  /** Append to the existing tags * */
+  def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
+  def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
+
+  /** Overwrite the existing tags * */
+  def withTags(ts: List[String]): EndpointInfo = copy(tags = ts.toVector)
+  def withTag(t: String): EndpointInfo = copy(tags = Vector(t))
+  def withoutTags: EndpointInfo = copy(tags = Vector.empty)
 }

@@ -9,11 +9,10 @@ import org.http4s._
 import org.http4s.headers.`Content-Length`
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
-import org.log4s.{Logger, getLogger}
 import org.typelevel.ci.CIString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
@@ -112,8 +111,6 @@ trait Http4sServerInterpreter[F[_]] {
 }
 
 object Http4sServerInterpreter {
-
-  private[http4s] val log: Logger = getLogger
 
   def apply[F[_]]()(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {

@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.lambda.js
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import sttp.client3.impl.cats.CatsMonadAsyncError
 import sttp.monad.{FutureMonad, MonadError}
@@ -11,8 +11,9 @@ import scala.scalajs.js.JSConverters._
 
 object AwsJsRouteHandler {
 
-  private def toJsRoute[F[_]: MonadError](route: Route[F])(implicit monadError: MonadError[F]): JsRoute[F] = { awsJsRequest: AwsJsRequest =>
-    monadError.map(route.apply(AwsJsRequest.toAwsRequest(awsJsRequest)))(AwsJsResponse.fromAwsResponse)
+  private def toJsRoute[F[_]](route: Route[F])(implicit monadError: MonadError[F]): JsRoute[F] = {
+    awsJsRequest: AwsJsRequest =>
+      monadError.map(route.apply(AwsJsRequest.toAwsRequest(awsJsRequest)))(AwsJsResponse.fromAwsResponse)
   }
 
   def futureHandler(event: AwsJsRequest, route: Route[Future])(implicit ec: ExecutionContext): scala.scalajs.js.Promise[AwsJsResponse] = {
@@ -21,9 +22,14 @@ object AwsJsRouteHandler {
     jsRoute(event).toJSPromise
   }
 
-  def catsIOHandler(event: AwsJsRequest, route: Route[IO])(implicit ec: ExecutionContext): scala.scalajs.js.Promise[AwsJsResponse] = {
+  def catsIOHandler(event: AwsJsRequest, route: Route[IO]): scala.scalajs.js.Promise[AwsJsResponse] = {
     implicit val monadError: MonadError[IO] = new CatsMonadAsyncError[IO]()
     val jsRoute = toJsRoute(route)
-    jsRoute(event).unsafeToFuture().toJSPromise
+    jsRoute(event).unsafeToPromise()
+  }
+
+  def catsResourceHandler(event: AwsJsRequest, routeR: Resource[IO, Route[IO]]): scala.scalajs.js.Promise[AwsJsResponse] = {
+    implicit val monadError: MonadError[IO] = new CatsMonadAsyncError[IO]()
+    routeR.use(route => toJsRoute(route).apply(event)).unsafeToPromise()
   }
 }

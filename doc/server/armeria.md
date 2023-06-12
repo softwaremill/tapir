@@ -155,7 +155,10 @@ val tapirService = ArmeriaCatsServerInterpreter(dispatcher).toService(streamingR
 Add the following dependency
 
 ```scala
+// for zio 2:
 "com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio" % "@VERSION@"
+// for zio 1:
+"com.softwaremill.sttp.tapir" %% "tapir-armeria-server-zio1" % "@VERSION@"
 ```
 
 to use this interpreter with ZIO.
@@ -191,7 +194,7 @@ object Main extends ZIOAppDefault {
       server.start().thenApply[Server](_ => server)
     }
 
-    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie).forever).exitCode
+    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie) *> ZIO.never).exitCode
   }
 }
 ```

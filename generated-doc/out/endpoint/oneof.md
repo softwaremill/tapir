@@ -11,7 +11,7 @@ Outputs with multiple variants can be specified using the `oneOf` output. Each v
 variant. All possible outputs must have a common supertype. Typically, the supertype is a sealed trait, and the variants 
 are implementing case classes.
 
-Each one-of variant needs an `appliesTo` function to determine at run-time, if the variant should be used for a given 
+Each one-of variant needs an `appliesTo` function to determine at run-time if the variant should be used for a given 
 value. This function is inferred at compile time when using `oneOfVariant`, but can also be provided by hand, or if
 the compile-time inference fails, using one of the other factory methods (see below). A catch-all variant can be defined
 using `oneOfDefaultVariant`, and should be placed as the last variant in the list of possible variants.
@@ -80,13 +80,13 @@ val baseEndpoint = endpoint.errorOut(
     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                             ^
-// error: Type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
 //                             ^
-// error: Type scala.util.Left[repl.MdocSession.App.ServerError,repl.MdocSession.App.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+// error: Type scala.util.Left[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
 //                             ^
 ```
@@ -130,9 +130,39 @@ val baseEndpoint = endpoint.errorOut(
 ### Error outputs
 
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
-[security logic](../server/logic.md) is already provided. The `.errorOutVariant` functions allow specifying alternative
-error outputs; the result is typed as the common supertype of the existing and new outputs; hence usually this should be
-different from `Any`. The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
+[security logic](../server/logic.md) is already provided. There are some specialised functions for this purpose.
+
+The `.errorOutVariant` functions allow appending an alternative error outputs; the result is typed as the common supertype 
+of the existing and new outputs; hence usually this should be different from `Any`. At runtime, a class check is performed
+to choose the variant to use.
+
+The `.errorOutVariantPrepend` function allows prepending an error out variant, leaving the current error output as
+a default. This is useful e.g. when providing a more specific error output, than the current one. For example:
+
+```scala
+import sttp.tapir._
+
+trait DomainException {
+  def help: String
+}
+case class SecurityException(help: String) extends DomainException
+case class LogicException(help: String) extends DomainException
+
+val base: PublicEndpoint[Unit, DomainException, Unit, Any] = endpoint
+  .errorOut(
+    oneOf(
+      oneOfVariant(statusCode(StatusCode.BadRequest).and(stringBody.mapTo[LogicException])),
+      oneOfDefaultVariant(
+        statusCode(StatusCode.InternalServerError).and(stringBody.map(v => new DomainException { def help: String = v })(_.help))
+      )
+    )
+  )
+
+val specialised: PublicEndpoint[Unit, DomainException, Unit, Any] = base
+  .errorOutVariant(oneOfVariant(statusCode(StatusCode.Forbidden).and(stringBody.mapTo[SecurityException])))
+```
+
+The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
 the result in an additional `Either`.
 
 ## `oneOfBody` inputs/outputs
@@ -175,7 +205,7 @@ However, this makes it impossible to use streaming bodies in `oneOf` (via `oneOf
 require normal input/outputs as parameters. To bypass this limitation, a `.toEndpointIO` method is available
 on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the streaming requirement. This decreases
 type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
-endpoints, which require including streaming bodies in output variants.
+endpoints which require including streaming bodies in output variants.
 
 ```eval_rst
 .. note::

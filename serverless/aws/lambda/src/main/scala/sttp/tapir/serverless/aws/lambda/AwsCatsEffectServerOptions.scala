@@ -12,4 +12,7 @@ object AwsCatsEffectServerOptions {
     )
 
   def default[F[_]: Monad]: AwsServerOptions[F] = customiseInterceptors.options
+
+  def noEncoding[F[_]: Monad]: AwsServerOptions[F] =
+    this.default[F].copy(encodeResponseBody = false)
 }

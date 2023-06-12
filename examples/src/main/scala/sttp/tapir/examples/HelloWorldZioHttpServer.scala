@@ -5,8 +5,8 @@ import sttp.tapir.ztapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.zio._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zhttp.http.HttpApp
-import zhttp.service.Server
+import zio.http.HttpApp
+import zio.http.Server
 import zio._
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
@@ -33,10 +33,16 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
 
   // converting the endpoint descriptions to the Http type
   val app: HttpApp[Any, Throwable] =
-    ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) <>
+    ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) ++
       ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 
   // starting the server
   override def run =
-    Server.start(8090, app).exitCode
+    Server
+      .serve(app.withDefaultErrorResponse)
+      .provide(
+        ZLayer.succeed(Server.Config.default.port(8080)),
+        Server.live
+      )
+      .exitCode
 }

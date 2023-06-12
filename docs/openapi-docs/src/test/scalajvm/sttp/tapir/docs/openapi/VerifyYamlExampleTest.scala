@@ -4,16 +4,17 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.apispec.openapi.Info
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.Info
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.data.{Entity, Organization, Person}
 import sttp.tapir.{endpoint, _}
 
+import java.nio.ByteBuffer
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 
@@ -43,7 +44,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
           .out(
             jsonBody[Entity].examples(
               List(
-                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")).description("Some description"),
                 Example.of(Organization("acme"), Some("Acme"))
               )
             )
@@ -77,7 +78,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
         endpoint.post
           .out(
             jsonBody[Entity].example(
-              Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+              Example.of(Person("michal", 40), Some("Michal"), Some("Some summary"))
             )
           ),
         Info("Entities", "1.0")
@@ -151,6 +152,20 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("support schema examples with multiple values") { // https://github.com/softwaremill/sttp-apispec/issues/49
+    val expectedYaml = load("example/expected_schema_example_multiple_value.yml")
+
+    implicit val testSchema: Schema[List[Int]] = Schema.schemaForInt.asIterable[List].encodedExample(List(1, 2, 3))
+    case class ContainsList(l: List[Int])
+
+    val e = endpoint.post.in(jsonBody[ContainsList])
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should support encoded examples for streaming bodies") {
     val expectedYaml = load("example/expected_stream_example.yml")
 
@@ -179,6 +194,32 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     )
 
     val expectedYaml = load("example/expected_single_example_with_summary.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support description for single example") {
+    val e = endpoint.in(
+      "users" / query[Option[Boolean]]("active")
+        .description("Filter for only active or inactive users.")
+        .example(Example.of(value = Some(true)).description("Get only active users"))
+    )
+
+    val expectedYaml = load("example/expected_single_example_with_description.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support byte buffer examples") {
+    val e = endpoint.out(
+      byteBufferBody
+        .example(Example.of(ByteBuffer.wrap("a,b,c,1024,e,f,42,g h,i".getBytes("UTF-8"))))
+        .and(header("Content-Type", "text/csv"))
+    )
+
+    val expectedYaml = load("example/expected_byte_buffer_example.yml")
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Users", "1.0")).toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml

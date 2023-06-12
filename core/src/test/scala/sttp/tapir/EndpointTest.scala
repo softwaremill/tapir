@@ -49,9 +49,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBinaryBody(TestStreams)): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBinaryBody(TestStreams))
+      .in(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .in(path[Int]): PublicEndpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -64,9 +64,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBinaryBody(TestStreams)): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream())): PublicEndpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBinaryBody(TestStreams))
+      .out(streamBinaryBody(TestStreams)(CodecFormat.OctetStream()))
       .out(header[Int]("h1")): PublicEndpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
@@ -278,7 +278,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (
       endpoint.in("p1" / "p2".schema(_.hidden(true)) / query[String]("par1") / query[String]("par2").schema(_.hidden(true))),
       "/p1?par1={par1}"
-    )
+    ),
+    (endpoint.in("not" / "allowed" / "chars" / "hi?hello"), "/not/allowed/chars/hi%3Fhello")
   )
 
   for ((testEndpoint, expectedShownPath) <- showPathTemplateTestData) {
@@ -293,6 +294,13 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       showPathParam = (index, _) => s"{par$index}",
       showQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
+  }
+
+  "showPathTemplate" should "skip query parameters" in {
+    val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
+    testEndpoint.showPathTemplate(
+      showQueryParam = None
+    ) shouldBe "/p1/{param1}"
   }
 
   "validate" should "accumulate validators" in {
@@ -374,7 +382,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     // given
     case class Wrapper(i: Int)
     val mapped = query[Int]("q1").mapTo[Wrapper]
-    val codec: Codec[List[String], Wrapper, CodecFormat.TextPlain] = mapped.codec
+    val codec: Codec[List[String], Wrapper, CodecFormat] = mapped.codec
 
     // when
     codec.encode(Wrapper(10)) shouldBe (List("10"))

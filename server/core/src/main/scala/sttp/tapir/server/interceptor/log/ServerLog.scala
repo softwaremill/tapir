@@ -18,11 +18,11 @@ trait ServerLog[F[_]] {
     */
   type TOKEN
 
-  /** Invoked when the request has been received. */
-  def requestReceived(request: ServerRequest): F[Unit]
-
   /** Invoked when the request has been received to obtain the per-request token, such as the starting timestamp. */
   def requestToken: TOKEN
+
+  /** Invoked when the request has been received. */
+  def requestReceived(request: ServerRequest, token: TOKEN): F[Unit]
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors, haven't provided a
     * response.
@@ -42,6 +42,11 @@ trait ServerLog[F[_]] {
 
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit]
+
+  /** Allows defining a list of endpoints which should not log requestHandled. Exceptions, decode failures and security failures will still
+    * be logged.
+    */
+  def ignoreEndpoints: Set[AnyEndpoint] = Set.empty
 }
 
 case class DefaultServerLog[F[_]](
@@ -58,7 +63,8 @@ case class DefaultServerLog[F[_]](
     showRequest: ServerRequest => String = _.showShort,
     showResponse: ServerResponse[_] => String = _.showShort,
     includeTiming: Boolean = true,
-    clock: Clock = Clock.systemUTC()
+    clock: Clock = Clock.systemUTC(),
+    override val ignoreEndpoints: Set[AnyEndpoint] = Set.empty
 ) extends ServerLog[F] {
 
   def doLogWhenReceived(f: String => F[Unit]): DefaultServerLog[F] = copy(doLogWhenReceived = f)
@@ -74,17 +80,18 @@ case class DefaultServerLog[F[_]](
   def showResponse(s: ServerResponse[_] => String): DefaultServerLog[F] = copy(showResponse = s)
   def includeTiming(doInclude: Boolean): DefaultServerLog[F] = copy(includeTiming = doInclude)
   def clock(c: Clock): DefaultServerLog[F] = copy(clock = c)
+  def ignoreEndpoints(es: Seq[AnyEndpoint]): DefaultServerLog[F] = copy(ignoreEndpoints = es.toSet)
 
   //
 
   override type TOKEN = Long
 
-  override def requestReceived(request: ServerRequest): F[Unit] =
+  override def requestToken: TOKEN = if (includeTiming) now() else 0
+
+  override def requestReceived(request: ServerRequest, token: TOKEN): F[Unit] =
     if (logWhenReceived) doLogWhenReceived(s"Request received: ${showRequest(request)}") else noLog
 
-  override def requestToken: Long = if (includeTiming) now() else 0
-
-  override def decodeFailureNotHandled(ctx: DecodeFailureContext, token: Long): F[Unit] =
+  override def decodeFailureNotHandled(ctx: DecodeFailureContext, token: TOKEN): F[Unit] =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
         s"Request: ${showRequest(ctx.request)}, not handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
@@ -92,7 +99,7 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_], token: Long): F[Unit] =
+  override def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_], token: TOKEN): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(
@@ -102,7 +109,7 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_], token: Long): F[Unit] =
+  override def securityFailureHandled(ctx: SecurityFailureContext[F, _], response: ServerResponse[_], token: TOKEN): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; security logic error response: ${showResponse(response)}",
@@ -110,7 +117,7 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def requestHandled(ctx: DecodeSuccessContext[F, _, _, _], response: ServerResponse[_], token: Long): F[Unit] =
+  override def requestHandled(ctx: DecodeSuccessContext[F, _, _, _], response: ServerResponse[_], token: TOKEN): F[Unit] =
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; response: ${showResponse(response)}",
@@ -118,14 +125,14 @@ case class DefaultServerLog[F[_]](
       )
     else noLog
 
-  override def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: Long): F[Unit] =
+  override def exception(ctx: ExceptionContext[_, _], ex: Throwable, token: TOKEN): F[Unit] =
     if (logLogicExceptions)
       doLogExceptions(s"Exception when handling request: ${showRequest(ctx.request)}, by: ${showEndpoint(ctx.endpoint)}${took(token)}", ex)
     else noLog
 
   private def now() = clock.instant().toEpochMilli
 
-  private def took(token: Long): String = if (includeTiming) s", took: ${now() - token}ms" else ""
+  private def took(token: TOKEN): String = if (includeTiming) s", took: ${now() - token}ms" else ""
 
   private def exception(ctx: DecodeFailureContext): Option[Throwable] =
     ctx.failure match {
