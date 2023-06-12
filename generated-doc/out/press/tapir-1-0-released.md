@@ -20,7 +20,7 @@ Compile-time verification combined with type-driven auto-complete in the IDE all
 
 ## Get started now
 
-If you’d like to try tapir, check out our [documentation](https://tapir.softwaremill.com/en/latest/) or the [adopt-tapir page](https://adopt-tapir.softwaremill.com), where you can generate a customised bare-bones tapir project. Looking forward to learning about your impressions of the library!
+If you’d like to try tapir, check out our [documentation](https://tapir.softwaremill.com/en/latest/) or the [adopt-tapir page](https://adopt-tapir.softwaremill.com), where you can generate a customised bare-bones tapir project. You can also create a stub of tapir-based application directly from commandline with `sbt new softwaremill/tapir.g8`. Looking forward to learning about your impressions of the library!
 
 ## Additional Resources
 
