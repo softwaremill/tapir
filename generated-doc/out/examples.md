@@ -4,7 +4,9 @@ The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/ma
 
 ## Generate a tapir project
 
-You can generate a simple tapir-based project using chosen features, build tool and effect system using [adopt-tapir](https://adopt-tapir.softwaremill.com). You can also create a stub of application using tapir directly from commandline with `sbt new softwaremill/tapir.g8`.
+You can generate a simple tapir-based project using chosen features, build tool and effect system using [adopt-tapir](https://adopt-tapir.softwaremill.com).
+
+Alternatively, you can generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8` (sbt 1.9+).
 
 ## Third-party examples
 
