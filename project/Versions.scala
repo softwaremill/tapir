@@ -51,7 +51,7 @@ object Versions {
   val fs2 = "3.7.0"
   val decline = "2.4.1"
   val quicklens = "1.9.4"
-  val openTelemetry = "1.26.0"
+  val openTelemetry = "1.27.0"
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.2.0"
   val nettyAll = "4.1.93.Final"
