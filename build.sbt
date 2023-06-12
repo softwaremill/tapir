@@ -106,9 +106,6 @@ val enableMimaSettings = Seq(
 
 // using Scala 3.3, docs generation fails sometimes in "readTasty" when processing compile-time annotations used by libraries
 val disableScaladocSettingsWhenScala3 = Seq(
-  Compile / packageDoc / publishArtifact := {
-    if (scalaVersion.value == scala3) false else (Compile / packageDoc / publishArtifact).value
-  },
   Compile / doc / sources := {
     if (scalaVersion.value == scala3) Seq.empty else (Compile / doc / sources).value
   }
