@@ -20,7 +20,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     def asByteArray: Array[Byte] = asInputStream.readAllBytes()
 
     bodyType match {
-      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => asInputStream)) // todo is this correct?
+      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => asInputStream))
       case RawBodyType.StringBody(charset)  => RawValue(new String(asByteArray, charset))
       case RawBodyType.ByteArrayBody        => RawValue(asByteArray)
       case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))

@@ -7,16 +7,15 @@ import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 
 object HelloWorldJdkHttpServer extends App {
 
-  // One endpoint on GET /hello with query parameter `name`
+  // GET /hello endpoint, with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   val secondEndpoint: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.get.in("second").out(stringBody)
 
-  // Just returning passed name with `Hello, ` prepended
-  val helloWorldServerEndpoint =
-    helloWorldEndpoint.handle(name => Right(s"Hello, $name!"))
+  // Providing the server logic for the endpoints: here, just returning the passed name with `Hello, ` prepended
+  val helloWorldServerEndpoint = helloWorldEndpoint.handle(name => Right(s"Hello, $name!"))
 
   val secondServerEndpoint = secondEndpoint.handle(_ => Right("IT WORKS!"))
 

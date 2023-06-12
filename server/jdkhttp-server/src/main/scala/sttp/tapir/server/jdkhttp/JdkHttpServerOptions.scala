@@ -15,7 +15,7 @@ import java.util.logging.{Level, Logger}
   *   [[JdkHttpServerInterpreter.isRequestHandled]].
   *
   * @param basePath
-  *   Path under which endpoints will be mounted when mounted on JdkHttpServer instance. Ie.: basePath of '/api' and endpoint '/hello' will
+  *   Path under which endpoints will be mounted when mounted on JdkHttpServer instance. I.e.: basePath of '/api' and endpoint '/hello' will
   *   result with a real path of '/api/hello'.
   *
   * @param port

@@ -11,20 +11,10 @@ case class JdkHttpServer(
     options: JdkHttpServerOptions = JdkHttpServerOptions.Default
 ) {
 
-  /** Sets the port to which the server will be bound.
-    *
-    * @param port
-    *   Int
-    * @return
-    */
+  /** Sets the port to which the server will be bound. */
   def port(port: Int): JdkHttpServer = copy(options = options.copy(port = port))
 
-  /** Sets the hostname to which the server will be bound.
-    *
-    * @param host
-    *   String
-    * @return
-    */
+  /** Sets the hostname to which the server will be bound. */
   def host(host: String): JdkHttpServer = copy(options = options.copy(host = host))
 
   /** Allows you to configure the Executor which will be used to handle HTTP requests. By default com.sun.net.httpserver.HttpServer uses a
@@ -51,19 +41,11 @@ case class JdkHttpServer(
   /** Sets the size of server's tcp connection backlog. This is the maximum number of queued incoming connections to allow on the listening
     * socket. Queued TCP connections exceeding this limit may be rejected by the TCP implementation. If set to 0 or less the system default
     * for backlog size will be used. Default is 0.
-    *
-    * @param size
-    *   Int
-    * @return
     */
   def backlogSize(size: Int): JdkHttpServer = copy(options = options.copy(backlogSize = size))
 
   /** Takes an instance of [[com.sun.net.httpserver.HttpsConfigurator]], which is a thin wrapper around [[javax.net.ssl.SSLContext]] to
     * configure the SSL termination for this server.
-    *
-    * @param httpsConfigurator
-    *   com.sun.net.httpserver.HttpsConfigurator
-    * @return
     */
   def https(httpsConfigurator: HttpsConfigurator): JdkHttpServer =
     copy(options = options.copy(httpsConfigurator = Some(httpsConfigurator)))
@@ -75,9 +57,6 @@ case class JdkHttpServer(
 
   /** Use this if you want to add more routes manually, outside of the routes defined with tapir. Afterwards it is necessary to call
     * `HttpServer.start()` to actually start the server.
-    *
-    * @return
-    *   com.sun.net.httpserver.HttpServer
     */
   def setup(): HttpServer = {
     val socketAddress = new InetSocketAddress(options.host, options.port)
@@ -99,11 +78,7 @@ case class JdkHttpServer(
     server
   }
 
-  /** Setup and start the server in the background.
-    *
-    * @return
-    *   com.sun.net.httpserver.HttpServer
-    */
+  /** Setup and start the server in the background. */
   def start(): HttpServer = {
     val server = setup()
     server.start()

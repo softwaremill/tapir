@@ -234,6 +234,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    server/vertx
    server/ziohttp
    server/armeria
+   server/jdkhttp
    server/aws
    server/options
    server/path
