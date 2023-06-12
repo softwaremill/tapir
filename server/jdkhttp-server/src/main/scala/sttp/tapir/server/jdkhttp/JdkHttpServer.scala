@@ -50,6 +50,11 @@ case class JdkHttpServer(
   def https(httpsConfigurator: HttpsConfigurator): JdkHttpServer =
     copy(options = options.copy(httpsConfigurator = Some(httpsConfigurator)))
 
+  /** Replace the options - any modifications to the host, prot, executor etc. will be replaced with what is configured in the given options
+    * instance. Useful for customising interceptors.
+    */
+  def options(o: JdkHttpServerOptions): JdkHttpServer = copy(options = o)
+
   def addEndpoint(se: ServerEndpoint[Any, Id]): JdkHttpServer = addEndpoints(List(se))
 
   def addEndpoints(ses: List[ServerEndpoint[Any, Id]]): JdkHttpServer =
