@@ -34,7 +34,7 @@ val myEndpoints: List[AnyEndpoint] = ???
 // first interpret as swagger ui endpoints, backend by the appropriate yaml
 val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Future](myEndpoints, "My App", "1.0")
 
-// add to your akka routes
+// add to your netty routes
 val swaggerRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
