@@ -55,13 +55,12 @@ Add the following dependency:
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
 well as an endpoint definition to read the metrics & expose them to the Prometheus server.
 
-For example, using `AkkaServerInterpeter`:
+For example, using `NettyFutureServerInterpreter`:
 
 ```scala mdoc:compile-only
-import akka.http.scaladsl.server.Route
-import io.prometheus.client.CollectorRegistry
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, NettyFutureServerOptions, FutureRoute}
+import java.net.InetSocketAddress
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -70,13 +69,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val prometheusMetrics = PrometheusMetrics.default[Future]()
 
 // enable metrics collection
-val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+val serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
   .customiseInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
 
 // route which exposes the current metrics values
-val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
+val routes: FutureRoute = NettyFutureServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
 ```
 
 By default, the following metrics are exposed:

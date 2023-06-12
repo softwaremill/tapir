@@ -24,7 +24,7 @@ interpreter. For example:
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,8 +34,8 @@ val myEndpoints: List[AnyEndpoint] = ???
 // first interpret as swagger ui endpoints, backend by the appropriate yaml
 val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Future](myEndpoints, "My App", "1.0")
 
-// add to your akka routes
-val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
+// add to your netty routes
+val swaggerRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
 By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
@@ -182,7 +182,7 @@ Then, you'll need to pass the server endpoints to your server interpreter. For e
 import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
@@ -191,8 +191,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
 
-// add to your akka routes
-val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
+// add to your netty routes
+val swaggerUIRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 
 ## Options
