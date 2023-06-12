@@ -88,24 +88,26 @@ Custom interpreters can be provided to the stub. For example, to test custom exc
 following customised akka http options:
 
 ```scala
+import sttp.tapir._
+import scala.concurrent.Future
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.CustomiseInterceptors
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.tapir.server.netty.NettyFutureServerOptions
+import java.net.InetSocketAddress
 import sttp.model.StatusCode
 
 val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
-    Some(ValuedEndpointOutput(
-      stringBody.and(statusCode),
-      (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
-    ))
+  Some(ValuedEndpointOutput(
+    stringBody.and(statusCode),
+    (s"failed due to ${ctx.e.getMessage}", StatusCode.InternalServerError)
+  ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
-  import scala.concurrent.ExecutionContext.Implicits.global
-  AkkaHttpServerOptions.customiseInterceptors
+val customOptions: CustomiseInterceptors[Future, NettyFutureServerOptions[InetSocketAddress]] = {
+  NettyFutureServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
-}    
+}
 ```
 
 Testing such an interceptor requires simulating an exception being thrown in the server logic:

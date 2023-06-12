@@ -118,6 +118,4 @@ val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint.serverLogicSuccess[
 ```
 
 ## Configuration
-
-The interpreter can be configured by providing an `AkkaHttpServerOptions` value, see
-[server options](options.md) for details.
+The interpreter can be configured by providing an `AkkaHttpServerOptions` value.

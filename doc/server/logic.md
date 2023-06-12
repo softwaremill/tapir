@@ -53,14 +53,13 @@ val aServerEndpoint: ServerEndpoint[Any, Future] = anEndpoint.serverLogic((logic
 ## Interpreting as a server
 
 Both a single server endpoint, and multiple endpoints can be interpreted as a server. As an example, a list of server 
-endpoints can be converted to an akka-http route:
+endpoints can be converted to an Netty route:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.http.scaladsl.server.Route
 
 val endpoint1 = endpoint.in("hello").out(stringBody)
   .serverLogic { _ => Future.successful[Either[Unit, String]](Right("world")) }
@@ -68,7 +67,7 @@ val endpoint1 = endpoint.in("hello").out(stringBody)
 val endpoint2 = endpoint.in("ping").out(stringBody)
   .serverLogic { _ => Future.successful[Either[Unit, String]](Right("pong")) }
 
-val route: Route = AkkaHttpServerInterpreter().toRoute(List(endpoint1, endpoint2))
+val route: FutureRoute = NettyFutureServerInterpreter().toRoute(List(endpoint1, endpoint2))
 ```
 
 ## Recovering errors from failed effects
