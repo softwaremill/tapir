@@ -206,6 +206,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerCats.projectRefs ++
   vertxServerZio.projectRefs ++
   vertxServerZio1.projectRefs ++
+  jdkhttpServer.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
@@ -1329,6 +1330,15 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-jdkhttp-server",
+    libraryDependencies ++= loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = List(scala2_13, scala3))
+  .dependsOn(serverCore, serverTests % Test)
+
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1856,6 +1866,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .dependsOn(
     akkaHttpServer,
     armeriaServer,
+    jdkhttpServer,
     http4sServer,
     http4sServerZio,
     http4sClient,
@@ -1942,6 +1953,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     armeriaServerCats,
     armeriaServerZio,
     armeriaServerZio1,
+    jdkhttpServer,
     circeJson,
     enumeratum,
     finatraServer,
