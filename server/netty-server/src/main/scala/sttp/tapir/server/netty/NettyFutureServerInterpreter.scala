@@ -10,6 +10,10 @@ import scala.concurrent.{ExecutionContext, Future}
 trait NettyFutureServerInterpreter {
   def nettyServerOptions: NettyFutureServerOptions[_]
 
+  def toRoute(se: ServerEndpoint[Any, Future])(implicit ec: ExecutionContext): FutureRoute = {
+    toRoute(List(se))
+  }
+
   def toRoute(
       ses: List[ServerEndpoint[Any, Future]]
   )(implicit ec: ExecutionContext): FutureRoute = {
