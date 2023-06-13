@@ -32,7 +32,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](https://tapir.softwaremill.com/en/latest/examples.html) 
-or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works! Or, use [adopt-tapir](https://adopt-tapir.softwaremill.com) to generate a tapir-based project in a couple of clicks! You can also generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8` (sbt 1.9+).
+or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works! Or, use [adopt-tapir](https://adopt-tapir.softwaremill.com) to generate a tapir-based project in a couple of clicks! You can also generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8`.
 
 ## Why tapir?
 
