@@ -1,10 +1,10 @@
 # Running using the AWS serverless stack
 
 Tapir server endpoints can be packaged and deployed as
-an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function. To invoke the
+an [AWS Fat Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function. To invoke the
 function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html).
 
-To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/)
+To configure API Gateway routes, and the Fat Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/)
 , [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
 
 For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)
