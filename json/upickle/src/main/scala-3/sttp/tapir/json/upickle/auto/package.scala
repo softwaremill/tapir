@@ -3,6 +3,7 @@ package sttp.tapir.json.upickle
 import upickle.AttributeTagged
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
+import scala.quoted._
 
 package object auto {
 
@@ -37,13 +38,18 @@ package object auto {
   // given animalKindRw: TapirPickle.ReadWriter[AnimalKind] = TapirPickle.ReadWriter.derived[AnimalKind]
   given dogAgeR: TapirPickle.ReadWriter[DogAge] = TapirPickle.ReadWriter.derived[DogAge]
   given dogRw: TapirPickle.ReadWriter[Dog] = TapirPickle.ReadWriter.derived[Dog]
- 
+
   import magnolia1.*
+  import scala.quoted.*
 
   object AutoPickleWriter extends AutoDerivation[TapirPickle.Writer]:
+
+    override def split[T](sealedTrait: SealedTrait[sttp.tapir.json.upickle.auto.TapirPickle.Writer, T]): TapirPickle.Writer[T] = ???
+
     def join[T](ctx: CaseClass[TapirPickle.Writer, T]): TapirPickle.Writer[T] =
-      ctx.annotations
-      TapirPickle.macroW[T]
+      ctx.params(0).typeclass
+      null
+
 
   val autoIntCodec = implicitly[TapirPickle.ReadWriter[Int]]
 
