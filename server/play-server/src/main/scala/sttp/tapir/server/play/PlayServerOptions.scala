@@ -37,7 +37,7 @@ object PlayServerOptions {
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile(_),
-          DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
+          DefaultActionBuilder.apply(PlayBodyParsers.apply(conf = conf).anyContent),
           PlayBodyParsers.apply(conf = conf),
           ci.decodeFailureHandler,
           ci.interceptors
