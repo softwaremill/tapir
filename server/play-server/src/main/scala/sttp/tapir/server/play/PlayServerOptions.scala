@@ -67,7 +67,7 @@ object PlayServerOptions {
 
   def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors().options
 
-  lazy val conf = ConfigFactory.load
+  private lazy val conf = ConfigFactory.load
 
   lazy val defaultParserConfiguration = {
     ParserConfiguration(
