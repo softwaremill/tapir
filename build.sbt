@@ -217,7 +217,6 @@ lazy val rawAllAggregates = core.projectRefs ++
   nettyServer.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
-  nettyServerZio1.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambda.projectRefs ++
@@ -1364,9 +1363,6 @@ lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
   .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
-
-lazy val nettyServerZio1: ProjectMatrix = nettyServerProject("zio1", zio1)
-  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zio1InteropCats)
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
   ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
