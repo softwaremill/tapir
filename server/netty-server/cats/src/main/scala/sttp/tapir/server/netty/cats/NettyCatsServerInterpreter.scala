@@ -10,7 +10,7 @@ import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 
 trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
-  def nettyServerOptions: NettyCatsServerOptions[F, _]
+  def nettyServerOptions: NettyCatsServerOptions[F]
 
   def toRoute(ses: List[ServerEndpoint[Any, F]]): Route[F] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
@@ -31,13 +31,13 @@ object NettyCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {
     new NettyCatsServerInterpreter[F] {
       override implicit def async: Async[F] = _fa
-      override def nettyServerOptions: NettyCatsServerOptions[F, _] = NettyCatsServerOptions.default(dispatcher)(_fa)
+      override def nettyServerOptions: NettyCatsServerOptions[F] = NettyCatsServerOptions.default(dispatcher)(_fa)
     }
   }
-  def apply[F[_]](options: NettyCatsServerOptions[F, _])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {
+  def apply[F[_]](options: NettyCatsServerOptions[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {
     new NettyCatsServerInterpreter[F] {
       override implicit def async: Async[F] = _fa
-      override def nettyServerOptions: NettyCatsServerOptions[F, _] = options
+      override def nettyServerOptions: NettyCatsServerOptions[F] = options
     }
   }
 }

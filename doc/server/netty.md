@@ -11,9 +11,6 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 // if you are using zio:
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "@VERSION@"
-
-// if you are using zio1:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio1" % "@VERSION@"
 ```
 
 Then, use:
@@ -32,7 +29,6 @@ import sttp.tapir._
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import java.net.InetSocketAddress
 
 val helloWorld = endpoint
   .get
@@ -40,7 +36,7 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogic(name => Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
 
-val binding: Future[NettyFutureServerBinding[InetSocketAddress]] = 
+val binding: Future[NettyFutureServerBinding] = 
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
@@ -54,7 +50,7 @@ can be passed using the `NettyFutureServer(options)` methods. Options may also b
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
+import sttp.tapir.server.netty.{NettyConfig, NettyFutureServer, NettyFutureServerOptions}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 // customising the port
@@ -63,8 +59,8 @@ NettyFutureServer().port(9090).addEndpoints(???)
 // customising the interceptors
 NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None).options)
 
-// customise Netty options
-NettyFutureServer(NettyFutureServerOptions.default.nettyOptions(???))
+// customise Netty config
+NettyFutureServer(NettyConfig.default.socketBacklog(256))
 ```
 
 ## Domain socket support
@@ -72,7 +68,7 @@ NettyFutureServer(NettyFutureServerOptions.default.nettyOptions(???))
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyOptions}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureDomainSocketBinding}
 import sttp.tapir.{endpoint, query, stringBody}
 
 import java.nio.file.Paths
@@ -81,17 +77,10 @@ import scala.concurrent.Future
 
 import io.netty.channel.unix.DomainSocketAddress
 
-val serverBinding: Future[NettyFutureServerBinding[DomainSocketAddress]] =
-  NettyFutureServer(
-    NettyFutureServerOptions.default.nettyOptions(
-        NettyOptions.defaultDomainSocket.domainSocketPath(
-          Paths.get(System.getProperty("java.io.tmpdir"), "hello")
-        )
-    )    
-  )
-  .addEndpoint(
+val serverBinding: Future[NettyFutureDomainSocketBinding] =
+  NettyFutureServer().addEndpoint(
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
       Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
   )
-  .start()
+  .startUsingDomainSocket(Paths.get(System.getProperty("java.io.tmpdir"), "hello"))
 ```

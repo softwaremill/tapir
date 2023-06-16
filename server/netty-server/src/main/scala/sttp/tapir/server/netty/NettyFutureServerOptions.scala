@@ -4,33 +4,29 @@ import com.typesafe.scalalogging.Logger
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
-import java.net.{InetSocketAddress, SocketAddress}
 import scala.concurrent.{Future, blocking}
 
-case class NettyFutureServerOptions[SA <: SocketAddress](
+/** Options configuring the [[NettyFutureServerInterpreter]], which is being used by [[NettyFutureServer]] to interpret tapir's
+  * [[sttp.tapir.server.ServerEndpoint]]s so that they can be served using a Netty server. Contains the interceptors stack and functions for
+  * file handling.
+  */
+case class NettyFutureServerOptions(
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
-    deleteFile: TapirFile => Future[Unit],
-    nettyOptions: NettyOptions[SA]
+    deleteFile: TapirFile => Future[Unit]
 ) {
-  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[SA] = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions[SA] = copy(interceptors = interceptors :+ i)
-  def nettyOptions[SA2 <: SocketAddress](o: NettyOptions[SA2]): NettyFutureServerOptions[SA2] = copy(nettyOptions = o)
+  def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
 }
 
 object NettyFutureServerOptions {
 
-  /** Default options, using TCP sockets (the most common case). This can be later customised using
-    * [[NettyFutureServerOptions#nettyOptions()]].
-    */
-  def default: NettyFutureServerOptions[InetSocketAddress] = customiseInterceptors.options
+  def default: NettyFutureServerOptions = customiseInterceptors.options
 
-  private def default[SA <: SocketAddress](
-      interceptors: List[Interceptor[Future]],
-      nettyOptions: NettyOptions[SA]
-  ): NettyFutureServerOptions[SA] =
+  private def default(interceptors: List[Interceptor[Future]]): NettyFutureServerOptions =
     NettyFutureServerOptions(
       interceptors,
       _ => {
@@ -40,17 +36,13 @@ object NettyFutureServerOptions {
       file => {
         import scala.concurrent.ExecutionContext.Implicits.global
         Future(blocking(Defaults.deleteFile()(file)))
-      },
-      nettyOptions
+      }
     )
 
-  /** Customise the interceptors that are being used when exposing endpoints as a server. By default uses TCP sockets (the most common
-    * case), but this can be later customised using [[NettyFutureServerOptions#nettyOptions()]].
-    */
-  def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions[InetSocketAddress]] = {
+  /** Customise the interceptors that are being used when exposing endpoints as a server. */
+  def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
     CustomiseInterceptors(
-      createOptions =
-        (ci: CustomiseInterceptors[Future, NettyFutureServerOptions[InetSocketAddress]]) => default(ci.interceptors, NettyOptions.default)
+      createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
