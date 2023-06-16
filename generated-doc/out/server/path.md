@@ -40,3 +40,12 @@ certain requests, such endpoints should be listed from the most specific, to the
 For example, an endpoint `endpoint.in("users" / "find")` is more specific than `endpoint.in("users" / path[Int]("id"))`,
 and should be listed first: otherwise attempting to decode `"find"` as an integer will cause an error. More complex 
 scenarios of path matching can be implemented using the approach described in the previous section.
+
+## Security and regular inputs
+
+Any security inputs are decoded first, before regular inputs. Hence, it is not uncommon for the security inputs
+to define the path prefix of the endpoint, along with any components that the security input should capture.
+
+As noted in the section on [security inputs](../endpoint/security.md), it is completely fine for the security inputs
+to contain any kind of inputs, including path segment and path captures. The security/regular distinction only 
+influences the decoding order, and which parameters are available to which part of the server logic.

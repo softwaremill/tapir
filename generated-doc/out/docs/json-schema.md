@@ -3,7 +3,7 @@
 You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-apispecs-docs" % "1.5.4"
+"com.softwaremill.sttp.tapir" %% "tapir-apispecs-docs" % "1.5.5"
 ```
 
 Schema generation can now be performed like in the following example:

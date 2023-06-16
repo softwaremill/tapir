@@ -154,7 +154,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.7",
+  "ch.qos.logback" % "logback-classic" % "1.4.8",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -389,7 +389,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.1")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.2")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.3",
