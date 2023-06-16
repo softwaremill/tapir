@@ -60,7 +60,6 @@ For example, using `NettyFutureServerInterpreter`:
 ```scala mdoc:compile-only
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, NettyFutureServerOptions, FutureRoute}
-import java.net.InetSocketAddress
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -69,7 +68,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val prometheusMetrics = PrometheusMetrics.default[Future]()
 
 // enable metrics collection
-val serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
+val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions
   .customiseInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options

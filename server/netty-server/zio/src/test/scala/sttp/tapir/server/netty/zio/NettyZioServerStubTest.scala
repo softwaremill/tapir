@@ -6,12 +6,11 @@ import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubTest}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.{Runtime, Task, Unsafe}
 
-import java.net.InetSocketAddress
 import scala.concurrent.Future
 
-class NettyZioCreateServerStubTest extends CreateServerStubTest[Task, NettyZioServerOptions[Any, InetSocketAddress]] {
+class NettyZioCreateServerStubTest extends CreateServerStubTest[Task, NettyZioServerOptions[Any]] {
 
-  override def customiseInterceptors: CustomiseInterceptors[Task, NettyZioServerOptions[Any, InetSocketAddress]] =
+  override def customiseInterceptors: CustomiseInterceptors[Task, NettyZioServerOptions[Any]] =
     NettyZioServerOptions.customiseInterceptors
   override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(new RIOMonadError[Any]())
 

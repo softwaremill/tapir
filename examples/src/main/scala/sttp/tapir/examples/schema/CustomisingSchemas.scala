@@ -9,7 +9,6 @@ import sttp.tapir.json.circe._
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -49,7 +48,7 @@ object CustomisingSchemas extends App {
   val docEndpoints = SwaggerInterpreter().fromServerEndpoints[Future](endpoints, "The tapir ZOO", "1.0.0")
 
   // start server & test
-  val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
+  val serverBinding: NettyFutureServerBinding =
     Await.result(
       NettyFutureServer().addEndpoints(endpoints ++ docEndpoints).start(),
       Duration.Inf

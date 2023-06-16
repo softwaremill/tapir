@@ -16,7 +16,6 @@ import sttp.tapir.server.interceptor.{
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
@@ -74,7 +73,7 @@ object ExternalSecurityInterceptor extends App {
   }
 
   // starting the server
-  val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
+  val serverBinding: NettyFutureServerBinding =
     Await.result(
       NettyFutureServer()
         .options(NettyFutureServerOptions.customiseInterceptors.prependInterceptor(rolesInterceptor).options)

@@ -6,7 +6,7 @@
 - If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in tapir 1.5, it is the new default.
 - Similarly, if your code sets `.badRequestOnDecodeFailure` on endpoint path input, just remove this attribute.
 - If your code doesn't change this parameter and you update tapir, you should expect shape-matched path decoding failures to always become 400s, without attempting the next endpoint unless explicitly specified.
-- If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](server/errors.html#default-failure-handler) for details.
+- If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](server/errors.md) for details.
 
 ## From 1.2 to 1.3
 

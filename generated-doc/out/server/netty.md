@@ -72,7 +72,7 @@ NettyFutureServer(NettyFutureServerOptions.default.nettyOptions(???))
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 ```scala
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyOptions}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyConfig}
 import sttp.tapir.{endpoint, query, stringBody}
 
 import java.nio.file.Paths
@@ -84,14 +84,14 @@ import io.netty.channel.unix.DomainSocketAddress
 val serverBinding: Future[NettyFutureServerBinding[DomainSocketAddress]] =
   NettyFutureServer(
     NettyFutureServerOptions.default.nettyOptions(
-        NettyOptions.defaultDomainSocket.domainSocketPath(
-          Paths.get(System.getProperty("java.io.tmpdir"), "hello")
-        )
-    )    
+      NettyConfig.defaultDomainSocket.domainSocketPath(
+        Paths.get(System.getProperty("java.io.tmpdir"), "hello")
+      )
+    )
   )
-  .addEndpoint(
-    endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
-      Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
-  )
-  .start()
+    .addEndpoint(
+      endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
+        Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
+    )
+    .start()
 ```
