@@ -1,10 +1,10 @@
-package sttp.tapir.serverless.aws.lambda.zio.tests
+package sttp.tapir.serverless.aws.ziolambda.tests
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
-import sttp.tapir.serverless.aws.lambda.zio.{AwsZioServerInterpreter, AwsZioServerOptions}
+import sttp.tapir.serverless.aws.ziolambda.{AwsZioServerInterpreter, AwsZioServerOptions}
 import sttp.tapir.serverless.aws.lambda.{AwsServerOptions, Route}
 import sttp.tapir.tests.{Port, Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError

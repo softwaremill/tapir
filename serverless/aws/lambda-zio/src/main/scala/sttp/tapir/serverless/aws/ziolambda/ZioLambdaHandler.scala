@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.zio
+package sttp.tapir.serverless.aws.ziolambda
 
 import io.circe._
 import io.circe.generic.auto._

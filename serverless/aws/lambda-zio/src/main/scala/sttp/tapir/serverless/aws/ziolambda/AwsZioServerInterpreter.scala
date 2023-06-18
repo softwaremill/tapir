@@ -1,10 +1,10 @@
-package sttp.tapir.serverless.aws.lambda.zio
+package sttp.tapir.serverless.aws.ziolambda
 
 import sttp.tapir.serverless.aws.lambda.{AwsServerInterpreter, AwsServerOptions}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.RIO
 
-private[lambda] abstract class AwsZioServerInterpreter[R: RIOMonadError] extends AwsServerInterpreter[RIO[R, *]]
+abstract class AwsZioServerInterpreter[R: RIOMonadError] extends AwsServerInterpreter[RIO[R, *]]
 
 object AwsZioServerInterpreter {
 

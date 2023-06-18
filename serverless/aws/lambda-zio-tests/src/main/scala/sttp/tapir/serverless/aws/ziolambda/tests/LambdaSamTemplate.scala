@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.zio.tests
+package sttp.tapir.serverless.aws.ziolambda.tests
 
 import sttp.tapir.serverless.aws.sam.{AwsSamInterpreter, AwsSamOptions, CodeSource}
 

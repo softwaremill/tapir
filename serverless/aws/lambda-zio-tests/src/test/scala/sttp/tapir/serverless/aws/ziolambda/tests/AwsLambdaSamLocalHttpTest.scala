@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.zio.tests
+package sttp.tapir.serverless.aws.ziolambda.tests
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global

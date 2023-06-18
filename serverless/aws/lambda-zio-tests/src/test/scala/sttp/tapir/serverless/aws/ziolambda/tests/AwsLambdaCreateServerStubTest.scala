@@ -1,5 +1,6 @@
-package sttp.tapir.serverless.aws.lambda.zio.tests
+package sttp.tapir.serverless.aws.ziolambda.tests
 
+import _root_.zio.{Runtime, Task, Unsafe}
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
@@ -14,12 +15,11 @@ import sttp.model.{Header, StatusCode, Uri}
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.CreateServerTest
-import sttp.tapir.serverless.aws.lambda.zio.tests.AwsLambdaCreateServerStubTest.{awsToSttpResponse, sttpToAwsRequest}
-import sttp.tapir.serverless.aws.lambda.zio.{AwsZioServerInterpreter, AwsZioServerOptions}
 import sttp.tapir.serverless.aws.lambda._
+import sttp.tapir.serverless.aws.ziolambda.{AwsZioServerInterpreter, AwsZioServerOptions}
+import sttp.tapir.serverless.aws.ziolambda.tests.AwsLambdaCreateServerStubTest.{awsToSttpResponse, sttpToAwsRequest}
 import sttp.tapir.tests.Test
 import sttp.tapir.ztapir.RIOMonadError
-import _root_.zio.{Runtime, Task, Unsafe}
 
 class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServerOptions[Task], Route[Task]] {
 

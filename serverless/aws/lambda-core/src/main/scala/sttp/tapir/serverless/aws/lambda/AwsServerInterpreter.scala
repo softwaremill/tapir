@@ -9,7 +9,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
-private[lambda] abstract class AwsServerInterpreter[F[_]: MonadError] {
+private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
   def awsServerOptions: AwsServerOptions[F]
 

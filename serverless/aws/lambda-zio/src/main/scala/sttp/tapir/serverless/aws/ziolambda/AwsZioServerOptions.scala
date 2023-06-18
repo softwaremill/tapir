@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.zio
+package sttp.tapir.serverless.aws.ziolambda
 
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.serverless.aws.lambda.AwsServerOptions

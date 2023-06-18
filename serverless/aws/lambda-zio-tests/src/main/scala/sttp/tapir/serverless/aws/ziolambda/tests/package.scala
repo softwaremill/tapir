@@ -1,6 +1,6 @@
-package sttp.tapir.serverless.aws.lambda.zio
+package sttp.tapir.serverless.aws.ziolambda
 
-import sttp.tapir._
+import sttp.tapir.{endpoint, stringToPath}
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.Mapping.in_4query_out_4header_extended
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray

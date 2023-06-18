@@ -1,9 +1,9 @@
-package sttp.tapir.serverless.aws.lambda.zio.tests
+package sttp.tapir.serverless.aws.ziolambda.tests
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe.generic.auto._
 import sttp.tapir.serverless.aws.lambda.AwsRequest
-import sttp.tapir.serverless.aws.lambda.zio.ZioLambdaHandler
+import sttp.tapir.serverless.aws.ziolambda.ZioLambdaHandler
 import sttp.tapir.ztapir.RIOMonadError
 import zio.{Runtime, Unsafe}
 

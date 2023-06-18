@@ -1489,7 +1489,7 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
         (Test / test)
           .dependsOn(
             Def.sequential(
-              (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.zio.tests.LambdaSamTemplate"),
+              (Compile / runMain).toTask(" sttp.tapir.serverless.aws.ziolambda.tests.LambdaSamTemplate"),
               assembly
             )
           )
