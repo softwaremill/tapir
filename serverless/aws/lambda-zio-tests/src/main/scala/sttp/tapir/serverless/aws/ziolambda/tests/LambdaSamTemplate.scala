@@ -14,7 +14,7 @@ object LambdaSamTemplate extends App {
     source = CodeSource(
       "java11",
       jarPath,
-      "sttp.tapir.serverless.aws.lambda.zio.tests.ZioLambdaHandlerImpl::handleRequest"
+      "sttp.tapir.serverless.aws.ziolambda.tests.ZioLambdaHandlerImpl::handleRequest"
     ),
     memorySize = 1024
   )
