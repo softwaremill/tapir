@@ -144,7 +144,7 @@ Firstly add dependencies:
 and generate the documentation by importing valid extension methods and explicitly specifying the "3.1.0" version in the OpenAPI model:
 ```scala mdoc:compile-only
 import sttp.apispec.openapi.OpenAPI
-import sttp.apispec.openapi.circe.yaml._ // for `toYaml3_1` extension method
+import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
@@ -152,10 +152,9 @@ case class Book(id: Option[Long], title: Option[String])
 
 val booksListing = endpoint.in(path[String]("bookId"))
 
-val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
-  .openapi("3.1.0") // "3.1.0" version explicitly specified
+val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0") // "3.1.0" version explicitly specified
   
-println(docs.toYaml3_1) // OpenApi 3.1.0 YAML string would be printed to the console
+println(docs.toYaml) // OpenApi 3.1.0 YAML string would be printed to the console
 ```
 
 ## Exposing generated OpenAPI documentation
