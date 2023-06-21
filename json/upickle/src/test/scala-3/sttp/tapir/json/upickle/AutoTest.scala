@@ -54,12 +54,8 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
     val dogJsonStr = tapirPickle.write(
       Dog("Bob", DogAge(33), DogOwner(name = "Anthony", ownerAge = 39), Mammal(), SimpleEnum.SimpleCaseTwo, ColorEnum.Mix(15))
     )
-    println(s"Hello, $dogJsonStr")
     val intJsonStr = tapirPickle.write(3)
-    val cc = tapirPickle.read[Dog](
-      """{"name":"Bob","dog_age":{"years":33},"dog_owner":{"name":"Anthony","owner_age":39}, "kind":{"mammal_param":44}, "simple_enum":"SimpleCaseTwo"}"""
-    )
-    println(cc)
+    println(s"Hello, $dogJsonStr, $intJsonStr")
 
   }
 }
