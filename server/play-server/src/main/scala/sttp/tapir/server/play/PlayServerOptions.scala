@@ -63,7 +63,7 @@ object PlayServerOptions {
     }
   }
 
-  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors.options.copy()
+  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors.options
 
   lazy val logger: Logger = Logger(this.getClass.getPackage.getName)
 }
