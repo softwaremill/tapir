@@ -18,7 +18,7 @@ class PlayCreateServerStubTest extends CreateServerStubTest[Future, PlayServerOp
 
   override def customiseInterceptors: CustomiseInterceptors[Future, PlayServerOptions] = {
     import actorSystem.dispatcher
-    PlayServerOptions.customiseInterceptors
+    PlayServerOptions.customiseInterceptors()
   }
   override def stub[R]: SttpBackendStub[Future, R] = SttpBackendStub(new FutureMonad()(ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity

@@ -1,6 +1,8 @@
 package sttp.tapir.server.play
 
 import akka.stream.Materializer
+import com.typesafe.config.ConfigFactory
+import play.api.http.ParserConfiguration
 import play.api.Logger
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
@@ -26,7 +28,7 @@ case class PlayServerOptions(
 object PlayServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customiseInterceptors(implicit
+  def customiseInterceptors(conf: ParserConfiguration = defaultParserConfiguration)(implicit
       mat: Materializer,
       ec: ExecutionContext
   ): CustomiseInterceptors[Future, PlayServerOptions] =
@@ -35,8 +37,8 @@ object PlayServerOptions {
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile(_),
-          DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
-          PlayBodyParsers.apply(),
+          DefaultActionBuilder.apply(PlayBodyParsers.apply(conf = conf).anyContent),
+          PlayBodyParsers.apply(conf = conf),
           ci.decodeFailureHandler,
           ci.interceptors
         )
@@ -63,7 +65,16 @@ object PlayServerOptions {
     }
   }
 
-  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors.options
+  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customiseInterceptors().options
+
+  private lazy val conf = ConfigFactory.load
+
+  lazy val defaultParserConfiguration = {
+    ParserConfiguration(
+      maxMemoryBuffer = conf.getMemorySize("play.http.parser.maxMemoryBuffer").toBytes,
+      maxDiskBuffer = conf.getMemorySize("play.http.parser.maxDiskBuffer").toBytes
+    )
+  }
 
   lazy val logger: Logger = Logger(this.getClass.getPackage.getName)
 }

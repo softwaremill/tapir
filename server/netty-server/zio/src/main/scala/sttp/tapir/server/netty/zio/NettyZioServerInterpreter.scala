@@ -4,10 +4,10 @@ import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
-import zio.{CancelableFuture, RIO, Runtime, Unsafe, ZIO}
+import zio.{RIO, Runtime, Unsafe, ZIO}
 
 trait NettyZioServerInterpreter[R] {
-  def nettyServerOptions: NettyZioServerOptions[R, _]
+  def nettyServerOptions: NettyZioServerOptions[R]
 
   def toRoute(ses: List[ZServerEndpoint[R, Any]]): RIO[R, Route[RIO[R, *]]] = ZIO.runtime.map { (runtime: Runtime[R]) =>
     implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
@@ -22,12 +22,12 @@ trait NettyZioServerInterpreter[R] {
 object NettyZioServerInterpreter {
   def apply[R]: NettyZioServerInterpreter[R] = {
     new NettyZioServerInterpreter[R] {
-      override def nettyServerOptions: NettyZioServerOptions[R, _] = NettyZioServerOptions.default
+      override def nettyServerOptions: NettyZioServerOptions[R] = NettyZioServerOptions.default
     }
   }
-  def apply[R](options: NettyZioServerOptions[R, _]): NettyZioServerInterpreter[R] = {
+  def apply[R](options: NettyZioServerOptions[R]): NettyZioServerInterpreter[R] = {
     new NettyZioServerInterpreter[R] {
-      override def nettyServerOptions: NettyZioServerOptions[R, _] = options
+      override def nettyServerOptions: NettyZioServerOptions[R] = options
     }
   }
 

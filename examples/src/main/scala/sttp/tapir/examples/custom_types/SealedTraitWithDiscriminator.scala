@@ -11,7 +11,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -40,7 +39,7 @@ object SealedTraitWithDiscriminator extends App {
 
   val docsEndpoints = SwaggerInterpreter().fromServerEndpoints[Future](List(nodesListingServerEndpoint), "Nodes", "1.0.0")
 
-  val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
+  val serverBinding: NettyFutureServerBinding =
     Await.result(
       NettyFutureServer().addEndpoints(nodesListingServerEndpoint :: docsEndpoints).start(),
       Duration.Inf
