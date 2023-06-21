@@ -12,8 +12,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#files=1"
@@ -30,8 +28,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#files=1"
@@ -48,8 +44,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#approved-reviews-by>=1"
@@ -65,8 +59,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#files=1"
@@ -83,8 +75,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#files=1"
@@ -101,8 +91,6 @@ pull_request_rules:
       - check-success=ci (2.12, JS)
       - check-success=ci (2.13, JS)
       - check-success=ci (3, JS)
-      - check-success=ci (2.12, Native)
-      - check-success=ci (2.13, Native)
       - check-success=ci (3, Native)
       - check-success=mima
       - "#files=1"
