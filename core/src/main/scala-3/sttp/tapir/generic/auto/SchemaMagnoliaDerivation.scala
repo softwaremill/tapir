@@ -9,10 +9,11 @@ import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.collection.mutable
 import scala.deriving.Mirror
+import scala.reflect.ClassTag
 
 trait SchemaMagnoliaDerivation {
 
-  inline def derived[T](using genericDerivationConfig: Configuration, m: Mirror.Of[T]): Schema[T] = {
+  inline def derived[T](using genericDerivationConfig: Configuration, m: Mirror.Of[T], ct: ClassTag[T]): Schema[T] = {
     val derivation = new Derivation[Schema] {
       type Typeclass[T] = Schema[T]
 
