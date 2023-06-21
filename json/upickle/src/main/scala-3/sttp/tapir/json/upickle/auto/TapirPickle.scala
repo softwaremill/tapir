@@ -70,7 +70,8 @@ class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagge
 
   /** Custom name for the field containing Scala type */
   // override lazy val tagName = "$customType"
-  // but field VALUE can apparently only be given as a constant with class annotation @key, not as a function :(
+
+  // but field VALUE can apparently only be given as a constant with class annotation @key
 
   inline def deriveRW[T: ClassTag](using Mirror.Of[T]) = macroRW
 
