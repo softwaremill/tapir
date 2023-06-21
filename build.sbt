@@ -71,6 +71,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
+  bloopGenerate in Compile := { if (ideSkipProject.value) None else (bloopGenerate in Compile).value },
+  bloopGenerate in Test := { if (ideSkipProject.value) None else (bloopGenerate in Test).value },
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
