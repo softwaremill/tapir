@@ -22,7 +22,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
   import actorSystem.dispatcher
 
   override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
-    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors).options
+    val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors()).options
       // increase the default maxMemoryBuffer to 10M so that tests pass
       .copy(playBodyParsers = PlayBodyParsers(conf = ParserConfiguration(maxMemoryBuffer = 1024000)))
     PlayServerInterpreter(serverOptions).toRoutes(es)

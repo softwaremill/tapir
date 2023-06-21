@@ -6,48 +6,44 @@ import com.typesafe.scalalogging.Logger
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.server.netty.{NettyDefaults, NettyOptions}
+import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
-import java.net.{InetSocketAddress, SocketAddress}
-
-case class NettyCatsServerOptions[F[_], SA <: SocketAddress](
+/** Options configuring the [[NettyCatsServerInterpreter]], which is being used by [[NettyCatsServer]] to interpret tapir's
+  * [[sttp.tapir.server.ServerEndpoint]]s so that they can be served using a Netty server. Contains the interceptors stack and functions for
+  * file handling.
+  */
+case class NettyCatsServerOptions[F[_]](
     interceptors: List[Interceptor[F]],
     createFile: ServerRequest => F[TapirFile],
     deleteFile: TapirFile => F[Unit],
-    dispatcher: Dispatcher[F],
-    nettyOptions: NettyOptions[SA]
+    dispatcher: Dispatcher[F]
 ) {
-  def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F, SA] = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F, SA] = copy(interceptors = interceptors :+ i)
-  def nettyOptions[SA2 <: SocketAddress](o: NettyOptions[SA2]): NettyCatsServerOptions[F, SA2] = copy(nettyOptions = o)
+  def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = interceptors :+ i)
 }
 
 object NettyCatsServerOptions {
 
-  /** Default options, using TCP sockets (the most common case). This can be later customised using
-    * [[NettyCatsServerOptions#nettyOptions()]].
-    */
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F, InetSocketAddress] =
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
     customiseInterceptors(dispatcher).options
 
   private def default[F[_]: Async](
       interceptors: List[Interceptor[F]],
       dispatcher: Dispatcher[F]
-  ): NettyCatsServerOptions[F, InetSocketAddress] =
+  ): NettyCatsServerOptions[F] =
     NettyCatsServerOptions(
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
-      dispatcher,
-      NettyOptions.default
+      dispatcher
     )
 
   def customiseInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
-  ): CustomiseInterceptors[F, NettyCatsServerOptions[F, InetSocketAddress]] =
+  ): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F, InetSocketAddress]]) => default(ci.interceptors, dispatcher)
+      createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
   private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
