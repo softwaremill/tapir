@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Hide in docs
   version: '1.0'
@@ -34,11 +34,11 @@ paths:
           description: ''
           headers:
             Set-Cookie:
-              required:false
+              required: false
               schema:
-                type:array
+                type: array
                 items:
-                type:string
+                  type: string
         '400':
           description: 'Invalid value for: header s1, Invalid value for: header s2,
             Invalid value for: cookie c1, Invalid value for: cookie c2, Invalid value
