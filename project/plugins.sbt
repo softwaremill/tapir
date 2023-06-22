@@ -18,5 +18,6 @@ addSbtPlugin("io.gatling" % "gatling-sbt" % "4.3.3")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.14")
 addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.4")
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.5.6")
 
 addDependencyTreePlugin
