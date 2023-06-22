@@ -2,8 +2,12 @@ package sttp.tapir.json.upickle.auto
 
 import upickle.AttributeTagged
 import upickle.implicits.MacrosCommon
+import upickle.implicits.macros
 import scala.reflect.ClassTag
 import scala.deriving.Mirror
+import upickle.core.ObjVisitor
+import upickle.core.ArrVisitor
+import upickle.core.Visitor
 
 trait SnakeCaseSupport {
   this: MacrosCommon =>
@@ -66,7 +70,7 @@ case class CodecConfiguration(
 /** Task: write upickle usage that can take a configuration object which: a) maps CONCRETE case class field name to another name b) default
   * value of a field if it's missing c) enum value encoding - numbers, strings, camel case, etc
   */
-class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagged with SnakeCaseSupport {
+class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagged {
 
   /** Custom name for the field containing Scala type */
   // override lazy val tagName = "$customType"
@@ -75,4 +79,22 @@ class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagge
 
   inline def deriveRW[T: ClassTag](using Mirror.Of[T]) = macroRW
 
+
+  inline def withDefaultsRW[T: ClassTag](using Mirror.Of[T]): ReadWriter[T] =
+    ReadWriter.join(macroR[T] match {
+    case c: CaseClassReadereader[T] => new CaseClassReadereader[T](macros.paramsCount[T], macros.checkErrorMissingKeysCount[T]()) {
+      override def visitors0 = c.visitors0
+      override def fromProduct(p: Product): T = c.fromProduct(p)
+
+      override def keyToIndex(x: String) = c.keyToIndex(x)
+      override def allKeysArray: Array[String] = c.allKeysArray
+   
+      // This is how we can force our own custom default
+      override def storeDefaults(x: upickle.implicits.BaseCaseObjectContext) = 
+        x.storeValueIfNotFound(1, "custom default!")
+
+    }
+    case other => other
+
+  }, macroW[T])
 }

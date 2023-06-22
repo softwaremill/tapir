@@ -6,6 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import auto.*
 import upickle.implicits.key
 
+case class SimpleWithDefault(aField: String, bField: String = "8")
 class AutoTest extends AnyFlatSpecLike with Matchers {
 
   val tapirPickle = new TapirPickle(CodecConfiguration(Snake, AsOrdinalInt, DiscriminatorField("$type")))
@@ -51,11 +52,14 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
     given dogAgeR: tapirPickle.ReadWriter[DogAge] = tapirPickle.deriveRW
     given ownerRw: tapirPickle.ReadWriter[DogOwner] = tapirPickle.deriveRW
     given dogRw: tapirPickle.ReadWriter[Dog] = tapirPickle.deriveRW
+    given swdRw: tapirPickle.ReadWriter[SimpleWithDefault] = tapirPickle.withDefaultsRW
+
     val dogJsonStr = tapirPickle.write(
       Dog("Bob", DogAge(33), DogOwner(name = "Anthony", ownerAge = 39), Mammal(), SimpleEnum.SimpleCaseTwo, ColorEnum.Mix(15))
     )
     val intJsonStr = tapirPickle.write(3)
     println(s"Hello, $dogJsonStr, $intJsonStr")
-
+    val swd = tapirPickle.read[SimpleWithDefault]("""{"aField":"str1"}""")
+    println(swd)
   }
 }
