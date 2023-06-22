@@ -9,6 +9,9 @@ import upickle.core.ObjVisitor
 import upickle.core.ArrVisitor
 import upickle.core.Visitor
 
+trait FieldNameCaseStrategy {
+
+}
 trait SnakeCaseSupport {
   this: MacrosCommon =>
 
@@ -58,29 +61,39 @@ case object AsScreamingSnake extends EnumValueEncoding
 
 sealed trait InheritanceReaderStrategy
 
-case class DiscriminatorField(name: String) extends InheritanceReaderStrategy
+object InheritanceReaderStrategy {
+  case class DiscriminatorField(name: String) extends InheritanceReaderStrategy
+  case object Default extends InheritanceReaderStrategy
+}
 
 // Global
 case class CodecConfiguration(
     fieldNameCase: FieldNameCase,
-    enumValueEncoding: EnumValueEncoding,
-    inheritanceReaderStrategy: InheritanceReaderStrategy
+    inheritanceReaderStrategy: InheritanceReaderStrategy,
+    discriminatorField: Option[String] // default is $type
 )
 
-/** Task: write upickle usage that can take a configuration object which: a) maps CONCRETE case class field name to another name b) default
-  * value of a field if it's missing c) enum value encoding - numbers, strings, camel case, etc
+case class ClassCodecConfiguration(
+  globalConfiguration: CodecConfiguration,
+  fieldEncodedNames: Map[String, String],
+  fieldDefaultValues: Map[String, Any]
+  )
+
+/**
+ * Represents (de)serialization entrypoint for a specific case class T
+  *
+  * @param codecConfiguration
   */
-class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagged {
+class TapirPickleBase[T: ClassTag](codecConfiguration: ClassCodecConfiguration)(using Mirror.Of[T]) extends TapirPickle[T] {
 
   /** Custom name for the field containing Scala type */
   // override lazy val tagName = "$customType"
 
   // but field VALUE can apparently only be given as a constant with class annotation @key
 
-  inline def deriveRW[T: ClassTag](using Mirror.Of[T]) = macroRW
+  inline def deriveRW = macroRW[T]
 
-
-  inline def withDefaultsRW[T: ClassTag](using Mirror.Of[T]): ReadWriter[T] =
+  inline def withDefaultsRW: ReadWriter[T] =
     ReadWriter.join(macroR[T] match {
     case c: CaseClassReadereader[T] => new CaseClassReadereader[T](macros.paramsCount[T], macros.checkErrorMissingKeysCount[T]()) {
       override def visitors0 = c.visitors0
@@ -97,4 +110,66 @@ class TapirPickle(codecConfiguration: CodecConfiguration) extends AttributeTagge
     case other => other
 
   }, macroW[T])
+}
+
+trait TapirPickle[T] extends AttributeTagged
+
+class ConfiguredTapirPickle[T](delegate: TapirPickle[T], val ccConfig: ClassCodecConfiguration) extends TapirPickle[T] {
+
+  override def objectAttributeKeyReadMap(s: CharSequence): CharSequence =
+    delegate.objectAttributeKeyWriteMap(s)
+
+  override def objectAttributeKeyWriteMap(s: CharSequence): CharSequence =
+    delegate.objectAttributeKeyWriteMap(s)
+
+  override def objectTypeKeyReadMap(s: CharSequence): CharSequence =
+    delegate.objectTypeKeyReadMap(s)
+
+  override def objectTypeKeyWriteMap(s: CharSequence): CharSequence =
+    delegate.objectTypeKeyWriteMap(s)
+}
+
+trait KeyReplacementSupport extends MacrosCommon {
+ 
+  def ccConfig: ClassCodecConfiguration
+
+
+  override def objectAttributeKeyReadMap(s: CharSequence): CharSequence =    
+    super.objectAttributeKeyWriteMap(s) // TODO
+
+  override def objectAttributeKeyWriteMap(s: CharSequence): CharSequence =
+    ccConfig.fieldEncodedNames.get(s.toString).getOrElse(super.objectAttributeKeyWriteMap(s))
+
+  override def objectTypeKeyReadMap(s: CharSequence): CharSequence =
+    super.objectTypeKeyReadMap(s) // TODO
+
+  override def objectTypeKeyWriteMap(s: CharSequence): CharSequence =
+    super.objectTypeKeyWriteMap(s) // TODO
+}
+object TapirPickle {
+ 
+  // Possibly should be optimized to not create a new TapirPickle instance for every type T
+  inline def deriveConfigured[T: ClassTag](using globalConfig: CodecConfiguration)(using Mirror.Of[T]): TapirPickle[T] =
+    val config: ClassCodecConfiguration = sttp.tapir.json.upickle.auto.caseClassConfiguration[T](globalConfig)    
+    val picklerWithCase = config.globalConfiguration.fieldNameCase match {
+      case Snake => new TapirPickleBase(config) with SnakeCaseSupport
+      case Camel => new TapirPickleBase(config)
+    }
+
+    val picklerWithCustomNames = if (config.fieldEncodedNames.nonEmpty)
+      new ConfiguredTapirPickle(picklerWithCase, config) with KeyReplacementSupport
+    else
+      picklerWithCase
+
+    picklerWithCustomNames
+
+    // TODO support for discriminator field override
+    //
+    // val picklerWithDefaultValues = if hasDefaultValues(config)
+    //   setCustomValues(picklerWithCustomNames)
+    // else
+    //   picklerWithCustomNames
+    //
+    // picklerWithDefaultValues
+
 }
