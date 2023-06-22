@@ -154,7 +154,7 @@ val booksListing = endpoint.in(path[String]("bookId"))
 
 val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0").openapi("3.0.3") // "3.0.3" version explicitly specified
   
-println(docs."3.0.3") // OpenApi 3.0.3 YAML string would be printed to the console
+println(docs.toYaml3_0_3) // OpenApi 3.0.3 YAML string would be printed to the console
 ```
 
 ### Support for OpenAPI 3.1.0
@@ -168,7 +168,7 @@ Firstly add dependencies:
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
-and generate the documentation by importing valid extension methods:
+and generate the documentation by importing valid extension methods (as 3.1.0 is now the default):
 ```scala mdoc:compile-only
 import sttp.apispec.openapi.OpenAPI
 import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
