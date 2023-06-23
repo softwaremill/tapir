@@ -1508,13 +1508,13 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
           if (!samReady) {
             sam.destroy()
             val exit = sam.exitValue()
-            log.error(s"failed to start sam local within 60 seconds (exit code: $exit")
+            log.error(s"failed to start sam local within 60 seconds (exit code: $exit)")
           }
         }),
         Tests.Cleanup(() => {
           sam.destroy()
           val exit = sam.exitValue()
-          log.info(s"stopped sam local (exit code: $exit")
+          log.info(s"stopped sam local (exit code: $exit)")
         })
       )
     },
@@ -1586,7 +1586,7 @@ lazy val awsLambdaCatsEffectTests: ProjectMatrix = (projectMatrix in file("serve
         Tests.Cleanup(() => {
           sam.destroy()
           val exit = sam.exitValue()
-          log.info(s"stopped sam local (exit code: $exit")
+          log.info(s"stopped sam local (exit code: $exit)")
         })
       )
     },
