@@ -10,8 +10,7 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.stream.ChunkedWriteHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
-
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration._
 
 /** Netty configuration, used by [[NettyFutureServer]] and other server implementations to configure the networking layer, the Netty
   * processing pipeline, and start & stop the server.
@@ -79,10 +78,10 @@ object NettyConfig {
     shutdownEventLoopGroupOnClose = true,
     socketBacklog = 128,
     socketKeepAlive = true,
-    requestTimeout = FiniteDuration(60, SECONDS),
-    connectionTimeout = FiniteDuration(60, SECONDS),
-    socketTimeout = FiniteDuration(60, SECONDS),
-    lingerTimeout = FiniteDuration(1, SECONDS),
+    requestTimeout = 60.seconds,
+    connectionTimeout = 60.seconds,
+    socketTimeout = 60.seconds,
+    lingerTimeout = 1.second,
     maxContentLength = Integer.MAX_VALUE,
     addLoggingHandler = false,
     sslContext = None,
