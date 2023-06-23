@@ -25,6 +25,18 @@ import scala.concurrent.duration._
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
   *   contains tapir's server processing logic.
+  *
+  * @param requestTimeout
+  *   Raises a ReadTimeoutException when no data is read from Netty within the specified period of time for a request.
+  *
+  * @param connectionTimeout
+  *   Specifies the maximum duration within which a connection between a client and a server must be established.
+  *
+  * @param socketTimeout
+  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent.
+  *
+  *  @param lingerTimeout
+  *   Sets the delay for which the Gateway waits, while data is being transmitted, before closing a socket after receiving a call to close the socket
   */
 case class NettyConfig(
     host: String,
