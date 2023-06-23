@@ -15,7 +15,6 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
     discriminatorField = None
   )
 
-
   object TestFixture:
     enum ColorEnum(val rgb: Int):
       @key("#FF0000") case Red extends ColorEnum(0xff0000)
@@ -31,13 +30,13 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
       case SimpleCaseOne extends SimpleEnum
       @upickle.implicits.key("2") case SimpleCaseTwo extends SimpleEnum
 
-
     case class DogAge(years: Int)
     case class DogOwner(name: String, ownerAge: Int)
 
     // given animalKindRw: TapirPickle.ReadWriter[AnimalKind] = TapirPickle.ReadWriter.derived[AnimalKind]
 
-  case class SimpleCaseClass(aField: Int, b: Int)
+  import sttp.tapir.Schema.annotations._
+  case class SimpleCaseClass(aField: Int, @encodedName("encoded_b_ann") b: Int)
   case class ClassWithDefaultMember(a: Int, b: SimpleCaseClass = SimpleCaseClass(3, 4))
 
   it should "work" in {
@@ -45,7 +44,6 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
     import TestFixture.*
     val ccPickle: TapirPickle[SimpleCaseClass] = TapirPickle.deriveConfigured[SimpleCaseClass]
     given simpleCaseClassRw: ccPickle.ReadWriter[SimpleCaseClass] = ccPickle.macroRW
-
 
     val jsonStr = ccPickle.write(SimpleCaseClass(aField = 3, b = 17))
     println(s"$jsonStr")
