@@ -6,10 +6,10 @@ import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.metrics.zio.ZioMetrics.DefaultNamespace
-import zio.metrics.Metric.Counter
+import zio._
+import zio.metrics.Metric.{Counter, Gauge}
 import zio.metrics._
 import zio.test._
-import zio._
 
 object ZioMetricsTest extends ZIOSpecDefault {
 
@@ -32,8 +32,8 @@ object ZioMetricsTest extends ZIOSpecDefault {
           )
 
         // when
-        val active: Counter[Long] = ZioMetrics
-          .getActiveRequestCounter("tapir")
+        val active: Gauge[Long] = ZioMetrics
+          .getActiveRequestGauge("tapir")
           .tagged(
             Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"))
           )
@@ -48,7 +48,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
           state <- active.value
           _ <- ZIO.succeed(Thread.sleep(150))
           state2 <- active.value
-        } yield assertTrue(state == MetricState.Counter(1)) && assertTrue(state2 == MetricState.Counter(0))
+        } yield assertTrue(state == MetricState.Gauge(1)) && assertTrue(state2 == MetricState.Gauge(0))
 
       } @@ TestAspect.retry(Schedule.recurs(5)),
       test("can collect requests total") {

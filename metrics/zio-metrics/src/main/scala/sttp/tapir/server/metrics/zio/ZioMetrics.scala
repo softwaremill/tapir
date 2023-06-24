@@ -65,8 +65,9 @@ object ZioMetrics {
   /** ZIO Default Runtime */
   val runtime: Runtime[Any] = Runtime.default
 
-  /** Active/Inprogress Counter +1 active, -1 complete. */
-  def getActiveRequestCounter(namespace: String): Counter[Long] = zio.metrics.Metric.counter(s"${namespace}_request_active")
+  /** Active/Inprogress Gauge +1 active, -1 complete. */
+  def getActiveRequestGauge(namespace: String): Gauge[Long] =
+    zio.metrics.Metric.gauge(s"${namespace}_request_active").contramap(_.toDouble)
 
   /** Total request counter. */
   def getRequestsTotalCounter(namespace: String): Counter[Long] = zio.metrics.Metric.counter(s"${namespace}_request_total")
@@ -91,30 +92,30 @@ object ZioMetrics {
   }.toSet
 
   /** Requests active metric collector. */
-  def requestActive[F[_]](namespace: String, labels: MetricLabels): Metric[F, Counter[Long]] = {
-    Metric[F, Counter[Long]](
-      getActiveRequestCounter(namespace),
-      onRequest = (req, counter, m) => {
+  def requestActive[F[_]](namespace: String, labels: MetricLabels): Metric[F, Gauge[Long]] = {
+    Metric[F, Gauge[Long]](
+      getActiveRequestGauge(namespace),
+      onRequest = (req, gauge, m) => {
         m.unit {
           EndpointMetric()
             .onEndpointRequest { ep =>
               m.eval {
                 unsafeRun(
-                  counter.tagged(asZioLabel(labels, ep, req)).update(1).unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).increment.unit
                 )
               }
             }
             .onResponseBody { (ep, _) =>
               m.eval {
                 unsafeRun(
-                  counter.tagged(asZioLabel(labels, ep, req)).update(-1).unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).decrement.unit
                 )
               }
             }
             .onException { (ep, _) =>
               m.eval {
                 unsafeRun(
-                  counter.tagged(asZioLabel(labels, ep, req)).update(-1).unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).decrement.unit
                 )
               }
             }
