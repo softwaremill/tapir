@@ -77,8 +77,8 @@ object ZioMetrics {
     zio.metrics.Metric.histogram(s"${namespace}_request_duration_seconds", DurationBoundaries)
 
   /** ZIO Unsafe Run Wrapper */
-  private def unsafeRun[T](task: Task[T]): T = Unsafe.unsafe { implicit u =>
-    runtime.unsafe.run(task.orDie).getOrThrowFiberFailure()
+  private def unsafeRun[T](effect: UIO[T]): T = Unsafe.unsafe { implicit u =>
+    runtime.unsafe.run(effect).getOrThrowFiberFailure()
   }
 
   /** Convert into zio metric labels */
@@ -101,21 +101,21 @@ object ZioMetrics {
             .onEndpointRequest { ep =>
               m.eval {
                 unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).increment.unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).increment
                 )
               }
             }
             .onResponseBody { (ep, _) =>
               m.eval {
                 unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).decrement.unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).decrement
                 )
               }
             }
             .onException { (ep, _) =>
               m.eval {
                 unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).decrement.unit
+                  gauge.tagged(asZioLabel(labels, ep, req)).decrement
                 )
               }
             }
@@ -134,14 +134,14 @@ object ZioMetrics {
             .onResponseBody { (ep, res) =>
               m.eval {
                 unsafeRun(
-                  counter.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Right(res), None)).update(1).unit
+                  counter.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Right(res), None)).increment
                 )
               }
             }
             .onException { (ep, ex) =>
               m.eval {
                 unsafeRun(
-                  counter.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).update(1).unit
+                  counter.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).increment
                 )
               }
             }
@@ -169,7 +169,6 @@ object ZioMetrics {
                   histogram
                     .tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Right(res), Some(labels.forResponsePhase.headersValue)))
                     .update(duration)
-                    .unit
                 )
               }
             }
@@ -179,14 +178,13 @@ object ZioMetrics {
                   histogram
                     .tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Right(res), Some(labels.forResponsePhase.bodyValue)))
                     .update(duration)
-                    .unit
                 )
               }
             }
             .onException { (ep: AnyEndpoint, ex: Throwable) =>
               m.eval {
                 unsafeRun(
-                  histogram.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).update(duration).unit
+                  histogram.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).update(duration)
                 )
               }
             }
