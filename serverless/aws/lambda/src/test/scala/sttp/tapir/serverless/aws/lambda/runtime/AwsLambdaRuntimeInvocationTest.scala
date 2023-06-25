@@ -12,6 +12,7 @@ import sttp.tapir._
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeInvocationTest._
 import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsCatsEffectServerOptions, AwsServerOptions}
+import PlatformCompat._
 
 import scala.collection.immutable.Seq
 
