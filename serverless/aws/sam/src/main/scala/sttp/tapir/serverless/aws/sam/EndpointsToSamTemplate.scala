@@ -4,6 +4,8 @@ import sttp.model.Method
 import sttp.tapir.internal._
 import sttp.tapir.{AnyEndpoint, EndpointInput}
 
+import scala.collection.immutable.SortedMap
+
 private[sam] object EndpointsToSamTemplate {
   def apply(es: List[AnyEndpoint], options: AwsSamOptions): SamTemplate = {
     val functionName = options.namePrefix + "Function"
@@ -18,13 +20,27 @@ private[sam] object EndpointsToSamTemplate {
       }
       .toMap
 
+    val parameters = options.parameters.map(parameters => SortedMap.from(parameters.map(Parameter.apply).toList))
+    val auths = {
+      for {
+        httpApi <- options.httpApi
+        auths <- httpApi.auths
+        models = auths.auths.map(authorizerToModel).toSeq.toMap
+      } yield HttpApiAuth(
+        Authorizers = models,
+        DefaultAuthorizer = auths.default,
+        EnableIamAuthorizer = None
+      )
+    }
+
     SamTemplate(
+      Parameters = parameters,
       Resources = Map(
         functionName -> FunctionResource(
           options.source match {
             case ImageSource(imageUri) =>
               FunctionImageProperties(options.timeout.toSeconds, options.memorySize, apiEvents, imageUri)
-            case cs @ CodeSource(_, _, _, environment) =>
+            case cs @ CodeSource(_, _, _, environment, role) =>
               FunctionCodeProperties(
                 options.timeout.toSeconds,
                 options.memorySize,
@@ -32,7 +48,8 @@ private[sam] object EndpointsToSamTemplate {
                 cs.runtime,
                 cs.codeUri,
                 cs.handler,
-                Environment = if (environment.nonEmpty) Some(EnvironmentCodeProperties(environment)) else None
+                Environment = if (environment.nonEmpty) Some(EnvironmentCodeProperties(environment)) else None,
+                Role = role
               )
           }
         ),
@@ -62,7 +79,8 @@ private[sam] object EndpointsToSamTemplate {
                   },
                   MaxAge = v.maxAge.map { case HttpApiProperties.MaxAge.Some(duration) => duration.toSeconds }
                 )
-              )
+              ),
+            Auth = auths
           )
         )
       ),
@@ -73,6 +91,31 @@ private[sam] object EndpointsToSamTemplate {
         )
       )
     )
+  }
+
+  private def authorizerToModel(auth: HttpApiProperties.Auth): (String, Authorizer) = auth match {
+    case auth: HttpApiProperties.Auth.Lambda =>
+      val authorizer = LambdaAuthorizer(
+        AuthorizerPayloadFormatVersion = if (auth.version == HttpApiProperties.Auth.Version.V1) "1.0" else "2.0",
+        EnableFunctionDefaultPermissions = Some(auth.enableDefaultPermissions),
+        EnableSimpleResponses = auth.version match {
+          case HttpApiProperties.Auth.Version.V2Simple    => Some(true)
+          case HttpApiProperties.Auth.Version.V2IamPolicy => Some(false)
+          case HttpApiProperties.Auth.Version.V1          => None
+        },
+        FunctionArn = auth.functionArn,
+        FunctionInvokeRole = auth.functionRole,
+        Identity = Option.when(auth.identity.nonEmpty)(
+          LambdaAuthorizationIdentity(
+            Context = None,
+            Headers = auth.identity.headers.map(_.toSeq),
+            QueryStrings = auth.identity.queryStrings.map(_.toSeq),
+            ReauthorizeEvery = auth.identity.reauthorizeEvery,
+            StageVariables = None
+          )
+        )
+      )
+      auth.name -> authorizer
   }
 
   private def endpointNameMethodAndPath(e: AnyEndpoint): (String, Option[Method], String) = {
