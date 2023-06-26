@@ -23,6 +23,12 @@ object NettyBootstrap {
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, nettyConfig.socketKeepAlive) // https://github.com/netty/netty/issues/1692
+      .childOption[java.lang.Boolean](ChannelOption.SO_REUSEADDR, nettyConfig.socketConfig.reuseAddress)
+      .childOption[java.lang.Boolean](ChannelOption.TCP_NODELAY, nettyConfig.socketConfig.tcpNoDelay)
+
+    nettyConfig.socketConfig.receiveBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_RCVBUF, i))
+    nettyConfig.socketConfig.sendBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_SNDBUF, i))
+    nettyConfig.socketConfig.typeOfService.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.IP_TOS, i))
 
     httpBootstrap.bind(overrideSocketAddress.getOrElse(new InetSocketAddress(nettyConfig.host, nettyConfig.port)))
   }

@@ -35,6 +35,7 @@ case class NettyConfig(
     addLoggingHandler: Boolean,
     sslContext: Option[SslContext],
     eventLoopConfig: EventLoopConfig,
+    socketConfig: NettySocketConfig,
     initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit
 ) {
   def host(h: String): NettyConfig = copy(host = h)
@@ -60,6 +61,8 @@ case class NettyConfig(
   def sslContext(s: SslContext): NettyConfig = copy(sslContext = Some(s))
   def noSslContext: NettyConfig = copy(sslContext = None)
 
+  def socketConfig(config: NettySocketConfig) = copy(socketConfig = config)
+
   def eventLoopConfig(elc: EventLoopConfig): NettyConfig = copy(eventLoopConfig = elc)
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
@@ -77,6 +80,7 @@ object NettyConfig {
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
+    socketConfig = NettySocketConfig.default,
     initPipeline = cfg => defaultInitPipeline(cfg)(_, _)
   )
 
