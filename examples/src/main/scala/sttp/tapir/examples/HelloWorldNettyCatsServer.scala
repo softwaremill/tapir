@@ -7,8 +7,6 @@ import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 import cats.effect.unsafe.implicits.global
 import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
 
-import java.net.InetSocketAddress
-
 object HelloWorldNettyCatsServer extends App {
   // One endpoint on GET /hello with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
@@ -26,7 +24,7 @@ object HelloWorldNettyCatsServer extends App {
     .io()
     .use { server =>
 
-      val effect: IO[NettyCatsServerBinding[IO, InetSocketAddress]] = server
+      val effect: IO[NettyCatsServerBinding[IO]] = server
         .port(declaredPort)
         .host(declaredHost)
         .addEndpoint(helloWorldServerEndpoint)

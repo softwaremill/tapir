@@ -33,9 +33,9 @@ trait TapirStaticContentEndpoints {
       case Some(h) => DecodeResult.fromEitherString(h, ETag.parseList(h)).map(Some(_))
     }(_.map(es => ETag.toString(es)))
 
-  private val acceptEncodingHeader: EndpointIO[List[String]] = 
+  private val acceptEncodingHeader: EndpointIO[List[String]] =
     header[Option[String]](HeaderNames.AcceptEncoding).mapDecode[List[String]] {
-      case None => DecodeResult.Value(List.empty)
+      case None      => DecodeResult.Value(List.empty)
       case Some(str) => DecodeResult.Value(str.split(",").map(_.trim).toList)
     }(es => Option(es.mkString(",")).filter(_.nonEmpty))
 

@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.5.5"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -24,7 +24,7 @@ interpreter. For example:
 ```scala
 import sttp.tapir._
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,8 +34,8 @@ val myEndpoints: List[AnyEndpoint] = ???
 // first interpret as swagger ui endpoints, backend by the appropriate yaml
 val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Future](myEndpoints, "My App", "1.0")
 
-// add to your akka routes
-val swaggerRoute = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
+// add to your netty routes
+val swaggerRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(swaggerEndpoints)
 ```
 
 By default, the documentation will be available under the `/docs` path. The path, as well as other options can be 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.5.5"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -65,7 +65,7 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.5.5"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -133,7 +133,7 @@ For example, generating the OpenAPI 3.1.0 YAML string can be achieved by perform
 
 Firstly add dependencies:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.5.5"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -164,12 +164,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.5.5"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.5.5"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -178,7 +178,7 @@ Then, you'll need to pass the server endpoints to your server interpreter. For e
 import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import sttp.tapir.swagger.SwaggerUI
 
 import scala.concurrent.Future
@@ -187,8 +187,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val myEndpoints: Seq[AnyEndpoint] = ???
 val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
 
-// add to your akka routes
-val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
+// add to your netty routes
+val swaggerUIRoute: FutureRoute = NettyFutureServerInterpreter().toRoute(SwaggerUI[Future](docsAsYaml))
 ```
 
 ## Options

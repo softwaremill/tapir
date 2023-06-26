@@ -17,6 +17,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
+  * [JDK HTTP](server/jdkhttp.md) `HttpHandler` (simple, synchronous API only)
   * [aws](server/aws.md) through Lambda/SAM/Terraform
   * [gRPC](grpc.md)
 * a client, which is a function from input parameters to output parameters.
@@ -27,6 +28,7 @@ input and output parameters. An endpoint specification can be interpreted as:
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md)
   * [AsyncAPI](docs/asyncapi.md)
+  * [Json Schema](docs/json-schema.md)
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
@@ -99,9 +101,9 @@ Thank you!
 <a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a>
 <div></div>
 <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
-<div></div>
 </div>
 
 ## Code teaser
@@ -232,8 +234,10 @@ We offer commercial support for sttp and related technologies, as well as develo
    server/vertx
    server/ziohttp
    server/armeria
+   server/jdkhttp
    server/aws
    server/options
+   server/path
    server/interceptors
    server/logic
    server/observability
@@ -254,6 +258,7 @@ We offer commercial support for sttp and related technologies, as well as develo
 
    docs/openapi
    docs/asyncapi
+   docs/json-schema
 
 .. toctree::
    :maxdepth: 2

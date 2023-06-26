@@ -72,7 +72,7 @@ object Resources {
     def resolveRec(path: List[String], default: Option[List[String]]): Option[ResolvedUrl] = {
       val name = (resourcePrefix ++ path).mkString("/")
       val resultOpt = (if (useGzippedIfAvailable(input, options))
-                         Option(classLoader.getResource(name + ".gz")).map(ResolvedUrl(_, MediaType.ApplicationGzip, Some("gzip")))
+                         Option(classLoader.getResource(name + ".gz")).map(ResolvedUrl(_, contentTypeFromName(name), Some("gzip")))
                        else None)
         .orElse(Option(classLoader.getResource(name)).map(ResolvedUrl(_, contentTypeFromName(name), None)))
         .orElse(default match {

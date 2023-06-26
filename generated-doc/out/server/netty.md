@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.5.5"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.5.5"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.5.5"
 
 // if you are using zio1:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio1" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio1" % "1.5.5"
 ```
 
 Then, use:
@@ -72,7 +72,7 @@ NettyFutureServer(NettyFutureServerOptions.default.nettyOptions(???))
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 ```scala
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyOptions}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions, NettyConfig}
 import sttp.tapir.{endpoint, query, stringBody}
 
 import java.nio.file.Paths
@@ -84,14 +84,14 @@ import io.netty.channel.unix.DomainSocketAddress
 val serverBinding: Future[NettyFutureServerBinding[DomainSocketAddress]] =
   NettyFutureServer(
     NettyFutureServerOptions.default.nettyOptions(
-        NettyOptions.defaultDomainSocket.domainSocketPath(
-          Paths.get(System.getProperty("java.io.tmpdir"), "hello")
-        )
-    )    
+      NettyConfig.defaultDomainSocket.domainSocketPath(
+        Paths.get(System.getProperty("java.io.tmpdir"), "hello")
+      )
+    )
   )
-  .addEndpoint(
-    endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
-      Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
-  )
-  .start()
+    .addEndpoint(
+      endpoint.get.in("hello").in(query[String]("name")).out(stringBody).serverLogic(name =>
+        Future.successful[Either[Unit, String]](Right(s"Hello, $name!")))
+    )
+    .start()
 ```

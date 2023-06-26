@@ -7,6 +7,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.AnyEndpoint
 
 /** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
@@ -36,7 +37,10 @@ class ServerLogEndpointInterceptor[F[_], T](serverLog: ServerLog[F] { type TOKEN
         decodeHandler
           .onDecodeSuccess(ctx)
           .flatMap { response =>
-            serverLog.requestHandled(ctx, response, token).map(_ => response)
+            if (serverLog.ignoreEndpoints.contains(ctx.endpoint))
+              response.unit
+            else
+              serverLog.requestHandled(ctx, response, token).map(_ => response)
           }
           .handleError { case e: Throwable =>
             serverLog

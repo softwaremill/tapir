@@ -5,7 +5,6 @@ import sttp.model.StatusCode
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
@@ -22,7 +21,7 @@ object HelloWorldNettyFutureServer extends App {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
   // Starting netty server
-  val serverBinding: NettyFutureServerBinding[InetSocketAddress] =
+  val serverBinding: NettyFutureServerBinding =
     Await.result(
       NettyFutureServer()
         .port(declaredPort)

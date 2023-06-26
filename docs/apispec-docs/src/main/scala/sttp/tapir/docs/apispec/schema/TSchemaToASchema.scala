@@ -128,7 +128,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
   }
 
   private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
-    val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
+    val values = v.flatMap(x => encode(x).map(ExampleSingleValue.apply))
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 

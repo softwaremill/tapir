@@ -160,7 +160,7 @@ object TestHelpers {
               )
             ),
             summary = None,
-            tags = Some(Seq("Bookshop")),
+            tags = Some(Seq("Bookshop"))
           ),
           OpenapiPathMethod(
             methodType = "get",
@@ -180,7 +180,7 @@ object TestHelpers {
             ),
             requestBody = None,
             summary = None,
-            tags = Some(Seq("Bookshop")),
+            tags = Some(Seq("Bookshop"))
           )
         )
       )
