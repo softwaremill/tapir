@@ -20,13 +20,20 @@ object NettyBootstrap {
       .group(eventLoopGroup)
       .channel(nettyConfig.eventLoopConfig.serverChannel)
       .childHandler(new ChannelInitializer[Channel] {
-        override def initChannel(ch: Channel): Unit = nettyConfig.initPipeline(nettyConfig)(ch.pipeline().addLast(new ReadTimeoutHandler(nettyConfig.requestTimeout.toSeconds.toInt)), handler)
+        override def initChannel(ch: Channel): Unit = {
+          val nettyConfigBuilder = nettyConfig.initPipeline(nettyConfig)
+          nettyConfig.requestTimeout match {
+            case Some(requestTimeout) =>
+              nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
+            case None => nettyConfigBuilder(ch.pipeline(), handler)
+          }
+        }
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, nettyConfig.socketKeepAlive) // https://github.com/netty/netty/issues/1692
-      .childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, nettyConfig.socketTimeout.toSeconds.toInt)
-      .childOption[java.lang.Integer](ChannelOption.SO_LINGER, nettyConfig.lingerTimeout.toSeconds.toInt)
-      .childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyConfig.connectionTimeout.toMillis.toInt)
+      .childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, nettyConfig.socketTimeout.orNull.toSeconds.toInt)
+      .childOption[java.lang.Integer](ChannelOption.SO_LINGER, nettyConfig.lingerTimeout.orNull.toSeconds.toInt)
+      .childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyConfig.connectionTimeout.orNull.toMillis.toInt)
 
     httpBootstrap.bind(overrideSocketAddress.getOrElse(new InetSocketAddress(nettyConfig.host, nettyConfig.port)))
   }
