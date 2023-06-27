@@ -154,7 +154,6 @@ We'll need to provide both the endpoint output which should be used for error me
 import sttp.tapir._
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.netty.NettyFutureServerOptions
-import java.net.InetSocketAddress
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
@@ -163,7 +162,7 @@ case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
 
-val myServerOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
+val myServerOptions: NettyFutureServerOptions = NettyFutureServerOptions
   .customiseInterceptors
   .defaultHandlers(myFailureResponse)
   .options
