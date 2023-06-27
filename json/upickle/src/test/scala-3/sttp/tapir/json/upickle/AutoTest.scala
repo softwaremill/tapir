@@ -39,6 +39,10 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
   case class SimpleCaseClass(aField: Int, @encodedName("encoded_b_ann") b: Int)
   case class ClassWithDefaultMember(a: Int, b: SimpleCaseClass = SimpleCaseClass(3, 4))
 
+  val simpleMirror: Mirror.Of[SimpleCaseClass] = Mirror.Product {
+
+  }
+
   it should "work" in {
 
     import TestFixture.*
@@ -47,5 +51,6 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
 
     val jsonStr = ccPickle.write(SimpleCaseClass(aField = 3, b = 17))
     println(s"$jsonStr")
+    addAnnotation[SimpleCaseClass]
   }
 }

@@ -9,9 +9,7 @@ import upickle.core.ObjVisitor
 import upickle.core.ArrVisitor
 import upickle.core.Visitor
 
-trait FieldNameCaseStrategy {
-
-}
+trait FieldNameCaseStrategy {}
 trait SnakeCaseSupport {
   this: MacrosCommon =>
 
@@ -74,13 +72,12 @@ case class CodecConfiguration(
 )
 
 case class ClassCodecConfiguration(
-  globalConfiguration: CodecConfiguration,
-  fieldEncodedNames: Map[String, String],
-  fieldDefaultValues: Map[String, Any]
-  )
+    globalConfiguration: CodecConfiguration,
+    fieldEncodedNames: Map[String, String],
+    fieldDefaultValues: Map[String, Any]
+)
 
-/**
- * Represents (de)serialization entrypoint for a specific case class T
+/** Represents (de)serialization entrypoint for a specific case class T
   *
   * @param codecConfiguration
   */
@@ -94,22 +91,26 @@ class TapirPickleBase[T: ClassTag](codecConfiguration: ClassCodecConfiguration)(
   inline def deriveRW = macroRW[T]
 
   inline def withDefaultsRW: ReadWriter[T] =
-    ReadWriter.join(macroR[T] match {
-    case c: CaseClassReadereader[T] => new CaseClassReadereader[T](macros.paramsCount[T], macros.checkErrorMissingKeysCount[T]()) {
-      override def visitors0 = c.visitors0
-      override def fromProduct(p: Product): T = c.fromProduct(p)
+    ReadWriter.join(
+      macroR[T] match {
+        case c: CaseClassReadereader[T] =>
+          new CaseClassReadereader[T](macros.paramsCount[T], macros.checkErrorMissingKeysCount[T]()) {
+            override def visitors0 = c.visitors0
+            override def fromProduct(p: Product): T = c.fromProduct(p)
 
-      override def keyToIndex(x: String) = c.keyToIndex(x)
-      override def allKeysArray: Array[String] = c.allKeysArray
-   
-      // This is how we can force our own custom default
-      override def storeDefaults(x: upickle.implicits.BaseCaseObjectContext) = 
-        x.storeValueIfNotFound(1, "custom default!")
+            override def keyToIndex(x: String) = c.keyToIndex(x)
+            override def allKeysArray: Array[String] = c.allKeysArray
 
-    }
-    case other => other
+            // This is how we can force our own custom default
+            override def storeDefaults(x: upickle.implicits.BaseCaseObjectContext) =
+              x.storeValueIfNotFound(1, "custom default!")
 
-  }, macroW[T])
+          }
+        case other => other
+
+      },
+      macroW[T]
+    )
 }
 
 trait TapirPickle[T] extends AttributeTagged
@@ -130,11 +131,10 @@ class ConfiguredTapirPickle[T](delegate: TapirPickle[T], val ccConfig: ClassCode
 }
 
 trait KeyReplacementSupport extends MacrosCommon {
- 
+
   def ccConfig: ClassCodecConfiguration
 
-
-  override def objectAttributeKeyReadMap(s: CharSequence): CharSequence =    
+  override def objectAttributeKeyReadMap(s: CharSequence): CharSequence =
     super.objectAttributeKeyWriteMap(s) // TODO
 
   override def objectAttributeKeyWriteMap(s: CharSequence): CharSequence =
@@ -147,19 +147,20 @@ trait KeyReplacementSupport extends MacrosCommon {
     super.objectTypeKeyWriteMap(s) // TODO
 }
 object TapirPickle {
- 
+
   // Possibly should be optimized to not create a new TapirPickle instance for every type T
   inline def deriveConfigured[T: ClassTag](using globalConfig: CodecConfiguration)(using Mirror.Of[T]): TapirPickle[T] =
-    val config: ClassCodecConfiguration = sttp.tapir.json.upickle.auto.caseClassConfiguration[T](globalConfig)    
+    val config: ClassCodecConfiguration = sttp.tapir.json.upickle.auto.caseClassConfiguration[T](globalConfig)
     val picklerWithCase = config.globalConfiguration.fieldNameCase match {
       case Snake => new TapirPickleBase(config) with SnakeCaseSupport
       case Camel => new TapirPickleBase(config)
     }
 
-    val picklerWithCustomNames = if (config.fieldEncodedNames.nonEmpty)
-      new ConfiguredTapirPickle(picklerWithCase, config) with KeyReplacementSupport
-    else
-      picklerWithCase
+    val picklerWithCustomNames =
+      if (config.fieldEncodedNames.nonEmpty)
+        new ConfiguredTapirPickle(picklerWithCase, config) with KeyReplacementSupport
+      else
+        picklerWithCase
 
     picklerWithCustomNames
 
