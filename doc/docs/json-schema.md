@@ -48,9 +48,10 @@ import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema._
 import sttp.tapir.generic.auto._
+import sttp.tapir.Schema.annotations.title
 
   object Childhood {
-    case class Child(age: Int, height: Option[Int])
+    @title("my child") case class Child(age: Int, height: Option[Int])
   }
   case class Parent(innerChildField: Child, childDetails: Childhood.Child)
   case class Child(childName: String)
@@ -65,6 +66,7 @@ import sttp.tapir.generic.auto._
   val schemaStr: String = Printer.spaces2.print(schemaAsJson.deepDropNullValues)
 ```
 
+The title annotation of the object will be by default the name of the case class. You can customize it with `@title` annotation.
 This example will produce following String:
 
 ```json
@@ -85,6 +87,7 @@ This example will produce following String:
   },
   "$defs" : {
     "Child" : {
+      "title" : "Child",
       "required" : [
         "childName"
       ],
@@ -96,6 +99,7 @@ This example will produce following String:
       }
     },
     "Child1" : {
+      "title" : "my child",
       "required" : [
         "age"
       ],

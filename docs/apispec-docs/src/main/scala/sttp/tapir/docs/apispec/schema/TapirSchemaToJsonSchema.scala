@@ -17,6 +17,7 @@ object TapirSchemaToJsonSchema {
   ): ReferenceOr[ASchema] = {
 
     val asKeyedSchemas = toKeyedSchemas(schema).drop(1)
+
     val keyedSchemas = ToKeyedSchemas.unique(asKeyedSchemas)
 
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
@@ -30,7 +31,7 @@ object TapirSchemaToJsonSchema {
 
     val defsList: ListMap[SchemaId, ASchema] =
       nestedKeyedSchemas.collect { case (k, Right(nestedSchema: ASchema)) =>
-        (k, nestedSchema)
+        (k, nestedSchema.copy(title = nestedSchema.title.orElse(Some(k))))
       }.toListMap
 
     rootApiSpecSchemaOrRef.map(
