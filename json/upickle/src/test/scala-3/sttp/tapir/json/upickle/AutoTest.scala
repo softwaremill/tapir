@@ -5,6 +5,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.flatspec.AnyFlatSpecLike
 import auto.*
 import upickle.implicits.key
+import scala.deriving.Mirror
+import scala.reflect.ClassTag
 
 case class SimpleWithDefault(aField: String, bField: String = "8")
 class AutoTest extends AnyFlatSpecLike with Matchers {
@@ -35,13 +37,18 @@ class AutoTest extends AnyFlatSpecLike with Matchers {
 
     // given animalKindRw: TapirPickle.ReadWriter[AnimalKind] = TapirPickle.ReadWriter.derived[AnimalKind]
 
+    // def createProduct: Mirror.Of[SimpleCaseClass] = new Mirror.Product {
+    //   type MirroredType = SimpleCaseClass
+    //   type MirroredMonoType = SimpleCaseClass
+    //   type MirorredElemTypes = (Int, Int)
+    //
+    //
+    // override def fromProduct(p: scala.Product): MirroredMonoType = null
+    // }.asInstanceOf[Mirror.Of[SimpleCaseClass]]
+
   import sttp.tapir.Schema.annotations._
   case class SimpleCaseClass(aField: Int, @encodedName("encoded_b_ann") b: Int)
   case class ClassWithDefaultMember(a: Int, b: SimpleCaseClass = SimpleCaseClass(3, 4))
-
-  val simpleMirror: Mirror.Of[SimpleCaseClass] = Mirror.Product {
-
-  }
 
   it should "work" in {
 

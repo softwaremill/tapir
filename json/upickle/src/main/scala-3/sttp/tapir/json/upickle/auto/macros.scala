@@ -7,38 +7,64 @@ import scala.quoted.Type
 import scala.reflect.ClassTag
 import sttp.tapir.Schema
 import scala.quoted.*
+import upickle.default
 
-inline def addAnnotation[T: ClassTag](using mirror: Mirror.Of[T]) = ${addAnnotationImpl[T]('mirror)}
+inline def addAnnotation[T](using m: Mirror.Of[T], ct: ClassTag[T]): default.ReadWriter[T] = inline m match {
+  case m: Mirror.ProductOf[T] =>
+    addAnnotationProduct[T, m.MirroredElemTypes](ct) 
+  case _ => null // TODO
+}
 
-def addAnnotationImpl[T: Type](mirror: Expr[Mirror.Of[T]])(using Quotes): Expr[Unit] = {
+inline def addAnnotationProduct[T, Elems <: Tuple](inline ct: ClassTag[T]) =
+  ${ addAnnotationImpl[T, Elems]('ct)}
+
+def addAnnotationImpl[T: Type, Elems <: Tuple](ct: Expr[ClassTag[T]])(using Quotes, Type[Elems]): Expr[default.ReadWriter[T]] = {
   import quotes.reflect.*
   import quoted.*
   val caseClassTree: TypeTree = TypeTree.of[T]
 
   // iterate over fields of T and build a list of refinements
-  val fieldTrees: List[Definition] = TypeRepr.of[T].typeSymbol.primaryConstructor.paramSymss.flatten.map {
-    field =>
-      field.tree.asInstanceOf[Definition] // TODO rewrite without asInstanceOf, pattern matching perhaps?
+  val fieldTrees: List[Definition] = TypeRepr.of[T].typeSymbol.primaryConstructor.paramSymss.flatten.map { field =>
+    field.tree.asInstanceOf[Definition] // TODO rewrite without asInstanceOf, pattern matching perhaps?
   }
-  
+
+
+
+  // println(s">>>>>>>>>>>>>>>>> ${mirror.tpe.asTerm.symbol}")
+
   // https://usesynchronizedrs.scala-lang.org/t/how-to-refine-type-dynamically-in-scala-3-whitebox-macro/9220
   // // problem: even if we create a new type out of T by enriching its annotations, the newly created type T2 has no Mirror.Of[]
   val refinedTypeTree: TypeTree = Refined.copy(caseClassTree)(TypeTree.of[T], fieldTrees)
   println(refinedTypeTree.show(using Printer.TreeShortCode))
   println(caseClassTree.show(using Printer.TreeShortCode))
-  val tpe: TypeRepr = refinedTypeTree.tpe  
-  tpe.asType match {
-    case '[t] => 
-      //given ct: ClassTag[t] = summon[ClassTag[t]]
-      // val mirrorExpr: Expr[Mirror.Of[t]] = '{
-      //   ${mirror} match {
-      //     case 
-      //   }
-      // }
-      // '{upickle.default.macroRW[t](ct, $mirror)}
+
+  // TODO just experimentally using caseClassTree, should be refinedTypeTree 
+  //val tpe: TypeRepr = refinedTypeTree.tpe
+  val tpe: TypeRepr = caseClassTree.tpe
+  
+
+  val tpeSymbol = TypeRepr.of[T].typeSymbol.name
+  val tpeSymbolExpr = Expr(tpeSymbol)
+  val readWriterExpr = tpe.asType match {
+    case '[t] =>
+      '{
+        val tpeSymbolName: String = ${tpeSymbolExpr}
+        given ClassTag[t] = $ct.asInstanceOf[ClassTag[t]]
+        given mirrorRefined: Mirror.ProductOf[t] = new Mirror.Product { // TODO support sum and singleton
+          type MirroredType = t
+          type MirroredMonoType = t
+          type MirroredElemTypes = Elems 
+          override def fromProduct(p: scala.Product): t = throw new IllegalStateException(s"Unexpected call to fromProduct on type t copied from $tpeSymbolName") // TODO 
+        }
+        println(s"Derived macroRW for $tpeSymbolName")
+        val readWriter: default.ReadWriter[t] = upickle.default.macroRW[t] // TODO not default
+        readWriter.asInstanceOf[default.ReadWriter[T]]
+      }
   }
-  '{println("--- Inside generated code for adding annotations")}
+  println(readWriterExpr.show)
+  readWriterExpr
 }
+
 /** Builds serialization configuration for a specific case class T. This macro merges the given global configuration with information read
   * from class annotations like @encodedName and others.
   *
@@ -58,9 +84,8 @@ def caseClassConfigurationImpl[T: Type](config: Expr[CodecConfiguration])(using 
   // TODO add upickle annotations to fields already annotated by Tapir annotations
   val tpeWithParamAnnotation = Refinement(tpe, "addedField", TypeRepr.of[String])
   val paramAnns = tpeWithParamAnnotation.asType match
-      case '[t] =>
-        new CollectAnnotations[t].paramAnns
-
+    case '[t] =>
+      new CollectAnnotations[t].paramAnns
 
   // construct encoded names
   // scan all fields of type T
