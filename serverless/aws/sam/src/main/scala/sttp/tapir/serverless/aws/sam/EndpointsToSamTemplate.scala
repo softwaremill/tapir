@@ -20,7 +20,7 @@ private[sam] object EndpointsToSamTemplate {
       }
       .toMap
 
-    val parameters = options.parameters.map(parameters => SortedMap.from(parameters.map(Parameter.apply).toList))
+    val parameters = options.parameters.map(parameters => SortedMap(parameters.map(Parameter.apply).toList: _*))
     val auths = {
       for {
         httpApi <- options.httpApi
@@ -105,15 +105,18 @@ private[sam] object EndpointsToSamTemplate {
         },
         FunctionArn = auth.functionArn,
         FunctionInvokeRole = auth.functionRole,
-        Identity = Option.when(auth.identity.nonEmpty)(
-          LambdaAuthorizationIdentity(
-            Context = None,
-            Headers = auth.identity.headers.map(_.toSeq),
-            QueryStrings = auth.identity.queryStrings.map(_.toSeq),
-            ReauthorizeEvery = auth.identity.reauthorizeEvery,
-            StageVariables = None
-          )
-        )
+        Identity =
+          if (auth.identity.nonEmpty)
+            Some(
+              LambdaAuthorizationIdentity(
+                Context = None,
+                Headers = auth.identity.headers.map(_.toSeq),
+                QueryStrings = auth.identity.queryStrings.map(_.toSeq),
+                ReauthorizeEvery = auth.identity.reauthorizeEvery,
+                StageVariables = None
+              )
+            )
+          else None
       )
       auth.name -> authorizer
   }
