@@ -27,16 +27,16 @@ import scala.concurrent.duration._
   *   contains tapir's server processing logic.
   *
   * @param requestTimeout
-  *   Raises a ReadTimeoutException when no data is read from Netty within the specified period of time (in seconds) for a request.
+  *   Raises a ReadTimeoutException when no data is read from Netty within the specified period of time for a request.
   *
   * @param connectionTimeout
-  *   Specifies the maximum duration (in seconds) within which a connection between a client and a server must be established.
+  *   Specifies the maximum duration within which a connection between a client and a server must be established.
   *
   * @param socketTimeout
-  *   Refers to the duration (in seconds) for which a socket operation will wait before throwing an exception if no data is received or sent.
+  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent.
   *
   *  @param lingerTimeout
-  *   Sets the delay (in seconds) for which the Gateway waits, while data is being transmitted, before closing a socket after receiving
+  *   Sets the delay for which the Gateway waits, while data is being transmitted, before closing a socket after receiving
   *   a call to close the socket
   */
 case class NettyConfig(
@@ -68,10 +68,10 @@ case class NettyConfig(
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
 
-  def withRequestTimeout(r: Int): NettyConfig = copy(requestTimeout = Some(r.seconds))
-  def withConnectionTimeout(c: Int): NettyConfig = copy(connectionTimeout = Some(c.seconds))
-  def withSocketTimeout(s: Int): NettyConfig = copy(socketTimeout = Some(s.seconds))
-  def withLingerTimeout(l: Int): NettyConfig = copy(requestTimeout = Some(l.seconds))
+  def withRequestTimeout(r: FiniteDuration): NettyConfig = copy(requestTimeout = Some(r))
+  def withConnectionTimeout(c: FiniteDuration): NettyConfig = copy(connectionTimeout = Some(c))
+  def withSocketTimeout(s: FiniteDuration): NettyConfig = copy(socketTimeout = Some(s))
+  def withLingerTimeout(l: FiniteDuration): NettyConfig = copy(requestTimeout = Some(l))
 
   def withSocketKeepAlive: NettyConfig = copy(socketKeepAlive = true)
   def withNoSocketKeepAlive: NettyConfig = copy(socketKeepAlive = false)

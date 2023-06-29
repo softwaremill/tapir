@@ -31,9 +31,11 @@ object NettyBootstrap {
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, nettyConfig.socketKeepAlive) // https://github.com/netty/netty/issues/1692
-      .childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, nettyConfig.socketTimeout.orNull.toSeconds.toInt)
-      .childOption[java.lang.Integer](ChannelOption.SO_LINGER, nettyConfig.lingerTimeout.orNull.toSeconds.toInt)
-      .childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyConfig.connectionTimeout.orNull.toMillis.toInt)
+    nettyConfig.socketTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, i.toSeconds.toInt))
+    nettyConfig.lingerTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_LINGER, i.toSeconds.toInt))
+    nettyConfig.connectionTimeout.foreach(i =>
+      httpBootstrap.childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, i.toMillis.toInt)
+    )
 
     httpBootstrap.bind(overrideSocketAddress.getOrElse(new InetSocketAddress(nettyConfig.host, nettyConfig.port)))
   }
