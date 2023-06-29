@@ -10,6 +10,7 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.stream.ChunkedWriteHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
+import scala.concurrent.duration._
 
 /** Netty configuration, used by [[NettyFutureServer]] and other server implementations to configure the networking layer, the Netty
   * processing pipeline, and start & stop the server.
@@ -24,6 +25,19 @@ import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
   *   contains tapir's server processing logic.
+  *
+  * @param requestTimeout
+  *   Raises a ReadTimeoutException when no data is read from Netty within the specified period of time for a request.
+  *
+  * @param connectionTimeout
+  *   Specifies the maximum duration within which a connection between a client and a server must be established.
+  *
+  * @param socketTimeout
+  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent.
+  *
+  *  @param lingerTimeout
+  *   Sets the delay for which the Gateway waits, while data is being transmitted, before closing a socket after receiving
+  *   a call to close the socket
   */
 case class NettyConfig(
     host: String,
@@ -31,6 +45,10 @@ case class NettyConfig(
     shutdownEventLoopGroupOnClose: Boolean,
     maxContentLength: Int,
     socketBacklog: Int,
+    requestTimeout: Option[FiniteDuration],
+    connectionTimeout: Option[FiniteDuration],
+    socketTimeout: Option[FiniteDuration],
+    lingerTimeout: Option[FiniteDuration],
     socketKeepAlive: Boolean,
     addLoggingHandler: Boolean,
     sslContext: Option[SslContext],
@@ -49,6 +67,11 @@ case class NettyConfig(
   def noMaxContentLength: NettyConfig = copy(maxContentLength = Integer.MAX_VALUE)
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
+
+  def withRequestTimeout(r: FiniteDuration): NettyConfig = copy(requestTimeout = Some(r))
+  def withConnectionTimeout(c: FiniteDuration): NettyConfig = copy(connectionTimeout = Some(c))
+  def withSocketTimeout(s: FiniteDuration): NettyConfig = copy(socketTimeout = Some(s))
+  def withLingerTimeout(l: FiniteDuration): NettyConfig = copy(requestTimeout = Some(l))
 
   def withSocketKeepAlive: NettyConfig = copy(socketKeepAlive = true)
   def withNoSocketKeepAlive: NettyConfig = copy(socketKeepAlive = false)
@@ -73,6 +96,10 @@ object NettyConfig {
     shutdownEventLoopGroupOnClose = true,
     socketBacklog = 128,
     socketKeepAlive = true,
+    requestTimeout = None,
+    connectionTimeout = None,
+    socketTimeout = None,
+    lingerTimeout = None,
     maxContentLength = Integer.MAX_VALUE,
     addLoggingHandler = false,
     sslContext = None,
