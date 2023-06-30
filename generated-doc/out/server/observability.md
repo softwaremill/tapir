@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.5.5"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.6.0"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -60,7 +60,6 @@ For example, using `NettyFutureServerInterpreter`:
 ```scala
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, NettyFutureServerOptions, FutureRoute}
-import java.net.InetSocketAddress
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -69,7 +68,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 val prometheusMetrics = PrometheusMetrics.default[Future]()
 
 // enable metrics collection
-val serverOptions: NettyFutureServerOptions[InetSocketAddress] = NettyFutureServerOptions
+val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions
   .customiseInterceptors
   .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
@@ -129,7 +128,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.5.5"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.6.0"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -156,7 +155,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.5.5"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.6.0"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -223,7 +222,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.5.5"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.6.0"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.

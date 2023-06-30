@@ -1,5 +1,5 @@
 object Versions {
-  val http4s = "0.23.21"
+  val http4s = "0.23.22"
   val http4sBlazeServer = "0.23.15"
   val http4sBlazeClient = "0.23.15"
   val catsCore = "2.9.0"
@@ -30,7 +30,7 @@ object Versions {
   val zio1Json = "0.2.0"
   val zio1InteropReactiveStreams = "1.3.12"
   val zio = "2.0.15"
-  val zioInteropCats = "23.0.0.7"
+  val zioInteropCats = "23.0.0.8"
   val zioInteropReactiveStreams = "2.0.2"
   val zioJson = "0.5.0"
   val playClient = "2.1.10"
