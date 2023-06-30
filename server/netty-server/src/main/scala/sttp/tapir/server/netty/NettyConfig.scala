@@ -35,9 +35,9 @@ import scala.concurrent.duration._
   * @param socketTimeout
   *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent.
   *
-  *  @param lingerTimeout
-  *   Sets the delay for which the Gateway waits, while data is being transmitted, before closing a socket after receiving
-  *   a call to close the socket
+  * @param lingerTimeout
+  *   Sets the delay for which the Gateway waits, while data is being transmitted, before closing a socket after receiving a call to close
+  *   the socket
   */
 case class NettyConfig(
     host: String,

@@ -406,7 +406,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                 r.code shouldBe StatusCode.Ok
                 r.body shouldBe "Gzipped resource"
                 r.headers should contain(Header(HeaderNames.ContentEncoding, "gzip"))
-                r.headers should contain (Header(HeaderNames.ContentType, MediaType.TextPlain.toString()))
+                r.headers should contain(Header(HeaderNames.ContentType, MediaType.TextPlain.toString()))
               })
           }
           .unsafeToFuture()

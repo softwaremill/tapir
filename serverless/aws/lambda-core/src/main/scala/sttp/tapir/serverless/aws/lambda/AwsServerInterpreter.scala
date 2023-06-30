@@ -27,7 +27,7 @@ private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
       deleteFile = _ => ().unit // no file support
     )
 
-    { (request: AwsRequest) =>
+    return { (request: AwsRequest) =>
       val serverRequest = AwsServerRequest(request)
 
       interpreter.apply(serverRequest).map {
