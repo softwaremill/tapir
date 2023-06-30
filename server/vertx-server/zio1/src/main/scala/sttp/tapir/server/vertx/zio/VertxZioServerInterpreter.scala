@@ -43,9 +43,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
-    )
-
-    { rc =>
+    ) { rc =>
       val serverRequest = VertxServerRequest(rc)
 
       def fail(t: Throwable): Unit = {

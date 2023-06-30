@@ -56,9 +56,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
       new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,
       vertxCatsServerOptions.deleteFile
-    )
-
-    { rc =>
+    ) { rc =>
       val serverRequest = VertxServerRequest(rc)
 
       val result = interpreter(serverRequest)

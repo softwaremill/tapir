@@ -42,9 +42,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
-    )
-
-    { rc =>
+    ) { rc =>
       val serverRequest = VertxServerRequest(rc)
 
       def fail(t: Throwable): Unit = {
@@ -94,18 +92,18 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
         })
       }
 
-    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-      rc.vertx()
-        .executeBlocking[Unit](
-          (promise: Promise[Unit]) => {
-            canceler(FiberId.None)
-            promise.complete(())
-          },
-          false
-        )
-    }
+      cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
+        rc.vertx()
+          .executeBlocking[Unit](
+            (promise: Promise[Unit]) => {
+              canceler(FiberId.None)
+              promise.complete(())
+            },
+            false
+          )
+      }
 
-    ()
+      ()
     }
   }
 }

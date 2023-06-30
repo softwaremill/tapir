@@ -25,9 +25,7 @@ private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
       new AwsToResponseBody(awsServerOptions),
       RejectInterceptor.disableWhenSingleEndpoint(awsServerOptions.interceptors, ses),
       deleteFile = _ => ().unit // no file support
-    )
-
-    { (request: AwsRequest) =>
+    ) { (request: AwsRequest) =>
       val serverRequest = AwsServerRequest(request)
 
       interpreter.apply(serverRequest).map {
