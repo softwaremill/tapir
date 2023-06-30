@@ -39,7 +39,8 @@ case class Schema[T](
     deprecated: Boolean = false,
     hidden: Boolean = false,
     validator: Validator[T] = Validator.pass[T],
-    attributes: AttributeMap = AttributeMap.Empty
+    attributes: AttributeMap = AttributeMap.Empty,
+    title: Option[String] = None
 ) extends SchemaMacros[T] {
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
@@ -69,7 +70,8 @@ case class Schema[T](
       format = format,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes
+      attributes = attributes,
+      title = title
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -81,7 +83,8 @@ case class Schema[T](
       isOptional = true,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes
+      attributes = attributes,
+      title = title
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -93,7 +96,8 @@ case class Schema[T](
       isOptional = true,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes
+      attributes = attributes,
+      title = title
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
@@ -121,6 +125,8 @@ case class Schema[T](
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
   def hidden(h: Boolean): Schema[T] = copy(hidden = h)
+
+  def title(t: String): Schema[T] = copy(title = Some(t))
 
   def show: String = s"schema is $schemaType"
 
@@ -339,6 +345,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class deprecated extends StaticAnnotation with Serializable
     class hidden extends StaticAnnotation with Serializable
     class encodedName(val name: String) extends StaticAnnotation with Serializable
+    class title(val name: String) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
       * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or

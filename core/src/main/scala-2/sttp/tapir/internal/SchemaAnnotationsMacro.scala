@@ -16,6 +16,7 @@ private[tapir] object SchemaAnnotationsMacro {
     val DeprecatedAnn = typeOf[sttp.tapir.Schema.annotations.deprecated]
     val HiddenAnn = typeOf[sttp.tapir.Schema.annotations.hidden]
     val EncodedNameAnn = typeOf[sttp.tapir.Schema.annotations.encodedName]
+    val TitleAnn = typeOf[sttp.tapir.Schema.annotations.title]
     val ValidateAnn = typeOf[sttp.tapir.Schema.annotations.validate[_]]
     val ValidateEachAnn = typeOf[sttp.tapir.Schema.annotations.validateEach[_]]
 
