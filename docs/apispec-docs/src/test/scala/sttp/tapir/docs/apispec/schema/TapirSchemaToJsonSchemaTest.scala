@@ -84,7 +84,6 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
 
-
   it should "use title from annotation or ref name" in {
     // given
     @title("MyOwnTitle1")

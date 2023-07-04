@@ -41,7 +41,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
                 .filterNot(_.hidden)
                 .map {
                   case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
-                  case t                                                          => apply(t)
+                  case t                                                             => apply(t)
                 }
                 .sortBy {
                   case Left(Reference(ref, _, _)) => ref

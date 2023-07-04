@@ -18,7 +18,7 @@ private[docs] class ToKeyedSchemas {
       case TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _, _, _, _, _)        => productSchemas(st)
       case TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _, _, _, _, _)      => coproductSchemas(st)
       case TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _, _, _, _, _) => apply(st.valueSchema)
-      case _                                                                         => List.empty
+      case _                                                                            => List.empty
     }
 
     thisSchema ++ nestedSchemas
