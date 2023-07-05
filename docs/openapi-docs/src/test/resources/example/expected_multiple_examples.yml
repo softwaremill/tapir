@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Entities
   version: '1.0'
@@ -37,16 +37,16 @@ paths:
               value: user1
             Example1:
               value: user2
-         - name: cookie-param
-         in: cookie
-         required: true
-         schema:
-           type: string
-         examples:
-           Example0:
-             value: cookie1
-           Example1:
-             value: cookie2
+        - name: cookie-param
+          in: cookie
+          required: true
+          schema:
+            type: string
+          examples:
+            Example0:
+              value: cookie1
+            Example1:
+              value: cookie2
       requestBody:
         content:
           application/json:
@@ -76,9 +76,9 @@ paths:
                   name: michal
                   age: 40
             Example1:
-                value:
-                  Organization:
-                    name: acme
+              value:
+                Organization:
+                  name: acme
         '400':
           description: 'Invalid value for: query parameter current-person, Invalid
                         value for: body, Invalid value for: header X-Forwarded-User, Invalid value

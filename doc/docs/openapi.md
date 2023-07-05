@@ -130,6 +130,33 @@ import sttp.apispec.openapi.circe._
 println(Printer.spaces2.print(docs.asJson))
 ```
 
+### Support for OpenAPI 3.0.3
+
+Generating OpenAPI documentation compatible with 3.0.3 specifications is a matter of using a different encoder.
+For example, generating the OpenAPI 3.0.3 YAML string can be achieved by performing the following steps:
+
+Firstly add dependencies:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
+"com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
+```
+
+and generate the documentation by importing valid extension methods and explicitly specifying the "3.0.3" version in the OpenAPI model:
+```scala mdoc:compile-only
+import sttp.apispec.openapi.OpenAPI
+import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
+import sttp.tapir._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+
+case class Book(id: Option[Long], title: Option[String])
+
+val booksListing = endpoint.in(path[String]("bookId"))
+
+val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0").openapi("3.0.3") // "3.0.3" version explicitly specified
+  
+println(docs.toYaml3_0_3) // OpenApi 3.0.3 YAML string would be printed to the console
+```
+
 ### Support for OpenAPI 3.1.0
 
 Generating OpenAPI documentation compatible with 3.1.0 specifications is a matter of using a different encoder.
@@ -141,10 +168,10 @@ Firstly add dependencies:
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
-and generate the documentation by importing valid extension methods and explicitly specifying the "3.1.0" version in the OpenAPI model:
+and generate the documentation by importing valid extension methods (as 3.1.0 is now the default):
 ```scala mdoc:compile-only
 import sttp.apispec.openapi.OpenAPI
-import sttp.apispec.openapi.circe.yaml._ // for `toYaml3_1` extension method
+import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
@@ -153,9 +180,8 @@ case class Book(id: Option[Long], title: Option[String])
 val booksListing = endpoint.in(path[String]("bookId"))
 
 val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
-  .openapi("3.1.0") // "3.1.0" version explicitly specified
   
-println(docs.toYaml3_1) // OpenApi 3.1.0 YAML string would be printed to the console
+println(docs.toYaml) // OpenApi 3.1.0 YAML string would be printed to the console
 ```
 
 ## Exposing generated OpenAPI documentation

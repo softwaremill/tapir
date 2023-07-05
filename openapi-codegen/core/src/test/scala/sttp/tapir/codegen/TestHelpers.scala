@@ -25,7 +25,7 @@ object TestHelpers {
 
   val myBookshopYaml =
     """
-      |openapi: 3.0.1
+      |openapi: 3.1.0
       |info:
       |  title: My Bookshop
       |  version: '1.0'
@@ -126,7 +126,7 @@ object TestHelpers {
       |""".stripMargin
 
   val myBookshopDoc = OpenapiDocument(
-    "3.0.1",
+    "3.1.0",
     OpenapiInfo("My Bookshop", "1.0"),
     Seq(
       OpenapiPath(
