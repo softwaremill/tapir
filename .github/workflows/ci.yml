@@ -52,7 +52,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install libidn2-dev libcurl3-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV       
-        echo "SBT_JAVA_OPTS=-J-Xms8g -J-Xmx8g" # Increasing for this job only, as it uses a custom runner
+        echo "SBT_JAVA_OPTS=-J-Xms8g -J-Xmx8g" >> $GITHUB_ENV # Increasing for this job only, as it uses a custom runner
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile documentation
