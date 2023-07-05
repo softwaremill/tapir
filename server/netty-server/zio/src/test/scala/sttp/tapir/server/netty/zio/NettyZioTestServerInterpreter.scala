@@ -14,7 +14,7 @@ import java.net.InetSocketAddress
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Task, Any, NettyZioServerOptions[Any], Task[Route[Task]]] {
   override def route(es: List[ServerEndpoint[Any, Task]], interceptors: Interceptors): Task[Route[Task]] = {
-    val serverOptions: NettyZioServerOptions[Any] = interceptors(
+    val serverOptions = interceptors(
       NettyZioServerOptions.customiseInterceptors
     ).options
     NettyZioServerInterpreter(serverOptions).toRoute(es)
