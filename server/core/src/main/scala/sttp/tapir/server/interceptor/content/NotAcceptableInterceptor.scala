@@ -1,6 +1,6 @@
 package sttp.tapir.server.interceptor.content
 
-import sttp.model.{ContentTypeRange, StatusCode}
+import sttp.model.{ContentTypeRange, StatusCode, HeaderNames}
 import sttp.monad.MonadError
 import sttp.tapir.internal._
 import sttp.tapir.server.interceptor._
@@ -25,7 +25,10 @@ class NotAcceptableInterceptor[F[_]] extends EndpointInterceptor[F] {
             // empty supported media types -> no body is defined, so the accepts header can be ignored
             val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty
 
-            if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
+            // mozilla says servers should ignore the Accept-Charset header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Charset
+            val hasAcceptCharset = ctx.request.header(HeaderNames.AcceptCharset).nonEmpty
+
+            if (hasMatchingRepresentation || hasAcceptCharset) endpointHandler.onDecodeSuccess(ctx)
             else responder(ctx.request, server.model.ValuedEndpointOutput(statusCode(StatusCode.NotAcceptable), ()))
 
           case Left(_) =>
