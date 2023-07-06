@@ -65,7 +65,6 @@ trait SchemaMagnoliaDerivation {
       case (schema, ann: Schema.annotations.validateEach[X]) =>
         schema.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[X]).validate(ann.v))
       case (schema, ann: Schema.annotations.format)    => schema.format(ann.format)
-      case (schema, ann: Schema.annotations.title)     => schema.title(ann.name)
       case (schema, _: Schema.annotations.deprecated)  => schema.deprecated(true)
       case (schema, ann: Schema.annotations.customise) => ann.f(schema).asInstanceOf[Schema[X]]
       case (schema, _)                                 => schema

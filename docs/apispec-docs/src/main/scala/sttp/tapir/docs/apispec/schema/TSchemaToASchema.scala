@@ -23,10 +23,10 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
             properties = extractProperties(fields)
           )
         )
-      case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(SchemaKey(nested, name))))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Left(toSchemaReference.map(SchemaKey(nested, name)))
       case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
@@ -40,8 +40,8 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
               schemas
                 .filterNot(_.hidden)
                 .map {
-                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
-                  case t                                                             => apply(t)
+                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
+                  case t                                                          => apply(t)
                 }
                 .sortBy {
                   case Left(Reference(ref, _, _)) => ref
@@ -72,7 +72,6 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
     result
       .map(s => if (nullable) s.copy(nullable = Some(true)) else s)
       .map(addMetadata(_, schema))
-      .map(addTitle(_, schema))
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }
 
@@ -87,9 +86,6 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
       }
       .toListMap
   }
-
-  private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema =
-    oschema.copy(title = tschema.title)
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(
