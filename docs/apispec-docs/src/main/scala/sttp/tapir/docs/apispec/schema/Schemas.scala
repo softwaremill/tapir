@@ -16,7 +16,7 @@ class Schemas(
       case Some(key) => Left(toSchemaReference.map(key))
       case None =>
         schema.schemaType match {
-          case TSchemaType.SArray(nested @ TSchema(_, Some(name), isOptional, _, _, _, _, _, _, _, _, _)) =>
+          case TSchemaType.SArray(nested @ TSchema(_, Some(name), isOptional, _, _, _, _, _, _, _, _)) =>
             Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(SchemaKey(nested, name))))))
               .map(s => if (isOptional && markOptionsAsNullable) s.copy(nullable = Some(true)) else s)
           case TSchemaType.SOption(ts) => apply(ts)

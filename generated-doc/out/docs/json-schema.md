@@ -85,7 +85,6 @@ This example will produce following String:
   },
   "$defs" : {
     "Child" : {
-      "title" : "my child",
       "required" : [
         "childName"
       ],
@@ -97,7 +96,6 @@ This example will produce following String:
       }
     },
     "Child1" : {
-      "title" : "Child1",
       "required" : [
         "age"
       ],
