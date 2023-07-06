@@ -2,14 +2,22 @@ package sttp.tapir.serverless.aws.sam
 
 import io.circe.syntax._
 import sttp.tapir.serverless.aws.sam.AwsSamTemplateEncoders._
+import sttp.tapir.serverless.aws.sam.parameter.InputParameter
 
 case class SamTemplate(
     AWSTemplateFormatVersion: String = "2010-09-09",
     Transform: String = "AWS::Serverless-2016-10-31",
+    Parameters: Option[Map[String, Parameter]] = None,
     Resources: Map[String, Resource],
     Outputs: Map[String, Output]
 ) {
   def toYaml: String = Printer(dropNullKeys = true, preserveOrder = true, stringStyle = Printer.StringStyle.Plain).pretty(this.asJson)
+}
+
+case class Parameter(Description: Option[String])
+object Parameter {
+  def apply(in: InputParameter): (String, Parameter) =
+    in.name -> Parameter(in.description)
 }
 
 sealed trait Resource {
@@ -42,11 +50,13 @@ case class FunctionCodeProperties(
     Runtime: String,
     CodeUri: String,
     Handler: String,
-    Environment: Option[EnvironmentCodeProperties]
+    Environment: Option[EnvironmentCodeProperties],
+    Role: Option[String] = None
 ) extends Properties
     with FunctionProperties
 
-case class HttpProperties(StageName: String, CorsConfiguration: Option[CorsConfiguration]) extends Properties
+case class HttpProperties(StageName: String, CorsConfiguration: Option[CorsConfiguration], Auth: Option[HttpApiAuth] = None)
+    extends Properties
 
 case class FunctionHttpApiEvent(Properties: FunctionHttpApiEventProperties)
 
@@ -70,3 +80,39 @@ case class CorsConfiguration(
 )
 
 case class EnvironmentCodeProperties(Variables: Map[String, String])
+
+case class HttpApiAuth(
+    Authorizers: Map[String, Authorizer],
+    DefaultAuthorizer: Option[String],
+    EnableIamAuthorizer: Option[Boolean]
+)
+
+sealed trait Authorizer
+
+case class OAuth2Authorizer(
+    AuthorizationScopes: Option[Seq[String]],
+    IdentitySource: Option[String],
+    JwtConfiguration: JwtConfiguration
+) extends Authorizer
+
+case class JwtConfiguration(
+    Audience: Option[Seq[String]],
+    Issuer: Option[String]
+)
+
+case class LambdaAuthorizer(
+    AuthorizerPayloadFormatVersion: String,
+    EnableFunctionDefaultPermissions: Option[Boolean],
+    EnableSimpleResponses: Option[Boolean],
+    FunctionArn: String,
+    FunctionInvokeRole: Option[String],
+    Identity: Option[LambdaAuthorizationIdentity]
+) extends Authorizer
+
+case class LambdaAuthorizationIdentity(
+    Context: Option[Seq[String]],
+    Headers: Option[Seq[String]],
+    QueryStrings: Option[Seq[String]],
+    ReauthorizeEvery: Option[Int],
+    StageVariables: Option[Seq[String]]
+)
