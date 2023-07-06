@@ -30,7 +30,7 @@ object TapirSchemaToJsonSchema {
 
     val defsList: ListMap[SchemaId, ASchema] =
       nestedKeyedSchemas.collect { case (k, Right(nestedSchema: ASchema)) =>
-        (k, nestedSchema)
+        (k, nestedSchema.copy(title = nestedSchema.title.orElse(Some(k))))
       }.toListMap
 
     rootApiSpecSchemaOrRef.map(
