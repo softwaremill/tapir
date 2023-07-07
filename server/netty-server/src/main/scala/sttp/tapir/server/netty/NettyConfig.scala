@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty
 
+import com.typesafe.netty.http.HttpStreamsServerHandler
 import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup, EpollServerSocketChannel}
 import io.netty.channel.kqueue.{KQueue, KQueueEventLoopGroup, KQueueServerSocketChannel}
 import io.netty.channel.nio.NioEventLoopGroup
@@ -121,6 +122,7 @@ object NettyConfig {
     pipeline.addLast(new HttpServerCodec())
     pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength))
     pipeline.addLast(new ChunkedWriteHandler())
+    pipeline.addLast("serverStreamsHandler", new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()

@@ -5,17 +5,19 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
+import org.reactivestreams.Publisher
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
   ChunkedFileNettyResponseContent,
   ChunkedStreamNettyResponseContent
 }
+import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
+import com.typesafe.netty.http.DefaultStreamedHttpResponse
 
 class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[FullHttpRequest] {
@@ -94,6 +96,15 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
         // HttpChunkedInput will write the end marker (LastHttpContent) for us.
         ctx.writeAndFlush(new HttpChunkedInput(chunkedFile), channelPromise).closeIfNeeded(req)
       },
+      reactiveStreamHandler = (channelPromise, publisher) => {
+        val resHeader: DefaultStreamedHttpResponse = new DefaultStreamedHttpResponse(
+          req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), publisher)
+
+        resHeader.setHeadersFrom(serverResponse)
+        resHeader.handleContentLengthAndChunkedHeaders(None)
+        resHeader.handleCloseAndKeepAliveHeaders(req)
+
+     },
       noBodyHandler = () => {
         val res = new DefaultFullHttpResponse(
           req.protocolVersion(),
@@ -115,6 +126,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
         byteBufHandler: (ChannelPromise, ByteBuf) => Unit,
         chunkedStreamHandler: (ChannelPromise, ChunkedStream) => Unit,
         chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
+        reactiveStreamHandler: (ChannelPromise, Publisher[HttpContent]) => Unit,
         noBodyHandler: () => Unit
     ): Unit = {
       r.body match {
@@ -125,6 +137,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case r: ByteBufNettyResponseContent       => byteBufHandler(r.channelPromise, r.byteBuf)
             case r: ChunkedStreamNettyResponseContent => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
             case r: ChunkedFileNettyResponseContent   => chunkedFileHandler(r.channelPromise, r.chunkedFile)
+            case r: NettyResponseContent.ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
           }
         }
         case None => noBodyHandler()

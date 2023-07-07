@@ -1,9 +1,11 @@
 package sttp.tapir.server.netty.internal
 
+import cats.effect.kernel.Async
+import cats.effect.std.Dispatcher
+import fs2.interop.reactivestreams._
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
-import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
@@ -18,15 +20,24 @@ import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSoc
 import java.io.{InputStream, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import sttp.capabilities.fs2.Fs2Streams
+import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.NettyResponseContent
+import org.reactivestreams.Publisher
+import io.netty.buffer.ByteBuf
+import org.reactivestreams.Subscriber
+import fs2.Chunk
+import io.netty.handler.codec.http.HttpContent
+import io.netty.handler.codec.http.DefaultHttpContent
 
-private[internal] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
+private[netty] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
 
   override def isEndOfInput(): Boolean =
     super.isEndOfInput || transferredBytes == length
 }
 
-class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
+  override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
@@ -82,21 +93,33 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
     }
   }
 
+  def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
+    // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
+    // dispatcher, which results in a Resource[], which is hard to afford here
+    StreamUnicastPublisher(
+      stream.chunks
+        .map { chunk =>
+          val bytes: Chunk.ArraySlice[Byte] = chunk.compact
+          new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length))
+        },
+      dispatcher
+    )
+  }
+
   override def fromStreamValue(
       v: streams.BinaryStream,
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): NettyResponse = throw new UnsupportedOperationException
+  ): NettyResponse =
+    (ctx: ChannelHandlerContext) => {
+      new NettyResponseContent.ReactivePublisherNettyResponseContent(
+        ctx.newPromise(), 
+        fs2StreamToPublisher(v))
+    }
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): NettyResponse = throw new UnsupportedOperationException
-}
-
-private[internal] object NettyToResponseBody {
-  val DefaultChunkSize = 8192
-  val IncludingLastOffset = 1
-  val ReadOnlyAccessMode = "r"
 }
