@@ -159,7 +159,7 @@ val base: PublicEndpoint[Unit, DomainException, Unit, Any] = endpoint
   )
 
 val specialised: PublicEndpoint[Unit, DomainException, Unit, Any] = base
-  .errorOutVariant(oneOfVariant(statusCode(StatusCode.Forbidden).and(stringBody.mapTo[SecurityException])))
+  .errorOutVariantPrepend(oneOfVariant(statusCode(StatusCode.Forbidden).and(stringBody.mapTo[SecurityException])))
 ```
 
 The `.errorOutEither` method allows adding an unrelated error output, at the cost of wrapping 
