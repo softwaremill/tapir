@@ -102,4 +102,20 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","title":"MyOwnTitle1","required":["inner"],"type":"object","properties":{"inner":{"$$ref":"#/$$defs/Parent"}},"$$defs":{"Parent":{"title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}}},"Child":{"title":"MyOwnTitle3","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
+
+  it should "NOT use generate default titles if disabled" in {
+    // given
+    case class Parent(innerChildField: Child)
+
+    @title("MyChild")
+    case class Child(childName: Option[String])
+
+    val tSchema = implicitly[Schema[Parent]]
+
+    // when
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true, addTitleToDefs = false).value
+
+    // then
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft-04/schema#","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"MyChild","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+  }
 }
