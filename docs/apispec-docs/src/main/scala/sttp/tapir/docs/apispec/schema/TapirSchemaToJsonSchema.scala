@@ -12,6 +12,7 @@ object TapirSchemaToJsonSchema {
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
+      addTitleToDefs: Boolean = true,
       metaSchema: MetaSchema = MetaSchemaDraft04,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ReferenceOr[ASchema] = {
@@ -30,7 +31,7 @@ object TapirSchemaToJsonSchema {
 
     val defsList: ListMap[SchemaId, ASchema] =
       nestedKeyedSchemas.collect { case (k, Right(nestedSchema: ASchema)) =>
-        (k, nestedSchema.copy(title = nestedSchema.title.orElse(Some(k))))
+        (k, nestedSchema.copy(title = nestedSchema.title.orElse(if (addTitleToDefs) Some(k) else None)))
       }.toListMap
 
     rootApiSpecSchemaOrRef.map(

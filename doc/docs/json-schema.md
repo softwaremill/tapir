@@ -67,7 +67,7 @@ import sttp.tapir.Schema.annotations.title
 ```
 
 The title annotation of the object will be by default the name of the case class. You can customize it with `@title` annotation.
-This example will produce following String:
+You can also disable generation of default title fields by setting an option `addTitleToDefs` to `false`.  This example will produce following String:
 
 ```json
 {
