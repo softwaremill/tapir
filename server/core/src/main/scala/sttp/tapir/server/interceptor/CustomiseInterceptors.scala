@@ -10,13 +10,17 @@ import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectHandler
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.statusCode
 
-/** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via `addInterceptor`, sitting
-  * between two configurable, default interceptor groups.
+/** Allows customising the interceptors used by the server interpreter. Custom interceptors should usually be added using `addInterceptor`.
+  * That way, the custom interceptor is called after the built-in ones (such as logging, metrics, exceptions), and before the decode failure
+  * handler. For even more flexibility, interceptors can be added to the beginning or end of the interceptor stack, using
+  * `prependInterceptor` and `appendInterceptor`.
   *
-  * The order of the interceptors corresponds to the ordering of the parameters.
+  * The first interceptor in the interceptor stack is the one which is called first on request, and processes the resulting response as the
+  * last one.
   *
-  * Moreover, built-in interceptors can be customised or disabled. Once done, use `.options` to obtain the server interpreter options to
-  * use.
+  * Built-in interceptors can be customised or disabled using the dedicated methods.
+  *
+  * Once done, use [[options]] to obtain the server interpreter options objects, which can be passed to the server interpreter.
   *
   * @param prependedInterceptors
   *   Additional interceptors, which will be called first on request / last on response, e.g. performing logging, metrics, or providing
