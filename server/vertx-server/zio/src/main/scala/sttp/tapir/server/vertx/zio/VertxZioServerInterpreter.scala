@@ -13,32 +13,32 @@ import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFutur
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
 import sttp.tapir.server.vertx.zio.streams._
-import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
+import sttp.tapir.ztapir._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
-  def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
+  def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] = VertxZioServerOptions.default
 
-  def route(e: ZServerEndpoint[R, ZioStreams with WebSockets])(implicit
-      runtime: Runtime[R]
+  def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
+      runtime: Runtime[R & R2]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
 
-  private def endpointHandler(
-      e: ZServerEndpoint[R, ZioStreams with WebSockets]
-  )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
-    val fromVFuture = new RioFromVFuture[R]
-    implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
-    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] =
-      new VertxBodyListener[RIO[R, *]](new ZioRunAsync(runtime))
-    val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
-    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
-      _ => List(e),
-      new VertxRequestBody[RIO[R, *], ZioStreams](vertxZioServerOptions, fromVFuture)(zioReadStream),
+  private def endpointHandler[R2](
+      e: ZServerEndpoint[R2, ZioStreams with WebSockets]
+  )(implicit runtime: Runtime[R & R2]): Handler[RoutingContext] = {
+    val fromVFuture = new RioFromVFuture[R & R2]
+    implicit val monadError: RIOMonadError[R & R2] = new RIOMonadError[R & R2]
+    implicit val bodyListener: BodyListener[RIO[R & R2, *], RoutingContext => Future[Void]] =
+      new VertxBodyListener[RIO[R & R2, *]](new ZioRunAsync(runtime))
+    val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions[R & R2])
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], RoutingContext => Future[Void], ZioStreams](
+      _ => List(e.widen[R & R2]),
+      new VertxRequestBody[RIO[R & R2, *], ZioStreams](vertxZioServerOptions[R & R2], fromVFuture)(zioReadStream),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
@@ -52,7 +52,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
           rc.fail(t)
         }
 
-        val result: ZIO[R, Throwable, Any] =
+        val result: ZIO[R & R2, Throwable, Any] =
           interpreter(serverRequest)
             .flatMap {
               // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
@@ -114,7 +114,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 object VertxZioServerInterpreter {
   def apply[R](serverOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
     new VertxZioServerInterpreter[R] {
-      override def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = serverOptions
+      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] = serverOptions.asInstanceOf[VertxZioServerOptions[RIO[R2, *]]]
     }
   }
 
