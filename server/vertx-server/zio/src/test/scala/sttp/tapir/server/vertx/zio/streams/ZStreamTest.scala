@@ -15,7 +15,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
 
   private val runtime = ZIORuntime.default
 
-  private val options = VertxZioServerOptions.default.copy(maxQueueSizeForReadStream = 4)
+  private val options = VertxZioServerOptions.default[Any].copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)
