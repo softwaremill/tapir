@@ -93,6 +93,12 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
+  // no readOnly/writeOnly, minProperties/maxProperties support
+  case class OpenapiSchemaMap(
+      items: OpenapiSchemaType,
+      nullable: Boolean
+  ) extends OpenapiSchemaType
+
   // ///////////////////////////////////////////////////////
   // decoders
   // //////////////////////////////////////////////////////
@@ -228,6 +234,16 @@ object OpenapiSchemaType {
     }
   }
 
+  implicit val OpenapiSchemaMapDecoder: Decoder[OpenapiSchemaMap] = { (c: HCursor) =>
+    for {
+      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
+      t <- c.downField("additionalProperties").as[OpenapiSchemaType]
+      nb <- c.downField("nullable").as[Option[Boolean]]
+    } yield {
+      OpenapiSchemaMap(t, nb.getOrElse(false))
+    }
+  }
+
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
       _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array")
@@ -244,6 +260,7 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaMixedType].widen,
       Decoder[OpenapiSchemaNot].widen,
       Decoder[OpenapiSchemaObject].widen,
+      Decoder[OpenapiSchemaMap].widen,
       Decoder[OpenapiSchemaArray].widen
     ).reduceLeft(_ or _)
 }
