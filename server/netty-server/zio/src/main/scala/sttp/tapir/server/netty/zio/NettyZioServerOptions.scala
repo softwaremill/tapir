@@ -19,6 +19,7 @@ case class NettyZioServerOptions[R](
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = interceptors :+ i)
+  def widen[R2 <: R]: NettyZioServerOptions[R2] = this.asInstanceOf[NettyZioServerOptions[R2]]
 }
 
 object NettyZioServerOptions {
