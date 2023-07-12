@@ -19,7 +19,7 @@ import zio._
 import java.util.concurrent.atomic.AtomicReference
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
-  def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] = VertxZioServerOptions.default
+  def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = VertxZioServerOptions.default[R].widen
 
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R & R2]
@@ -112,9 +112,9 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 }
 
 object VertxZioServerInterpreter {
-  def apply[R](serverOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
+  def apply[R](serverOptions: VertxZioServerOptions[R] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
     new VertxZioServerInterpreter[R] {
-      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] = serverOptions.asInstanceOf[VertxZioServerOptions[RIO[R2, *]]]
+      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = serverOptions.widen[R2]
     }
   }
 
