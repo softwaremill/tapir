@@ -77,6 +77,30 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
   }
 
+  it should "generate class with array with inner class" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaObject(
+            Map(
+              "objects" -> OpenapiSchemaArray(
+                OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
+                false
+              )
+            ),
+            Seq("texts"),
+            false
+          )
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+  }
+
   it should "nonrequired and required are not the same" in {
     val doc1 = OpenapiDocument(
       "",
