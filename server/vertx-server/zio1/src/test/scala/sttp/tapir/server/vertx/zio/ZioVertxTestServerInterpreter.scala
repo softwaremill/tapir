@@ -15,14 +15,14 @@ import _root_.zio.blocking.Blocking
 import sttp.tapir.server.vertx.VertxTestServerInterpreter
 
 class ZioVertxTestServerInterpreter(vertx: Vertx)
-    extends TestServerInterpreter[RIO[Blocking, *], ZioStreams with WebSockets, VertxZioServerOptions[RIO[Blocking, *]], Router => Route] {
+    extends TestServerInterpreter[RIO[Blocking, *], ZioStreams with WebSockets, VertxZioServerOptions[Blocking], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
   override def route(
       es: List[ServerEndpoint[ZioStreams with WebSockets, RIO[Blocking, *]]],
       interceptors: Interceptors
   ): Router => Route = { router =>
-    val options: VertxZioServerOptions[RIO[Blocking, *]] = interceptors(VertxZioServerOptions.customiseInterceptors).options
+    val options: VertxZioServerOptions[Blocking] = interceptors(VertxZioServerOptions.customiseInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
     es.map(interpreter.route(_)(runtime)(router)).last
   }
