@@ -3,7 +3,12 @@ package sttp.tapir.codegen
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaSimpleType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaSimpleType
+}
 
 class ClassDefinitionGenerator {
 
@@ -35,11 +40,10 @@ class ClassDefinitionGenerator {
         .flatten
         .toList
 
-      val properties = obj.properties.map {
-        case (key, schemaType) =>
-          val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType)
-          val fixedKey = fixKey(key)
-          s"$fixedKey: $tpe"
+      val properties = obj.properties.map { case (key, schemaType) =>
+        val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType)
+        val fixedKey = fixKey(key)
+        s"$fixedKey: $tpe"
       }
 
       s"""|case class $name (
@@ -59,11 +63,11 @@ class ClassDefinitionGenerator {
         addName(parentName, key) -> objectType.nullable
 
       case mapType: OpenapiSchemaMap =>
-        val innerType = mapSchemaTypeToType(addName(parentName, key), "item", required = false, mapType.items)
+        val innerType = mapSchemaTypeToType(addName(parentName, key), "item", required = true, mapType.items)
         s"Map[String, $innerType]" -> mapType.nullable
 
       case arrayType: OpenapiSchemaArray =>
-        val innerType = mapSchemaTypeToType(addName(parentName, key), "item", required = false, arrayType.items)
+        val innerType = mapSchemaTypeToType(addName(parentName, key), "item", required = true, arrayType.items)
         s"Seq[$innerType]" -> arrayType.nullable
 
       case _ =>

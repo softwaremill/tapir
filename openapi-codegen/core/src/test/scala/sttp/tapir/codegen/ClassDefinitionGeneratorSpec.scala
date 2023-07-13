@@ -128,7 +128,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               "objects" -> OpenapiSchemaMap(
                 OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
                 false
-              ),
+              )
             ),
             Seq("objects"),
             false
