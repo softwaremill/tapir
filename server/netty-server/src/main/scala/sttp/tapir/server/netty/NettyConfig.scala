@@ -37,8 +37,8 @@ import scala.concurrent.duration._
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
   *
   * @param socketTimeout
-  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent.
-  *   Socket timeout also effectively establishes a read timeout.
+  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent. Socket
+  *   timeout also effectively establishes a read timeout.
   *
   * @param lingerTimeout
   *   Sets the delay for which the Netty waits, while data is being transmitted, before closing a socket after receiving a call to close the

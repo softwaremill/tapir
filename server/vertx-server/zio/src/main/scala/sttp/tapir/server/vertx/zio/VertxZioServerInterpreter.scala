@@ -114,7 +114,8 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 object VertxZioServerInterpreter {
   def apply[R](serverOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
     new VertxZioServerInterpreter[R] {
-      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] = serverOptions.asInstanceOf[VertxZioServerOptions[RIO[R2, *]]]
+      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[RIO[R2, *]] =
+        serverOptions.asInstanceOf[VertxZioServerOptions[RIO[R2, *]]]
     }
   }
 
