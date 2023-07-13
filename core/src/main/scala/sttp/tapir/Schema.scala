@@ -122,7 +122,7 @@ case class Schema[T](
 
   def hidden(h: Boolean): Schema[T] = copy(hidden = h)
 
-  def title(t: String): Schema[T] = attribute(Title.Attribute ,Title(t))
+  def title(t: String): Schema[T] = attribute(Title.Attribute, Title(t))
 
   def show: String = s"schema is $schemaType"
 
