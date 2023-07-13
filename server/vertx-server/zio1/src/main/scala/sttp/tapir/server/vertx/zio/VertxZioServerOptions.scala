@@ -8,24 +8,26 @@ import _root_.zio.{RIO, URIO}
 import _root_.zio.blocking._
 import sttp.tapir.server.vertx.VertxServerOptions
 
-final case class VertxZioServerOptions[F[_]](
+final case class VertxZioServerOptions[R](
     uploadDirectory: TapirFile,
-    deleteFile: TapirFile => F[Unit],
+    deleteFile: TapirFile => RIO[R, Unit],
     maxQueueSizeForReadStream: Int,
-    interceptors: List[Interceptor[F]]
-) extends VertxServerOptions[F] {
-  def prependInterceptor(i: Interceptor[F]): VertxZioServerOptions[F] =
+    interceptors: List[Interceptor[RIO[R, *]]]
+) extends VertxServerOptions[RIO[R, *]] {
+  def prependInterceptor(i: Interceptor[RIO[R, *]]): VertxZioServerOptions[R] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F]): VertxZioServerOptions[F] =
+  def appendInterceptor(i: Interceptor[RIO[R, *]]): VertxZioServerOptions[R] =
     copy(interceptors = interceptors :+ i)
+
+  def widen[R2 <: R]: VertxZioServerOptions[R2] = this.asInstanceOf[VertxZioServerOptions[R2]]
 }
 
 object VertxZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customiseInterceptors[R <: Blocking]: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]] =
+  def customiseInterceptors[R <: Blocking]: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[R]] =
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[RIO[R, *]]]) =>
+      createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[R]]) =>
         VertxZioServerOptions(
           VertxServerOptions.uploadDirectory(),
           file => effectBlocking(Defaults.deleteFile()(file)),
@@ -34,7 +36,7 @@ object VertxZioServerOptions {
         )
     ).serverLog(defaultServerLog[R](LoggerFactory.getLogger("tapir-vertx")))
 
-  implicit def default[R <: Blocking]: VertxZioServerOptions[RIO[R, *]] = customiseInterceptors.options
+  implicit def default[R <: Blocking]: VertxZioServerOptions[R] = customiseInterceptors.options
 
   def defaultServerLog[R](log: Logger): DefaultServerLog[RIO[R, *]] = {
     DefaultServerLog(

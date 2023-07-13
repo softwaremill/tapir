@@ -20,7 +20,7 @@ import _root_.zio.blocking.Blocking
 import java.util.concurrent.atomic.AtomicReference
 
 trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
-  def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
+  def vertxZioServerOptions: VertxZioServerOptions[R] = VertxZioServerOptions.default
 
   def route(e: ZServerEndpoint[R, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R]
@@ -112,10 +112,10 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
 
 object VertxZioServerInterpreter {
   def apply[R <: Blocking](
-      serverOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default[R]
+      serverOptions: VertxZioServerOptions[R] = VertxZioServerOptions.default
   ): VertxZioServerInterpreter[R] = {
     new VertxZioServerInterpreter[R] {
-      override def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = serverOptions
+      override def vertxZioServerOptions: VertxZioServerOptions[R] = serverOptions
     }
   }
 
