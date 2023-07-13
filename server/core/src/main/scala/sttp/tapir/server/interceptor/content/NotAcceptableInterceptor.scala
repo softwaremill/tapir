@@ -25,10 +25,7 @@ class NotAcceptableInterceptor[F[_]] extends EndpointInterceptor[F] {
             // empty supported media types -> no body is defined, so the accepts header can be ignored
             val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty
 
-            // mozilla says servers should ignore the Accept-Charset header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Charset
-            val hasAcceptCharset = ctx.request.header(HeaderNames.AcceptCharset).nonEmpty
-
-            if (hasMatchingRepresentation || hasAcceptCharset) endpointHandler.onDecodeSuccess(ctx)
+            if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
             else responder(ctx.request, server.model.ValuedEndpointOutput(statusCode(StatusCode.NotAcceptable), ()))
 
           case Left(_) =>

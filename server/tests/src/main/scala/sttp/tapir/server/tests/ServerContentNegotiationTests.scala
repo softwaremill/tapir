@@ -17,6 +17,7 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
     m: MonadError[F]
 ) {
   import createServerTest._
+  import sttp.tapir.tests.Basic.byte_array
 
   def tests(): List[Test] = List(
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { (backend, baseUri) =>
@@ -74,6 +75,10 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
     testServer(in_root_path, testNameSuffix = "accepts header without output body")(_ => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
         basicRequest.header(HeaderNames.Accept, "text/plain").get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(byte_array, testNameSuffix = "check response with header AcceptCharset")(_ => pureResult(Array.emptyByteArray.asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest.get(uri"$baseUri/bytes").header(HeaderNames.AcceptCharset, "utf-8").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }
