@@ -23,6 +23,20 @@ trait ZTapir {
     def zServerLogic[R](logic: INPUT => ZIO[R, ERROR_OUTPUT, OUTPUT])(implicit aIsUnit: SECURITY_INPUT =:= Unit): ZServerEndpoint[R, C] =
       ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, C]], _ => logic(_: INPUT).either.resurrect)
 
+    /** Combine this public endpoint description with a function, which implements the server-side logic. The logic returns a result, which
+      * is wrapped in Either `Right` and in an effect type F. Effect type `F` may failed with ZIO error channel type `ERROR_OUTPUT`.
+      * In this case `ERROR_OUTPUT` must be a subtype of Throwable. For secure endpoints, use [[zServerSecurityLogic]].
+      *
+      * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific type(s).
+      *
+      * Both the endpoint and logic function are considered complete, and cannot be later extended through the returned [[ServerEndpoint]]
+      * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
+      * specified.
+      */
+    def zServerLogicFallible[R](logic: INPUT => ZIO[R, ERROR_OUTPUT, OUTPUT])(implicit ev1: ERROR_OUTPUT <:< Throwable): ZServerEndpoint[R, C] =
+      ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, C]], _ => logic(_: INPUT).asRight.resurrect)
+
+
     /** Combine this endpoint description with a function, which implements the security logic of the endpoint.
       *
       * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then the main server logic can be provided,

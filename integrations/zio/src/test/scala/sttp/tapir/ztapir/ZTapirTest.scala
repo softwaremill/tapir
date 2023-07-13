@@ -1,26 +1,30 @@
 package sttp.tapir.ztapir
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.{Streams, WebSockets}
-import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
-import sttp.tapir.{AttributeKey, CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.model._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.model.ServerResponse
-import zio.{UIO, ZIO}
+import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interpreter._
+import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.ztapir.instances.TestMonadError._
-import zio.test._
+import sttp.tapir.{AttributeKey, CodecFormat, PublicEndpoint, RawBodyType, WebSocketBodyOutput}
 import zio.test.Assertion._
+import zio.test._
+import zio.{UIO, ZIO}
 
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
-import scala.collection.immutable.Seq
 
 object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling)
+    suite("ZTapir tests")(
+      testZServerLogicErrorHandling,
+      testZServerSecurityLogicErrorHandling,
+      testZServerLogicNonFallible,
+      testZServerLogicFallibleWholeRequestEffectHandling
+    )
 
   type ResponseBodyType = String
 
@@ -34,7 +38,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
   private val exampleToResponse: ToResponseBody[ResponseBodyType, RequestBodyType] = new ToResponseBody[ResponseBodyType, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseBodyType = "Sample body"
+    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseBodyType = v.toString
     override def fromStreamValue(
         v: streams.BinaryStream,
         headers: HasHeaders,
@@ -126,4 +130,73 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
         )
       }
   }
+
+  private val testZServerLogicNonFallible = test("zServerLogic non fallible") {
+    val testEndpoint: PublicEndpoint[Unit, TestError, String, Any] =
+      endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
+
+    val logic: Unit => ZIO[Any, TestError, String] = _ => ZIO.attempt(10 / 0).mapBoth(_ => TestError.SomeError, _.toString)
+
+    val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
+
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+      _ => List(serverEndpoint),
+      exampleRequestBody,
+      exampleToResponse,
+      List.empty,
+      _ => ZIO.unit
+    )
+
+    interpreter(testRequest)
+      .map { result =>
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("body", _.response.body, isSome(equalTo("SomeError"))))
+        )
+      }
+  }
+
+  private val testZServerLogicFallibleWholeRequestEffectHandling = test("zServerLogicFallible error handling") {
+
+    val testEndpoint: PublicEndpoint[Unit, TestErrorThrowable, String, Any] =
+      endpoint.in("foo" / "bar").errorOut(plainBody[TestErrorThrowable]).out(stringBody)
+
+    val testError = TestErrorThrowable("BOOM")
+    val logic: Unit => ZIO[Any, TestErrorThrowable, String] = _ => ZIO.fail(testError)
+
+    val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogicFallible(logic)
+
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+      _ => List(serverEndpoint),
+      exampleRequestBody,
+      exampleToResponse,
+      List.empty,
+      _ => ZIO.unit
+    )
+
+    interpreter(testRequest).exit
+      .map(assert(_)(fails(equalTo(testError))))
+
+    val recoverF: Throwable => ValuedEndpointOutput[ResponseBodyType] =
+      error => ValuedEndpointOutput(statusCode(StatusCode.InternalServerError) and plainBody[ResponseBodyType], error.getMessage)
+
+    val interpreterWithRecoverInterceptor =
+      new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+        _ => List(serverEndpoint),
+        exampleRequestBody,
+        exampleToResponse,
+        List(RecoverInterceptor(recoverF)),
+        _ => ZIO.unit
+      )
+
+    interpreterWithRecoverInterceptor(testRequest)
+      .map { result =>
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+        )
+        assert(result)(
+          isSubtype[RequestResult.Response[String]](hasField("body", _.response.body, isSome(equalTo(testError.message))))
+        )
+      }
+  }
+
 }

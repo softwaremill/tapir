@@ -79,4 +79,14 @@ case class ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
       _ => securityLogic(_: SECURITY_INPUT).either.resurrect,
       _ => (u: PRINCIPAL) => (i: INPUT) => logic(u)(i).either.resurrect
     )
+
+  def serverLogicFallible[R0](
+      logic: PRINCIPAL => INPUT => ZIO[R0, ERROR_OUTPUT, OUTPUT]
+  )(implicit ev1: ERROR_OUTPUT <:< Throwable): ZServerEndpoint[R with R0, C] =
+    ServerEndpoint(
+      endpoint,
+      _ => securityLogic(_: SECURITY_INPUT).asRight.resurrect,
+      _ => (u: PRINCIPAL) => (i: INPUT) => logic(u)(i).asRight.resurrect
+    )
+
 }
