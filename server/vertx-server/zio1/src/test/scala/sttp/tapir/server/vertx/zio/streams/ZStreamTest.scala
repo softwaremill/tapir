@@ -5,6 +5,7 @@ import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import _root_.zio._
+import _root_.zio.blocking.Blocking
 import _root_.zio.duration._
 import _root_.zio.stream.ZStream
 import _root_.zio.clock.Clock
@@ -17,7 +18,7 @@ class ZStreamTest extends AsyncFlatSpec with Matchers {
 
   private val runtime = ZIORuntime.default
 
-  private val options = VertxZioServerOptions.default.copy(maxQueueSizeForReadStream = 4)
+  private val options = VertxZioServerOptions.default[Blocking].copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)
