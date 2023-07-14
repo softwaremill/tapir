@@ -40,6 +40,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
+    println(">>>>>>>>>>>>>>>>>>>>>>> Using fromRawValue")
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = v.asInstanceOf[String].getBytes(charset)
@@ -60,6 +61,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
         (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(v))
 
       case RawBodyType.FileBody =>
+        println(s"Returning FileBody, headers = $headers")
         (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(v))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
@@ -89,11 +91,14 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
         val randomAccessFile = new RandomAccessFile(file, NettyToResponseBody.ReadOnlyAccessMode)
         new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)
       }
-      case None => new ChunkedFile(file)
+      case None => 
+        println(s">>>>>>>>>>>>>>>>>>>>>>>>>> no range, $file")
+        new ChunkedFile(file)
     }
   }
 
   def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
+    println(">>>>>>>>>>>>> handling stream and creating a publisher")
     // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(
@@ -113,9 +118,8 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
       charset: Option[Charset]
   ): NettyResponse =
     (ctx: ChannelHandlerContext) => {
-      new NettyResponseContent.ReactivePublisherNettyResponseContent(
-        ctx.newPromise(), 
-        fs2StreamToPublisher(v))
+      println(">>>>>>>> Creating reactive stream from response")
+      new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(v))
     }
 
   override def fromWebSocketPipe[REQ, RESP](

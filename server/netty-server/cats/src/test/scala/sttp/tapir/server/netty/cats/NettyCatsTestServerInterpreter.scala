@@ -8,10 +8,11 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
+import sttp.capabilities.fs2.Fs2Streams
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Any, NettyCatsServerOptions[IO], Route[IO]] {
-  override def route(es: List[ServerEndpoint[Any, IO]], interceptors: Interceptors): Route[IO] = {
+    extends TestServerInterpreter[IO, Fs2Streams[IO], NettyCatsServerOptions[IO], Route[IO]] {
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]], interceptors: Interceptors): Route[IO] = {
     val serverOptions: NettyCatsServerOptions[IO] = interceptors(
       NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
     ).options
