@@ -79,7 +79,6 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       _ <- Resource.eval(IO(logger.info(s"Bound server on port: $port")))
     } yield port
 
-    import scala.concurrent.duration._
     Test(name)(
       resources
         .use { port =>

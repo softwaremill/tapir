@@ -7,11 +7,6 @@ import sttp.tapir._
 import java.nio.charset.StandardCharsets
 
 object Streaming {
-  def in_string_out_string_stream[S](s: Streams[S]) = {
-    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
-    endpoint.post.in("api" / "echo").in(stringBody).out(sb)
-  }
-
   def in_stream_out_stream[S](s: Streams[S]): PublicEndpoint[s.BinaryStream, Unit, s.BinaryStream, S] = {
     val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(sb).out(sb)

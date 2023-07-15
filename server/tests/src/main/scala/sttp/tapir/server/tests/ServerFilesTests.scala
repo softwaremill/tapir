@@ -218,9 +218,8 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("should return 200 status code for whole file") {
         withTestFilesDirectory { testDir =>
-          import scala.concurrent.duration._
           serveRoute(staticFilesGetServerEndpoint[F]("test")(testDir.getAbsolutePath))
-            .use { port => get(port, List("test", "f2")).timeout(10.seconds).map(_.code shouldBe StatusCode.Ok) }
+            .use { port => get(port, List("test", "f2")).map(_.code shouldBe StatusCode.Ok) }
             .unsafeToFuture()
         }
       },

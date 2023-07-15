@@ -14,9 +14,6 @@ import sttp.tapir.tests.Streaming.{
   in_string_stream_out_either_stream_string,
   out_custom_content_type_stream_body
 }
-import scala.concurrent.duration._
-import java.io.ByteArrayInputStream
-import java.io.InputStream
 
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE], streams: Streams[S])(implicit
     m: MonadError[F]
@@ -36,7 +33,6 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
       )((in: (Long, streams.BinaryStream)) => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
         {
           basicRequest
-          .readTimeout(3.seconds)
             .post(uri"$baseUri/api/echo")
             .contentLength(penPineapple.length.toLong)
             .body(penPineapple)
@@ -56,7 +52,6 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
       } { (backend, baseUri) =>
         basicRequest
           .post(uri"$baseUri?kind=-1")
-          .readTimeout(3.seconds)
           .body(penPineapple)
           .send(backend)
           .map { r =>
@@ -90,7 +85,6 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
       testServer(in_stream_out_either_json_xml_stream(streams)) { s => pureResult(s.asRight[Unit]) } { (backend, baseUri) =>
         basicRequest
           .post(uri"$baseUri")
-          .readTimeout(3.seconds)
           .body(penPineapple)
           .header(Header.accept(MediaType.ApplicationXml, MediaType.ApplicationJson))
           .send(backend)
