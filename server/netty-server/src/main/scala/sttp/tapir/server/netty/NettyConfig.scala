@@ -96,7 +96,6 @@ case class NettyConfig(
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
   def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
-
 }
 
 object NettyConfig {

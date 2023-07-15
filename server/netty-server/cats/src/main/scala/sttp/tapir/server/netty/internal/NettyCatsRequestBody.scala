@@ -51,7 +51,7 @@ private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[T
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
     val nettyRequest = serverRequest.underlying.asInstanceOf[StreamedHttpRequest]
     fs2.Stream
-      .eval(StreamSubscriber[F, HttpContent](NettyRequestBody.bufferSize))
+      .eval(StreamSubscriber[F, HttpContent](NettyRequestBody.DefaultChunkSize))
       .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
       .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
   }

@@ -8,7 +8,6 @@ import fs2.io.file.{Files, Flags, Path}
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
-import io.netty.handler.stream.ChunkedStream
 import org.reactivestreams.Publisher
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HasHeaders
@@ -20,12 +19,6 @@ import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-
-private[netty] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
-
-  override def isEndOfInput(): Boolean =
-    super.isEndOfInput || transferredBytes == length
-}
 
 class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]

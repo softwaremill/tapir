@@ -46,6 +46,6 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
   private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 }
 
-object NettyRequestBody {
-  private[internal] val bufferSize = 8192
+private[internal] object NettyRequestBody {
+  val DefaultChunkSize = 8192
 }
