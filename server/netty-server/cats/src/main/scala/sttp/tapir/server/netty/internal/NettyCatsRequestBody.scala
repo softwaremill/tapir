@@ -19,7 +19,6 @@ import java.nio.ByteBuffer
 private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit val monad: Async[F])
     extends RequestBody[F, Fs2Streams[F]] {
 
-  val streamChunkSize = 8192
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
