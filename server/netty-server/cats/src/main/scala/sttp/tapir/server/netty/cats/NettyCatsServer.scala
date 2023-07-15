@@ -15,15 +15,16 @@ import sttp.tapir.server.netty.{NettyConfig, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
+import sttp.capabilities.fs2.Fs2Streams
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
-  def addEndpoint(se: ServerEndpoint[Any, F]): NettyCatsServer[F] = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Any, F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
+  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Any, F]]): NettyCatsServer[F] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F], F]]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[Any, F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F], F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(overrideOptions).toRoute(ses)
   )
 
