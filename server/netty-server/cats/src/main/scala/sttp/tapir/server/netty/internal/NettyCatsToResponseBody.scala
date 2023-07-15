@@ -1,34 +1,25 @@
 package sttp.tapir.server.netty.internal
 
-import cats.effect.kernel.Async
+import cats.effect.kernel.{Async, Sync}
 import cats.effect.std.Dispatcher
+import fs2.Chunk
 import fs2.interop.reactivestreams._
+import fs2.io.file.{Files, Flags, Path}
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
+import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
+import io.netty.handler.stream.ChunkedStream
+import org.reactivestreams.Publisher
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HasHeaders
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{
-  ByteBufNettyResponseContent,
-  ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent
-}
-import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.server.netty.NettyResponseContent.ByteBufNettyResponseContent
+import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent}
+import sttp.tapir.{CodecFormat, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
-import java.io.{InputStream, RandomAccessFile}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent
-import org.reactivestreams.Publisher
-import io.netty.buffer.ByteBuf
-import org.reactivestreams.Subscriber
-import fs2.Chunk
-import io.netty.handler.codec.http.HttpContent
-import io.netty.handler.codec.http.DefaultHttpContent
 
 private[netty] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
 
@@ -40,7 +31,6 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
-    println(">>>>>>>>>>>>>>>>>>>>>>> Using fromRawValue")
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = v.asInstanceOf[String].getBytes(charset)
@@ -55,50 +45,43 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
         (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
       case RawBodyType.InputStreamBody =>
-        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(v))
+        val stream = inputStreamToFs2(() => v)
+        (ctx: ChannelHandlerContext) =>
+          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.InputStreamRangeBody =>
-        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(v))
+        val stream = v.range
+          .map(range => inputStreamToFs2(v.inputStreamFromRangeStart).take(range.contentLength))
+          .getOrElse(inputStreamToFs2(v.inputStream))
+        (ctx: ChannelHandlerContext) =>
+          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.FileBody =>
-        println(s"Returning FileBody, headers = $headers")
-        (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(v))
+        val tapirFile = v
+        val path = Path.fromNioPath(tapirFile.file.toPath)
+        val stream = tapirFile.range
+          .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, r.contentLength.toInt, s._1, s._2)))
+          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
+
+        (ctx: ChannelHandlerContext) =>
+          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
   }
 
+  private def inputStreamToFs2(inputStream: () => InputStream) =
+    fs2.io.readInputStream(
+      Sync[F].blocking(inputStream()),
+      NettyToResponseBody.DefaultChunkSize
+    )
   private def wrap(streamRange: InputStreamRange): ChunkedStream = {
     streamRange.range
       .map(r => new RangedChunkedStream(streamRange.inputStreamFromRangeStart(), r.contentLength))
       .getOrElse(new ChunkedStream(streamRange.inputStream()))
   }
 
-  private def wrap(content: InputStream): ChunkedStream = {
-    new ChunkedStream(content)
-  }
-
-  private def wrap(content: FileRange): ChunkedFile = {
-    val file = content.file
-    val maybeRange = for {
-      range <- content.range
-      start <- range.start
-      end <- range.end
-    } yield (start, end + NettyToResponseBody.IncludingLastOffset)
-
-    maybeRange match {
-      case Some((start, end)) => {
-        val randomAccessFile = new RandomAccessFile(file, NettyToResponseBody.ReadOnlyAccessMode)
-        new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)
-      }
-      case None => 
-        println(s">>>>>>>>>>>>>>>>>>>>>>>>>> no range, $file")
-        new ChunkedFile(file)
-    }
-  }
-
   def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
-    println(">>>>>>>>>>>>> handling stream and creating a publisher")
     // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(
@@ -118,7 +101,6 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
       charset: Option[Charset]
   ): NettyResponse =
     (ctx: ChannelHandlerContext) => {
-      println(">>>>>>>> Creating reactive stream from response")
       new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(v))
     }
 

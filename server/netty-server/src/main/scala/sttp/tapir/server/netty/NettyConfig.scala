@@ -14,8 +14,6 @@ import io.netty.handler.timeout.ReadTimeoutException
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 
 import scala.concurrent.duration._
-import com.typesafe.netty.http.HttpStreamsClientHandler
-import sttp.tapir.server.netty.internal.NettyStreamingHandler
 
 /** Netty configuration, used by [[NettyFutureServer]] and other server implementations to configure the networking layer, the Netty
   * processing pipeline, and start & stop the server.
@@ -98,6 +96,7 @@ case class NettyConfig(
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
   def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
+
 }
 
 object NettyConfig {
@@ -121,14 +120,23 @@ object NettyConfig {
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
-    println("--------------------------------------- default init pipeline")
     pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast("serverStreamsHandler", new HttpStreamsServerHandler())
+    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength))
     pipeline.addLast(new ChunkedWriteHandler())
+    pipeline.addLast(handler)
+    ()
+  }
+
+  def streamingPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+    cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
+    pipeline.addLast(new HttpServerCodec())
+    pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()
   }
+
+  def defaultWithStreaming: NettyConfig = default.copy(initPipeline = cfg => streamingPipeline(cfg)(_, _))
 
   case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 

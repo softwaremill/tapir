@@ -81,9 +81,9 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
 
 object NettyCatsServer {
   def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.default)
+    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.defaultWithStreaming)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, options, NettyConfig.default)
+    NettyCatsServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
   def apply[F[_]: Async](dispatcher: Dispatcher[F], config: NettyConfig): NettyCatsServer[F] =
     NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), config)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F], config: NettyConfig): NettyCatsServer[F] =
