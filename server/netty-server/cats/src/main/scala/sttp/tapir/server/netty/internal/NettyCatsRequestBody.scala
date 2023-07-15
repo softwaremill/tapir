@@ -2,21 +2,19 @@ package sttp.tapir.server.netty.internal
 
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
-import io.netty.handler.codec.http.FullHttpRequest
+import com.typesafe.netty.http.StreamedHttpRequest
+import fs2.Chunk
+import fs2.interop.reactivestreams.StreamSubscriber
+import fs2.io.file.{Files, Path}
+import io.netty.buffer.ByteBufUtil
+import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
+
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import com.typesafe.netty.http.StreamedHttpRequest
-import com.typesafe.netty.http.DefaultStreamedHttpRequest
-import fs2.interop.reactivestreams.StreamSubscriber
-import io.netty.handler.codec.http.HttpContent
-import fs2.Chunk
-import fs2.io.file.Files
-import fs2.io.file.Path
 
 private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit val monad: Async[F])
     extends RequestBody[F, Fs2Streams[F]] {
@@ -52,20 +50,16 @@ private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[T
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
-
     val nettyRequest = serverRequest.underlying.asInstanceOf[StreamedHttpRequest]
-
     fs2.Stream
       .eval(StreamSubscriber[F, HttpContent](NettyRequestBody.bufferSize))
       .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
       .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
-
-    // fs2.io.readInputStream(Sync[F].delay(new ByteBufInputStream(nettyRequest(serverRequest).content())), streamChunkSize)
   }
 
   private def nettyRequestBytes(serverRequest: ServerRequest): F[Array[Byte]] = serverRequest.underlying match {
     case req: FullHttpRequest     => monad.delay(ByteBufUtil.getBytes(req.content()))
-    case req: StreamedHttpRequest => toStream(serverRequest).compile.to(Chunk).map(_.toArray[Byte])
+    case _: StreamedHttpRequest => toStream(serverRequest).compile.to(Chunk).map(_.toArray[Byte])
     case other => monad.raiseError(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
   }
 }

@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.internal
 
+import com.typesafe.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
@@ -17,9 +18,6 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
-import com.typesafe.netty.http.DefaultStreamedHttpResponse
-import com.typesafe.netty.http.DelegateStreamedHttpRequest
-import com.typesafe.netty.http.StreamedHttpRequest
 
 class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[HttpRequest] {

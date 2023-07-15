@@ -15,7 +15,7 @@ import sttp.model.HasHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponseContent.ByteBufNettyResponseContent
 import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent}
-import sttp.tapir.{CodecFormat, InputStreamRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -75,13 +75,8 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
       Sync[F].blocking(inputStream()),
       NettyToResponseBody.DefaultChunkSize
     )
-  private def wrap(streamRange: InputStreamRange): ChunkedStream = {
-    streamRange.range
-      .map(r => new RangedChunkedStream(streamRange.inputStreamFromRangeStart(), r.contentLength))
-      .getOrElse(new ChunkedStream(streamRange.inputStream()))
-  }
 
-  def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
+  private def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
     // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(

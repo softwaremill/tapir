@@ -2,24 +2,16 @@ package sttp.tapir.server.netty.cats
 
 import cats.effect.Async
 import cats.effect.std.Dispatcher
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.Route
-import sttp.tapir.server.interpreter.BodyListener
-import sttp.tapir.server.netty.internal.NettyBodyListener
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.interpreter.FilterServerEndpoints
-import sttp.tapir.server.netty.internal.NettyRequestBody
-import sttp.tapir.server.netty.internal.NettyToResponseBody
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.netty.NettyServerRequest
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.server.netty.internal.RunAsync
-import sttp.tapir.server.netty.internal._
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
+import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
 trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
