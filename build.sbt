@@ -633,7 +633,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2And3Versions,
+    scalaVersions = List(scala3),
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -641,6 +641,22 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     )
   )
   .dependsOn(core, circeJson % Test)
+
+lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-iron",
+    libraryDependencies ++= Seq(
+      "io.github.iltotore" %% "iron" % Versions.iron,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3)
+  )
+  .dependsOn(core)
+// .dependsOn(core, circeJson % Test)
 
 lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
   .settings(commonSettings)
