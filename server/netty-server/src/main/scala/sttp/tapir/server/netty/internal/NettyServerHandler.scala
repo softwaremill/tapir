@@ -133,7 +133,6 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           new DefaultStreamedHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), publisher)
 
         res.setHeadersFrom(serverResponse)
-        res.handleContentLengthAndChunkedHeaders(None)
         res.handleCloseAndKeepAliveHeaders(req)
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
