@@ -164,6 +164,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   catsEffect.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
+  iron.projectRefs ++
   zio1.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
