@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.stream.ChunkedWriteHandler
-import io.netty.handler.timeout.ReadTimeoutException
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 
 import scala.concurrent.duration._
@@ -99,7 +98,7 @@ case class NettyConfig(
 }
 
 object NettyConfig {
-  def default: NettyConfig = NettyConfig(
+  def defaultNoStreaming: NettyConfig = NettyConfig(
     host = "localhost",
     port = 8080,
     shutdownEventLoopGroupOnClose = true,
@@ -114,10 +113,10 @@ object NettyConfig {
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _)
+    initPipeline = cfg => defaultInitPipelineNoStreaming(cfg)(_, _)
   )
 
-  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+  def defaultInitPipelineNoStreaming(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(new HttpServerCodec())
     pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength.getOrElse(Integer.MAX_VALUE)))
@@ -126,7 +125,7 @@ object NettyConfig {
     ()
   }
 
-  def streamingPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+  def defaultInitPipelineStreaming(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(new HttpServerCodec())
     pipeline.addLast(new HttpStreamsServerHandler())
@@ -135,7 +134,7 @@ object NettyConfig {
     ()
   }
 
-  def defaultWithStreaming: NettyConfig = default.copy(initPipeline = cfg => streamingPipeline(cfg)(_, _))
+  def defaultWithStreaming: NettyConfig = defaultNoStreaming.copy(initPipeline = cfg => defaultInitPipelineStreaming(cfg)(_, _))
 
   case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 

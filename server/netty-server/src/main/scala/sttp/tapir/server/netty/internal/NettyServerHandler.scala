@@ -4,6 +4,7 @@ import com.typesafe.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest
 import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
+import io.netty.handler.codec.http.HttpHeaderNames.{CONNECTION, CONTENT_LENGTH}
 import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.reactivestreams.Publisher
@@ -13,19 +14,19 @@ import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
   ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent
+  ChunkedStreamNettyResponseContent,
+  ReactivePublisherNettyResponseContent
 }
-import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
-import io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
 
-class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit, maxContentLength: Option[Int])(implicit me: MonadError[F])
-    extends SimpleChannelInboundHandler[HttpRequest] {
+class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit, maxContentLength: Option[Int])(implicit
+    me: MonadError[F]
+) extends SimpleChannelInboundHandler[HttpRequest] {
 
   private val logger = Logger[NettyServerHandler[F]]
-  
+
   private val EntityTooLarge: FullHttpResponse = {
     val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
     res.headers().set(CONTENT_LENGTH, 0)
@@ -39,8 +40,35 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     res
   }
 
-
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
+
+    def runRoute(req: HttpRequest) = {
+
+      route(NettyServerRequest(req))
+        .map {
+          case Some(response) => response
+          case None           => ServerResponse.notFound
+        }
+        .flatMap((serverResponse: ServerResponse[NettyResponse]) =>
+          // in ZIO, exceptions thrown in .map become defects - instead, we want them represented as errors so that
+          // we get the 500 response, instead of dropping the request
+          try handleResponse(ctx, req, serverResponse).unit
+          catch {
+            case e: Exception => me.error[Unit](e)
+          }
+        )
+        .handleError { case ex: Exception =>
+          logger.error("Error while processing the request", ex)
+          // send 500
+          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+          res.handleCloseAndKeepAliveHeaders(req)
+
+          ctx.writeAndFlush(res).closeIfNeeded(req)
+          me.unit(())
+        }
+    }
+
     if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
@@ -48,58 +76,14 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
-
           unsafeRunAsync { () =>
-            route(NettyServerRequest(req))
-              .map {
-                case Some(response) => response
-                case None           => ServerResponse.notFound
-              }
-              .flatMap((serverResponse: ServerResponse[NettyResponse]) =>
-                // in ZIO, exceptions thrown in .map become defects - instead, we want them represented as errors so that
-                // we get the 500 response, instead of dropping the request
-                try handleResponse(ctx, req, serverResponse).unit
-                catch {
-                  case e: Exception => me.error[Unit](e)
-                }
-              )
-              .handleError { case ex: Exception =>
-                logger.error("Error while processing the request", ex)
-                // send 500
-                val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-                res.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.writeAndFlush(res).closeIfNeeded(req)
-                me.unit(())
-              }
+            runRoute(req)
               .ensure(me.eval(req.release()))
           } // exceptions should be handled
         case req: StreamedHttpRequest =>
           unsafeRunAsync { () =>
-            route(NettyServerRequest(req))
-              .map {
-                case Some(response) => response
-                case None           => ServerResponse.notFound
-              }
-              .flatMap((serverResponse: ServerResponse[NettyResponse]) =>
-                // in ZIO, exceptions thrown in .map become defects - instead, we want them represented as errors so that
-                // we get the 500 response, instead of dropping the request
-                try handleResponse(ctx, req, serverResponse).unit
-                catch {
-                  case e: Exception => me.error[Unit](e)
-                }
-              )
-              .handleError { case ex: Exception =>
-                logger.error("Error while processing the request", ex)
-                // send 500
-                val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-
-                ctx.writeAndFlush(res)
-                me.unit(())
-              }
-          } // exceptions should be handled
+            runRoute(req)
+          }
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
 
@@ -212,7 +196,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
             case r: ByteBufNettyResponseContent                                => byteBufHandler(r.channelPromise, r.byteBuf)
             case r: ChunkedStreamNettyResponseContent                          => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
             case r: ChunkedFileNettyResponseContent                            => chunkedFileHandler(r.channelPromise, r.chunkedFile)
-            case r: NettyResponseContent.ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
+            case r: ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
           }
         }
         case None => noBodyHandler()

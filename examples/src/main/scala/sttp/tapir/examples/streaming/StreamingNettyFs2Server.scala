@@ -43,29 +43,31 @@ object StreamingNettyFs2Server extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
     // starting the server
-  NettyCatsServer
-    .io()
-    .use { server =>
+    NettyCatsServer
+      .io()
+      .use { server =>
 
-      val effect: IO[NettyCatsServerBinding[IO]] = server
-        .port(declaredPort)
-        .host(declaredHost)
-        .addEndpoint(serverEndpoint)
-        .start()
+        val startServer: IO[NettyCatsServerBinding[IO]] = server
+          .port(declaredPort)
+          .host(declaredHost)
+          .addEndpoint(serverEndpoint)
+          .start()
 
-      effect.map { binding =>
+        startServer
+          .map { binding =>
 
-        val port = binding.port
-        val host = binding.hostName
-        println(s"Server started at port = ${binding.port}")
+            val port = binding.port
+            val host = binding.hostName
+            println(s"Server started at port = ${binding.port}")
 
-        val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
-        val result: String = basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
-        println("Got result: " + result)
+            val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+            val result: String =
+              basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
+            println("Got result: " + result)
 
-        assert(result == "abcd" * 25)
+            assert(result == "abcd" * 25)
+          }
+          .as(ExitCode.Success)
       }
-      .as(ExitCode.Success)
-  }
   }
 }

@@ -55,7 +55,12 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val route = Route.combine(routes)
 
     val channelFuture =
-      NettyBootstrap(config, new NettyServerHandler(route, (f: () => Future[Unit]) => f(), config.maxContentLength), eventLoopGroup, socketOverride)
+      NettyBootstrap(
+        config,
+        new NettyServerHandler(route, (f: () => Future[Unit]) => f(), config.maxContentLength),
+        eventLoopGroup,
+        socketOverride
+      )
 
     nettyChannelFutureToScala(channelFuture).map(ch => (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup)))
   }
@@ -71,10 +76,10 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
 
 object NettyFutureServer {
   def apply()(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default, NettyConfig.default)
+    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default, NettyConfig.defaultNoStreaming)
 
   def apply(serverOptions: NettyFutureServerOptions)(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, serverOptions, NettyConfig.default)
+    NettyFutureServer(Vector.empty, serverOptions, NettyConfig.defaultNoStreaming)
 
   def apply(config: NettyConfig)(implicit ec: ExecutionContext): NettyFutureServer =
     NettyFutureServer(Vector.empty, NettyFutureServerOptions.default, config)

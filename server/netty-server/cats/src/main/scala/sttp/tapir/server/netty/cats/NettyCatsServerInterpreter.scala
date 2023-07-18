@@ -32,7 +32,7 @@ trait NettyCatsServerInterpreter[F[_]] {
     val serverInterpreter = new ServerInterpreter[Fs2Streams[F], F, NettyResponse, Fs2Streams[F]](
       FilterServerEndpoints(ses),
       new NettyCatsRequestBody(createFile),
-      new NettyCatsToResponseBody(nettyServerOptions.dispatcher), 
+      new NettyCatsToResponseBody(nettyServerOptions.dispatcher, delegate = new NettyToResponseBody), 
       RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
       deleteFile
     )

@@ -12,44 +12,31 @@ import org.reactivestreams.Publisher
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HasHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.netty.NettyResponseContent.ByteBufNettyResponseContent
-import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent}
+import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.NettyResponseContent._
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
-import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import fs2.Pull
 
-class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F])
+class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: NettyToResponseBody)
     extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
-      case RawBodyType.StringBody(charset) =>
-        val bytes = v.asInstanceOf[String].getBytes(charset)
-        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
-
-      case RawBodyType.ByteArrayBody =>
-        val bytes = v.asInstanceOf[Array[Byte]]
-        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
-
-      case RawBodyType.ByteBufferBody =>
-        val byteBuffer = v.asInstanceOf[ByteBuffer]
-        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
       case RawBodyType.InputStreamBody =>
         val stream = inputStreamToFs2(() => v)
         (ctx: ChannelHandlerContext) =>
-          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.InputStreamRangeBody =>
         val stream = v.range
           .map(range => inputStreamToFs2(v.inputStreamFromRangeStart).take(range.contentLength))
           .getOrElse(inputStreamToFs2(v.inputStream))
         (ctx: ChannelHandlerContext) =>
-          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.FileBody =>
         val tapirFile = v
@@ -59,9 +46,11 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F])
           .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
 
         (ctx: ChannelHandlerContext) =>
-          new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
+
+      case _ => delegate.fromRawValue(v, headers, format, bodyType)
     }
   }
 
@@ -92,7 +81,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F])
       charset: Option[Charset]
   ): NettyResponse =
     (ctx: ChannelHandlerContext) => {
-      new NettyResponseContent.ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(v))
+      new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(v))
     }
 
   override def fromWebSocketPipe[REQ, RESP](
