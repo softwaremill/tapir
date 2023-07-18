@@ -13,35 +13,64 @@ import sttp.tapir.ValidationResult
 import scala.reflect.ClassTag
 import sttp.tapir.ValidationError
 
-trait TapirCodecIron {
+trait TapirCodecIron extends LowPriorityValidatorForPredicate {
 
-  inline given [Value, Predicate: ClassTag](using
+  inline given [Value, Predicate](using
       inline vSchema: Schema[Value],
-      inline constraint: Constraint[Value, Predicate]
+      inline constraint: Constraint[Value, Predicate],
+      inline validatorTranslation: ValidatorForPredicate[Value, Predicate]
   ): Schema[Value :| Predicate] =
-    vSchema.validate(validator).map[Value :| Predicate](v => v.refineOption[Predicate])(identity)
+    vSchema.validate(validatorTranslation.validator).map[Value :| Predicate](v => v.refineOption[Predicate])(identity)
 
-  inline given [R, V, P: ClassTag, CF <: CodecFormat](using
-      inline tm: Codec[R, V, CF],
-      inline constraint: Constraint[V, P]
-  ): Codec[R, V :| P, CF] = {
+  inline given [Representation, Value, Predicate, CF <: CodecFormat](using
+      inline tm: Codec[Representation, Value, CF],
+      inline constraint: Constraint[Value, Predicate],
+      inline validatorTranslation: ValidatorForPredicate[Value, Predicate]
+  ): Codec[Representation, Value :| Predicate, CF] = {
 
-    implicitly[Codec[R, V, CF]]
-      .validate(validator)
-      .mapDecode { (v: V) =>
-        v.refineEither[P] match {
-          case Right(refined) => DecodeResult.Value[V :| P](refined)
+    summon[Codec[Representation, Value, CF]]
+      .validate(validatorTranslation.validator)
+      .mapDecode { (v: Value) =>
+        v.refineEither[Predicate] match {
+          case Right(refined) => DecodeResult.Value[Value :| Predicate](refined)
           case Left(errorMessage) =>
-            DecodeResult.InvalidValue(
-              List(ValidationError[V](validator, v, Nil, Some(errorMessage)))
-            )
+            DecodeResult.InvalidValue(validatorTranslation.makeErrors(v, constraint.message))
         }
       }(identity)
   }
+}
 
-  // TODO currently only uses custom validator, should be changed to other variants based on selected constraint
-  private inline def validator[V, P: ClassTag](using inline constraint: Constraint[V, P]): Validator.Custom[V] = Validator.Custom { v =>
-    if (constraint.test(v)) ValidationResult.Valid
-    else ValidationResult.Invalid(implicitly[ClassTag[P]].runtimeClass.toString)
-  }
+trait ValidatorForPredicate[Value, Predicate] {
+  def validator: Validator[Value]
+  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
+}
+
+trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
+  def validator: Validator.Primitive[Value]
+  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
+}
+
+object ValidatorForPredicate {
+  def fromPrimitiveValidator[Value, Predicate](
+      primitiveValidator: Validator.Primitive[Value]
+  ): PrimitiveValidatorForPredicate[Value, Predicate] =
+    new PrimitiveValidatorForPredicate[Value, Predicate] {
+      override def validator: Validator.Primitive[Value] = primitiveValidator
+      override def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]] =
+        List(ValidationError[Value](primitiveValidator, value))
+    }
+}
+
+trait LowPriorityValidatorForPredicate {
+  inline given [Value, Predicate](using inline constraint: Constraint[Value, Predicate]): ValidatorForPredicate[Value, Predicate] =
+    new ValidatorForPredicate[Value, Predicate] {
+
+      override val validator: Validator.Custom[Value] = Validator.Custom { v =>
+        if (constraint.test(v)) ValidationResult.Valid
+        else ValidationResult.Invalid(constraint.message)
+      }
+
+      override def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]] =
+        List(ValidationError[Value](validator, value, Nil, Some(errorMessage)))
+    }
 }
