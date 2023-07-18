@@ -80,19 +80,6 @@ trait TapirCodecIron extends LowPriorityValidatorForPredicate {
   ): PrimitiveValidatorForPredicate[N, GreaterEqual[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.min(witness.value))
 
-  // inline given validatorForDescribedAs[Value, Predicate, Description <: String](using
-  //     validatorForPredicate: ValidatorForPredicate[Value, Predicate],
-  //     inline constraint: Constraint[Value, Predicate]
-  // ): ValidatorForPredicate[Value, Predicate DescribedAs Description] =
-  //   new ValidatorForPredicate[Value, Predicate DescribedAs Description] {
-
-  //     override def validator: Validator[Value] = validatorForPredicate.validator
-
-  //     override def makeErrors(value: Value, errorMessage: String): List[ValidationError[?]] =
-  //       validatorForPredicate.makeErrors(value, errorMessage)
-
-  //   }
-
   inline given validatorForAnd[N, LP, RP](using
       leftPredValidator: PrimitiveValidatorForPredicate[N, LP],
       rightPredValidator: PrimitiveValidatorForPredicate[N, RP],
