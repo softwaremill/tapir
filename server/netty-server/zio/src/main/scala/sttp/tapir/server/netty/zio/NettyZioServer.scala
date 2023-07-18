@@ -66,7 +66,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         config,
         new NettyServerHandler[RIO[R, *]](
           route,
-          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f()))
+          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f())),
+          config.maxContentLength
         ),
         eventLoopGroup,
         socketOverride

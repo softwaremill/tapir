@@ -20,7 +20,11 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
   }
 
   override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
-    val config = NettyConfig.defaultWithStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+    val config = NettyConfig.defaultWithStreaming
+      .eventLoopGroup(eventLoopGroup)
+      .randomPort
+      .withDontShutdownEventLoopGroupOnClose
+      .maxContentLength(NettyCatsTestServerInterpreter.maxContentLength)
     val options = NettyCatsServerOptions.default[IO](dispatcher)
     val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, config).addRoutes(routes.toList).start()
 
@@ -28,4 +32,8 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
       .make(bind)(_.stop())
       .map(_.port)
   }
+}
+
+object NettyCatsTestServerInterpreter {
+  val maxContentLength = 10000
 }

@@ -49,7 +49,7 @@ case class NettyConfig(
     host: String,
     port: Int,
     shutdownEventLoopGroupOnClose: Boolean,
-    maxContentLength: Int,
+    maxContentLength: Option[Int],
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
@@ -70,8 +70,8 @@ case class NettyConfig(
   def withShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = true)
   def withDontShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = false)
 
-  def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = m)
-  def noMaxContentLength: NettyConfig = copy(maxContentLength = Integer.MAX_VALUE)
+  def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = Some(m))
+  def noMaxContentLength: NettyConfig = copy(maxContentLength = None)
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
 
@@ -109,7 +109,7 @@ object NettyConfig {
     connectionTimeout = Some(10.seconds),
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
-    maxContentLength = Integer.MAX_VALUE,
+    maxContentLength = None,
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
@@ -120,7 +120,7 @@ object NettyConfig {
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength))
+    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength.getOrElse(Integer.MAX_VALUE)))
     pipeline.addLast(new ChunkedWriteHandler())
     pipeline.addLast(handler)
     ()

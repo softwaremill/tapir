@@ -19,8 +19,10 @@ import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import fs2.Pull
 
-class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
+class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], maxContentLength: Option[Int])
+    extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
@@ -70,16 +72,36 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends To
     )
 
   private def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
+    val chunkedStream = stream.chunkLimit(NettyToResponseBody.DefaultChunkSize)
+    val streamToConvert = maxContentLength.map(enforceFs2MaxBytes(chunkedStream, _)).getOrElse(chunkedStream)
     // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(
-      stream.chunks
+      streamToConvert
         .map { chunk =>
           val bytes: Chunk.ArraySlice[Byte] = chunk.compact
+
           new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length))
         },
       dispatcher
     )
+  }
+  private def enforceFs2MaxBytes(stream: fs2.Stream[F, Chunk[Byte]], maxBytes: Int): fs2.Stream[F, Chunk[Byte]] = {
+    def go(s: fs2.Stream[F, Chunk[Byte]], count: Long): Pull[F, Chunk[Byte], Unit] = {
+      s.pull.uncons.flatMap {
+        case Some((chunk, tail)) =>
+          val chunkSize = chunk.size.toLong
+          val newCount = count + chunkSize
+          if (newCount > maxBytes) {
+            Pull.raiseError[F](new IllegalArgumentException(s"Body size limit $maxBytes exceeded"))
+          } else {
+            Pull.output(chunk) >> go(tail, newCount)
+          }
+        case None =>
+          Pull.done
+      }
+    }
+    go(stream, 0L).stream
   }
 
   override def fromStreamValue(

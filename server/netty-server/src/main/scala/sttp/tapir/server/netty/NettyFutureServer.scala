@@ -55,7 +55,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val route = Route.combine(routes)
 
     val channelFuture =
-      NettyBootstrap(config, new NettyServerHandler(route, (f: () => Future[Unit]) => f()), eventLoopGroup, socketOverride)
+      NettyBootstrap(config, new NettyServerHandler(route, (f: () => Future[Unit]) => f(), config.maxContentLength), eventLoopGroup, socketOverride)
 
     nettyChannelFutureToScala(channelFuture).map(ch => (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup)))
   }

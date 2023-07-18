@@ -16,13 +16,29 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ChunkedStreamNettyResponseContent
 }
 import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
+import io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 
 import scala.collection.JavaConverters._
 
-class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit)(implicit me: MonadError[F])
+class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit, maxContentLength: Option[Int])(implicit me: MonadError[F])
     extends SimpleChannelInboundHandler[HttpRequest] {
 
   private val logger = Logger[NettyServerHandler[F]]
+  
+  private val EntityTooLarge: FullHttpResponse = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
+    res.headers().set(CONTENT_LENGTH, 0)
+    res
+  }
+
+  private val EntityTooLargeClose: FullHttpResponse = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
+    res.headers().set(CONTENT_LENGTH, 0)
+    res.headers().set(CONNECTION, HttpHeaderValues.CLOSE)
+    res
+  }
+
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
     if (HttpUtil.is100ContinueExpected(request)) {
@@ -95,13 +111,16 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     serverResponse.handle(
       ctx = ctx,
       byteBufHandler = (channelPromise, byteBuf) => {
-        val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
 
-        res.setHeadersFrom(serverResponse)
-        res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
-        res.handleCloseAndKeepAliveHeaders(req)
-
-        ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
+        if (maxContentLength.exists(_ < byteBuf.readableBytes))
+          writeEntityTooLargeResponse(ctx, req)
+        else {
+          val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
+          res.setHeadersFrom(serverResponse)
+          res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
+          res.handleCloseAndKeepAliveHeaders(req)
+          ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
+        }
       },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         val resHeader: DefaultHttpResponse =
@@ -149,6 +168,32 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
     )
+
+  private def writeEntityTooLargeResponse(ctx: ChannelHandlerContext, req: HttpRequest): Unit = {
+
+    if (!HttpUtil.is100ContinueExpected(req) && !HttpUtil.isKeepAlive(req)) {
+      val future: ChannelFuture = ctx.writeAndFlush(EntityTooLargeClose.retainedDuplicate())
+      future.addListener(new ChannelFutureListener() {
+        override def operationComplete(future: ChannelFuture) = {
+          if (!future.isSuccess()) {
+            logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
+          }
+          ctx.close()
+        }
+      })
+    } else {
+      ctx
+        .writeAndFlush(EntityTooLarge.retainedDuplicate())
+        .addListener(new ChannelFutureListener() {
+          override def operationComplete(future: ChannelFuture) = {
+            if (!future.isSuccess()) {
+              logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
+              ctx.close()
+            }
+          }
+        })
+    }
+  }
 
   private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
     def handle(
