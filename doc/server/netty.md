@@ -60,7 +60,7 @@ NettyFutureServer().port(9090).addEndpoints(???)
 NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None).options)
 
 // customise Netty config
-NettyFutureServer(NettyConfig.default.socketBacklog(256))
+NettyFutureServer(NettyConfig.defaultNoStreaming.socketBacklog(256))
 ```
 
 ## Domain socket support
