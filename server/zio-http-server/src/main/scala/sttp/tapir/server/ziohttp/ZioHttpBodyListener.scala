@@ -9,15 +9,19 @@ import scala.util.{Failure, Success, Try}
 class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZioHttpResponseBody] {
   override def onComplete(body: ZioHttpResponseBody)(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZioHttpResponseBody] =
     ZIO
-      .environmentWith[R]
+      .environmentWithZIO[R]
       .apply { r =>
-        val (stream, contentLength) = body
-        (
-          stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
-            .fromZIO(cb(Success(())))
-            .provideEnvironment(r)
-            .drain,
-          contentLength
-        )
+        body match {
+          case ZioStreamHttpResponseBody(stream, contentLength) =>
+            ZIO.succeed(ZioStreamHttpResponseBody(
+              stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
+                .fromZIO(cb(Success(())))
+                .provideEnvironment(r)
+                .drain,
+              contentLength
+            )
+          )
+          case raw: ZioRawHttpResponseBody => cb(Success(())).provideEnvironment(r).map(_ => raw)
+        }
       }
 }
