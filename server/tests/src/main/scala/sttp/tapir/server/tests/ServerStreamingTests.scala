@@ -39,11 +39,7 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServ
             .send(backend)
             .map { response =>
               response.body shouldBe Right(penPineapple)
-              if (response.headers.contains(Header(HeaderNames.TransferEncoding, "chunked"))) {
-                response.contentLength shouldBe None
-              } else {
-                response.contentLength shouldBe Some(penPineapple.length)
-              }
+              response.contentLength shouldBe Some(penPineapple.length)
             }
         }
       },

@@ -27,13 +27,14 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     validation: Boolean = true,
     oneOfBody: Boolean = true,
     cors: Boolean = true,
-    options: Boolean = true
+    options: Boolean = true,
+    maxContentLength: Option[Int] = None
 )(implicit
     m: MonadError[F]
 ) {
   def tests(): List[Test] =
     (if (security) new ServerSecurityTests(createServerTest).tests() else Nil) ++
-      (if (basic) new ServerBasicTests(createServerTest, serverInterpreter).tests() else Nil) ++
+      (if (basic) new ServerBasicTests(createServerTest, serverInterpreter, maxContentLength = maxContentLength).tests() else Nil) ++    
       (if (contentNegotiation) new ServerContentNegotiationTests(createServerTest).tests() else Nil) ++
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++
       (if (mapping) new ServerMappingTests(createServerTest).tests() else Nil) ++

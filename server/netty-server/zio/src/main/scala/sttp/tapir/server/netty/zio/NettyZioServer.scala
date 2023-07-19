@@ -66,7 +66,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         config,
         new NettyServerHandler[RIO[R, *]](
           route,
-          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f()))
+          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f())),
+          config.maxContentLength
         ),
         eventLoopGroup,
         socketOverride
@@ -92,8 +93,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
 }
 
 object NettyZioServer {
-  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.default)
-  def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] = NettyZioServer(Vector.empty, options, NettyConfig.default)
+  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.defaultNoStreaming)
+  def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] = NettyZioServer(Vector.empty, options, NettyConfig.defaultNoStreaming)
   def apply[R](config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], config)
   def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, options, config)
 }
