@@ -19,7 +19,7 @@ object Versions {
   val finatra = "22.12.0"
   val catbird = "21.12.0"
   val json4s = "4.0.6"
-  val nettyReactiveStreams = "2.0.8"
+  val nettyReactiveStreams = "2.0.9"
   val sprayJson = "1.3.6"
   val scalaCheck = "1.17.0"
   val scalaTest = "3.2.16"
