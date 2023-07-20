@@ -52,7 +52,7 @@ case class NettyConfig(
     port: Int,
     shutdownEventLoopGroupOnClose: Boolean,
     maxContentLength: Option[Int],
-    maxConnections: Int,
+    maxConnections: Option[Int],
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
@@ -76,7 +76,7 @@ case class NettyConfig(
   def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = Some(m))
   def noMaxContentLength: NettyConfig = copy(maxContentLength = None)
 
-  def maxConnections(m: Int): NettyConfig = copy(maxConnections = m)
+  def maxConnections(m: Int): NettyConfig = copy(maxConnections = Some(m))
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
 
@@ -115,7 +115,7 @@ object NettyConfig {
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
     maxContentLength = None,
-    maxConnections = 1024,
+    maxConnections = Some(1024),
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,

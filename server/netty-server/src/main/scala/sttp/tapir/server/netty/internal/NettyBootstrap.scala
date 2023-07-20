@@ -22,14 +22,17 @@ object NettyBootstrap {
       .childHandler(new ChannelInitializer[Channel] {
         override def initChannel(ch: Channel): Unit = {
           val nettyConfigBuilder = nettyConfig.initPipeline(nettyConfig)
-          val connectionCounter = NettyConnectionCounter(nettyConfig.maxConnections)
-          val pipelineWithConnectionCounter = ch.pipeline().addFirst(connectionCounter)
 
           nettyConfig.requestTimeout match {
             case Some(requestTimeout) =>
-              nettyConfigBuilder(pipelineWithConnectionCounter.addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
-            case None => nettyConfigBuilder(pipelineWithConnectionCounter, handler)
+              nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
+            case None => nettyConfigBuilder(ch.pipeline(), handler)
           }
+
+          nettyConfig.maxConnections.map(maxConnections => {
+            val connectionCounter = NettyConnectionCounter(maxConnections)
+            ch.pipeline().addFirst(connectionCounter)
+          })
         }
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
