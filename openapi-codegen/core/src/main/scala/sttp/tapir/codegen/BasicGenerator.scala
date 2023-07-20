@@ -25,7 +25,7 @@ object BasicGenerator {
         |
         |${indent(2)(imports)}
         |
-        |${indent(2)(classGenerator.classDefs(doc))}
+        |${indent(2)(classGenerator.classDefs(doc).getOrElse(""))}
         |
         |${indent(2)(endpointGenerator.endpointDefs(doc))}
         |

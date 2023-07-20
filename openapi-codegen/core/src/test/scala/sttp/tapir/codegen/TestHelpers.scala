@@ -185,10 +185,75 @@ object TestHelpers {
         )
       )
     ),
-    OpenapiComponent(
-      Map(
-        "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+    Some(
+      OpenapiComponent(
+        Map(
+          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+        )
       )
     )
+  )
+
+  val helloYaml = """openapi: 3.1.0
+                    |info:
+                    |  title: hello
+                    |  version: 1.0.0
+                    |paths:
+                    |  /hello:
+                    |    get:
+                    |      operationId: getHello
+                    |      parameters:
+                    |      - name: name
+                    |        in: path
+                    |        required: true
+                    |        schema:
+                    |          type: string
+                    |      responses:
+                    |        '200':
+                    |          description: ''
+                    |          content:
+                    |            text/plain:
+                    |              schema:
+                    |                type: string
+                    |        '400':
+                    |          description: 'Invalid value for: query parameter name'
+                    |          content:
+                    |            text/plain:
+                    |              schema:
+                    |                type: string
+                    |""".stripMargin
+
+  val helloDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello", "1.0.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            Seq(
+              OpenapiParameter("name", "path", true, None, OpenapiSchemaString(false))
+            ),
+            responses = Seq(
+              OpenapiResponse(
+                "200",
+                "",
+                Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
+              ),
+              OpenapiResponse(
+                code = "400",
+                description = "Invalid value for: query parameter name",
+                content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
+              )
+            ),
+            requestBody = None,
+            summary = None,
+            tags = None
+          )
+        )
+      )
+    ),
+    None
   )
 }

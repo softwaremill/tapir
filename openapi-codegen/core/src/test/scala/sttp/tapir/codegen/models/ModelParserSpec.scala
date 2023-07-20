@@ -60,4 +60,17 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     ))
   }
 
+  it should "parse hello yaml" in {
+    val yaml = TestHelpers.helloYaml
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    res shouldBe (Right(
+      TestHelpers.helloDocs
+    ))
+  }
+
 }

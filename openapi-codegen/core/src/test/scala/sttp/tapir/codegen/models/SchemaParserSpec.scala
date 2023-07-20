@@ -29,15 +29,17 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     val res = parser
       .parse(yaml)
       .leftMap(err => err: Error)
-      .flatMap(_.as[OpenapiComponent])
+      .flatMap(_.as[Option[OpenapiComponent]])
 
     res shouldBe Right(
-      OpenapiComponent(
-        Map(
-          "User" -> OpenapiSchemaObject(
-            Map("id" -> OpenapiSchemaInt(false), "name" -> OpenapiSchemaString(false)),
-            Seq("id", "name"),
-            false
+      Some(
+        OpenapiComponent(
+          Map(
+            "User" -> OpenapiSchemaObject(
+              Map("id" -> OpenapiSchemaInt(false), "name" -> OpenapiSchemaString(false)),
+              Seq("id", "name"),
+              false
+            )
           )
         )
       )

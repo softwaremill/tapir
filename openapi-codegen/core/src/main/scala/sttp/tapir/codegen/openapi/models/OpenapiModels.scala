@@ -1,5 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
+import cats.syntax.either._
+
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -8,7 +10,7 @@ object OpenapiModels {
       // not used so not parsed; servers, contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
-      components: OpenapiComponent
+      components: Option[OpenapiComponent]
   )
 
   case class OpenapiInfo(
@@ -178,6 +180,13 @@ object OpenapiModels {
     }
   }
 
-  implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = deriveDecoder[OpenapiDocument]
+  implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = { (c: HCursor) =>
+    for {
+      openapi <- c.downField("openapi").as[String]
+      info <- c.downField("info").as[OpenapiInfo]
+      paths <- c.downField("paths").as[Seq[OpenapiPath]]
+      components <- c.downField("components").as[Option[OpenapiComponent]].orElse(Right(None))
+    } yield OpenapiDocument(openapi, info, paths, components)
+  }
 
 }
