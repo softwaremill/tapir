@@ -7,7 +7,7 @@ private[ziohttp] sealed trait ZioHttpResponseBody {
   def contentLength: Option[Long]
 }
 
-private[ziohttp] case class ZioStreamHttpResponseBody(stream: ZStream[Any, Throwable, Byte], val contentLength: Option[Long])
+private[ziohttp] case class ZioStreamHttpResponseBody(stream: ZStream[Any, Throwable, Byte], contentLength: Option[Long])
     extends ZioHttpResponseBody
 
-private[ziohttp] case class ZioRawHttpResponseBody(bytes: Chunk[Byte], val contentLength: Option[Long]) extends ZioHttpResponseBody
+private[ziohttp] case class ZioRawHttpResponseBody(bytes: Chunk[Byte], contentLength: Option[Long]) extends ZioHttpResponseBody
