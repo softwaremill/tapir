@@ -20,6 +20,9 @@ import scala.concurrent.duration._
   * @param maxContentLength
   *   The max content length passed to the [[io.netty.handler.codec.http.HttpObjectAggregator]] handler.
   *
+  * @param maxConnections
+  *   The maximum number of concurrent connections allowed by the server. Any connections above this limit will be closed right after they are opened.
+  *
   * @param addLoggingHandler
   *   Should a low-level logging handler, [[io.netty.handler.logging.LoggingHandler]], be added to the Netty pipeline. This is independent
   *   from the logging interceptor configured through the server options.
@@ -49,6 +52,7 @@ case class NettyConfig(
     port: Int,
     shutdownEventLoopGroupOnClose: Boolean,
     maxContentLength: Option[Int],
+    maxConnections: Int,
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
@@ -71,6 +75,8 @@ case class NettyConfig(
 
   def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = Some(m))
   def noMaxContentLength: NettyConfig = copy(maxContentLength = None)
+
+  def maxConnections(m: Int): NettyConfig = copy(maxConnections = m)
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
 
@@ -109,6 +115,7 @@ object NettyConfig {
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
     maxContentLength = None,
+    maxConnections = 1024,
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
