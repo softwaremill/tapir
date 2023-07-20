@@ -6,7 +6,7 @@ import zio.stream.ZStream
 
 import scala.util.{Failure, Success, Try}
 
-class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZioHttpResponseBody] {
+private[ziohttp] class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], ZioHttpResponseBody] {
   override def onComplete(body: ZioHttpResponseBody)(cb: Try[Unit] => RIO[R, Unit]): RIO[R, ZioHttpResponseBody] =
     ZIO
       .environmentWithZIO[R]
