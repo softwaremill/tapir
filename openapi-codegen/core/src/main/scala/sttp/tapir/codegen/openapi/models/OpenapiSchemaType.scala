@@ -69,6 +69,9 @@ object OpenapiSchemaType {
   case class OpenapiSchemaBinary(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
+  case class OpenapiSchemaUUID(
+      nullable: Boolean
+  ) extends OpenapiSchemaStringType
 
   case class OpenapiSchemaBoolean(
       nullable: Boolean
@@ -130,6 +133,7 @@ object OpenapiSchemaType {
         case "date-time" => OpenapiSchemaDateTime(nb.getOrElse(false))
         case "byte"      => OpenapiSchemaByte(nb.getOrElse(false))
         case "binary"    => OpenapiSchemaBinary(nb.getOrElse(false))
+        case "uuid"      => OpenapiSchemaUUID(nb.getOrElse(false))
         case _           => OpenapiSchemaString(nb.getOrElse(false))
       }
     }
