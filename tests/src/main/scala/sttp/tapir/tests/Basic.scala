@@ -196,7 +196,4 @@ object Basic {
 
   val in_flag_query_out_string: PublicEndpoint[Option[Boolean], Unit, String, Any] =
     endpoint.get.in(query[Option[Boolean]]("flag").flagValue(Some(true))).out(stringBody)
-
-  val byte_array: Endpoint[Unit, Unit, Unit, Array[Byte], Any] =
-    endpoint.get.in("bytes").out(byteArrayBody)
 }

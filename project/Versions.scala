@@ -8,7 +8,7 @@ object Versions {
   val circeGenericExtras = "0.14.3"
   val circeYaml = "0.14.2"
   val sttp = "3.8.15"
-  val sttpModel = "1.6.0"
+  val sttpModel = "1.7.1"
   val sttpShared = "1.3.15"
   val sttpApispec = "0.4.0"
   val akkaHttp = "10.2.10"

@@ -7,9 +7,8 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
-import sttp.tapir.tests.Basic.in_root_path
+import sttp.tapir.tests.Basic.{in_byte_array_out_byte_array, in_root_path}
 import sttp.tapir.tests.ContentNegotiation._
-
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
@@ -17,7 +16,6 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
     m: MonadError[F]
 ) {
   import createServerTest._
-  import sttp.tapir.tests.Basic.byte_array
 
   def tests(): List[Test] = List(
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { (backend, baseUri) =>
@@ -76,9 +74,11 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
       (backend, baseUri) =>
         basicRequest.header(HeaderNames.Accept, "text/plain").get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.Ok)
     },
-    testServer(byte_array, testNameSuffix = "check response with header AcceptCharset")(_ => pureResult(Array.emptyByteArray.asRight[Unit])) {
-      (backend, baseUri) =>
-        basicRequest.get(uri"$baseUri/bytes").header(HeaderNames.AcceptCharset, "utf-8").send(backend).map(_.code shouldBe StatusCode.Ok)
+    testServer(
+      in_byte_array_out_byte_array,
+      testNameSuffix = "not take into account the accept charset header when the body media type doesn't specify one"
+    )(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest.post(uri"$baseUri/api/echo").header(HeaderNames.AcceptCharset, "utf8").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }

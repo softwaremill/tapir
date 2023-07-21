@@ -1,6 +1,6 @@
 package sttp.tapir.server.interceptor.content
 
-import sttp.model.{ContentTypeRange, StatusCode, HeaderNames}
+import sttp.model.{ContentTypeRange, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.internal._
 import sttp.tapir.server.interceptor._
@@ -21,7 +21,11 @@ class NotAcceptableInterceptor[F[_]] extends EndpointInterceptor[F] {
         ctx.request.acceptsContentTypes match {
           case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => endpointHandler.onDecodeSuccess(ctx)
           case Right(ranges) =>
+
+            println("X " + ranges)
+
             val supportedMediaTypes = ctx.endpoint.output.supportedMediaTypes
+            println("Y " + supportedMediaTypes)
             // empty supported media types -> no body is defined, so the accepts header can be ignored
             val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty
 
