@@ -46,7 +46,7 @@ object Versions {
   val monixNewtype = "0.2.3"
   val zioPrelude = "1.0.0-RC19"
   val awsLambdaInterface = "2.3.3"
-  val armeria = "1.23.1"
+  val armeria = "1.24.2"
   val scalaJava8Compat = "1.0.2"
   val scalaCollectionCompat = "2.11.0"
   val fs2 = "3.7.0"
