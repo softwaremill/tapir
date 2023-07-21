@@ -8,7 +8,7 @@ object Versions {
   val circeGenericExtras = "0.14.3"
   val circeYaml = "0.14.2"
   val sttp = "3.8.16"
-  val sttpModel = "1.6.0"
+  val sttpModel = "1.7.0"
   val sttpShared = "1.3.15"
   val sttpApispec = "0.5.3"
   val akkaHttp = "10.2.10"
@@ -55,5 +55,5 @@ object Versions {
   val openTelemetry = "1.28.0"
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.2.0"
-  val nettyAll = "4.1.94.Final"
+  val nettyAll = "4.1.95.Final"
 }

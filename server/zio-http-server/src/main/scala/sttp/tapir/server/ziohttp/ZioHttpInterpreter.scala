@@ -42,8 +42,8 @@ trait ZioHttpInterpreter[R] {
             {
               case RequestResult.Response(resp) =>
                 val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
-                val allHeaders = resp.body match {
-                  case Some((_, Some(contentLength))) if resp.contentLength.isEmpty =>
+                val allHeaders = resp.body.flatMap(_.contentLength) match {
+                  case Some(contentLength) if resp.contentLength.isEmpty =>
                     ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
                   case _ => baseHeaders
                 }
@@ -53,7 +53,12 @@ trait ZioHttpInterpreter[R] {
                   Response(
                     status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
                     headers = ZioHttpHeaders(allHeaders),
-                    body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
+                    body = resp.body
+                      .map {
+                        case ZioStreamHttpResponseBody(stream, _) => Body.fromStream(stream)
+                        case ZioRawHttpResponseBody(chunk, _)     => Body.fromChunk(chunk)
+                      }
+                      .getOrElse(Body.empty)
                   )
                 )
               case RequestResult.Failure(_) =>
