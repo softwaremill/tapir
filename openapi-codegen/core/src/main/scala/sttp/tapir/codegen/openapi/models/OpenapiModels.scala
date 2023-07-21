@@ -30,7 +30,8 @@ object OpenapiModels {
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
-      tags: Option[Seq[String]] = None
+      tags: Option[Seq[String]] = None,
+      operationId: Option[String]
   )
 
   case class OpenapiParameter(
@@ -150,8 +151,9 @@ object OpenapiModels {
           requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
           summary <- c.downField("summary").as[Option[String]]
           tags <- c.downField("tags").as[Option[Seq[String]]]
+          operationId <- c.downField("operationId").as[Option[String]]
         } yield {
-          (parameters, responses, requestBody, summary, tags)
+          (parameters, responses, requestBody, summary, tags, operationId)
         }
     }
     for {
@@ -163,12 +165,13 @@ object OpenapiModels {
               Seq[OpenapiResponse],
               Option[OpenapiRequestBody],
               Option[String],
-              Option[Seq[String]]
+              Option[Seq[String]],
+              Option[String],
           )
         ]
       ]
     } yield {
-      methods.map { case (t, (p, r, rb, s, tg)) => OpenapiPathMethod(t, p, r, rb, s, tg) }.toSeq
+      methods.map { case (t, (p, r, rb, s, tg, oid)) => OpenapiPathMethod(t, p, r, rb, s, tg, oid) }.toSeq
     }
   }
 
