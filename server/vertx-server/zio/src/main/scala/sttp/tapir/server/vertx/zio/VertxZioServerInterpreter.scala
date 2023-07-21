@@ -13,107 +13,108 @@ import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFutur
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
 import sttp.tapir.server.vertx.zio.streams._
-import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
+import sttp.tapir.ztapir._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
-  def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default
+  def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = VertxZioServerOptions.default[R].widen
 
-  def route(e: ZServerEndpoint[R, ZioStreams with WebSockets])(implicit
-      runtime: Runtime[R]
+  def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
+      runtime: Runtime[R & R2]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e))
   }
 
-  private def endpointHandler(
-      e: ZServerEndpoint[R, ZioStreams with WebSockets]
-  )(implicit runtime: Runtime[R]): Handler[RoutingContext] = {
-    val fromVFuture = new RioFromVFuture[R]
-    implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
-    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Future[Void]] =
-      new VertxBodyListener[RIO[R, *]](new ZioRunAsync(runtime))
-    val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions)
-    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R, *], RoutingContext => Future[Void], ZioStreams](
-      _ => List(e),
-      new VertxRequestBody[RIO[R, *], ZioStreams](vertxZioServerOptions, fromVFuture)(zioReadStream),
+  private def endpointHandler[R2](
+      e: ZServerEndpoint[R2, ZioStreams with WebSockets]
+  )(implicit runtime: Runtime[R & R2]): Handler[RoutingContext] = {
+    val fromVFuture = new RioFromVFuture[R & R2]
+    implicit val monadError: RIOMonadError[R & R2] = new RIOMonadError[R & R2]
+    implicit val bodyListener: BodyListener[RIO[R & R2, *], RoutingContext => Future[Void]] =
+      new VertxBodyListener[RIO[R & R2, *]](new ZioRunAsync(runtime))
+    val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions[R & R2])
+    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], RoutingContext => Future[Void], ZioStreams](
+      _ => List(e.widen[R & R2]),
+      new VertxRequestBody[RIO[R & R2, *], ZioStreams](vertxZioServerOptions[R & R2], fromVFuture)(zioReadStream),
       new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
     )
+    new Handler[RoutingContext] {
+      override def handle(rc: RoutingContext) = {
+        val serverRequest = VertxServerRequest(rc)
 
-    { rc =>
-      val serverRequest = VertxServerRequest(rc)
+        def fail(t: Throwable): Unit = {
+          if (rc.response().bytesWritten() > 0) rc.response().end()
+          rc.fail(t)
+        }
 
-      def fail(t: Throwable): Unit = {
-        if (rc.response().bytesWritten() > 0) rc.response().end()
-        rc.fail(t)
-      }
+        val result: ZIO[R & R2, Throwable, Any] =
+          interpreter(serverRequest)
+            .flatMap {
+              // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
+              case RequestResult.Failure(_) => ZIO.succeed(rc.next())
+              case RequestResult.Response(response) =>
+                ZIO.async((k: Task[Unit] => Unit) => {
+                  VertxOutputEncoders(response)
+                    .apply(rc)
+                    .onComplete(d => {
+                      if (d.succeeded()) k(ZIO.unit) else k(ZIO.fail(d.cause()))
+                    })
+                })
+            }
+            .catchAll { t => ZIO.attempt(fail(t)) }
 
-      val result: ZIO[R, Throwable, Any] =
-        interpreter(serverRequest)
-          .flatMap {
-            // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
-            case RequestResult.Failure(_) => ZIO.succeed(rc.next())
-            case RequestResult.Response(response) =>
-              ZIO.async((k: Task[Unit] => Unit) => {
-                VertxOutputEncoders(response)
-                  .apply(rc)
-                  .onComplete(d => {
-                    if (d.succeeded()) k(ZIO.unit) else k(ZIO.fail(d.cause()))
-                  })
-              })
+        // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+        // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+        // if so, we need to use this fact to cancel the operation nonetheless
+        val cancelRef = new AtomicReference[Option[Either[Throwable, FiberId => Exit[Throwable, Any]]]](None)
+
+        rc.response.exceptionHandler { (t: Throwable) =>
+          cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+            rc.vertx()
+              .executeBlocking[Unit](
+                (promise: Promise[Unit]) => {
+                  c(FiberId.None)
+                  promise.complete(())
+                },
+                false
+              )
           }
-          .catchAll { t => ZIO.attempt(fail(t)) }
+          ()
+        }
 
-      // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
-      // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
-      // if so, we need to use this fact to cancel the operation nonetheless
-      val cancelRef = new AtomicReference[Option[Either[Throwable, FiberId => Exit[Throwable, Any]]]](None)
+        val canceler: FiberId => Exit[Throwable, Any] = {
+          Unsafe.unsafe(implicit u => {
+            val value = runtime.unsafe.fork(ZIO.yieldNow *> result)
+            (fiberId: FiberId) => runtime.unsafe.run(value.interruptAs(fiberId)).flattenExit
+          })
+        }
 
-      rc.response.exceptionHandler { (t: Throwable) =>
-        cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+        cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
           rc.vertx()
             .executeBlocking[Unit](
               (promise: Promise[Unit]) => {
-                c(FiberId.None)
+                canceler(FiberId.None)
                 promise.complete(())
               },
               false
             )
         }
+
         ()
       }
-
-      val canceler: FiberId => Exit[Throwable, Any] = {
-        Unsafe.unsafe(implicit u => {
-          val value = runtime.unsafe.fork(ZIO.yieldNow *> result)
-          (fiberId: FiberId) => runtime.unsafe.run(value.interruptAs(fiberId)).flattenExit
-        })
-      }
-
-    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
-      rc.vertx()
-        .executeBlocking[Unit](
-          (promise: Promise[Unit]) => {
-            canceler(FiberId.None)
-            promise.complete(())
-          },
-          false
-        )
-    }
-
-    ()
     }
   }
 }
 
 object VertxZioServerInterpreter {
-  def apply[R](serverOptions: VertxZioServerOptions[RIO[R, *]] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
+  def apply[R](serverOptions: VertxZioServerOptions[R] = VertxZioServerOptions.default[R]): VertxZioServerInterpreter[R] = {
     new VertxZioServerInterpreter[R] {
-      override def vertxZioServerOptions: VertxZioServerOptions[RIO[R, *]] = serverOptions
+      override def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = serverOptions.widen[R2]
     }
   }
 

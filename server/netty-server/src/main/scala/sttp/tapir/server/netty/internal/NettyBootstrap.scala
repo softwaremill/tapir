@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
+import io.netty.handler.timeout.ReadTimeoutHandler
 import sttp.tapir.server.netty.NettyConfig
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -19,10 +20,28 @@ object NettyBootstrap {
       .group(eventLoopGroup)
       .channel(nettyConfig.eventLoopConfig.serverChannel)
       .childHandler(new ChannelInitializer[Channel] {
-        override def initChannel(ch: Channel): Unit = nettyConfig.initPipeline(nettyConfig)(ch.pipeline(), handler)
+        override def initChannel(ch: Channel): Unit = {
+          val nettyConfigBuilder = nettyConfig.initPipeline(nettyConfig)
+          nettyConfig.requestTimeout match {
+            case Some(requestTimeout) =>
+              nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
+            case None => nettyConfigBuilder(ch.pipeline(), handler)
+          }
+        }
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
       .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, nettyConfig.socketKeepAlive) // https://github.com/netty/netty/issues/1692
+      .childOption[java.lang.Boolean](ChannelOption.SO_REUSEADDR, nettyConfig.socketConfig.reuseAddress)
+      .childOption[java.lang.Boolean](ChannelOption.TCP_NODELAY, nettyConfig.socketConfig.tcpNoDelay)
+
+    nettyConfig.socketConfig.receiveBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_RCVBUF, i))
+    nettyConfig.socketConfig.sendBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_SNDBUF, i))
+    nettyConfig.socketConfig.typeOfService.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.IP_TOS, i))
+    nettyConfig.socketTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, i.toSeconds.toInt))
+    nettyConfig.lingerTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_LINGER, i.toSeconds.toInt))
+    nettyConfig.connectionTimeout.foreach(i =>
+      httpBootstrap.childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, i.toMillis.toInt)
+    )
 
     httpBootstrap.bind(overrideSocketAddress.getOrElse(new InetSocketAddress(nettyConfig.host, nettyConfig.port)))
   }

@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.model.Part
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.{SName, Title}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
@@ -121,6 +121,8 @@ case class Schema[T](
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
   def hidden(h: Boolean): Schema[T] = copy(hidden = h)
+
+  def title(t: String): Schema[T] = attribute(Title.Attribute, Title(t))
 
   def show: String = s"schema is $schemaType"
 
@@ -323,6 +325,13 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
+  /** Corresponds to JsonSchema's `title` parameter which should be used for defining title of the object. */
+  case class Title(value: String)
+
+  object Title {
+    val Attribute: AttributeKey[Title] = new AttributeKey[Title]("sttp.tapir.Schema.Title")
+  }
+
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
   }
@@ -339,6 +348,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     class deprecated extends StaticAnnotation with Serializable
     class hidden extends StaticAnnotation with Serializable
     class encodedName(val name: String) extends StaticAnnotation with Serializable
+    class title(val name: String) extends StaticAnnotation with Serializable
 
     /** Adds the `v` validator to the schema using [[Schema.validate]]. Note that the type of the validator must match exactly the type of
       * the class/field. This is not checked at compile-time, and might cause run-time exceptions. To validate elements of collections or

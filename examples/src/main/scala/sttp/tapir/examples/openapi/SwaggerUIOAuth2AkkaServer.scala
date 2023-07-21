@@ -24,8 +24,7 @@ import scala.concurrent.{Await, Future, Promise}
   *     - `Web Origins` == *
   *   - create user 'myuser' and add password which is permanent not temporary
   *
-  * 3. Check if you can connect by using [[https://www.keycloak.org/app/]]
-  * ---
+  * 3. Check if you can connect by using [[https://www.keycloak.org/app/]] ---
   *
   * Go to: [[http://localhost:3333/docs]] And try authorize by using `Authorize` by providing details of clients and user
   */

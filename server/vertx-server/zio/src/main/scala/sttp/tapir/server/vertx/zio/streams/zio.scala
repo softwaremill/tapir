@@ -26,7 +26,7 @@ package object streams {
       dfd.await
   }
 
-  def zioReadStreamCompatible[F[_]](opts: VertxZioServerOptions[F])(implicit
+  def zioReadStreamCompatible[R](opts: VertxZioServerOptions[R])(implicit
       runtime: Runtime[Any]
   ): ReadStreamCompatible[ZioStreams] = new ReadStreamCompatible[ZioStreams] {
     override val streams: ZioStreams = ZioStreams

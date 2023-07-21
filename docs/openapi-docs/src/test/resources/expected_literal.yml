@@ -1,5 +1,5 @@
 openapi: |-
-  3.0.3
+  3.1.0
 info:
   title: |-
     String style
