@@ -31,7 +31,7 @@ object OpenapiModels {
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
-      operationId: Option[String]
+      operationId: Option[String] = None
   )
 
   case class OpenapiParameter(
