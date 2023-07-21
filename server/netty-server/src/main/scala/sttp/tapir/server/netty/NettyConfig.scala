@@ -115,7 +115,7 @@ object NettyConfig {
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
     maxContentLength = None,
-    maxConnections = Some(1024),
+    maxConnections = None,
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,

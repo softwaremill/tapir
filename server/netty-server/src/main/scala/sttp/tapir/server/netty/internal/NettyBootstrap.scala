@@ -17,7 +17,7 @@ object NettyBootstrap {
   ): ChannelFuture = {
     val httpBootstrap = new ServerBootstrap()
 
-    val connectionCounterOpt = nettyConfig.maxConnections.map(max => NettyConnectionCounter(max))
+    val connectionCounterOpt = nettyConfig.maxConnections.map(max => new NettyConnectionCounter(max))
     httpBootstrap
       .group(eventLoopGroup)
       .channel(nettyConfig.eventLoopConfig.serverChannel)
