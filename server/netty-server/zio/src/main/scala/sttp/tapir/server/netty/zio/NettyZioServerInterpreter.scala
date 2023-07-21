@@ -3,6 +3,7 @@ package sttp.tapir.server.netty.zio
 import sttp.tapir.server.netty.Route
 import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
+import sttp.tapir.server.netty.zio.internal.ZioStreamCompatible
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio._
 import sttp.tapir.server.ServerEndpoint
@@ -29,7 +30,7 @@ trait NettyZioServerInterpreter[R] {
     val serverInterpreter = new ServerInterpreter[ZioStreams, F, NettyResponse, ZioStreams](
       FilterServerEndpoints(widenedSes),
       new NettyZioRequestBody(widenedServerOptions.createFile),
-      new NettyToResponseBody,
+      new NettyToStreamsResponseBody[ZioStreams](delegate = new NettyToResponseBody(), ZioStreamCompatible(runtime)),
       RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
       widenedServerOptions.deleteFile
     )

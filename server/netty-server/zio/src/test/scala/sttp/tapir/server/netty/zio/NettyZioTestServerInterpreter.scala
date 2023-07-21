@@ -21,7 +21,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
   }
 
   override def server(routes: NonEmptyList[Task[Route[Task]]]): Resource[IO, Port] = {
-    val config = NettyConfig.defaultNoStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+    val config = NettyConfig.defaultWithStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
     val options = NettyZioServerOptions.default[R]
 
     val runtime: Runtime[R] = Runtime.default.asInstanceOf[Runtime[R]]
