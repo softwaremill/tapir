@@ -26,7 +26,7 @@ class EndpointGenerator {
         |""".stripMargin
   }
 
-  private val legalNameRegex = """[a-z][a-zA-Z$_]*""".r
+  private val legalNameRegex = """[a-z][0-9a-zA-Z$_]*""".r
   private[codegen] def generatedEndpoints(p: OpenapiPath): Seq[(String, String)] = {
     p.methods.map { m =>
       val definition =
