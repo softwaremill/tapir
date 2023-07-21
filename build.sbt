@@ -67,7 +67,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala3) ||
+    (scalaVersion.value == scala2_13) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -1365,10 +1365,12 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
-  .settings(libraryDependencies ++= Seq(
-    "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-    "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
-  ))
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
+    )
+  )
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
   .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
@@ -1378,7 +1380,9 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(
       name := s"tapir-netty-server-$proj",
-      libraryDependencies ++= loggerDependencies,
+      libraryDependencies ++= loggerDependencies ++ Seq(
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
+      ),
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false
     )
