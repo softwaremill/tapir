@@ -23,7 +23,8 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-private[netty] class NettyZioToRequestBody[Env](createFile: ServerRequest => RIO[Env, TapirFile]) extends RequestBody[RIO[Env, *], ZioStreams] {
+private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[Env, TapirFile])
+    extends RequestBody[RIO[Env, *], ZioStreams] {
 
   override val streams: ZioStreams = ZioStreams
 
@@ -43,19 +44,19 @@ private[netty] class NettyZioToRequestBody[Env](createFile: ServerRequest => RIO
         throw new java.lang.UnsupportedOperationException("TODO")
       case MultipartBody(partTypes, defaultType) =>
         throw new java.lang.UnsupportedOperationException("TODO")
-    
 
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
 
-    serverRequest.underlying.asInstanceOf[StreamedHttpRequest].toZIOStream()
+    serverRequest.underlying
+      .asInstanceOf[StreamedHttpRequest]
+      .toZIOStream()
       .flatMap(httpContent => ZStream.fromChunk(Chunk.fromByteBuffer(httpContent.content.nioBuffer())))
   }
 
-
   private def nettyRequestBytes(serverRequest: ServerRequest): RIO[Env, Array[Byte]] = serverRequest.underlying match {
-    case req: FullHttpRequest     => ZIO.succeed(ByteBufUtil.getBytes(req.content()))
+    case req: FullHttpRequest   => ZIO.succeed(ByteBufUtil.getBytes(req.content()))
     case _: StreamedHttpRequest => toStream(serverRequest).run(ZSink.collectAll[Byte]).map(_.toArray)
     case other => ZIO.fail(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
   }
