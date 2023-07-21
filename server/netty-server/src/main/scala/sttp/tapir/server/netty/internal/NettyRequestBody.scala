@@ -9,7 +9,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.server.netty.NettyServerRequest
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -45,4 +44,8 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
 
   private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
+}
+
+private[internal] object NettyRequestBody {
+  val DefaultChunkSize = 8192
 }

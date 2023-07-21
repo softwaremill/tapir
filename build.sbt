@@ -392,7 +392,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.2")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.3")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.3",
@@ -1353,7 +1353,10 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-netty-server",
-    libraryDependencies ++= Seq("io.netty" % "netty-all" % Versions.nettyAll)
+    libraryDependencies ++= Seq(
+      "io.netty" % "netty-all" % Versions.nettyAll,
+      "com.typesafe.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams
+    )
       ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
@@ -1362,7 +1365,10 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
-  .settings(libraryDependencies += "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared)
+  .settings(libraryDependencies ++= Seq(
+    "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+    "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
+  ))
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
   .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)

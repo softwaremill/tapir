@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.model.Part
-import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.{SName, Title}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
@@ -39,8 +39,7 @@ case class Schema[T](
     deprecated: Boolean = false,
     hidden: Boolean = false,
     validator: Validator[T] = Validator.pass[T],
-    attributes: AttributeMap = AttributeMap.Empty,
-    title: Option[String] = None
+    attributes: AttributeMap = AttributeMap.Empty
 ) extends SchemaMacros[T] {
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
@@ -70,8 +69,7 @@ case class Schema[T](
       format = format,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes,
-      title = title
+      attributes = attributes
     )
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection might
@@ -83,8 +81,7 @@ case class Schema[T](
       isOptional = true,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes,
-      title = title
+      attributes = attributes
     )
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]]. Sets `isOptional` to true as the collection
@@ -96,8 +93,7 @@ case class Schema[T](
       isOptional = true,
       deprecated = deprecated,
       hidden = hidden,
-      attributes = attributes,
-      title = title
+      attributes = attributes
     )
 
   def name(name: SName): Schema[T] = copy(name = Some(name))
@@ -126,7 +122,7 @@ case class Schema[T](
 
   def hidden(h: Boolean): Schema[T] = copy(hidden = h)
 
-  def title(t: String): Schema[T] = copy(title = Some(t))
+  def title(t: String): Schema[T] = attribute(Title.Attribute, Title(t))
 
   def show: String = s"schema is $schemaType"
 
@@ -327,6 +323,13 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   case class Explode(explode: Boolean)
   object Explode {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
+  }
+
+  /** Corresponds to JsonSchema's `title` parameter which should be used for defining title of the object. */
+  case class Title(value: String)
+
+  object Title {
+    val Attribute: AttributeKey[Title] = new AttributeKey[Title]("sttp.tapir.Schema.Title")
   }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {

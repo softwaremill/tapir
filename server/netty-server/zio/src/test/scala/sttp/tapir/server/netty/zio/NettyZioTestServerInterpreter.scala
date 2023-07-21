@@ -14,14 +14,14 @@ import java.net.InetSocketAddress
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Task, Any, NettyZioServerOptions[Any], Task[Route[Task]]] {
   override def route(es: List[ServerEndpoint[Any, Task]], interceptors: Interceptors): Task[Route[Task]] = {
-    val serverOptions: NettyZioServerOptions[Any] = interceptors(
+    val serverOptions = interceptors(
       NettyZioServerOptions.customiseInterceptors
     ).options
     NettyZioServerInterpreter(serverOptions).toRoute(es)
   }
 
   override def server(routes: NonEmptyList[Task[Route[Task]]]): Resource[IO, Port] = {
-    val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+    val config = NettyConfig.defaultNoStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
     val options = NettyZioServerOptions.default[R]
 
     val runtime: Runtime[R] = Runtime.default.asInstanceOf[Runtime[R]]

@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Examples
   version: '1.0'
@@ -13,10 +13,8 @@ paths:
           schema:
             type: integer
             format: int32
-            minimum: 0
-            exclusiveMinimum: true
-            maximum: 42
-            exclusiveMaximum: true
+            exclusiveMinimum: 0
+            exclusiveMaximum: 42
       responses:
         '200':
           description: ''

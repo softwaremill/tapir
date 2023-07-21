@@ -15,7 +15,7 @@ import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
@@ -31,7 +31,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,
     supportsMultipleSetCookieHeaders: Boolean = true,
-    invulnerableToUnsanitizedHeaders: Boolean = true
+    invulnerableToUnsanitizedHeaders: Boolean = true,
+    maxContentLength: Option[Int] = None
 )(implicit
     m: MonadError[F]
 ) {
@@ -46,6 +47,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       customiseDecodeFailureHandlerTests() ++
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
+      (if (maxContentLength.nonEmpty) maxContentLengthTests() else Nil) ++
       exceptionTests()
 
   def basicTests(): List[Test] = List(
@@ -740,6 +742,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.header(HeaderNames.ContentLength) shouldBe Some("128")
         }
     }
+  )
+
+  def maxContentLengthTests(): List[Test] = List(
+    testServer(in_string_out_string, "returns 413 on exceeded max content length")(_ =>
+      pureResult(List.fill(maxContentLength.getOrElse(0) + 1)('x').mkString.asRight[Unit])
+    ) { (backend, baseUri) => basicRequest.post(uri"$baseUri/api/echo").body("irrelevant").send(backend).map(_.code.code shouldBe 413) }
   )
 
   def exceptionTests(): List[Test] = List(

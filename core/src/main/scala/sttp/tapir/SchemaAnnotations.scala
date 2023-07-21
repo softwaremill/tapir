@@ -16,7 +16,6 @@ final case class SchemaAnnotations[T](
     validate: List[Validator[T]],
     validateEach: List[Validator[Any]]
 ) {
-
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
   }

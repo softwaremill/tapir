@@ -1,16 +1,17 @@
 package sttp.tapir.serverless.aws.sam
 
+import cats.data.NonEmptySeq
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.model.Method
+import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.serverless.aws.sam.VerifySamTemplateTest._
-import sttp.tapir._
 
 import scala.concurrent.duration._
 import scala.io.Source
-import sttp.model.Method
 
 class VerifySamTemplateTest extends AnyFunSuite with Matchers {
 
@@ -38,6 +39,45 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
       timeout = 10.seconds,
       memorySize = 1024
     )
+
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint, getCutePetsEndpoint)).toYaml
+
+    expectedYaml shouldBe noIndentation(actualYaml)
+  }
+
+  test("should match the expected yaml with params, code source and role") {
+    val expectedYaml = load("code_source_template_with_params_and_role.yaml")
+
+    val samOptions: AwsSamOptions = AwsSamOptions(
+      "PetApi",
+      source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest"),
+      timeout = 10.seconds,
+      memorySize = 1024
+    )
+      .withParameter("PetApiJava", None)
+      .withParameter("PetApiLambdaAuthorizer", Some("Lambda authorizer for authentication"))
+      .withParameter("PetApiLambdaAuthorizerRoleArn", Some("Role for lambda authorizer"))
+      .withParameter("PetApiLambdaRoleArn", Some("Lambda role for basic execution and permissions"))
+      .customiseOptions { case ((jvm, authArn, authRole, role), originalOptions) =>
+        val functionSource = originalOptions.source.asInstanceOf[CodeSource].copy(runtime = jvm.ref, role = Some(role.ref))
+        val lambdaAuth = HttpApiProperties.Auth.Lambda(
+          name = "MyLambdaAuthorizer",
+          version = HttpApiProperties.Auth.Version.V2Simple,
+          enableDefaultPermissions = true,
+          functionArn = authArn.ref,
+          functionRole = Some(authRole.ref),
+          identity = HttpApiProperties.Auth
+            .LambdaAuthorizationIdentitySource(
+              headers = Some(NonEmptySeq.one("Authorization")),
+              queryStrings = None,
+              reauthorizeEvery = None
+            )
+        )
+        val httpApiProperties = originalOptions.httpApi
+          .getOrElse(HttpApiProperties(None, None))
+          .copy(auths = Some(HttpApiProperties.Auths(NonEmptySeq.one(lambdaAuth), Some(lambdaAuth.name))))
+        originalOptions.copy(source = functionSource, httpApi = Some(httpApiProperties))
+      }
 
     val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint, getCutePetsEndpoint)).toYaml
 

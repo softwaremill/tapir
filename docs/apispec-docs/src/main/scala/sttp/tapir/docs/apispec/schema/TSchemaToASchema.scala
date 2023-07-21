@@ -1,6 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
+import sttp.tapir.Schema.Title
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
@@ -23,10 +24,10 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
             properties = extractProperties(fields)
           )
         )
-      case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(SchemaKey(nested, name))))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         Left(toSchemaReference.map(SchemaKey(nested, name)))
       case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
@@ -40,8 +41,8 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
               schemas
                 .filterNot(_.hidden)
                 .map {
-                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
-                  case t                                                             => apply(t)
+                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
+                  case t                                                          => apply(t)
                 }
                 .sortBy {
                   case Left(Reference(ref, _, _)) => ref
@@ -89,7 +90,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
   }
 
   private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema =
-    oschema.copy(title = tschema.title)
+    oschema.copy(title = tschema.attributes.get(Title.Attribute).map(_.value))
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(

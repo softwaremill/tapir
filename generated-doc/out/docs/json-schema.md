@@ -3,7 +3,7 @@
 You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.6.0"
+"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.6.2"
 ```
 
 Schema generation can now be performed like in the following example:
@@ -48,9 +48,10 @@ import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema._
 import sttp.tapir.generic.auto._
+import sttp.tapir.Schema.annotations.title
 
   object Childhood {
-    case class Child(age: Int, height: Option[Int])
+    @title("my child") case class Child(age: Int, height: Option[Int])
   }
   case class Parent(innerChildField: Child, childDetails: Childhood.Child)
   case class Child(childName: String)
@@ -65,7 +66,8 @@ import sttp.tapir.generic.auto._
   val schemaStr: String = Printer.spaces2.print(schemaAsJson.deepDropNullValues)
 ```
 
-This example will produce following String:
+The title annotation of the object will be by default the name of the case class. You can customize it with `@title` annotation.
+You can also disable generation of default title fields by setting an option `addTitleToDefs` to `false`.  This example will produce following String:
 
 ```json
 {
@@ -85,7 +87,7 @@ This example will produce following String:
   },
   "$defs" : {
     "Child" : {
-      "title" : "my child",
+      "title" : "Child",
       "required" : [
         "childName"
       ],
@@ -97,7 +99,7 @@ This example will produce following String:
       }
     },
     "Child1" : {
-      "title" : "Child1",
+      "title" : "my child",
       "required" : [
         "age"
       ],
