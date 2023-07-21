@@ -8,6 +8,7 @@ import sttp.tapir.server.netty.NettyConfig
 import java.net.{InetSocketAddress, SocketAddress}
 
 object NettyBootstrap {
+
   def apply[F[_]](
       nettyConfig: NettyConfig,
       handler: => NettyServerHandler[F],
@@ -16,6 +17,7 @@ object NettyBootstrap {
   ): ChannelFuture = {
     val httpBootstrap = new ServerBootstrap()
 
+    val connectionCounterOpt = nettyConfig.maxConnections.map(max => NettyConnectionCounter(max))
     httpBootstrap
       .group(eventLoopGroup)
       .channel(nettyConfig.eventLoopConfig.serverChannel)
@@ -29,9 +31,8 @@ object NettyBootstrap {
             case None => nettyConfigBuilder(ch.pipeline(), handler)
           }
 
-          nettyConfig.maxConnections.map(maxConnections => {
-            val connectionCounter = NettyConnectionCounter(maxConnections)
-            ch.pipeline().addFirst(connectionCounter)
+          connectionCounterOpt.map(counter => {
+            ch.pipeline().addFirst(counter)
           })
         }
       })
