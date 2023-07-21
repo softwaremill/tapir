@@ -60,7 +60,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     ))
   }
 
-  it should "parse bookstore yaml from generaated project" in {
+  it should "parse bookstore yaml containing an endpoint with no parameters" in {
     val yaml = TestHelpers.generatedBookshopYaml
 
     val res = parser
