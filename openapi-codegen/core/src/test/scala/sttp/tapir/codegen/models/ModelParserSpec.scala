@@ -59,6 +59,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       TestHelpers.myBookshopDoc
     ))
   }
+
   it should "parse bookstore yaml containing an endpoint with no parameters" in {
     val yaml = TestHelpers.generatedBookshopYaml
 
@@ -71,6 +72,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
         TestHelpers.generatedBookshopDoc
       ))
   }
+
   it should "parse uuids" in {
     val yaml =
       """
