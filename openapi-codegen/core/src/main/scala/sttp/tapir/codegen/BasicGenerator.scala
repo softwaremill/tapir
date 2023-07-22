@@ -9,7 +9,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaLong,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
-  OpenapiSchemaString
+  OpenapiSchemaString,
+  OpenapiSchemaUUID
 }
 
 object BasicGenerator {
@@ -54,6 +55,8 @@ object BasicGenerator {
         ("Int", nb)
       case OpenapiSchemaLong(nb) =>
         ("Long", nb)
+      case OpenapiSchemaUUID(nb) =>
+        ("java.util.UUID", nb)
       case OpenapiSchemaString(nb) =>
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
