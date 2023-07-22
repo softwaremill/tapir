@@ -60,4 +60,17 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     ))
   }
 
+  it should "parse bookstore yaml containing an endpoint with no parameters" in {
+    val yaml = TestHelpers.generatedBookshopYaml
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+      
+      res shouldBe (Right(
+        TestHelpers.generatedBookshopDoc
+      ))
+  }
+
 }

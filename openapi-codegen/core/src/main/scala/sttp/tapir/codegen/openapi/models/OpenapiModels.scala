@@ -1,5 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
+import cats.syntax.either._ 
+
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -143,7 +145,7 @@ object OpenapiModels {
         : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
       (c: HCursor) =>
         for {
-          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
+          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
           responses <- c.downField("responses").as[Seq[OpenapiResponse]]
           requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
           summary <- c.downField("summary").as[Option[String]]
