@@ -8,6 +8,7 @@ import sttp.tapir.server.netty.NettyConfig
 import java.net.{InetSocketAddress, SocketAddress}
 
 object NettyBootstrap {
+
   def apply[F[_]](
       nettyConfig: NettyConfig,
       handler: => NettyServerHandler[F],
@@ -16,17 +17,23 @@ object NettyBootstrap {
   ): ChannelFuture = {
     val httpBootstrap = new ServerBootstrap()
 
+    val connectionCounterOpt = nettyConfig.maxConnections.map(max => new NettyConnectionCounter(max))
     httpBootstrap
       .group(eventLoopGroup)
       .channel(nettyConfig.eventLoopConfig.serverChannel)
       .childHandler(new ChannelInitializer[Channel] {
         override def initChannel(ch: Channel): Unit = {
           val nettyConfigBuilder = nettyConfig.initPipeline(nettyConfig)
+
           nettyConfig.requestTimeout match {
             case Some(requestTimeout) =>
               nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
             case None => nettyConfigBuilder(ch.pipeline(), handler)
           }
+
+          connectionCounterOpt.map(counter => {
+            ch.pipeline().addFirst(counter)
+          })
         }
       })
       .option[java.lang.Integer](ChannelOption.SO_BACKLOG, nettyConfig.socketBacklog) // https://github.com/netty/netty/issues/1692
