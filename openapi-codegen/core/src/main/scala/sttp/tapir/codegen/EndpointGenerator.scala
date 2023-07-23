@@ -26,6 +26,7 @@ class EndpointGenerator {
         |""".stripMargin
   }
 
+  private val legalNameRegex = """[a-z][a-zA-Z$_]*""".r
   private[codegen] def generatedEndpoints(p: OpenapiPath): Seq[(String, String)] = {
     p.methods.map { m =>
       val definition =
@@ -38,7 +39,11 @@ class EndpointGenerator {
             |""".stripMargin
 
       val name = m.operationId
-        .getOrElse(m.methodType + p.url.split('/').map(_.replace("{", "").replace("}", "").toLowerCase.capitalize).mkString)
+        .getOrElse(m.methodType + p.url.split('/').map(_.replace("{", "").replace("}", "").toLowerCase.capitalize).mkString) match {
+        case legalNameRegex(n) => n
+        case n =>
+          n.split("[^a-zA-Z$_]").filter(_.nonEmpty).zipWithIndex.map { case (part, 0) => part; case (part, _) => part.capitalize }.mkString
+      }
       (name, definition)
     }
   }
