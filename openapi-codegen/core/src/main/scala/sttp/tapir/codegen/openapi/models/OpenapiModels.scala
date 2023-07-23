@@ -1,6 +1,6 @@
 package sttp.tapir.codegen.openapi.models
 
-import cats.syntax.either._ 
+import cats.syntax.either._
 
 // https://swagger.io/specification/
 object OpenapiModels {
@@ -30,7 +30,8 @@ object OpenapiModels {
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
-      tags: Option[Seq[String]] = None
+      tags: Option[Seq[String]] = None,
+      operationId: Option[String] = None
   )
 
   case class OpenapiParameter(
@@ -141,18 +142,26 @@ object OpenapiModels {
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
-    implicit val InnerDecoder
-        : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
-      (c: HCursor) =>
-        for {
-          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
-          responses <- c.downField("responses").as[Seq[OpenapiResponse]]
-          requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
-          summary <- c.downField("summary").as[Option[String]]
-          tags <- c.downField("tags").as[Option[Seq[String]]]
-        } yield {
-          (parameters, responses, requestBody, summary, tags)
-        }
+    implicit val InnerDecoder: Decoder[
+      (
+          Seq[OpenapiParameter],
+          Seq[OpenapiResponse],
+          Option[OpenapiRequestBody],
+          Option[String],
+          Option[Seq[String]],
+          Option[String]
+      )
+    ] = { (c: HCursor) =>
+      for {
+        parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+        responses <- c.downField("responses").as[Seq[OpenapiResponse]]
+        requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
+        summary <- c.downField("summary").as[Option[String]]
+        tags <- c.downField("tags").as[Option[Seq[String]]]
+        operationId <- c.downField("operationId").as[Option[String]]
+      } yield {
+        (parameters, responses, requestBody, summary, tags, operationId)
+      }
     }
     for {
       methods <- c.as[
@@ -163,12 +172,13 @@ object OpenapiModels {
               Seq[OpenapiResponse],
               Option[OpenapiRequestBody],
               Option[String],
-              Option[Seq[String]]
+              Option[Seq[String]],
+              Option[String],
           )
         ]
       ]
     } yield {
-      methods.map { case (t, (p, r, rb, s, tg)) => OpenapiPathMethod(t, p, r, rb, s, tg) }.toSeq
+      methods.map { case (t, (p, r, rb, s, tg, oid)) => OpenapiPathMethod(t, p, r, rb, s, tg, oid) }.toSeq
     }
   }
 

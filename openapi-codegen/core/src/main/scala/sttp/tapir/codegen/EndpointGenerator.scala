@@ -37,7 +37,8 @@ class EndpointGenerator {
             |${indent(2)(tags(m.tags))}
             |""".stripMargin
 
-      val name = m.methodType + p.url.split('/').map(_.replace("{", "").replace("}", "").toLowerCase.capitalize).mkString
+      val name = m.operationId
+        .getOrElse(m.methodType + p.url.split('/').map(_.replace("{", "").replace("}", "").toLowerCase.capitalize).mkString)
       (name, definition)
     }
   }
