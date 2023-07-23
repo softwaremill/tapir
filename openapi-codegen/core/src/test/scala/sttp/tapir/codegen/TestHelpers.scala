@@ -185,43 +185,174 @@ object TestHelpers {
         )
       )
     ),
-    Some(
-      OpenapiComponent(
-        Map(
-          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
-        )
+    Some(OpenapiComponent(
+      Map(
+        "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
       )
-    )
+    ))
   )
 
-  val helloYaml = """openapi: 3.1.0
-                    |info:
-                    |  title: hello
-                    |  version: 1.0.0
-                    |paths:
-                    |  /hello:
-                    |    get:
-                    |      operationId: getHello
-                    |      parameters:
-                    |      - name: name
-                    |        in: path
-                    |        required: true
-                    |        schema:
-                    |          type: string
-                    |      responses:
-                    |        '200':
-                    |          description: ''
-                    |          content:
-                    |            text/plain:
-                    |              schema:
-                    |                type: string
-                    |        '400':
-                    |          description: 'Invalid value for: query parameter name'
-                    |          content:
-                    |            text/plain:
-                    |              schema:
-                    |                type: string
-                    |""".stripMargin
+  val generatedBookshopYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: Generated Bookshop
+      |  version: '1.0'
+      |paths:
+      |  /hello:
+      |    get:
+      |      operationId: getHello
+      |      parameters:
+      |      - name: name
+      |        in: query
+      |        required: true
+      |        schema:
+      |          type: string
+      |      responses:
+      |        '200':
+      |          description: ''
+      |          content:
+      |            text/plain:
+      |              schema:
+      |                type: string
+      |        '400':
+      |          description: 'Invalid value for: query parameter name'
+      |          content:
+      |            text/plain:
+      |              schema:
+      |                type: string
+      |  /books/list/all:
+      |    get:
+      |      operationId: getBooksListAll
+      |      responses:
+      |        '200':
+      |          description: ''
+      |          content:
+      |            application/json:
+      |              schema:
+      |                type: array
+      |                items:
+      |                  $ref: '#/components/schemas/Book'
+      |components:
+      |  schemas:
+      |    Author:
+      |      required:
+      |      - name
+      |      type: object
+      |      properties:
+      |        name:
+      |          type: string
+      |    Book:
+      |      required:
+      |      - title
+      |      - year
+      |      - author
+      |      type: object
+      |      properties:
+      |        title:
+      |          type: string
+      |        year:
+      |          type: integer
+      |          format: int32
+      |        author:
+      |          $ref: '#/components/schemas/Author'
+      |""".stripMargin
+
+  val generatedBookshopDoc = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("Generated Bookshop", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(
+              OpenapiParameter("name", "query", true, None, OpenapiSchemaString(false))
+            ),
+            responses = Seq(
+              OpenapiResponse(
+                "200",
+                "",
+                Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
+              ),
+              OpenapiResponse(
+                code = "400",
+                description = "Invalid value for: query parameter name",
+                content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
+              )
+            ),
+            requestBody = None,
+            summary = None,
+            tags = None
+          )
+        )
+      ),
+      OpenapiPath(
+        url = "/books/list/all",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(),
+            responses = Seq(
+              OpenapiResponse(
+                code = "200",
+                description = "",
+                content = List(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
+              )
+            ),
+            requestBody = None,
+            summary = None,
+            tags = None
+          )
+        )
+      )
+    ),
+    Some(OpenapiComponent(
+      Map(
+        "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
+        "Book" -> OpenapiSchemaObject(
+          properties = Map(
+            "title" -> OpenapiSchemaString(false),
+            "year" -> OpenapiSchemaInt(false),
+            "author" -> OpenapiSchemaRef("#/components/schemas/Author")
+          ),
+          required = Seq("title", "year", "author"),
+          nullable = false
+        )
+      )
+    ))
+  )
+
+  val helloYaml =
+    """openapi: 3.1.0
+      |info:
+      |  title: hello
+      |  version: 1.0.0
+      |paths:
+      |  /hello:
+      |    get:
+      |      operationId: getHello
+      |      parameters:
+      |      - name: name
+      |        in: path
+      |        required: true
+      |        schema:
+      |          type: string
+      |      responses:
+      |        '200':
+      |          description: ''
+      |          content:
+      |            text/plain:
+      |              schema:
+      |                type: string
+      |        '400':
+      |          description: 'Invalid value for: query parameter name'
+      |          content:
+      |            text/plain:
+      |              schema:
+      |                type: string
+      |""".stripMargin
 
   val helloDocs = OpenapiDocument(
     "3.1.0",

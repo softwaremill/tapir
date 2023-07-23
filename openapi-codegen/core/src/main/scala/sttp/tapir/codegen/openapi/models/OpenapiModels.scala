@@ -145,7 +145,7 @@ object OpenapiModels {
         : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
       (c: HCursor) =>
         for {
-          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
+          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
           responses <- c.downField("responses").as[Seq[OpenapiResponse]]
           requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
           summary <- c.downField("summary").as[Option[String]]

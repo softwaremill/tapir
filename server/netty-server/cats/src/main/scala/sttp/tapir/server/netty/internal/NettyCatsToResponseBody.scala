@@ -28,15 +28,13 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
 
       case RawBodyType.InputStreamBody =>
         val stream = inputStreamToFs2(() => v)
-        (ctx: ChannelHandlerContext) =>
-          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+        (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.InputStreamRangeBody =>
         val stream = v.range
           .map(range => inputStreamToFs2(v.inputStreamFromRangeStart).take(range.contentLength))
           .getOrElse(inputStreamToFs2(v.inputStream))
-        (ctx: ChannelHandlerContext) =>
-          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+        (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case RawBodyType.FileBody =>
         val tapirFile = v
@@ -45,8 +43,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
           .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, r.contentLength.toInt, s._1, s._2)))
           .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
 
-        (ctx: ChannelHandlerContext) =>
-          new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
+        (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
 
@@ -64,7 +61,8 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
     // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(
-      stream.chunkLimit(NettyToResponseBody.DefaultChunkSize)
+      stream
+        .chunkLimit(NettyToResponseBody.DefaultChunkSize)
         .map { chunk =>
           val bytes: Chunk.ArraySlice[Byte] = chunk.compact
 

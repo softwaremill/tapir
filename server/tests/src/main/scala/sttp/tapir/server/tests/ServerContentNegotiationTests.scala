@@ -7,9 +7,8 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
-import sttp.tapir.tests.Basic.in_root_path
+import sttp.tapir.tests.Basic.{in_byte_array_out_byte_array, in_root_path}
 import sttp.tapir.tests.ContentNegotiation._
-
 import sttp.tapir.tests._
 import sttp.tapir.tests.data._
 
@@ -74,6 +73,12 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
     testServer(in_root_path, testNameSuffix = "accepts header without output body")(_ => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
         basicRequest.header(HeaderNames.Accept, "text/plain").get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(
+      in_byte_array_out_byte_array,
+      testNameSuffix = "not take into account the accept charset header when the body media type doesn't specify one"
+    )(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest.post(uri"$baseUri/api/echo").header(HeaderNames.AcceptCharset, "utf8").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }

@@ -289,6 +289,13 @@ documentation) in sync with how the values are serialised, you will have to conf
 Schemas are referenced at the point of `jsonBody` and `jsonQuery` usage, so any configuration must be available in the implicit scope
 when these methods are called.
 
+## Optional json bodies
+
+When the body is specified as an option, e.g. `jsonBody[Option[Book]]`, an empty body will be decoded as `None`. 
+
+This is implemented by passing `null` to the json-library-specific decoder, when the schema specifies that the value is 
+optional, and the body is empty.
+
 ## Next
 
 Read on about [working with forms](forms.md).

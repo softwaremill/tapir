@@ -248,20 +248,23 @@ private[tapir] object SchemaCompanionMacros {
     if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
       report.errorAndAbort("Can only generate a coproduct schema for an enum, sealed trait or class.")
     } else {
-      val subclasses = symbol.children.toList.sortBy(_.name)
+      val children = symbol.children.toList.sortBy(_.name)
 
-      val subclassesSchemas: List[Expr[(String, Schema[_])]] = subclasses.map(subclass =>
-        TypeIdent(subclass).tpe.asType match {
-          case '[f] => {
-            Expr.summon[Schema[f]] match {
-              case Some(subSchema) => '{ ${ Expr(subclass.name) } -> Schema.wrapWithSingleFieldProduct(${ subSchema })($conf) }
-              case None => {
-                val typeName = TypeRepr.of[f].typeSymbol.name
-                report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
+      val childSchemas: List[Expr[(String, Schema[_])]] = children.map(child =>
+        if child.isClassDef
+        then // this can be a type (enum case with params / case class with params), or a parameterless enum case / case object
+          TypeIdent(child).tpe.asType match {
+            case '[f] => {
+              Expr.summon[Schema[f]] match {
+                case Some(subSchema) => '{ ${ Expr(child.name) } -> Schema.wrapWithSingleFieldProduct(${ subSchema })($conf) }
+                case None => {
+                  val typeName = TypeRepr.of[f].typeSymbol.name
+                  report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
+                }
               }
             }
           }
-        }
+        else '{ ${ Expr(child.name) } -> Schema(SchemaType.SProduct[E](Nil), name = Some(Schema.SName(${ Expr(child.name) }))) }
       )
 
       def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[_]]]) = {
@@ -272,12 +275,10 @@ private[tapir] object SchemaCompanionMacros {
 
         val t = Match(
           eIdent,
-          subclasses.map { subclass =>
-            CaseDef(
-              Typed(Wildcard(), TypeIdent(subclass)),
-              None,
-              Block(Nil, '{ Some(SchemaWithValue($map(${ Expr(subclass.name) }).asInstanceOf[Schema[Any]], $e)) }.asTerm)
-            )
+          children.map { child =>
+            val caseThen = Block(Nil, '{ Some(SchemaWithValue($map(${ Expr(child.name) }).asInstanceOf[Schema[Any]], $e)) }.asTerm)
+            if child.isClassDef then CaseDef(Typed(Wildcard(), TypeIdent(child)), None, caseThen)
+            else CaseDef(Ident(child.termRef), None, caseThen)
           }
         )
 
@@ -291,7 +292,7 @@ private[tapir] object SchemaCompanionMacros {
         import _root_.sttp.tapir.SchemaType._
         import _root_.scala.collection.immutable.{List, Map}
 
-        val subclassNameToSchema: List[(String, Schema[_])] = List(${ Varargs(subclassesSchemas) }: _*)
+        val subclassNameToSchema: List[(String, Schema[_])] = List(${ Varargs(childSchemas) }: _*)
         val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
 
         val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
