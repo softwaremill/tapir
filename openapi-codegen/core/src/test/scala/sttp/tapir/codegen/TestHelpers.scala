@@ -160,7 +160,8 @@ object TestHelpers {
               )
             ),
             summary = None,
-            tags = Some(Seq("Bookshop"))
+            tags = Some(Seq("Bookshop")),
+            operationId = Some("postBooksGenreYear")
           ),
           OpenapiPathMethod(
             methodType = "get",
@@ -180,7 +181,8 @@ object TestHelpers {
             ),
             requestBody = None,
             summary = None,
-            tags = Some(Seq("Bookshop"))
+            tags = Some(Seq("Bookshop")),
+            operationId = Some("getBooksGenreYear")
           )
         )
       )
@@ -284,7 +286,8 @@ object TestHelpers {
             ),
             requestBody = None,
             summary = None,
-            tags = None
+            tags = None,
+            operationId = Some("getHello")
           )
         )
       ),
@@ -303,7 +306,8 @@ object TestHelpers {
             ),
             requestBody = None,
             summary = None,
-            tags = None
+            tags = None,
+            operationId = Some("getBooksListAll")
           )
         )
       )
