@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.zio
 
 import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
@@ -14,14 +15,14 @@ import java.nio.file.{Path, Paths}
 import java.util.UUID
 
 case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
-  def addEndpoint(se: ZServerEndpoint[R, Any]): NettyZioServer[R] = addEndpoints(List(se))
-  def addEndpoint(se: ZServerEndpoint[R, Any], overrideOptions: NettyZioServerOptions[R]): NettyZioServer[R] =
+  def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
+  def addEndpoint(se: ZServerEndpoint[R, ZioStreams], overrideOptions: NettyZioServerOptions[R]): NettyZioServer[R] =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Any, RIO[R, *]]]): NettyZioServer[R] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[ZioStreams, RIO[R, *]]]): NettyZioServer[R] = addRoute(
     NettyZioServerInterpreter[R](options).toRoute(ses)
   )
   def addEndpoints(
-      ses: List[ZServerEndpoint[R, Any]],
+      ses: List[ZServerEndpoint[R, ZioStreams]],
       overrideOptions: NettyZioServerOptions[R]
   ): NettyZioServer[R] = addRoute(
     NettyZioServerInterpreter[R](overrideOptions).toRoute(ses)
