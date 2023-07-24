@@ -1,12 +1,11 @@
 package sttp.tapir.server.netty.zio
 
 import sttp.tapir.server.netty.Route
-import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
+import sttp.tapir.server.netty.internal.RunAsync
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
 import sttp.tapir.server.netty.zio.internal.ZioStreamCompatible
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio._
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}

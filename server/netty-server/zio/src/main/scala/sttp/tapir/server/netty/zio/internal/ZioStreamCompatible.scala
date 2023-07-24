@@ -2,16 +2,14 @@ package sttp.tapir.server.netty.zio.internal
 
 import _root_.zio._
 import _root_.zio.interop.reactivestreams._
-import _root_.zio.stream.Stream
-import org.reactivestreams.Publisher
-import sttp.tapir.server.netty._
-import sttp.tapir.server.netty.internal._
-import sttp.capabilities.zio.ZioStreams
-import io.netty.handler.codec.http.DefaultHttpContent
+import _root_.zio.stream.{Stream, ZStream}
 import io.netty.buffer.Unpooled
-import io.netty.handler.codec.http.HttpContent
+import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
+import org.reactivestreams.Publisher
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.FileRange
-import _root_.zio.stream.ZStream
+import sttp.tapir.server.netty.internal._
+
 import java.io.InputStream
 
 private[zio] object ZioStreamCompatible {
@@ -22,26 +20,29 @@ private[zio] object ZioStreamCompatible {
 
       override def fromFile(fileRange: FileRange): streams.BinaryStream = {
         fileRange.range
-          .flatMap(r => r.startAndEnd.map { case(fStart, _) => 
-            ZStream.fromPath(fileRange.file.toPath)
-            .drop(fStart.toInt)
-            .take(r.contentLength)
-          })
+          .flatMap(r =>
+            r.startAndEnd.map { case (fStart, _) =>
+              ZStream
+                .fromPath(fileRange.file.toPath)
+                .drop(fStart.toInt)
+                .take(r.contentLength)
+            }
+          )
           .getOrElse(
             ZStream.fromPath(fileRange.file.toPath)
-            )
+          )
       }
 
-      override def fromInputStream(is: () => InputStream, length: Option[Long]): streams.BinaryStream = 
+      override def fromInputStream(is: () => InputStream, length: Option[Long]): streams.BinaryStream =
         length match {
           case Some(limitedLength) => ZStream.fromInputStream(is()).take(limitedLength.toInt)
-          case None => ZStream.fromInputStream(is())
-      }
+          case None                => ZStream.fromInputStream(is())
+        }
 
       override def asPublisher(stream: Stream[Throwable, Byte]): Publisher[HttpContent] =
         Unsafe.unsafe(implicit u =>
           runtime.unsafe
-            .run(stream.mapChunks(c => Chunk.single(DefaultHttpContent(Unpooled.wrappedBuffer(c.toArray)))).toPublisher)
+            .run(stream.mapChunks(c => Chunk.single(new DefaultHttpContent(Unpooled.wrappedBuffer(c.toArray)): HttpContent)).toPublisher)
             .getOrThrowFiberFailure()
         )
 

@@ -1,25 +1,17 @@
 package sttp.tapir.server.netty.internal
 
-import sttp.capabilities.zio.ZioStreams
-import zio.RIO
-import sttp.tapir.server.interpreter.RequestBody
-import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.RawBodyType
-import sttp.tapir.RawBodyType._
-import sttp.tapir.TapirFile
-import zio.interop.reactivestreams._
 import com.typesafe.netty.http.StreamedHttpRequest
+import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.FullHttpRequest
-import io.netty.buffer.ByteBufUtil
-import zio.ZIO
-import zio.stream._
-import io.netty.buffer.ByteBufUtil
-import scala.sys.process.ProcessBuilder.Sink
-import zio.stream.ZStream
-import zio.Chunk
-
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.RawBodyType._
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
+import zio.interop.reactivestreams._
+import zio.stream.{ZStream, _}
+import zio.{Chunk, RIO, ZIO}
+
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
@@ -29,7 +21,7 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
   override val streams: ZioStreams = ZioStreams
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): RIO[Env, RawValue[R]] = {
-    bodyType match
+    bodyType match {
       case StringBody(charset) => nettyRequestBytes(serverRequest).map(bs => RawValue(new String(bs, charset)))
 
       case ByteArrayBody =>
@@ -48,8 +40,8 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
             .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
           })
       case MultipartBody(partTypes, defaultType) =>
-        throw new java.lang.UnsupportedOperationException("TODO")
-
+        throw new java.lang.UnsupportedOperationException()
+    }
   }
 
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
