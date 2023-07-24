@@ -41,7 +41,12 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
       case InputStreamRangeBody =>
         nettyRequestBytes(serverRequest).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
       case FileBody =>
-        throw new java.lang.UnsupportedOperationException("TODO")
+        createFile(serverRequest)
+          .flatMap(tapirFile => {
+            toStream(serverRequest)
+            .run(ZSink.fromFile(tapirFile))
+            .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
+          })
       case MultipartBody(partTypes, defaultType) =>
         throw new java.lang.UnsupportedOperationException("TODO")
 
