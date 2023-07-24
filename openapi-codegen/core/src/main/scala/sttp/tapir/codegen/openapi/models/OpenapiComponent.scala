@@ -5,14 +5,11 @@ case class OpenapiComponent(schemas: Map[String, OpenapiSchemaType])
 object OpenapiComponent {
   import io.circe._
 
-  implicit val OpenapiComponentDecoder: Decoder[Option[OpenapiComponent]] = { (c: HCursor) =>
+  implicit val OpenapiComponentDecoder: Decoder[OpenapiComponent] = { (c: HCursor) =>
     for {
-      schemas <- c.downField("schemas").as[Option[Map[String, OpenapiSchemaType]]]
+      schemas <- c.downField("schemas").as[Map[String, OpenapiSchemaType]]
     } yield {
-      schemas match {
-        case None    => None
-        case Some(m) => Some(OpenapiComponent(m))
-      }
+      OpenapiComponent(schemas)
     }
   }
 }
