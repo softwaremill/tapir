@@ -17,7 +17,7 @@ Then, use:
 
 - `NettyFutureServer().addEndpoints` to expose `Future`-based server endpoints.
 - `NettyCatsServer().addEndpoints` to expose `F`-based server endpoints, where `F` is any cats-effect supported effect. [Streaming](../endpoint/streaming.md) request and response bodies is supported with fs2.
-- `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect.
+- `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect. Streaming is supported with ZIO Streams.
 
 These methods require a single, or a list of `ServerEndpoint`s, which can be created by adding [server logic](logic.md)
 to an endpoint.
