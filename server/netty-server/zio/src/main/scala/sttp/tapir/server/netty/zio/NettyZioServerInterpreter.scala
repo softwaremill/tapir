@@ -18,7 +18,7 @@ import sttp.capabilities.zio.ZioStreams
 trait NettyZioServerInterpreter[R] {
   def nettyServerOptions: NettyZioServerOptions[R]
 
-  def toRoute[R2](ses: List[ZServerEndpoint[R2, Any]]): RIO[R & R2, Route[RIO[R & R2, *]]] = ZIO.runtime.map { (runtime: Runtime[R & R2]) =>
+  def toRoute[R2](ses: List[ZServerEndpoint[R2, ZioStreams]]): RIO[R & R2, Route[RIO[R & R2, *]]] = ZIO.runtime.map { (runtime: Runtime[R & R2]) =>
     type F[A] = RIO[R & R2, A]
     implicit val monadError: RIOMonadError[R & R2] = new RIOMonadError[R & R2]
     val runAsync = new ZioRunAsync[R & R2](runtime)
