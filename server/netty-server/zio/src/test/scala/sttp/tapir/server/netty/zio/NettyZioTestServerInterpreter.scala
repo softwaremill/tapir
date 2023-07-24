@@ -3,6 +3,7 @@ package sttp.tapir.server.netty.zio
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
@@ -10,7 +11,6 @@ import sttp.tapir.tests.Port
 import zio.{CancelableFuture, Runtime, Task, Unsafe}
 
 import java.net.InetSocketAddress
-import sttp.capabilities.zio.ZioStreams
 
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Task, ZioStreams, NettyZioServerOptions[Any], Task[Route[Task]]] {

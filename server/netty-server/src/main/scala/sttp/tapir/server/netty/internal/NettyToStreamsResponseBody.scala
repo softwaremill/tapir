@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import sttp.capabilities
+import sttp.capabilities.Streams
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
@@ -11,16 +12,14 @@ import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
   ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent
+  ChunkedStreamNettyResponseContent,
+  ReactivePublisherNettyResponseContent
 }
 import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.{InputStream, RandomAccessFile}
 import java.nio.ByteBuffer
-import sttp.tapir.server.interpreter.ToResponseBody
 import java.nio.charset.Charset
-import sttp.capabilities.Streams
-import sttp.tapir.server.netty.NettyResponseContent.ReactivePublisherNettyResponseContent
 
 class NettyToStreamsResponseBody[S <: Streams[S]](delegate: NettyToResponseBody, streamCompatible: StreamCompatible[S])
     extends ToResponseBody[NettyResponse, S] {
