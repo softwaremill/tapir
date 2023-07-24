@@ -42,7 +42,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
         val tapirFile = v
         val path = Path.fromNioPath(tapirFile.file.toPath)
         val stream = tapirFile.range
-          .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, NettyToResponseBody.DefaultChunkSize, s._1, s._2)))
+          .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, r.contentLength.toInt, s._1, s._2)))
           .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
 
         (ctx: ChannelHandlerContext) =>
