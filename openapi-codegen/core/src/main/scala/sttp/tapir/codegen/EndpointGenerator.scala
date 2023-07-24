@@ -39,7 +39,7 @@ class EndpointGenerator {
 
       val name = m.operationId
         .getOrElse(m.methodType + p.url.capitalize)
-        .split("[^a-zA-Z0-9$_]")
+        .split("[^0-9a-zA-Z$_]")
         .filter(_.nonEmpty)
         .zipWithIndex
         .map { case (part, 0) => part; case (part, _) => part.capitalize }
