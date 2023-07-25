@@ -4,20 +4,20 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.6.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.6.3"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.6.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.6.3"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.6.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.6.3"
 ```
 
 Then, use:
 
 - `NettyFutureServer().addEndpoints` to expose `Future`-based server endpoints.
 - `NettyCatsServer().addEndpoints` to expose `F`-based server endpoints, where `F` is any cats-effect supported effect. [Streaming](../endpoint/streaming.md) request and response bodies is supported with fs2.
-- `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect.
+- `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect. Streaming is supported with ZIO Streams.
 
 These methods require a single, or a list of `ServerEndpoint`s, which can be created by adding [server logic](logic.md)
 to an endpoint.
