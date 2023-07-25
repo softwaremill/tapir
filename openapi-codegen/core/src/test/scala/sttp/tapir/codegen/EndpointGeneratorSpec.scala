@@ -19,11 +19,11 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Seq(
         OpenapiPath(
-          "test/{asd}",
+          "test/{asd-id}",
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(OpenapiParameter("asd", "path", true, None, OpenapiSchemaString(false))),
+              parameters = Seq(OpenapiParameter("asd-id", "path", true, None, OpenapiSchemaString(false))),
               responses = Seq(
                 OpenapiResponse(
                   "200",
@@ -41,8 +41,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    BasicGenerator.imports ++
-      new EndpointGenerator().endpointDefs(doc) shouldCompile ()
+    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
+    generatedCode should include ("val getTestAsdId =")
+    generatedCode shouldCompile ()
   }
 
 }
