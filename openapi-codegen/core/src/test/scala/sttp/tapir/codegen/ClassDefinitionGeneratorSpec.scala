@@ -2,7 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaString}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -56,6 +56,21 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
   }
 
+  it should "generate class with map" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)), Seq("texts"), false)
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+  }
+
   it should "generate class with inner class" in {
     val doc = OpenapiDocument(
       "",
@@ -68,6 +83,54 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               "inner" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
             ),
             Seq("inner"),
+            false
+          )
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+  }
+
+  it should "generate class with array with inner class" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaObject(
+            Map(
+              "objects" -> OpenapiSchemaArray(
+                OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
+                false
+              )
+            ),
+            Seq("objects"),
+            false
+          )
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+  }
+
+  it should "generate class with map with inner class" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaObject(
+            Map(
+              "objects" -> OpenapiSchemaMap(
+                OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
+                false
+              )
+            ),
+            Seq("objects"),
             false
           )
         )
