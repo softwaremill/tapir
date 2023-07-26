@@ -3,8 +3,20 @@ package sttp.tapir.codegen.openapi.models
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
 
+import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
+
+  sealed trait Resolvable[T] {
+    def resolve(input: Map[String, T]): T
+    def toResolved(input: Map[String, T]): Resolved[T] = Resolved(resolve(input))
+  }
+  case class Resolved[T](t: T) extends Resolvable[T] {
+    override def resolve(input: Map[String, T]): T = t
+  }
+  case class Ref[T](name: String) extends Resolvable[T] {
+    override def resolve(input: Map[String, T]): T = input.getOrElse(name, throw new IllegalArgumentException(s"Cannot resolve $name"))
+  }
 
   case class OpenapiDocument(
       openapi: String,
@@ -23,20 +35,32 @@ object OpenapiModels {
   case class OpenapiPath(
       url: String,
       methods: Seq[OpenapiPathMethod],
-      parameters: Seq[OpenapiParameter] = Nil
+      parameters: Seq[Resolvable[OpenapiParameter]] = Nil
   )
 
   case class OpenapiPathMethod(
       methodType: String,
-      parameters: Seq[OpenapiParameter],
+      parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None
   ) {
-    def withParentParameters(pathParameters: Seq[OpenapiParameter]): OpenapiPathMethod =
-      this.copy(parameters = pathParameters.filterNot(p => parameters.exists(p.name == _.name)) ++ parameters)
+    def resolvedParameters: Seq[OpenapiParameter] = parameters.collect { case Resolved(t) => t }
+    def withResolvedParentParameters(
+        pMap: Map[String, OpenapiParameter],
+        pathParameters: Seq[Resolvable[OpenapiParameter]]
+    ): OpenapiPathMethod = {
+      val resolved = parameters.map(_.toResolved(pMap))
+      val duplicates = resolved.groupBy(_.t.name).filter(_._2.size > 1).keys
+      if (duplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${duplicates.mkString(", ")}")
+      val filteredParents: Seq[Resolved[OpenapiParameter]] =
+        pathParameters.map(_.toResolved(pMap)).filterNot(p => resolved.exists(p.t.name == _.t.name))
+      val parentDuplicates = filteredParents.groupBy(_.t.name).filter(_._2.size > 1).keys
+      if (parentDuplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${parentDuplicates.mkString(", ")}")
+      this.copy(parameters = filteredParents ++ resolved)
+    }
   }
 
   case class OpenapiParameter(
@@ -138,9 +162,15 @@ object OpenapiModels {
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
+  implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
+    c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
+  }
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
-      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      parameters <- c
+        .downField("parameters")
+        .as[Seq[Resolvable[OpenapiParameter]]]
+        .orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
       responses <- c.downField("responses").as[Seq[OpenapiResponse]]
       requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
       summary <- c.downField("summary").as[Option[String]]
@@ -153,7 +183,7 @@ object OpenapiModels {
 
   implicit val PartialOpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
-      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      parameters <- c.downField("parameters").as[Seq[Resolvable[OpenapiParameter]]].orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
       methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
     } yield OpenapiPath("--partial--", methods.flatten, parameters)
