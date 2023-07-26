@@ -196,7 +196,7 @@ object OpenapiModels {
   implicit val OpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
       parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
-      methods <- c.removeIfPresent("parameters").as[Seq[OpenapiPathMethod]]
+      methods <- c.removeIfPresent("parameters", "$ref", "summary", "description", "servers").as[Seq[OpenapiPathMethod]]
     } yield OpenapiPath("--partial--", methods, parameters)
   }
 
