@@ -21,7 +21,8 @@ object OpenapiModels {
 
   case class OpenapiPath(
       url: String,
-      methods: Seq[OpenapiPathMethod]
+      methods: Seq[OpenapiPathMethod],
+      parameters: Seq[OpenapiParameter] = Nil
   )
 
   case class OpenapiPathMethod(
@@ -32,7 +33,10 @@ object OpenapiModels {
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None
-  )
+  ) {
+    def withParentParameters(pathParameters: Seq[OpenapiParameter]): OpenapiPathMethod =
+      this.copy(parameters = pathParameters.filterNot(p => parameters.exists(p.name == _.name)) ++ parameters)
+  }
 
   case class OpenapiParameter(
       name: String,
@@ -70,6 +74,13 @@ object OpenapiModels {
 
   import io.circe._
   import io.circe.generic.semiauto._
+
+  implicit class RicherACursor(c: ACursor) {
+    def removeIfPresent(keys: String*): ACursor = keys.foldLeft(c) { (cursor, key) =>
+      val withKeyFocus = cursor.downField(key)
+      withKeyFocus.focus.fold(cursor)(_ => withKeyFocus.delete)
+    }
+  }
 
   implicit val OpenapiResponseContentDecoder: Decoder[Seq[OpenapiResponseContent]] = { (c: HCursor) =>
     case class Holder(d: OpenapiSchemaType)
@@ -182,11 +193,18 @@ object OpenapiModels {
     }
   }
 
-  implicit val OpenapiPathDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+  implicit val OpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
-      paths <- c.as[Map[String, Seq[OpenapiPathMethod]]]
+      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      methods <- c.removeIfPresent("parameters").as[Seq[OpenapiPathMethod]]
+    } yield OpenapiPath("--partial--", methods, parameters)
+  }
+
+  implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+    for {
+      paths <- c.as[Map[String, OpenapiPath]]
     } yield {
-      paths.map { case (url, ms) => OpenapiPath(url, ms) }.toSeq
+      paths.map { case (url, path) => path.copy(url = url) }.toSeq
     }
   }
 

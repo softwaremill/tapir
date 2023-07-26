@@ -27,7 +27,7 @@ class EndpointGenerator {
   }
 
   private[codegen] def generatedEndpoints(p: OpenapiPath): Seq[(String, String)] = {
-    p.methods.map { m =>
+    p.methods.map(_ withParentParameters p.parameters).map { m =>
       val definition =
         s"""|endpoint
             |  .${m.methodType}
