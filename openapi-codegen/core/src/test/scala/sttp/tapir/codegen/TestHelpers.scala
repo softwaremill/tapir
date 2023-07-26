@@ -31,14 +31,15 @@ object TestHelpers {
       |  version: '1.0'
       |paths:
       |  /books/{genre}/{year}:
+      |    parameters:
+      |    - name: genre
+      |      in: path
+      |      required: true
+      |      schema:
+      |        type: string
       |    post:
       |      operationId: postBooksGenreYear
       |      parameters:
-      |      - name: genre
-      |        in: path
-      |        required: true
-      |        schema:
-      |          type: string
       |      - name: year
       |        in: path
       |        required: true
@@ -135,7 +136,6 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "post",
             parameters = Seq(
-              OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
               OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
               OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
               OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
@@ -184,7 +184,8 @@ object TestHelpers {
             tags = Some(Seq("Bookshop")),
             operationId = Some("getBooksGenreYear")
           )
-        )
+        ),
+        parameters = Seq(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)))
       )
     ),
     Some(OpenapiComponent(
@@ -384,7 +385,8 @@ object TestHelpers {
             ),
             requestBody = None,
             summary = None,
-            tags = None
+            tags = None,
+            operationId = Some("getHello")
           )
         )
       )

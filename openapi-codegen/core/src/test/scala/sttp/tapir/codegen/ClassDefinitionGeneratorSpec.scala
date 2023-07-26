@@ -67,14 +67,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)), Seq("texts"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)), Seq("texts"), false)
+          )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate class with inner class" in {
@@ -105,23 +107,25 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(
-            Map(
-              "objects" -> OpenapiSchemaArray(
-                OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
-                false
-              )
-            ),
-            Seq("objects"),
-            false
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(
+              Map(
+                "objects" -> OpenapiSchemaArray(
+                  OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
+                  false
+                )
+              ),
+              Seq("objects"),
+              false
+            )
           )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate class with map with inner class" in {
@@ -129,23 +133,25 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(
-            Map(
-              "objects" -> OpenapiSchemaMap(
-                OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
-                false
-              )
-            ),
-            Seq("objects"),
-            false
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(
+              Map(
+                "objects" -> OpenapiSchemaMap(
+                  OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false),
+                  false
+                )
+              ),
+              Seq("objects"),
+              false
+            )
           )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "nonrequired and required are not the same" in {
