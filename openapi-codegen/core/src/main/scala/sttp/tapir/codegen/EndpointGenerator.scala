@@ -10,7 +10,8 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   def endpointDefs(doc: OpenapiDocument): String = {
-    val ge = doc.paths.flatMap(generatedEndpoints)
+    val ps = Option(doc.components).flatten.map(_.parameters) getOrElse Map.empty
+    val ge = doc.paths.flatMap(generatedEndpoints(ps))
     val definitions = ge
       .map { case (name, definition) =>
         s"""|val $name =
@@ -26,8 +27,8 @@ class EndpointGenerator {
         |""".stripMargin
   }
 
-  private[codegen] def generatedEndpoints(p: OpenapiPath): Seq[(String, String)] = {
-    p.methods.map(_ withParentParameters p.parameters).map { m =>
+  private[codegen] def generatedEndpoints(parameters: Map[String, OpenapiParameter])(p: OpenapiPath): Seq[(String, String)] = {
+    p.methods.map(_.withReconciledParameters(parameters, p.parameters, p.parameterRefs)).map { m =>
       val definition =
         s"""|endpoint
             |  .${m.methodType}

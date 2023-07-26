@@ -3,6 +3,7 @@ package sttp.tapir.codegen.openapi.models
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
 
+import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -23,7 +24,8 @@ object OpenapiModels {
   case class OpenapiPath(
       url: String,
       methods: Seq[OpenapiPathMethod],
-      parameters: Seq[OpenapiParameter] = Nil
+      parameters: Seq[OpenapiParameter] = Nil,
+      parameterRefs: Seq[OpenapiSchemaRef] = Nil
   )
 
   case class OpenapiPathMethod(
@@ -33,10 +35,24 @@ object OpenapiModels {
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
-      operationId: Option[String] = None
+      operationId: Option[String] = None,
+      parameterRefs: Seq[OpenapiSchemaRef] = Nil
   ) {
-    def withParentParameters(pathParameters: Seq[OpenapiParameter]): OpenapiPathMethod =
-      this.copy(parameters = pathParameters.filterNot(p => parameters.exists(p.name == _.name)) ++ parameters)
+    def withReconciledParameters(
+        pMap: Map[String, OpenapiParameter],
+        pathParameters: Seq[OpenapiParameter],
+        pathParameterRefs: Seq[OpenapiSchemaRef]
+    ): OpenapiPathMethod = {
+      val reconciled =
+        parameterRefs.map(r => pMap.getOrElse(r.name, throw new IllegalArgumentException(s"parameter ${r.name} is not in schema")))
+      val reconciledParents =
+        pathParameterRefs.map(r => pMap.getOrElse(r.name, throw new IllegalArgumentException(s"parameter ${r.name} is not in schema")))
+      val overridingParams = parameters ++ reconciled
+      val duplicates = overridingParams.groupBy(_.name).filter(_._2.size > 1).keys
+      if (duplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${duplicates.mkString(", ")}")
+      val filteredParents = (pathParameters ++ reconciledParents).filterNot(p => overridingParams.exists(p.name == _.name))
+      this.copy(parameters = filteredParents ++ overridingParams, parameterRefs = Nil)
+    }
   }
 
   case class OpenapiParameter(
@@ -138,25 +154,38 @@ object OpenapiModels {
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
+  implicit val OpenapiParameterOrRefDecoder: Decoder[Either[OpenapiSchemaRef, OpenapiParameter]] = { (c: HCursor) =>
+    c.as[OpenapiParameter].map(Right(_)).orElse(c.as[OpenapiSchemaRef].map(Left(_)))
+  }
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
-      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      parametersAndRefs <- c
+        .downField("parameters")
+        .as[Seq[Either[OpenapiSchemaRef, OpenapiParameter]]]
+        .orElse(Right(List.empty[Either[OpenapiSchemaRef, OpenapiParameter]]))
+      parameters = parametersAndRefs.collect { case Right(p) => p }
+      parameterRefs = parametersAndRefs.collect { case Left(r) => r }
       responses <- c.downField("responses").as[Seq[OpenapiResponse]]
       requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
       summary <- c.downField("summary").as[Option[String]]
       tags <- c.downField("tags").as[Option[Seq[String]]]
       operationId <- c.downField("operationId").as[Option[String]]
     } yield {
-      OpenapiPathMethod("--partial--", parameters, responses, requestBody, summary, tags, operationId)
+      OpenapiPathMethod("--partial--", parameters, responses, requestBody, summary, tags, operationId, parameterRefs)
     }
   }
 
   implicit val PartialOpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
-      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      parametersAndRefs <- c
+        .downField("parameters")
+        .as[Seq[Either[OpenapiSchemaRef, OpenapiParameter]]]
+        .orElse(Right(List.empty[Either[OpenapiSchemaRef, OpenapiParameter]]))
+      parameters = parametersAndRefs.collect { case Right(p) => p }
+      parameterRefs = parametersAndRefs.collect { case Left(r) => r }
       methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
-    } yield OpenapiPath("--partial--", methods.flatten, parameters)
+    } yield OpenapiPath("--partial--", methods.flatten, parameters, parameterRefs)
   }
 
   implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>

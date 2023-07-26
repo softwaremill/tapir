@@ -37,6 +37,7 @@ object TestHelpers {
       |      required: true
       |      schema:
       |        type: string
+      |    - $ref: '#/components/parameters/year'
       |    post:
       |      operationId: postBooksGenreYear
       |      parameters:
@@ -82,11 +83,7 @@ object TestHelpers {
       |        required: true
       |        schema:
       |          type: string
-      |      - name: year
-      |        in: path
-      |        required: true
-      |        schema:
-      |          type: integer
+      |      - $ref: '#/components/parameters/offset'
       |      - name: limit
       |        in: query
       |        description: Maximum number of books to retrieve
@@ -124,6 +121,20 @@ object TestHelpers {
       |      properties:
       |        title:
       |          type: string
+      |  parameters:
+      |    offset:
+      |      name: offset
+      |      in: query
+      |      description: Offset at which to start fetching books
+      |      required: true
+      |      schema:
+      |        type: integer
+      |    year:
+      |      name: year
+      |      in: path
+      |      required: true
+      |      schema:
+      |        type: integer
       |""".stripMargin
 
   val myBookshopDoc = OpenapiDocument(
@@ -137,7 +148,6 @@ object TestHelpers {
             methodType = "get",
             parameters = Seq(
               OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
-              OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
               OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
               OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
             ),
@@ -152,7 +162,8 @@ object TestHelpers {
             requestBody = None,
             summary = None,
             tags = Some(Seq("Bookshop")),
-            operationId = Some("getBooksGenreYear")
+            operationId = Some("getBooksGenreYear"),
+            parameterRefs = Seq(OpenapiSchemaRef("#/components/parameters/offset"))
           ),
           OpenapiPathMethod(
             methodType = "post",
@@ -185,13 +196,19 @@ object TestHelpers {
             operationId = Some("postBooksGenreYear")
           )
         ),
-        parameters = Seq(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)))
+        parameters = Seq(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false))),
+        parameterRefs = Seq(OpenapiSchemaRef("#/components/parameters/year"))
       )
     ),
     Some(
       OpenapiComponent(
         Map(
           "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+        ),
+        Map(
+          "#/components/parameters/offset" ->
+            OpenapiParameter("offset", "query", true, Some("Offset at which to start fetching books"), OpenapiSchemaInt(false)),
+          "#/components/parameters/year" -> OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false))
         )
       )
     )
