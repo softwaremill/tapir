@@ -60,6 +60,19 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     ))
   }
 
+  it should "parse hello yaml" in {
+    val yaml = TestHelpers.helloYaml
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    res shouldBe (Right(
+      TestHelpers.helloDocs
+    ))
+}
+
   it should "parse bookstore yaml containing an endpoint with no parameters" in {
     val yaml = TestHelpers.generatedBookshopYaml
 
@@ -67,10 +80,10 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .parse(yaml)
       .leftMap(err => err: Error)
       .flatMap(_.as[OpenapiDocument])
-      
-      res shouldBe (Right(
-        TestHelpers.generatedBookshopDoc
-      ))
+
+    res shouldBe (Right(
+      TestHelpers.generatedBookshopDoc
+    ))
   }
 
   it should "parse uuids" in {

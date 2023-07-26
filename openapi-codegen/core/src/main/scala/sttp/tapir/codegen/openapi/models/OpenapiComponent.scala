@@ -7,9 +7,9 @@ object OpenapiComponent {
 
   implicit val OpenapiComponentDecoder: Decoder[OpenapiComponent] = { (c: HCursor) =>
     for {
-      schemas <- c.downField("schemas").as[Option[Map[String, OpenapiSchemaType]]]
+      schemas <- c.downField("schemas").as[Map[String, OpenapiSchemaType]]
     } yield {
-      OpenapiComponent(schemas.getOrElse(Map.empty))
+      OpenapiComponent(schemas)
     }
   }
 }

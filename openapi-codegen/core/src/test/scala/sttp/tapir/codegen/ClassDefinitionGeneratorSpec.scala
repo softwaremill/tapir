@@ -8,7 +8,7 @@ import sttp.tapir.codegen.testutils.CompileCheckTestBase
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate the example class defs" in {
-    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc).get shouldCompile ()
   }
 
   it should "generate simple class" in {
@@ -16,14 +16,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
+          )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate simple class with reserved propName" in {
@@ -31,14 +33,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("type" -> OpenapiSchemaString(false)), Seq("type"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("type" -> OpenapiSchemaString(false)), Seq("type"), false)
+          )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate class with array" in {
@@ -46,14 +50,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaArray(OpenapiSchemaString(false), false)), Seq("texts"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaArray(OpenapiSchemaString(false), false)), Seq("texts"), false)
+          )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate class with map" in {
@@ -76,20 +82,22 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(
-            Map(
-              "inner" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
-            ),
-            Seq("inner"),
-            false
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(
+              Map(
+                "inner" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
+              ),
+              Seq("inner"),
+              false
+            )
           )
         )
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate class with array with inner class" in {
@@ -145,9 +153,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq.empty, false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq.empty, false)
+          )
         )
       )
     )
@@ -155,9 +165,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq("text"), false)
+          )
         )
       )
     )
@@ -165,17 +177,19 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val res1 = gen.classDefs(doc1)
     val res2 = gen.classDefs(doc2)
     res1 shouldNot be(res2)
-    res1 shouldCompile ()
-    res2 shouldCompile ()
+    res1.get shouldCompile ()
+    res2.get shouldCompile ()
   }
   it should "nonrequired and nullable are the same" in {
     val doc1 = OpenapiDocument(
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq.empty, false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(false)), Seq.empty, false)
+          )
         )
       )
     )
@@ -183,9 +197,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "",
       null,
       null,
-      OpenapiComponent(
-        Map(
-          "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(true)), Seq("text"), false)
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(true)), Seq("text"), false)
+          )
         )
       )
     )

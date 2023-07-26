@@ -192,9 +192,9 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
           val values = function(ctx)
 
           values match {
-            case r: ByteBufNettyResponseContent                                => byteBufHandler(r.channelPromise, r.byteBuf)
-            case r: ChunkedStreamNettyResponseContent                          => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
-            case r: ChunkedFileNettyResponseContent                            => chunkedFileHandler(r.channelPromise, r.chunkedFile)
+            case r: ByteBufNettyResponseContent           => byteBufHandler(r.channelPromise, r.byteBuf)
+            case r: ChunkedStreamNettyResponseContent     => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
+            case r: ChunkedFileNettyResponseContent       => chunkedFileHandler(r.channelPromise, r.chunkedFile)
             case r: ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
           }
         }

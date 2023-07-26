@@ -12,13 +12,14 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 
 class ClassDefinitionGenerator {
 
-  def classDefs(doc: OpenapiDocument): String = {
-    val classes = doc.components.schemas.flatMap {
-      case (name, obj: OpenapiSchemaObject) =>
-        generateClass(name, obj)
-      case _ => throw new NotImplementedError("Only objects supported!")
-    }
-    classes.mkString("\n")
+  def classDefs(doc: OpenapiDocument): Option[String] = {
+    doc.components
+      .map(_.schemas.flatMap {
+        case (name, obj: OpenapiSchemaObject) =>
+          generateClass(name, obj)
+        case _ => throw new NotImplementedError("Only objects supported!")
+      })
+      .map(_.mkString("\n"))
   }
 
   private[codegen] def generateClass(name: String, obj: OpenapiSchemaObject): Seq[String] = {

@@ -34,7 +34,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
 ) {
   def tests(): List[Test] =
     (if (security) new ServerSecurityTests(createServerTest).tests() else Nil) ++
-      (if (basic) new ServerBasicTests(createServerTest, serverInterpreter, maxContentLength = maxContentLength).tests() else Nil) ++    
+      (if (basic) new ServerBasicTests(createServerTest, serverInterpreter, maxContentLength = maxContentLength).tests() else Nil) ++
       (if (contentNegotiation) new ServerContentNegotiationTests(createServerTest).tests() else Nil) ++
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++
       (if (mapping) new ServerMappingTests(createServerTest).tests() else Nil) ++

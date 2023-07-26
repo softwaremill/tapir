@@ -13,14 +13,15 @@ private[ziohttp] class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], Zi
       .apply { r =>
         body match {
           case ZioStreamHttpResponseBody(stream, contentLength) =>
-            ZIO.succeed(ZioStreamHttpResponseBody(
-              stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
-                .fromZIO(cb(Success(())))
-                .provideEnvironment(r)
-                .drain,
-              contentLength
+            ZIO.succeed(
+              ZioStreamHttpResponseBody(
+                stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
+                  .fromZIO(cb(Success(())))
+                  .provideEnvironment(r)
+                  .drain,
+                contentLength
+              )
             )
-          )
           case raw: ZioRawHttpResponseBody => cb(Success(())).provideEnvironment(r).map(_ => raw)
         }
       }

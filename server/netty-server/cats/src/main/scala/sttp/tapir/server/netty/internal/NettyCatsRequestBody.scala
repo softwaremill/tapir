@@ -57,7 +57,7 @@ private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[T
   }
 
   private def nettyRequestBytes(serverRequest: ServerRequest): F[Array[Byte]] = serverRequest.underlying match {
-    case req: FullHttpRequest     => monad.delay(ByteBufUtil.getBytes(req.content()))
+    case req: FullHttpRequest   => monad.delay(ByteBufUtil.getBytes(req.content()))
     case _: StreamedHttpRequest => toStream(serverRequest).compile.to(Chunk).map(_.toArray[Byte])
     case other => monad.raiseError(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
   }

@@ -43,7 +43,12 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStrea
         ZioStreamHttpResponseBody(ZStream.fromInputStream(r), None)
       case RawBodyType.InputStreamRangeBody =>
         r.range
-          .map(range => ZioStreamHttpResponseBody(ZStream.fromInputStream(r.inputStreamFromRangeStart()).take(range.contentLength), Some(range.contentLength)))
+          .map(range =>
+            ZioStreamHttpResponseBody(
+              ZStream.fromInputStream(r.inputStreamFromRangeStart()).take(range.contentLength),
+              Some(range.contentLength)
+            )
+          )
           .getOrElse(ZioStreamHttpResponseBody(ZStream.fromInputStream(r.inputStream()), None))
       case RawBodyType.FileBody =>
         val tapirFile = r

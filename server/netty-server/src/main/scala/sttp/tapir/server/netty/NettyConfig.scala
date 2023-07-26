@@ -21,7 +21,8 @@ import scala.concurrent.duration._
   *   The max content length passed to the [[io.netty.handler.codec.http.HttpObjectAggregator]] handler.
   *
   * @param maxConnections
-  *   The maximum number of concurrent connections allowed by the server. Any connections above this limit will be closed right after they are opened.
+  *   The maximum number of concurrent connections allowed by the server. Any connections above this limit will be closed right after they
+  *   are opened.
   *
   * @param addLoggingHandler
   *   Should a low-level logging handler, [[io.netty.handler.logging.LoggingHandler]], be added to the Netty pipeline. This is independent
