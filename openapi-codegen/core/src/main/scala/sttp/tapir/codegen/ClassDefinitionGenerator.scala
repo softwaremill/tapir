@@ -5,6 +5,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
   OpenapiSchemaMap,
   OpenapiSchemaObject,
   OpenapiSchemaSimpleType
@@ -17,9 +19,21 @@ class ClassDefinitionGenerator {
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(name, obj)
-        case _ => throw new NotImplementedError("Only objects supported!")
+        case (name, obj: OpenapiSchemaEnum) =>
+          generateEnum(name, obj)
+        case _ => throw new NotImplementedError("Only objects and enums supported!")
       })
       .map(_.mkString("\n"))
+  }
+
+  // Uses enumeratum so as to work with scala 2, but ideally should probably generate scala 3 enums instead where it can
+  private[codegen] def generateEnum(name: String, obj: OpenapiSchemaEnum): Seq[String] = {
+    val members = obj.items.map{ i => s"case object ${i.value} extends $name" }
+    s"""|sealed trait $name extends EnumEntry
+        |object $name extends Enum[$name] {
+        |  val values = findValues
+        |${indent(2)(members.mkString("\n"))}
+        |}""".stripMargin :: Nil
   }
 
   private[codegen] def generateClass(name: String, obj: OpenapiSchemaObject): Seq[String] = {

@@ -2,7 +2,14 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -26,6 +33,23 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+  }
+
+  it should "generate simple enum" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
+          )
+        )
+      )
+    )
+    // the enumeratum import should be included by the BasicGenerator iff we generated enums
+    "import enumeratum._;" + (new ClassDefinitionGenerator().classDefs(doc).get) shouldCompile ()
   }
 
   it should "generate simple class with reserved propName" in {
