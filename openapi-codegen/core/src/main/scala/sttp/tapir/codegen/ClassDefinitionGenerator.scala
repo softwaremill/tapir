@@ -26,12 +26,9 @@ class ClassDefinitionGenerator {
       .map(_.mkString("\n"))
   }
 
-  // Uses enumeratum so as to work with scala 2, but ideally should probably generate scala 3 enums instead when it can
+  // Uses enumeratum so as to work with scala 2, but ideally should probably generate scala 3 enums instead where it can
   private[codegen] def generateEnum(name: String, obj: OpenapiSchemaEnum): Seq[String] = {
-    val members = obj.items.map{
-      case OpenapiSchemaConstantString(s) => s"case object $s extends $name"
-      case _ => throw new NotImplementedError("Only string enums are supported!")
-    }
+    val members = obj.items.map{ i => s"case object ${i.value} extends $name" }
     s"""|sealed trait $name extends EnumEntry
         |object $name extends Enum[$name] {
         |  val values = findValues
