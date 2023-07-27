@@ -42,7 +42,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null
     )
     val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
-    generatedCode should include ("val getTestAsdId =")
+    generatedCode should include("val getTestAsdId =")
     generatedCode shouldCompile ()
   }
 

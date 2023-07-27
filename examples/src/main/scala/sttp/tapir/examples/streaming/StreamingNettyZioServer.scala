@@ -41,10 +41,10 @@ object StreamingNettyZioServer extends ZIOAppDefault {
   override def run: URIO[Any, ExitCode] = {
     (for {
       binding <- NettyZioServer()
-                  .port(declaredPort)
-                  .host(declaredHost)
-                  .addEndpoint(serverEndpoint)
-                  .start()
+        .port(declaredPort)
+        .host(declaredHost)
+        .addEndpoint(serverEndpoint)
+        .start()
       _ = {
         val port = binding.port
         val host = binding.hostName
@@ -56,8 +56,8 @@ object StreamingNettyZioServer extends ZIOAppDefault {
         println("Got result: " + result)
 
         assert(result == "abcd" * 25)
-        }
+      }
       _ <- binding.stop()
-      } yield ()).exitCode
+    } yield ()).exitCode
   }
 }
