@@ -85,14 +85,13 @@ class EndpointGenerator {
           case _ => throw new NotImplementedError("Can't create non-simple params to input")
         }
       }
-      .mkString("\n")
 
     val rqBody = requestBody.fold("") { b =>
       if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
-      s"\n.in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})"
+      s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})"
     }
 
-    params + rqBody
+    (params :+ rqBody).mkString("\n")
   }
 
   private def tags(openapiTags: Option[Seq[String]]): String = {
@@ -105,19 +104,22 @@ class EndpointGenerator {
     // .out(jsonBody[List[Book]])
     responses
       .map { resp =>
-        if (resp.content.size != 1) throw new NotImplementedError("We can handle only one return content!")
-        resp.code match {
-          case "200" =>
-            val content = resp.content.head
-            s".out(${contentTypeMapper(content.contentType, content.schema)})"
-          case "default" =>
-            val content = resp.content.head
-            s".errorOut(${contentTypeMapper(content.contentType, content.schema)})"
-          case _ =>
-            throw new NotImplementedError("Statuscode mapping is incomplete!")
+        resp.content match {
+          case Nil => ""
+          case content +: Nil =>
+            resp.code match {
+              case "200" =>
+                s".out(${contentTypeMapper(content.contentType, content.schema)})"
+              case "default" =>
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema)})"
+              case _ =>
+                throw new NotImplementedError("Statuscode mapping is incomplete!")
+            }
+          case _ => throw new NotImplementedError("We can handle only one return content!")
         }
       }
       .sorted
+      .filter(_.nonEmpty)
       .mkString("\n")
   }
 
