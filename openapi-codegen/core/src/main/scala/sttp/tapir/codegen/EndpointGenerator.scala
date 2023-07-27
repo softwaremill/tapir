@@ -10,7 +10,8 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   def endpointDefs(doc: OpenapiDocument): String = {
-    val ge = doc.paths.flatMap(generatedEndpoints)
+    val ps = Option(doc.components).flatten.map(_.parameters) getOrElse Map.empty
+    val ge = doc.paths.flatMap(generatedEndpoints(ps))
     val definitions = ge
       .map { case (name, definition) =>
         s"""|val $name =
@@ -26,13 +27,13 @@ class EndpointGenerator {
         |""".stripMargin
   }
 
-  private[codegen] def generatedEndpoints(p: OpenapiPath): Seq[(String, String)] = {
-    p.methods.map(_ withParentParameters p.parameters).map { m =>
+  private[codegen] def generatedEndpoints(parameters: Map[String, OpenapiParameter])(p: OpenapiPath): Seq[(String, String)] = {
+    p.methods.map(_.withResolvedParentParameters(parameters, p.parameters)).map { m =>
       val definition =
         s"""|endpoint
             |  .${m.methodType}
-            |  ${urlMapper(p.url, m.parameters)}
-            |${indent(2)(ins(m.parameters, m.requestBody))}
+            |  ${urlMapper(p.url, m.resolvedParameters)}
+            |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
             |${indent(2)(outs(m.responses))}
             |${indent(2)(tags(m.tags))}
             |""".stripMargin
@@ -54,7 +55,7 @@ class EndpointGenerator {
       if (segment.startsWith("{")) {
         val name = segment.drop(1).dropRight(1)
         val param = parameters.find(_.name == name)
-        param.fold(throw new Error("URLParam not found!")) { p =>
+        param.fold(throw new Error(s"URLParam $name not found!")) { p =>
           p.schema match {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)

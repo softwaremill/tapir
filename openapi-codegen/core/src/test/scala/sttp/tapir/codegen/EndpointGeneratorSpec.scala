@@ -6,7 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiPath,
   OpenapiPathMethod,
   OpenapiResponse,
-  OpenapiResponseContent
+  OpenapiResponseContent,
+  Resolved
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
@@ -23,7 +24,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(OpenapiParameter("asd-id", "path", true, None, OpenapiSchemaString(false))),
+              parameters = Seq(Resolved(OpenapiParameter("asd-id", "path", true, None, OpenapiSchemaString(false)))),
               responses = Seq(
                 OpenapiResponse(
                   "200",
