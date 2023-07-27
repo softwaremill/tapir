@@ -57,7 +57,7 @@ object GenScala {
       val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
       def generateCode(doc: OpenapiDocument): IO[Unit] = for {
-        content <- IO.pure(BasicGenerator.generateObjects(doc, packageName, objectName))
+        content <- IO.pure(BasicGenerator.generateObjects(doc, packageName, objectName, false))
         destFile <- writeGeneratedFile(destDir, objectName, content)
         _ <- IO.println(s"Generated endpoints written to: $destFile")
       } yield ()
