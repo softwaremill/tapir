@@ -134,6 +134,27 @@ object TestHelpers {
         "/books/{genre}/{year}",
         Seq(
           OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(
+              OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
+              OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
+              OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
+              OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
+            ),
+            responses = Seq(
+              OpenapiResponse(
+                "200",
+                "",
+                Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
+              ),
+              OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+            ),
+            requestBody = None,
+            summary = None,
+            tags = Some(Seq("Bookshop")),
+            operationId = Some("getBooksGenreYear")
+          ),
+          OpenapiPathMethod(
             methodType = "post",
             parameters = Seq(
               OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
@@ -162,37 +183,18 @@ object TestHelpers {
             summary = None,
             tags = Some(Seq("Bookshop")),
             operationId = Some("postBooksGenreYear")
-          ),
-          OpenapiPathMethod(
-            methodType = "get",
-            parameters = Seq(
-              OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)),
-              OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false)),
-              OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false)),
-              OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false))
-            ),
-            responses = Seq(
-              OpenapiResponse(
-                "200",
-                "",
-                Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
-              ),
-              OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
-            ),
-            requestBody = None,
-            summary = None,
-            tags = Some(Seq("Bookshop")),
-            operationId = Some("getBooksGenreYear")
           )
         ),
         parameters = Seq(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)))
       )
     ),
-    Some(OpenapiComponent(
-      Map(
-        "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+    Some(
+      OpenapiComponent(
+        Map(
+          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+        )
       )
-    ))
+    )
   )
 
   val generatedBookshopYaml =
@@ -302,7 +304,8 @@ object TestHelpers {
               OpenapiResponse(
                 code = "200",
                 description = "",
-                content = List(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
+                content =
+                  List(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               )
             ),
             requestBody = None,
@@ -313,20 +316,22 @@ object TestHelpers {
         )
       )
     ),
-    Some(OpenapiComponent(
-      Map(
-        "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
-        "Book" -> OpenapiSchemaObject(
-          properties = Map(
-            "title" -> OpenapiSchemaString(false),
-            "year" -> OpenapiSchemaInt(false),
-            "author" -> OpenapiSchemaRef("#/components/schemas/Author")
-          ),
-          required = Seq("title", "year", "author"),
-          nullable = false
+    Some(
+      OpenapiComponent(
+        Map(
+          "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
+          "Book" -> OpenapiSchemaObject(
+            properties = Map(
+              "title" -> OpenapiSchemaString(false),
+              "year" -> OpenapiSchemaInt(false),
+              "author" -> OpenapiSchemaRef("#/components/schemas/Author")
+            ),
+            required = Seq("title", "year", "author"),
+            nullable = false
+          )
         )
       )
-    ))
+    )
   )
 
   val helloYaml =

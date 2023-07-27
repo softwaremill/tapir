@@ -1,5 +1,6 @@
 package sttp.tapir.codegen.openapi.models
 
+import cats.implicits.toTraverseOps
 import cats.syntax.either._
 
 // https://swagger.io/specification/
@@ -152,52 +153,25 @@ object OpenapiModels {
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
-  implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[
-      (
-          Seq[OpenapiParameter],
-          Seq[OpenapiResponse],
-          Option[OpenapiRequestBody],
-          Option[String],
-          Option[Seq[String]],
-          Option[String]
-      )
-    ] = { (c: HCursor) =>
-      for {
-        parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
-        responses <- c.downField("responses").as[Seq[OpenapiResponse]]
-        requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
-        summary <- c.downField("summary").as[Option[String]]
-        tags <- c.downField("tags").as[Option[Seq[String]]]
-        operationId <- c.downField("operationId").as[Option[String]]
-      } yield {
-        (parameters, responses, requestBody, summary, tags, operationId)
-      }
-    }
+  implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
-      methods <- c.as[
-        Map[
-          String,
-          (
-              Seq[OpenapiParameter],
-              Seq[OpenapiResponse],
-              Option[OpenapiRequestBody],
-              Option[String],
-              Option[Seq[String]],
-              Option[String],
-          )
-        ]
-      ]
+      parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
+      responses <- c.downField("responses").as[Seq[OpenapiResponse]]
+      requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
+      summary <- c.downField("summary").as[Option[String]]
+      tags <- c.downField("tags").as[Option[Seq[String]]]
+      operationId <- c.downField("operationId").as[Option[String]]
     } yield {
-      methods.map { case (t, (p, r, rb, s, tg, oid)) => OpenapiPathMethod(t, p, r, rb, s, tg, oid) }.toSeq
+      OpenapiPathMethod("--partial--", parameters, responses, requestBody, summary, tags, operationId)
     }
   }
 
-  implicit val OpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
+  implicit val PartialOpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
       parameters <- c.downField("parameters").as[Seq[OpenapiParameter]].orElse(Right(List.empty[OpenapiParameter]))
-      methods <- c.removeIfPresent("parameters", "$ref", "summary", "description", "servers").as[Seq[OpenapiPathMethod]]
-    } yield OpenapiPath("--partial--", methods, parameters)
+      methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
+        .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
+    } yield OpenapiPath("--partial--", methods.flatten, parameters)
   }
 
   implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
