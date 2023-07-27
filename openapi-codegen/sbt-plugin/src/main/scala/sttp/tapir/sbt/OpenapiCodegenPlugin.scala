@@ -37,7 +37,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiObject,
       sourceManaged,
       streams,
-      sbt.Keys.scalaVersion
+      scalaVersion
     ) flatMap {
       (
           swaggerFile: File,
