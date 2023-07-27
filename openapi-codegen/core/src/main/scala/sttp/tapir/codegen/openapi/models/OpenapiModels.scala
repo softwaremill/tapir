@@ -76,13 +76,6 @@ object OpenapiModels {
   import io.circe._
   import io.circe.generic.semiauto._
 
-  implicit class RicherACursor(c: ACursor) {
-    def removeIfPresent(keys: String*): ACursor = keys.foldLeft(c) { (cursor, key) =>
-      val withKeyFocus = cursor.downField(key)
-      withKeyFocus.focus.fold(cursor)(_ => withKeyFocus.delete)
-    }
-  }
-
   implicit val OpenapiResponseContentDecoder: Decoder[Seq[OpenapiResponseContent]] = { (c: HCursor) =>
     case class Holder(d: OpenapiSchemaType)
     implicit val InnerDecoder: Decoder[Holder] = { (c: HCursor) =>
@@ -134,14 +127,6 @@ object OpenapiModels {
   }
 
   implicit val OpenapiRequestBodyDecoder: Decoder[OpenapiRequestBody] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Seq[OpenapiRequestBodyContent])] = { (c: HCursor) =>
-      for {
-        description <- c.downField("description").as[String]
-        content <- c.downField("content").as[Seq[OpenapiRequestBodyContent]]
-      } yield {
-        (description, content)
-      }
-    }
     for {
       requiredOpt <- c.downField("required").as[Option[Boolean]]
       description <- c.downField("description").as[Option[String]]
