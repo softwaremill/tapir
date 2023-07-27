@@ -4,6 +4,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBoolean,
   OpenapiSchemaDouble,
+  OpenapiSchemaEnum,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaLong,
@@ -19,12 +20,13 @@ object BasicGenerator {
   val endpointGenerator = new EndpointGenerator()
 
   def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String): String = {
+    val enumImport = if (doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._" else ""
     s"""|
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports)}
+        |${indent(2)(imports)}$enumImport
         |
         |${indent(2)(classGenerator.classDefs(doc).getOrElse(""))}
         |
