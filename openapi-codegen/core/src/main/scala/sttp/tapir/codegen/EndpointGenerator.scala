@@ -86,12 +86,12 @@ class EndpointGenerator {
         }
       }
 
-    val rqBody = requestBody.fold("") { b =>
+    val rqBody = requestBody.map{ b =>
       if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
       s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})"
     }
 
-    (params :+ rqBody).mkString("\n")
+    (params ++ rqBody).mkString("\n")
   }
 
   private def tags(openapiTags: Option[Seq[String]]): String = {
