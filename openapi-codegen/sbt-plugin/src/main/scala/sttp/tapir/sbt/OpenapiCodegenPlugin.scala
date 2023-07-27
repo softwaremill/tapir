@@ -36,16 +36,18 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiPackage,
       openapiObject,
       sourceManaged,
-      streams
+      streams,
+      sbt.Keys.scalaVersion
     ) flatMap {
       (
           swaggerFile: File,
           packageName: String,
           objectName: String,
           srcDir: File,
-          taskStreams: TaskStreams
+          taskStreams: TaskStreams,
+          sv: String
       ) =>
-        OpenapiCodegenTask(swaggerFile, packageName, objectName, srcDir, taskStreams.cacheDirectory).file
+        OpenapiCodegenTask(swaggerFile, packageName, objectName, srcDir, taskStreams.cacheDirectory, sv.startsWith("3")).file
     }) map (Seq(_))).value
   }
 }

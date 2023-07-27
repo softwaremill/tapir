@@ -19,8 +19,10 @@ object BasicGenerator {
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
-  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String): String = {
-    val enumImport = if (doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._" else ""
+  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String, targetScala3: Boolean): String = {
+    val enumImport =
+      if (!targetScala3 && doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._"
+      else ""
     s"""|
         |package $packagePath
         |
@@ -28,7 +30,7 @@ object BasicGenerator {
         |
         |${indent(2)(imports)}$enumImport
         |
-        |${indent(2)(classGenerator.classDefs(doc).getOrElse(""))}
+        |${indent(2)(classGenerator.classDefs(doc, targetScala3).getOrElse(""))}
         |
         |${indent(2)(endpointGenerator.endpointDefs(doc))}
         |
