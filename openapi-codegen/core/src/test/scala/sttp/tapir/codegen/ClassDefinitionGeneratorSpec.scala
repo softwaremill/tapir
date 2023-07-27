@@ -241,4 +241,26 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     res1 shouldBe res2
   }
 
+  it should "generate legal scala 3 enums when instructed to" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
+          )
+        )
+      )
+    )
+
+    val gen = new ClassDefinitionGenerator()
+    val res = gen.classDefs(doc, true)
+    // can't just check whether this compiles, because our tests only run on scala 2.12 - so instead just eyeball it...
+    res shouldBe Some(
+      """enum Test {
+        |  case enum1, enum2
+        |}""".stripMargin)
+  }
 }
