@@ -58,9 +58,11 @@ val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "
 
 Currently, the generated code depends on `"io.circe" %% "circe-generic"`. In the future probably we will make the encoder/decoder json lib configurable (PRs welcome).
 
+String-like enums depend on `"com.beachape" %% "enumeratum"`. Other forms of OpenApi enum are not currently supported. 
+
 We currently miss a lot of OpenApi features like:
  - tags
- - enums/ADTs
+ - ADTs
  - missing model types and meta descriptions (like date, minLength)
  - file handling
 
