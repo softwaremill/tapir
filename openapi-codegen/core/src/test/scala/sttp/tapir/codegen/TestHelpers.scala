@@ -188,11 +188,13 @@ object TestHelpers {
         parameters = Seq(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false)))
       )
     ),
-    Some(OpenapiComponent(
-      Map(
-        "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+    Some(
+      OpenapiComponent(
+        Map(
+          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+        )
       )
-    ))
+    )
   )
 
   val generatedBookshopYaml =
@@ -302,7 +304,8 @@ object TestHelpers {
               OpenapiResponse(
                 code = "200",
                 description = "",
-                content = List(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
+                content =
+                  List(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               )
             ),
             requestBody = None,
@@ -313,20 +316,22 @@ object TestHelpers {
         )
       )
     ),
-    Some(OpenapiComponent(
-      Map(
-        "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
-        "Book" -> OpenapiSchemaObject(
-          properties = Map(
-            "title" -> OpenapiSchemaString(false),
-            "year" -> OpenapiSchemaInt(false),
-            "author" -> OpenapiSchemaRef("#/components/schemas/Author")
-          ),
-          required = Seq("title", "year", "author"),
-          nullable = false
+    Some(
+      OpenapiComponent(
+        Map(
+          "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
+          "Book" -> OpenapiSchemaObject(
+            properties = Map(
+              "title" -> OpenapiSchemaString(false),
+              "year" -> OpenapiSchemaInt(false),
+              "author" -> OpenapiSchemaRef("#/components/schemas/Author")
+            ),
+            required = Seq("title", "year", "author"),
+            nullable = false
+          )
         )
       )
-    ))
+    )
   )
 
   val helloYaml =

@@ -36,8 +36,8 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
         createFile(serverRequest)
           .flatMap(tapirFile => {
             toStream(serverRequest)
-            .run(ZSink.fromFile(tapirFile))
-            .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
+              .run(ZSink.fromFile(tapirFile))
+              .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
           })
       case MultipartBody(partTypes, defaultType) =>
         throw new java.lang.UnsupportedOperationException()
