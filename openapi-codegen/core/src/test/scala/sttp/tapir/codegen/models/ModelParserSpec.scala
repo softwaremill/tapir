@@ -2,7 +2,14 @@ package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.TestHelpers
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponse, OpenapiResponseContent}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaRef, OpenapiSchemaString, OpenapiSchemaUUID}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaRef,
+  OpenapiSchemaString,
+  OpenapiSchemaUUID
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -71,7 +78,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe (Right(
       TestHelpers.helloDocs
     ))
-}
+  }
 
   it should "parse bookstore yaml containing an endpoint with no parameters" in {
     val yaml = TestHelpers.generatedBookshopYaml
@@ -119,6 +126,23 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
         ),
         OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaUUID(false))))
       )
+    )
+  }
+
+  it should "parse enums" in {
+    val yaml =
+      """
+        |enum:
+        |- paperback
+        |- hardback""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiSchemaType])
+
+    res shouldBe Right(
+      OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
     )
   }
 }

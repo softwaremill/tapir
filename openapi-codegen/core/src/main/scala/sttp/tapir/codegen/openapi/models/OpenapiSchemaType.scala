@@ -83,6 +83,36 @@ object OpenapiSchemaType {
     val nullable = false
   }
 
+  sealed trait OpenapiSchemaConstantValue[T] extends OpenapiSchemaType {
+    def value: T
+  }
+  case class OpenapiSchemaConstantString(
+      value: String
+  ) extends OpenapiSchemaConstantValue[String] {
+    val nullable = false
+  }
+  case class OpenapiSchemaConstantBoolean(
+      value: Boolean
+  ) extends OpenapiSchemaConstantValue[Boolean] {
+    val nullable = false
+  }
+  case class OpenapiSchemaConstantLong(
+      value: Long
+  ) extends OpenapiSchemaConstantValue[Long] {
+    val nullable = false
+  }
+  case object OpenapiSchemaConstantNull extends OpenapiSchemaConstantValue[Null] {
+    val value = null
+    val nullable = true
+  }
+
+  // Can't support non-primitive item types although that should be legal (see https://json-schema.org/draft/2020-12/json-schema-validation.html#enum)
+  // Maybe can't support heterogenous item types either, IDK, let's see...
+  case class OpenapiSchemaEnum(
+      items: Seq[OpenapiSchemaConstantValue[_]],
+      nullable: Boolean
+  ) extends OpenapiSchemaType
+
   // no minItems/maxItems, uniqueItems support
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
@@ -224,6 +254,24 @@ object OpenapiSchemaType {
     }
   }
 
+  implicit val OpenapiSchemaConstantDecoder: Decoder[OpenapiSchemaConstantValue[_]] = { (c: HCursor) =>
+    c.value.fold(
+      Right(OpenapiSchemaConstantNull),
+      b => Right(OpenapiSchemaConstantBoolean(b)),
+      _.toLong.map(OpenapiSchemaConstantLong(_)).toRight(DecodingFailure("Numeric enums only support long literals", c.history)),
+      s => Right(OpenapiSchemaConstantString(s)),
+      _ => Left(DecodingFailure("Array enums are unsupported!", c.history)),
+      _ => Left(DecodingFailure("Object enums are unsupported!", c.history))
+    )
+  }
+
+  implicit val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
+    for {
+      items <- c.downField("enum").as[Seq[OpenapiSchemaConstantValue[_]]]
+      nb <- c.downField("nullable").as[Option[Boolean]]
+    } yield OpenapiSchemaEnum(items, nb.getOrElse(false))
+  }
+
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       _ <- c
@@ -265,6 +313,7 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaNot].widen,
       Decoder[OpenapiSchemaObject].widen,
       Decoder[OpenapiSchemaMap].widen,
-      Decoder[OpenapiSchemaArray].widen
+      Decoder[OpenapiSchemaArray].widen,
+      Decoder[OpenapiSchemaEnum].widen,
     ).reduceLeft(_ or _)
 }
