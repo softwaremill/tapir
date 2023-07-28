@@ -154,9 +154,9 @@ object OpenapiModels {
     for {
       requiredOpt <- c.downField("required").as[Option[Boolean]]
       description <- c.downField("description").as[Option[String]]
-      content <- c.downField("content").as[Option[Seq[OpenapiRequestBodyContent]]]
+      content <- c.downField("content").as[Seq[OpenapiRequestBodyContent]]
     } yield {
-      OpenapiRequestBody(required = requiredOpt.getOrElse(false), description, content.getOrElse(Nil))
+      OpenapiRequestBody(required = requiredOpt.getOrElse(false), description, content)
     }
   }
 
