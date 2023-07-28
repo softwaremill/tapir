@@ -117,19 +117,19 @@ object OpenapiModels {
   }
 
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Seq[OpenapiResponseContent])] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]])] = { (c: HCursor) =>
       for {
         description <- c.downField("description").as[String]
-        content <- c.downField("content").as[Seq[OpenapiResponseContent]]
+        content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
       } yield {
         (description, content)
       }
     }
     for {
-      schema <- c.as[Map[String, (String, Seq[OpenapiResponseContent])]]
+      schema <- c.as[Map[String, (String, Option[Seq[OpenapiResponseContent]])]]
     } yield {
       schema.map { case (code, (desc, content)) =>
-        OpenapiResponse(code, desc, content)
+        OpenapiResponse(code, desc, content.getOrElse(Nil))
       }.toSeq
     }
   }

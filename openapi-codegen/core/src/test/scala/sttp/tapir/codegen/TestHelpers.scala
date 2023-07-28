@@ -114,6 +114,15 @@ object TestHelpers {
       |                type: string
       |      tags:
       |        - Bookshop
+      |    delete:
+      |      operationId: deleteBooksGenreYear
+      |      responses:
+      |        '200':
+      |          description: 'deletion was successful'
+      |        default:
+      |          description: 'deletion failed'
+      |      tags:
+      |        - Bookshop
       |components:
       |  schemas:
       |    Book:
@@ -196,6 +205,18 @@ object TestHelpers {
             summary = None,
             tags = Some(Seq("Bookshop")),
             operationId = Some("postBooksGenreYear")
+          ),
+          OpenapiPathMethod(
+            methodType = "delete",
+            parameters = Nil,
+            responses = Seq(
+              OpenapiResponse("200", "deletion was successful", Nil),
+              OpenapiResponse("default", "deletion failed", Nil)
+            ),
+            requestBody = None,
+            summary = None,
+            tags = Some(Seq("Bookshop")),
+            operationId = Some("deleteBooksGenreYear")
           )
         ),
         parameters = Seq(
