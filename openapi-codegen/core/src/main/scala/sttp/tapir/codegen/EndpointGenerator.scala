@@ -86,9 +86,10 @@ class EndpointGenerator {
         }
       }
 
-    val rqBody = requestBody.map{ b =>
-      if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
-      s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})"
+    val rqBody = requestBody.flatMap{ b =>
+      if (b.content.isEmpty) None
+      else if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
+      else Some(s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})")
     }
 
     (params ++ rqBody).mkString("\n")
