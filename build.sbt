@@ -18,9 +18,9 @@ val scala2_12 = "2.12.18"
 val scala2_13 = "2.13.11"
 val scala3 = "3.3.0"
 
-val scala2Versions = List(scala2_12, scala2_13)
+val scala2Versions = List(scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
-val codegenScalaVersions = List(scala2_12)
+// val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
 
@@ -66,8 +66,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     }
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
-  ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala3) ||
+  ideSkipProject := (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -237,9 +236,6 @@ lazy val rawAllAggregates = core.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
   documentation.projectRefs ++
-  openapiCodegenCore.projectRefs ++
-  openapiCodegenSbt.projectRefs ++
-  openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
@@ -1055,7 +1051,6 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
 
 lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn()
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
-lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
@@ -1243,7 +1238,6 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   )
   .dependsOn(serverCore, cats, catsEffect)
 
-lazy val http4sServer2_12 = http4sServer.jvm(scala2_12).dependsOn(serverTests.jvm(scala2_12) % Test)
 lazy val http4sServer2_13 = http4sServer.jvm(scala2_13).dependsOn(serverTests.jvm(scala2_13) % Test)
 lazy val http4sServer3 = http4sServer.jvm(scala3).dependsOn(serverTests.jvm(scala3) % Test)
 
@@ -1740,7 +1734,6 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   )
   .dependsOn(awsLambdaCore, awsLambdaCatsEffect)
 
-lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
 lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
 
 // client
@@ -1870,61 +1863,61 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
 
 import scala.collection.JavaConverters._
 
-lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
-  .settings(commonSettings)
-  .jvmPlatform(scalaVersions = codegenScalaVersions)
-  .settings(
-    name := "tapir-openapi-codegen-core",
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-yaml" % Versions.circeYaml,
-      scalaTest.value % Test,
-      scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      scalaOrganization.value % "scala-reflect" % scalaVersion.value,
-      scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
-    )
-  )
-  .dependsOn(core % Test, circeJson % Test)
+// lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
+//   .settings(commonSettings)
+//   .jvmPlatform(scalaVersions = codegenScalaVersions)
+//   .settings(
+//     name := "tapir-openapi-codegen-core",
+//     libraryDependencies ++= Seq(
+//       "io.circe" %% "circe-core" % Versions.circe,
+//       "io.circe" %% "circe-generic" % Versions.circe,
+//       "io.circe" %% "circe-yaml" % Versions.circeYaml,
+//       scalaTest.value % Test,
+//       scalaCheck.value % Test,
+//       scalaTestPlusScalaCheck.value % Test,
+//       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
+//       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
+//       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
+//     )
+//   )
+//   .dependsOn(core % Test, circeJson % Test)
 
-lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
-  .enablePlugins(SbtPlugin)
-  .settings(commonSettings)
-  .jvmPlatform(scalaVersions = codegenScalaVersions)
-  .settings(
-    name := "sbt-openapi-codegen",
-    sbtPlugin := true,
-    scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
-    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
-      .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
-    scriptedBufferLog := false,
-    sbtTestDirectory := sourceDirectory.value / "sbt-test",
-    libraryDependencies ++= Seq(
-      scalaTest.value % Test,
-      scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    )
-  )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+// lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
+//   .enablePlugins(SbtPlugin)
+//   .settings(commonSettings)
+//   .jvmPlatform(scalaVersions = codegenScalaVersions)
+//   .settings(
+//     name := "sbt-openapi-codegen",
+//     sbtPlugin := true,
+//     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
+//     scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
+//       .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
+//     scriptedBufferLog := false,
+//     sbtTestDirectory := sourceDirectory.value / "sbt-test",
+//     libraryDependencies ++= Seq(
+//       scalaTest.value % Test,
+//       scalaCheck.value % Test,
+//       scalaTestPlusScalaCheck.value % Test,
+//       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
+//       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+//     )
+//   )
+//   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
-lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
-  .enablePlugins(BuildInfoPlugin)
-  .settings(commonSettings)
-  .jvmPlatform(scalaVersions = codegenScalaVersions)
-  .settings(
-    name := "tapir-codegen",
-    buildInfoPackage := "sttp.tapir.codegen",
-    libraryDependencies ++= Seq(
-      "com.monovore" %% "decline" % Versions.decline,
-      "com.monovore" %% "decline-effect" % Versions.decline,
-      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
-    )
-  )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+// lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
+//   .enablePlugins(BuildInfoPlugin)
+//   .settings(commonSettings)
+//   .jvmPlatform(scalaVersions = codegenScalaVersions)
+//   .settings(
+//     name := "tapir-codegen",
+//     buildInfoPackage := "sttp.tapir.codegen",
+//     libraryDependencies ++= Seq(
+//       "com.monovore" %% "decline" % Versions.decline,
+//       "com.monovore" %% "decline-effect" % Versions.decline,
+//       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
+//     )
+//   )
+//   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
 // other
 
