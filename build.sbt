@@ -657,7 +657,6 @@ lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
     scalaVersions = List(scala3)
   )
   .dependsOn(core)
-// .dependsOn(core, circeJson % Test)
 
 lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
   .settings(commonSettings)
