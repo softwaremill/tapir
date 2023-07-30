@@ -104,22 +104,13 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
           .asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
   }
 
-  private inline def summonConstraints[N, A <: Tuple]: List[Constraint[N, Any]] = {
-    inline erasedValue[A] match
-      case _: EmptyTuple     => Nil
-      case _: (head *: tail) => summonInline[Constraint[N, head]].asInstanceOf[Constraint[N, Any]] :: summonConstraints[N, tail]
-  }
-
   inline given validatorForAnd[N, Predicates](using mirror: IntersectionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
     new ValidatorForPredicate[N, Predicates] {
 
       val intersectionConstraint = new Constraint.IntersectionConstraint[N, Predicates]
-
       val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
-      val primitiveValidators = validatorsForPredicates.map(_.validator)
-
-      override def validator: Validator[N] = Validator.all(primitiveValidators: _*)
+      override def validator: Validator[N] = Validator.all(validatorsForPredicates.map(_.validator): _*)
 
       override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
         if (!intersectionConstraint.test(value))
@@ -139,12 +130,9 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
     new ValidatorForPredicate[N, Predicates] {
 
       val intersectionConstraint = new Constraint.UnionConstraint[N, Predicates]
-
       val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
-      val primitiveValidators = validatorsForPredicates.map(_.validator)
-
-      override def validator: Validator[N] = Validator.any(primitiveValidators: _*)
+      override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
 
       override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
         if (!intersectionConstraint.test(value))
