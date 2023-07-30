@@ -18,8 +18,17 @@ import sttp.tapir.ValidationResult
 import scala.reflect.ClassTag
 import sttp.tapir.ValidationError
 import io.github.iltotore.iron.constraint.any.Not
+import io.github.iltotore.iron.macros.union.IsUnion
+import io.github.iltotore.iron.macros.intersection.IsIntersection
 
-trait TapirCodecIron extends LowPriorityValidatorForPredicate {
+import scala.compiletime.*
+import scala.util.NotGiven
+
+import sttp.tapir.typelevel.IntersectionTypeMirror
+import sttp.tapir.Validator.Primitive
+import sttp.tapir.typelevel.UnionTypeMirror
+
+trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPredicate {
 
   inline given ironTypeSchema[Value, Predicate](using
       inline vSchema: Schema[Value],
@@ -45,8 +54,8 @@ trait TapirCodecIron extends LowPriorityValidatorForPredicate {
 
   inline given (using
       inline vSchema: Schema[String],
-      inline refinedValidator: Constraint[String, ValidUUID],
-      inline refinedValidatorTranslation: ValidatorForPredicate[String, ValidUUID]
+      inline constraint: Constraint[String, ValidUUID],
+      inline validatorTranslation: ValidatorForPredicate[String, ValidUUID]
   ): Schema[String :| ValidUUID] =
     ironTypeSchema[String, ValidUUID].format("uuid")
 
@@ -80,56 +89,97 @@ trait TapirCodecIron extends LowPriorityValidatorForPredicate {
   ): PrimitiveValidatorForPredicate[N, GreaterEqual[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.min(witness.value))
 
-  inline given validatorForAnd[N, LP, RP](using
-      leftPredValidator: PrimitiveValidatorForPredicate[N, LP],
-      rightPredValidator: PrimitiveValidatorForPredicate[N, RP],
-      inline leftConstraint: Constraint[N, LP],
-      inline rightConstraint: Constraint[N, RP]
-  ): ValidatorForPredicate[N, DescribedAs[LP & RP, _]] = new ValidatorForPredicate[N, DescribedAs[LP & RP, _]] {
-    override def validator: Validator[N] = Validator.all(leftPredValidator.validator, rightPredValidator.validator)
-    override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] = {
+  inline given validatorForStrictEqual[N: Numeric, NM <: N](using
+      witness: ValueOf[NM]
+  ): PrimitiveValidatorForPredicate[N, StrictEqual[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(
+      Validator.enumeration[N](List(witness.value))
+    )
 
-      val leftErrors = if (!leftConstraint.test(value)) List(ValidationError[N](leftPredValidator.validator, value)) else List.empty
-
-      val rightErrors = if (!rightConstraint.test(value)) List(ValidationError[N](rightPredValidator.validator, value)) else List.empty
-
-      leftErrors ::: rightErrors
-
-      // val primitivesErrors = Seq[(Constraint[N, _], Validator.Primitive[N])](
-      //   leftConstraint -> leftPredValidator.validator,
-      //   rightConstraint -> rightPredValidator.validator
-      // )
-      //   .filterNot { (constraint, _) => constraint.test(value) } // NOTE - tried this and it does not work, since we lost track of the constraint being inline
-      //   .map { (_, primitiveValidator) => ValidationError[N](primitiveValidator, value) }
-      //   .toList
-
-      // if (primitivesErrors.isEmpty) {
-      //   // this should not happen
-      //   List(ValidationError(Validator.Custom((_: N) => ValidationResult.Valid), value, Nil, Some(errorMessage)))
-      // } else {
-      //   primitivesErrors
-      // }
-    }
+  private inline def summonValidators[N, A <: Tuple]: List[ValidatorForPredicate[N, Any]] = {
+    inline erasedValue[A] match
+      case _: EmptyTuple => Nil
+      case _: (head *: tail) =>
+        summonInline[ValidatorForPredicate[N, head]]
+          .asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
   }
 
-  inline given validatorForOr[N, LP, RP](using
-      leftPredValidator: PrimitiveValidatorForPredicate[N, LP],
-      rightPredValidator: PrimitiveValidatorForPredicate[N, RP],
-      inline leftConstraint: Constraint[N, LP],
-      inline rightConstraint: Constraint[N, RP]
-  ): ValidatorForPredicate[N, LP | RP] =
-    new ValidatorForPredicate[N, LP | RP] {
-      override def validator: Validator[N] = Validator.any(leftPredValidator.validator, rightPredValidator.validator)
-      override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] = {
+  private inline def summonConstraints[N, A <: Tuple]: List[Constraint[N, Any]] = {
+    inline erasedValue[A] match
+      case _: EmptyTuple     => Nil
+      case _: (head *: tail) => summonInline[Constraint[N, head]].asInstanceOf[Constraint[N, Any]] :: summonConstraints[N, tail]
+  }
 
-        val leftErrors = if (!leftConstraint.test(value)) List(ValidationError[N](leftPredValidator.validator, value)) else List.empty
+  inline given validatorForAnd[N, Predicates](using mirror: IntersectionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
+    new ValidatorForPredicate[N, Predicates] {
 
-        val rightErrors = if (!rightConstraint.test(value)) List(ValidationError[N](rightPredValidator.validator, value)) else List.empty
+      val intersectionConstraint = new Constraint.IntersectionConstraint[N, Predicates]
 
-        leftErrors ::: rightErrors
+      val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
-      }
+      val primitiveValidators = validatorsForPredicates.map(_.validator)
+
+      override def validator: Validator[N] = Validator.all(primitiveValidators: _*)
+
+      override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
+        if (!intersectionConstraint.test(value))
+          List(
+            ValidationError[N](
+              Validator.Custom(_ =>
+                ValidationResult.Invalid(intersectionConstraint.message) // at this point the validator is already failed anyway
+              ),
+              value
+            )
+          )
+        else Nil
+
     }
+
+  inline given validatorForOr[N, Predicates](using mirror: UnionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
+    new ValidatorForPredicate[N, Predicates] {
+
+      val intersectionConstraint = new Constraint.UnionConstraint[N, Predicates]
+
+      val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
+
+      val primitiveValidators = validatorsForPredicates.map(_.validator)
+
+      override def validator: Validator[N] = Validator.any(primitiveValidators: _*)
+
+      override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
+        if (!intersectionConstraint.test(value))
+          List(
+            ValidationError[N](
+              Validator.Custom(_ =>
+                ValidationResult.Invalid(intersectionConstraint.message) // at this point the validator is already failed anyway
+              ),
+              value
+            )
+          )
+        else Nil
+
+    }
+
+  inline given validatorForDescribedAnd[N, P](using
+      id: IsDescription[P],
+      mirror: IntersectionTypeMirror[id.Predicate]
+  ): ValidatorForPredicate[N, P] =
+    validatorForAnd[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
+
+  inline given validatorForDescribedOr[N, P](using
+      id: IsDescription[P],
+      mirror: UnionTypeMirror[id.Predicate]
+  ): ValidatorForPredicate[N, P] =
+    validatorForOr[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
+
+  inline given validatorForDescribedPrimitive[N, P](using
+      id: IsDescription[P],
+      notUnion: NotGiven[UnionTypeMirror[id.Predicate]],
+      notIntersection: NotGiven[IntersectionTypeMirror[id.Predicate]],
+      inline validator: ValidatorForPredicate[N, id.Predicate]
+  ): ValidatorForPredicate[N, P] =
+    validator.asInstanceOf[ValidatorForPredicate[N, P]]
+
 }
 
 private[iron] trait ValidatorForPredicate[Value, Predicate] {
@@ -154,7 +204,13 @@ private[iron] object ValidatorForPredicate {
 }
 
 private[iron] trait LowPriorityValidatorForPredicate {
-  inline given [Value, Predicate](using inline constraint: Constraint[Value, Predicate]): ValidatorForPredicate[Value, Predicate] =
+
+  inline given [Value, Predicate](using
+      inline constraint: Constraint[Value, Predicate],
+      id: IsDescription[Predicate],
+      notIntersection: NotGiven[IntersectionTypeMirror[id.Predicate]],
+      notUnion: NotGiven[UnionTypeMirror[id.Predicate]]
+  ): ValidatorForPredicate[Value, Predicate] =
     new ValidatorForPredicate[Value, Predicate] {
 
       override val validator: Validator.Custom[Value] = Validator.Custom { v =>
@@ -165,4 +221,24 @@ private[iron] trait LowPriorityValidatorForPredicate {
       override def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]] =
         List(ValidationError[Value](validator, value, Nil, Some(errorMessage)))
     }
+}
+
+private[iron] trait DescriptionWitness {
+
+  trait IsDescription[A] {
+    type Predicate
+    type Description
+  }
+
+  class DescriptionTypeMirrorImpl[A, P, D <: String] extends IsDescription[A] {
+    override type Predicate = P
+    override type Description = D
+  }
+  object IsDescription {
+    transparent inline given derived[A]: IsDescription[A] =
+      inline erasedValue[A] match {
+        case _: DescribedAs[p, d] => new DescriptionTypeMirrorImpl[A, p, d]
+      }
+  }
+
 }
