@@ -43,7 +43,7 @@ class ClassDefinitionGenerator {
   } else {
     val members = obj.items.map { i => s"case object ${i.value} extends $name" }
     s"""|sealed trait $name extends EnumEntry
-        |object $name extends Enum[$name] {
+        |object $name extends Enum[$name] with CirceEnum[$name] {
         |  val values = findValues
         |${indent(2)(members.mkString("\n"))}
         |}""".stripMargin :: Nil
