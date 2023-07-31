@@ -58,13 +58,13 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  updateDocs := Def.taskDyn {
-    val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
-    Def.task {
-      (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
-      files1 ++ Seq(file("generated-doc/out"))
-    }
-  }.value,
+//  updateDocs := Def.taskDyn {
+//    val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
+//    Def.task {
+//      (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
+//      files1 ++ Seq(file("generated-doc/out"))
+//    }
+//  }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
@@ -235,7 +235,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   perfTests.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
-  documentation.projectRefs ++
+//  documentation.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
@@ -789,9 +789,9 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -1331,7 +1331,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
@@ -1996,76 +1996,76 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
-val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
-compileDocumentation := {
-  (documentation.jvm(documentationScalaVersion) / mdoc).toTask(" --out target/tapir-doc").value
-}
+//val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
+//compileDocumentation := {
+//  (documentation.jvm(documentationScalaVersion) / mdoc).toTask(" --out target/tapir-doc").value
+//}
 
-lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
-  .enablePlugins(MdocPlugin)
-  .settings(commonSettings)
-  .settings(macros)
-  .settings(
-    mdocIn := file("doc"),
-    moduleName := "tapir-doc",
-    mdocVariables := Map(
-      "VERSION" -> version.value,
-      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
-      "JSON4S_VERSION" -> Versions.json4s
-    ),
-    mdocOut := file("generated-doc/out"),
-    mdocExtraArguments := Seq("--clean-target"),
-    publishArtifact := false,
-    name := "doc",
-    libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
-  )
-  .jvmPlatform(scalaVersions = List(documentationScalaVersion))
-  .dependsOn(
-    core % "compile->test",
-    testing,
-    akkaHttpServer,
-    armeriaServer,
-    armeriaServerCats,
-    armeriaServerZio,
-    armeriaServerZio1,
-    jdkhttpServer,
-    circeJson,
-    enumeratum,
-    finatraServer,
-    finatraServerCats,
-    jsoniterScala,
-    asyncapiDocs,
-    openapiDocs,
-    json4s,
-    playJson,
-    playServer,
-    sprayJson,
-    http4sClient,
-    http4sServerZio,
-    sttpClient,
-    playClient,
-    sttpStubServer,
-    tethysJson,
-    uPickleJson,
-    vertxServer,
-    vertxServerCats,
-    vertxServerZio,
-    zio,
-    zioHttpServer,
-    derevo,
-    zioJson,
-    prometheusMetrics,
-    opentelemetryMetrics,
-    datadogMetrics,
-    zioMetrics,
-    sttpMockServer,
-    nettyServer,
-    swaggerUiBundle
-  )
+//lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
+//  .enablePlugins(MdocPlugin)
+//  .settings(commonSettings)
+//  .settings(macros)
+//  .settings(
+//    mdocIn := file("doc"),
+//    moduleName := "tapir-doc",
+//    mdocVariables := Map(
+//      "VERSION" -> version.value,
+//      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
+//      "JSON4S_VERSION" -> Versions.json4s
+//    ),
+//    mdocOut := file("generated-doc/out"),
+//    mdocExtraArguments := Seq("--clean-target"),
+//    publishArtifact := false,
+//    name := "doc",
+//    libraryDependencies ++= Seq(
+//      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+//      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+//      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+//      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
+//    ),
+//    // needed because of https://github.com/coursier/coursier/issues/2016
+//    useCoursier := false
+//  )
+//  .jvmPlatform(scalaVersions = List(documentationScalaVersion))
+//  .dependsOn(
+//    core % "compile->test",
+//    testing,
+//    akkaHttpServer,
+//    armeriaServer,
+//    armeriaServerCats,
+//    armeriaServerZio,
+//    armeriaServerZio1,
+//    jdkhttpServer,
+//    circeJson,
+//    enumeratum,
+//    finatraServer,
+//    finatraServerCats,
+//    jsoniterScala,
+//    asyncapiDocs,
+//    openapiDocs,
+//    json4s,
+//    playJson,
+//    playServer,
+//    sprayJson,
+//    http4sClient,
+//    http4sServerZio,
+//    sttpClient,
+//    playClient,
+//    sttpStubServer,
+//    tethysJson,
+//    uPickleJson,
+//    vertxServer,
+//    vertxServerCats,
+//    vertxServerZio,
+//    zio,
+//    zioHttpServer,
+//    derevo,
+//    zioJson,
+//    prometheusMetrics,
+//    opentelemetryMetrics,
+//    datadogMetrics,
+//    zioMetrics,
+//    sttpMockServer,
+//    nettyServer,
+//    swaggerUiBundle
+//  )
