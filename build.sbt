@@ -1741,8 +1741,8 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   )
   .dependsOn(awsLambdaCore, awsLambdaCatsEffect)
 
-lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
 lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
+lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
 
 // client
 
@@ -1971,6 +1971,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     nettyServerCats,
     nettyServerZio,
     sttpStubServer,
+    playJson,
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
@@ -1999,8 +2000,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .dependsOn(
     http4sServer,
     swaggerUiBundle,
-    circeJson,
-    playJson
+    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
