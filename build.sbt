@@ -794,7 +794,7 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2_13And3Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
