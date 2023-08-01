@@ -18,9 +18,10 @@ val scala2_12 = "2.12.18"
 val scala2_13 = "2.13.11"
 val scala3 = "3.3.0"
 
-val scala2Versions = List(scala2_13)
+val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
-// val codegenScalaVersions = List(scala2_12)
+val scala2_13And3Versions = List(scala2_13, scala3)
+val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
 
@@ -58,15 +59,16 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-//  updateDocs := Def.taskDyn {
-//    val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
-//    Def.task {
-//      (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
-//      files1 ++ Seq(file("generated-doc/out"))
-//    }
-//  }.value,
+  updateDocs := Def.taskDyn {
+    val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
+    Def.task {
+      (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
+      files1 ++ Seq(file("generated-doc/out"))
+    }
+  }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
-  ideSkipProject := (scalaVersion.value == scala3) ||
+  ideSkipProject := (scalaVersion.value == scala2_12) ||
+    (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -235,7 +237,10 @@ lazy val rawAllAggregates = core.projectRefs ++
   perfTests.projectRefs ++
   examples.projectRefs ++
   examples3.projectRefs ++
-//  documentation.projectRefs ++
+  documentation.projectRefs ++
+  openapiCodegenCore.projectRefs ++
+  openapiCodegenSbt.projectRefs ++
+  openapiCodegenCli.projectRefs ++
   clientTestServer.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
@@ -789,7 +794,7 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
@@ -1238,6 +1243,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   )
   .dependsOn(serverCore, cats, catsEffect)
 
+lazy val http4sServer2_12 = http4sServer.jvm(scala2_12).dependsOn(serverTests.jvm(scala2_12) % Test)
 lazy val http4sServer2_13 = http4sServer.jvm(scala2_13).dependsOn(serverTests.jvm(scala2_13) % Test)
 lazy val http4sServer3 = http4sServer.jvm(scala3).dependsOn(serverTests.jvm(scala3) % Test)
 
@@ -1331,7 +1337,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
@@ -1735,6 +1741,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   .dependsOn(awsLambdaCore, awsLambdaCatsEffect)
 
 lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala2_13), awsTerraform.jvm(scala2_13), awsCdk.jvm(scala2_13))
+//lazy val awsExamples2_12 = awsExamples.jvm(scala2_12).dependsOn(awsSam.jvm(scala2_12), awsTerraform.jvm(scala2_12), awsCdk.jvm(scala2_12))
 
 // client
 
@@ -1863,61 +1870,61 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
 
 import scala.collection.JavaConverters._
 
-// lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
-//   .settings(commonSettings)
-//   .jvmPlatform(scalaVersions = codegenScalaVersions)
-//   .settings(
-//     name := "tapir-openapi-codegen-core",
-//     libraryDependencies ++= Seq(
-//       "io.circe" %% "circe-core" % Versions.circe,
-//       "io.circe" %% "circe-generic" % Versions.circe,
-//       "io.circe" %% "circe-yaml" % Versions.circeYaml,
-//       scalaTest.value % Test,
-//       scalaCheck.value % Test,
-//       scalaTestPlusScalaCheck.value % Test,
-//       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-//       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
-//       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
-//     )
-//   )
-//   .dependsOn(core % Test, circeJson % Test)
+lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
+  .settings(commonSettings)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
+  .settings(
+    name := "tapir-openapi-codegen-core",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
+      scalaOrganization.value % "scala-reflect" % scalaVersion.value,
+      scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
+    )
+  )
+  .dependsOn(core % Test, circeJson % Test)
 
-// lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
-//   .enablePlugins(SbtPlugin)
-//   .settings(commonSettings)
-//   .jvmPlatform(scalaVersions = codegenScalaVersions)
-//   .settings(
-//     name := "sbt-openapi-codegen",
-//     sbtPlugin := true,
-//     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
-//     scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
-//       .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
-//     scriptedBufferLog := false,
-//     sbtTestDirectory := sourceDirectory.value / "sbt-test",
-//     libraryDependencies ++= Seq(
-//       scalaTest.value % Test,
-//       scalaCheck.value % Test,
-//       scalaTestPlusScalaCheck.value % Test,
-//       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-//       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-//     )
-//   )
-//   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
+  .enablePlugins(SbtPlugin)
+  .settings(commonSettings)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
+  .settings(
+    name := "sbt-openapi-codegen",
+    sbtPlugin := true,
+    scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
+    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
+      .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
+    scriptedBufferLog := false,
+    sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+    )
+  )
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
-// lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
-//   .enablePlugins(BuildInfoPlugin)
-//   .settings(commonSettings)
-//   .jvmPlatform(scalaVersions = codegenScalaVersions)
-//   .settings(
-//     name := "tapir-codegen",
-//     buildInfoPackage := "sttp.tapir.codegen",
-//     libraryDependencies ++= Seq(
-//       "com.monovore" %% "decline" % Versions.decline,
-//       "com.monovore" %% "decline-effect" % Versions.decline,
-//       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
-//     )
-//   )
-//   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(commonSettings)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
+  .settings(
+    name := "tapir-codegen",
+    buildInfoPackage := "sttp.tapir.codegen",
+    libraryDependencies ++= Seq(
+      "com.monovore" %% "decline" % Versions.decline,
+      "com.monovore" %% "decline-effect" % Versions.decline,
+      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
+    )
+  )
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
 
 // other
 
@@ -1963,7 +1970,6 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     nettyServerCats,
     nettyServerZio,
     sttpStubServer,
-    playJson,
     prometheusMetrics,
     opentelemetryMetrics,
     datadogMetrics,
@@ -1992,80 +1998,81 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .dependsOn(
     http4sServer,
     swaggerUiBundle,
-    circeJson
+    circeJson,
+    playJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
-//val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
-//compileDocumentation := {
-//  (documentation.jvm(documentationScalaVersion) / mdoc).toTask(" --out target/tapir-doc").value
-//}
+val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
+compileDocumentation := {
+  (documentation.jvm(documentationScalaVersion) / mdoc).toTask(" --out target/tapir-doc").value
+}
 
-//lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
-//  .enablePlugins(MdocPlugin)
-//  .settings(commonSettings)
-//  .settings(macros)
-//  .settings(
-//    mdocIn := file("doc"),
-//    moduleName := "tapir-doc",
-//    mdocVariables := Map(
-//      "VERSION" -> version.value,
-//      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
-//      "JSON4S_VERSION" -> Versions.json4s
-//    ),
-//    mdocOut := file("generated-doc/out"),
-//    mdocExtraArguments := Seq("--clean-target"),
-//    publishArtifact := false,
-//    name := "doc",
-//    libraryDependencies ++= Seq(
-//      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
-//      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-//      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-//      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
-//    ),
-//    // needed because of https://github.com/coursier/coursier/issues/2016
-//    useCoursier := false
-//  )
-//  .jvmPlatform(scalaVersions = List(documentationScalaVersion))
-//  .dependsOn(
-//    core % "compile->test",
-//    testing,
-//    akkaHttpServer,
-//    armeriaServer,
-//    armeriaServerCats,
-//    armeriaServerZio,
-//    armeriaServerZio1,
-//    jdkhttpServer,
-//    circeJson,
-//    enumeratum,
-//    finatraServer,
-//    finatraServerCats,
-//    jsoniterScala,
-//    asyncapiDocs,
-//    openapiDocs,
-//    json4s,
-//    playJson,
-//    playServer,
-//    sprayJson,
-//    http4sClient,
-//    http4sServerZio,
-//    sttpClient,
-//    playClient,
-//    sttpStubServer,
-//    tethysJson,
-//    uPickleJson,
-//    vertxServer,
-//    vertxServerCats,
-//    vertxServerZio,
-//    zio,
-//    zioHttpServer,
-//    derevo,
-//    zioJson,
-//    prometheusMetrics,
-//    opentelemetryMetrics,
-//    datadogMetrics,
-//    zioMetrics,
-//    sttpMockServer,
-//    nettyServer,
-//    swaggerUiBundle
-//  )
+lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
+  .enablePlugins(MdocPlugin)
+  .settings(commonSettings)
+  .settings(macros)
+  .settings(
+    mdocIn := file("doc"),
+    moduleName := "tapir-doc",
+    mdocVariables := Map(
+      "VERSION" -> version.value,
+      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
+      "JSON4S_VERSION" -> Versions.json4s
+    ),
+    mdocOut := file("generated-doc/out"),
+    mdocExtraArguments := Seq("--clean-target"),
+    publishArtifact := false,
+    name := "doc",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
+    ),
+    // needed because of https://github.com/coursier/coursier/issues/2016
+    useCoursier := false
+  )
+  .jvmPlatform(scalaVersions = List(documentationScalaVersion))
+  .dependsOn(
+    core % "compile->test",
+    testing,
+    akkaHttpServer,
+    armeriaServer,
+    armeriaServerCats,
+    armeriaServerZio,
+    armeriaServerZio1,
+    jdkhttpServer,
+    circeJson,
+    enumeratum,
+    finatraServer,
+    finatraServerCats,
+    jsoniterScala,
+    asyncapiDocs,
+    openapiDocs,
+    json4s,
+    playJson,
+    playServer,
+    sprayJson,
+    http4sClient,
+    http4sServerZio,
+    sttpClient,
+    playClient,
+    sttpStubServer,
+    tethysJson,
+    uPickleJson,
+    vertxServer,
+    vertxServerCats,
+    vertxServerZio,
+    zio,
+    zioHttpServer,
+    derevo,
+    zioJson,
+    prometheusMetrics,
+    opentelemetryMetrics,
+    datadogMetrics,
+    zioMetrics,
+    sttpMockServer,
+    nettyServer,
+    swaggerUiBundle
+  )
