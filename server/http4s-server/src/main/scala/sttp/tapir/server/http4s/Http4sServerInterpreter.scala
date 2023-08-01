@@ -78,21 +78,17 @@ trait Http4sServerInterpreter[F[_]] {
 
     response.body match {
       case Some(Left(pipeF)) =>
-        Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
-          pipeF.flatMap { pipe =>
-            val send: Stream[F, WebSocketFrame] = Stream.repeatEval(queue.take)
-            val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.offer(f)))
-            webSocketBuilder match {
-              case Some(wsb) => wsb.withHeaders(headers).build(send, receive)
-              case None =>
-                monad.error(
-                  new Http4sInvalidWebSocketUse(
-                    "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
-                      "Use the toWebSocketRoutes/toWebSocketHttp interpreter methods, " +
-                      "and add the result using BlazeServerBuilder.withHttpWebSocketApp(..)."
-                  )
+        pipeF.flatMap { pipe =>
+          webSocketBuilder match {
+            case Some(wsb) => wsb.withHeaders(headers).build(pipe)
+            case None =>
+              monad.error(
+                new Http4sInvalidWebSocketUse(
+                  "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
+                    "Use the toWebSocketRoutes/toWebSocketHttp interpreter methods, " +
+                    "and add the result using BlazeServerBuilder.withHttpWebSocketApp(..)."
                 )
-            }
+              )
           }
         }
       case Some(Right((entity, contentLength))) =>

@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty
 
+import com.typesafe.netty.http.HttpStreamsServerHandler
 import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup, EpollServerSocketChannel}
 import io.netty.channel.kqueue.{KQueue, KQueueEventLoopGroup, KQueueServerSocketChannel}
 import io.netty.channel.nio.NioEventLoopGroup
@@ -9,7 +10,6 @@ import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.stream.ChunkedWriteHandler
-import io.netty.handler.timeout.ReadTimeoutException
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 
 import scala.concurrent.duration._
@@ -19,6 +19,10 @@ import scala.concurrent.duration._
   *
   * @param maxContentLength
   *   The max content length passed to the [[io.netty.handler.codec.http.HttpObjectAggregator]] handler.
+  *
+  * @param maxConnections
+  *   The maximum number of concurrent connections allowed by the server. Any connections above this limit will be closed right after they
+  *   are opened.
   *
   * @param addLoggingHandler
   *   Should a low-level logging handler, [[io.netty.handler.logging.LoggingHandler]], be added to the Netty pipeline. This is independent
@@ -48,7 +52,8 @@ case class NettyConfig(
     host: String,
     port: Int,
     shutdownEventLoopGroupOnClose: Boolean,
-    maxContentLength: Int,
+    maxContentLength: Option[Int],
+    maxConnections: Option[Int],
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
@@ -69,8 +74,10 @@ case class NettyConfig(
   def withShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = true)
   def withDontShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = false)
 
-  def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = m)
-  def noMaxContentLength: NettyConfig = copy(maxContentLength = Integer.MAX_VALUE)
+  def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = Some(m))
+  def noMaxContentLength: NettyConfig = copy(maxContentLength = None)
+
+  def maxConnections(m: Int): NettyConfig = copy(maxConnections = Some(m))
 
   def socketBacklog(s: Int): NettyConfig = copy(socketBacklog = s)
 
@@ -98,7 +105,7 @@ case class NettyConfig(
 }
 
 object NettyConfig {
-  def default: NettyConfig = NettyConfig(
+  def defaultNoStreaming: NettyConfig = NettyConfig(
     host = "localhost",
     port = 8080,
     shutdownEventLoopGroupOnClose = true,
@@ -108,23 +115,34 @@ object NettyConfig {
     connectionTimeout = Some(10.seconds),
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
-    maxContentLength = Integer.MAX_VALUE,
+    maxContentLength = None,
+    maxConnections = None,
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _)
+    initPipeline = cfg => defaultInitPipelineNoStreaming(cfg)(_, _)
   )
 
-  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+  def defaultInitPipelineNoStreaming(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength))
+    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength.getOrElse(Integer.MAX_VALUE)))
     pipeline.addLast(new ChunkedWriteHandler())
+    pipeline.addLast(handler)
+    ()
+  }
+
+  def defaultInitPipelineStreaming(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+    cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
+    pipeline.addLast(new HttpServerCodec())
+    pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()
   }
+
+  def defaultWithStreaming: NettyConfig = defaultNoStreaming.copy(initPipeline = cfg => defaultInitPipelineStreaming(cfg)(_, _))
 
   case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
 

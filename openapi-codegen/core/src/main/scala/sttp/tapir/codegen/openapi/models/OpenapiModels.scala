@@ -1,14 +1,29 @@
 package sttp.tapir.codegen.openapi.models
 
+import cats.implicits.toTraverseOps
+import cats.syntax.either._
+
+import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
+
+  sealed trait Resolvable[T] {
+    def resolve(input: Map[String, T]): T
+    def toResolved(input: Map[String, T]): Resolved[T] = Resolved(resolve(input))
+  }
+  case class Resolved[T](t: T) extends Resolvable[T] {
+    override def resolve(input: Map[String, T]): T = t
+  }
+  case class Ref[T](name: String) extends Resolvable[T] {
+    override def resolve(input: Map[String, T]): T = input.getOrElse(name, throw new IllegalArgumentException(s"Cannot resolve $name"))
+  }
 
   case class OpenapiDocument(
       openapi: String,
       // not used so not parsed; servers, contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
-      components: OpenapiComponent
+      components: Option[OpenapiComponent]
   )
 
   case class OpenapiInfo(
@@ -19,17 +34,34 @@ object OpenapiModels {
 
   case class OpenapiPath(
       url: String,
-      methods: Seq[OpenapiPathMethod]
+      methods: Seq[OpenapiPathMethod],
+      parameters: Seq[Resolvable[OpenapiParameter]] = Nil
   )
 
   case class OpenapiPathMethod(
       methodType: String,
-      parameters: Seq[OpenapiParameter],
+      parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
       summary: Option[String] = None,
-      tags: Option[Seq[String]] = None
-  )
+      tags: Option[Seq[String]] = None,
+      operationId: Option[String] = None
+  ) {
+    def resolvedParameters: Seq[OpenapiParameter] = parameters.collect { case Resolved(t) => t }
+    def withResolvedParentParameters(
+        pMap: Map[String, OpenapiParameter],
+        pathParameters: Seq[Resolvable[OpenapiParameter]]
+    ): OpenapiPathMethod = {
+      val resolved = parameters.map(_.toResolved(pMap))
+      val duplicates = resolved.groupBy(_.t.name).filter(_._2.size > 1).keys
+      if (duplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${duplicates.mkString(", ")}")
+      val filteredParents: Seq[Resolved[OpenapiParameter]] =
+        pathParameters.map(_.toResolved(pMap)).filterNot(p => resolved.exists(p.t.name == _.t.name))
+      val parentDuplicates = filteredParents.groupBy(_.t.name).filter(_._2.size > 1).keys
+      if (parentDuplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${parentDuplicates.mkString(", ")}")
+      this.copy(parameters = filteredParents ++ resolved)
+    }
+  }
 
   case class OpenapiParameter(
       name: String,
@@ -85,19 +117,19 @@ object OpenapiModels {
   }
 
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Seq[OpenapiResponseContent])] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]])] = { (c: HCursor) =>
       for {
         description <- c.downField("description").as[String]
-        content <- c.downField("content").as[Seq[OpenapiResponseContent]]
+        content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
       } yield {
         (description, content)
       }
     }
     for {
-      schema <- c.as[Map[String, (String, Seq[OpenapiResponseContent])]]
+      schema <- c.as[Map[String, (String, Option[Seq[OpenapiResponseContent]])]]
     } yield {
       schema.map { case (code, (desc, content)) =>
-        OpenapiResponse(code, desc, content)
+        OpenapiResponse(code, desc, content.getOrElse(Nil))
       }.toSeq
     }
   }
@@ -119,14 +151,6 @@ object OpenapiModels {
   }
 
   implicit val OpenapiRequestBodyDecoder: Decoder[OpenapiRequestBody] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Seq[OpenapiRequestBodyContent])] = { (c: HCursor) =>
-      for {
-        description <- c.downField("description").as[String]
-        content <- c.downField("content").as[Seq[OpenapiRequestBodyContent]]
-      } yield {
-        (description, content)
-      }
-    }
     for {
       requiredOpt <- c.downField("required").as[Option[Boolean]]
       description <- c.downField("description").as[Option[String]]
@@ -138,46 +162,48 @@ object OpenapiModels {
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
-  implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
-    implicit val InnerDecoder
-        : Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String], Option[Seq[String]])] = {
-      (c: HCursor) =>
-        for {
-          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
-          responses <- c.downField("responses").as[Seq[OpenapiResponse]]
-          requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
-          summary <- c.downField("summary").as[Option[String]]
-          tags <- c.downField("tags").as[Option[Seq[String]]]
-        } yield {
-          (parameters, responses, requestBody, summary, tags)
-        }
-    }
+  implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
+    c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
+  }
+  implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
-      methods <- c.as[
-        Map[
-          String,
-          (
-              Seq[OpenapiParameter],
-              Seq[OpenapiResponse],
-              Option[OpenapiRequestBody],
-              Option[String],
-              Option[Seq[String]]
-          )
-        ]
-      ]
+      parameters <- c
+        .downField("parameters")
+        .as[Seq[Resolvable[OpenapiParameter]]]
+        .orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
+      responses <- c.downField("responses").as[Seq[OpenapiResponse]]
+      requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
+      summary <- c.downField("summary").as[Option[String]]
+      tags <- c.downField("tags").as[Option[Seq[String]]]
+      operationId <- c.downField("operationId").as[Option[String]]
     } yield {
-      methods.map { case (t, (p, r, rb, s, tg)) => OpenapiPathMethod(t, p, r, rb, s, tg) }.toSeq
+      OpenapiPathMethod("--partial--", parameters, responses, requestBody, summary, tags, operationId)
     }
   }
 
-  implicit val OpenapiPathDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+  implicit val PartialOpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
-      paths <- c.as[Map[String, Seq[OpenapiPathMethod]]]
+      parameters <- c.downField("parameters").as[Seq[Resolvable[OpenapiParameter]]].orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
+      methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
+        .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
+    } yield OpenapiPath("--partial--", methods.flatten, parameters)
+  }
+
+  implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+    for {
+      paths <- c.as[Map[String, OpenapiPath]]
     } yield {
-      paths.map { case (url, ms) => OpenapiPath(url, ms) }.toSeq
+      paths.map { case (url, path) => path.copy(url = url) }.toSeq
     }
   }
 
-  implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = deriveDecoder[OpenapiDocument]
+  implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = { (c: HCursor) =>
+    for {
+      openapi <- c.downField("openapi").as[String]
+      info <- c.downField("info").as[OpenapiInfo]
+      paths <- c.downField("paths").as[Seq[OpenapiPath]]
+      components <- c.downField("components").as[Option[OpenapiComponent]].orElse(Right(None))
+    } yield OpenapiDocument(openapi, info, paths, components)
+  }
 
 }

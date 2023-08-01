@@ -6,7 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiPath,
   OpenapiPathMethod,
   OpenapiResponse,
-  OpenapiResponseContent
+  OpenapiResponseContent,
+  Resolved
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
@@ -19,11 +20,11 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Seq(
         OpenapiPath(
-          "test/{asd}",
+          "test/{asd-id}",
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(OpenapiParameter("asd", "path", true, None, OpenapiSchemaString(false))),
+              parameters = Seq(Resolved(OpenapiParameter("asd-id", "path", true, None, OpenapiSchemaString(false)))),
               responses = Seq(
                 OpenapiResponse(
                   "200",
@@ -41,8 +42,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    BasicGenerator.imports ++
-      new EndpointGenerator().endpointDefs(doc) shouldCompile ()
+    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
+    generatedCode should include("val getTestAsdId =")
+    generatedCode shouldCompile ()
   }
 
 }

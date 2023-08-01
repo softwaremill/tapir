@@ -1,4 +1,4 @@
-asyncapi: 2.0.0
+asyncapi: 2.6.0
 info:
   title: Header descriptions
   version: '1.0'
