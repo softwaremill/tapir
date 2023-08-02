@@ -21,9 +21,18 @@ class ClassDefinitionGenerator {
           generateClass(name, obj)
         case (name, obj: OpenapiSchemaEnum) =>
           generateEnum(name, obj, targetScala3)
-        case _ => throw new NotImplementedError("Only objects and enums supported!")
+        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
+        case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
+  }
+
+  private[codegen] def generateMap(name: String, valueSchema: OpenapiSchemaType): Seq[String] = {
+    val valueSchemaName = valueSchema match {
+      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
+    }
+    Seq(s"""type $name = Map[String, $valueSchemaName]""")
   }
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
