@@ -37,7 +37,7 @@ class ClassDefinitionGenerator {
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
   private[codegen] def generateEnum(name: String, obj: OpenapiSchemaEnum, targetScala3: Boolean): Seq[String] = if (targetScala3) {
-    s"""enum $name {
+    s"""enum $name derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
        |  case ${obj.items.map(_.value).mkString(", ")}
        |}""".stripMargin :: Nil
   } else {

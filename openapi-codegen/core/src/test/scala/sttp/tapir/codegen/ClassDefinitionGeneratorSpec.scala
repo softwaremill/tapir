@@ -259,7 +259,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val gen = new ClassDefinitionGenerator()
     val res = gen.classDefs(doc, true)
     // can't just check whether this compiles, because our tests only run on scala 2.12 - so instead just eyeball it...
-    res shouldBe Some("""enum Test {
+    res shouldBe Some(
+      """enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
         |  case enum1, enum2
         |}""".stripMargin)
   }
