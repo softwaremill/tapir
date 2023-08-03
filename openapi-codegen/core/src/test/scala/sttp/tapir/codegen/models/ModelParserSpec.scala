@@ -131,7 +131,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
 
   it should "parse enums" in {
     val yaml =
-      """
+      """type: string
         |enum:
         |- paperback
         |- hardback""".stripMargin
@@ -142,7 +142,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[OpenapiSchemaType])
 
     res shouldBe Right(
-      OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
+      OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
     )
   }
 }

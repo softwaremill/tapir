@@ -89,8 +89,9 @@ object OpenapiSchemaType {
     val nullable = false
   }
 
-  // Can't support non-string enum types although that should apparently be legal (see https://json-schema.org/draft/2020-12/json-schema-validation.html#enum)
+  // Can't currently support non-string enum types although that should apparently be legal (see https://json-schema.org/draft/2020-12/json-schema-validation.html#enum)
   case class OpenapiSchemaEnum(
+      `type`: String,
       items: Seq[OpenapiSchemaConstantString],
       nullable: Boolean
   ) extends OpenapiSchemaType
@@ -241,9 +242,11 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
     for {
+      tpe <- c.downField("type").as[String]
+      _ <- Either.cond(tpe == "string", (), DecodingFailure("only string enums are supported", c.history))
       items <- c.downField("enum").as[Seq[OpenapiSchemaConstantString]]
       nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield OpenapiSchemaEnum(items, nb.getOrElse(false))
+    } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
   }
 
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
@@ -282,12 +285,12 @@ object OpenapiSchemaType {
 
   implicit lazy val OpenapiSchemaTypeDecoder: Decoder[OpenapiSchemaType] =
     List[Decoder[OpenapiSchemaType]](
+      Decoder[OpenapiSchemaEnum].widen,
       Decoder[OpenapiSchemaSimpleType].widen,
       Decoder[OpenapiSchemaMixedType].widen,
       Decoder[OpenapiSchemaNot].widen,
       Decoder[OpenapiSchemaObject].widen,
       Decoder[OpenapiSchemaMap].widen,
-      Decoder[OpenapiSchemaArray].widen,
-      Decoder[OpenapiSchemaEnum].widen,
+      Decoder[OpenapiSchemaArray].widen
     ).reduceLeft(_ or _)
 }
