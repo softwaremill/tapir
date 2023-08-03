@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
+import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiInfo,
@@ -16,7 +16,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
-  OpenapiSchemaDouble,
   OpenapiSchemaInt,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
@@ -227,10 +226,11 @@ object TestHelpers {
     ),
     Some(
       OpenapiComponent(
-        Map(
+        schemas = Map(
           "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
         ),
-        Map(
+        securitySchemes = Map.empty,
+        parameters = Map(
           "#/components/parameters/offset" ->
             OpenapiParameter("offset", "query", true, Some("Offset at which to start fetching books"), OpenapiSchemaInt(false)),
           "#/components/parameters/year" -> OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false))

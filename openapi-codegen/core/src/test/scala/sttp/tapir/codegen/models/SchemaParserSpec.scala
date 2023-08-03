@@ -8,6 +8,11 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaString
 }
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OpenapiSecuritySchemeBearerType,
+  OpenapiSecuritySchemeBasicType,
+  OpenapiSecuritySchemeApiKeyType
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -77,6 +82,48 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
             Seq("attributes"),
             false
           )
+        )
+      )
+    )
+  }
+
+  it should "parse security schemes" in {
+    val yaml =
+      """
+        |securitySchemes:
+        |  httpAuthBearer:
+        |    type: http
+        |    scheme: bearer
+        |  httpAuthBasic:
+        |    type: http
+        |    scheme: basic
+        |  apiKeyHeader:
+        |    type: apiKey
+        |    in: header
+        |    name: X-API-KEY
+        |  apiKeyCookie:
+        |    type: apiKey
+        |    in: cookie
+        |    name: api_key
+        |  apiKeyQuery:
+        |    type: apiKey
+        |    in: query
+        |    name: api-key""".stripMargin
+
+    val res = parser
+        .parse(yaml)
+        .leftMap(err => err: Error)
+        .flatMap(_.as[OpenapiComponent])
+
+    res shouldBe Right(
+      OpenapiComponent(
+        Map(),
+        Map(
+          "httpAuthBearer" -> OpenapiSecuritySchemeBearerType,
+          "httpAuthBasic" -> OpenapiSecuritySchemeBasicType,
+          "apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", "X-API-KEY"),
+          "apiKeyCookie" -> OpenapiSecuritySchemeApiKeyType("cookie", "api_key"),
+          "apiKeyQuery" -> OpenapiSecuritySchemeApiKeyType("query", "api-key")
         )
       )
     )
