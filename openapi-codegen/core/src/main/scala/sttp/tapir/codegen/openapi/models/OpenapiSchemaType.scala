@@ -288,6 +288,6 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaObject].widen,
       Decoder[OpenapiSchemaMap].widen,
       Decoder[OpenapiSchemaArray].widen,
-      Decoder[OpenapiSchemaEnum].widen,
+      Decoder[OpenapiSchemaEnum].widen
     ).reduceLeft(_ or _)
 }
