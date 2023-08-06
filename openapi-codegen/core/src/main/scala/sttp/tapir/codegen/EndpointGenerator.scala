@@ -76,9 +76,8 @@ class EndpointGenerator {
   }
 
   private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Seq[Seq[String]]) = {
-    if (security.size > 1 || security.exists(_.size > 1)) throw new NotImplementedError(
-      "We can handle only single security entry!"
-    )
+    if (security.size > 1 || security.exists(_.size > 1))
+      throw new NotImplementedError("We can handle only single security entry!")
 
     security.headOption
       .flatMap(_.headOption)
