@@ -43,6 +43,7 @@ object OpenapiModels {
       parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
+      security: Seq[Seq[String]] = Nil,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None
@@ -167,17 +168,24 @@ object OpenapiModels {
   }
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
-      parameters <- c
-        .downField("parameters")
-        .as[Option[Seq[Resolvable[OpenapiParameter]]]]
-        .map(_.getOrElse(Nil))
-      responses <- c.downField("responses").as[Seq[OpenapiResponse]]
-      requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
-      summary <- c.downField("summary").as[Option[String]]
-      tags <- c.downField("tags").as[Option[Seq[String]]]
-      operationId <- c.downField("operationId").as[Option[String]]
+      parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)
+      responses <- c.get[Seq[OpenapiResponse]]("responses")
+      requestBody <- c.get[Option[OpenapiRequestBody]]("requestBody")
+      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+      summary <- c.get[Option[String]]("summary")
+      tags <- c.get[Option[Seq[String]]]("tags")
+      operationId <- c.get[Option[String]]("operationId")
     } yield {
-      OpenapiPathMethod("--partial--", parameters, responses, requestBody, summary, tags, operationId)
+      OpenapiPathMethod(
+        "--partial--",
+        parameters,
+        responses,
+        requestBody,
+        security.map(_.keys.toSeq),
+        summary,
+        tags,
+        operationId
+      )
     }
   }
 

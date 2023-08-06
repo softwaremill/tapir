@@ -440,4 +440,74 @@ object TestHelpers {
     ),
     None
   )
+
+  val simpleSecurityYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: hello
+      |  version: '1.0'
+      |paths:
+      |  /hello:
+      |    get:
+      |      security:
+      |        - basicAuth: []
+      |      responses: {}
+    """.stripMargin
+
+  val simpleSecurityDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            security = Seq(Seq("basicAuth"))
+          )
+        )
+      )
+    ),
+    None
+  )
+
+  val complexSecurityYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: hello
+      |  version: '1.0'
+      |paths:
+      |  /hello:
+      |    get:
+      |      security:
+      |        - bearerAuth: []
+      |        - basicAuth: []
+      |          apiKeyAuth: []
+      |      responses: {}
+    """.stripMargin
+
+  val complexSecurityDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            security = Seq(Seq("bearerAuth"), Seq("basicAuth", "apiKeyAuth"))
+          )
+        )
+      )
+    ),
+    None
+  )
 }
