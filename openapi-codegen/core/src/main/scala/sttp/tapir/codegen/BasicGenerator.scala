@@ -67,7 +67,7 @@ object BasicGenerator {
         ("Boolean", nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
-      case _ => throw new NotImplementedError("Not all simple types supported!")
+      case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
 }

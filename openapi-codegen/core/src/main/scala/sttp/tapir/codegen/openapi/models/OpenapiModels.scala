@@ -169,8 +169,8 @@ object OpenapiModels {
     for {
       parameters <- c
         .downField("parameters")
-        .as[Seq[Resolvable[OpenapiParameter]]]
-        .orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
+        .as[Option[Seq[Resolvable[OpenapiParameter]]]]
+        .map(_.getOrElse(Nil))
       responses <- c.downField("responses").as[Seq[OpenapiResponse]]
       requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
       summary <- c.downField("summary").as[Option[String]]
@@ -183,7 +183,10 @@ object OpenapiModels {
 
   implicit val PartialOpenapiPathDecoder: Decoder[OpenapiPath] = { (c: HCursor) =>
     for {
-      parameters <- c.downField("parameters").as[Seq[Resolvable[OpenapiParameter]]].orElse(Right(List.empty[Resolvable[OpenapiParameter]]))
+      parameters <- c
+        .downField("parameters")
+        .as[Option[Seq[Resolvable[OpenapiParameter]]]]
+        .map(_.getOrElse(Nil))
       methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
     } yield OpenapiPath("--partial--", methods.flatten, parameters)
@@ -202,7 +205,7 @@ object OpenapiModels {
       openapi <- c.downField("openapi").as[String]
       info <- c.downField("info").as[OpenapiInfo]
       paths <- c.downField("paths").as[Seq[OpenapiPath]]
-      components <- c.downField("components").as[Option[OpenapiComponent]].orElse(Right(None))
+      components <- c.downField("components").as[Option[OpenapiComponent]]
     } yield OpenapiDocument(openapi, info, paths, components)
   }
 
