@@ -220,9 +220,10 @@ class ServerInterpreter[R, F[_], B, S](
       val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
       val headers = outputValues.headers
-      outputValues.body match {
-        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
-        case None                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
+      (statusCode, outputValues.body) match {
+        case (StatusCode.NoContent, Some(_)) => monad.error(new IllegalStateException("Unexpected response body when status code == NoContent (204)"))
+        case (_, Some(bodyFromHeaders)) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
+        case (_, None)                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
       }
     }
   }
