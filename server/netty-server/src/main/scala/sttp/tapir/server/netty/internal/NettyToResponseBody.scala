@@ -95,8 +95,8 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   ): NettyResponse = throw new UnsupportedOperationException
 }
 
-object NettyToResponseBody {
-  private val DefaultChunkSize = 8192
-  private val IncludingLastOffset = 1
-  private val ReadOnlyAccessMode = "r"
+private[internal] object NettyToResponseBody {
+  val DefaultChunkSize = 8192
+  val IncludingLastOffset = 1
+  val ReadOnlyAccessMode = "r"
 }

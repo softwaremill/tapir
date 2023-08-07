@@ -21,7 +21,7 @@ better error reporting, in case one of the components required to create the jso
 
 ## Implicit json codecs
 
-If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customJsonBody[T]` method instead. 
+If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customCodecJsonBody[T]` method instead. 
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
 the json codec that is in scope.
 
@@ -288,6 +288,13 @@ documentation) in sync with how the values are serialised, you will have to conf
 
 Schemas are referenced at the point of `jsonBody` and `jsonQuery` usage, so any configuration must be available in the implicit scope
 when these methods are called.
+
+## Optional json bodies
+
+When the body is specified as an option, e.g. `jsonBody[Option[Book]]`, an empty body will be decoded as `None`. 
+
+This is implemented by passing `null` to the json-library-specific decoder, when the schema specifies that the value is 
+optional, and the body is empty.
 
 ## Next
 

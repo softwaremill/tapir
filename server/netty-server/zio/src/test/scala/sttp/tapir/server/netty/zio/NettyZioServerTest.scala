@@ -3,6 +3,7 @@ package sttp.tapir.server.netty.zio
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
+import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.netty.internal.FutureUtil
 import sttp.tapir.server.tests._
@@ -22,7 +23,8 @@ class NettyZioServerTest extends TestSuite with EitherValues {
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests()
+            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
+              new ServerStreamingTests(createServerTest, ZioStreams).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

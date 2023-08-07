@@ -1,7 +1,8 @@
 package sttp.tapir.server.armeria.cats
 
-import cats.effect.Async
+import cats.effect.{Async, Sync}
 import cats.effect.std.Dispatcher
+import cats.syntax.all._
 import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.ServiceRequestContext
 import fs2.interop.reactivestreams._
@@ -14,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadAsyncError
-import sttp.monad.syntax._
+
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
@@ -91,13 +92,7 @@ private object Fs2StreamCompatible {
 
 private class CatsFutureConversion[F[_]: Async](dispatcher: Dispatcher[F])(implicit ec: ExecutionContext) extends FutureConversion[F] {
   override def from[A](f: => Future[A]): F[A] = {
-    Async[F].async_ { cb =>
-      f.onComplete {
-        case Failure(exception) => cb(Left(exception))
-        case Success(value)     => cb(Right(value))
-      }
-      ()
-    }
+    Async[F].fromFutureCancelable(Sync[F].delay((f, ().pure[F])))
   }
 
   override def to[A](f: => F[A]): Future[A] = dispatcher.unsafeToFuture(f)

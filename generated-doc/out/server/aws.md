@@ -1,8 +1,10 @@
 # Running using the AWS serverless stack
 
 Tapir server endpoints can be packaged and deployed as
-an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function. To invoke the
-function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html).
+an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function.
+This approach, known as the Fat Lambda function, utilizes a single lambda function for deploying multiple endpoints. To invoke the
+function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html). 
+
 
 To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/)
 , [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
@@ -31,7 +33,7 @@ These are corresponding classes for each of the supported runtime:
 To start using any of the above add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.6.4"
 ```
 
 ## Deployment
@@ -42,9 +44,9 @@ Tapir leverages ways of doing it provided by AWS, you can choose from: AWS SAM t
 You can start by adding one of the following dependencies to your project, and then follow examples:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.3.0"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.3.0"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.6.4"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.6.4"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.6.4"
 ```
 
 ### Examples

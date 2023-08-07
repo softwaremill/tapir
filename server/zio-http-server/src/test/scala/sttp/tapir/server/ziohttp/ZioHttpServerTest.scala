@@ -104,7 +104,7 @@ class ZioHttpServerTest extends TestSuite {
                 .out(stringBody)
                 .zServerLogic[Any](_ => p.await.timeout(time.Duration.ofSeconds(1)) *> ZIO.succeed("Ok"))
               int = ZioHttpInterpreter().toHttp(ep)
-              route = int @@ HttpAppMiddleware.allowZIO[Any, Nothing]((_: Request) => p.succeed(()).as(true))
+              route = int @@ HttpAppMiddleware.allowZIO((_: Request) => p.succeed(()).as(true))
               result <- route
                 .runZIO(Request.get(url = URL(Path.empty / "p1")))
                 .flatMap(response => response.body.asString)
@@ -122,7 +122,7 @@ class ZioHttpServerTest extends TestSuite {
                 .out(stringBody)
                 .zServerLogic[Any](_ => ref.updateAndGet(_ + 1).map(_.toString))
               route = ZioHttpInterpreter()
-                .toHttp(ep) @@ HttpAppMiddleware.allowZIO[Any, Nothing]((_: Request) => ref.update(_ + 1).as(true))
+                .toHttp(ep) @@ HttpAppMiddleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
               result <- route
                 .runZIO(Request.get(url = URL(Path.empty / "p1")))
                 .flatMap(response => response.body.asString)

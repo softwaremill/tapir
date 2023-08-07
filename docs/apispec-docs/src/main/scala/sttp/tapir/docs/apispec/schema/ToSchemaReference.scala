@@ -3,7 +3,7 @@ package sttp.tapir.docs.apispec.schema
 import sttp.apispec.Reference
 import sttp.tapir.{Schema => TSchema}
 
-private[schema] class ToSchemaReference(keyToId: Map[SchemaKey, SchemaId]) {
+private[schema] class ToSchemaReference(keyToId: Map[SchemaKey, SchemaId], refRoot: String = "#/components/schemas/") {
 
   def map(key: SchemaKey): Reference = map(key.name, keyToId.get(key))
 
@@ -21,7 +21,7 @@ private[schema] class ToSchemaReference(keyToId: Map[SchemaKey, SchemaId]) {
 
   private def map(name: TSchema.SName, maybeId: Option[SchemaId]): Reference = maybeId match {
     case Some(id) =>
-      Reference.to("#/components/schemas/", id)
+      Reference.to(refRoot, id)
     case None =>
       // no reference to internal model found. assuming external reference
       Reference(name.fullName)

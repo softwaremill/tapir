@@ -2,74 +2,80 @@ package sttp.tapir.server.netty.zio
 
 import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.Route
+import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio.{RIO, Unsafe, ZIO}
 
 import java.net.{InetSocketAddress, SocketAddress}
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
+import java.util.UUID
 
-case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R, SA]) {
-  def addEndpoint(se: ZServerEndpoint[R, Any]): NettyZioServer[R, SA] = addEndpoints(List(se))
-  def addEndpoint(
-      se: ZServerEndpoint[R, Any],
-      overrideOptions: NettyZioServerOptions[R, SA]
-  ): NettyZioServer[R, SA] =
+case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
+  def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
+  def addEndpoint(se: ZServerEndpoint[R, ZioStreams], overrideOptions: NettyZioServerOptions[R]): NettyZioServer[R] =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Any, RIO[R, *]]]): NettyZioServer[R, SA] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[ZioStreams, RIO[R, *]]]): NettyZioServer[R] = addRoute(
     NettyZioServerInterpreter[R](options).toRoute(ses)
   )
   def addEndpoints(
-      ses: List[ZServerEndpoint[R, Any]],
-      overrideOptions: NettyZioServerOptions[R, SA]
-  ): NettyZioServer[R, SA] = addRoute(
+      ses: List[ZServerEndpoint[R, ZioStreams]],
+      overrideOptions: NettyZioServerOptions[R]
+  ): NettyZioServer[R] = addRoute(
     NettyZioServerInterpreter[R](overrideOptions).toRoute(ses)
   )
 
-  def addRoute(r: Route[RIO[R, *]]): NettyZioServer[R, SA] = addRoute(ZIO.succeed(r))
+  def addRoute(r: Route[RIO[R, *]]): NettyZioServer[R] = addRoute(ZIO.succeed(r))
 
-  def addRoute(r: RIO[R, Route[RIO[R, *]]]): NettyZioServer[R, SA] = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[RIO[R, Route[RIO[R, *]]]]): NettyZioServer[R, SA] = copy(routes = routes ++ r)
+  def addRoute(r: RIO[R, Route[RIO[R, *]]]): NettyZioServer[R] = copy(routes = routes :+ r)
+  def addRoutes(r: Iterable[RIO[R, Route[RIO[R, *]]]]): NettyZioServer[R] = copy(routes = routes ++ r)
 
-  def options[SA2 <: SocketAddress](o: NettyZioServerOptions[R, SA2]): NettyZioServer[R, SA2] = copy(options = o)
+  def options(o: NettyZioServerOptions[R]): NettyZioServer[R] = copy(options = o)
 
-  def host(hostname: String)(implicit isTCP: SA =:= InetSocketAddress): NettyZioServer[R, InetSocketAddress] = {
-    val nettyOptions = options.nettyOptions.host(hostname)
-    options(options.nettyOptions(nettyOptions))
-  }
+  def config(c: NettyConfig): NettyZioServer[R] = copy(config = c)
+  def modifyConfig(f: NettyConfig => NettyConfig): NettyZioServer[R] = config(f(config))
 
-  def port(p: Int)(implicit isTCP: SA =:= InetSocketAddress): NettyZioServer[R, InetSocketAddress] = {
-    val nettyOptions = options.nettyOptions.port(p)
-    options(options.nettyOptions(nettyOptions))
-  }
+  def host(h: String): NettyZioServer[R] = modifyConfig(_.host(h))
 
-  def domainSocketPath(path: Path)(implicit isDomainSocket: SA =:= DomainSocketAddress): NettyZioServer[R, DomainSocketAddress] = {
-    val nettyOptions = options.nettyOptions.domainSocketPath(path)
-    options(options.nettyOptions(nettyOptions))
-  }
+  def port(p: Int): NettyZioServer[R] = modifyConfig(_.port(p))
 
-  def start(): RIO[R, NettyZioServerBinding[R, SA]] = for {
+  def start(): RIO[R, NettyZioServerBinding[R]] =
+    startUsingSocketOverride[InetSocketAddress](None).map { case (socket, stop) =>
+      NettyZioServerBinding(socket, stop)
+    }
+
+  def startUsingDomainSocket(path: Option[Path] = None): RIO[R, NettyZioDomainSocketBinding[R]] =
+    startUsingDomainSocket(path.getOrElse(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)))
+
+  def startUsingDomainSocket(path: Path): RIO[R, NettyZioDomainSocketBinding[R]] =
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))).map { case (socket, stop) =>
+      NettyZioDomainSocketBinding(socket, stop)
+    }
+
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]
     routes <- ZIO.foreach(routes)(identity)
-    eventLoopGroup = options.nettyOptions.eventLoopConfig.initEventLoopGroup()
+    eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
       val route: Route[RIO[R, *]] = Route.combine(routes)
 
       NettyBootstrap[RIO[R, *]](
-        options.nettyOptions,
+        config,
         new NettyServerHandler[RIO[R, *]](
           route,
-          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f()))
+          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f())),
+          config.maxContentLength
         ),
-        eventLoopGroup
+        eventLoopGroup,
+        socketOverride
       )
     }
     binding <- nettyChannelFutureToScala(channelFuture).map(ch =>
-      NettyZioServerBinding(
+      (
         ch.localAddress().asInstanceOf[SA],
         () => stop(ch, eventLoopGroup)
       )
@@ -79,7 +85,7 @@ case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[RIO[R, Route[RI
   private def stop(ch: Channel, eventLoopGroup: EventLoopGroup): RIO[R, Unit] = {
     ZIO.suspend {
       nettyFutureToScala(ch.close()).flatMap { _ =>
-        if (options.nettyOptions.shutdownEventLoopGroupOnClose) {
+        if (config.shutdownEventLoopGroupOnClose) {
           nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
         } else ZIO.succeed(())
       }
@@ -88,15 +94,18 @@ case class NettyZioServer[R, SA <: SocketAddress](routes: Vector[RIO[R, Route[RI
 }
 
 object NettyZioServer {
-  def apply[R](): NettyZioServer[R, InetSocketAddress] =
-    apply(NettyZioServerOptions.default[R])
-
-  def apply[R, SA <: SocketAddress](options: NettyZioServerOptions[R, SA]): NettyZioServer[R, SA] =
-    NettyZioServer(Vector.empty, options)
+  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.defaultWithStreaming)
+  def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] =
+    NettyZioServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
+  def apply[R](config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], config)
+  def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, options, config)
 }
 
-case class NettyZioServerBinding[R, SA <: SocketAddress](localSocket: SA, stop: () => RIO[R, Unit]) {
-  def hostName(implicit isTCP: SA =:= InetSocketAddress): String = isTCP(localSocket).getHostName
-  def port(implicit isTCP: SA =:= InetSocketAddress): Int = isTCP(localSocket).getPort
-  def path(implicit isDomainSocket: SA =:= DomainSocketAddress): String = isDomainSocket(localSocket).path()
+case class NettyZioServerBinding[R](localSocket: InetSocketAddress, stop: () => RIO[R, Unit]) {
+  def hostName: String = localSocket.getHostName
+  def port: Int = localSocket.getPort
+}
+
+case class NettyZioDomainSocketBinding[R](localSocket: DomainSocketAddress, stop: () => RIO[R, Unit]) {
+  def path: String = localSocket.path()
 }

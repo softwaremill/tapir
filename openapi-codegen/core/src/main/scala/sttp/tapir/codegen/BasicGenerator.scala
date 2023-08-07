@@ -4,12 +4,14 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBoolean,
   OpenapiSchemaDouble,
+  OpenapiSchemaEnum,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaLong,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
-  OpenapiSchemaString
+  OpenapiSchemaString,
+  OpenapiSchemaUUID
 }
 
 object BasicGenerator {
@@ -17,15 +19,18 @@ object BasicGenerator {
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
-  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String): String = {
+  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String, targetScala3: Boolean): String = {
+    val enumImport =
+      if (!targetScala3 && doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._"
+      else ""
     s"""|
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports)}
+        |${indent(2)(imports)}$enumImport
         |
-        |${indent(2)(classGenerator.classDefs(doc))}
+        |${indent(2)(classGenerator.classDefs(doc, targetScala3).getOrElse(""))}
         |
         |${indent(2)(endpointGenerator.endpointDefs(doc))}
         |
@@ -54,13 +59,15 @@ object BasicGenerator {
         ("Int", nb)
       case OpenapiSchemaLong(nb) =>
         ("Long", nb)
+      case OpenapiSchemaUUID(nb) =>
+        ("java.util.UUID", nb)
       case OpenapiSchemaString(nb) =>
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
-      case _ => throw new NotImplementedError("Not all simple types supported!")
+      case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
 }

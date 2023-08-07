@@ -6,13 +6,13 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.ztapir._
-import zio.RIO
+import zio._
 import zio.interop.catz._
 
 trait ZHttp4sServerInterpreter[R] {
 
-  def zHttp4sServerOptions: Http4sServerOptions[RIO[R, *]] =
-    Http4sServerOptions.default[RIO[R, *]]
+  def zHttp4sServerOptions[R2 <: R]: Http4sServerOptions[RIO[R2, *]] =
+    Http4sServerOptions.default[RIO[R2, *]]
 
   def from(se: ZServerEndpoint[R, ZioStreams]): ServerEndpointsToRoutes = from(List(se))
 
@@ -27,9 +27,9 @@ trait ZHttp4sServerInterpreter[R] {
   class ServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, ZioStreams]]
   ) {
-    def toRoutes: HttpRoutes[RIO[R, *]] = {
-      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(
-        serverEndpoints.map(se => ConvertStreams(se.widen[R]))
+    def toRoutes[R2]: HttpRoutes[RIO[R & R2, *]] = {
+      Http4sServerInterpreter(zHttp4sServerOptions[R & R2]).toRoutes(
+        serverEndpoints.map(se => ConvertStreams(se.widen[R & R2]))
       )
     }
   }
@@ -37,9 +37,9 @@ trait ZHttp4sServerInterpreter[R] {
   class WebSocketServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]
   ) {
-    def toRoutes: WebSocketBuilder2[RIO[R, *]] => HttpRoutes[RIO[R, *]] = {
-      Http4sServerInterpreter(zHttp4sServerOptions).toWebSocketRoutes(
-        serverEndpoints.map(se => ConvertStreams(se.widen[R]))
+    def toRoutes[R2]: WebSocketBuilder2[RIO[R & R2, *]] => HttpRoutes[RIO[R & R2, *]] = {
+      Http4sServerInterpreter(zHttp4sServerOptions[R & R2]).toWebSocketRoutes(
+        serverEndpoints.map(se => ConvertStreams(se.widen[R & R2]))
       )
     }
   }
@@ -54,8 +54,8 @@ object ZHttp4sServerInterpreter {
       serverOptions: Http4sServerOptions[RIO[R, *]]
   ): ZHttp4sServerInterpreter[R] = {
     new ZHttp4sServerInterpreter[R] {
-      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R, *]] =
-        serverOptions
+      override def zHttp4sServerOptions[R2 <: R]: Http4sServerOptions[RIO[R2, *]] =
+        serverOptions.asInstanceOf[Http4sServerOptions[RIO[R2, *]]]
     }
   }
 }

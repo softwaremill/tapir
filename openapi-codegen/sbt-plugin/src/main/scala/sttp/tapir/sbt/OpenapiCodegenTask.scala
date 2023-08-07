@@ -10,7 +10,8 @@ case class OpenapiCodegenTask(
     packageName: String,
     objectName: String,
     dir: File,
-    cacheDir: File
+    cacheDir: File,
+    targetScala3: Boolean
 ) {
 
   val tempFile = cacheDir / "sbt-openapi-codegen" / s"$objectName.scala"
@@ -35,7 +36,7 @@ case class OpenapiCodegenTask(
   def makeFile(file: File): Task[File] = {
     task {
       val parsed = YamlParser.parseFile(IO.readLines(inputYaml).mkString("\n"))
-      val lines = BasicGenerator.generateObjects(parsed.toTry.get, packageName, objectName).linesIterator.toSeq
+      val lines = BasicGenerator.generateObjects(parsed.toTry.get, packageName, objectName, targetScala3).linesIterator.toSeq
       IO.writeLines(file, lines, IO.utf8)
       file
     }

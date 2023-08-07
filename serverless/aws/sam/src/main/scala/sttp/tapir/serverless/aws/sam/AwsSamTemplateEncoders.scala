@@ -12,16 +12,35 @@ object AwsSamTemplateEncoders {
     Json.obj(properties: _*)
   }
 
+  implicit val encodeParameter: Encoder[Parameter] = {
+    val encoder = deriveEncoder[Parameter]
+    v => Json.fromJsonObject(encoder(v).asObject.get.add("Type", Json.fromString("String")))
+  }
+
   implicit val encoderOutput: Encoder[Output] = deriveEncoder[Output]
   implicit val encoderFunctionHttpApiEventProperties: Encoder[FunctionHttpApiEventProperties] =
     deriveEncoder[FunctionHttpApiEventProperties]
   implicit val encoderFunctionHttpApiEvent: Encoder[FunctionHttpApiEvent] = {
     val encoder = deriveEncoder[FunctionHttpApiEvent]
-    e => Json.fromJsonObject(encoder(e).asJson.asObject.get.add("Type", Json.fromString("HttpApi")))
+    e => Json.fromJsonObject(encoder(e).asObject.get.add("Type", Json.fromString("HttpApi")))
   }
 
   implicit val encoderCorsConfiguration: Encoder[CorsConfiguration] = deriveEncoder[CorsConfiguration]
   implicit val encoderEnvironmentCodeProperties: Encoder[EnvironmentCodeProperties] = deriveEncoder[EnvironmentCodeProperties]
+  implicit val encoderJwtConfiguration: Encoder[JwtConfiguration] = deriveEncoder[JwtConfiguration]
+  implicit val encoderLambdaAuthorizationIdentity: Encoder[LambdaAuthorizationIdentity] = deriveEncoder[LambdaAuthorizationIdentity]
+  implicit val encoderAuthorizer: Encoder[Authorizer] = new Encoder[Authorizer] {
+    private val oAuth2AuthorizerEncoder: Encoder[OAuth2Authorizer] = deriveEncoder[OAuth2Authorizer]
+    private val lambdaAuthorizerEncoder: Encoder[LambdaAuthorizer] = deriveEncoder[LambdaAuthorizer]
+
+    override def apply(a: Authorizer): Json = a match {
+      case a: OAuth2Authorizer => oAuth2AuthorizerEncoder(a)
+      case a: LambdaAuthorizer => lambdaAuthorizerEncoder(a)
+    }
+  }
+
+  implicit val encoderHttpApiAuth: Encoder[HttpApiAuth] = deriveEncoder[HttpApiAuth]
+
   implicit val encoderHttpProperties: Encoder[HttpProperties] = deriveEncoder[HttpProperties]
   implicit val encoderFunctionImageProperties: Encoder[FunctionImageProperties] = deriveEncoder[FunctionImageProperties]
   implicit val encoderFunctionCodeProperties: Encoder[FunctionCodeProperties] = deriveEncoder[FunctionCodeProperties]

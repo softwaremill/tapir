@@ -1,7 +1,13 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaInt, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaInt,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaString
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -29,14 +35,46 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     val res = parser
       .parse(yaml)
       .leftMap(err => err: Error)
+      .flatMap(_.as[Option[OpenapiComponent]])
+
+    res shouldBe Right(
+      Some(
+        OpenapiComponent(
+          Map(
+            "User" -> OpenapiSchemaObject(
+              Map("id" -> OpenapiSchemaInt(false), "name" -> OpenapiSchemaString(false)),
+              Seq("id", "name"),
+              false
+            )
+          )
+        )
+      )
+    )
+  }
+
+  it should "parse map" in {
+    val yaml = """
+      |schemas:
+      |  User:
+      |    properties:
+      |      attributes:
+      |        type: object
+      |        additionalProperties:
+      |          type: string
+      |    required:
+      |      - attributes""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
       .flatMap(_.as[OpenapiComponent])
 
     res shouldBe Right(
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            Map("id" -> OpenapiSchemaInt(false), "name" -> OpenapiSchemaString(false)),
-            Seq("id", "name"),
+            Map("attributes" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)),
+            Seq("attributes"),
             false
           )
         )

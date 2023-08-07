@@ -79,6 +79,13 @@ When defining the business logic for an endpoint, the following methods are avai
 
 The first defines complete server logic, while the second and third allow defining server logic in parts.
 
+```eval_rst
+.. note::
+
+  When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
+  E.g.: ``myEndpoint.zServerLogic[Any](...)``.
+```
+
 ## Streaming
 
 The zio-http interpreter accepts streaming bodies of type `Stream[Throwable, Byte]`, as described by the `ZioStreams`

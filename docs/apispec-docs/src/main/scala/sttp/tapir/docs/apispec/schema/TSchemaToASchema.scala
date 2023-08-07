@@ -1,6 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
+import sttp.tapir.Schema.Title
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
@@ -72,6 +73,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
     result
       .map(s => if (nullable) s.copy(nullable = Some(true)) else s)
       .map(addMetadata(_, schema))
+      .map(addTitle(_, schema))
       .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }
 
@@ -86,6 +88,9 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
       }
       .toListMap
   }
+
+  private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema =
+    oschema.copy(title = tschema.attributes.get(Title.Attribute).map(_.value))
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(
@@ -128,7 +133,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
   }
 
   private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
-    val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
+    val values = v.flatMap(x => encode(x).map(ExampleSingleValue.apply))
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 

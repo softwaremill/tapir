@@ -9,13 +9,13 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.6.4"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.3.0"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.6.4"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -78,6 +78,13 @@ When defining the business logic for an endpoint, the following methods are avai
 * `def zServerSecurityLogic[R, U](f: A => ZIO[R, E, U]): ZPartialServerEndpoint[R, A, U, I, E, O, C]` for secure endpoints
 
 The first defines complete server logic, while the second and third allow defining server logic in parts.
+
+```eval_rst
+.. note::
+
+  When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
+  E.g.: ``myEndpoint.zServerLogic[Any](...)``.
+```
 
 ## Streaming
 

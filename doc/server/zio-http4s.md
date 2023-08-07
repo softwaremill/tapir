@@ -47,6 +47,13 @@ When defining the business logic for an endpoint, the following methods are avai
 The first defines complete server logic, while the second allows defining first the security server logic, and then the 
 rest.
 
+```eval_rst
+.. note::
+
+  When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
+  E.g.: ``myEndpoint.zServerLogic[Any](...)``.
+```
+
 ## Exposing endpoints using the http4s server
 
 To interpret a `ZServerEndpoint` as an http4s server, use the following interpreter:

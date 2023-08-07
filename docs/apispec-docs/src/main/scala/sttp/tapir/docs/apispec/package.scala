@@ -1,7 +1,6 @@
 package sttp.tapir.docs
 
 import sttp.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
-import sttp.tapir.Schema.SName
 import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 import java.nio.ByteBuffer
@@ -10,11 +9,6 @@ import java.nio.charset.Charset
 package object apispec {
   private[docs] type SchemeName = String
   private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
-
-  private[docs] val defaultSchemaName: SName => String = info => {
-    val shortName = info.fullName.split('.').last
-    (shortName +: info.typeParameterShortNames).mkString("_")
-  }
 
   private[docs] def uniqueString(base: String, isUnique: String => Boolean): String = {
     var i = 0
