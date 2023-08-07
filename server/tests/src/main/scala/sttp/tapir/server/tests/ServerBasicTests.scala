@@ -771,13 +771,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         }
     },
     testServer(
-      "fail when code = NoContent but there's a body",
+      "fail when status is 204 NoContent, but there's a body",
       NonEmptyList.of(
         route(endpoint.out(jsonBody[Unit]).out(statusCode(StatusCode.NoContent)).serverLogicSuccess(_ => pureResult(())))
       )
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
-    }
+    ) { (backend, baseUri) => basicRequest.get(baseUri).send(backend).map(_.code shouldBe StatusCode.InternalServerError) }
   )
 
   def throwFruits(name: String): F[String] =
