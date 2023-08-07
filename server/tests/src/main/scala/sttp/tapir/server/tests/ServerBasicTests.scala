@@ -769,6 +769,14 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.code shouldBe StatusCode.InternalServerError
           r.body shouldBe Symbol("left")
         }
+    },
+    testServer(
+      "fail when code = NoContent but there's a body",
+      NonEmptyList.of(
+        route(endpoint.out(jsonBody[Unit]).out(statusCode(StatusCode.NoContent)).serverLogicSuccess(_ => pureResult(())))
+      )
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
     }
   )
 
