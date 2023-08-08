@@ -328,6 +328,8 @@ val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
 object manually or using a tool such as [quicklens](https://github.com/softwaremill/quicklens).
 
+If you are using `tapir-swagger-ui` you need to set `withShowExtensions` option for `SwaggerUIOptions`.
+
 ## Hiding inputs/outputs
 
 It's possible to hide an input/output from the OpenAPI description using following syntax:
