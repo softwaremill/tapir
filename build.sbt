@@ -1966,6 +1966,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
