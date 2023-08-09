@@ -25,6 +25,7 @@ The modules are categorised using the following levels:
 | finatra   | stabilising  |
 | http4s    | stabilising  |
 | netty     | experimental |
+| pekko-http| stabilising  |
 | play      | stabilising  |
 | vertx     | stabilising  |
 | zio1-http | experimental |

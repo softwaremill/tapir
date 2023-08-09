@@ -16,10 +16,10 @@ private[armeria] final case class ArmeriaServerRequest(ctx: ServiceRequestContex
   private lazy val request: HttpRequest = ctx.request
 
   lazy val connectionInfo: ConnectionInfo = {
-    val remotePort = ctx.remoteAddress[InetSocketAddress]().getPort
+    val remotePort = ctx.remoteAddress().getPort
     val clientAddress = InetSocketAddress.createUnresolved(ctx.clientAddress().getHostAddress, remotePort)
     ConnectionInfo(
-      Some(ctx.localAddress[InetSocketAddress]()),
+      Some(ctx.localAddress()),
       Some(clientAddress),
       Some(ctx.sessionProtocol().isTls)
     )
