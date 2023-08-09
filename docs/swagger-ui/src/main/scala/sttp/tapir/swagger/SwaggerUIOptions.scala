@@ -12,15 +12,26 @@ package sttp.tapir.swagger
   *   referrer's uri). Also used for creating redirects. Defaults to `Nil`.
   * @param useRelativePaths
   *   Should relative paths be used for yaml references and redirects. Defaults to `true`.
+  * @param showExtensions
+  *   Should display the content of vendor extensions (x-) fields and values for Operations, Parameters, Responses, and Schema. Defaults to
+  *   `false`.
   */
-case class SwaggerUIOptions(pathPrefix: List[String], yamlName: String, contextPath: List[String], useRelativePaths: Boolean) {
+case class SwaggerUIOptions(
+    pathPrefix: List[String],
+    yamlName: String,
+    contextPath: List[String],
+    useRelativePaths: Boolean,
+    showExtensions: Boolean
+) {
   def pathPrefix(pathPrefix: List[String]): SwaggerUIOptions = copy(pathPrefix = pathPrefix)
   def yamlName(yamlName: String): SwaggerUIOptions = copy(yamlName = yamlName)
   def contextPath(contextPath: List[String]): SwaggerUIOptions = copy(contextPath = contextPath)
   def withRelativePaths: SwaggerUIOptions = copy(useRelativePaths = true)
   def withAbsolutePaths: SwaggerUIOptions = copy(useRelativePaths = false)
+  def withShowExtensions: SwaggerUIOptions = copy(showExtensions = true)
+  def withHideExtensions: SwaggerUIOptions = copy(showExtensions = false)
 }
 
 object SwaggerUIOptions {
-  val default: SwaggerUIOptions = SwaggerUIOptions(List("docs"), "docs.yaml", Nil, useRelativePaths = true)
+  val default: SwaggerUIOptions = SwaggerUIOptions(List("docs"), "docs.yaml", Nil, useRelativePaths = true, showExtensions = false)
 }
