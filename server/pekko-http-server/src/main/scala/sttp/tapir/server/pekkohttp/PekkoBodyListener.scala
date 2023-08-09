@@ -2,6 +2,8 @@ package sttp.tapir.server.pekkohttp
 
 import org.apache.pekko.stream.scaladsl.Flow
 import org.apache.pekko.util.ByteString
+import org.apache.pekko.http.scaladsl.model.HttpEntity
+import org.apache.pekko.http.scaladsl.model.UniversalEntity
 import sttp.tapir.server.interpreter.BodyListener
 
 import scala.concurrent.ExecutionContext
