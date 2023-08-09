@@ -1,11 +1,15 @@
 package sttp.tapir.server.http4s
 
+import cats.data._
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import fs2.Pipe
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
+import org.http4s.server.ContextMiddleware
+import org.http4s.ContextRoutes
+import org.http4s.HttpRoutes
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
@@ -47,6 +51,34 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           .use { server =>
             val port = server.address.getPort
             basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok"))
+          }
+          .unsafeRunSync()
+      },
+      Test("should work with a router and  context routes in a context") {
+        val expectedContext: String = "Hello World!" // the context we expect http4s to provide to the endpoint
+
+        def serverFn(in: InputWithContext[Unit, String]) = IO.pure(Right[Unit, String](in.context))
+
+        val e = endpoint.get.in("test" / "router").out(stringBody)
+
+        val routesWithContext: ContextRoutes[String, IO] =
+          Http4sServerInterpreter[IO]()
+            .withContext[String]()
+            // server logic is to return the context as is
+            .toContextRoutes(e)(_.serverLogic[IO](serverFn _))
+
+        // middleware to add the context to each request (so here string constant)
+        val middleware: ContextMiddleware[IO, String] =
+          ContextMiddleware.const(expectedContext)
+
+        BlazeServerBuilder[IO]
+          .withExecutionContext(ExecutionContext.global)
+          .bindHttp(0, "localhost")
+          .withHttpApp(Router("/api" -> middleware(routesWithContext)).orNotFound)
+          .resource
+          .use { server =>
+            val port = server.address.getPort
+            basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
           }
           .unsafeRunSync()
       },

@@ -41,6 +41,31 @@ It's completely feasible that some part of the input is read using a http4s wrap
 with the tapir endpoint descriptions. Moreover, "edge-case endpoints", which require some special logic not expressible 
 using tapir, can be always implemented directly using http4s.
 
+
+If you need a `ContextRoutes` (or its type alias `AuthedRoutes`) with a `SomeCtx` context intead of a `HttpRoutes`:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.InputWithContext
+import cats.effect.IO
+import org.http4s.ContextRoutes
+
+case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s
+
+def countCharacters(in: InputWithContext[String, SomeCtx]): IO[Either[Unit, Int]] = 
+  IO.pure(
+    if(in.context.actionAllowed) Right[Unit, Int](in.input.length) else Left[Unit, Int](())
+  )
+
+val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] = 
+  endpoint.in(stringBody).out(plainBody[Int])
+val countCharactersRoutes: ContextRoutes[SomeCtx, IO] = 
+  Http4sServerInterpreter[IO]()
+    .withContext[SomeCtx]() // you may give it a name (default to "defaultContext")
+    .toContextRoutes(countCharactersEndpoint)(_.serverLogic(countCharacters _))
+```
+
 ## Streaming
 
 The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, as described by the `Fs2Streams`
