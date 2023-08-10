@@ -93,7 +93,7 @@ class EndpointGenerator {
             s""".securityIn(auth.apiKey($in[String]("$name")))"""
 
           case None =>
-            throw new Error(s"Undefined security scheme $schemeName!")
+            throw new Error(s"Unknown security scheme $schemeName!")
         }
       }
   }
