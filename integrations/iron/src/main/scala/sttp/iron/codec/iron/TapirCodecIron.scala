@@ -1,6 +1,5 @@
 package sttp.tapir.codec.iron
 
-import sttp.tapir.Schema
 import io.github.iltotore.iron.Constraint
 import io.github.iltotore.iron.:|
 import io.github.iltotore.iron.refineEither
@@ -10,23 +9,19 @@ import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
 import io.github.iltotore.iron.constraint.numeric.*
 
-import sttp.tapir.CodecFormat
 import sttp.tapir.Codec
+import sttp.tapir.CodecFormat
 import sttp.tapir.DecodeResult
+import sttp.tapir.Schema
 import sttp.tapir.Validator
-import sttp.tapir.ValidationResult
-import scala.reflect.ClassTag
+import sttp.tapir.Validator.Primitive
 import sttp.tapir.ValidationError
-import io.github.iltotore.iron.constraint.any.Not
-import io.github.iltotore.iron.macros.union.IsUnion
-import io.github.iltotore.iron.macros.intersection.IsIntersection
+import sttp.tapir.ValidationResult
+import sttp.tapir.typelevel.IntersectionTypeMirror
+import sttp.tapir.typelevel.UnionTypeMirror
 
 import scala.compiletime.*
 import scala.util.NotGiven
-
-import sttp.tapir.typelevel.IntersectionTypeMirror
-import sttp.tapir.Validator.Primitive
-import sttp.tapir.typelevel.UnionTypeMirror
 
 trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPredicate {
 
@@ -87,7 +82,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   inline given validatorForGreaterEqual[N: Numeric, NM <: N](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[N, GreaterEqual[NM]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(witness.value))
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(witness.value, exclusive = false))
 
   inline given validatorForStrictEqual[N: Numeric, NM <: N](using
       witness: ValueOf[NM]
@@ -129,17 +124,17 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   inline given validatorForOr[N, Predicates](using mirror: UnionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
     new ValidatorForPredicate[N, Predicates] {
 
-      val intersectionConstraint = new Constraint.UnionConstraint[N, Predicates]
+      val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
       val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
       override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
 
       override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
-        if (!intersectionConstraint.test(value))
+        if (!unionConstraint.test(value))
           List(
             ValidationError[N](
               Validator.Custom(_ =>
-                ValidationResult.Invalid(intersectionConstraint.message) // at this point the validator is already failed anyway
+                ValidationResult.Invalid(unionConstraint.message) // at this point the validator is already failed anyway
               ),
               value
             )
