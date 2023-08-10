@@ -1927,7 +1927,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.7.3" % Test
+      "com.beachape" %% "enumeratum" % "1.7.3" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test
     )
   )
   .dependsOn(core % Test, circeJson % Test)
