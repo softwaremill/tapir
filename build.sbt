@@ -544,7 +544,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.9.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.10.0" % Test
     )
   )
   .jvmPlatform(
