@@ -53,9 +53,16 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
+    val swaggerInitializerJsWithOptions =
+      swaggerInitializerJsWithReplacedUrl.replace(
+        "window.ui = SwaggerUIBundle({",
+        s"""window.ui = SwaggerUIBundle({
+           |    showExtensions: ${options.showExtensions},""".stripMargin
+      )
+
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
-      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
+      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithOptions))
 
     val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
