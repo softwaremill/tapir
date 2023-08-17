@@ -69,7 +69,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)
-        body.toEntity()
+        body.toEntity
     }
   }
 
