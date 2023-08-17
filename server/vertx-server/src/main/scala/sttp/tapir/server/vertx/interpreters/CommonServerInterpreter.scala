@@ -12,5 +12,5 @@ trait CommonServerInterpreter {
       routeDef: RouteDefinition,
       serverOptions: VertxServerOptions[F]
   ): Route =
-    attachDefaultHandlers(e.endpoint, createRoute(router, routeDef), serverOptions.uploadDirectory.getAbsolutePath)
+    attachDefaultHandlers(e.endpoint, createRoute(router, routeDef), serverOptions.uploadDirectory.getPath)
 }
