@@ -15,4 +15,6 @@ Tuple-concatenating code is copied from [akka-http](https://github.com/akka/akka
 
 Parts of generic derivation configuration is copied from [circe](https://github.com/circe/circe/blob/master/modules/generic-extras/src/main/scala/io/circe/generic/extras/Configuration.scala)
 
+Implementation of mirror for union and intersection types are originally implemented by [Iltotore](https://github.com/Iltotore) in [this gist](https://gist.github.com/Iltotore/eece20188d383f7aee16a0b89eeb887f)
+
 Tapir logo & stickers have been drawn by [impurepics](https://twitter.com/impurepics).

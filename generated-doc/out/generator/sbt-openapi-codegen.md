@@ -11,7 +11,7 @@
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.7.0")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.7.1")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -58,7 +58,9 @@ val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "
 
 Currently, the generated code depends on `"io.circe" %% "circe-generic"`. In the future probably we will make the encoder/decoder json lib configurable (PRs welcome).
 
-String-like enums depend on `"com.beachape" %% "enumeratum"`. Other forms of OpenApi enum are not currently supported. 
+String-like enums in Scala 2 depend on both `"com.beachape" %% "enumeratum"` and `"com.beachape" %% "enumeratum-circe"`.
+For Scala 3 we derive native enums, and depend instead on `"org.latestbit" %% "circe-tagged-adt-codec"`.
+Other forms of OpenApi enum are not currently supported.
 
 We currently miss a lot of OpenApi features like:
  - tags
