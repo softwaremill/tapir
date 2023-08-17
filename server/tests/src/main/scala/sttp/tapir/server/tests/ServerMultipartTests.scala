@@ -39,6 +39,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
           .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
           .send(backend)
           .map { r =>
+            r.code shouldBe StatusCode.Ok
             r.body should include regex "name=\"fruit\"[\\s\\S]*pineapple apple"
             r.body should include regex "name=\"amount\"[\\s\\S]*240"
           }
@@ -50,6 +51,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"), multipart("shape", "regular"))
             .send(backend)
             .map { r =>
+              r.code shouldBe StatusCode.Ok
               r.body shouldBe "FruitAmount(pineapple,120)"
             }
       },
