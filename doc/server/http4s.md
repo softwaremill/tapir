@@ -41,31 +41,6 @@ It's completely feasible that some part of the input is read using a http4s wrap
 with the tapir endpoint descriptions. Moreover, "edge-case endpoints", which require some special logic not expressible 
 using tapir, can be always implemented directly using http4s.
 
-
-If you need a `ContextRoutes` (or its type alias `AuthedRoutes`) with a `SomeCtx` context intead of a `HttpRoutes`:
-
-```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
-import sttp.tapir.server.http4s.InputWithContext
-import cats.effect.IO
-import org.http4s.ContextRoutes
-
-case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s
-
-def countCharacters(in: InputWithContext[String, SomeCtx]): IO[Either[Unit, Int]] = 
-  IO.pure(
-    if(in.context.actionAllowed) Right[Unit, Int](in.input.length) else Left[Unit, Int](())
-  )
-
-val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] = 
-  endpoint.in(stringBody).out(plainBody[Int])
-val countCharactersRoutes: ContextRoutes[SomeCtx, IO] = 
-  Http4sServerInterpreter[IO]()
-    .withContext[SomeCtx]() // you may give it a name (default to "defaultContext")
-    .toContextRoutes(countCharactersEndpoint)(_.serverLogic(countCharacters _))
-```
-
 ## Streaming
 
 The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, as described by the `Fs2Streams`
@@ -137,6 +112,37 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint.serverLogicSuccess[IO](_ =>
   IO(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))
 ))
+```
+
+## Accessing http4s context
+
+If you'd like to access context provided by an http4s middleware, e.g. with authentication data, this can be done
+with a dedicated context-extracting input, `.contextIn`. Endpoints using such input need then to be interpreted to
+`org.http4s.ContextRoutes` (also known by its type alias `AuthedRoutes`) using the `.toContextRoutes` method.
+
+For example:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.http4s._
+import cats.effect.IO
+import org.http4s.ContextRoutes
+
+case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s middleware
+
+def countCharacters(in: (String, SomeCtx)): IO[Either[Unit, Int]] = 
+  IO.pure(
+    if(in._2.actionAllowed) Right[Unit, Int](in._1.length) else Left[Unit, Int](())
+  )
+
+// the .contextIn extension method is imported from the sttp.tapir.server.http4s package
+// the Context[SomeCtx] capability requirement requires interpretation to be done using .toContextRoutes
+val countCharactersEndpoint: PublicEndpoint[(String, SomeCtx), Unit, Int, Context[SomeCtx]] = 
+  endpoint.in(stringBody).contextIn[SomeCtx]().out(plainBody[Int])
+  
+val countCharactersRoutes: ContextRoutes[SomeCtx, IO] = 
+  Http4sServerInterpreter[IO]()
+    .toContextRoutes(countCharactersEndpoint.serverLogic(countCharacters _))
 ```
 
 ## Configuration

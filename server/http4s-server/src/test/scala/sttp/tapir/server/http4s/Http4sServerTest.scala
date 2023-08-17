@@ -57,15 +57,13 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       Test("should work with a router and  context routes in a context") {
         val expectedContext: String = "Hello World!" // the context we expect http4s to provide to the endpoint
 
-        def serverFn(in: InputWithContext[Unit, String]) = IO.pure(Right[Unit, String](in.context))
-
-        val e = endpoint.get.in("test" / "router").out(stringBody)
+        val e: Endpoint[Unit, String, Unit, String, Context[String]] =
+          endpoint.get.in("test" / "router").contextIn[String]().out(stringBody)
 
         val routesWithContext: ContextRoutes[String, IO] =
           Http4sServerInterpreter[IO]()
-            .withContext[String]()
             // server logic is to return the context as is
-            .toContextRoutes(e)(_.serverLogic[IO](serverFn _))
+            .toContextRoutes(e.serverLogicSuccess(ctx => IO.pure(ctx)))
 
         // middleware to add the context to each request (so here string constant)
         val middleware: ContextMiddleware[IO, String] =
