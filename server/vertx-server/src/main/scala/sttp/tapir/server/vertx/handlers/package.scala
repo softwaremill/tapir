@@ -9,11 +9,14 @@ import sttp.tapir.internal._
 
 package object handlers {
 
-  private[vertx] lazy val bodyHandler = BodyHandler.create()
+  private[vertx] lazy val bodyHandler = BodyHandler.create(false)
 
-  private[vertx] lazy val multipartHandler: Handler[RoutingContext] = { rc =>
+  private[vertx] def multipartHandler(uploadDirectory: String): Handler[RoutingContext] = { rc =>
     rc.request.setExpectMultipart(true)
-    bodyHandler.handle(rc)
+    bodyHandler
+      .setHandleFileUploads(true)
+      .setUploadsDirectory(uploadDirectory)
+      .handle(rc)
   }
 
   private[vertx] lazy val streamPauseHandler: Handler[RoutingContext] = { rc =>
@@ -21,7 +24,7 @@ package object handlers {
     rc.next()
   }
 
-  private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route): Route = {
+  private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route, uploadDirectory: String): Route = {
     val mbWebsocketType = e.output.traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] {
       case body: EndpointOutput.WebSocketBodyWrapper[_, _] => Vector(body)
     }
@@ -34,7 +37,7 @@ package object handlers {
     }
 
     mbWebsocketType.headOption.orElse(bodyType.headOption) match {
-      case Some(MultipartBody(_, _))                          => route.handler(multipartHandler)
+      case Some(MultipartBody(_, _))                          => route.handler(multipartHandler(uploadDirectory))
       case Some(_: EndpointIO.StreamBodyWrapper[_, _])        => route.handler(streamPauseHandler)
       case Some(_: EndpointOutput.WebSocketBodyWrapper[_, _]) => route.handler(streamPauseHandler)
       case Some(_)                                            => route.handler(bodyHandler)
