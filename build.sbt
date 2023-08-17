@@ -987,6 +987,23 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
     akkaGrpcServer
   )
 
+lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-examples"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-pekko-grpc-examples",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-discovery" % "1.0.1"
+    ),
+    fork := true
+  )
+  .enablePlugins(PekkoGrpcPlugin)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(
+    protobuf,
+    pbDirectProtobuf,
+    pekkoGrpcServer
+  )
+
 // metrics
 
 lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
@@ -1215,6 +1232,17 @@ lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grp
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, akkaHttpServer)
+
+lazy val pekkoGrpcServer: ProjectMatrix = (projectMatrix in file("server/pekko-grpc-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-pekko-grpc-server",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.0.0"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, pekkoHttpServer)
 
 lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
   .settings(commonJvmSettings)
