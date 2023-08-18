@@ -29,7 +29,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     *   A function, that given a router, will attach this endpoint to it
     */
   def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxFutureServerOptions)
       .handler(endpointHandler(e))
   }
 
@@ -40,7 +40,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute(e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxFutureServerOptions)
       .blockingHandler(endpointHandler(e))
   }
 

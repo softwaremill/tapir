@@ -1,16 +1,12 @@
 package sttp.tapir.server.vertx.streams
 
-import java.util.concurrent.atomic.AtomicReference
-
-import io.vertx.core.{AsyncResult, Handler}
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.http.{WebSocketFrame => VertxWebSocketFrame}
-import io.vertx.core.http.ServerWebSocket
-import io.vertx.core.streams.ReadStream
-import io.vertx.core.streams.WriteStream
+import io.vertx.core.http.{ServerWebSocket, WebSocketFrame => VertxWebSocketFrame}
+import io.vertx.core.streams.{ReadStream, WriteStream}
 import sttp.ws.WebSocketFrame
 import sttp.ws.WebSocketFrame._
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 
 object Pipe {
