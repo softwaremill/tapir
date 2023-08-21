@@ -1,13 +1,12 @@
 package sttp.tapir.testing
 
+import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.model.Method
+import sttp.model.{Method, StatusCode}
 import sttp.tapir._
-import sttp.model.StatusCode
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import io.circe.generic.auto._
 
 class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
 
