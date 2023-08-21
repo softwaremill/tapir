@@ -1,16 +1,23 @@
 package sttp.tapir.testing
 
 import sttp.model.Method
-import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
+import sttp.model.StatusCode.{NoContent, NotModified}
+import sttp.tapir.internal.{RichEndpointInput, RichEndpointOutput, UrlencodedData}
 import sttp.tapir.{AnyEndpoint, EndpointInput, testing}
 
 import scala.annotation.tailrec
+import sttp.tapir.AnyEndpoint
+import sttp.tapir.EndpointOutput
+import sttp.tapir.EndpointOutput.StatusCode
+import sttp.tapir.EndpointOutput.FixedStatusCode
+import sttp.tapir.EndpointIO
 
 object EndpointVerifier {
   def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
     findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
       findIncorrectPaths(endpoints).toSet ++
-      findDuplicatedMethodDefinitions(endpoints).toSet
+      findDuplicatedMethodDefinitions(endpoints).toSet ++
+      findForbiddenStatusAndBody(endpoints).toSet
   }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
@@ -34,6 +41,9 @@ object EndpointVerifier {
   private def findAllShadowedByEndpoint(endpoint: AnyEndpoint, in: List[AnyEndpoint]): List[ShadowedEndpointError] = {
     in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpointError(e, endpoint))
   }
+
+  private def findForbiddenStatusAndBody(endpoints: List[AnyEndpoint]): List[UnexpectedBodyError] =
+    endpoints.flatMap(hasStatusWithoutBody)
 
   private def checkIfShadows(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
     checkMethods(e1, e2) && checkPaths(e1, e2)
@@ -63,6 +73,22 @@ object EndpointVerifier {
       endpoint.securityInput
         .and(endpoint.input)
     )
+  }
+
+  private def hasStatusWithoutBody(endpoint: AnyEndpoint): Option[UnexpectedBodyError] = {
+    (endpoint.output.asBasicOutputsList ++ endpoint.errorOutput.asBasicOutputsList)
+      .collect { list =>
+        list
+          .collectFirst { case _: EndpointIO.Body[_, _] => list }
+          .flatMap(_.collectFirst {
+            case EndpointOutput.FixedStatusCode(NoContent, _, _)   => NoContent
+            case EndpointOutput.FixedStatusCode(NotModified, _, _) => NotModified
+          })
+          .map(UnexpectedBodyError(endpoint, _))
+
+      }
+      .flatMap(_.toList)
+      .headOption
   }
 
   private def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {

@@ -2,6 +2,7 @@ package sttp.tapir.testing
 
 import sttp.model.Method
 import sttp.tapir.AnyEndpoint
+import sttp.model.StatusCode
 
 sealed trait EndpointVerificationError
 
@@ -51,4 +52,18 @@ case class IncorrectPathsError(e: AnyEndpoint, at: Int) extends EndpointVerifica
   */
 case class DuplicatedMethodDefinitionError(e: AnyEndpoint, methods: List[Method]) extends EndpointVerificationError {
   override def toString: String = s"An endpoint ${e.show} have multiple method definitions: $methods"
+}
+
+/**
+  * Endpoint `e` defines outputs where status code indicates no body, but at the same time a body output is specified. For status codes 204 and 304 it's forbidden by specification.
+  *
+  * Example of incorrectly defined endpoint:
+  *
+  * {{{
+  *   endpoint.get.in("x").out(jsonBody[Unit]).out(statusCode(StatusCode.NoContent))
+  * }}}
+  *
+  */
+case class UnexpectedBodyError(e: AnyEndpoint, statusCode: StatusCode) extends EndpointVerificationError {
+  override def toString: String = s"An endpoint ${e.show} may return status code ${statusCode} with body, which is not allowed by specificiation."
 }

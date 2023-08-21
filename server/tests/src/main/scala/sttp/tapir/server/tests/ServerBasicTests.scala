@@ -774,11 +774,32 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       "fail when status is 204 or 304, but there's a body",
       NonEmptyList.of(
         route(endpoint.in("no_content").out(jsonBody[Unit]).out(statusCode(StatusCode.NoContent)).serverLogicSuccess(_ => pureResult(()))),
-        route(endpoint.in("not_modified").out(jsonBody[Unit]).out(statusCode(StatusCode.NotModified)).serverLogicSuccess(_ => pureResult(())))
+        route(
+          endpoint.in("not_modified").out(jsonBody[Unit]).out(statusCode(StatusCode.NotModified)).serverLogicSuccess(_ => pureResult(()))
+        ),
+        route(
+          endpoint
+            .in("one_of")
+            .in(query[String]("select_err"))
+            .errorOut(
+              sttp.tapir.oneOf[ErrorInfo](
+                oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound])),
+                oneOfVariant(statusCode(StatusCode.NoContent).and(jsonBody[NoContentData])),
+              )
+            )
+            .serverLogic(selectErr =>
+              if (selectErr == "no_content")             
+                pureResult(Left(NoContentData("error"))) 
+              else 
+                pureResult(Left(NotFound("error")))
+            )
+        )
       )
-    ) { (backend, baseUri) => 
+    ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/no_content").send(backend).map(_.code shouldBe StatusCode.InternalServerError) >>
-      basicRequest.get(uri"$baseUri/not_modified").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+        basicRequest.get(uri"$baseUri/not_modified").send(backend).map(_.code shouldBe StatusCode.InternalServerError) >>
+        basicRequest.get(uri"$baseUri/one_of?select_err=no_content").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+        basicRequest.get(uri"$baseUri/one_of?select_err=not_found").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 
@@ -797,3 +818,7 @@ object Animal extends Enum[Animal] with TapirCodecEnumeratum {
 
   override def values = findValues
 }
+
+sealed trait ErrorInfo
+case class NotFound(what: String) extends ErrorInfo
+case class NoContentData(msg: String) extends ErrorInfo
