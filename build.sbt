@@ -1376,7 +1376,9 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-jdkhttp-server",
-    libraryDependencies ++= loggerDependencies
+    libraryDependencies ++= Seq(
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14"
+    ) ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = List(scala2_13, scala3))
   .dependsOn(serverCore, serverTests % Test)

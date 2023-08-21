@@ -1,8 +1,11 @@
 package sttp.tapir.server.jdkhttp
 package internal
 
+import org.apache.http.entity.ContentType
+import org.apache.http.entity.mime.content._
+import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.capabilities
-import sttp.model.HasHeaders
+import sttp.model.{HasHeaders, Part}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
@@ -49,7 +52,56 @@ private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[JdkHttpRespo
           .getOrElse {
             (base, Some(tapirFile.file.length()))
           }
-      case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException("MultipartBody is not supported")
+      case m: RawBodyType.MultipartBody =>
+        val entity = MultipartEntityBuilder.create()
+        v.flatMap(rawPartToFormBodyPart(m, _)).foreach { (formBodyPart: FormBodyPart) => entity.addPart(formBodyPart) }
+        val builtEntity = entity.build()
+        val inputStream: InputStream = builtEntity.getContent
+        (inputStream, Some(builtEntity.getContentLength))
+    }
+  }
+
+  private def rawPartToFormBodyPart[R](m: RawBodyType.MultipartBody, part: Part[R]): Option[FormBodyPart] = {
+    m.partType(part.name).map { partType =>
+      val builder = FormBodyPartBuilder
+        .create(
+          part.name,
+          rawValueToContentBody(partType.asInstanceOf[RawBodyType[Any]], part.asInstanceOf[Part[Any]], part.body)
+        )
+
+      part.headers.foreach(header => builder.addField(header.name, header.value))
+
+      builder.build()
+    }
+  }
+
+  private def rawValueToContentBody[CF <: CodecFormat, R](
+      bodyType: RawBodyType[R],
+      part: Part[R],
+      r: R
+  ): ContentBody = {
+    val contentType: String = part.header("content-type").getOrElse("text/plain")
+
+    bodyType match {
+      case RawBodyType.StringBody(_) =>
+        new StringBody(r.toString, ContentType.parse(contentType))
+      case RawBodyType.ByteArrayBody =>
+        new ByteArrayBody(r, ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.ByteBufferBody =>
+        val array: Array[Byte] = new Array[Byte](r.remaining)
+        r.get(array)
+        new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.FileBody =>
+        part.fileName match {
+          case Some(filename) => new FileBody(r.file, ContentType.create(contentType), filename)
+          case None           => new FileBody(r.file, ContentType.create(contentType))
+        }
+      case RawBodyType.InputStreamRangeBody =>
+        new InputStreamBody(r.inputStream(), ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.InputStreamBody =>
+        new InputStreamBody(r, ContentType.create(contentType), part.fileName.get)
+      case _: RawBodyType.MultipartBody =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
   }
 
