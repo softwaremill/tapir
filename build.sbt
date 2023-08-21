@@ -188,6 +188,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   protobuf.projectRefs ++
   pbDirectProtobuf.projectRefs ++
   grpcExamples.projectRefs ++
+  pekkoGrpcExamples.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
@@ -200,6 +201,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   akkaGrpcServer.projectRefs ++
   pekkoHttpServer.projectRefs ++
+  pekkoGrpcServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
