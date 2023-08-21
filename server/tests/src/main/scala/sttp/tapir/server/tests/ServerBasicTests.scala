@@ -787,12 +787,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
                 oneOfVariant(statusCode(StatusCode.NoContent).and(jsonBody[NoContentData])),
               )
             )
-            .serverLogic(selectErr =>
+            .serverLogic { selectErr =>
               if (selectErr == "no_content")             
-                pureResult(Left(NoContentData("error"))) 
+                pureResult[F, Either[ErrorInfo, Unit]](Left(NoContentData("error"))) 
               else 
-                pureResult(Left(NotFound("error")))
-            )
+                pureResult[F, Either[ErrorInfo, Unit]](Left(NotFound("error")))
+            }
         )
       )
     ) { (backend, baseUri) =>

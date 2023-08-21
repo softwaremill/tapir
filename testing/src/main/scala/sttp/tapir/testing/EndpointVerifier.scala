@@ -2,7 +2,6 @@ package sttp.tapir.testing
 
 import sttp.model.Method
 import sttp.model.StatusCode.{NoContent, NotModified}
-import sttp.tapir.EndpointOutput.FixedStatusCode
 import sttp.tapir.internal.{RichEndpointInput, RichEndpointOutput, UrlencodedData}
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, EndpointOutput, testing}
 
