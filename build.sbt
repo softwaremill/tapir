@@ -999,7 +999,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
     fork := true
   )
   .enablePlugins(PekkoGrpcPlugin)
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(
     protobuf,
     pbDirectProtobuf,
