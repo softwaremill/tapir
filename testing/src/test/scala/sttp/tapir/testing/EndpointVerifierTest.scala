@@ -305,10 +305,22 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
           oneOfVariant(statusCode(StatusCode.NoContent).and(jsonBody[NoContentData]))
         )
       )
+    val e6 = endpoint
+      .in("endpoint6_ok")
+      .errorOut(
+        sttp.tapir.oneOf[ErrorInfo](
+          oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound])),
+          oneOfVariant(statusCode(StatusCode.NoContent).and(emptyOutputAs(NoContent)))
+        )
+      )
 
-    val result = EndpointVerifier(List(e1, e2, e3, e4, e5))
+    val result = EndpointVerifier(List(e1, e2, e3, e4, e5, e6))
 
-    result shouldBe Set(UnexpectedBodyError(e1, StatusCode.NoContent), UnexpectedBodyError(e3, StatusCode.NotModified), UnexpectedBodyError(e5, StatusCode.NoContent))
+    result shouldBe Set(
+      UnexpectedBodyError(e1, StatusCode.NoContent),
+      UnexpectedBodyError(e3, StatusCode.NotModified),
+      UnexpectedBodyError(e5, StatusCode.NoContent)
+    )
   }
 }
 
