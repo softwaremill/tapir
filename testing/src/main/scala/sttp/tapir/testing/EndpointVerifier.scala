@@ -1,8 +1,9 @@
 package sttp.tapir.testing
 
 import sttp.model.Method
-import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
-import sttp.tapir.{AnyEndpoint, EndpointInput, testing}
+import sttp.model.StatusCode.{NoContent, NotModified}
+import sttp.tapir.internal.{RichEndpointInput, RichEndpointOutput, UrlencodedData}
+import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, EndpointOutput, testing}
 
 import scala.annotation.tailrec
 
@@ -10,7 +11,8 @@ object EndpointVerifier {
   def apply(endpoints: List[AnyEndpoint]): Set[EndpointVerificationError] = {
     findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
       findIncorrectPaths(endpoints).toSet ++
-      findDuplicatedMethodDefinitions(endpoints).toSet
+      findDuplicatedMethodDefinitions(endpoints).toSet ++
+      findIncorrectStatusWithBody(endpoints).toSet
   }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
@@ -34,6 +36,19 @@ object EndpointVerifier {
   private def findAllShadowedByEndpoint(endpoint: AnyEndpoint, in: List[AnyEndpoint]): List[ShadowedEndpointError] = {
     in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpointError(e, endpoint))
   }
+
+  private def findIncorrectStatusWithBody(endpoints: List[AnyEndpoint]): List[UnexpectedBodyError] =
+    endpoints.flatMap { e =>
+      val outputs = (e.output.asBasicOutputsList ++ e.errorOutput.asBasicOutputsList)
+      outputs.flatMap { outputElems =>
+        val hasBody = outputElems.collectFirst { case b: EndpointIO.Body[_, _] => b }.isDefined
+        val noBodyStatusCodes = outputElems.collect {
+          case EndpointOutput.FixedStatusCode(NoContent, _, _)   => NoContent
+          case EndpointOutput.FixedStatusCode(NotModified, _, _) => NotModified
+        }
+        if (hasBody) noBodyStatusCodes.map(UnexpectedBodyError(e, _)) else Nil
+      }
+    }
 
   private def checkIfShadows(e1: AnyEndpoint, e2: AnyEndpoint): Boolean =
     checkMethods(e1, e2) && checkPaths(e1, e2)
