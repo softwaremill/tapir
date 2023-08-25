@@ -19,7 +19,7 @@ import scala.util.NotGiven
 import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
-import _root_.upickle.implicits. { macros => upickleMacros }
+import _root_.upickle.implicits.{macros => upickleMacros}
 
 trait TapirPickle[T] extends Readers with Writers:
   def rw: this.ReadWriter[T]
@@ -116,10 +116,14 @@ object Pickler:
       case s: Mirror.SumOf[T]     => picklerSum(s, schema, childPicklers)
     }
 
-  private inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using Configuration): List[Pickler[?]] =
+  private inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
+      m: Mirror.Of[T],
+      c: Configuration
+  ): Tuple =
     inline erasedValue[Fields] match {
-      case _: (fieldType *: fieldTypesTail) => deriveOrSummon[T, fieldType] :: summonChildPicklerInstances[T, fieldTypesTail]
-      case _: EmptyTuple                    => Nil
+      case _: (fieldType *: fieldTypesTail) =>
+        deriveOrSummon[T, fieldType] *: summonChildPicklerInstances[T, fieldTypesTail]
+      case _: EmptyTuple => EmptyTuple
     }
 
   private inline def deriveOrSummon[T, FieldType](using Configuration): Pickler[FieldType] =
@@ -136,19 +140,20 @@ object Pickler:
       // create a new RW from scratch using children rw and fields of the product
       // use provided existing schema
       // use data from schema to customize the new schema
-  private inline def picklerProduct[T: ClassTag](product: Mirror.ProductOf[T], schema: Schema[T], childPicklers: => List[Pickler[?]])(using
+  private inline def picklerProduct[T: ClassTag, CP <: Tuple](product: Mirror.ProductOf[T], schema: Schema[T], childPicklers: => CP)(using
       Configuration
   ): Pickler[T] =
     println(s">>>>>>> pickler product for ${schema.name}")
     val tapirPickle = new TapirPickle[T] {
-      lazy val writer: Writer[T] = macroProductW[T](schema, childPicklers.map(_.innerUpickle.rw)) 
-      lazy val reader: Reader[T] = macroProductR[T](childPicklers.map(_.innerUpickle.rw))(using product)
+      lazy val writer: Writer[T] =
+        macroProductW[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw).productIterator.toList)
+      lazy val reader: Reader[T] = macroProductR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))(using product)
 
       override def rw: ReadWriter[T] = ReadWriter.join(reader, writer)
     }
-    new Pickler[T](tapirPickle, schema) 
+    new Pickler[T](tapirPickle, schema)
 
-  private inline def picklerSum[T: ClassTag](s: Mirror.SumOf[T], schema: Schema[T], childPicklers: => List[Pickler[?]]): Pickler[T] =
+  private inline def picklerSum[T: ClassTag, CP <: Tuple](s: Mirror.SumOf[T], schema: Schema[T], childPicklers: => CP): Pickler[T] =
     new Pickler[T](null, schema) // TODO
 
   implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec

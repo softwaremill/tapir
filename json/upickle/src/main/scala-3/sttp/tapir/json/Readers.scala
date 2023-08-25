@@ -23,9 +23,9 @@ import _root_.upickle.core.*
 import _root_.upickle.implicits.{macros => upickleMacros}
 
 trait Readers extends AttributeTagged {
-  inline def macroProductR[T](childReaders: => List[Any])(using m: Mirror.ProductOf[T]): Reader[T] =
+  inline def macroProductR[T](childReaders: Tuple)(using m: Mirror.ProductOf[T]): Reader[T] =
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
-      override def visitors0 = ??? // TODO
+      override def visitors0 = childReaders
       override def fromProduct(p: Product): T = m.fromProduct(p)
       override def keyToIndex(x: String): Int = upickleMacros.keyToIndex[T](x)
       override def allKeysArray = upickleMacros.fieldLabels[T].map(_._2).toArray

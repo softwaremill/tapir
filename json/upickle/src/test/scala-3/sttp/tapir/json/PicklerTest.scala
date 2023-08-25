@@ -43,8 +43,11 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // when
     val derived = Pickler.derived[Level1TopClass]
     val jsonStr = derived.toCodec.encode(Level1TopClass("field_a_value", Level1InnerClass(7954)))
-    
+    val inputJson = """{"fieldA":"field_a_value_2","fieldB":{"fieldA11":-321}}"""
+    val resultObj = derived.toCodec.decode(inputJson)
+
     // then
     jsonStr shouldBe """{"fieldA":"field_a_value","fieldB":{"fieldA11":7954}}"""
+    resultObj shouldBe Value(Level1TopClass("field_a_value_2", Level1InnerClass(-321)))
   }
 }
