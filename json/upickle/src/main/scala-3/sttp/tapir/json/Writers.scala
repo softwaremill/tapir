@@ -20,18 +20,22 @@ import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
 import _root_.upickle.implicits. { macros => upickleMacros }
+import sttp.tapir.SchemaType.SProduct
 
 trait Writers extends AttributeTagged {
 
-  inline def macroProductW[T: ClassTag](schema: Schema[T], childWriters: => List[Any])(using Configuration) =
+  inline def macroProductW[T: ClassTag](inline schema: Schema[T], childWriters: => List[Any])(using Configuration) =
     lazy val writer = new CaseClassWriter[T] {
         def length(v: T) = upickleMacros.writeLength[T](outerThis, v)
+
+        val sProduct = schema.schemaType.asInstanceOf[SProduct[T]]
 
         override def write0[R](out: Visitor[_, R], v: T): R = {
           if (v == null) out.visitNull(-1)
           else {
             val ctx = out.visitObject(length(v), true, -1)
             macros.writeSnippets[R, T](
+              sProduct,
               outerThis,
               this,
               v,
@@ -44,6 +48,7 @@ trait Writers extends AttributeTagged {
 
         def writeToObject[R](ctx: _root_.upickle.core.ObjVisitor[_, R], v: T): Unit =
           macros.writeSnippets[R, T](
+            sProduct,
             outerThis,
             this,
             v,

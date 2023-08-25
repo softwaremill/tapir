@@ -99,7 +99,7 @@ object Pickler:
   implicit inline def primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(new DefaultReadWriterWrapper(summonInline[_root_.upickle.default.ReadWriter[T]]), summonInline[Schema[T]])
 
-  private inline def fromExistingSchema[T: ClassTag](schema: Schema[T])(using Configuration, Mirror.Of[T]): Pickler[T] =
+  private inline def fromExistingSchema[T: ClassTag](inline schema: Schema[T])(using Configuration, Mirror.Of[T]): Pickler[T] =
     summonFrom {
       case foundRW: _root_.upickle.default.ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
         new Pickler[T](new DefaultReadWriterWrapper(foundRW), schema)
@@ -107,7 +107,7 @@ object Pickler:
         buildReadWritersFromSchema(schema)
     }
 
-  private inline def buildReadWritersFromSchema[T: ClassTag](schema: Schema[T])(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
+  private inline def buildReadWritersFromSchema[T: ClassTag](inline schema: Schema[T])(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
     println(s">>>>>> Building new pickler for ${schema.name}")
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
     lazy val childPicklers = summonChildPicklerInstances[T, m.MirroredElemTypes]
@@ -140,7 +140,7 @@ object Pickler:
       // create a new RW from scratch using children rw and fields of the product
       // use provided existing schema
       // use data from schema to customize the new schema
-  private inline def picklerProduct[T: ClassTag, CP <: Tuple](product: Mirror.ProductOf[T], schema: Schema[T], childPicklers: => CP)(using
+  private inline def picklerProduct[T: ClassTag, CP <: Tuple](inline product: Mirror.ProductOf[T], inline schema: Schema[T], childPicklers: => CP)(using
       Configuration
   ): Pickler[T] =
     println(s">>>>>>> pickler product for ${schema.name}")

@@ -5,19 +5,23 @@ import deriving.*, compiletime.*
 import scala.reflect.ClassTag
 import _root_.upickle.implicits.*
 import _root_.upickle.implicits.{macros => uMacros}
+import sttp.tapir.Schema
+import sttp.tapir.SchemaType.SProduct
 
 type IsInt[A <: Int] = A
 
 inline def writeSnippets[R, T](
+    inline sProduct: SProduct[T],
     inline thisOuter: upickle.core.Types with upickle.implicits.MacrosCommon,
     inline self: upickle.implicits.CaseClassReadWriters#CaseClassWriter[T],
     inline v: T,
     inline ctx: _root_.upickle.core.ObjVisitor[_, R],
     childWriters: List[Any]
 ): Unit =
-  ${ writeSnippetsImpl[R, T]('thisOuter, 'self, 'v, 'ctx, 'childWriters) }
+  ${ writeSnippetsImpl[R, T]('sProduct, 'thisOuter, 'self, 'v, 'ctx, 'childWriters) }
 
 def writeSnippetsImpl[R, T](
+    sProduct: Expr[SProduct[T]],
     thisOuter: Expr[upickle.core.Types with upickle.implicits.MacrosCommon],
     self: Expr[upickle.implicits.CaseClassReadWriters#CaseClassWriter[T]],
     v: Expr[T],
@@ -35,12 +39,14 @@ def writeSnippetsImpl[R, T](
           val defaults = uMacros.getDefaultParamsImpl0[T]
           Literal(IntConstant(i)).tpe.asType match
             case '[IsInt[index]] =>
+              val encodedName = '{${sProduct}.fields(${Expr(i)}).name.encodedName}
               val select = Select.unique(v.asTerm, rawLabel.name).asExprOf[Any]
+              // val encodedNameExpr = '{ ${schema} match { case } }
 
               val snippet = '{
                 ${ self }.writeSnippetMappedName[R, tpe](
                   ${ ctx },
-                  ${ thisOuter }.objectAttributeKeyWriteMap(${ Expr(label) }),
+                  ${ encodedName },
                   ${ childWriters }(${ Expr(i) }),
                   ${ select }
                 )

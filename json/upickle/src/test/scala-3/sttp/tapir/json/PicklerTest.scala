@@ -5,6 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema
+import sttp.tapir.generic.Configuration
 
 class PicklerTest extends AnyFlatSpec with Matchers {
   behavior of "Pickler derivation"
@@ -49,5 +50,19 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     jsonStr shouldBe """{"fieldA":"field_a_value","fieldB":{"fieldA11":7954}}"""
     resultObj shouldBe Value(Level1TopClass("field_a_value_2", Level1InnerClass(-321)))
+  }
+
+  it should "respect schema's encodedName" in {
+    // given
+    import sttp.tapir.generic.auto._ // for Schema auto-derivation
+    import generic.auto._ // for Pickler auto-derivation
+    given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
+
+    // when
+    val derived = Pickler.derived[Level1TopClass]
+    val jsonStr = derived.toCodec.encode(Level1TopClass("field_a_value", Level1InnerClass(7954)))
+
+    // then
+    jsonStr shouldBe """{"field_a":"field_a_value","field_b":{"field_a11":7954}}"""
   }
 }
