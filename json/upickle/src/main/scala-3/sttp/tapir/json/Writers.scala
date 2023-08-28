@@ -63,4 +63,11 @@ trait Writers extends AttributeTagged {
         annotate[T](writer, upickleMacros.tagName[T], Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass))
       else
         writer
+
+  inline def macroSumW[T: ClassTag](inline schema: Schema[T], childWriters: => List[Any])(using Configuration) =
+    implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
+    val writers: List[Writer[_ <: T]] = childWriters
+      .asInstanceOf[List[Writer[_ <: T]]]
+
+    Writer.merge[T](writers: _*): Writer[T]
 }

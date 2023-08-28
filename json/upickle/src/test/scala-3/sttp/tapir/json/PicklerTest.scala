@@ -6,6 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
+import sttp.tapir.SchemaType
 
 class PicklerTest extends AnyFlatSpec with Matchers {
   behavior of "Pickler derivation"
@@ -38,7 +39,6 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "build an instance for a case class with a nested case class" in {
     // given
-    import sttp.tapir.generic.auto._ // for Schema auto-derivation
     import generic.auto._ // for Pickler auto-derivation
 
     // when
@@ -52,9 +52,15 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     resultObj shouldBe Value(Level1TopClass("field_a_value_2", Level1InnerClass(-321)))
   }
 
-  it should "respect schema's encodedName" in {
+  it should "fail to derive a Pickler when there's a Schema but missing ReadWriter" in {
+    assertDoesNotCompile("""
+      given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
+      Pickler.derived[FlatClass]
+    """)
+  }
+
+  it should "respect encodedName from Configuration" in {
     // given
-    import sttp.tapir.generic.auto._ // for Schema auto-derivation
     import generic.auto._ // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
 
@@ -64,5 +70,49 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
     // then
     jsonStr shouldBe """{"field_a":"field_a_value","field_b":{"field_a11":7954}}"""
+  }
+
+  it should "Decode in a Reader using custom encodedName" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+    given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
+
+    // when
+    val derived = Pickler.derived[Level1TopClass]
+    val jsonStr = """{"field_a":"field_a_value","field_b":{"field_a11":7954}}"""
+    val obj = derived.toCodec.decode(jsonStr)
+
+    // then
+    obj shouldBe Level1TopClass("field_a_value", Level1InnerClass(7954))
+  }
+
+  it should "encode sealed trait as enum according to Schema's configuration" in {
+    // given
+    // sealed trait ErrorCode:
+    //   def specialCode: Int
+    //
+    // case object ErrorNotFound extends ErrorCode:
+    //   override def specialCode = 612
+    //
+    // case object ErrorTimeout extends ErrorCode:
+    //   override def specialCode = -5
+    //
+    //
+    // implicit val yEnumSchema: Schema[ErrorCode] = Schema.derivedEnumeration[ErrorCode](
+    //   encode = Some(v => v.specialCode),
+    //   schemaType = SchemaType.SInteger[ErrorCode]()
+    // )
+    // case class TopCaseClass(fieldA: NestedCaseClass, fieldB: String)
+    // case class NestedCaseClass(errorCode: ErrorCode)
+    //
+    // import sttp.tapir.generic.auto._ // for Schema auto-derivation
+    // import generic.auto._ // for Pickler auto-derivationi
+    //
+    // // when
+    // val derived = Pickler.derived[TopCaseClass]
+    // val jsonStr = derived.toCodec.encode(TopCaseClass(NestedCaseClass(ErrorTimeout), "msg18"))
+    //
+    // // then
+    // jsonStr shouldBe """xxxxx"""
   }
 }

@@ -35,4 +35,12 @@ trait Readers extends AttributeTagged {
     inline if upickleMacros.isSingleton[T] then annotate[T](SingletonReader[T](upickleMacros.getSingleton[T]), upickleMacros.tagName[T])
     else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, upickleMacros.tagName[T])
     else reader
+
+  inline def macroSumR[T](childReaders: Tuple): Reader[T] =
+    implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
+    val readers: List[Reader[_ <: T]] = childReaders
+      .toList
+      .asInstanceOf[List[Reader[_ <: T]]]
+
+    Reader.merge[T](readers: _*)
 }

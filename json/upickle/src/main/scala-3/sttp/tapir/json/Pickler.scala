@@ -20,6 +20,8 @@ import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
 import _root_.upickle.implicits.{macros => upickleMacros}
+import scala.quoted.Expr
+import scala.NonEmptyTuple
 
 trait TapirPickle[T] extends Readers with Writers:
   def rw: this.ReadWriter[T]
@@ -86,80 +88,109 @@ object Pickler:
     println(s">>>>>>>>>>> building new pickler for type ${implicitly[ClassTag[T]].getClass().getSimpleName()}")
     summonFrom {
       case schema: Schema[T] => fromExistingSchema[T](schema)
-      case _                 => fromMissingSchema[T]
+      case _                 => buildNewPickler[T]()
     }
-
-  private inline def fromMissingSchema[T: ClassTag](using Configuration, Mirror.Of[T]): Pickler[T] =
-    // can badly affect perf, it's going to repeat derivation excessively
-    // the issue here is that deriving writers for nested CC fields requires schemas for these field types, and deriving each
-    // such schema derives all of its childschemas. Another problem is delivering schemas for the same type many times
-    given schema: Schema[T] = Schema.derived
-    fromExistingSchema(schema)
 
   implicit inline def primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(new DefaultReadWriterWrapper(summonInline[_root_.upickle.default.ReadWriter[T]]), summonInline[Schema[T]])
 
-  private inline def fromExistingSchema[T: ClassTag](inline schema: Schema[T])(using Configuration, Mirror.Of[T]): Pickler[T] =
+  inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
+
+  import scala.quoted.*
+  def errorForTypeImpl[T: Type](template: Expr[String])(using Quotes): Expr[Unit] = {
+    import quotes.reflect.*
+    val templateStr = template.valueOrAbort
+    val typeName = TypeRepr.of[T].show
+    report.error(String.format(templateStr, typeName))
+    '{}
+  }
+
+  private inline def fromExistingSchema[T](inline schema: Schema[T])(using ClassTag[T], Configuration, Mirror.Of[T]): Pickler[T] =
     summonFrom {
       case foundRW: _root_.upickle.default.ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
         new Pickler[T](new DefaultReadWriterWrapper(foundRW), schema)
       case _ =>
-        buildReadWritersFromSchema(schema)
+        errorForType[T](
+          "Found implicit Schema[%s] but couldn't find a uPickle ReadWriter for this type. Either provide a ReadWriter, or remove the Schema from scope and let Pickler derive its own."
+        )
+        null
     }
 
-  private inline def buildReadWritersFromSchema[T: ClassTag](inline schema: Schema[T])(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
-    println(s">>>>>> Building new pickler for ${schema.name}")
+  private inline def buildNewPickler[T: ClassTag](
+  )(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
-    lazy val childPicklers = summonChildPicklerInstances[T, m.MirroredElemTypes]
+    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
-      case p: Mirror.ProductOf[T] => picklerProduct(p, schema, childPicklers)
-      case s: Mirror.SumOf[T]     => picklerSum(s, schema, childPicklers)
+      case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
+      case s: Mirror.SumOf[T]     => null // TODO picklerSum(s, schema, childPicklers)
     }
 
-  private inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
-      m: Mirror.Of[T],
-      c: Configuration
-  ): Tuple =
-    inline erasedValue[Fields] match {
-      case _: (fieldType *: fieldTypesTail) =>
-        deriveOrSummon[T, fieldType] *: summonChildPicklerInstances[T, fieldTypesTail]
-      case _: EmptyTuple => EmptyTuple
-    }
+private inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
+    m: Mirror.Of[T],
+    c: Configuration
+): Tuple.Map[Fields, Pickler] =
+  inline erasedValue[Fields] match {
+    case _: (fieldType *: fieldTypesTail) =>
+      val processedHead = deriveOrSummon[T, fieldType]
+      val processedTail = summonChildPicklerInstances[T, fieldTypesTail]
+      Tuple.fromArray((processedHead +: processedTail.toArray)).asInstanceOf[Tuple.Map[Fields, Pickler]]
+    case _: EmptyTuple.type => EmptyTuple.asInstanceOf[Tuple.Map[Fields, Pickler]]
+  }
 
-  private inline def deriveOrSummon[T, FieldType](using Configuration): Pickler[FieldType] =
-    inline erasedValue[FieldType] match
-      case _: T => deriveRec[T, FieldType]
-      case _    => summonInline[Pickler[FieldType]]
+private inline def deriveOrSummon[T, FieldType](using Configuration): Pickler[FieldType] =
+  inline erasedValue[FieldType] match
+    case _: T => deriveRec[T, FieldType]
+    case _    => summonInline[Pickler[FieldType]]
 
-  private inline def deriveRec[T, FieldType](using config: Configuration): Pickler[FieldType] =
-    inline erasedValue[T] match
-      case _: FieldType => error("Infinite recursive derivation")
-      case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config, summonInline[Mirror.Of[FieldType]])
+private inline def deriveRec[T, FieldType](using config: Configuration): Pickler[FieldType] =
+  inline erasedValue[T] match
+    case _: FieldType => error("Infinite recursive derivation")
+    case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config, summonInline[Mirror.Of[FieldType]])
 
-      // Extract child RWs from child picklers
-      // create a new RW from scratch using children rw and fields of the product
-      // use provided existing schema
-      // use data from schema to customize the new schema
-  private inline def picklerProduct[T: ClassTag, CP <: Tuple](inline product: Mirror.ProductOf[T], inline schema: Schema[T], childPicklers: => CP)(using
-      Configuration
-  ): Pickler[T] =
-    println(s">>>>>>> pickler product for ${schema.name}")
-    val tapirPickle = new TapirPickle[T] {
-      lazy val writer: Writer[T] =
-        macroProductW[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw).productIterator.toList)
-      lazy val reader: Reader[T] = macroProductR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))(using product)
+    // Extract child RWs from child picklers
+    // create a new RW from scratch using children rw and fields of the product
+    // use provided existing schema
+    // use data from schema to customize the new schema
+private inline def picklerProduct[T: ClassTag, TFields <: Tuple](
+    inline product: Mirror.ProductOf[T],
+    childPicklers: => Tuple.Map[TFields, Pickler]
+)(using
+    Configuration
+): Pickler[T] =
+  lazy val childSchemas: Tuple.Map[TFields, Schema] =
+    childPicklers.map([t] => (p: t) => p.asInstanceOf[Pickler[t]].schema).asInstanceOf[Tuple.Map[TFields, Schema]]
+  println(childSchemas)
+  val schema: Schema[T] = productSchema(product, childSchemas)
+  println(s">>>>>>> pickler product for ${schema.name}")
+  val tapirPickle = new TapirPickle[T] {
+    lazy val writer: Writer[T] =
+      macroProductW[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw).productIterator.toList)
+    lazy val reader: Reader[T] =
+      macroProductR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))(using product)
 
-      override def rw: ReadWriter[T] = ReadWriter.join(reader, writer)
-    }
-    new Pickler[T](tapirPickle, schema)
+    override def rw: ReadWriter[T] = ReadWriter.join(reader, writer)
+  }
+  new Pickler[T](tapirPickle, schema)
 
-  private inline def picklerSum[T: ClassTag, CP <: Tuple](s: Mirror.SumOf[T], schema: Schema[T], childPicklers: => CP): Pickler[T] =
-    new Pickler[T](null, schema) // TODO
+private inline def productSchema[T, TFields <: Tuple](product: Mirror.ProductOf[T], childSchemas: Tuple.Map[TFields, Schema])(using genericDerivationConfig: Configuration): Schema[T] = 
+  macros.SchemaDerivation2.productSchema(genericDerivationConfig, childSchemas)
 
-  implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
+private inline def picklerSum[T: ClassTag, CP <: Tuple](s: Mirror.SumOf[T], schema: Schema[T], childPicklers: => CP): Pickler[T] =
+  val tapirPickle = new TapirPickle[T] {
+    lazy val writer: Writer[T] =
+      macroSumW[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw).productIterator.toList)
+    lazy val reader: Reader[T] = macroSumR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))
+
+    override def rw: ReadWriter[T] = ReadWriter.join(reader, writer)
+  }
+  new Pickler[T](tapirPickle, schema)
+
+implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
 
 object generic {
   object auto { // TODO move to appropriate place
     inline implicit def picklerForCaseClass[T: ClassTag](implicit m: Mirror.Of[T], cfg: Configuration): Pickler[T] = Pickler.derived[T]
   }
+
+
 }
