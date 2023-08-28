@@ -166,7 +166,7 @@ private inline def picklerProduct[T: ClassTag, TFields <: Tuple](
     lazy val writer: Writer[T] =
       macroProductW[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw).productIterator.toList)
     lazy val reader: Reader[T] =
-      macroProductR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))(using product)
+      macroProductR[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.rw))(using product)
 
     override def rw: ReadWriter[T] = ReadWriter.join(reader, writer)
   }

@@ -21,14 +21,18 @@ import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
 import _root_.upickle.implicits.{macros => upickleMacros}
+import sttp.tapir.SchemaType
 
 trait Readers extends AttributeTagged {
-  inline def macroProductR[T](childReaders: Tuple)(using m: Mirror.ProductOf[T]): Reader[T] =
+  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple)(using m: Mirror.ProductOf[T]): Reader[T] =
+    val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
       override def visitors0 = childReaders
       override def fromProduct(p: Product): T = m.fromProduct(p)
-      override def keyToIndex(x: String): Int = upickleMacros.keyToIndex[T](x)
-      override def allKeysArray = upickleMacros.fieldLabels[T].map(_._2).toArray
+      override def keyToIndex(x: String): Int =
+        schemaFields.indexWhere(_.name.encodedName == x)
+
+      override def allKeysArray = schemaFields.map(_.name.encodedName).toArray
       override def storeDefaults(x: _root_.upickle.implicits.BaseCaseObjectContext): Unit = upickleMacros.storeDefaults[T](x)
     }
 
@@ -38,8 +42,7 @@ trait Readers extends AttributeTagged {
 
   inline def macroSumR[T](childReaders: Tuple): Reader[T] =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val readers: List[Reader[_ <: T]] = childReaders
-      .toList
+    val readers: List[Reader[_ <: T]] = childReaders.toList
       .asInstanceOf[List[Reader[_ <: T]]]
 
     Reader.merge[T](readers: _*)

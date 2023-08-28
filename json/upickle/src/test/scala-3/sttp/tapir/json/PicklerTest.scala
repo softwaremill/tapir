@@ -83,7 +83,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val obj = derived.toCodec.decode(jsonStr)
 
     // then
-    obj shouldBe Level1TopClass("field_a_value", Level1InnerClass(7954))
+    obj shouldBe Value(Level1TopClass("field_a_value", Level1InnerClass(7954)))
   }
 
   it should "encode sealed trait as enum according to Schema's configuration" in {
