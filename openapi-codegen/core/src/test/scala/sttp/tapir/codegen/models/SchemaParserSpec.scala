@@ -111,9 +111,9 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
         |    name: api-key""".stripMargin
 
     val res = parser
-        .parse(yaml)
-        .leftMap(err => err: Error)
-        .flatMap(_.as[OpenapiComponent])
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
 
     res shouldBe Right(
       OpenapiComponent(
