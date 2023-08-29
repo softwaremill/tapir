@@ -28,8 +28,8 @@ package object http4s {
 
     /** Access the context provided by an http4s middleware, such as authentication data.
       *
-      * Interpreting endpoints which access the http4s context requires the usage of the [[Http4sServerInterpreter.toContextRoutes]]
-      * method. This then yields a [[org.http4s.ContextRoutes]] instance, which needs to be correctly mounted in the http4s router.
+      * Interpreting endpoints which access the http4s context requires the usage of the [[Http4sServerInterpreter.toContextRoutes]] method.
+      * This then yields a [[org.http4s.ContextRoutes]] instance, which needs to be correctly mounted in the http4s router.
       *
       * Note that the correct syntax for adding the context input includes `()` after the method invocation, to properly infer types and
       * capture implicit parameters, e.g. `myEndpoint.contextIn[Auth]()`.
