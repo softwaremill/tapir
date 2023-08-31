@@ -109,19 +109,21 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           )
         )
       ),
-      Some(OpenapiComponent(
-        Map(),
-        Map(
-          "httpBearer" -> OpenapiSecuritySchemeBearerType,
-          "httpBasic" -> OpenapiSecuritySchemeBasicType,
-          "apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", "X-API-KEY"),
-          "apiKeyCookie" -> OpenapiSecuritySchemeApiKeyType("cookie", "api_key"),
-          "apiKeyQuery" -> OpenapiSecuritySchemeApiKeyType("query", "api-key")
+      Some(
+        OpenapiComponent(
+          Map(),
+          Map(
+            "httpBearer" -> OpenapiSecuritySchemeBearerType,
+            "httpBasic" -> OpenapiSecuritySchemeBasicType,
+            "apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", "X-API-KEY"),
+            "apiKeyCookie" -> OpenapiSecuritySchemeApiKeyType("cookie", "api_key"),
+            "apiKeyQuery" -> OpenapiSecuritySchemeApiKeyType("query", "api-key")
+          )
         )
-      ))
+      )
     )
     BasicGenerator.imports ++
-        new EndpointGenerator().endpointDefs(doc) shouldCompile()
+      new EndpointGenerator().endpointDefs(doc) shouldCompile ()
   }
 
   it should "handle status codes" in {
@@ -165,10 +167,16 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null
     )
     val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
-    generatedCode should include(""".out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))""") // status code with body
-    generatedCode should include(""".errorOut(stringBody.description("couldn't find thing").and(statusCode(sttp.model.StatusCode(404))))""") // error status code with body
-    generatedCode should include(""".errorOut(statusCode(sttp.model.StatusCode(403)).description("Not authorised"))""") // error status code, no body
+    generatedCode should include(
+      """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
+    ) // status code with body
+    generatedCode should include(
+      """.errorOut(stringBody.description("couldn't find thing").and(statusCode(sttp.model.StatusCode(404))))"""
+    ) // error status code with body
+    generatedCode should include(
+      """.errorOut(statusCode(sttp.model.StatusCode(403)).description("Not authorised"))"""
+    ) // error status code, no body
     generatedCode should include(""".out(statusCode(sttp.model.StatusCode(204)).description("No body"))""") // status code, no body
-    generatedCode shouldCompile()
+    generatedCode shouldCompile ()
   }
 }

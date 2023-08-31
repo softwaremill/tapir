@@ -65,4 +65,3 @@ object PekkoUsersApi {
   def options(implicit ec: ExecutionContext): CustomiseInterceptors[Future, PekkoHttpServerOptions] =
     PekkoHttpServerOptions.customiseInterceptors.exceptionHandler(exceptionHandler)
 }
-

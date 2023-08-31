@@ -9,13 +9,20 @@ import java.util.Properties
 import scala.io.Source
 
 object SwaggerUI {
-  private val swaggerVersion = {
-    val p = new Properties()
-    val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
-    try p.load(pomProperties)
-    finally pomProperties.close()
-    p.getProperty("version")
-  }
+  private val swaggerVersion =
+    Option(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
+      .map { pomProperties =>
+        val p = new Properties()
+        try p.load(pomProperties)
+        finally pomProperties.close()
+        p.getProperty("version")
+      }
+      .getOrElse(
+        throw new ExceptionInInitializerError(
+          "META-INF resources are missing, please check " +
+            "https://tapir.softwaremill.com/en/latest/docs/openapi.html#using-swaggerui-with-sbt-assembly"
+        )
+      )
 
   private val swaggerInitializerJs = {
     val s = getClass.getResourceAsStream(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/swagger-initializer.js")
