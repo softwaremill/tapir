@@ -19,7 +19,10 @@ class ZioHttpTestServerInterpreter(
     trace: Trace
 ) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
 
-  override def route(es: List[ServerEndpoint[ZioStreams with WebSockets, Task]], interceptors: Interceptors): Http[Any, Throwable, Request, Response] = {
+  override def route(
+      es: List[ServerEndpoint[ZioStreams with WebSockets, Task]],
+      interceptors: Interceptors
+  ): Http[Any, Throwable, Request, Response] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }

@@ -7,8 +7,10 @@ import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
+import zio.http.ChannelEvent.Read
 import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 
 trait ZioHttpInterpreter[R] {
@@ -19,16 +21,16 @@ trait ZioHttpInterpreter[R] {
 
   def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): HttpApp[R & R2, Throwable] = {
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
-    implicit val monadError: MonadError[RIO[R & R2, *]]    = new RIOMonadError[R & R2]
-    val widenedSes                                         = ses.map(_.widen[R & R2])
-    val widenedServerOptions                               = zioHttpServerOptions.widen[R & R2]
-    val zioHttpRequestBody                                 = new ZioHttpRequestBody(widenedServerOptions)
-    val zioHttpResponseBody                                = new ZioHttpToResponseBody
-    val interceptors                                       = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
+    implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
+    val widenedSes = ses.map(_.widen[R & R2])
+    val widenedServerOptions = zioHttpServerOptions.widen[R & R2]
+    val zioHttpRequestBody = new ZioHttpRequestBody(widenedServerOptions)
+    val zioHttpResponseBody = new ZioHttpToResponseBody
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
     def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]]) =
       Handler.fromZIO {
-        val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioHttpResponseBody, ZioStreams](
+        val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
           _ => filteredEndpoints,
           zioHttpRequestBody,
           zioHttpResponseBody,
@@ -42,27 +44,27 @@ trait ZioHttpInterpreter[R] {
             error => ZIO.fail(error),
             {
               case RequestResult.Response(resp) =>
-                val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
-                val allHeaders  = resp.body.flatMap(_.contentLength) match {
-                  case Some(contentLength) if resp.contentLength.isEmpty =>
-                    ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
-                  case _                                                 => baseHeaders
-                }
-                val statusCode  = resp.code.code
+                resp.body match {
+                  case None              => handleHttpResponse(resp, None)
+                  case Some(Right(body)) => handleHttpResponse(resp, Some(body))
+                  case Some(Left(body)) =>
+                    Handler.webSocket { channel =>
+                      {
+                        channel.receiveAll {
+                          case ChannelEvent.Read(message) =>
+                            for {
+                              m <- body(message)
+                              _ <- ZIO.foldLeft(m)(())((_, z) => channel.send(Read(z)))
+                            } yield ()
 
-                ZIO.succeed(
-                  Response(
-                    status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
-                    headers = ZioHttpHeaders(allHeaders),
-                    body = resp.body
-                      .map {
-                        case ZioStreamHttpResponseBody(stream, _) => Body.fromStream(stream)
-                        case ZioRawHttpResponseBody(chunk, _)     => Body.fromChunk(chunk)
+                          case v =>
+                            channel.send(v)
+                        }
                       }
-                      .getOrElse(Body.empty)
-                  )
-                )
-              case RequestResult.Failure(_)     =>
+                    }.toResponse
+                }
+
+              case RequestResult.Failure(_) =>
                 ZIO.fail(
                   new RuntimeException(
                     s"The path: ${req.path} matches the shape of some endpoint, but none of the " +
@@ -76,11 +78,11 @@ trait ZioHttpInterpreter[R] {
       }
 
     val serverEndpointsFilter = FilterServerEndpoints[ZioStreams with WebSockets, RIO[R & R2, *]](widenedSes)
-    val singleEndpoint        = widenedSes.size == 1
+    val singleEndpoint = widenedSes.size == 1
 
     Http.fromOptionalHandlerZIO { request =>
       // pre-filtering the endpoints by shape to determine, if this request should be handled by tapir
-      val filteredEndpoints  = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
+      val filteredEndpoints = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
       val filteredEndpoints2 = if (singleEndpoint) {
         // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
         // we refuse to handle the request, allowing other ZIO Http routes to handle it. Otherwise even if the method
@@ -98,6 +100,31 @@ trait ZioHttpInterpreter[R] {
     }
   }
 
+  private def handleHttpResponse(
+      resp: ServerResponse[ZioResponseBody],
+      body: Option[ZioHttpResponseBody]
+  ) = {
+    val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
+    val allHeaders = body.flatMap(_.contentLength) match {
+      case Some(contentLength) if resp.contentLength.isEmpty => ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
+      case _                                                 => baseHeaders
+    }
+    val statusCode = resp.code.code
+
+    ZIO.succeed(
+      Response(
+        status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
+        headers = ZioHttpHeaders(allHeaders),
+        body = body
+          .map {
+            case ZioStreamHttpResponseBody(stream, _) => Body.fromStream(stream)
+            case ZioRawHttpResponseBody(chunk, _)     => Body.fromChunk(chunk)
+          }
+          .getOrElse(Body.empty)
+      )
+    )
+  }
+
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] =
     List(ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", ")))
 }
@@ -107,7 +134,7 @@ object ZioHttpInterpreter {
     new ZioHttpInterpreter[R] {
       override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions
     }
-  def apply(): ZioHttpInterpreter[Any]                                        =
+  def apply(): ZioHttpInterpreter[Any] =
     new ZioHttpInterpreter[Any] {
       override def zioHttpServerOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.default[Any]
     }
