@@ -7,6 +7,7 @@ import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
 import sttp.tapir.SchemaType
+import sttp.tapir.static.StaticErrorOutput.BadRequest
 
 class PicklerTest extends AnyFlatSpec with Matchers {
   behavior of "Pickler derivation"
@@ -86,33 +87,84 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     obj shouldBe Value(Level1TopClass("field_a_value", Level1InnerClass(7954)))
   }
 
-  it should "encode sealed trait as enum according to Schema's configuration" in {
+  it should "handle a simple ADT (no customizations)" in {
     // given
-    // sealed trait ErrorCode:
-    //   def specialCode: Int
-    //
-    // case object ErrorNotFound extends ErrorCode:
-    //   override def specialCode = 612
-    //
-    // case object ErrorTimeout extends ErrorCode:
-    //   override def specialCode = -5
-    //
-    //
-    // implicit val yEnumSchema: Schema[ErrorCode] = Schema.derivedEnumeration[ErrorCode](
-    //   encode = Some(v => v.specialCode),
-    //   schemaType = SchemaType.SInteger[ErrorCode]()
-    // )
-    // case class TopCaseClass(fieldA: NestedCaseClass, fieldB: String)
-    // case class NestedCaseClass(errorCode: ErrorCode)
-    //
-    // import sttp.tapir.generic.auto._ // for Schema auto-derivation
-    // import generic.auto._ // for Pickler auto-derivationi
-    //
-    // // when
-    // val derived = Pickler.derived[TopCaseClass]
-    // val jsonStr = derived.toCodec.encode(TopCaseClass(NestedCaseClass(ErrorTimeout), "msg18"))
-    //
-    // // then
-    // jsonStr shouldBe """xxxxx"""
+    import generic.auto._ // for Pickler auto-derivation
+    case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
+
+    // when
+    val derived = Pickler.derived[MyCaseClass]
+    val jsonStr1 = derived.toCodec.encode(MyCaseClass(ErrorTimeout, "msg18"))
+    val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
+
+    // then
+    jsonStr1 shouldBe """{"fieldA":"sttp.tapir.json.ErrorTimeout","fieldB":"msg18"}"""
+    jsonStr2 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
+  }
+
+  it should "apply custom field name encoding to a simple ADT" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+    given schemaConfig: Configuration = Configuration.default.copy(toEncodedName = _.toUpperCase())
+    case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
+
+    // when
+    val derived = Pickler.derived[MyCaseClass]
+    val jsonStr1 = derived.toCodec.encode(MyCaseClass(ErrorTimeout, "msg18"))
+    val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
+
+    // then
+    jsonStr1 shouldBe """{"FIELDA":"sttp.tapir.json.ErrorTimeout","FIELDB":"msg18"}"""
+    jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
+  }
+
+  it should "apply custom discriminator name to a simple ADT" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+    given schemaConfig: Configuration = Configuration.default.withDiscriminator("kind")
+    case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
+    val inputObj = MyCaseClass(CustomError("customErrMsg2"), "msg19")
+
+    // when
+    val derived = Pickler.derived[MyCaseClass]
+    val jsonStr = derived.toCodec.encode(inputObj)
+
+    // then
+    jsonStr shouldBe """{"fieldA":{"kind":"sttp.tapir.json.CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
+    derived.toCodec.decode(jsonStr) shouldBe Value(inputObj)
+  }
+
+  it should "Set discriminator value with oneOfUsingField" in {
+    // given
+    sealed trait Status:
+      def code: Int
+
+    case class StatusOk(oF: Int) extends Status {
+      def code = 200
+    }
+    case class StatusBadRequest(bF: Int) extends Status {
+      def code = 400
+    }
+
+    case class Response(status: Status)
+    val picklerOk = Pickler.derived[StatusOk]
+    val picklerBadRequest = Pickler.derived[StatusBadRequest]
+
+    // when
+    given statusPickler: Pickler[Status] = Pickler.oneOfUsingField[Status, Int](_.code, codeInt => s"code-$codeInt")(
+      200 -> picklerOk,
+      400 -> picklerBadRequest
+    )
+    val picklerResponse = Pickler.derived[Response]
+    val obj = Response(StatusBadRequest(54))
+
+    // then
+    picklerResponse.toCodec.encode(obj) shouldBe """{"status":{"$type":"code-400","bF":54}}"""
   }
 }
+
+sealed trait ErrorCode
+
+case object ErrorNotFound extends ErrorCode
+case object ErrorTimeout extends ErrorCode
+case class CustomError(msg: String) extends ErrorCode
