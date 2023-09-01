@@ -1,29 +1,22 @@
 package sttp.tapir.json
 
 import _root_.upickle.AttributeTagged
-import sttp.tapir.Codec.JsonCodec
-import _root_.upickle.AttributeTagged
-import sttp.tapir.Schema
-import sttp.tapir.Codec
-import scala.util.Try
-import scala.util.Success
-import sttp.tapir.DecodeResult.Error
-import sttp.tapir.DecodeResult.Value
-import scala.util.Failure
-import sttp.tapir.DecodeResult.Error.JsonDecodeException
-import _root_.upickle.core.Visitor
-import _root_.upickle.core.ObjVisitor
-import _root_.upickle.core.ArrVisitor
-import scala.compiletime.*
-import scala.deriving.Mirror
-import scala.util.NotGiven
-import scala.reflect.ClassTag
-import sttp.tapir.generic.Configuration
-import _root_.upickle.core.*
 import _root_.upickle.implicits.{macros => upickleMacros}
-import sttp.tapir.SchemaType
+import sttp.tapir.{Schema, SchemaType}
 
-trait Readers extends AttributeTagged {
+import scala.deriving.Mirror
+import scala.reflect.ClassTag
+
+trait Readers extends AttributeTagged with UpickleHelpers {
+
+  case class LeafWrapper[T](leaf: TaggedReader.Leaf[T], r: Reader[T], leafTagValue: String) extends TaggedReader[T] {
+    override def findReader(s: String) = if (s == leafTagValue) r else null
+  }
+
+  override def annotate[V](rw: Reader[V], n: String) = {
+    LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
+  }
+
   inline def macroProductR[T](schema: Schema[T], childReaders: Tuple)(using m: Mirror.ProductOf[T]): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
@@ -40,10 +33,26 @@ trait Readers extends AttributeTagged {
     else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, upickleMacros.tagName[T])
     else reader
 
-  inline def macroSumR[T](childReaders: Tuple): Reader[T] =
+  inline def macroSumR[T](derivedChildReaders: Tuple, subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val readers: List[Reader[_ <: T]] = childReaders.toList
-      .asInstanceOf[List[Reader[_ <: T]]]
+    subtypeDiscriminator match {
+      case discriminator: CustomSubtypeDiscriminator[T] =>
+        // This part ensures that child product readers are replaced with product readers with proper "tag value".
+        // This value is used by uPickle internals to find a matching reader for given discriminator value.
+        // Originally product readers have this value set to class name when they are derived individually,
+        // so we need to 'fix' them here using discriminator settings.
+        val readersFromMapping = discriminator.mapping
+          .map { case (k, v) => (k, v.innerUpickle.reader) }
+          .map {
+            case (k, leaf) if leaf.isInstanceOf[LeafWrapper[_]] =>
+              TaggedReader.Leaf[T](discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+            case (_, otherKindOfReader) =>
+              otherKindOfReader
+          }
 
-    Reader.merge[T](readers: _*)
+        new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
+      case _: DefaultSubtypeDiscriminator[T] =>
+        val readers = derivedChildReaders.toList.asInstanceOf[List[TaggedReader[T]]]
+        Reader.merge(readers: _*)
+    }
 }

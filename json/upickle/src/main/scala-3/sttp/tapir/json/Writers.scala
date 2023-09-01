@@ -24,7 +24,7 @@ import sttp.tapir.SchemaType.SProduct
 import _root_.upickle.core.Annotator.Checker
 import scala.quoted.*
 
-trait Writers extends AttributeTagged {
+trait Writers extends AttributeTagged with UpickleHelpers {
 
   inline def macroProductW[T: ClassTag](schema: Schema[T], childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(using
       Configuration
@@ -67,7 +67,7 @@ trait Writers extends AttributeTagged {
       annotate[T](
         writer,
         upickleMacros.tagName[T],
-        Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass),
+        Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
     else writer
 
@@ -78,15 +78,6 @@ trait Writers extends AttributeTagged {
     val writers: List[TaggedWriter[_ <: T]] = childWriters
       .asInstanceOf[List[TaggedWriter[_ <: T]]]
 
-    def scanChildren[T, V](xs: Seq[T])(f: T => V) = { // copied from uPickle
-      var x: V = null.asInstanceOf[V]
-      val i = xs.iterator
-      while (x == null && i.hasNext) {
-        val t = f(i.next())
-        if (t != null) x = t
-      }
-      x
-    }
     new TaggedWriter.Node[T](writers: _*) {
       override def findWriter(v: Any): (String, ObjectWriter[T]) = {
         subtypeDiscriminator match {
