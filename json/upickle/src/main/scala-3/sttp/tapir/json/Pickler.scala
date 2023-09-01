@@ -83,6 +83,7 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
   }
 
 object Pickler:
+
   inline def derived[T: ClassTag](using Configuration, Mirror.Of[T]): Pickler[T] =
     given subtypeDiscriminator: SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator()
     summonFrom {
@@ -113,14 +114,18 @@ object Pickler:
               s"Unexpected product type (case class) ${implicitly[ClassTag[T]].runtimeClass.getSimpleName()}, this method should only be used with sum types (like sealed hierarchy)"
             )
           case s: Mirror.SumOf[T] =>
-            given schemaV: Schema[V] = p.schema
-            val schema: Schema[T] = Schema.oneOfUsingField[T, V](extractor, asString)(
-              mapping.toList.map { case (v, p) =>
-                (v, p.schema)
-              }: _*
-            )
-            lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
-            picklerSum(schema, s, childPicklers)
+            inline if (isScalaEnum[T])
+              error("oneOfUsingField cannot be used with enums. Try Pickler.derivedEnumeration instead.")
+            else {
+              given schemaV: Schema[V] = p.schema
+              val schema: Schema[T] = Schema.oneOfUsingField[T, V](extractor, asString)(
+                mapping.toList.map { case (v, p) =>
+                  (v, p.schema)
+                }: _*
+              )
+              lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
+              picklerSum(schema, s, childPicklers)
+            }
         }
     }
 
@@ -156,7 +161,11 @@ object Pickler:
     inline m match {
       case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
       case s: Mirror.SumOf[T] =>
-        val schema: Schema[T] = Schema.derived[T]
+        val schema: Schema[T] =
+          inline if (isScalaEnum[T])
+            Schema.derivedEnumeration[T].defaultStringBased
+          else
+            Schema.derived[T]
         picklerSum(schema, s, childPicklers)
     }
 
@@ -236,6 +245,12 @@ private inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T], s: Mi
   new Pickler[T](tapirPickle, schema)
 
 implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
+
+transparent inline def isScalaEnum[X]: Boolean = inline compiletime.erasedValue[X] match
+  case _: Null         => false
+  case _: Nothing      => false
+  case _: reflect.Enum => true
+  case _               => false
 
 object generic {
   object auto { // TODO move to appropriate place

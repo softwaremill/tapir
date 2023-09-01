@@ -241,6 +241,41 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     encoded shouldBe """{"status":{"$type":"code-200","oF":818}}"""
     decoded shouldBe Value(inputObject)
   }
+
+  it should "support simple enums" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+    import Fixtures.*
+
+    // when
+    val picklerResponse = Pickler.derived[Response]
+    val codec = picklerResponse.toCodec
+    val inputObj = Response(ColorEnum.Pink, "pink!!")
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"color":"Pink","description":"pink!!"}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
+
+  it should "Reject oneOfUsingField for enums" in {
+    // given
+    assertCompiles("""
+      import Fixtures.*
+      val picklerCyan = Pickler.derived[RichColorEnum.Cyan.type]
+      val picklerMagenta = Pickler.derived[RichColorEnum.Magenta.type]""")
+    // when
+    assertDoesNotCompile("""
+      import Fixtures.*
+      val picklerCyan = Pickler.derived[RichColorEnum.Cyan.type]
+      val picklerMagenta = Pickler.derived[RichColorEnum.Magenta.type]
+
+      given picklerRichColor: Pickler[RichColorEnum] = 
+        Pickler.oneOfUsingField[RichColorEnum, Int](_.code, codeInt => s"code-$codeInt")(
+          3 -> picklerCyan,
+          18 -> picklerMagenta
+        )""")
+  }
 }
 
 sealed trait ErrorCode
