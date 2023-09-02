@@ -10,7 +10,6 @@ import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
-import zio.http.ChannelEvent.Read
 import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 
 trait ZioHttpInterpreter[R] {
@@ -47,21 +46,7 @@ trait ZioHttpInterpreter[R] {
                 resp.body match {
                   case None              => handleHttpResponse(resp, None)
                   case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                  case Some(Left(body)) =>
-                    Handler.webSocket { channel =>
-                      {
-                        channel.receiveAll {
-                          case ChannelEvent.Read(message) =>
-                            for {
-                              m <- body(message)
-                              _ <- ZIO.foldLeft(m)(())((_, z) => channel.send(Read(z)))
-                            } yield ()
-
-                          case v =>
-                            channel.send(v)
-                        }
-                      }
-                    }.toResponse
+                  case Some(Left(body))  => handleWebSocketResponse(body)
                 }
 
               case RequestResult.Failure(_) =>
@@ -100,6 +85,10 @@ trait ZioHttpInterpreter[R] {
     }
   }
 
+  private def handleWebSocketResponse(webSocketHandler: WebSocketHandler) = {
+    Handler.webSocket(webSocketHandler).toResponse
+  }
+
   private def handleHttpResponse(
       resp: ServerResponse[ZioResponseBody],
       body: Option[ZioHttpResponseBody]
@@ -130,6 +119,7 @@ trait ZioHttpInterpreter[R] {
 }
 
 object ZioHttpInterpreter {
+
   def apply[R](serverOptions: ZioHttpServerOptions[R]): ZioHttpInterpreter[R] =
     new ZioHttpInterpreter[R] {
       override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions

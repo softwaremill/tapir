@@ -1,11 +1,11 @@
 package sttp.tapir.server
 import zio.Task
-import zio.http.{WebSocketFrame => ZWebSocketFrame}
+import zio.http.WebSocketChannel
 
 package object ziohttp {
-  type F2F = ZWebSocketFrame => Task[List[ZWebSocketFrame]]
+  type WebSocketHandler = WebSocketChannel => Task[Unit]
 
   type ZioResponseBody =
-    Either[F2F, ZioHttpResponseBody]
+    Either[WebSocketHandler, ZioHttpResponseBody]
 
 }
