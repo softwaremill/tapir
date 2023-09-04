@@ -23,6 +23,7 @@ import _root_.upickle.implicits.{macros => upickleMacros}
 import sttp.tapir.SchemaType.SProduct
 import _root_.upickle.core.Annotator.Checker
 import scala.quoted.*
+import macros.*
 
 trait Writers extends AttributeTagged with UpickleHelpers {
 
@@ -61,14 +62,14 @@ trait Writers extends AttributeTagged with UpickleHelpers {
         )
     }
 
-    inline if upickleMacros.isSingleton[T] then
-      annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
-    else if upickleMacros.isMemberOfSealedHierarchy[T] then
+    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isScalaEnum[T] then
       annotate[T](
         writer,
         upickleMacros.tagName[T],
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
+      else if upickleMacros.isSingleton[T] then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
+      annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
   inline def macroSumW[T: ClassTag](inline schema: Schema[T], childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(

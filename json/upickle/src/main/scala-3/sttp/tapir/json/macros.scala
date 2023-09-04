@@ -279,3 +279,9 @@ private class SchemaDerivation2(genericDerivationConfig: Expr[Configuration])(us
     private def filterAnnotation(a: Term): Boolean =
       a.tpe.typeSymbol.maybeOwner.isNoSymbol ||
         a.tpe.typeSymbol.owner.fullName != "scala.annotation.internal"
+
+transparent inline def isScalaEnum[X]: Boolean = inline compiletime.erasedValue[X] match
+  case _: Null         => false
+  case _: Nothing      => false
+  case _: reflect.Enum => true
+  case _               => false

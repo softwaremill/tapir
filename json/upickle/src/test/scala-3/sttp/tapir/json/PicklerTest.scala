@@ -97,7 +97,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"fieldA":"sttp.tapir.json.ErrorTimeout","fieldB":"msg18"}"""
+    jsonStr1 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.ErrorTimeout"},"fieldB":"msg18"}"""
     jsonStr2 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
   }
 
@@ -113,7 +113,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"FIELDA":"sttp.tapir.json.ErrorTimeout","FIELDB":"msg18"}"""
+    jsonStr1 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.ErrorTimeout"},"FIELDB":"msg18"}"""
     jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
   }
 
@@ -133,7 +133,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
     // then
     jsonStr1 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
-    jsonStr2 shouldBe """{"fieldA":"sttp.tapir.json.ErrorNotFound","fieldB":""}"""
+    jsonStr2 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.ErrorNotFound"},"fieldB":""}"""
     codec.decode(jsonStr1) shouldBe Value(inputObj1)
     codec.decode(jsonStr2) shouldBe Value(inputObj2)
   }
@@ -203,7 +203,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     jsonStr1 shouldBe """{"status":{"$type":"code-400","bF":54}}"""
     decoded1 shouldBe Value(inputObject1)
-    jsonStr2 shouldBe """{"status":"code-500"}"""
+    jsonStr2 shouldBe """{"status":{"$type":"code-500"}}"""
     decoded2 shouldBe Value(inputObject2)
   }
 

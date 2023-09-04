@@ -18,6 +18,7 @@ import scala.util.NotGiven
 import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
+import macros.*
 
 trait TapirPickle[T] extends Readers with Writers:
   def reader: this.Reader[T]
@@ -246,11 +247,6 @@ private inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T], s: Mi
 
 implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
 
-transparent inline def isScalaEnum[X]: Boolean = inline compiletime.erasedValue[X] match
-  case _: Null         => false
-  case _: Nothing      => false
-  case _: reflect.Enum => true
-  case _               => false
 
 object generic {
   object auto { // TODO move to appropriate place
