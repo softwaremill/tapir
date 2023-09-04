@@ -51,6 +51,12 @@ trait Readers extends AttributeTagged with UpickleHelpers {
           }
 
         new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
+      case discriminator: EnumValueDiscriminator[T] =>
+        val readersForPossibleValues: Seq[TaggedReader[T]] = discriminator.validator.possibleValues.zip(derivedChildReaders.toList).map { case (enumValue, reader) =>
+          TaggedReader.Leaf[T](discriminator.encode(enumValue), reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+        }
+        new TaggedReader.Node[T](readersForPossibleValues: _*)
+        
       case _: DefaultSubtypeDiscriminator[T] =>
         val readers = derivedChildReaders.toList.asInstanceOf[List[TaggedReader[T]]]
         Reader.merge(readers: _*)

@@ -19,6 +19,8 @@ import scala.reflect.ClassTag
 import sttp.tapir.generic.Configuration
 import _root_.upickle.core.*
 import macros.*
+import sttp.tapir.Validator
+import sttp.tapir.SchemaAnnotations
 
 trait TapirPickle[T] extends Readers with Writers:
   def reader: this.Reader[T]
@@ -114,7 +116,7 @@ object Pickler:
             error(
               s"Unexpected product type (case class) ${implicitly[ClassTag[T]].runtimeClass.getSimpleName()}, this method should only be used with sum types (like sealed hierarchy)"
             )
-          case s: Mirror.SumOf[T] =>
+          case _: Mirror.SumOf[T] =>
             inline if (isScalaEnum[T])
               error("oneOfUsingField cannot be used with enums. Try Pickler.derivedEnumeration instead.")
             else {
@@ -125,10 +127,22 @@ object Pickler:
                 }: _*
               )
               lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
-              picklerSum(schema, s, childPicklers)
+              picklerSum(schema, childPicklers)
             }
         }
     }
+
+  inline def derivedEnumeration[T: ClassTag](using Mirror.Of[T]): CreateDerivedEnumerationPickler[T] = 
+    inline erasedValue[T] match
+      case _: Null =>
+        error("Unexpected non-enum Null passed to derivedEnumeration")
+      case _: Nothing =>
+        error("Unexpected non-enum Nothing passed to derivedEnumeration")
+      case _: reflect.Enum =>        
+        new CreateDerivedEnumerationPickler(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
+      case other =>
+        error(s"Unexpected non-enum value ${other} passed to derivedEnumeration")
+
 
   implicit inline def primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(new DefaultReadWriterWrapper(summonInline[_root_.upickle.default.ReadWriter[T]]), summonInline[Schema[T]])
@@ -155,19 +169,19 @@ object Pickler:
         null
     }
 
-  private inline def buildNewPickler[T: ClassTag](
+  private[tapir] inline def buildNewPickler[T: ClassTag](
   )(using m: Mirror.Of[T], c: Configuration, subtypeDiscriminator: SubtypeDiscriminator[T]): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
       case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
-      case s: Mirror.SumOf[T] =>
+      case _: Mirror.SumOf[T] =>
         val schema: Schema[T] =
           inline if (isScalaEnum[T])
             Schema.derivedEnumeration[T].defaultStringBased
           else
             Schema.derived[T]
-        picklerSum(schema, s, childPicklers)
+        picklerSum(schema, childPicklers)
     }
 
 private inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
@@ -226,7 +240,7 @@ private inline def productSchema[T, TFields <: Tuple](product: Mirror.ProductOf[
 ): Schema[T] =
   macros.SchemaDerivation2.productSchema(genericDerivationConfig, childSchemas)
 
-private inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T], s: Mirror.SumOf[T], childPicklers: => CP)(using
+private[json] inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T], childPicklers: => CP)(using
     m: Mirror.Of[T],
     config: Configuration,
     subtypeDiscriminator: SubtypeDiscriminator[T]

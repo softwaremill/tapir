@@ -258,6 +258,38 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     codec.decode(encoded) shouldBe Value(inputObj)
   }
 
+  it should "handle enums with ordinal encoding" in {
+    // given
+    import Fixtures.*
+    given picklerColorEnum: Pickler[ColorEnum] = Pickler.derivedEnumeration[ColorEnum].customStringBased(_.ordinal.toString)
+
+    // when
+    val picklerResponse = Pickler.derived[Response]
+    val codec = picklerResponse.toCodec
+    val inputObj = Response(ColorEnum.Pink, "pink!!")
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"color":"1","description":"pink!!"}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
+  
+  it should "handle enums with custom function encoding" in {
+    // given
+    import Fixtures.*
+    given picklerColorEnum: Pickler[RichColorEnum] = Pickler.derivedEnumeration[RichColorEnum].customStringBased(enumValue => s"color-number-${enumValue.code}")
+
+    // when
+    val picklerResponse = Pickler.derived[RichColorResponse]
+    val codec = picklerResponse.toCodec
+    val inputObj = RichColorResponse(RichColorEnum.Cyan)
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"color":"color-number-3"}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
+
   it should "Reject oneOfUsingField for enums" in {
     // given
     assertCompiles("""

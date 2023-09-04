@@ -69,6 +69,7 @@ trait Writers extends AttributeTagged with UpickleHelpers {
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
       else if upickleMacros.isSingleton[T] then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
+      // here we handle enums
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
@@ -86,8 +87,14 @@ trait Writers extends AttributeTagged with UpickleHelpers {
             val (tag, w) = super.findWriter(v)
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
             (overriddenTag, w)
+          case discriminator: EnumValueDiscriminator[T] =>
+            val (t, writer) = super.findWriter(v)
+            val overriddenTag = discriminator.encode(v.asInstanceOf[T])
+            (overriddenTag, writer)
+
           case _: DefaultSubtypeDiscriminator[T] =>
-            super.findWriter(v)
+            val (t, writer) = super.findWriter(v)
+            (t, writer)
         }
       }
     }

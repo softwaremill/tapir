@@ -1,5 +1,7 @@
 package sttp.tapir.json
 
+import sttp.tapir.Validator
+
 sealed trait SubtypeDiscriminator[T]
 
 trait CustomSubtypeDiscriminator[T] extends SubtypeDiscriminator[T]:
@@ -11,5 +13,8 @@ trait CustomSubtypeDiscriminator[T] extends SubtypeDiscriminator[T]:
 
   // to integrate with uPickle where at some point all we have is Any
   def writeUnsafe(t: Any): String = asString(extractor(t.asInstanceOf[T]))
+
+case class EnumValueDiscriminator[T](encode: T => String, validator: Validator.Enumeration[T]) extends SubtypeDiscriminator[T]:
+  def mapping: Seq[(String, TapirPickle[_ <:T])] = Seq.empty // TODO
 
 case class DefaultSubtypeDiscriminator[T]() extends SubtypeDiscriminator[T]
