@@ -1,9 +1,12 @@
 package sttp.tapir.testing
 
+import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.model.Method
+import sttp.model.{Method, StatusCode}
 import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
 
 class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
 
@@ -286,4 +289,42 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
 
     result shouldBe Set()
   }
+
+  it should "detect endpoints with body where status code doesn't allow a body" in {
+
+    val e1 = endpoint.in("endpoint1_Err").out(stringBody).out(statusCode(StatusCode.NoContent))
+    val e2 = endpoint.in("endpoint2_Ok").out(stringBody).out(statusCode(StatusCode.BadRequest))
+    val e3 = endpoint.in("endpoint3_Err").out(stringBody).out(statusCode(StatusCode.NotModified))
+    val e4 = endpoint.in("endpoint4_ok").out(emptyOutputAs(NoContent)).out(statusCode(StatusCode.NoContent))
+    val e5 = endpoint
+      .in("endpoint5_err")
+      .out(stringBody)
+      .errorOut(
+        sttp.tapir.oneOf[ErrorInfo](
+          oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound])),
+          oneOfVariant(statusCode(StatusCode.NoContent).and(jsonBody[NoContentData]))
+        )
+      )
+    val e6 = endpoint
+      .in("endpoint6_ok")
+      .errorOut(
+        sttp.tapir.oneOf[ErrorInfo](
+          oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound])),
+          oneOfVariant(statusCode(StatusCode.NoContent).and(emptyOutputAs(NoContent)))
+        )
+      )
+
+    val result = EndpointVerifier(List(e1, e2, e3, e4, e5, e6))
+
+    result shouldBe Set(
+      UnexpectedBodyError(e1, StatusCode.NoContent),
+      UnexpectedBodyError(e3, StatusCode.NotModified),
+      UnexpectedBodyError(e5, StatusCode.NoContent)
+    )
+  }
 }
+
+sealed trait ErrorInfo
+case class NotFound(what: String) extends ErrorInfo
+case object NoContent extends ErrorInfo
+case class NoContentData(msg: String) extends ErrorInfo

@@ -397,7 +397,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.3")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.3",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.6",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -459,7 +459,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
-  .dependsOn(core)
+  .dependsOn(core, circeJson % Test)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
@@ -544,7 +544,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.9.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.10.0" % Test
     )
   )
   .jvmPlatform(
@@ -635,7 +635,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = List(scala3),
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -880,8 +880,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.23.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.23.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.4" % Test,
       scalaTest.value % Test
     )
   )
@@ -1188,7 +1188,7 @@ lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-h
       "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
@@ -1376,7 +1376,9 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-jdkhttp-server",
-    libraryDependencies ++= loggerDependencies
+    libraryDependencies ++= Seq(
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14"
+    ) ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = List(scala2_13, scala3))
   .dependsOn(serverCore, serverTests % Test)

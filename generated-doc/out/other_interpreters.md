@@ -22,3 +22,7 @@ layer that allows you to create traced http endpoints from tapir Endpoint defini
 ## SNUnit
 
 [SNUnit](https://github.com/lolgab/snunit) is a Scala Native HTTP Server library based on [NGINX Unit](https://unit.nginx.org/). It provides first-class support for Tapir.
+
+## tapir-http-session
+
+[tapir-http-session](https://github.com/SOFTNETWORK-APP/tapir-http-session) provides integration with functionality of [akka-http-session](https://github.com/softwaremill/akka-http-session), which includes client-side session management in web and mobile applications.

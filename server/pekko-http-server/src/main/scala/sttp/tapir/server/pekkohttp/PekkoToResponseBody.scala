@@ -52,8 +52,8 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
           case nb: ContentType.NonBinary => HttpEntity(nb, r)
           case _                         => HttpEntity(ct, r.getBytes(charset))
         }
-      case RawBodyType.ByteArrayBody     => HttpEntity(ct, r)
-      case RawBodyType.ByteBufferBody    => HttpEntity(ct, ByteString(r))
+      case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
+      case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
       case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r, ChunkSize))
       case RawBodyType.InputStreamRangeBody =>
         val resource = r
@@ -69,7 +69,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = Multipart.FormData(parts: _*)
-        body.toEntity()
+        body.toEntity
     }
   }
 

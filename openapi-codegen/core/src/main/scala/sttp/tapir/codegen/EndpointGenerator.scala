@@ -127,21 +127,34 @@ class EndpointGenerator {
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
 
+  // treats redirects as ok
+  private val okStatus = """([23]\d\d)""".r
+  private val errorStatus = """([45]\d\d)""".r
   private def outs(responses: Seq[OpenapiResponse]) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
     responses
       .map { resp =>
+        val d = s""".description("${resp.description}")"""
         resp.content match {
-          case Nil => ""
+          case Nil =>
+            resp.code match {
+              case "200" | "default" => ""
+              case okStatus(s)       => s".out(statusCode(sttp.model.StatusCode($s))$d)"
+              case errorStatus(s)    => s".errorOut(statusCode(sttp.model.StatusCode($s))$d)"
+            }
           case content +: Nil =>
             resp.code match {
               case "200" =>
-                s".out(${contentTypeMapper(content.contentType, content.schema)})"
+                s".out(${contentTypeMapper(content.contentType, content.schema)}$d)"
+              case okStatus(s) =>
+                s".out(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
               case "default" =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema)})"
-              case _ =>
-                throw new NotImplementedError("Statuscode mapping is incomplete!")
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d)"
+              case errorStatus(s) =>
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
+              case x =>
+                throw new NotImplementedError(s"Statuscode mapping is incomplete! Cannot handle $x")
             }
           case _ => throw new NotImplementedError("We can handle only one return content!")
         }

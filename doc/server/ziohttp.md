@@ -94,6 +94,20 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 The capability can be added to the classpath independently of the interpreter through the
 `"com.softwaremill.sttp.shared" %% "zio"` dependency.
 
+## Error handling
+
+By default, any endpoints interpreted with the `ZioHttpInterpreter` will use tapir's built-in failed effect handling, 
+which uses an interceptor. Errors can be sent in a custom format by [providing a custom `ErrorHandler`](errors.md).
+
+If you'd prefer to use zio-http's error handling, you can disable tapir's exception interceptor by modifying the
+[server options](options.md):
+
+```scala mdoc:compile-only
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
+
+ZioHttpInterpreter(ZioHttpServerOptions.customiseInterceptors[Any].exceptionHandler(None).options)
+```
+
 ## Configuration
 
 The interpreter can be configured by providing an `ZioHttpServerOptions` value, see

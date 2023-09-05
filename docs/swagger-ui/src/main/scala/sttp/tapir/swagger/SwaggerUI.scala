@@ -9,13 +9,20 @@ import java.util.Properties
 import scala.io.Source
 
 object SwaggerUI {
-  private val swaggerVersion = {
-    val p = new Properties()
-    val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
-    try p.load(pomProperties)
-    finally pomProperties.close()
-    p.getProperty("version")
-  }
+  private val swaggerVersion =
+    Option(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
+      .map { pomProperties =>
+        val p = new Properties()
+        try p.load(pomProperties)
+        finally pomProperties.close()
+        p.getProperty("version")
+      }
+      .getOrElse(
+        throw new ExceptionInInitializerError(
+          "META-INF resources are missing, please check " +
+            "https://tapir.softwaremill.com/en/latest/docs/openapi.html#using-swaggerui-with-sbt-assembly"
+        )
+      )
 
   private val swaggerInitializerJs = {
     val s = getClass.getResourceAsStream(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/swagger-initializer.js")
@@ -53,9 +60,16 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
+    val swaggerInitializerJsWithOptions =
+      swaggerInitializerJsWithReplacedUrl.replace(
+        "window.ui = SwaggerUIBundle({",
+        s"""window.ui = SwaggerUIBundle({
+           |    showExtensions: ${options.showExtensions},""".stripMargin
+      )
+
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
-      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithReplacedUrl))
+      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithOptions))
 
     val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,

@@ -29,14 +29,15 @@ class ServerInterpreter[R, F[_], B, S](
   ): RequestHandler[F, R, B] = {
     is match {
       case Nil => RequestHandler.from { (request, ses, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
-      case is => is.head match {
-        case ei: EndpointInterceptor[F] => callInterceptors(is.tail, ei :: eisAcc, responder)
-        case i: RequestInterceptor[F] =>
-          i(
-            responder,
-            { ei => RequestHandler.from { (request, ses, _) => callInterceptors(is.tail, ei :: eisAcc, responder).apply(request, ses) } }
-          )
-      }
+      case is =>
+        is.head match {
+          case ei: EndpointInterceptor[F] => callInterceptors(is.tail, ei :: eisAcc, responder)
+          case i: RequestInterceptor[F] =>
+            i(
+              responder,
+              { ei => RequestHandler.from { (request, ses, _) => callInterceptors(is.tail, ei :: eisAcc, responder).apply(request, ses) } }
+            )
+        }
     }
   }
 
@@ -64,12 +65,15 @@ class ServerInterpreter[R, F[_], B, S](
     }
 
   private val defaultSecurityFailureResponse =
-      ServerResponse[B](StatusCode.InternalServerError, Nil, None, None).unit
+    ServerResponse[B](StatusCode.InternalServerError, Nil, None, None).unit
 
-  private def endpointHandler(securityFailureResponse: => F[ServerResponse[B]], endpointInterceptors: List[EndpointInterceptor[F]]): EndpointHandler[F, B] =
-      endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
-        interceptor(responder(defaultSuccessStatusCode), handler)
-      }
+  private def endpointHandler(
+      securityFailureResponse: => F[ServerResponse[B]],
+      endpointInterceptors: List[EndpointInterceptor[F]]
+  ): EndpointHandler[F, B] =
+    endpointInterceptors.foldRight(defaultEndpointHandler(securityFailureResponse)) { case (interceptor, handler) =>
+      interceptor(responder(defaultSuccessStatusCode), handler)
+    }
 
   private def tryServerEndpoint[A, U, I, E, O](
       request: ServerRequest,
@@ -117,7 +121,10 @@ class ServerInterpreter[R, F[_], B, S](
       response <- securityLogicResult match {
         case Left(e) =>
           resultOrValueFrom.value(
-            endpointHandler(responder(defaultErrorStatusCode)(request, model.ValuedEndpointOutput(se.endpoint.errorOutput, e)), endpointInterceptors)
+            endpointHandler(
+              responder(defaultErrorStatusCode)(request, model.ValuedEndpointOutput(se.endpoint.errorOutput, e)),
+              endpointInterceptors
+            )
               .onSecurityFailure(SecurityFailureContext(se, a, request))
               .map(r => RequestResult.Response(r): RequestResult[B])
           )
@@ -224,9 +231,11 @@ class ServerInterpreter[R, F[_], B, S](
       val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
       val headers = outputValues.headers
-      outputValues.body match {
-        case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
-        case None                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
+      (statusCode, outputValues.body) match {
+        case (StatusCode.NoContent | StatusCode.NotModified, Some(_)) =>
+          monad.error(new IllegalStateException(s"Unexpected response body when status code == $statusCode"))
+        case (_, Some(bodyFromHeaders)) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))), Some(output)).unit
+        case (_, None)                  => ServerResponse(statusCode, headers, None: Option[B], Some(output)).unit
       }
     }
   }

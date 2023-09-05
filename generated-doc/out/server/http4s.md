@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.7.0"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.7.3"
 ```
 
 and import the object:
@@ -112,6 +112,37 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint.serverLogicSuccess[IO](_ =>
   IO(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))
 ))
+```
+
+## Accessing http4s context
+
+If you'd like to access context provided by an http4s middleware, e.g. with authentication data, this can be done
+with a dedicated context-extracting input, `.contextIn`. Endpoints using such input need then to be interpreted to
+`org.http4s.ContextRoutes` (also known by its type alias `AuthedRoutes`) using the `.toContextRoutes` method.
+
+For example:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.http4s._
+import cats.effect.IO
+import org.http4s.ContextRoutes
+
+case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s middleware // the context expected from http4s middleware
+
+def countCharacters(in: (String, SomeCtx)): IO[Either[Unit, Int]] = 
+  IO.pure(
+    if(in._2.actionAllowed) Right[Unit, Int](in._1.length) else Left[Unit, Int](())
+  )
+
+// the .contextIn extension method is imported from the sttp.tapir.server.http4s package
+// the Context[SomeCtx] capability requirement requires interpretation to be done using .toContextRoutes
+val countCharactersEndpoint: PublicEndpoint[(String, SomeCtx), Unit, Int, Context[SomeCtx]] = 
+  endpoint.in(stringBody).contextIn[SomeCtx]().out(plainBody[Int])
+  
+val countCharactersRoutes: ContextRoutes[SomeCtx, IO] = 
+  Http4sServerInterpreter[IO]()
+    .toContextRoutes(countCharactersEndpoint.serverLogic(countCharacters _))
 ```
 
 ## Configuration

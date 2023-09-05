@@ -71,4 +71,3 @@ object WebSocketPekkoServer extends App {
 
   Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }
-

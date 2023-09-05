@@ -17,6 +17,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
   * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
+  * [Pekko HTTP](https://tapir.softwaremill.com/en/latest/server/pekkohttp.html) `Route`s/`Directive`s
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
   * [Vert.X](https://tapir.softwaremill.com/en/latest/server/vertx.html) `Router => Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
@@ -129,7 +130,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.7.0"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.7.3"
 ```
 
 Then, import:

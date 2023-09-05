@@ -1,9 +1,8 @@
 package sttp.tapir.server.pekkohttp
 
 import org.apache.pekko.http.scaladsl.server.RequestContext
-import org.apache.pekko.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
 import org.apache.pekko.http.scaladsl.model.{Uri => PekkoUri}
-import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.model.{Header, HeaderNames, Method, QueryParams, Uri}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
@@ -20,7 +19,7 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
     def run(p: PekkoUri.Path, acc: List[String]): List[String] = p match {
       case PekkoUri.Path.Slash(pathTail)      => run(pathTail, acc)
       case PekkoUri.Path.Segment(s, pathTail) => run(pathTail, s :: acc)
-      case _                                 => acc.reverse
+      case _                                  => acc.reverse
     }
 
     run(ctx.unmatchedPath, Nil)
@@ -35,14 +34,16 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
   // https://doc.pekko.io/docs/pekko-http/current/common/http-model.html?language=scala#http-headers
   // https://github.com/softwaremill/tapir/issues/331
   override lazy val headers: Seq[Header] = {
-    val contentLength = ctx.request.entity.contentLengthOption.map(`Content-Length`(_))
-    val contentType = `Content-Type`(ctx.request.entity.contentType)
-    val pekkoHeaders = contentType :: contentLength.toList ++ ctx.request.headers
-    pekkoHeaders.filterNot(_.value == EmptyContentType).map(h => Header(h.name(), h.value()))
+    val contentLengthHeader = ctx.request.entity.contentLengthOption.map(cl => Header(HeaderNames.ContentLength, cl.toString))
+    val contentType = ctx.request.entity.contentType.value
+    val contentTypeHeader =
+      if (contentType == EmptyContentType) Nil else List(Header(HeaderNames.ContentType, ctx.request.entity.contentType.value))
+    contentTypeHeader ++ contentLengthHeader.toList ++ ctx.request.headers.map(h => Header(h.name(), h.value()))
   }
 
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): PekkoServerRequest = copy(attributes = attributes.put(k, v))
 
-  override def withUnderlying(underlying: Any): ServerRequest = PekkoServerRequest(ctx = underlying.asInstanceOf[RequestContext], attributes)
+  override def withUnderlying(underlying: Any): ServerRequest =
+    PekkoServerRequest(ctx = underlying.asInstanceOf[RequestContext], attributes)
 }

@@ -24,7 +24,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+    mountWithDefaultHandlers(e.widen)(router, extractRouteDefinition(e.endpoint), vertxZioServerOptions)
       .handler(endpointHandler(e))
   }
 

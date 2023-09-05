@@ -39,7 +39,7 @@ class TapirNewtypeSupportTest extends AnyFlatSpec with Matchers {
     import StringNewtypeWithMixin.tapirCodec
     val newTypeCodec = implicitly[Codec[String, StringNewtypeWithMixin, TextPlain]]
 
-    newTypeCodec.decode("asd") shouldBe Multiple(List("asd did not satisfy startsWith(foo)", "asd did not satisfy startsWith(baz)"))
+    newTypeCodec.decode("asd") shouldBe Multiple(List("asd did not satisfy startsWith(foo)", "asd did not satisfy endsWith(baz)"))
   }
 
   "Provided PlainText codec for a Subtype" should "equal to the codec of its underlying value" in {
