@@ -1,26 +1,19 @@
 package sttp.tapir.json
 
+import _root_.upickle.core.{ArrVisitor, ObjVisitor, Visitor, _}
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.Schema
-import sttp.tapir.Codec
-import scala.util.Try
-import scala.util.Success
-import sttp.tapir.DecodeResult.Error
-import sttp.tapir.DecodeResult.Value
-import scala.util.Failure
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
-import _root_.upickle.core.Visitor
-import _root_.upickle.core.ObjVisitor
-import _root_.upickle.core.ArrVisitor
+import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.generic.Configuration
+import sttp.tapir.{Codec, Schema, SchemaAnnotations, Validator}
+
 import scala.compiletime.*
 import scala.deriving.Mirror
-import scala.util.NotGiven
 import scala.reflect.ClassTag
-import sttp.tapir.generic.Configuration
-import _root_.upickle.core.*
+import scala.util.{Failure, NotGiven, Success, Try}
+
 import macros.*
-import sttp.tapir.Validator
-import sttp.tapir.SchemaAnnotations
+import sttp.tapir.SchemaType.SProduct
 
 trait TapirPickle[T] extends Readers with Writers:
   def reader: this.Reader[T]
@@ -72,7 +65,7 @@ class DefaultReadWriterWrapper[T](delegateDefault: _root_.upickle.default.ReadWr
   override lazy val writer = rw
 
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
-  def toCodec: JsonCodec[T] = {
+  def toCodec: JsonCodec[T] =
     import innerUpickle._
     given reader: innerUpickle.Reader[T] = innerUpickle.reader
     given writer: innerUpickle.Writer[T] = innerUpickle.writer
@@ -83,7 +76,21 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
         case Failure(e) => Error(s, JsonDecodeException(errors = List.empty, e))
       }
     } { t => write(t) }
-  }
+
+  def asOption: Pickler[Option[T]] =
+    val newSchema = schema.asOption
+    import innerUpickle.*
+    given reader: innerUpickle.Reader[T] = innerUpickle.reader
+    given writer: innerUpickle.Writer[T] = innerUpickle.writer
+    val readerOpt = summon[Reader[Option[T]]]
+    val writerOpt = summon[Writer[Option[T]]]
+    new Pickler[Option[T]](
+      new TapirPickle[Option[T]] {
+        override lazy val writer = writerOpt.asInstanceOf[Writer[Option[T]]]
+        override lazy val reader = readerOpt.asInstanceOf[Reader[Option[T]]]
+      },
+      newSchema
+    )
 
 object Pickler:
 
@@ -132,20 +139,21 @@ object Pickler:
         }
     }
 
-  inline def derivedEnumeration[T: ClassTag](using Mirror.Of[T]): CreateDerivedEnumerationPickler[T] = 
+  inline def derivedEnumeration[T: ClassTag](using Mirror.Of[T]): CreateDerivedEnumerationPickler[T] =
     inline erasedValue[T] match
       case _: Null =>
         error("Unexpected non-enum Null passed to derivedEnumeration")
       case _: Nothing =>
         error("Unexpected non-enum Nothing passed to derivedEnumeration")
-      case _: reflect.Enum =>        
+      case _: reflect.Enum =>
         new CreateDerivedEnumerationPickler(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
       case other =>
         error(s"Unexpected non-enum value ${other} passed to derivedEnumeration")
 
-
-  implicit inline def primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
+  inline given primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(new DefaultReadWriterWrapper(summonInline[_root_.upickle.default.ReadWriter[T]]), summonInline[Schema[T]])
+
+  given optionPickler[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] = summon[Pickler[T]].asOption
 
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 
@@ -172,6 +180,8 @@ object Pickler:
   private[tapir] inline def buildNewPickler[T: ClassTag](
   )(using m: Mirror.Of[T], c: Configuration, subtypeDiscriminator: SubtypeDiscriminator[T]): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
+    val ct = summon[ClassTag[T]]
+    // println(s"Building new pickler for ${ct.runtimeClass.getName()}")
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
       case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
@@ -181,6 +191,7 @@ object Pickler:
             Schema.derivedEnumeration[T].defaultStringBased
           else
             Schema.derived[T]
+        // println(s"Schema for sum: $schema")
         picklerSum(schema, childPicklers)
     }
 
@@ -217,9 +228,13 @@ private inline def picklerProduct[T: ClassTag, TFields <: Tuple](
     config: Configuration,
     subtypeDiscriminator: SubtypeDiscriminator[T]
 ): Pickler[T] =
-  lazy val childSchemas: Tuple.Map[TFields, Schema] =
+  lazy val derivedChildSchemas: Tuple.Map[TFields, Schema] =
     childPicklers.map([t] => (p: t) => p.asInstanceOf[Pickler[t]].schema).asInstanceOf[Tuple.Map[TFields, Schema]]
-  val schema: Schema[T] = productSchema(product, childSchemas)
+  val schema: Schema[T] = productSchema(product, derivedChildSchemas)
+  // only now schema fields are enriched properly
+  val enrichedChildSchemas = schema.schemaType.asInstanceOf[SProduct[T]].fields.map(_.schema)
+  val childDefaults = enrichedChildSchemas.map(_.default.map(_._1))
+
   val tapirPickle = new TapirPickle[T] {
     override def tagName = config.discriminator.getOrElse(super.tagName)
 
@@ -227,10 +242,13 @@ private inline def picklerProduct[T: ClassTag, TFields <: Tuple](
       macroProductW[T](
         schema,
         childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.writer).productIterator.toList,
+        childDefaults,
         subtypeDiscriminator
       )
     override lazy val reader: Reader[T] =
-      macroProductR[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader))(using product)
+      macroProductR[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader), childDefaults)(using
+        product
+      )
 
   }
   Pickler[T](tapirPickle, schema)
@@ -260,7 +278,6 @@ private[json] inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T],
   new Pickler[T](tapirPickle, schema)
 
 implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
-
 
 object generic {
   object auto { // TODO move to appropriate place

@@ -1,13 +1,10 @@
 package sttp.tapir.json
 
-import sttp.tapir.Validator
-import sttp.tapir.SchemaAnnotations
-import sttp.tapir.SchemaType
-import sttp.tapir.Schema
-import sttp.tapir.macros.CreateDerivedEnumerationSchema
-import compiletime.*
-import scala.deriving.Mirror
 import sttp.tapir.generic.Configuration
+import sttp.tapir.macros.CreateDerivedEnumerationSchema
+import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
+
+import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
 class CreateDerivedEnumerationPickler[T: ClassTag](

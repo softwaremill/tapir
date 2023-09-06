@@ -17,8 +17,9 @@ trait Readers extends AttributeTagged with UpickleHelpers {
     LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
   }
 
-  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple)(using m: Mirror.ProductOf[T]): Reader[T] =
+  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]])(using m: Mirror.ProductOf[T]): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
+
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
       override def visitors0 = childReaders
       override def fromProduct(p: Product): T = m.fromProduct(p)
@@ -26,7 +27,9 @@ trait Readers extends AttributeTagged with UpickleHelpers {
         schemaFields.indexWhere(_.name.encodedName == x)
 
       override def allKeysArray = schemaFields.map(_.name.encodedName).toArray
-      override def storeDefaults(x: _root_.upickle.implicits.BaseCaseObjectContext): Unit = upickleMacros.storeDefaults[T](x)
+      override def storeDefaults(x: _root_.upickle.implicits.BaseCaseObjectContext): Unit = {
+        macros.storeDefaultsTapir[T](x, childDefaults)
+      }
     }
 
     inline if upickleMacros.isSingleton[T] then annotate[T](SingletonReader[T](upickleMacros.getSingleton[T]), upickleMacros.tagName[T])

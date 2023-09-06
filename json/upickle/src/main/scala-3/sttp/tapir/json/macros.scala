@@ -1,26 +1,17 @@
 package sttp.tapir.json.macros
 
-import scala.quoted.*
-import deriving.*, compiletime.*
-import scala.reflect.ClassTag
 import _root_.upickle.implicits.*
 import _root_.upickle.implicits.{macros => uMacros}
-import sttp.tapir.Schema
-import sttp.tapir.SchemaType.SProduct
+import sttp.tapir.SchemaType.{SProduct, SProductField, SRef}
 import sttp.tapir.generic.Configuration
-import sttp.tapir.Schema
-import sttp.tapir.SchemaType
-import scala.reflect.TypeTest
-import sttp.tapir.SchemaType.SProductField
-import sttp.tapir.SchemaType.SProduct
-import sttp.tapir.FieldName
+import sttp.tapir.{FieldName, Schema, SchemaType}
+
 import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters.ConcurrentMapHasAsScala
-import sttp.tapir.SchemaType.SRef
-import sttp.tapir.SchemaType.SCoproduct
+import scala.quoted.*
 import scala.reflect.ClassTag
-import sttp.tapir.SchemaType.SchemaWithValue
-import sttp.tapir.json.generic
+
+import compiletime.*
 
 type IsInt[A <: Int] = A
 
@@ -30,9 +21,10 @@ inline def writeSnippets[R, T](
     inline self: upickle.implicits.CaseClassReadWriters#CaseClassWriter[T],
     inline v: T,
     inline ctx: _root_.upickle.core.ObjVisitor[_, R],
-    childWriters: List[Any]
+    childWriters: List[Any],
+    childDefaults: List[Option[Any]]
 ): Unit =
-  ${ writeSnippetsImpl[R, T]('sProduct, 'thisOuter, 'self, 'v, 'ctx, 'childWriters) }
+  ${ writeSnippetsImpl[R, T]('sProduct, 'thisOuter, 'self, 'v, 'ctx, 'childWriters, 'childDefaults) }
 
 def writeSnippetsImpl[R, T](
     sProduct: Expr[SProduct[T]],
@@ -40,7 +32,8 @@ def writeSnippetsImpl[R, T](
     self: Expr[upickle.implicits.CaseClassReadWriters#CaseClassWriter[T]],
     v: Expr[T],
     ctx: Expr[_root_.upickle.core.ObjVisitor[_, R]],
-    childWriters: Expr[List[?]]
+    childWriters: Expr[List[?]],
+    childDefaults: Expr[List[Option[?]]]
 )(using Quotes, Type[T], Type[R]): Expr[Unit] =
 
   import quotes.reflect.*
@@ -50,14 +43,11 @@ def writeSnippetsImpl[R, T](
       val tpe0 = TypeRepr.of[T].memberType(rawLabel).asType
       tpe0 match
         case '[tpe] =>
-          val defaults = uMacros.getDefaultParamsImpl0[T]
           Literal(IntConstant(i)).tpe.asType match
             case '[IsInt[index]] =>
               val encodedName = '{ ${ sProduct }.fields(${ Expr(i) }).name.encodedName }
               val select = Select.unique(v.asTerm, rawLabel.name).asExprOf[Any]
-              // val encodedNameExpr = '{ ${schema} match { case } }
-
-              val snippet = '{
+              '{
                 ${ self }.writeSnippetMappedName[R, tpe](
                   ${ ctx },
                   ${ encodedName },
@@ -65,12 +55,39 @@ def writeSnippetsImpl[R, T](
                   ${ select }
                 )
               }
-              if (!defaults.contains(label)) snippet
-              else '{ if (${ thisOuter }.serializeDefaults || ${ select } != ${ defaults(label) }) $snippet }
-
     },
     '{ () }
   )
+
+inline def storeDefaultsTapir[T](inline x: upickle.implicits.BaseCaseObjectContext, defaultsFromSchema: List[Option[Any]]): Unit = ${
+  storeDefaultsImpl[T]('x, 'defaultsFromSchema)
+}
+def storeDefaultsImpl[T](x: Expr[upickle.implicits.BaseCaseObjectContext], defaultsFromSchema: Expr[List[Option[Any]]])(using
+    Quotes,
+    Type[T]
+) = {
+  import quotes.reflect.*
+
+  val defaults = uMacros.getDefaultParamsImpl0[T]
+  val statements = uMacros
+    .fieldLabelsImpl0[T]
+    .zipWithIndex
+    .map { case ((rawLabel, label), i) =>
+      Expr.block(
+        List('{
+          // modified uPickle macro - this additional expression looks for defaults in the schema
+          // and applies them to override defaults from the type definition
+          ${ defaultsFromSchema }(${ Expr(i) }).foreach { schemaDefaultValue =>
+            ${ x }.storeValueIfNotFound(${ Expr(i) }, schemaDefaultValue)
+          }
+        }),
+        if (defaults.contains(label)) '{ ${ x }.storeValueIfNotFound(${ Expr(i) }, ${ defaults(label) }) }
+        else '{}
+      )
+    }
+
+  Expr.block(statements, '{})
+}
 
 object SchemaDerivation2:
   private[macros] val deriveInProgress: scala.collection.mutable.Map[String, Unit] = new ConcurrentHashMap[String, Unit]().asScala
@@ -168,10 +185,10 @@ private class SchemaDerivation2(genericDerivationConfig: Expr[Configuration])(us
   private def enrichSchema[X: Type](schema: Expr[Schema[X]], annotations: Annotations): Expr[Schema[X]] =
     annotations.all.foldLeft(schema) { (schema, annTerm) =>
       annTerm.asExpr match
-        case '{ $ann: Schema.annotations.description }    => '{ $schema.description($ann.text) }
-        case '{ $ann: Schema.annotations.encodedExample } => '{ $schema.encodedExample($ann.example) }
-        case '{ $ann: Schema.annotations.default[X] }     => '{ $schema.default($ann.default, $ann.encoded) }
-        case '{ $ann: Schema.annotations.validate[X] }    => '{ $schema.validate($ann.v) }
+        case '{ $ann: Schema.annotations.description }     => '{ $schema.description($ann.text) }
+        case '{ $ann: Schema.annotations.encodedExample }  => '{ $schema.encodedExample($ann.example) }
+        case '{ $ann: Schema.annotations.default[? <: X] } => '{ $schema.default($ann.default, $ann.encoded) }
+        case '{ $ann: Schema.annotations.validate[X] }     => '{ $schema.validate($ann.v) }
         case '{ $ann: Schema.annotations.validateEach[X] } =>
           '{ $schema.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[X]).validate($ann.v)) }
         case '{ $ann: Schema.annotations.format }     => '{ $schema.format($ann.format) }

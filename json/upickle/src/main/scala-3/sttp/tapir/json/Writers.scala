@@ -1,33 +1,30 @@
 package sttp.tapir.json
 
-import sttp.tapir.Codec.JsonCodec
 import _root_.upickle.AttributeTagged
-import sttp.tapir.Schema
-import sttp.tapir.Codec
-import scala.util.Try
-import scala.util.Success
-import sttp.tapir.DecodeResult.Error
-import sttp.tapir.DecodeResult.Value
-import scala.util.Failure
-import sttp.tapir.DecodeResult.Error.JsonDecodeException
-import _root_.upickle.core.Visitor
-import _root_.upickle.core.ObjVisitor
-import _root_.upickle.core.ArrVisitor
-import scala.compiletime.*
-import scala.deriving.Mirror
-import scala.util.NotGiven
-import scala.reflect.ClassTag
-import sttp.tapir.generic.Configuration
-import _root_.upickle.core.*
+import _root_.upickle.core.Annotator.Checker
+import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{macros => upickleMacros}
 import sttp.tapir.SchemaType.SProduct
-import _root_.upickle.core.Annotator.Checker
-import scala.quoted.*
+import sttp.tapir.generic.Configuration
+import sttp.tapir.Schema
+
+import scala.reflect.ClassTag
+
 import macros.*
 
 trait Writers extends AttributeTagged with UpickleHelpers {
+  // override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
+  //   implicitly[Writer[T]].comap[Option[T]] {
+  //     case None => null.asInstanceOf[T]
+  //     case Some(x) => x
+  //   }
 
-  inline def macroProductW[T: ClassTag](schema: Schema[T], childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(using
+  inline def macroProductW[T: ClassTag](
+      schema: Schema[T],
+      childWriters: => List[Any],
+      childDefaults: => List[Option[Any]],
+      subtypeDiscriminator: SubtypeDiscriminator[T]
+  )(using
       Configuration
   ) =
     lazy val writer = new CaseClassWriter[T] {
@@ -45,7 +42,8 @@ trait Writers extends AttributeTagged with UpickleHelpers {
             this,
             v,
             ctx,
-            childWriters
+            childWriters,
+            childDefaults
           )
           ctx.visitEnd(-1)
         }
@@ -58,7 +56,8 @@ trait Writers extends AttributeTagged with UpickleHelpers {
           this,
           v,
           ctx,
-          childWriters
+          childWriters,
+          childDefaults
         )
     }
 
@@ -68,7 +67,8 @@ trait Writers extends AttributeTagged with UpickleHelpers {
         upickleMacros.tagName[T],
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
-      else if upickleMacros.isSingleton[T] then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
+    else if upickleMacros.isSingleton[T]
+    then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
       // here we handle enums
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer

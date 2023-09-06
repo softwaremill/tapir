@@ -7,13 +7,18 @@ import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
 import sttp.tapir.SchemaType
+import sttp.tapir.Schema.annotations.encodedName
+import sttp.tapir.Schema.annotations.default
 
 class PicklerTest extends AnyFlatSpec with Matchers {
   behavior of "Pickler derivation"
 
   case class FlatClass(fieldA: Int, fieldB: String)
-  case class Level1TopClass(fieldA: String, fieldB: Level1InnerClass)
-  case class Level1InnerClass(fieldA11: Int)
+  case class TopClass(fieldA: String, fieldB: InnerClass)
+  case class InnerClass(fieldA11: Int)
+
+  case class TopClass2(fieldA: String, fieldB: AnnotatedInnerClass)
+  case class AnnotatedInnerClass(@encodedName("encoded_field-a") fieldA: String, fieldB: String)
 
   it should "build from an existing Schema and ReadWriter" in {
     // given schema and reader / writer in scope
@@ -42,14 +47,14 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     import generic.auto._ // for Pickler auto-derivation
 
     // when
-    val derived = Pickler.derived[Level1TopClass]
-    val jsonStr = derived.toCodec.encode(Level1TopClass("field_a_value", Level1InnerClass(7954)))
+    val derived = Pickler.derived[TopClass]
+    val jsonStr = derived.toCodec.encode(TopClass("field_a_value", InnerClass(7954)))
     val inputJson = """{"fieldA":"field_a_value_2","fieldB":{"fieldA11":-321}}"""
     val resultObj = derived.toCodec.decode(inputJson)
 
     // then
     jsonStr shouldBe """{"fieldA":"field_a_value","fieldB":{"fieldA11":7954}}"""
-    resultObj shouldBe Value(Level1TopClass("field_a_value_2", Level1InnerClass(-321)))
+    resultObj shouldBe Value(TopClass("field_a_value_2", InnerClass(-321)))
   }
 
   it should "fail to derive a Pickler when there's a Schema but missing ReadWriter" in {
@@ -59,17 +64,29 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     """)
   }
 
-  it should "respect encodedName from Configuration" in {
+  it should "use encodedName from configuration" in {
     // given
     import generic.auto._ // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
 
     // when
-    val derived = Pickler.derived[Level1TopClass]
-    val jsonStr = derived.toCodec.encode(Level1TopClass("field_a_value", Level1InnerClass(7954)))
+    val derived = Pickler.derived[TopClass]
+    val jsonStr = derived.toCodec.encode(TopClass("field_a_value", InnerClass(7954)))
 
     // then
     jsonStr shouldBe """{"field_a":"field_a_value","field_b":{"field_a11":7954}}"""
+  }
+
+  it should "use encodedName from annotations" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val derived = Pickler.derived[TopClass2]
+    val jsonStr = derived.toCodec.encode(TopClass2("field_a_value", AnnotatedInnerClass("f-a-value", "f-b-value")))
+
+    // then
+    jsonStr shouldBe """{"fieldA":"field_a_value","fieldB":{"encoded_field-a":"f-a-value","fieldB":"f-b-value"}}"""
   }
 
   it should "Decode in a Reader using custom encodedName" in {
@@ -78,12 +95,12 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
 
     // when
-    val derived = Pickler.derived[Level1TopClass]
+    val derived = Pickler.derived[TopClass]
     val jsonStr = """{"field_a":"field_a_value","field_b":{"field_a11":7954}}"""
     val obj = derived.toCodec.decode(jsonStr)
 
     // then
-    obj shouldBe Value(Level1TopClass("field_a_value", Level1InnerClass(7954)))
+    obj shouldBe Value(TopClass("field_a_value", InnerClass(7954)))
   }
 
   it should "handle a simple ADT (no customizations)" in {
@@ -115,6 +132,45 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     jsonStr1 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.ErrorTimeout"},"FIELDB":"msg18"}"""
     jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
+  }
+
+  it should "apply defaults from annotations" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val codecCc1 = Pickler.derived[ClassWithDefault].toCodec
+    val codecCc2 = Pickler.derived[ClassWithDefault2].toCodec
+    val codecCc3 = Pickler.derived[ClassWithDefault3].toCodec
+    val jsonStrCc11 = codecCc1.encode(ClassWithDefault("field-a-user-value", "msg104"))
+    val object12 = codecCc1.decode("""{"fieldB":"msg105"}""")
+    val object2 = codecCc2.decode("""{"fieldA":"msgCc12"}""")
+    val object3 = codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
+
+    // then
+    jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
+    object12 shouldBe Value(ClassWithDefault("field-a-default", "msg105"))
+    object2 shouldBe Value(ClassWithDefault2("msgCc12", ErrorTimeout))
+    object3 shouldBe Value(ClassWithDefault3(ErrorNotFound, InnerCaseClass("def-field", 65), InnerCaseClass("deeper field inner", 4)))
+  }
+
+  it should "apply defaults from class fields, then annotations" in {
+    // given
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val codecCc1 = Pickler.derived[ClassWithScalaDefault].toCodec
+    val codecCc2 = Pickler.derived[ClassWithScalaAndTapirDefault].toCodec
+    val jsonStrCc11 = codecCc1.encode(ClassWithScalaDefault("field-a-user-value", "msg104"))
+    val jsonStrCc12 = codecCc1.encode(ClassWithScalaDefault("field-a-default", "text b"))
+    val object12 = codecCc1.decode("""{"fieldB":"msg205"}""")
+    val object2 = codecCc2.decode("""{"fieldB":"msgCc22"}""")
+
+    // then
+    jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
+    jsonStrCc12 shouldBe """{"fieldA":"field-a-default","fieldB":"text b"}"""
+    object12 shouldBe Value(ClassWithScalaDefault("field-a-default", "msg205"))
+    object2 shouldBe Value(ClassWithScalaAndTapirDefault("field-a-tapir-default", "msgCc22", 55))
   }
 
   it should "apply custom discriminator name to a simple ADT" in {
@@ -273,11 +329,12 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     encoded shouldBe """{"color":"1","description":"pink!!"}"""
     codec.decode(encoded) shouldBe Value(inputObj)
   }
-  
+
   it should "handle enums with custom function encoding" in {
     // given
     import Fixtures.*
-    given picklerColorEnum: Pickler[RichColorEnum] = Pickler.derivedEnumeration[RichColorEnum].customStringBased(enumValue => s"color-number-${enumValue.code}")
+    given picklerColorEnum: Pickler[RichColorEnum] =
+      Pickler.derivedEnumeration[RichColorEnum].customStringBased(enumValue => s"color-number-${enumValue.code}")
 
     // when
     val picklerResponse = Pickler.derived[RichColorResponse]
@@ -309,9 +366,3 @@ class PicklerTest extends AnyFlatSpec with Matchers {
         )""")
   }
 }
-
-sealed trait ErrorCode
-
-case object ErrorNotFound extends ErrorCode
-case object ErrorTimeout extends ErrorCode
-case class CustomError(msg: String) extends ErrorCode
