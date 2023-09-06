@@ -1,9 +1,10 @@
 package sttp.tapir.json
 
-import _root_.upickle.core.{ArrVisitor, ObjVisitor, Visitor, _}
+import _root_.upickle.AttributeTagged
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
 import sttp.tapir.{Codec, Schema, SchemaAnnotations, Validator}
 
@@ -13,56 +14,23 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 
 import macros.*
-import sttp.tapir.SchemaType.SProduct
 
-trait TapirPickle[T] extends Readers with Writers:
+trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
   def reader: this.Reader[T]
   def writer: this.Writer[T]
 
-abstract class TapirPickleBase[T] extends TapirPickle[T]
+  // This ensures that None is encoded as null instead of an empty array
+  override given OptionWriter[T: Writer]: Writer[Option[T]] =
+    summon[Writer[T]].comapNulls[Option[T]] {
+      case None    => null.asInstanceOf[T]
+      case Some(x) => x
+    }
 
-class DefaultReadWriterWrapper[T](delegateDefault: _root_.upickle.default.ReadWriter[T]) extends TapirPickleBase[T]:
-  lazy val rw: this.ReadWriter[T] = new ReadWriter[T] {
-    override def visitArray(length: Int, index: Int): ArrVisitor[Any, T] = delegateDefault.visitArray(length, index)
-
-    override def visitFloat64String(s: String, index: Int): T = delegateDefault.visitFloat64String(s, index)
-
-    override def visitFloat32(d: Float, index: Int): T = delegateDefault.visitFloat32(d, index)
-
-    override def visitObject(length: Int, jsonableKeys: Boolean, index: Int): ObjVisitor[Any, T] =
-      delegateDefault.visitObject(length, jsonableKeys, index)
-
-    override def visitFloat64(d: Double, index: Int): T = delegateDefault.visitFloat64(d, index)
-
-    override def visitInt32(i: Int, index: Int): T = delegateDefault.visitInt32(i, index)
-
-    override def visitInt64(i: Long, index: Int): T = delegateDefault.visitInt64(i, index)
-
-    override def write0[V](out: Visitor[?, V], v: T): V = delegateDefault.write0(out, v)
-
-    override def visitBinary(bytes: Array[Byte], offset: Int, len: Int, index: Int): T =
-      delegateDefault.visitBinary(bytes, offset, len, index)
-
-    override def visitExt(tag: Byte, bytes: Array[Byte], offset: Int, len: Int, index: Int): T =
-      delegateDefault.visitExt(tag, bytes, offset, len, index)
-
-    override def visitNull(index: Int): T = delegateDefault.visitNull(index)
-
-    override def visitChar(s: Char, index: Int): T = delegateDefault.visitChar(s, index)
-
-    override def visitFalse(index: Int): T = delegateDefault.visitFalse(index)
-
-    override def visitString(s: CharSequence, index: Int): T = delegateDefault.visitString(s, index)
-
-    override def visitTrue(index: Int): T = delegateDefault.visitTrue(index)
-
-    override def visitFloat64StringParts(s: CharSequence, decIndex: Int, expIndex: Int, index: Int): T =
-      delegateDefault.visitFloat64StringParts(s, decIndex, expIndex, index)
-
-    override def visitUInt64(i: Long, index: Int): T = delegateDefault.visitUInt64(i, index)
-  }
-  override lazy val reader = rw
-  override lazy val writer = rw
+  // This ensures that null is read as None
+  override given OptionReader[T: Reader]: Reader[Option[T]] =
+    new Reader.Delegate[Any, Option[T]](summon[Reader[T]].map(Some(_))) {
+      override def visitNull(index: Int) = None
+    }
 
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
   def toCodec: JsonCodec[T] =
@@ -79,15 +47,12 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
 
   def asOption: Pickler[Option[T]] =
     val newSchema = schema.asOption
-    import innerUpickle.*
-    given reader: innerUpickle.Reader[T] = innerUpickle.reader
-    given writer: innerUpickle.Writer[T] = innerUpickle.writer
-    val readerOpt = summon[Reader[Option[T]]]
-    val writerOpt = summon[Writer[Option[T]]]
     new Pickler[Option[T]](
       new TapirPickle[Option[T]] {
-        override lazy val writer = writerOpt.asInstanceOf[Writer[Option[T]]]
-        override lazy val reader = readerOpt.asInstanceOf[Reader[Option[T]]]
+        given readerT: Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
+        given writerT: Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
+        override lazy val writer = summon[Writer[Option[T]]]
+        override lazy val reader = summon[Reader[Option[T]]]
       },
       newSchema
     )
@@ -150,10 +115,19 @@ object Pickler:
       case other =>
         error(s"Unexpected non-enum value ${other} passed to derivedEnumeration")
 
-  inline given primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
-    Pickler(new DefaultReadWriterWrapper(summonInline[_root_.upickle.default.ReadWriter[T]]), summonInline[Schema[T]])
+  inline given primitivePickler[T: ClassTag](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
+    Pickler(
+      new TapirPickle[T] {
+        // Relying on given writers and readers provided by uPickle Writers and Readers base traits
+        // They should take care of deriving for Int, String, Boolean, Option, List, Map, Array, etc.
+        override lazy val reader = summonInline[Reader[T]]
+        override lazy val writer = summonInline[Writer[T]]
+      },
+      summonInline[Schema[T]]
+    )
 
-  given optionPickler[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] = summon[Pickler[T]].asOption
+  inline given optionPickler[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
+    summon[Pickler[T]].asOption
 
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 
@@ -167,21 +141,26 @@ object Pickler:
   }
 
   private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], Configuration, Mirror.Of[T]): Pickler[T] =
-    summonFrom {
-      case foundRW: _root_.upickle.default.ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
-        new Pickler[T](new DefaultReadWriterWrapper(foundRW), schema)
-      case _ =>
-        errorForType[T](
-          "Found implicit Schema[%s] but couldn't find a uPickle ReadWriter for this type. Either provide a ReadWriter, or remove the Schema from scope and let Pickler derive its own."
-        )
-        null
-    }
+    Pickler(
+      new TapirPickle[T] {
+        val rw: ReadWriter[T] = summonFrom {
+          case foundRW: ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
+            foundRW
+          case _ =>
+            errorForType[T](
+              "Found implicit Schema[%s] but couldn't find a uPickle ReadWriter for this type. Either provide a ReadWriter, or remove the Schema from scope and let Pickler derive its own."
+            )
+            null
+        }
+        override lazy val reader = rw
+        override lazy val writer = rw
+      },
+      schema
+    )
 
   private[tapir] inline def buildNewPickler[T: ClassTag](
   )(using m: Mirror.Of[T], c: Configuration, subtypeDiscriminator: SubtypeDiscriminator[T]): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
-    val ct = summon[ClassTag[T]]
-    // println(s"Building new pickler for ${ct.runtimeClass.getName()}")
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
       case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
@@ -191,7 +170,6 @@ object Pickler:
             Schema.derivedEnumeration[T].defaultStringBased
           else
             Schema.derived[T]
-        // println(s"Schema for sum: $schema")
         picklerSum(schema, childPicklers)
     }
 

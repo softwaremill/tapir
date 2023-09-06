@@ -1,13 +1,13 @@
 package sttp.tapir.json
 
-import _root_.upickle.AttributeTagged
 import _root_.upickle.implicits.{macros => upickleMacros}
 import sttp.tapir.{Schema, SchemaType}
 
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
+import _root_.upickle.implicits.ReadersVersionSpecific
 
-trait Readers extends AttributeTagged with UpickleHelpers {
+trait Readers extends ReadersVersionSpecific with UpickleHelpers {
 
   case class LeafWrapper[T](leaf: TaggedReader.Leaf[T], r: Reader[T], leafTagValue: String) extends TaggedReader[T] {
     override def findReader(s: String) = if (s == leafTagValue) r else null

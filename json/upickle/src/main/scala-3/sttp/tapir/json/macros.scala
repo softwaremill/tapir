@@ -37,7 +37,6 @@ def writeSnippetsImpl[R, T](
 )(using Quotes, Type[T], Type[R]): Expr[Unit] =
 
   import quotes.reflect.*
-
   Expr.block(
     for (((rawLabel, label), i) <- uMacros.fieldLabelsImpl0[T].zipWithIndex) yield {
       val tpe0 = TypeRepr.of[T].memberType(rawLabel).asType
@@ -47,7 +46,8 @@ def writeSnippetsImpl[R, T](
             case '[IsInt[index]] =>
               val encodedName = '{ ${ sProduct }.fields(${ Expr(i) }).name.encodedName }
               val select = Select.unique(v.asTerm, rawLabel.name).asExprOf[Any]
-              '{
+              '{ 
+                //if ($select != None) { // <<<<<<<<<<<<<<<<<<<<<< TODO a hack to skip empty options, make it customizable?
                 ${ self }.writeSnippetMappedName[R, tpe](
                   ${ ctx },
                   ${ encodedName },
@@ -55,6 +55,8 @@ def writeSnippetsImpl[R, T](
                   ${ select }
                 )
               }
+              //   else ()
+              // }
     },
     '{ () }
   )

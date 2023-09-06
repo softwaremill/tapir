@@ -11,13 +11,9 @@ import sttp.tapir.Schema
 import scala.reflect.ClassTag
 
 import macros.*
+import _root_.upickle.implicits.WritersVersionSpecific
 
-trait Writers extends AttributeTagged with UpickleHelpers {
-  // override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
-  //   implicitly[Writer[T]].comap[Option[T]] {
-  //     case None => null.asInstanceOf[T]
-  //     case Some(x) => x
-  //   }
+trait Writers extends WritersVersionSpecific with UpickleHelpers {
 
   inline def macroProductW[T: ClassTag](
       schema: Schema[T],

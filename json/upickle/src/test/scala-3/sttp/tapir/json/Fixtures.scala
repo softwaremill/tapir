@@ -21,6 +21,8 @@ case class ClassWithScalaAndTapirDefault(@default("field-a-tapir-default") field
 case class ClassWithDefault2(@default("field-a-default-2") fieldA: String, @default(ErrorTimeout) fieldB: ErrorCode)
 case class ClassWithDefault3(fieldA: ErrorCode, @description("desc1") @default(InnerCaseClass("def-field", 65)) fieldB: InnerCaseClass, fieldC: InnerCaseClass)
 case class InnerCaseClass(fieldInner: String, @default(4) fieldInnerInt: Int)
+case class FlatClassWithOption(fieldA: String, fieldB: Option[Int])
+case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 
 sealed trait ErrorCode
 
