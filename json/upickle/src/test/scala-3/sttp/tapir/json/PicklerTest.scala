@@ -8,6 +8,7 @@ import sttp.tapir.generic.Configuration
 import sttp.tapir.SchemaType
 import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.Schema.annotations.default
+import java.util.UUID
 
 class PicklerTest extends AnyFlatSpec with Matchers {
   behavior of "Pickler derivation"
@@ -131,7 +132,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val pickler2 = Pickler.derived[NestedClassWithList]
     val codec2 = pickler2.toCodec
     val obj1 = FlatClassWithList("fieldA value", List(64, -5))
-    val obj2 = NestedClassWithList(List(FlatClassWithList("a2", Nil), FlatClassWithList("a3", List(8,9))))
+    val obj2 = NestedClassWithList(List(FlatClassWithList("a2", Nil), FlatClassWithList("a3", List(8, 9))))
     val jsonStr1 = codec1.encode(obj1)
     val jsonStr2 = codec2.encode(obj2)
 
@@ -166,6 +167,44 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "derive picklers for Map with String key" in {
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val pickler = Pickler.derived[ClassWithMap]
+    val codec = pickler.toCodec
+    val obj = ClassWithMap(Map(("keyB", SimpleTestResult("result1")), ("keyA", SimpleTestResult("result2"))))
+    val jsonStr = codec.encode(obj)
+
+    // then
+    jsonStr shouldBe """{"field":{"keyB":{"msg":"result1"},"keyA":{"msg":"result2"}}}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler.schema shouldBe Schema.derived[ClassWithMap]
+    }
+  }
+
+  it should "derive picklers for Map with non-String key" in {
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    given picklerMap: Pickler[Map[UUID, SimpleTestResult]] = Pickler.picklerForMap(_.toString)
+    val pickler = Pickler.derived[ClassWithMapCustomKey]
+    val uuid1: UUID = UUID.randomUUID()
+    val uuid2: UUID = UUID.randomUUID()
+    val codec = pickler.toCodec
+    val obj = ClassWithMapCustomKey(Map((uuid1, SimpleTestResult("result3")), (uuid2, SimpleTestResult("result4"))))
+    val jsonStr = codec.encode(obj)
+
+    // then
+    jsonStr shouldBe s"""{"field":{"$uuid1":{"msg":"result3"},"$uuid2":{"msg":"result4"}}}"""
+    {
+      import sttp.tapir.generic.auto.*
+      picklerMap.schema shouldBe Schema.schemaForMap[UUID, SimpleTestResult](_.toString)
+      given Schema[Map[UUID, SimpleTestResult]] = picklerMap.schema
+      pickler.schema shouldBe Schema.derived[ClassWithMapCustomKey]
+    }
+  }
   it should "handle a simple ADT (no customizations)" in {
     // given
     import generic.auto._ // for Pickler auto-derivation

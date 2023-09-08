@@ -162,6 +162,34 @@ object Pickler:
       newSchema
     )
 
+  inline given picklerForStringMap[V](using pv: Pickler[V]): Pickler[Map[String, V]] =
+    given Schema[V] = pv.schema
+    val newSchema = Schema.schemaForMap[V]
+    new Pickler[Map[String, V]](
+      new TapirPickle[Map[String, V]] {
+        given Reader[V] = pv.innerUpickle.reader.asInstanceOf[Reader[V]]
+        given Writer[V] = pv.innerUpickle.writer.asInstanceOf[Writer[V]]
+        override lazy val writer = summon[Writer[Map[String, V]]]
+        override lazy val reader = summon[Reader[Map[String, V]]]
+      },
+      newSchema
+    )
+
+  inline def picklerForMap[K, V](keyToString: K => String)(using pk: Pickler[K], pv: Pickler[V]): Pickler[Map[K, V]] =
+    given Schema[V] = pv.schema
+    val newSchema = Schema.schemaForMap[K, V](keyToString)
+    new Pickler[Map[K, V]](
+      new TapirPickle[Map[K, V]] {
+        given Reader[K] = pk.innerUpickle.reader.asInstanceOf[Reader[K]]
+        given Writer[K] = pk.innerUpickle.writer.asInstanceOf[Writer[K]]
+        given Reader[V] = pv.innerUpickle.reader.asInstanceOf[Reader[V]]
+        given Writer[V] = pv.innerUpickle.writer.asInstanceOf[Writer[V]]
+        override lazy val writer = summon[Writer[Map[K, V]]]
+        override lazy val reader = summon[Reader[Map[K, V]]]
+      },
+      newSchema
+    )
+
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 
   import scala.quoted.*

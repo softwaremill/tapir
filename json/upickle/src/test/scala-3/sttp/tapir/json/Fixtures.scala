@@ -2,6 +2,7 @@ package sttp.tapir.json
 
 import sttp.tapir.Schema.annotations.default
 import sttp.tapir.Schema.annotations.description
+import java.util.UUID
 
 object Fixtures:
   enum ColorEnum:
@@ -36,6 +37,8 @@ case class FlatClassWithList(fieldA: String, fieldB: List[Int])
 case class NestedClassWithList(innerField: List[FlatClassWithList])
 case class SimpleTestResult(msg: String)
 case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
+case class ClassWithMap(field: Map[String, SimpleTestResult])
+case class ClassWithMapCustomKey(field: Map[UUID, SimpleTestResult])
 
 sealed trait ErrorCode
 
