@@ -14,6 +14,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 
 import macros.*
+import scala.collection.Factory
 
 trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
   def reader: this.Reader[T]
@@ -53,6 +54,18 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
         given writerT: Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
         override lazy val writer = summon[Writer[Option[T]]]
         override lazy val reader = summon[Reader[Option[T]]]
+      },
+      newSchema
+    )
+
+  def asIterable[C[X] <: Iterable[X]](using Factory[T, C[T]]): Pickler[C[T]] = 
+    val newSchema = schema.asIterable[C]
+    new Pickler[C[T]](
+      new TapirPickle[C[T]] {
+        given readerT: Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
+        given writerT: Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
+        override lazy val writer = summon[Writer[C[T]]]
+        override lazy val reader = summon[Reader[C[T]]]
       },
       newSchema
     )
@@ -126,8 +139,11 @@ object Pickler:
       summonInline[Schema[T]]
     )
 
-  inline given optionPickler[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
-    summon[Pickler[T]].asOption
+  inline given picklerForOption[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
+    summonInline[Pickler[T]].asOption
+
+  inline given picklerForIterable[T: Pickler, C[X] <: Iterable[X]](using Configuration, Mirror.Of[T], Factory[T, C[T]]): Pickler[C[T]] =
+    summonInline[Pickler[T]].asIterable[C]
 
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 

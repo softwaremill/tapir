@@ -17,12 +17,23 @@ object Fixtures:
 
 case class ClassWithDefault(@default("field-a-default") fieldA: String, fieldB: String)
 case class ClassWithScalaDefault(fieldA: String = "field-a-default", fieldB: String)
-case class ClassWithScalaAndTapirDefault(@default("field-a-tapir-default") fieldA: String = "field-a-scala-default", fieldB: String, fieldC: Int = 55)
+case class ClassWithScalaAndTapirDefault(
+    @default("field-a-tapir-default") fieldA: String = "field-a-scala-default",
+    fieldB: String,
+    fieldC: Int = 55
+)
 case class ClassWithDefault2(@default("field-a-default-2") fieldA: String, @default(ErrorTimeout) fieldB: ErrorCode)
-case class ClassWithDefault3(fieldA: ErrorCode, @description("desc1") @default(InnerCaseClass("def-field", 65)) fieldB: InnerCaseClass, fieldC: InnerCaseClass)
+case class ClassWithDefault3(
+    fieldA: ErrorCode,
+    @description("desc1") @default(InnerCaseClass("def-field", 65)) fieldB: InnerCaseClass,
+    fieldC: InnerCaseClass
+)
 case class InnerCaseClass(fieldInner: String, @default(4) fieldInnerInt: Int)
 case class FlatClassWithOption(fieldA: String, fieldB: Option[Int])
 case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
+
+case class FlatClassWithList(fieldA: String, fieldB: List[Int])
+case class NestedClassWithList(innerField: List[FlatClassWithList])
 
 sealed trait ErrorCode
 

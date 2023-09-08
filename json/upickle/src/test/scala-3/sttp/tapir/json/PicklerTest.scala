@@ -106,15 +106,40 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
     // when
     val pickler1 = Pickler.derived[FlatClassWithOption]
-    val pickler2 = Pickler.derived[NestedClassWithOption] 
+    val pickler2 = Pickler.derived[NestedClassWithOption]
     val jsonStr1 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", Some(-4018)))
     val jsonStr2 = pickler2.toCodec.encode(NestedClassWithOption(Some(FlatClassWithOption("fieldA value2", Some(-3014)))))
     val jsonStr3 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", None))
 
     // then
-    jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-4018}"""
-    jsonStr2 shouldBe """{"innerField":{"fieldA":"fieldA value2","fieldB":-3014}}"""
-    jsonStr3 shouldBe """{"fieldA":"fieldA value","fieldB":null}"""
+    {
+      given derivedFlatClassSchema: Schema[FlatClassWithOption] = Schema.derived[FlatClassWithOption]
+      pickler1.schema shouldBe derivedFlatClassSchema
+      pickler2.schema shouldBe Schema.derived[NestedClassWithOption]
+      jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-4018}"""
+      jsonStr2 shouldBe """{"innerField":{"fieldA":"fieldA value2","fieldB":-3014}}"""
+      jsonStr3 shouldBe """{"fieldA":"fieldA value","fieldB":null}"""
+    }
+  }
+
+  it should "derive picklers for List fields" in {
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val pickler1 = Pickler.derived[FlatClassWithList]
+    val codec1 = pickler1.toCodec
+    val pickler2 = Pickler.derived[NestedClassWithList]
+    val codec2 = pickler2.toCodec
+    val obj1 = FlatClassWithList("fieldA value", List(64, -5))
+    val obj2 = NestedClassWithList(List(FlatClassWithList("a2", Nil), FlatClassWithList("a3", List(8,9))))
+    val jsonStr1 = codec1.encode(obj1)
+    val jsonStr2 = codec2.encode(obj2)
+
+    // then
+    jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":[64,-5]}"""
+    codec1.decode(jsonStr1) shouldBe Value(obj1)
+    jsonStr2 shouldBe """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[8,9]}]}"""
+    codec2.decode(jsonStr2) shouldBe Value(obj2)
   }
 
   it should "handle a simple ADT (no customizations)" in {
@@ -159,7 +184,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStrCc11 = codecCc1.encode(ClassWithDefault("field-a-user-value", "msg104"))
     val object12 = codecCc1.decode("""{"fieldB":"msg105"}""")
     val object2 = codecCc2.decode("""{"fieldA":"msgCc12"}""")
-    val object3 = codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
+    val object3 =
+      codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
 
     // then
     jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
