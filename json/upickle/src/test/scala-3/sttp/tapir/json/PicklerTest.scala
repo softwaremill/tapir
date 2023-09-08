@@ -43,7 +43,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "build an instance for a case class with a nested case class" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val derived = Pickler.derived[TopClass]
@@ -65,7 +65,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "use encodedName from configuration" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
 
     // when
@@ -78,7 +78,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "use encodedName from annotations" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val derived = Pickler.derived[TopClass2]
@@ -90,7 +90,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "Decode in a Reader using custom encodedName" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
 
     // when
@@ -103,7 +103,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "derive picklers for Option fields" in {
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val pickler1 = Pickler.derived[FlatClassWithOption]
@@ -124,7 +124,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "derive picklers for List fields" in {
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val pickler1 = Pickler.derived[FlatClassWithList]
@@ -169,7 +169,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     }
   }
   it should "derive picklers for Either fields" in {
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val pickler = Pickler.derived[ClassWithEither]
@@ -189,7 +189,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "derive picklers for Map with String key" in {
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val pickler = Pickler.derived[ClassWithMap]
@@ -228,7 +228,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
   }
   it should "handle a simple ADT (no customizations)" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
 
     // when
@@ -243,7 +243,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "apply custom field name encoding to a simple ADT" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.copy(toEncodedName = _.toUpperCase())
     case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
 
@@ -259,7 +259,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "apply defaults from annotations" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val codecCc1 = Pickler.derived[ClassWithDefault].toCodec
@@ -280,7 +280,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "apply defaults from class fields, then annotations" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
 
     // when
     val codecCc1 = Pickler.derived[ClassWithScalaDefault].toCodec
@@ -299,7 +299,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "apply custom discriminator name to a simple ADT" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     given schemaConfig: Configuration = Configuration.default.withDiscriminator("kind")
     case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
     val inputObj1 = MyCaseClass(CustomError("customErrMsg2"), "msg19")
@@ -320,7 +320,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "Set discriminator value using class name" in {
     // given
-    import generic.auto._ // for Pickler auto-derivation
+    import generic.auto.* // for Pickler auto-derivation
     sealed trait Status:
       def code: Int
 
