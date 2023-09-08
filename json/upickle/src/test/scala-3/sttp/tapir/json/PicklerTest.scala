@@ -140,6 +140,30 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     codec1.decode(jsonStr1) shouldBe Value(obj1)
     jsonStr2 shouldBe """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[8,9]}]}"""
     codec2.decode(jsonStr2) shouldBe Value(obj2)
+    {
+      import sttp.tapir.generic.auto.*
+      pickler2.schema shouldBe Schema.derived[NestedClassWithList]
+    }
+  }
+
+  it should "derive picklers for Either fields" in {
+    import generic.auto._ // for Pickler auto-derivation
+
+    // when
+    val pickler = Pickler.derived[ClassWithEither]
+    val codec = pickler.toCodec
+    val obj1 = ClassWithEither("fieldA 1", Left("err1"))
+    val obj2 = ClassWithEither("fieldA 2", Right(SimpleTestResult("it is fine")))
+    val jsonStr1 = codec.encode(obj1)
+    val jsonStr2 = codec.encode(obj2)
+
+    // then
+    jsonStr1 shouldBe """{"fieldA":"fieldA 1","fieldB":[0,"err1"]}"""
+    jsonStr2 shouldBe """{"fieldA":"fieldA 2","fieldB":[1,{"msg":"it is fine"}]}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler.schema shouldBe Schema.derived[ClassWithEither]
+    }
   }
 
   it should "handle a simple ADT (no customizations)" in {

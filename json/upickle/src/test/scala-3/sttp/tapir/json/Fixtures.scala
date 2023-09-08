@@ -34,6 +34,8 @@ case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 
 case class FlatClassWithList(fieldA: String, fieldB: List[Int])
 case class NestedClassWithList(innerField: List[FlatClassWithList])
+case class SimpleTestResult(msg: String)
+case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
 
 sealed trait ErrorCode
 

@@ -36,8 +36,8 @@ trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
   def toCodec: JsonCodec[T] =
     import innerUpickle._
-    given reader: innerUpickle.Reader[T] = innerUpickle.reader
-    given writer: innerUpickle.Writer[T] = innerUpickle.writer
+    given innerUpickle.Reader[T] = innerUpickle.reader
+    given innerUpickle.Writer[T] = innerUpickle.writer
     given schemaT: Schema[T] = schema
     Codec.json[T] { s =>
       Try(read[T](s)) match {
@@ -50,20 +50,20 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
     val newSchema = schema.asOption
     new Pickler[Option[T]](
       new TapirPickle[Option[T]] {
-        given readerT: Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
-        given writerT: Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
+        given Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
+        given Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
         override lazy val writer = summon[Writer[Option[T]]]
         override lazy val reader = summon[Reader[Option[T]]]
       },
       newSchema
     )
 
-  def asIterable[C[X] <: Iterable[X]](using Factory[T, C[T]]): Pickler[C[T]] = 
+  def asIterable[C[X] <: Iterable[X]](using Factory[T, C[T]]): Pickler[C[T]] =
     val newSchema = schema.asIterable[C]
     new Pickler[C[T]](
       new TapirPickle[C[T]] {
-        given readerT: Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
-        given writerT: Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
+        given Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
+        given Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
         override lazy val writer = summon[Writer[C[T]]]
         override lazy val reader = summon[Reader[C[T]]]
       },
@@ -139,11 +139,28 @@ object Pickler:
       summonInline[Schema[T]]
     )
 
-  inline given picklerForOption[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
-    summonInline[Pickler[T]].asOption
+  given picklerForOption[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
+    summon[Pickler[T]].asOption
 
-  inline given picklerForIterable[T: Pickler, C[X] <: Iterable[X]](using Configuration, Mirror.Of[T], Factory[T, C[T]]): Pickler[C[T]] =
-    summonInline[Pickler[T]].asIterable[C]
+  given picklerForIterable[T: Pickler, C[X] <: Iterable[X]](using Configuration, Mirror.Of[T], Factory[T, C[T]]): Pickler[C[T]] =
+    summon[Pickler[T]].asIterable[C]
+
+  given picklerForEither[A, B](using pa: Pickler[A], pb: Pickler[B]): Pickler[Either[A, B]] =
+    given Schema[A] = pa.schema
+    given Schema[B] = pb.schema
+    val newSchema = summon[Schema[Either[A, B]]]
+
+    new Pickler[Either[A, B]](
+      new TapirPickle[Either[A, B]] {
+        given Reader[A] = pa.innerUpickle.reader.asInstanceOf[Reader[A]]
+        given Writer[A] = pa.innerUpickle.writer.asInstanceOf[Writer[A]]
+        given Reader[B] = pb.innerUpickle.reader.asInstanceOf[Reader[B]]
+        given Writer[B] = pb.innerUpickle.writer.asInstanceOf[Writer[B]]
+        override lazy val writer = summon[Writer[Either[A, B]]]
+        override lazy val reader = summon[Reader[Either[A, B]]]
+      },
+      newSchema
+    )
 
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 
