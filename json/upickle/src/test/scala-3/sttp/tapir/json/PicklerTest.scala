@@ -147,6 +147,27 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "derive picklers for Array fields" in {
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    val pickler1 = Pickler.derived[FlatClassWithArray]
+    val codec1 = pickler1.toCodec
+    val pickler2 = Pickler.derived[NestedClassWithArray]
+    val codec2 = pickler2.toCodec
+    val obj1 = FlatClassWithArray("fieldA value 50", Array(8, 8, 107))
+    val obj2 = NestedClassWithArray(Array(FlatClassWithArray("a2", Array()), FlatClassWithArray("a3", Array(-10))))
+    val jsonStr1 = codec1.encode(obj1)
+    val jsonStr2 = codec2.encode(obj2)
+
+    // then
+    jsonStr1 shouldBe """{"fieldA":"fieldA value 50","fieldB":[8,8,107]}"""
+    jsonStr2 shouldBe """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[-10]}]}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler2.schema shouldBe Schema.derived[NestedClassWithArray]
+    }
+  }
   it should "derive picklers for Either fields" in {
     import generic.auto._ // for Pickler auto-derivation
 

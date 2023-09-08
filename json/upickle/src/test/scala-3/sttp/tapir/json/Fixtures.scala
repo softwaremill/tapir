@@ -35,6 +35,8 @@ case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 
 case class FlatClassWithList(fieldA: String, fieldB: List[Int])
 case class NestedClassWithList(innerField: List[FlatClassWithList])
+case class FlatClassWithArray(fieldA: String, fieldB: Array[Int])
+case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
 case class SimpleTestResult(msg: String)
 case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
 case class ClassWithMap(field: Map[String, SimpleTestResult])

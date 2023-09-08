@@ -70,6 +70,18 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
       newSchema
     )
 
+  def asArray(using ct: ClassTag[T]): Pickler[Array[T]] =
+    val newSchema = schema.asArray
+    new Pickler[Array[T]](
+      new TapirPickle[Array[T]] {
+        given Reader[T] = innerUpickle.reader.asInstanceOf[Reader[T]]
+        given Writer[T] = innerUpickle.writer.asInstanceOf[Writer[T]]
+        override lazy val writer = summon[Writer[Array[T]]]
+        override lazy val reader = summon[Reader[Array[T]]]
+      },
+      newSchema
+    )
+
 object Pickler:
 
   inline def derived[T: ClassTag](using Configuration, Mirror.Of[T]): Pickler[T] =
@@ -161,6 +173,9 @@ object Pickler:
       },
       newSchema
     )
+
+  given picklerForArray[T: Pickler: ClassTag]: Pickler[Array[T]] =
+    summon[Pickler[T]].asArray
 
   inline given picklerForStringMap[V](using pv: Pickler[V]): Pickler[Map[String, V]] =
     given Schema[V] = pv.schema
