@@ -24,7 +24,7 @@ object Versions {
   val nettyReactiveStreams = "2.0.9"
   val sprayJson = "1.3.6"
   val scalaCheck = "1.17.0"
-  val scalaTest = "3.2.16"
+  val scalaTest = "3.2.17"
   val scalaTestPlusScalaCheck = "3.2.16.0"
   val refined = "0.11.0"
   val iron = "2.2.1"
