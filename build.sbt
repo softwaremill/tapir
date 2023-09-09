@@ -179,6 +179,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
+  picklerJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
@@ -859,6 +860,18 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
       )
     )
   )
+  .dependsOn(core)
+
+lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-pickler",
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
   .dependsOn(core)
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
