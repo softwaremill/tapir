@@ -140,7 +140,7 @@ object Pickler:
       case other =>
         error(s"Unexpected non-enum value ${other} passed to derivedEnumeration")
 
-  inline given primitivePickler[T: ClassTag](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
+  inline given primitivePickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(
       new TapirPickle[T] {
         // Relying on given writers and readers provided by uPickle Writers and Readers base traits
@@ -205,6 +205,8 @@ object Pickler:
       newSchema
     )
 
+  inline given picklerForAnyVal[T <: AnyVal]: Pickler[T] = ${ picklerForAnyValImpl[T] }
+
   private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
 
   import scala.quoted.*
@@ -215,6 +217,43 @@ object Pickler:
     report.error(String.format(templateStr, typeName))
     '{}
   }
+
+  private def picklerForAnyValImpl[T: Type](using quotes: Quotes): Expr[Pickler[T]] =
+    import quotes.reflect.*
+    val tpe = TypeRepr.of[T]
+
+    val isValueCaseClass =
+      tpe.typeSymbol.isClassDef && tpe.classSymbol.get.flags.is(Flags.Case) && tpe.baseClasses.contains(Symbol.classSymbol("scala.AnyVal"))
+
+    if (!isValueCaseClass) {
+      '{ primitivePickler[T] }
+    } else {
+
+      val field = tpe.typeSymbol.declaredFields.head
+      val fieldTpe = tpe.memberType(field)
+      fieldTpe.asType match
+        case '[f] =>
+          val basePickler = Expr.summon[Pickler[f]].getOrElse {
+            report.errorAndAbort(
+              s"Cannot summon Pickler for value class ${tpe.show}. Missing Pickler[${fieldTpe.show}] in implicit scope."
+            )
+          }
+          '{
+            val newSchema: Schema[T] = ${ basePickler }.schema.as[T]
+            new Pickler[T](
+              new TapirPickle[T] {
+                override lazy val writer = summonInline[Writer[f]].comap[T](
+                  // writing object of type T means writing T.field
+                  ccObj => ${ Select.unique(('ccObj).asTerm, field.name).asExprOf[f] }
+                )
+                // a reader of type f (field) will read it and wrap into value object using the consutructor of T
+                override lazy val reader = summonInline[Reader[f]]
+                  .map[T](fieldObj => ${ Apply(Select.unique(New(Inferred(tpe)), "<init>"), List(('fieldObj).asTerm)).asExprOf[T] })
+              },
+              newSchema
+            )
+          }
+    }
 
   private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], Configuration, Mirror.Of[T]): Pickler[T] =
     Pickler(

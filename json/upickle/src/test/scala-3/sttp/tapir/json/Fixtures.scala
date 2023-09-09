@@ -41,7 +41,9 @@ case class SimpleTestResult(msg: String)
 case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
 case class ClassWithMap(field: Map[String, SimpleTestResult])
 case class ClassWithMapCustomKey(field: Map[UUID, SimpleTestResult])
-
+case class UserId(value: UUID) extends AnyVal
+case class UserName(name: String) extends AnyVal
+case class ClassWithValues(id: UserId, name: UserName, age: Int)
 sealed trait ErrorCode
 
 case object ErrorNotFound extends ErrorCode

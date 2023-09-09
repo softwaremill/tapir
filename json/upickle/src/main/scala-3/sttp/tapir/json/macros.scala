@@ -46,8 +46,8 @@ def writeSnippetsImpl[R, T](
             case '[IsInt[index]] =>
               val encodedName = '{ ${ sProduct }.fields(${ Expr(i) }).name.encodedName }
               val select = Select.unique(v.asTerm, rawLabel.name).asExprOf[Any]
-              '{ 
-                //if ($select != None) { // <<<<<<<<<<<<<<<<<<<<<< TODO a hack to skip empty options, make it customizable?
+              '{
+                // if ($select != None) { // <<<<<<<<<<<<<<<<<<<<<< TODO a hack to skip empty options, make it customizable?
                 ${ self }.writeSnippetMappedName[R, tpe](
                   ${ ctx },
                   ${ encodedName },
@@ -55,8 +55,8 @@ def writeSnippetsImpl[R, T](
                   ${ select }
                 )
               }
-              //   else ()
-              // }
+          //   else ()
+          // }
     },
     '{ () }
   )

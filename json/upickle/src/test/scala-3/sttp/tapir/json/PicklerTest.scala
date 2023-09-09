@@ -471,6 +471,18 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     codec.decode(encoded) shouldBe Value(inputObj)
   }
 
+  it should "handle value classes" in {
+    // when
+    val pickler = Pickler.derived[ClassWithValues]
+    val codec = pickler.toCodec
+    val inputObj = ClassWithValues(UserId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")), UserName("Alan"), age = 65)
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"id":"550e8400-e29b-41d4-a716-446655440000","name":"Alan","age":65}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
+
   it should "Reject oneOfUsingField for enums" in {
     // given
     assertCompiles("""
