@@ -28,6 +28,17 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     obj shouldBe Value(FlatClass(654, "field_b_value"))
   }
 
+  it should "work with `derives`" in {
+    // when
+    val bookPickler: Pickler[Book] = summon[Pickler[Book]]
+    val bookShelfPickler: Pickler[BookShelf] = summon[Pickler[BookShelf]]
+
+    // then
+    bookPickler.toCodec.encode(Book("John", "Hello")) shouldBe """{"author":"John","title":"Hello"}"""
+    bookShelfPickler.toCodec.encode(BookShelf(List(Book("Alice", "Goodbye")))) shouldBe 
+     """{"books":[{"author":"Alice","title":"Goodbye"}]}"""
+  }
+
   it should "build an instance for a flat case class" in {
     // when
     val derived = Pickler.derived[FlatClass]

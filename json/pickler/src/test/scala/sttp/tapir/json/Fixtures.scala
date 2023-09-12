@@ -9,6 +9,9 @@ object Fixtures:
   enum ColorEnum:
     case Green, Pink
 
+  case class Book(author: String, title: String) derives Pickler
+  case class BookShelf(books: List[Book]) derives Pickler
+
   case class Response(color: ColorEnum, description: String)
 
   enum RichColorEnum(val code: Int):
