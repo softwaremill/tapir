@@ -163,7 +163,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         )
       ),
       Some(SName("sttp.tapir.json.I"))
-    ).description("class I")
+    ).description("class I") // TODO this causes test to fail, because SchemaDerivation doesn't support @description annotation on case classes
   }
 
   it should "find the right schema for a case class with simple types" in {
