@@ -7,7 +7,7 @@ import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
-class CreateDerivedEnumerationPickler[T: ClassTag](
+private[json] class CreateDerivedEnumerationPickler[T: ClassTag](
     validator: Validator.Enumeration[T],
     schemaAnnotations: SchemaAnnotations[T]
 ):
@@ -26,17 +26,16 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     given SubtypeDiscriminator[T] = EnumValueDiscriminator[T](
       encode.map(_.andThen(_.toString)).getOrElse(_.toString),
       validator
-      )
-    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
-    picklerSum(schema, childPicklers)
+    )
+    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = Pickler.summonChildPicklerInstances[T, m.MirroredElemTypes]
+    Pickler.picklerSum(schema, childPicklers)
   }
 
   inline def defaultStringBased(using Mirror.Of[T]) = apply()
 
   inline def customStringBased(encode: T => String)(using Mirror.Of[T]): Pickler[T] =
     apply(
-      Some(encode), 
+      Some(encode),
       schemaType = SchemaType.SString[T](),
       default = None
     )
-
