@@ -8,13 +8,13 @@ import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
 import sttp.tapir.{Codec, Schema, SchemaAnnotations, Validator}
 
+import scala.collection.Factory
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 
 import macros.*
-import scala.collection.Factory
 
 trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
   def reader: this.Reader[T]
@@ -259,8 +259,10 @@ object Pickler:
     Pickler(
       new TapirPickle[T] {
         val rw: ReadWriter[T] = summonFrom {
-          case foundRW: ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
-            foundRW
+          case foundTapirRW: ReadWriter[T] =>
+            foundTapirRW
+          case foundUpickleDefaultRW: _root_.upickle.default.ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
+            foundUpickleDefaultRW.asInstanceOf[ReadWriter[T]]
           case _ =>
             errorForType[T](
               "Found implicit Schema[%s] but couldn't find a uPickle ReadWriter for this type. Either provide a ReadWriter, or remove the Schema from scope and let Pickler derive its own."

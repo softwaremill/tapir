@@ -20,16 +20,17 @@ class PicklerTest extends AnyFlatSpec with Matchers {
   case class TopClass2(fieldA: String, fieldB: AnnotatedInnerClass)
   case class AnnotatedInnerClass(@encodedName("encoded_field-a") fieldA: String, fieldB: String)
 
-  it should "build from an existing Schema and ReadWriter" in {
+  it should "build from an existing Schema and upickle.default.ReadWriter" in {
     // given schema and reader / writer in scope
-    // given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
-    //
-    // // when
-    // val derived = Pickler.derived[FlatClass]
-    // val obj = derived.toCodec.decode("""{"fieldA": 654, "fieldB": "field_b_value"}""")
-    //
-    // // then
-    // obj shouldBe Value(FlatClass(654, "field_b_value"))
+    given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
+    given rw: _root_.upickle.default.ReadWriter[FlatClass] = _root_.upickle.default.macroRW[FlatClass]
+
+    // when
+    val derived = Pickler.derived[FlatClass]
+    val obj = derived.toCodec.decode("""{"fieldA": 654, "fieldB": "field_b_value"}""")
+
+    // then
+    obj shouldBe Value(FlatClass(654, "field_b_value"))
   }
 
   it should "build an instance for a flat case class" in {

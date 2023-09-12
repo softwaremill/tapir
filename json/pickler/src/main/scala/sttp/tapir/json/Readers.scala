@@ -1,11 +1,10 @@
 package sttp.tapir.json
 
-import _root_.upickle.implicits.{macros => upickleMacros}
+import _root_.upickle.implicits.{ReadersVersionSpecific, macros => upickleMacros}
 import sttp.tapir.{Schema, SchemaType}
 
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
-import _root_.upickle.implicits.ReadersVersionSpecific
 
 trait Readers extends ReadersVersionSpecific with UpickleHelpers {
 
@@ -17,7 +16,9 @@ trait Readers extends ReadersVersionSpecific with UpickleHelpers {
     LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
   }
 
-  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]])(using m: Mirror.ProductOf[T]): Reader[T] =
+  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]])(using
+      m: Mirror.ProductOf[T]
+  ): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
 
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
@@ -55,11 +56,12 @@ trait Readers extends ReadersVersionSpecific with UpickleHelpers {
 
         new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
       case discriminator: EnumValueDiscriminator[T] =>
-        val readersForPossibleValues: Seq[TaggedReader[T]] = discriminator.validator.possibleValues.zip(derivedChildReaders.toList).map { case (enumValue, reader) =>
-          TaggedReader.Leaf[T](discriminator.encode(enumValue), reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
-        }
+        val readersForPossibleValues: Seq[TaggedReader[T]] =
+          discriminator.validator.possibleValues.zip(derivedChildReaders.toList).map { case (enumValue, reader) =>
+            TaggedReader.Leaf[T](discriminator.encode(enumValue), reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+          }
         new TaggedReader.Node[T](readersForPossibleValues: _*)
-        
+
       case _: DefaultSubtypeDiscriminator[T] =>
         val readers = derivedChildReaders.toList.asInstanceOf[List[TaggedReader[T]]]
         Reader.merge(readers: _*)
