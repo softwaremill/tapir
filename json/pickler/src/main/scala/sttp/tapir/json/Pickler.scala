@@ -355,11 +355,5 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
       newSchema
     )
 
-implicit def picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
+given picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
 
-object generic {
-  object auto { // TODO move to appropriate place
-    inline implicit def picklerForCaseClass[T: ClassTag](implicit m: Mirror.Of[T], cfg: Configuration): Pickler[T] = Pickler.derived[T]
-  }
-
-}

@@ -872,7 +872,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
     )
   )
   .jvmPlatform(scalaVersions = List(scala3))
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
   .settings(commonSettings)
