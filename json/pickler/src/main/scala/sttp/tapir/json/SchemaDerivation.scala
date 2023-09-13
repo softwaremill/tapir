@@ -110,19 +110,12 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
         case '{ $ann: Schema.annotations.encodedExample }  => '{ $schema.encodedExample($ann.example) }
         case '{ $ann: Schema.annotations.default[? <: X] } => '{ $schema.default($ann.default, $ann.encoded) }
         case '{ $ann: Schema.annotations.validate[X] }     => '{ $schema.validate($ann.v) }
-        case '{ $ann: Schema.annotations.validateEach[?] } => '{ $schema.modifyUnsafe[X](Schema.ModifyCollectionElements)((_: Schema[X]).validate($ann.v.asInstanceOf[Validator[X]])) }
+        case '{ $ann: Schema.annotations.validateEach[?] } =>
+          '{ $schema.modifyUnsafe[X](Schema.ModifyCollectionElements)((_: Schema[X]).validate($ann.v.asInstanceOf[Validator[X]])) }
         case '{ $ann: Schema.annotations.format }     => '{ $schema.format($ann.format) }
         case '{ $ann: Schema.annotations.deprecated } => '{ $schema.deprecated(true) }
-        case '{ $ann: Schema.annotations.customise } =>
-          println(s"Customize triggered for schema ${ann}")
-          '{ $ann.f($schema).asInstanceOf[Schema[X]] }
-        case ann =>
-          '{
-            val name = ${ schema }.name
-            val ann2 = ${ ann }
-            println(s"Adding $ann2 to $name")
-            $schema
-          }
+        case '{ $ann: Schema.annotations.customise }  => '{ $ann.f($schema).asInstanceOf[Schema[X]] }
+        case _                                        => schema
     }
 
   // helper classes
