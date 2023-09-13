@@ -6,6 +6,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.vertx.VertxErrorHandler
 import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
@@ -19,7 +20,7 @@ import _root_.zio.blocking.Blocking
 
 import java.util.concurrent.atomic.AtomicReference
 
-trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
+trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter with VertxErrorHandler {
   def vertxZioServerOptions: VertxZioServerOptions[R] = VertxZioServerOptions.default
 
   def route(e: ZServerEndpoint[R, ZioStreams with WebSockets])(implicit
@@ -50,8 +51,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter {
         val serverRequest = VertxServerRequest(rc)
 
         def fail(t: Throwable): Unit = {
-          if (rc.response().bytesWritten() > 0) rc.response().end()
-          rc.fail(t)
+          handleError(rc, t, performLogging = false)
         }
 
         val result: ZIO[R, Throwable, Any] =

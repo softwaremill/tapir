@@ -3,7 +3,6 @@ package sttp.tapir.server.vertx.cats
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.{Streams, WebSockets}
@@ -12,7 +11,7 @@ import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxBodyListener
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxErrorHandler}
 import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, CatsRunAsync, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
@@ -23,9 +22,7 @@ import sttp.tapir.server.vertx.cats.streams.fs2.fs2ReadStreamCompatible
 
 import java.util.concurrent.atomic.AtomicReference
 
-trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
-
-  private val logger = LoggerFactory.getLogger(VertxCatsServerInterpreter.getClass)
+trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with VertxErrorHandler {
 
   implicit def fa: Async[F]
 
@@ -69,11 +66,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
             case RequestResult.Failure(_)         => Async[F].delay(rc.next())
             case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
           }
-          .handleError { ex =>
-            logger.error("Error while processing the request", ex)
-            if (rc.response().bytesWritten() > 0) rc.response().end()
-            rc.fail(ex)
-          }
+          .handleError(handleError(rc, _))
 
         // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
         // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
