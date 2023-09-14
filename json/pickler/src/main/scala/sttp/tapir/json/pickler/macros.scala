@@ -9,6 +9,9 @@ import scala.quoted.*
 
 import compiletime.*
 
+/**
+ * Macros, mostly copied from uPickle, and modified to allow our customizations like passing writers/readers as parameters, adjusting encoding/decoding logic to make it coherent with the schema.
+ */
 private[pickler] object macros:
   type IsInt[A <: Int] = A
 

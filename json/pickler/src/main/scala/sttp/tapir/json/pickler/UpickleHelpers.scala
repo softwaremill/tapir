@@ -1,6 +1,6 @@
 package sttp.tapir.json.pickler
 
-trait UpickleHelpers {
+private[pickler] trait UpickleHelpers {
   def scanChildren[T, V](xs: Seq[T])(f: T => V) = { // copied from uPickle
     var x: V = null.asInstanceOf[V]
     val i = xs.iterator

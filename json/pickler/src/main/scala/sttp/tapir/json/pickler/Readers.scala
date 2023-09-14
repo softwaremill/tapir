@@ -6,7 +6,15 @@ import sttp.tapir.{Schema, SchemaType}
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
-trait Readers extends ReadersVersionSpecific with UpickleHelpers {
+/**
+  * A modification of upickle.implicits.Readers, implemented in order to provide our custom JSON decoding and typeclass derivation logic:
+  * 1. A CaseClassReader[T] is built based on readers for child fields passed as an argument, instead of just summoning these readers. This allows us to operate on Picklers and use readers extracted from these Picklers. Summoning is now done on Pickler, not Reader level.
+  * 2. Default values can be passed as parameters, which are read from Schema annotations if present. Vanilla uPickle reads defaults only from case class defaults.
+  * 3. Subtype discriminator can be passed as a parameter, allowing specyfing custom key for discriminator field, as well as function for extracting discriminator value.
+  * 4. Schema is passed as a parameter, so that we can use its encodedName to transform field keys.
+  * 5. Configuration can be used for setting discrtiminator field name or decoding all field names according to custom function (allowing transformations like snake_case, etc.)
+  */
+private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelpers {
 
   case class LeafWrapper[T](leaf: TaggedReader.Leaf[T], r: Reader[T], leafTagValue: String) extends TaggedReader[T] {
     override def findReader(s: String) = if (s == leafTagValue) r else null
