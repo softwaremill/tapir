@@ -57,9 +57,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       Some(SName("sttp.tapir.json.pickler.A"))
     )
 
-  // it should "find schema for collections of case classes" in { // TODO
-  //   implicitlySchema[List[A]].schemaType shouldBe SArray[List[A], A](expectedASchema)(_.toIterable)
-  // }
+  case class ListA(fl: List[A])
+
+  it should "find schema for collections of case classes" in { 
+    implicitlySchema[ListA].schemaType shouldBe SProduct(List(
+      SProductField(FieldName("fl"),
+        Schema(SArray[List[A], A](expectedASchema)(_.toIterable), isOptional = true), _ => None)))
+  }
 
   it should "find schema for a simple case class" in {
     implicitlySchema[A] shouldBe expectedASchema
