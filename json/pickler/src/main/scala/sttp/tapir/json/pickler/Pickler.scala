@@ -78,7 +78,7 @@ object Pickler:
   inline given nonMirrorPickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     summonFrom {
       // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
-      case m: Mirror.Of[T] => error("Failed to derive a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
+      case m: Mirror.Of[T] => errorForType[T]("Failed to summon a Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
       case n: NotGiven[Mirror.Of[T]] =>
         Pickler(
           new TapirPickle[T] {
@@ -147,14 +147,14 @@ object Pickler:
 
   inline given picklerForAnyVal[T <: AnyVal]: Pickler[T] = ${ picklerForAnyValImpl[T] }
 
-  private inline def errorForType[T](inline template: String): Unit = ${ errorForTypeImpl[T]('template) }
+  private inline def errorForType[T](inline template: String): Null = ${ errorForTypeImpl[T]('template) }
 
-  private def errorForTypeImpl[T: Type](template: Expr[String])(using Quotes): Expr[Unit] = {
+  private def errorForTypeImpl[T: Type](template: Expr[String])(using Quotes): Expr[Null] = {
     import quotes.reflect.*
     val templateStr = template.valueOrAbort
     val typeName = TypeRepr.of[T].show
     report.error(String.format(templateStr, typeName))
-    '{}
+    '{null}
   }
 
   private def picklerForAnyValImpl[T: Type](using quotes: Quotes): Expr[Pickler[T]] =
@@ -244,7 +244,10 @@ object Pickler:
   private inline def deriveOrSummon[T, FieldType](using Configuration): Pickler[FieldType] =
     inline erasedValue[FieldType] match
       case _: T => deriveRec[T, FieldType]
-      case _    => summonInline[Pickler[FieldType]]
+      case _    => summonFrom {
+        case p: Pickler[FieldType] => p
+        case _ => errorForType[FieldType]("Failed to summon Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
+      }
 
   private inline def deriveRec[T, FieldType](using config: Configuration): Pickler[FieldType] =
     inline erasedValue[T] match
@@ -311,7 +314,7 @@ object Pickler:
     }
     new Pickler[T](tapirPickle, schema)
 
-@implicitNotFound("Failed to derive a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
+@implicitNotFound("Failed to summon a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
 
   def toCodec: JsonCodec[T] =
