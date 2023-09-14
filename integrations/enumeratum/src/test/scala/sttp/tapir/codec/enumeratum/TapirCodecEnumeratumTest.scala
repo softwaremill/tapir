@@ -77,7 +77,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     }
   }
 
-  private def fullName[E](e: E) = s"$className${e.getClass.getSimpleName}".replace("$", ".")
+  private def fullName[E](e: E) = s"$className${e.getClass.getSimpleName}".replace("$", ".").dropRight(1)
 
   it should "find correct plain codec for enumeratum enum entries" in {
     testEnumPlainCodec(implicitly[PlainCodec[TestEnumEntry]])
