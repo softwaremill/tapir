@@ -15,6 +15,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 
 import macros.*
+import scala.annotation.implicitNotFound
 
 object Pickler:
 
@@ -75,15 +76,20 @@ object Pickler:
         error("Unexpected non-enum type passed to derivedEnumeration")
 
   inline given nonMirrorPickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
-    Pickler(
-      new TapirPickle[T] {
-        // Relying on given writers and readers provided by uPickle Writers and Readers base traits
-        // They should take care of deriving for Int, String, Boolean, Option, List, Map, Array, etc.
-        override lazy val reader = summonInline[Reader[T]]
-        override lazy val writer = summonInline[Writer[T]]
-      },
-      summonInline[Schema[T]]
-    )
+    summonFrom {
+      // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
+      case m: Mirror.Of[T] => error("Failed to derive a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
+      case n: NotGiven[Mirror.Of[T]] =>
+        Pickler(
+          new TapirPickle[T] {
+            // Relying on given writers and readers provided by uPickle Writers and Readers base traits
+            // They should take care of deriving for Int, String, Boolean, Option, List, Map, Array, etc.
+            override lazy val reader = summonInline[Reader[T]]
+            override lazy val writer = summonInline[Writer[T]]
+          },
+          summonInline[Schema[T]]
+        )
+    }
 
   given picklerForOption[T: Pickler](using Configuration, Mirror.Of[T]): Pickler[Option[T]] =
     summon[Pickler[T]].asOption
@@ -305,6 +311,7 @@ object Pickler:
     }
     new Pickler[T](tapirPickle, schema)
 
+@implicitNotFound("Failed to derive a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
 
   def toCodec: JsonCodec[T] =
