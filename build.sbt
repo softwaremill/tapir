@@ -2057,9 +2057,12 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .dependsOn(
+    circeJson,
     http4sServer,
+    nettyServer,
+    picklerJson,
+    sttpClient,
     swaggerUiBundle,
-    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
