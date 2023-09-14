@@ -71,8 +71,8 @@ object Pickler:
         error("Unexpected non-enum Nothing passed to derivedEnumeration")
       case _: reflect.Enum =>
         new CreateDerivedEnumerationPickler(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
-      case other =>
-        error(s"Unexpected non-enum value $other passed to derivedEnumeration")
+      case _ =>
+        error("Unexpected non-enum type passed to derivedEnumeration")
 
   inline given nonMirrorPickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     Pickler(
@@ -356,4 +356,3 @@ case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
     )
 
 given picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
-
