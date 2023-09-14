@@ -276,7 +276,9 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val object12 = codecCc1.decode("""{"fieldB":"msg105"}""")
     val object2 = codecCc2.decode("""{"fieldA":"msgCc12"}""")
     val object3 =
-      codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
+      codecCc3.decode(
+        """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}"""
+      )
 
     // then
     jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
@@ -443,7 +445,9 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
   it should "handle enums with ordinal encoding" in {
     // given
-    given picklerColorEnum: Pickler[ColorEnum] = Pickler.derivedEnumeration[ColorEnum].customStringBased(_.ordinal.toString)
+    given Pickler[ColorEnum] = Pickler
+      .derivedEnumeration[ColorEnum]
+      .customStringBased(_.ordinal.toString)
 
     // when
     val picklerResponse = Pickler.derived[Response]

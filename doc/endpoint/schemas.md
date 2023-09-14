@@ -3,7 +3,7 @@
 A schema describes the shape of a value, how the low-level representation should be structured. Schemas are primarily
 used when generating [documentation](../docs/openapi.md) and when [validating](validation.md) incoming values.
 
-Schemas are typically defined as implicit values. They are part of [codecs](codecs.md), and are looked up in the 
+Schemas are typically defined as implicit values. They are part of [codecs](codecs.md), and are looked up in the
 implicit scope during codec derivation, as well as when using [json](json.md) or [form](forms.md) bodies.
 
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
@@ -15,12 +15,12 @@ fields, or all of the implementations of the `enum`/`sealed trait`/`sealed class
 
 Two policies of custom type derivation are available:
 
-* automatic derivation
-* semi automatic derivation
+- automatic derivation
+- semi automatic derivation
 
 ## Automatic derivation
 
-Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto._` 
+Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto._`
 (or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
 
 ```scala mdoc:silent:reset
@@ -37,7 +37,7 @@ implicitly[Schema[Parent]]
 If you have a case class which contains some non-standard types (other than strings, number, other case classes,
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
-Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
+Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to
 enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
 
@@ -66,13 +66,13 @@ values must be `lazy val`s.
 
 ## Debugging schema derivation
 
-When deriving schemas using `Schema.derived[T]`, in case derivation fails, you'll get information for which part of `T` 
+When deriving schemas using `Schema.derived[T]`, in case derivation fails, you'll get information for which part of `T`
 the schema cannot be found (e.g. a specific field, or a trait subtype). Given this diagnostic information you can drill
-down, and try to derive the schema (again using `Schema.derived`) for the problematic part. Eventually, you'll find the 
+down, and try to derive the schema (again using `Schema.derived`) for the problematic part. Eventually, you'll find the
 lowest-level type for which the schema cannot be derived. You might need to provide it manually, or use some kind of
 integration layer.
 
-This method may be used both with automatic and semi-automatic derivation. 
+This method may be used both with automatic and semi-automatic derivation.
 
 ## Derivation for recursive types in Scala3
 
@@ -124,10 +124,13 @@ will be represented as a coproduct which contains a list of child schemas, witho
 ```eval_rst
 .. note::
 
-  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
+  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is
   encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
-  configured in the json library, matching the configuration of the schema.  
+  configured in the json library, matching the configuration of the schema.
 ```
+
+Alternatively, instead of deriving schemas and json codecs separately, you can use the [tapir-pickler](pickler.md) module,
+which provides a higher level Pickler concept which takes care of consistent derivation.
 
 ### Field discriminators
 
@@ -155,7 +158,7 @@ import sttp.tapir._
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 
-sealed trait MyCoproduct 
+sealed trait MyCoproduct
 case class Child1(s: String) extends MyCoproduct
 // ... implementations of MyCoproduct ...
 
@@ -176,39 +179,39 @@ implicit val myCoproductSchema: Schema[MyCoproduct] = {
 ```
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
-schemas can be specified as a custom implicit value using the `Schema.oneOfUsingField` macro, 
+schemas can be specified as a custom implicit value using the `Schema.oneOfUsingField` macro,
 for example (this will also generate the appropriate mappings):
 
 ```scala mdoc:silent:reset
 sealed trait Entity {
   def kind: String
-} 
-case class Person(firstName: String, lastName: String) extends Entity { 
+}
+case class Person(firstName: String, lastName: String) extends Entity {
   def kind: String = "person"
 }
 case class Organization(name: String) extends Entity {
-  def kind: String = "org"  
+  def kind: String = "org"
 }
 
 import sttp.tapir._
 
 val sPerson = Schema.derived[Person]
 val sOrganization = Schema.derived[Organization]
-implicit val sEntity: Schema[Entity] = 
+implicit val sEntity: Schema[Entity] =
     Schema.oneOfUsingField[Entity, String](_.kind, _.toString)(
       "person" -> sPerson, "org" -> sOrganization)
 ```
 
 ### Wrapper object discriminators
 
-Another discrimination strategy uses a wrapper object. Such an object contains a single field, with its name 
+Another discrimination strategy uses a wrapper object. Such an object contains a single field, with its name
 corresponding to the discriminator value. A schema can be automatically generated using the `Schema.oneOfWrapped`
 macro, for example:
 
 ```scala mdoc:silent:reset
 sealed trait Entity
 case class Person(firstName: String, lastName: String) extends Entity
-case class Organization(name: String) extends Entity 
+case class Organization(name: String) extends Entity
 
 import sttp.tapir._
 import sttp.tapir.generic.auto._ // to derive child schemas
@@ -226,14 +229,14 @@ this is insufficient, you can generate schemas for individual wrapper objects us
 In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
 field of a case class. One way the automatic & semi-automatic derivation can be customised is using annotations:
 
-* `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
-* `@description` sets description for the whole case class or its field
-* `@default` sets default value for a case class field (plus an optional encoded form used in documentation)
-* `@encodedExample` sets example value for a case class field which is used in the documentation in the encoded form
-* `@format` sets the format for a case class field
-* `@deprecated` marks a case class's field as deprecated
-* `@validate` will add the given validator to a case class field
-* `@validateEach` will add the given validator to the elements of a case class field. Useful for validating the
+- `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
+- `@description` sets description for the whole case class or its field
+- `@default` sets default value for a case class field (plus an optional encoded form used in documentation)
+- `@encodedExample` sets example value for a case class field which is used in the documentation in the encoded form
+- `@format` sets the format for a case class field
+- `@deprecated` marks a case class's field as deprecated
+- `@validate` will add the given validator to a case class field
+- `@validateEach` will add the given validator to the elements of a case class field. Useful for validating the
   value contained in an `Option` (when it's defined), and collection elements
 
 These annotations will adjust schemas, after they are looked up using the normal implicit mechanisms.
@@ -271,11 +274,11 @@ Non-standard collections can be unwrapped in the modification path by providing 
 ### Using value classes/tagged types
 
 An alternative to customising schemas for case class fields of primitive type (e.g. `Int`s), is creating a unique type.
-As schema lookup is type-driven, if a schema for a such type is provided as an implicit value, it will be used 
+As schema lookup is type-driven, if a schema for a such type is provided as an implicit value, it will be used
 during automatic or semi-automatic schema derivation. Such schemas can have custom meta-data, including description,
 validation, etc.
 
-To introduce unique types for primitive values, which don't have a runtime overhead, you can use value classes or 
+To introduce unique types for primitive values, which don't have a runtime overhead, you can use value classes or
 [type tagging](https://github.com/softwaremill/scala-common#tagging).
 
 For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and

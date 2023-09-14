@@ -2,14 +2,14 @@
 
 The modules are categorised using the following levels:
 
-* **stable**: binary compatibility is guaranteed within a major version; adheres to semantic versioning
-* **stabilising**: the API is mostly stable, with rare binary-incompatible changes possible in minor releases (only if necessary)
-* **experimental**: API can change significantly even in patch releases
+- **stable**: binary compatibility is guaranteed within a major version; adheres to semantic versioning
+- **stabilising**: the API is mostly stable, with rare binary-incompatible changes possible in minor releases (only if necessary)
+- **experimental**: API can change significantly even in patch releases
 
-## Main modules 
+## Main modules
 
 | Module         | Level       |
-|----------------|-------------|
+| -------------- | ----------- |
 | core (Scala 2) | stable      |
 | core (Scala 3) | stabilising |
 | server-core    | stabilising |
@@ -18,23 +18,23 @@ The modules are categorised using the following levels:
 
 ## Server interpreters
 
-| Module    | Level        |
-|-----------|--------------|
-| akka-http | stabilising  |
-| armeria   | stabilising  |
-| finatra   | stabilising  |
-| http4s    | stabilising  |
-| netty     | experimental |
-| pekko-http| stabilising  |
-| play      | stabilising  |
-| vertx     | stabilising  |
-| zio1-http | experimental |
-| zio-http  | experimental |
+| Module     | Level        |
+| ---------- | ------------ |
+| akka-http  | stabilising  |
+| armeria    | stabilising  |
+| finatra    | stabilising  |
+| http4s     | stabilising  |
+| netty      | experimental |
+| pekko-http | stabilising  |
+| play       | stabilising  |
+| vertx      | stabilising  |
+| zio1-http  | experimental |
+| zio-http   | experimental |
 
 ## Client interpreters
 
 | Module | Level       |
-|--------|-------------|
+| ------ | ----------- |
 | sttp   | stabilising |
 | play   | stabilising |
 | http4s | stabilising |
@@ -42,14 +42,14 @@ The modules are categorised using the following levels:
 ## Documentation interpreters
 
 | Module   | Level       |
-|----------|-------------|
+| -------- | ----------- |
 | openapi  | stabilising |
 | asyncapi | stabilising |
 
 ## Serverless interpreters
 
 | Module        | Level        |
-|---------------|--------------|
+| ------------- | ------------ |
 | aws-lambda    | experimental |
 | aws-sam       | experimental |
 | aws-terraform | experimental |
@@ -57,7 +57,7 @@ The modules are categorised using the following levels:
 ## Integration modules
 
 | Module        | Level        |
-|---------------|--------------|
+| ------------- | ------------ |
 | cats          | stabilising  |
 | cats-effect   | stabilising  |
 | derevo        | stabilising  |
@@ -73,10 +73,11 @@ The modules are categorised using the following levels:
 ## JSON modules
 
 | Module     | Level        |
-|------------|--------------|
+| ---------- | ------------ |
 | circe      | stabilising  |
 | json4s     | stabilising  |
 | jsoniter   | stabilising  |
+| pickler    | experimental |
 | play-json  | stabilising  |
 | spray-json | stabilising  |
 | tethys     | stabilising  |
@@ -87,7 +88,7 @@ The modules are categorised using the following levels:
 ## Testing modules
 
 | Module    | Level        |
-|-----------|--------------|
+| --------- | ------------ |
 | testing   | stabilising  |
 | sttp-mock | experimental |
 | sttp-stub | stabilising  |
@@ -95,12 +96,12 @@ The modules are categorised using the following levels:
 ## Observability modules
 
 | Module                | Level       |
-|-----------------------|-------------|
+| --------------------- | ----------- |
 | opentelemetry-metrics | stabilising |
 | prometheus-metrics    | stabilising |
 
 ## Other modules
 
-| Module             | Level        |
-|--------------------|--------------|
-| openapi-codegen    | experimental |
+| Module          | Level        |
+| --------------- | ------------ |
+| openapi-codegen | experimental |
