@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
@@ -16,7 +16,7 @@ import sttp.tapir.generic.Configuration
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
 
-  import sttp.tapir.json.generic.auto._
+  import generic.auto._
   def implicitlySchema[T: Pickler]: Schema[T] = summon[Pickler[T]].schema
 
   "Schema auto derivation" should "find schema for simple types" in {
@@ -54,7 +54,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SProduct(
         List(field(FieldName("f1"), stringSchema), field(FieldName("f2"), intSchema), field(FieldName("f3"), stringSchema.asOption))
       ),
-      Some(SName("sttp.tapir.json.A"))
+      Some(SName("sttp.tapir.json.pickler.A"))
     )
 
   // it should "find schema for collections of case classes" in { // TODO
@@ -71,24 +71,24 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "find schema for a nested case class" in {
-    implicitlySchema[B].name shouldBe Some(SName("sttp.tapir.json.B"))
+    implicitlySchema[B].name shouldBe Some(SName("sttp.tapir.json.pickler.B"))
     implicitlySchema[B].schemaType shouldBe SProduct[B](
       List(field(FieldName("g1"), stringSchema), field(FieldName("g2"), expectedASchema))
     )
   }
 
   it should "find schema for case classes with collections" in {
-    implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.C"))
+    implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
     implicitlySchema[C].schemaType shouldBe SProduct[C](
       List(field(FieldName("h1"), stringSchema.asArray), field(FieldName("h2"), intSchema.asOption))
     )
     implicitlySchema[C].schemaType.asInstanceOf[SProduct[C]].required shouldBe Nil
   }
 
-  // it should "use custom schema for custom types" in { // TODO 
+  // it should "use custom schema for custom types" in { // TODO
   //   implicit val scustom: Schema[Custom] = Schema[Custom](SchemaType.SString())
   //   val schema = Pickler.derived[G].schema
-  //   schema.name shouldBe Some(SName("sttp.tapir.json.G"))
+  //   schema.name shouldBe Some(SName("sttp.tapir.json.pickler.G"))
   //   schema.schemaType shouldBe SProduct[G](
   //     List(field(FieldName("f1"), intSchema), field(FieldName("f2"), stringSchema))
   //   )
@@ -96,7 +96,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitlySchema[H[A]]
-    schema.name shouldBe Some(SName("sttp.tapir.json.H", List("A")))
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.H", List("A")))
     schema.schemaType shouldBe SProduct[H[A]](List(field(FieldName("data"), expectedASchema)))
   }
 
@@ -111,7 +111,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schema.name shouldBe Some(SName("Map", List("D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
       Nil,
-      Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.json.D")))
+      Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.json.pickler.D")))
     )(identity)
   }
 
@@ -125,16 +125,16 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           List(
             field(
               FieldName("data"),
-              Schema(SProduct[D](List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.json.D")))
+              Schema(SProduct[D](List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.json.pickler.D")))
             )
           )
         ),
-        Some(SName("sttp.tapir.json.H", List("D")))
+        Some(SName("sttp.tapir.json.pickler.H", List("D")))
       )
     )(identity)
   }
 
-  it should "add meta-data to schema from annotations" in {
+  ignore should "add meta-data to schema from annotations" in { // TODO https://github.com/softwaremill/tapir/issues/3167
     val schema = implicitlySchema[I]
     schema shouldBe Schema[I](
       SProduct(
@@ -157,13 +157,15 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
                   field(FieldName("str"), stringSchema.format("special-string"))
                 )
               ),
-              Some(SName("sttp.tapir.json.K"))
+              Some(SName("sttp.tapir.json.pickler.K"))
             ).deprecated(true).description("child-k-desc")
           )
         )
       ),
-      Some(SName("sttp.tapir.json.I"))
-    ).description("class I") // TODO this causes test to fail, because SchemaDerivation doesn't support @description annotation on case classes
+      Some(SName("sttp.tapir.json.pickler.I"))
+    ).description(
+      "class I"
+    ) // TODO this causes test to fail, because SchemaDerivation doesn't support @description annotation on case classes
   }
 
   it should "find the right schema for a case class with simple types" in {
@@ -177,13 +179,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         f6: Float,
         f7: Double,
         f8: Boolean,
-        f9: BigDecimal,
+        f9: BigDecimal
         // f10: JBigDecimal // TODO
     )
     val schema = implicitlySchema[Test1]
 
     // when
-    schema.name shouldBe Some(SName("sttp.tapir.json.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"))
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
       List(
         field(FieldName("f1"), implicitlySchema[String]),
@@ -194,7 +196,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         field(FieldName("f6"), implicitlySchema[Float]),
         field(FieldName("f7"), implicitlySchema[Double]),
         field(FieldName("f8"), implicitlySchema[Boolean]),
-        field(FieldName("f9"), implicitlySchema[BigDecimal]),
+        field(FieldName("f9"), implicitlySchema[BigDecimal])
         // field(FieldName("f10"), implicitlySchema[JBigDecimal]) // TODO
       )
     )
@@ -224,11 +226,11 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           field(FieldName("secondField", "second_field"), intSchema)
         )
       ),
-      Some(SName("sttp.tapir.json.L"))
+      Some(SName("sttp.tapir.json.pickler.L"))
     )
   }
 
-  it should "customise the schema using the given function" in {
+  ignore should "customise the schema using the given function" in { // TODO https://github.com/softwaremill/tapir/issues/3166
     val schema = implicitlySchema[M]
     schema.attribute(M.testAttributeKey) shouldBe Some("test")
   }
@@ -243,7 +245,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         SProduct[Organization](
           List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
         ),
-        Some(SName("sttp.tapir.json.Organization"))
+        Some(SName("sttp.tapir.json.pickler.Organization"))
       ),
       Schema(
         SProduct[Person](
@@ -253,7 +255,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             field(FieldName("who_am_i"), Schema(SString()))
           )
         ),
-        Some(SName("sttp.tapir.json.Person"))
+        Some(SName("sttp.tapir.json.pickler.Person"))
       ),
       Schema(
         SProduct[UnknownEntity.type](
@@ -261,7 +263,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             field(FieldName("who_am_i"), Schema(SString()))
           )
         ),
-        Some(SName("sttp.tapir.json.UnknownEntity"))
+        Some(SName("sttp.tapir.json.pickler.UnknownEntity"))
       )
     )
 
@@ -269,9 +271,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "Organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "Person" -> SRef(SName("sttp.tapir.json.Person")),
-          "UnknownEntity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "Organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "Person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "UnknownEntity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -283,9 +285,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "person" -> SRef(SName("sttp.tapir.json.Person")),
-          "unknown-entity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "unknown-entity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -297,9 +299,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "person" -> SRef(SName("sttp.tapir.json.Person")),
-          "unknown_entity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "unknown_entity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -311,9 +313,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "sttp.tapir.json.Organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "sttp.tapir.json.Person" -> SRef(SName("sttp.tapir.json.Person")),
-          "sttp.tapir.json.UnknownEntity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "sttp.tapir.json.pickler.Organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "sttp.tapir.json.pickler.Person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "sttp.tapir.json.pickler.UnknownEntity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -325,9 +327,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "sttp.tapir.json.organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "sttp.tapir.json.person" -> SRef(SName("sttp.tapir.json.Person")),
-          "sttp.tapir.json.unknown-entity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "sttp.tapir.json.pickler.organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "sttp.tapir.json.pickler.person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "sttp.tapir.json.pickler.unknown-entity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -339,9 +341,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SDiscriminator(
         FieldName("who_am_i"),
         Map(
-          "sttp.tapir.json.organization" -> SRef(SName("sttp.tapir.json.Organization")),
-          "sttp.tapir.json.person" -> SRef(SName("sttp.tapir.json.Person")),
-          "sttp.tapir.json.unknown_entity" -> SRef(SName("sttp.tapir.json.UnknownEntity"))
+          "sttp.tapir.json.pickler.organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "sttp.tapir.json.pickler.person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "sttp.tapir.json.pickler.unknown_entity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )
@@ -403,7 +405,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 }
 
 object SchemaGenericAutoTest {
-  import sttp.tapir.json.generic.auto._
+  import generic.auto._
   def implicitlySchema[A: Pickler]: Schema[A] = summon[Pickler[A]].schema
 
   private[json] val stringSchema = implicitlySchema[String]

@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import sttp.tapir.SchemaType.{SProduct, SProductField, SRef}
 import sttp.tapir.generic.Configuration
@@ -10,8 +10,8 @@ import scala.quoted.*
 import scala.reflect.ClassTag
 import sttp.tapir.Validator
 
-private[json] object SchemaDerivation:
-  private[json] val deriveInProgress: scala.collection.mutable.Map[String, Unit] = new ConcurrentHashMap[String, Unit]().asScala
+private[pickler] object SchemaDerivation:
+  private[pickler] val deriveInProgress: scala.collection.mutable.Map[String, Unit] = new ConcurrentHashMap[String, Unit]().asScala
 
   inline def productSchema[T, TFields <: Tuple](
       genericDerivationConfig: Configuration,

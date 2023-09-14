@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
@@ -8,8 +8,6 @@ import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
 
 import scala.reflect.ClassTag
-
-import macros.*
 
 trait Writers extends WritersVersionSpecific with UpickleHelpers {
 
@@ -55,7 +53,7 @@ trait Writers extends WritersVersionSpecific with UpickleHelpers {
         )
     }
 
-    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isScalaEnum[T] then
+    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !macros.isScalaEnum[T] then
       annotate[T](
         writer,
         upickleMacros.tagName[T],

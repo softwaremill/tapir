@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import _root_.upickle.implicits.{ReadersVersionSpecific, macros => upickleMacros}
 import sttp.tapir.{Schema, SchemaType}

@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import sttp.tapir._
 

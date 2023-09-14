@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
@@ -208,7 +208,7 @@ object Pickler:
       schema
     )
 
-  private[json] inline def buildNewPickler[T: ClassTag](
+  private[pickler] inline def buildNewPickler[T: ClassTag](
   )(using m: Mirror.Of[T], c: Configuration, subtypeDiscriminator: SubtypeDiscriminator[T]): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
@@ -223,7 +223,7 @@ object Pickler:
         picklerSum(schema, childPicklers)
     }
 
-  private[json] inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
+  private[pickler] inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
       m: Mirror.Of[T],
       c: Configuration
   ): Tuple.Map[Fields, Pickler] =

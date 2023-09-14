@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 trait UpickleHelpers {
   def scanChildren[T, V](xs: Seq[T])(f: T => V) = { // copied from uPickle

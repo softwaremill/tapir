@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import sttp.tapir.generic.Configuration
 import sttp.tapir.macros.CreateDerivedEnumerationSchema
@@ -7,7 +7,7 @@ import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
-private[json] class CreateDerivedEnumerationPickler[T: ClassTag](
+private[pickler] class CreateDerivedEnumerationPickler[T: ClassTag](
     validator: Validator.Enumeration[T],
     schemaAnnotations: SchemaAnnotations[T]
 ):

@@ -1,4 +1,4 @@
-package sttp.tapir.json
+package sttp.tapir.json.pickler
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -35,8 +35,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
 
     // then
     bookPickler.toCodec.encode(Book("John", "Hello")) shouldBe """{"author":"John","title":"Hello"}"""
-    bookShelfPickler.toCodec.encode(BookShelf(List(Book("Alice", "Goodbye")))) shouldBe 
-     """{"books":[{"author":"Alice","title":"Goodbye"}]}"""
+    bookShelfPickler.toCodec.encode(BookShelf(List(Book("Alice", "Goodbye")))) shouldBe
+      """{"books":[{"author":"Alice","title":"Goodbye"}]}"""
   }
 
   it should "build an instance for a flat case class" in {
@@ -244,8 +244,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.Fixtures.ErrorTimeout"},"fieldB":"msg18"}"""
-    jsonStr2 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.Fixtures.CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
+    jsonStr1 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorTimeout"},"fieldB":"msg18"}"""
+    jsonStr2 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
   }
 
   it should "apply custom field name encoding to a simple ADT" in {
@@ -260,8 +260,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.Fixtures.ErrorTimeout"},"FIELDB":"msg18"}"""
-    jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.Fixtures.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
+    jsonStr1 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorTimeout"},"FIELDB":"msg18"}"""
+    jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.pickler.Fixtures.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
   }
 
   it should "apply defaults from annotations" in {
@@ -276,7 +276,7 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val object12 = codecCc1.decode("""{"fieldB":"msg105"}""")
     val object2 = codecCc2.decode("""{"fieldA":"msgCc12"}""")
     val object3 =
-      codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.Fixtures.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
+      codecCc3.decode("""{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""")
 
     // then
     jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
@@ -319,8 +319,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = codec.encode(inputObj2)
 
     // then
-    jsonStr1 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.Fixtures.CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
-    jsonStr2 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.Fixtures.ErrorNotFound"},"fieldB":""}"""
+    jsonStr1 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.pickler.Fixtures.CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
+    jsonStr2 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"},"fieldB":""}"""
     codec.decode(jsonStr1) shouldBe Value(inputObj1)
     codec.decode(jsonStr2) shouldBe Value(inputObj2)
   }
@@ -337,8 +337,31 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     val decoded = codec.decode(jsonStr)
 
     // then
-    jsonStr shouldBe """{"status":{"$type":"sttp.tapir.json.Fixtures.StatusBadRequest","bF":55}}"""
+    jsonStr shouldBe """{"status":{"$type":"sttp.tapir.json.pickler.Fixtures.StatusBadRequest","bF":55}}"""
     decoded shouldBe Value(inputObject)
+  }
+
+  it should "work2" in {
+    sealed trait Entity {
+      def kind: String
+    }
+    case class Person(firstName: String, lastName: String) extends Entity {
+      def kind: String = "person"
+    }
+    case class Organization(name: String) extends Entity {
+      def kind: String = "org"
+    }
+
+    import sttp.tapir.*
+    import sttp.tapir.json.*
+
+    val pPerson = Pickler.derived[Person]
+    val pOrganization = Pickler.derived[Organization]
+    given pEntity: Pickler[Entity] =
+      Pickler.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> pPerson, "org" -> pOrganization)
+
+    // { "$type": "person", "firstName": "Jessica", "lastName": "West" }
+    pEntity.toCodec.encode(Person("Jessica", "West"))
   }
   it should "Set discriminator value using oneOfUsingField" in {
     // given
