@@ -158,10 +158,6 @@ lazy val loggerDependencies = Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
-lazy val slf4jDependencies = Seq(
-  "org.slf4j" % "slf4j-api" % "2.0.9"
-)
-
 lazy val rawAllAggregates = core.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
@@ -1431,7 +1427,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-vertx-server",
-    libraryDependencies ++= slf4jDependencies ++ Seq(
+    libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx
     )
   )

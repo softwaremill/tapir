@@ -49,7 +49,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
         val serverRequest = VertxServerRequest(rc)
 
         def fail(t: Throwable): Unit = {
-          handleError(rc, t, performLogging = false)
+          handleError(rc, t)
         }
 
         val result: ZIO[R & R2, Throwable, Any] =

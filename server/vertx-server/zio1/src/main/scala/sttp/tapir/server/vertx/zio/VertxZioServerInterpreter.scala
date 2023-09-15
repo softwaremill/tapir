@@ -51,7 +51,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter w
         val serverRequest = VertxServerRequest(rc)
 
         def fail(t: Throwable): Unit = {
-          handleError(rc, t, performLogging = false)
+          handleError(rc, t)
         }
 
         val result: ZIO[R, Throwable, Any] =
