@@ -10,7 +10,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
-import java.math.{BigDecimal => JBigDecimal}
+import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import sttp.tapir.generic.Configuration
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
@@ -30,7 +30,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitlySchema[Double].schemaType shouldBe SNumber()
     implicitlySchema[Boolean].schemaType shouldBe SBoolean()
     implicitlySchema[BigDecimal].schemaType shouldBe SNumber()
-    // implicitlySchema[JBigDecimal].schemaType shouldBe SNumber() // TODO
+    implicitlySchema[JBigDecimal].schemaType shouldBe SNumber() 
+    implicitlySchema[JBigInteger].schemaType shouldBe SInteger() 
   }
 
   it should "find schema for optional types" in {
@@ -183,8 +184,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         f6: Float,
         f7: Double,
         f8: Boolean,
-        f9: BigDecimal
-        // f10: JBigDecimal // TODO
+        f9: BigDecimal,
+        f10: JBigDecimal,
+        f11: JBigInteger
     )
     val schema = implicitlySchema[Test1]
 
@@ -200,8 +202,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         field(FieldName("f6"), implicitlySchema[Float]),
         field(FieldName("f7"), implicitlySchema[Double]),
         field(FieldName("f8"), implicitlySchema[Boolean]),
-        field(FieldName("f9"), implicitlySchema[BigDecimal])
-        // field(FieldName("f10"), implicitlySchema[JBigDecimal]) // TODO
+        field(FieldName("f9"), implicitlySchema[BigDecimal]),
+        field(FieldName("f10"), implicitlySchema[JBigDecimal]),
+        field(FieldName("f11"), implicitlySchema[JBigInteger])
       )
     )
   }

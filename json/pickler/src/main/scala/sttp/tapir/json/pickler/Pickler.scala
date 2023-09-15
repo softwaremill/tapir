@@ -14,6 +14,7 @@ import scala.quoted.*
 import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 
+import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import macros.*
 import scala.annotation.implicitNotFound
 
@@ -77,7 +78,8 @@ object Pickler:
   inline given nonMirrorPickler[T](using Configuration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     summonFrom {
       // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
-      case m: Mirror.Of[T] => errorForType[T]("Failed to summon a Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
+      case m: Mirror.Of[T] =>
+        errorForType[T]("Failed to summon a Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
       case n: NotGiven[Mirror.Of[T]] =>
         Pickler(
           new TapirPickle[T] {
@@ -144,6 +146,22 @@ object Pickler:
       newSchema
     )
 
+  given Pickler[JBigDecimal] = new Pickler[JBigDecimal](
+    new TapirPickle[JBigDecimal] {
+      override lazy val writer = summon[Writer[BigDecimal]].comap(jBd => BigDecimal(jBd))
+      override lazy val reader = summon[Reader[BigDecimal]].map(bd => bd.bigDecimal)
+    },
+    summon[Schema[JBigDecimal]]
+  )
+  
+  given Pickler[JBigInteger] = new Pickler[JBigInteger](
+    new TapirPickle[JBigInteger] {
+      override lazy val writer = summon[Writer[BigInt]].comap(jBi => BigInt(jBi))
+      override lazy val reader = summon[Reader[BigInt]].map(bi => bi.bigInteger)
+    },
+    summon[Schema[JBigInteger]]
+  )
+
   inline given picklerForAnyVal[T <: AnyVal]: Pickler[T] = ${ picklerForAnyValImpl[T] }
 
   private inline def errorForType[T](inline template: String): Null = ${ errorForTypeImpl[T]('template) }
@@ -153,7 +171,7 @@ object Pickler:
     val templateStr = template.valueOrAbort
     val typeName = TypeRepr.of[T].show
     report.error(String.format(templateStr, typeName))
-    '{null}
+    '{ null }
   }
 
   private def picklerForAnyValImpl[T: Type](using quotes: Quotes): Expr[Pickler[T]] =
@@ -244,10 +262,14 @@ object Pickler:
   private inline def deriveOrSummon[T, FieldType](using Configuration): Pickler[FieldType] =
     inline erasedValue[FieldType] match
       case _: T => deriveRec[T, FieldType]
-      case _    => summonFrom {
-        case p: Pickler[FieldType] => p
-        case _ => errorForType[FieldType]("Failed to summon Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
-      }
+      case _ =>
+        summonFrom {
+          case p: Pickler[FieldType] => p
+          case _ =>
+            errorForType[FieldType](
+              "Failed to summon Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*"
+            )
+        }
 
   private inline def deriveRec[T, FieldType](using config: Configuration): Pickler[FieldType] =
     inline erasedValue[T] match
