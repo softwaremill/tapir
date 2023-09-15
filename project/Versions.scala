@@ -17,7 +17,7 @@ object Versions {
   val pekkoStreams = "1.0.1"
   val swaggerUi = "5.6.1"
   val upickle = "3.1.2"
-  val playJson = "2.9.4"
+  val playJson = "2.10.0"
   val finatra = "22.12.0"
   val catbird = "21.12.0"
   val json4s = "4.0.6"
