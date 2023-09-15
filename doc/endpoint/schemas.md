@@ -129,6 +129,9 @@ will be represented as a coproduct which contains a list of child schemas, witho
   configured in the json library, matching the configuration of the schema.  
 ```
 
+Alternatively, instead of deriving schemas and json codecs separately, you can use the [tapir-pickler](pickler.md) 
+module, which provides a higher level Pickler concept which takes care of consistent derivation.
+
 ### Field discriminators
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used

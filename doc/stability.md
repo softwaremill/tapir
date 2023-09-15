@@ -77,6 +77,7 @@ The modules are categorised using the following levels:
 | circe      | stabilising  |
 | json4s     | stabilising  |
 | jsoniter   | stabilising  |
+| pickler    | experimental |
 | play-json  | stabilising  |
 | spray-json | stabilising  |
 | tethys     | stabilising  |

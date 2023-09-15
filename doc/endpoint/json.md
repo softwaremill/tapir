@@ -15,9 +15,15 @@ better error reporting, in case one of the components required to create the jso
 .. note::
 
   Note that the process of deriving schemas, and deriving library-specific json encoders and decoders is entirely
-  separate. The first is controlled by tapir, the second - by the json library. Any customisation, e.g. for field
-  naming or inheritance strategies, must be done separately for both derivations.
+  separate. The first is controlled by tapir, the second - by the json library, unless you use the Pickler module 
+  mentioned below. Otherwise, any customisation, e.g. for field naming or inheritance strategies, must be done 
+  separately for both derivations.
 ```
+
+## Pickler
+
+Alternatively, instead of deriving schemas and json codecs separately, you can use the [tapir-pickler](pickler.md) module,
+which takes care of both derivation in a consistent way, keeping possibility to customize both with a common configuration API.
 
 ## Implicit json codecs
 
