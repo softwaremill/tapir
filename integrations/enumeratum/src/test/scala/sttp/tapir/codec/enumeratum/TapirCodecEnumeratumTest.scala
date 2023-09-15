@@ -42,42 +42,60 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find proper validator for enumeratum enum entries" in {
-    testEnumValidator(implicitly[Schema[TestEnumEntry]].validator)
-    testValueEnumValidator[Int, TestIntEnumEntry, IntEnum[TestIntEnumEntry]](implicitly[Schema[TestIntEnumEntry]].validator)
-    testValueEnumValidator[Long, TestLongEnumEntry, LongEnum[TestLongEnumEntry]](implicitly[Schema[TestLongEnumEntry]].validator)
-    testValueEnumValidator[Short, TestShortEnumEntry, ShortEnum[TestShortEnumEntry]](implicitly[Schema[TestShortEnumEntry]].validator)
-    testValueEnumValidator[String, TestStringEnumEntry, StringEnum[TestStringEnumEntry]](implicitly[Schema[TestStringEnumEntry]].validator)
-    testValueEnumValidator[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[Schema[TestByteEnumEntry]].validator)
-    testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](implicitly[Schema[TestCharEnumEntry]].validator)
+    testEnumValidator(implicitly[Schema[TestEnumEntry]].validator, "TestEnumEntry")
+    testValueEnumValidator[Int, TestIntEnumEntry, IntEnum[TestIntEnumEntry]](
+      implicitly[Schema[TestIntEnumEntry]].validator,
+      "TestIntEnumEntry"
+    )
+    testValueEnumValidator[Long, TestLongEnumEntry, LongEnum[TestLongEnumEntry]](
+      implicitly[Schema[TestLongEnumEntry]].validator,
+      "TestLongEnumEntry"
+    )
+    testValueEnumValidator[Short, TestShortEnumEntry, ShortEnum[TestShortEnumEntry]](
+      implicitly[Schema[TestShortEnumEntry]].validator,
+      "TestShortEnumEntry"
+    )
+    testValueEnumValidator[String, TestStringEnumEntry, StringEnum[TestStringEnumEntry]](
+      implicitly[Schema[TestStringEnumEntry]].validator,
+      "TestStringEnumEntry"
+    )
+    testValueEnumValidator[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](
+      implicitly[Schema[TestByteEnumEntry]].validator,
+      "TestByteEnumEntry"
+    )
+    testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](
+      implicitly[Schema[TestCharEnumEntry]].validator,
+      "TestCharEnumEntry"
+    )
   }
 
-  private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit `enum`: Enum[E]): Unit = {
+  private def testEnumValidator[E <: EnumEntry](validator: Validator[E], shortName: String)(implicit `enum`: Enum[E]): Unit = {
     `enum`.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
         case Validator.Enumeration(_, Some(encode), name) =>
           encode(v) shouldBe Some(v.entryName)
-          name shouldBe Some(SName(fullName(`enum`)))
+          name shouldBe Some(SName(fullName(shortName)))
         case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
 
-  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit
-      `enum`: E
+  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE], shortName: String)(
+      implicit `enum`: E
   ): Unit = {
     `enum`.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
         case Validator.Enumeration(_, Some(encode), name) =>
           encode(v) shouldBe Some(v.value)
-          name shouldBe Some(SName(fullName(`enum`)))
+          name shouldBe Some(SName(fullName(shortName)))
         case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
 
-  private def fullName[E](e: E) = s"$className${e.getClass.getSimpleName}".replace("$", ".").dropRight(1)
+  private def fullName(name: String) = s"sttp.tapir.codec.enumeratum.TapirCodecEnumeratumTest.$name"
 
   it should "find correct plain codec for enumeratum enum entries" in {
     testEnumPlainCodec(implicitly[PlainCodec[TestEnumEntry]])
