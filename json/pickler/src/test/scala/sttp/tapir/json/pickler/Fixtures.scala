@@ -20,6 +20,10 @@ object Fixtures:
 
   case class RichColorResponse(color: RichColorEnum)
 
+  enum Entity:
+    case Person(first: String, age: Int)
+    case Business(address: String)
+
   case class ClassWithDefault(@default("field-a-default") fieldA: String, fieldB: String)
   case class ClassWithScalaDefault(fieldA: String = "field-a-default", fieldB: String)
   case class ClassWithScalaAndTapirDefault(

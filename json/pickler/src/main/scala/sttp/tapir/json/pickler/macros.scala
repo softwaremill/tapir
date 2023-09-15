@@ -9,9 +9,9 @@ import scala.quoted.*
 
 import compiletime.*
 
-/**
- * Macros, mostly copied from uPickle, and modified to allow our customizations like passing writers/readers as parameters, adjusting encoding/decoding logic to make it coherent with the schema.
- */
+/** Macros, mostly copied from uPickle, and modified to allow our customizations like passing writers/readers as parameters, adjusting
+  * encoding/decoding logic to make it coherent with the schema.
+  */
 private[pickler] object macros:
   type IsInt[A <: Int] = A
 
@@ -58,11 +58,15 @@ private[pickler] object macros:
       '{ () }
     )
 
-  private[pickler] inline def storeDefaultsTapir[T](inline x: upickle.implicits.BaseCaseObjectContext, defaultsFromSchema: List[Option[Any]]): Unit = ${
+  private[pickler] inline def storeDefaultsTapir[T](
+      inline x: upickle.implicits.BaseCaseObjectContext,
+      defaultsFromSchema: List[Option[Any]]
+  ): Unit = ${
     storeDefaultsImpl[T]('x, 'defaultsFromSchema)
   }
 
-  private[pickler] def storeDefaultsImpl[T](x: Expr[upickle.implicits.BaseCaseObjectContext], defaultsFromSchema: Expr[List[Option[Any]]])(using
+  private[pickler] def storeDefaultsImpl[T](x: Expr[upickle.implicits.BaseCaseObjectContext], defaultsFromSchema: Expr[List[Option[Any]]])(
+      using
       Quotes,
       Type[T]
   ) = {
@@ -92,5 +96,19 @@ private[pickler] object macros:
   transparent inline def isScalaEnum[X]: Boolean = inline compiletime.erasedValue[X] match
     case _: Null         => false
     case _: Nothing      => false
-    case _: reflect.Enum => true
+    case _: reflect.Enum => allChildrenObjectsOrEnumCases[X]
     case _               => false
+
+  /** Checks whether all children of type T are objects or enum cases or sealed parents of such. Useful for determining whether an enum is
+    * indeed an enum, or will be desugared to a sealed hierarchy, in which case it's not really an enumeration in context of schemas and
+    * JSON codecs.
+    */
+  inline def allChildrenObjectsOrEnumCases[T]: Boolean = ${ allChildrenObjectsOrEnumCasesImpl[T] }
+
+  import scala.quoted._
+
+  def allChildrenObjectsOrEnumCasesImpl[T: Type](using q: Quotes): Expr[Boolean] =
+    import quotes.reflect.*
+    val tpe = TypeRepr.of[T]
+    val symbol = tpe.typeSymbol
+    Expr(symbol.children.nonEmpty && !symbol.children.exists(c => c.isClassDef && !(c.flags is Flags.Sealed)))

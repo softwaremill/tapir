@@ -457,6 +457,22 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     encoded shouldBe """{"color":"Cyan"}"""
     codec.decode(encoded) shouldBe Value(inputObj)
   }
+
+  it should "support sealed hierarchies looking like enums" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    val picklerResponse = Pickler.derived[Entity]
+    val codec = picklerResponse.toCodec
+    val inputObj = Entity.Business("221B Baker Street")
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"$type":"Business","address":"221B Baker Street"}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
+
   it should "handle enums with ordinal encoding" in {
     // given
     given Pickler[ColorEnum] = Pickler
