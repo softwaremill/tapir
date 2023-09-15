@@ -443,6 +443,20 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     codec.decode(encoded) shouldBe Value(inputObj)
   }
 
+  it should "support enums with fields" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    val picklerResponse = Pickler.derived[RichColorResponse]
+    val codec = picklerResponse.toCodec
+    val inputObj = RichColorResponse(RichColorEnum.Cyan)
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"color":"Cyan"}"""
+    codec.decode(encoded) shouldBe Value(inputObj)
+  }
   it should "handle enums with ordinal encoding" in {
     // given
     given Pickler[ColorEnum] = Pickler
