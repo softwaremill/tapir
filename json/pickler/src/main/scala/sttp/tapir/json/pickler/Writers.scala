@@ -9,13 +9,18 @@ import sttp.tapir.generic.Configuration
 
 import scala.reflect.ClassTag
 
-/**
-  * A modification of upickle.implicits.Writers, implemented in order to provide our custom JSON encoding and typeclass derivation logic:
-  * 1. A CaseClassWriter[T] is built based on writers for child fields passed as an argument, instead of just summoning these writers. This allows us to operate on Picklers and use Writers extracted from these Picklers. Summoning is now done on Pickler, not Writer level.
-  * 2. Default values can be passed as parameters, which are read from Schema annotations if present. Vanilla uPickle reads defaults only from case class defaults.
-  * 3. Subtype discriminator can be passed as a parameter, allowing specyfing custom key for discriminator field, as well as function for extracting discriminator value
-  * 4. Schema is passed as a parameter, so that we can use its encodedName to transform field keys
-  * 5. Configuration can be used for setting discrtiminator field name or encoding all field names according to custom function (allowing transformations like snake_case, etc.)
+/** A modification of upickle.implicits.Writers, implemented in order to provide our custom JSON encoding and typeclass derivation logic:
+  *
+  *   1. A CaseClassWriter[T] is built based on writers for child fields passed as an argument, instead of just summoning these writers.
+  *      This allows us to operate on Picklers and use Writers extracted from these Picklers. Summoning is now done on Pickler, not Writer
+  *      level.
+  *   1. Default values can be passed as parameters, which are read from Schema annotations if present. Vanilla uPickle reads defaults only
+  *      from case class defaults.
+  *   1. Subtype discriminator can be passed as a parameter, allowing specyfing custom key for discriminator field, as well as function for
+  *      extracting discriminator value
+  *   1. Schema is passed as a parameter, so that we can use its encodedName to transform field keys
+  *   1. Configuration can be used for setting discrtiminator field name or encoding all field names according to custom function (allowing
+  *      transformations like snake_case, etc.)
   */
 private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelpers {
 
