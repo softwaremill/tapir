@@ -22,8 +22,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
   inline def macroProductW[T: ClassTag](
       schema: Schema[T],
       childWriters: => List[Any],
-      childDefaults: => List[Option[Any]],
-      subtypeDiscriminator: SubtypeDiscriminator[T]
+      childDefaults: => List[Option[Any]]
   )(using
       Configuration
   ) =

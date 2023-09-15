@@ -20,7 +20,6 @@ import scala.annotation.implicitNotFound
 object Pickler:
 
   inline def derived[T: ClassTag](using Configuration, Mirror.Of[T]): Pickler[T] =
-    given subtypeDiscriminator: SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator()
     summonFrom {
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
       case _                 => buildNewPickler[T]()
@@ -215,7 +214,7 @@ object Pickler:
     )
 
   private[pickler] inline def buildNewPickler[T: ClassTag](
-  )(using m: Mirror.Of[T], c: Configuration, subtypeDiscriminator: SubtypeDiscriminator[T]): Pickler[T] =
+  )(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
@@ -226,6 +225,7 @@ object Pickler:
             Schema.derivedEnumeration[T].defaultStringBased
           else
             Schema.derived[T]
+        given SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
         picklerSum(schema, childPicklers)
     }
 
@@ -262,8 +262,7 @@ object Pickler:
       product: Mirror.ProductOf[T],
       childPicklers: => Tuple.Map[TFields, Pickler]
   )(using
-      config: Configuration,
-      subtypeDiscriminator: SubtypeDiscriminator[T]
+      config: Configuration
   ): Pickler[T] =
     lazy val derivedChildSchemas: Tuple.Map[TFields, Schema] =
       childPicklers.map([t] => (p: t) => p.asInstanceOf[Pickler[t]].schema).asInstanceOf[Tuple.Map[TFields, Schema]]
@@ -279,8 +278,7 @@ object Pickler:
         macroProductW[T](
           schema,
           childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.writer).productIterator.toList,
-          childDefaults,
-          subtypeDiscriminator
+          childDefaults
         )
       override lazy val reader: Reader[T] =
         macroProductR[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader), childDefaults)(
@@ -298,7 +296,7 @@ object Pickler:
   private[tapir] inline def picklerSum[T: ClassTag, CP <: Tuple](schema: Schema[T], childPicklers: => CP)(using
       m: Mirror.Of[T],
       config: Configuration,
-      subtypeDiscriminator: SubtypeDiscriminator[T]
+      subtypeDiscriminator: SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
   ): Pickler[T] =
     val tapirPickle = new TapirPickle[T] {
       override def tagName = config.discriminator.getOrElse(super.tagName)
