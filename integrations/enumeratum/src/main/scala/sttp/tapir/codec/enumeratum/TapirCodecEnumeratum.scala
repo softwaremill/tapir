@@ -90,7 +90,10 @@ trait TapirCodecEnumeratum {
   implicit def plainCodecByteEnumEntry[E <: ByteEnumEntry](implicit `enum`: ByteEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Byte, E]
 
-  private def fullName[T](t: T) = t.getClass.getName.replace("$", ".")
+  private def fullName[T](t: T) = {
+    val s = t.getClass.getName.replace("$", ".")
+    if (s.endsWith(".")) s.dropRight(1) else s
+  }
 
   // no Codec.PlainCodec[Char]
 }
