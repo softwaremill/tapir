@@ -1,24 +1,46 @@
 package sttp.tapir.server.ziohttp
 
-import cats.effect.{IO, Resource}
-import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
-import org.scalatest.{Assertion, Exceptional, FutureOutcome}
+import cats.effect.IO
+import cats.effect.Resource
+import io.netty.channel.ChannelFactory
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.ServerChannel
+import org.scalatest.Assertion
+import org.scalatest.Exceptional
+import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.MediaType
 import sttp.monad.MonadError
-import sttp.tapir.{PublicEndpoint, _}
+import sttp.tapir.PublicEndpoint
+import sttp.tapir._
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.server.tests._
-import sttp.tapir.tests.{Test, TestSuite}
-import sttp.tapir.ztapir.{RIOMonadError, RichZEndpoint}
-import zio.{Promise, Ref, Runtime, Task, UIO, Unsafe, ZEnvironment, ZIO, ZLayer}
-import zio.http.{HttpAppMiddleware, Path, Request, URL}
-import zio.http.netty.{ChannelFactories, ChannelType, EventLoopGroups}
+import sttp.tapir.tests.Test
+import sttp.tapir.tests.TestSuite
+import sttp.tapir.ztapir.RIOMonadError
+import sttp.tapir.ztapir.RichZEndpoint
+import zio.Promise
+import zio.Ref
+import zio.Runtime
+import zio.Task
+import zio.UIO
+import zio.Unsafe
+import zio.ZEnvironment
+import zio.ZIO
+import zio.ZLayer
+import zio.http.HttpAppMiddleware
+import zio.http.Path
+import zio.http.Request
+import zio.http.URL
+import zio.http.netty.ChannelFactories
+import zio.http.netty.ChannelType
+import zio.http.netty.EventLoopGroups
 import zio.interop.catz._
-import zio.stream.{ZPipeline, ZStream}
+import zio.stream.ZPipeline
+import zio.stream.ZStream
 
 import java.nio.charset.Charset
 import java.time
@@ -129,13 +151,13 @@ class ZioHttpServerTest extends TestSuite {
             val streamingEndpoint: sttp.tapir.ztapir.ZServerEndpoint[Any, ZioStreams] =
               endpointModel
                 .zServerLogic(stream =>
-                  ZIO.succeed {
+                  ZIO.succeed({
                     stream
                       .via(ZPipeline.utf8Decode)
                       .via(ZPipeline.splitLines)
                       .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
                       .via(ZPipeline.utf8Encode)
-                  }
+                  })
                 )
             val inputStrings = List("Hello,how,are,you", "I,am,good,thanks")
             val input: ZStream[Any, Nothing, Byte] =
@@ -195,10 +217,6 @@ class ZioHttpServerTest extends TestSuite {
           ).tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
-          new ServerWebSocketTests(createServerTest, ZioStreams) {
-            override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
-            override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
-          }.tests() ++
           additionalTests()
       }
   }

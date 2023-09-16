@@ -46,7 +46,9 @@ trait ZioHttpInterpreter[R] {
                 resp.body match {
                   case None              => handleHttpResponse(resp, None)
                   case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                  case Some(Left(body))  => handleWebSocketResponse(body)
+                  case Some(Left(body)) =>
+                    println(body)
+                    handleWebSocketResponse(body)
                 }
 
               case RequestResult.Failure(_) =>
@@ -85,8 +87,15 @@ trait ZioHttpInterpreter[R] {
     }
   }
 
-  private def handleWebSocketResponse(webSocketHandler: WebSocketHandler) = {
-    Handler.webSocket(webSocketHandler).toResponse
+  private def handleWebSocketResponse(webSocketHandler: WebSocketHandler): ZIO[Any, Nothing, Response] = {
+    Handler.webSocket { channel =>
+      for {
+        channelEventsQueue <- zio.Queue.unbounded[WebSocketChannelEvent]
+        messageReceptionFiber <- channel.receiveAll { message => channelEventsQueue.offer(message) }.fork
+        webSocketStream <- webSocketHandler(stream.ZStream.fromQueue(channelEventsQueue))
+        _ <- webSocketStream.mapZIO(channel.send).runDrain
+      } yield messageReceptionFiber.join
+    }.toResponse
   }
 
   private def handleHttpResponse(
