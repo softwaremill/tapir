@@ -1,14 +1,19 @@
 package sttp.tapir.server.ziohttp
 import sttp.capabilities.zio.ZioStreams
 import sttp.capabilities.zio.ZioStreams.Pipe
+import sttp.tapir.DecodeResult
+import sttp.tapir.WebSocketBodyOutput
 import sttp.tapir.model.WebSocketFrameDecodeFailure
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocketFrame => SttpWebSocketFrame}
+import zio.Chunk
 import zio.Duration.fromScala
+import zio.Schedule
+import zio.ZIO
 import zio.http.ChannelEvent.Read
-import zio.http.{WebSocketChannelEvent, WebSocketFrame => ZioWebSocketFrame}
+import zio.http.WebSocketChannelEvent
+import zio.http.{WebSocketFrame => ZioWebSocketFrame}
+import zio.stream
 import zio.stream.ZStream
-import zio.{Chunk, Schedule, ZIO, stream}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -25,7 +30,7 @@ object ZioWebSockets {
           sttpFrames = in.map(zWebSocketChannelEventToFrame).collectSome
           concatenated = optionallyConcatenate(sttpFrames, o.concatenateFragmentedFrames)
           ignoredPongs = optionallyIgnorePongs(concatenated, o.ignorePong)
-          autoPongs = optionallyAutoPong(ignoredPongs, pongs, o.autoPongOnPing)
+          autoPongs = optionallyAutoPongOnPing(ignoredPongs, pongs, o.autoPongOnPing)
           autoPing = optionallyAutoPing(o.autoPing)
           closeStream = stream.ZStream.from[SttpWebSocketFrame](SttpWebSocketFrame.close)
           intermediateStream = autoPongs
@@ -92,15 +97,15 @@ object ZioWebSockets {
     }
   }
 
-  private def optionallyAutoPong(
+  private def optionallyAutoPongOnPing(
       sttpFrames: ZStream[Any, Throwable, SttpWebSocketFrame],
       pongs: zio.Queue[SttpWebSocketFrame],
       autoPongOnPing: Boolean
   ): ZStream[Any, Throwable, SttpWebSocketFrame] = {
     if (autoPongOnPing) {
       sttpFrames.mapZIO {
-        case _: SttpWebSocketFrame.Ping if autoPongOnPing =>
-          pongs.offer(SttpWebSocketFrame.pong).as(Option.empty[SttpWebSocketFrame])
+        case SttpWebSocketFrame.Ping(payload) if autoPongOnPing =>
+          pongs.offer(SttpWebSocketFrame.Pong(payload)).as(Option.empty[SttpWebSocketFrame])
         case f => ZIO.succeed(Some(f))
       }.collectSome
     } else sttpFrames
@@ -121,8 +126,15 @@ object ZioWebSockets {
           case (None, f: SttpWebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
           case (Some(Left(acc)), f: SttpWebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
           case (Some(Left(acc)), f: SttpWebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
-          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
+          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if f.finalFragment =>
+            println(s"final fragment: $f")
+            println(s"acc: $acc")
+            (None, Some(f.copy(payload = acc + f.payload)))
+          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if !f.finalFragment =>
+            println(s"final fragment: $f")
+            println(s"acc: $acc")
+            (Some(Right(acc + f.payload)), None)
+
           case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
         }
         .collectSome

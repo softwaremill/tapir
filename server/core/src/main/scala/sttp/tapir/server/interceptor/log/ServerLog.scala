@@ -72,6 +72,7 @@ case class DefaultServerLog[F[_]](
   def doLogAllDecodeFailures(f: (String, Option[Throwable]) => F[Unit]): DefaultServerLog[F] = copy(doLogAllDecodeFailures = f)
   def doLogExceptions(f: (String, Throwable) => F[Unit]): DefaultServerLog[F] = copy(doLogExceptions = f)
   def noLog(f: F[Unit]): DefaultServerLog[F] = copy(noLog = f)
+  def logWhenReceived(doLog: Boolean): DefaultServerLog[F] = copy(logWhenReceived = doLog)
   def logWhenHandled(doLog: Boolean): DefaultServerLog[F] = copy(logWhenHandled = doLog)
   def logAllDecodeFailures(doLog: Boolean): DefaultServerLog[F] = copy(logAllDecodeFailures = doLog)
   def logLogicExceptions(doLog: Boolean): DefaultServerLog[F] = copy(logLogicExceptions = doLog)

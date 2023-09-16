@@ -2,15 +2,19 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{Method, Header => SttpHeader}
+import sttp.model.Method
+import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.FilterServerEndpoints
+import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
-import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
+import zio.http.{Header => ZioHttpHeader}
+import zio.http.{Headers => ZioHttpHeaders}
+import zio.http._
 
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
@@ -46,9 +50,7 @@ trait ZioHttpInterpreter[R] {
                 resp.body match {
                   case None              => handleHttpResponse(resp, None)
                   case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                  case Some(Left(body)) =>
-                    println(body)
-                    handleWebSocketResponse(body)
+                  case Some(Left(body))  => handleWebSocketResponse(body)
                 }
 
               case RequestResult.Failure(_) =>
