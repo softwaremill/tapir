@@ -76,7 +76,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
-  inline def macroSumW[T: ClassTag](inline schema: Schema[T], childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(
+  inline def macroSumW[T: ClassTag](inline childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(
       using Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()

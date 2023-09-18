@@ -362,7 +362,6 @@ object Pickler:
       override def tagName = config.discriminator.getOrElse(super.tagName)
       override lazy val writer: Writer[T] =
         macroSumW[T](
-          schema,
           childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.writer).productIterator.toList,
           subtypeDiscriminator
         )
