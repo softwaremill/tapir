@@ -1,15 +1,18 @@
 # JSON Pickler
 
-Pickler is a module that simplifies working with `Schema` and `JSON` without worrying of consistency between these two models. In standard handling, you have to keep schema in sync with JSON codec configuration. The more customizations you need, like special field name encoding, or preferred way to represent sealed hierarchies, the more you need to carefully keep schemas in sync with your specific JSON codec configuration (specific to chosen library, like µPickle, Circe, etc.).  
-`Pickler[T]` takes care of this, generating a consistent pair of `Schema[T]` and `JsonCodec[T]`, with single point of customization. Underneath it uses µPickle as its specific library for handling JSON, but it aims to keep it as an implementation detail.
+Pickler is an experimental module that simplifies working with JSON, using a consistent configuration API to provide both accurate endpoint documentation and server or client-side encoding/decoding. 
 
-To use picklers, add the following dependency to your project:
+In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (which is used for documentation) in sync with the library-specific configuration of JSON encoders/decoders. The more customizations you need, like special field name encoding, or preferred way to represent sealed hierarchies, the more configuration you need to repeat (which is specific to the chosen library, like µPickle, Circe, etc.).  
+
+`Pickler[T]` takes care of this, generating a consistent pair of `Schema[T]` and `JsonCodec[T]`, with single point of customization. Underneath it uses [µPickle](http://www.lihaoyi.com/upickle/) as its specific library for handling JSON, but it aims to keep it as an implementation detail.
+
+To use pickler, add the following dependency to your project:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "@VERSION@"
 ```
 
-Please note that it is avilable only for Scala 3 and Scala.js 3.
+Please note that it is available only for Scala 3 and Scala.JS 3.
 
 ## Semi-automatic derivation
 
@@ -26,18 +29,7 @@ val bookJsonStr = // { "author": "Herman Melville", "title": Moby Dick", "year":
   codec.encode(Book("Herman Melville", "Moby Dick", 1851))
 ```
 
-A `given` Pickler in scope makes it available for `jsonQuery`, `jsonBody` and `jsonBodyWithRaw`, as long as the proper import is in place:
-
-```scala 
-import sttp.tapir.*
-import sttp.tapir.json.pickler.*
-
-case class Book(author: String, title: String, year: Int)
-
-given Pickler[Book] = Pickler.derived
-
-val bookQuery: EndpointInput.Query[Book] = jsonQuery[Book]("book")
-```
+A `given` pickler in scope makes it available for `jsonQuery`, `jsonBody` and `jsonBodyWithRaw`, which need to be imported from the `sttp.tapir.json.pickler` package. For example:
 
 ```scala 
 import sttp.tapir.*
@@ -54,7 +46,7 @@ val addBook: PublicEndpoint[Book, Unit, Unit, Any] =
     .in(jsonBody[Book].description("The book to add"))
 ```
 
-It can also be derived using the `derives` keyword directly on a class:
+A pickler also be derived using the `derives` keyword directly on a class:
 
 ```scala 
 import sttp.tapir.json.pickler.*
@@ -63,17 +55,19 @@ case class Book(author: String, title: String, year: Int) derives Pickler
 val pickler: Pickler[Book] = summon[Pickler]
 ```
 
+Picklers for primitive types are available out-of-the-box. For more complex hierarchies, like nested `case class` structures or `enum`s, you'll need to provide picklers for all children (fields, enum cases etc.). Alternatively, you can use automatic derivation described below.
+
 ## Automatic derivation
 
-Similarly to traditional typeclass derivation schemes, you can either provide picklers for individual classes which compose into more complex classes, or rely on generic auto-derivation using a dedicated import:
+Picklers can be derived at usage side, when required, by adding the auto-derivation import:
 
 ```scala 
 import sttp.tapir.json.pickler.*
 import sttp.tapir.json.pickler.generic.auto.*
 
-sealed trait Country
-case object India extends Country
-case object Bhutan extends Country
+enum Country:
+  case India
+  case Bhutan
 
 case class Address(street: String, zipCode: String, country: Country)
 case class Person(name: String, address: Address)
@@ -81,9 +75,11 @@ case class Person(name: String, address: Address)
 val pickler: Pickler[Person] = summon[Pickler[Person]]
 ```
 
-## Configuring Pickler derivation
+However, this can negatively impact compilation performance, as the same pickler might be derived multiple times, for each usage of a type. This can be improved by explicitly providing picklers (as described in the semi-auto section above) either for all, or selected types. It's important then to make sure that the manually-provided picklers are in the implicit scope at the usage sites.
 
-It is possible to configure schema and codec derivation by providing an implicit `sttp.tapir.generic.Configuration`, just as for standalone [schema derivation](schemas.md). This configuration allows switching field naming policy to `snake_case`, `kebab_case`, or an arbitrary transformation function, as well as setting field name for coproduct (sealed hierarchy) type discriminator, which is discussed in details in further sections.
+## Configuring pickler derivation
+
+It is possible to configure schema and codec derivation by providing an implicit `sttp.tapir.generic.Configuration`, just as for standalone [schema derivation](schemas.md). This configuration allows switching field naming policy to `snake_case`, `kebab_case`, or an arbitrary transformation function, as well as setting the field name for the coproduct (sealed hierarchy) type discriminator, which is discussed in details in further sections.
 
 ```scala 
 import sttp.tapir.generic.Configuration
@@ -91,9 +87,9 @@ import sttp.tapir.generic.Configuration
 given customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
 ```
 
-## Sealed traits / coproducts
+## Enums / sealed traits / coproducts
 
-Pickler derivation for coproduct types (sealed hierarchies) works automatically, by adding mentioned discriminator `$type` field with full class name. This is the default behavior of uPickle, but it can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
+Pickler derivation for coproduct types (enums / sealed hierarchies) works automatically, by adding an `$type` discriminator field with the full class name. This is the default behavior of uPickle, but it can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used during automatic and semi-automatic derivation:
 
@@ -135,12 +131,12 @@ pEntity.toCodec.encode(Person("Jessica", "West"))
 
 Schemas generated by picklers can be customized using annotations, just like with traditional schema derivation (see [here](schemas.html#using-annotations)). Some annotations automatically affect JSON codes:
 
-- `@encodedName` determines JSON field name
-- `@default` sets default value if the field is missing in JSON
+* `@encodedName` determines JSON field name
+* `@default` sets default value if the field is missing in JSON
 
-## Enums
+## Enumerations
 
-Scala 3 enums can be automatically handled by `Pickler.derived[T]`. This will encode enum values as simple strings representing type name. For example:
+Scala 3 `enums`, where all cases are parameterless, are treated as an enumeration (not as a coproduct / sealed hierarchy). They are also automatically handled by `Pickler.derived[T]`: enum values are encoded as simple strings representing the type name. For example:
 
 ```scala 
 import sttp.tapir.json.pickler.*
@@ -187,10 +183,10 @@ pResponse.schema
 
 ## Using existing µPickle Readers and Writers
 
-If you have a case where you would like to use an already defined `upickle.default.ReadWriter[T]`, you can still derive a `Pickler[T]`, but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in implicit scope. With such a setup, you can proceed with `Pickler.derived[T]`.
+If you have a case where you would like to use an already defined `upickle.default.ReadWriter[T]`, you can still derive a `Pickler[T]`, but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in the given (implicit) scope. With such a setup, you can proceed with `Pickler.derived[T]`.
 
 ## Divergences from default µPickle behavior
 
-* Tapir Pickler serialises None values as `null`, instead of wrapping the value in an array
+* Tapir pickler serialises None values as `null`, instead of wrapping the value in an array
 * Value classes (case classes extending AnyVal) will be serialised as simple values
 
