@@ -156,6 +156,18 @@ object Pickler:
       newSchema
     )
 
+  /** Create a pickler for a map with arbitrary keys. The pickler for the keys (`Pickler[K]`) should be string-like (that is, the schema
+    * type should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time and is not verified at run-time.
+    *
+    * The given `keyToString` conversion function is used during validation.
+    *
+    * If you'd like this pickler to be available as a given type of keys, create an custom implicit, e.g.:
+    *
+    * {{{
+    * case class MyKey(value: String) extends AnyVal
+    * given picklerForMyMap: Pickler[Map[MyKey, MyValue]] = Pickler.picklerForMap[MyKey, MyValue](_.value)
+    * }}}
+    */
   inline def picklerForMap[K, V](keyToString: K => String)(using pk: Pickler[K], pv: Pickler[V]): Pickler[Map[K, V]] =
     given Schema[V] = pv.schema
     val newSchema = Schema.schemaForMap[K, V](keyToString)
@@ -188,6 +200,8 @@ object Pickler:
   )
 
   inline given picklerForAnyVal[T <: AnyVal]: Pickler[T] = ${ picklerForAnyValImpl[T] }
+
+  //
 
   private inline def errorForType[T](inline template: String): Null = ${ errorForTypeImpl[T]('template) }
 
