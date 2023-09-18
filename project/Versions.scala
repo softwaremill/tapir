@@ -47,7 +47,7 @@ object Versions {
   val derevo = "0.13.0"
   val newtype = "0.4.4"
   val monixNewtype = "0.2.3"
-  val zioPrelude = "1.0.0-RC20"
+  val zioPrelude = "1.0.0-RC21"
   val awsLambdaInterface = "2.4.1"
   val armeria = "1.25.2"
   val scalaJava8Compat = "1.0.2"
