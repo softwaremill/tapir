@@ -153,7 +153,7 @@ object Pickler:
     },
     summon[Schema[JBigDecimal]]
   )
-  
+
   given Pickler[JBigInteger] = new Pickler[JBigInteger](
     new TapirPickle[JBigInteger] {
       override lazy val writer = summon[Writer[BigInt]].comap(jBi => BigInt(jBi))

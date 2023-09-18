@@ -30,8 +30,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitlySchema[Double].schemaType shouldBe SNumber()
     implicitlySchema[Boolean].schemaType shouldBe SBoolean()
     implicitlySchema[BigDecimal].schemaType shouldBe SNumber()
-    implicitlySchema[JBigDecimal].schemaType shouldBe SNumber() 
-    implicitlySchema[JBigInteger].schemaType shouldBe SInteger() 
+    implicitlySchema[JBigDecimal].schemaType shouldBe SNumber()
+    implicitlySchema[JBigInteger].schemaType shouldBe SInteger()
   }
 
   it should "find schema for optional types" in {
@@ -60,10 +60,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   case class ListA(fl: List[A])
 
-  it should "find schema for collections of case classes" in { 
-    implicitlySchema[ListA].schemaType shouldBe SProduct(List(
-      SProductField(FieldName("fl"),
-        Schema(SArray[List[A], A](expectedASchema)(_.toIterable), isOptional = true), _ => None)))
+  it should "find schema for collections of case classes" in {
+    implicitlySchema[ListA].schemaType shouldBe SProduct(
+      List(SProductField(FieldName("fl"), Schema(SArray[List[A], A](expectedASchema)(_.toIterable), isOptional = true), _ => None))
+    )
   }
 
   it should "find schema for a simple case class" in {
