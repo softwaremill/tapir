@@ -7,7 +7,7 @@ import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
-/** A builder allowing deriving Pickler for enums, used by Pickler.derivedEnumeration. Can be used to set non-standard encoding logic,
+/** A builder allowing deriving Pickler for enums, used by [[Pickler.derivedEnumeration]]. Can be used to set non-standard encoding logic,
   * schema type or default value for an enum.
   */
 class CreateDerivedEnumerationPickler[T: ClassTag](
@@ -18,7 +18,7 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
   /** @param encode
     *   Specify how values of this type can be encoded to a raw value (typically a [[String]]; the raw form should correspond with
     *   `schemaType`). This encoding will be used when writing/reading JSON and generating documentation. Defaults to an identity function,
-    *   which effectively mean that `.toString` will be used to represent the enumeration in the docs.
+    *   which effectively means that `.toString` will be used to represent the enumeration in the docs.
     * @param schemaType
     *   The low-level representation of the enumeration. Defaults to a string.
     */
@@ -43,7 +43,7 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
 
   /** Creates the Pickler assuming the low-level representation is a `String`. The encoding function passes the object unchanged (which
     * means `.toString` will be used to represent the enumeration in JSON and documentation). Typically you don't need to explicitly use
-    * Pickler.derivedEnumeration[T].defaultStringBased, as this is the default behavior of Pickler.derived[T] for enums.
+    * `Pickler.derivedEnumeration[T].defaultStringBased`, as this is the default behavior of [[Pickler.derived]] for enums.
     */
   inline def defaultStringBased(using Mirror.Of[T]) = apply()
 

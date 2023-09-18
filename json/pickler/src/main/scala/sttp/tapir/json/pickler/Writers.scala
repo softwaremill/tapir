@@ -22,8 +22,7 @@ import scala.reflect.ClassTag
   *   1. Configuration can be used for setting discrtiminator field name or encoding all field names according to custom function (allowing
   *      transformations like snake_case, etc.)
   */
-private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelpers {
-
+private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelpers:
   inline def macroProductW[T: ClassTag](
       schema: Schema[T],
       childWriters: => List[Any],
@@ -102,4 +101,3 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
         }
       }
     }
-}

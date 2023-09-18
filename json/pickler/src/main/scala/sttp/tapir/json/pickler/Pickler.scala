@@ -13,22 +13,41 @@ import scala.deriving.Mirror
 import scala.quoted.*
 import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
-
-import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
+import java.math.{BigDecimal as JBigDecimal, BigInteger as JBigInteger}
 import macros.*
+
 import scala.annotation.implicitNotFound
 
 object Pickler:
 
+  /** Derive a [[Pickler]] instance for the given type, at compile-time. Depending on the derivation mode (auto / semi-auto), picklers for
+    * referenced types (e.g. via a field, enum case or subtype) will either be derived automatically, or will need to be provided manually.
+    *
+    * This method can either be used explicitly, in the definition of a `given`, or indirectly by adding a `... derives Pickler` modifier to
+    * a datatype definition.
+    *
+    * The in-scope [[Configuration]] instance is used to customise field names and other behavior.
+    */
   inline def derived[T: ClassTag](using Configuration, Mirror.Of[T]): Pickler[T] =
     summonFrom {
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
       case _                 => buildNewPickler[T]()
     }
 
+  /** Create a coproduct pickler (e.g. for an `enum` or `sealed trait`), where the value of the discriminator between child types is a read
+    * of a field of the base type. The field, if not yet present, is added to each child schema.
+    *
+    * The picklers for the child types have to be provided explicitly with their value mappings in `mapping`.
+    *
+    * Note that if the discriminator value is some transformation of the child's type name (obtained using the implicit [[Configuration]]),
+    * the coproduct schema can be derived automatically or semi-automatically.
+    *
+    * @param discriminatorPickler
+    *   The pickler that is used when adding the discriminator as a field to child picklers (if it's not yet added).
+    */
   inline def oneOfUsingField[T: ClassTag, V](extractor: T => V, asString: V => String)(
       mapping: (V, Pickler[_ <: T])*
-  )(using m: Mirror.Of[T], c: Configuration, p: Pickler[V]): Pickler[T] =
+  )(using m: Mirror.Of[T], c: Configuration, discriminatorPickler: Pickler[V]): Pickler[T] =
 
     val paramExtractor = extractor
     val paramAsString = asString
@@ -52,7 +71,7 @@ object Pickler:
             inline if (isScalaEnum[T])
               error("oneOfUsingField cannot be used with enums. Try Pickler.derivedEnumeration instead.")
             else {
-              given schemaV: Schema[V] = p.schema
+              given schemaV: Schema[V] = discriminatorPickler.schema
               val schema: Schema[T] = Schema.oneOfUsingField[T, V](extractor, asString)(
                 mapping.toList.map { case (v, p) =>
                   (v, p.schema)
@@ -64,6 +83,12 @@ object Pickler:
         }
     }
 
+  /** Creates a pickler for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
+    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object`s.
+    *
+    * This method cannot be a `given`, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
+    * that this would be invoked only when necessary.
+    */
   inline def derivedEnumeration[T: ClassTag](using Mirror.Of[T]): CreateDerivedEnumerationPickler[T] =
     inline erasedValue[T] match
       case _: Null =>
@@ -231,8 +256,7 @@ object Pickler:
       schema
     )
 
-  private[pickler] inline def buildNewPickler[T: ClassTag](
-  )(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
+  private[pickler] inline def buildNewPickler[T: ClassTag]()(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
     // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
     lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
     inline m match {
@@ -334,7 +358,17 @@ object Pickler:
     }
     new Pickler[T](tapirPickle, schema)
 
-@implicitNotFound("Failed to summon a Pickler. Try using Pickler[T].derived or importing sttp.tapir.json.pickler.generic.auto.*")
+/** A pickler combines the [[Schema]] of a type (which is used for documentation and validation of deserialized values), with a uPickle
+  * encoder/decoder ([[ReadWriter]]). The pickler module can derive both the schema, and the uPickle readwriters in a single go, using a
+  * common configuration API.
+  *
+  * An in-scope pickler instance is required by [[jsonBody]] (and its variants), but it can also be manually converted to a codec using
+  * [[Pickler.toCodec]].
+  */
+@implicitNotFound(msg = """Could not summon a Pickler for type ${T}.
+Picklers can be derived automatically by adding: `import sttp.tapir.json.pickler.generic.auto.*`, or manually using `Pickler.derived[T]`.
+The latter is also useful for debugging derivation errors.
+You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/pickler.html.""")
 case class Pickler[T](innerUpickle: TapirPickle[T], schema: Schema[T]):
 
   def toCodec: JsonCodec[T] =
