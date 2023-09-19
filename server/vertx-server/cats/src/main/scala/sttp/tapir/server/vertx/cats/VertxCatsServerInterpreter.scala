@@ -12,7 +12,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxErrorHandler}
-import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, CatsRunAsync, monadError}
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, CatsRunAsync, VertxFutureToCatsF, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
@@ -66,7 +66,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
             case RequestResult.Failure(_)         => Async[F].delay(rc.next())
             case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
           }
-          .handleError(handleError(rc, _))
+          .handleErrorWith(handleError(rc, _).asF.void)
 
         // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
         // via a mutable ref; however, before this is done, it's possible an exception has already been reported;

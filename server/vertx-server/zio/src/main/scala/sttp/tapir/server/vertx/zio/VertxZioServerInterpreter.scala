@@ -12,7 +12,7 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, VertxFutureToRIO, ZioRunAsync}
 import sttp.tapir.server.vertx.zio.streams._
 import sttp.tapir.ztapir._
 import zio._
@@ -48,10 +48,6 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
       override def handle(rc: RoutingContext) = {
         val serverRequest = VertxServerRequest(rc)
 
-        def fail(t: Throwable): Unit = {
-          handleError(rc, t)
-        }
-
         val result: ZIO[R & R2, Throwable, Any] =
           interpreter(serverRequest)
             .flatMap {
@@ -66,7 +62,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
                     })
                 })
             }
-            .catchAll { t => ZIO.attempt(fail(t)) }
+            .catchAll { t => handleError(rc, t).asRIO }
 
         // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
         // via a mutable ref; however, before this is done, it's possible an exception has already been reported;

@@ -7,7 +7,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxErrorHandler
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, VertxFutureToRIO, ZioRunAsync}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
@@ -50,10 +50,6 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter w
       override def handle(rc: RoutingContext) = {
         val serverRequest = VertxServerRequest(rc)
 
-        def fail(t: Throwable): Unit = {
-          handleError(rc, t)
-        }
-
         val result: ZIO[R, Throwable, Any] =
           interpreter(serverRequest)
             .flatMap {
@@ -68,7 +64,7 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter w
                     })
                 })
             }
-            .catchAll { t => RIO.effect(fail(t)) }
+            .catchAll { t => handleError(rc, t).asRIO }
 
         // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
         // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
@@ -89,9 +85,9 @@ trait VertxZioServerInterpreter[R <: Blocking] extends CommonServerInterpreter w
           ()
         }
 
-        val canceler = runtime.unsafeRunAsyncCancelable(result) {
-          case Exit.Failure(cause) => fail(cause.squash)
-          case Exit.Success(_)     => ()
+        val canceler = runtime.unsafeRunAsyncCancelable(result.catchAll { t => handleError(rc, t).asRIO }) {
+          case Exit.Failure(_) => () // should be handled
+          case Exit.Success(_) => ()
         }
         cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
           rc.vertx()

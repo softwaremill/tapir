@@ -7,7 +7,7 @@ import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxFutureServerInterpreter.{FutureFromVFuture, FutureRunAsync}
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter.{FutureFromVFuture, FutureRunAsync, VertxFutureToScalaFuture}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
@@ -64,8 +64,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
         case RequestResult.Failure(_)         => Future.successful(rc.next())
         case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
       }
-      .failed
-      .foreach {handleError(rc, _)}
+      .recoverWith(t => handleError(rc, t).asScala)
   }
 }
 

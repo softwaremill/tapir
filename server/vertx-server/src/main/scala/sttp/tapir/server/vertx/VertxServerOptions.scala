@@ -4,8 +4,6 @@ import io.vertx.core.logging.Logger
 import sttp.tapir.TapirFile
 import sttp.tapir.server.interceptor.Interceptor
 
-import scala.concurrent.duration._
-
 trait VertxServerOptions[F[_]] {
   def uploadDirectory: TapirFile
   def deleteFile: TapirFile => F[Unit]
@@ -27,6 +25,4 @@ object VertxServerOptions {
 
   private[vertx] def uploadDirectory(): TapirFile =
     new java.io.File(System.getProperty("java.io.tmpdir")).getAbsoluteFile
-
-  private[vertx] val safeEndWaitTime = 2.seconds
 }
