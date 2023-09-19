@@ -199,6 +199,7 @@ private[tapir] object SchemaCompanionMacros {
       case Block(List(defdef), _)      => resolveFunctionName(defdef)
       case DefDef(_, _, _, Some(body)) => resolveFunctionName(body)
       case Apply(fun, _)               => resolveFunctionName(fun)
+      case Ident(str)                  => str
       case Select(_, kind)             => kind
     }
 

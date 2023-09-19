@@ -67,7 +67,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala3) ||
+    (scalaVersion.value == scala2_13) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -179,6 +179,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
+  picklerJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
@@ -860,6 +861,19 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     )
   )
   .dependsOn(core)
+
+lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-pickler",
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(scalaVersions = List(scala3))
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
   .settings(commonSettings)
@@ -2045,9 +2059,12 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .dependsOn(
+    circeJson,
     http4sServer,
+    nettyServer,
+    picklerJson,
+    sttpClient,
     swaggerUiBundle,
-    circeJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
