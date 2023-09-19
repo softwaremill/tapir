@@ -22,6 +22,8 @@ aws-lambda-zio-template.yaml
 
 .bsp
 .idea*
+metals.sbt
+.vscode
 .java-version
 
 file-uploads

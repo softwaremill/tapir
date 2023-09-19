@@ -67,9 +67,11 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala3) ||
-    thisProjectRef.value.project.contains("Native") ||
-    thisProjectRef.value.project.contains("JS"),
+    (scalaVersion.value == scala2_13) ||
+    thisProjectRef.value.project.contains("JS") ||
+    thisProjectRef.value.project.contains("Native"),
+  Compile / bloopGenerate := { if (ideSkipProject.value) None else (Compile / bloopGenerate).value },
+  Test / bloopGenerate := { if (ideSkipProject.value) None else (Test / bloopGenerate).value },
   bspEnabled := !ideSkipProject.value,
   // slow down for CI
   Test / parallelExecution := false,
@@ -159,6 +161,7 @@ lazy val loggerDependencies = Seq(
 )
 
 lazy val rawAllAggregates = core.projectRefs ++
+  newschema.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
   catsEffect.projectRefs ++
@@ -436,6 +439,17 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     }
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
+
+lazy val newschema: ProjectMatrix = (projectMatrix in file("newschema"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-newschema"
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .dependsOn(core)
 
 lazy val files: ProjectMatrix = (projectMatrix in file("files"))
   .settings(commonJvmSettings)

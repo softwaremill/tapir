@@ -105,7 +105,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
   it should "use validators defined when modifying the schema" in {
     import sttp.tapir.generic.auto._
-    val s: Schema[SimpleDog] = implicitly[Derived[Schema[SimpleDog]]].value.modify(_.name)(_.validate(Validator.minLength(3)))
+    val s: Schema[SimpleDog] = Schema.derived[SimpleDog].modify(_.name)(_.validate(Validator.minLength(3)))
 
     s.applyValidation(SimpleDog("a")) should have length 1
   }
