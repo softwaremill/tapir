@@ -64,7 +64,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
         case RequestResult.Failure(_)         => Future.successful(rc.next())
         case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
       }
-      .recoverWith(t => handleError(rc, t).asScala)
+      .recoverWith { case t => handleError(rc, t).asScala }
   }
 }
 
