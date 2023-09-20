@@ -4,7 +4,7 @@ Pickler is an experimental module that simplifies working with JSON, using a con
 
 In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (which is used for documentation) in sync with the library-specific configuration of JSON encoders/decoders. The more customizations you need, like special field name encoding, or preferred way to represent sealed hierarchies, the more configuration you need to repeat (which is specific to the chosen library, like µPickle, Circe, etc.).  
 
-`Pickler[T]` takes care of this, generating a consistent pair of `Schema[T]` and `JsonCodec[T]`, with single point of customization. Underneath it uses [µPickle](http://www.lihaoyi.com/upickle/) as its specific library for handling JSON, but it aims to keep it as an implementation detail.
+`Pickler[T]` takes care of this, generating a consistent pair of `Schema[T]` and `JsonCodec[T]`, with single point of customization. Underneath it uses [µPickle](https://com-lihaoyi.github.io/upickle/) as its specific library for handling JSON, but it aims to keep it as an implementation detail.
 
 To use pickler, add the following dependency to your project:
 
