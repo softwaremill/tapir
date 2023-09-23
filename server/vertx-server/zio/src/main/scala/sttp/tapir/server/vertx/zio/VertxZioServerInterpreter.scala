@@ -7,18 +7,19 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxBodyListener
+import sttp.tapir.server.vertx.VertxErrorHandler
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture, RunAsync}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, ZioRunAsync}
+import sttp.tapir.server.vertx.zio.VertxZioServerInterpreter.{RioFromVFuture, VertxFutureToRIO, ZioRunAsync}
 import sttp.tapir.server.vertx.zio.streams._
 import sttp.tapir.ztapir._
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference
 
-trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
+trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErrorHandler {
   def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = VertxZioServerOptions.default[R].widen
 
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
@@ -47,11 +48,6 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
       override def handle(rc: RoutingContext) = {
         val serverRequest = VertxServerRequest(rc)
 
-        def fail(t: Throwable): Unit = {
-          if (rc.response().bytesWritten() > 0) rc.response().end()
-          rc.fail(t)
-        }
-
         val result: ZIO[R & R2, Throwable, Any] =
           interpreter(serverRequest)
             .flatMap {
@@ -66,7 +62,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
                     })
                 })
             }
-            .catchAll { t => ZIO.attempt(fail(t)) }
+            .catchAll { t => handleError(rc, t).asRIO }
 
         // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
         // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
