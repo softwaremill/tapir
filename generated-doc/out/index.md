@@ -214,6 +214,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/pickler
    endpoint/xml
    endpoint/forms
    endpoint/security
