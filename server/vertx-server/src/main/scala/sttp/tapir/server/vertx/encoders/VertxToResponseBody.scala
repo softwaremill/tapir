@@ -8,6 +8,7 @@ import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.server.vertx.Helpers.RichResponse
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 
@@ -88,7 +89,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
         }
       })
       .flatMap { _ =>
-        resp.end()
+        resp.safeEnd()
       }
   }
 

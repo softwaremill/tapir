@@ -15,8 +15,8 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
 val scala2_12 = "2.12.18"
-val scala2_13 = "2.13.11"
-val scala3 = "3.3.0"
+val scala2_13 = "2.13.12"
+val scala3 = "3.3.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -68,7 +68,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala3) ||
+    (scalaVersion.value == scala2_13) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -155,7 +155,7 @@ val scalaTestPlusScalaCheck = {
 }
 
 lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.8",
+  "ch.qos.logback" % "logback-classic" % "1.4.11",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 )
 
@@ -165,6 +165,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   catsEffect.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
+  iron.projectRefs ++
   zio1.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
@@ -179,6 +180,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
+  picklerJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
@@ -198,6 +200,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
   akkaGrpcServer.projectRefs ++
+  pekkoHttpServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
@@ -396,7 +399,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.3")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.3",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.6",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -415,7 +418,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % "2.6.0",
+        "org.scala-js" %%% "scalajs-dom" % "2.7.0",
         // TODO: remove once https://github.com/scalatest/scalatest/issues/2116 is fixed
         ("org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0").cross(CrossVersion.for3Use2_13) % Test,
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
@@ -458,7 +461,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
-  .dependsOn(core)
+  .dependsOn(core, circeJson % Test)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
@@ -543,7 +546,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.9.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.10.0" % Test
     )
   )
   .jvmPlatform(
@@ -642,6 +645,21 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     )
   )
   .dependsOn(core, circeJson % Test)
+
+lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-iron",
+    libraryDependencies ++= Seq(
+      "io.github.iltotore" %% "iron" % Versions.iron,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3)
+  )
+  .dependsOn(core)
 
 lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
   .settings(commonSettings)
@@ -845,6 +863,19 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
   )
   .dependsOn(core)
 
+lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-pickler",
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(scalaVersions = List(scala3))
+  .dependsOn(core % "compile->compile;test->test")
+
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
   .settings(commonSettings)
   .settings(
@@ -864,8 +895,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.23.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.23.5",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.5" % Test,
       scalaTest.value % Test
     )
   )
@@ -1160,6 +1191,21 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-http-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-pekko-http-server",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekkoHttp,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams,
+      "org.apache.pekko" %% "pekko-slf4j" % Versions.pekkoStreams,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, serverTests % Test)
+
 lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1345,7 +1391,9 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-jdkhttp-server",
-    libraryDependencies ++= loggerDependencies
+    libraryDependencies ++= Seq(
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14"
+    ) ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = List(scala2_13, scala3))
   .dependsOn(serverCore, serverTests % Test)
@@ -1897,6 +1945,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.7.3" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test
     )
   )
   .dependsOn(core % Test, circeJson % Test)
@@ -1951,6 +2000,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
@@ -1966,6 +2016,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
+    pekkoHttpServer,
     armeriaServer,
     jdkhttpServer,
     http4sServer,
@@ -2009,9 +2060,12 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .dependsOn(
+    circeJson,
     http4sServer,
-    swaggerUiBundle,
-    circeJson
+    nettyServer,
+    picklerJson,
+    sttpClient,
+    swaggerUiBundle
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
@@ -2050,6 +2104,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     core % "compile->test",
     testing,
     akkaHttpServer,
+    pekkoHttpServer,
     armeriaServer,
     armeriaServerCats,
     armeriaServerZio,

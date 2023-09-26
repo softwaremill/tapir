@@ -40,6 +40,7 @@ object BasicGenerator {
 
   private[codegen] def imports: String =
     """import sttp.tapir._
+      |import sttp.tapir.model._
       |import sttp.tapir.json.circe._
       |import sttp.tapir.generic.auto._
       |import io.circe.generic.auto._
@@ -67,7 +68,7 @@ object BasicGenerator {
         ("Boolean", nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
-      case _ => throw new NotImplementedError("Not all simple types supported!")
+      case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
 }

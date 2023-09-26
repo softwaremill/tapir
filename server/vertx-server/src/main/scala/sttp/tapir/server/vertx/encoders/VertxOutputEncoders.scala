@@ -3,6 +3,7 @@ package sttp.tapir.server.vertx.encoders
 import io.vertx.core.Future
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.vertx.Helpers.RichResponse
 
 import scala.util.control.NonFatal
 
@@ -14,7 +15,7 @@ object VertxOutputEncoders {
       serverResponse.headers.foreach { h => resp.headers.add(h.name, h.value) }
       serverResponse.body match {
         case Some(responseHandler) => responseHandler(rc)
-        case None                  => resp.end()
+        case None                  => resp.safeEnd()
       }
     } catch {
       case NonFatal(e) => Future.failedFuture(e)

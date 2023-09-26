@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
+import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiInfo,
@@ -16,7 +16,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
-  OpenapiSchemaDouble,
   OpenapiSchemaInt,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
@@ -227,10 +226,11 @@ object TestHelpers {
     ),
     Some(
       OpenapiComponent(
-        Map(
+        schemas = Map(
           "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
         ),
-        Map(
+        securitySchemes = Map.empty,
+        parameters = Map(
           "#/components/parameters/offset" ->
             OpenapiParameter("offset", "query", true, Some("Offset at which to start fetching books"), OpenapiSchemaInt(false)),
           "#/components/parameters/year" -> OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false))
@@ -434,6 +434,76 @@ object TestHelpers {
             summary = None,
             tags = None,
             operationId = Some("getHello")
+          )
+        )
+      )
+    ),
+    None
+  )
+
+  val simpleSecurityYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: hello
+      |  version: '1.0'
+      |paths:
+      |  /hello:
+      |    get:
+      |      security:
+      |        - basicAuth: []
+      |      responses: {}
+    """.stripMargin
+
+  val simpleSecurityDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            security = Seq(Seq("basicAuth"))
+          )
+        )
+      )
+    ),
+    None
+  )
+
+  val complexSecurityYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: hello
+      |  version: '1.0'
+      |paths:
+      |  /hello:
+      |    get:
+      |      security:
+      |        - bearerAuth: []
+      |        - basicAuth: []
+      |          apiKeyAuth: []
+      |      responses: {}
+    """.stripMargin
+
+  val complexSecurityDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "get",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            security = Seq(Seq("bearerAuth"), Seq("basicAuth", "apiKeyAuth"))
           )
         )
       )

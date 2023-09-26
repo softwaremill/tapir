@@ -2,6 +2,7 @@ package sttp.tapir.server.ziohttp
 
 import cats.effect.IO
 import cats.effect.Resource
+import cats.implicits.toTraverseOps
 import io.netty.channel.ChannelFactory
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.ServerChannel
@@ -22,6 +23,8 @@ import sttp.tapir.tests.Test
 import sttp.tapir.tests.TestSuite
 import sttp.tapir.ztapir.RIOMonadError
 import sttp.tapir.ztapir.RichZEndpoint
+import sttp.ws.WebSocket
+import sttp.ws.WebSocketFrame
 import zio.Promise
 import zio.Ref
 import zio.Runtime
@@ -39,13 +42,14 @@ import zio.http.netty.ChannelFactories
 import zio.http.netty.ChannelType
 import zio.http.netty.EventLoopGroups
 import zio.interop.catz._
+import zio.stream
 import zio.stream.ZPipeline
 import zio.stream.ZStream
 
 import java.nio.charset.Charset
 import java.time
 import scala.concurrent.Future
-
+import scala.concurrent.duration.DurationInt
 class ZioHttpServerTest extends TestSuite {
 
   // zio-http tests often fail with "Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [DEFAULT], parser state [STATUS_LINE]"
@@ -190,6 +194,45 @@ class ZioHttpServerTest extends TestSuite {
                 }
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
+          createServerTest.testServer(
+            endpoint
+              .out(
+                webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
+                  .apply(ZioStreams)
+                  .autoPing(Some((1.second, WebSocketFrame.ping)))
+              ),
+            "auto pings"
+          )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
+            basicRequest
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
+              })
+              .get(baseUri.scheme("ws"))
+              .send(backend)
+              .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
+          },
+          createServerTest.testServer(
+            endpoint
+              .out(
+                webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
+                  .apply(ZioStreams)
+                  .autoPing(None)
+              ),
+            "ping-pong echo"
+          )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
+            basicRequest
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                for {
+                  _ <- ws.send(WebSocketFrame.ping)
+                  m2 <- ws.receive()
+                } yield List(m2)
+              })
+              .get(baseUri.scheme("ws"))
+              .send(backend)
+              .map { response =>
+                response.body should matchPattern { case Right(List(_: WebSocketFrame.Pong)) => }
+              }
           }
         )
 
@@ -217,6 +260,10 @@ class ZioHttpServerTest extends TestSuite {
           ).tests() ++
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
+          new ServerWebSocketTests(createServerTest, ZioStreams) {
+            override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
+            override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
+          }.tests() ++
           additionalTests()
       }
   }

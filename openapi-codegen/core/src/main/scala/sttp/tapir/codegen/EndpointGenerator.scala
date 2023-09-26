@@ -2,7 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaSimpleType}
 
 class EndpointGenerator {
@@ -10,16 +10,16 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   def endpointDefs(doc: OpenapiDocument): String = {
-    val ps = Option(doc.components).flatten.map(_.parameters) getOrElse Map.empty
-    val ge = doc.paths.flatMap(generatedEndpoints(ps))
+    val components = Option(doc.components).flatten
+    val ge = doc.paths.flatMap(generatedEndpoints(components))
     val definitions = ge
       .map { case (name, definition) =>
-        s"""|val $name =
+        s"""|lazy val $name =
             |${indent(2)(definition)}
             |""".stripMargin
       }
       .mkString("\n")
-    val allEP = s"val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
+    val allEP = s"lazy val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
 
     s"""|$definitions
         |
@@ -27,12 +27,16 @@ class EndpointGenerator {
         |""".stripMargin
   }
 
-  private[codegen] def generatedEndpoints(parameters: Map[String, OpenapiParameter])(p: OpenapiPath): Seq[(String, String)] = {
+  private[codegen] def generatedEndpoints(components: Option[OpenapiComponent])(p: OpenapiPath): Seq[(String, String)] = {
+    val parameters = components.map(_.parameters).getOrElse(Map.empty)
+    val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
+
     p.methods.map(_.withResolvedParentParameters(parameters, p.parameters)).map { m =>
       val definition =
         s"""|endpoint
             |  .${m.methodType}
             |  ${urlMapper(p.url, m.resolvedParameters)}
+            |${indent(2)(security(securitySchemes, m.security))}
             |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
             |${indent(2)(outs(m.responses))}
             |${indent(2)(tags(m.tags))}
@@ -71,6 +75,29 @@ class EndpointGenerator {
     ".in((" + inPath.mkString(" / ") + "))"
   }
 
+  private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Seq[Seq[String]]) = {
+    if (security.size > 1 || security.exists(_.size > 1))
+      throw new NotImplementedError("We can handle only single security entry!")
+
+    security.headOption
+      .flatMap(_.headOption)
+      .fold("") { schemeName =>
+        securitySchemes.get(schemeName) match {
+          case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBearerType) =>
+            ".securityIn(auth.bearer[String]())"
+
+          case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBasicType) =>
+            ".securityIn(auth.basic[UsernamePassword]())"
+
+          case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType(in, name)) =>
+            s""".securityIn(auth.apiKey($in[String]("$name")))"""
+
+          case None =>
+            throw new Error(s"Unknown security scheme $schemeName!")
+        }
+      }
+  }
+
   private def ins(parameters: Seq[OpenapiParameter], requestBody: Option[OpenapiRequestBody]): String = {
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
@@ -82,11 +109,11 @@ class EndpointGenerator {
             val (t, _) = mapSchemaSimpleTypeToType(st)
             val desc = param.description.fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$t]("${param.name}")$desc)"""
-          case _ => throw new NotImplementedError("Can't create non-simple params to input")
+          case x => throw new NotImplementedError(s"Can't create non-simple params to input - found $x")
         }
       }
 
-    val rqBody = requestBody.flatMap{ b =>
+    val rqBody = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
       else if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
       else Some(s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})")
@@ -100,21 +127,34 @@ class EndpointGenerator {
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
 
+  // treats redirects as ok
+  private val okStatus = """([23]\d\d)""".r
+  private val errorStatus = """([45]\d\d)""".r
   private def outs(responses: Seq[OpenapiResponse]) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
     responses
       .map { resp =>
+        val d = s""".description("${resp.description}")"""
         resp.content match {
-          case Nil => ""
+          case Nil =>
+            resp.code match {
+              case "200" | "default" => ""
+              case okStatus(s)       => s".out(statusCode(sttp.model.StatusCode($s))$d)"
+              case errorStatus(s)    => s".errorOut(statusCode(sttp.model.StatusCode($s))$d)"
+            }
           case content +: Nil =>
             resp.code match {
               case "200" =>
-                s".out(${contentTypeMapper(content.contentType, content.schema)})"
+                s".out(${contentTypeMapper(content.contentType, content.schema)}$d)"
+              case okStatus(s) =>
+                s".out(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
               case "default" =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema)})"
-              case _ =>
-                throw new NotImplementedError("Statuscode mapping is incomplete!")
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d)"
+              case errorStatus(s) =>
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
+              case x =>
+                throw new NotImplementedError(s"Statuscode mapping is incomplete! Cannot handle $x")
             }
           case _ => throw new NotImplementedError("We can handle only one return content!")
         }
@@ -136,11 +176,11 @@ class EndpointGenerator {
           case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"List[$t]"
-          case _ => throw new NotImplementedError("Can't create non-simple or array params as output")
+          case x => throw new NotImplementedError(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
         s"jsonBody[$req]"
-      case _ => throw new NotImplementedError("We only handle json and text!")
+      case x => throw new NotImplementedError(s"We only handle json and text! Found $x")
     }
   }
 

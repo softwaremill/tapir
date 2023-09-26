@@ -8,6 +8,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
   OpenapiSchemaObject,
+  OpenapiSchemaRef,
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
@@ -43,7 +44,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
+            "Test" -> OpenapiSchemaEnum(
+              "string",
+              Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+              false
+            )
           )
         )
       )
@@ -249,7 +254,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
+            "Test" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
           )
         )
       )
@@ -258,9 +263,31 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val gen = new ClassDefinitionGenerator()
     val res = gen.classDefs(doc, true)
     // can't just check whether this compiles, because our tests only run on scala 2.12 - so instead just eyeball it...
-    res shouldBe Some(
-      """enum Test {
+    res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
         |  case enum1, enum2
         |}""".stripMargin)
+  }
+
+  it should "generate named maps" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      Some(
+        OpenapiComponent(
+          Map(
+            "MyObject" -> OpenapiSchemaObject(Map("text" -> OpenapiSchemaString(true)), Seq("text"), false),
+            "MyEnum" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false),
+            "MyMapPrimitive" -> OpenapiSchemaMap(OpenapiSchemaString(false), false),
+            "MyMapObject" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyObject"), false),
+            "MyMapEnum" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyEnum"), false)
+          )
+        )
+      )
+    )
+
+    val gen = new ClassDefinitionGenerator()
+    val res = gen.classDefs(doc, false)
+    "import enumeratum._;" + res.get shouldCompile ()
   }
 }

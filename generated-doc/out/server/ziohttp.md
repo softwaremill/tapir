@@ -9,13 +9,13 @@ The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.6.4"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.7.5"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.6.4"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.7.5"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -93,6 +93,26 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 
 The capability can be added to the classpath independently of the interpreter through the
 `"com.softwaremill.sttp.shared" %% "zio"` dependency.
+
+## Web sockets
+
+The interpreter supports web sockets, with pipes of type `zio.stream.Stream[Throwable, REQ] => zio.stream.Stream[Throwable, RESP]`.
+See [web sockets](../endpoint/websockets.md) for more details. It also supports auto-ping, auto-pong-on-ping, ignoring-pongs and handling 
+of fragmented frames.
+
+## Error handling
+
+By default, any endpoints interpreted with the `ZioHttpInterpreter` will use tapir's built-in failed effect handling, 
+which uses an interceptor. Errors can be sent in a custom format by [providing a custom `ErrorHandler`](errors.md).
+
+If you'd prefer to use zio-http's error handling, you can disable tapir's exception interceptor by modifying the
+[server options](options.md):
+
+```scala
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
+
+ZioHttpInterpreter(ZioHttpServerOptions.customiseInterceptors[Any].exceptionHandler(None).options)
+```
 
 ## Configuration
 

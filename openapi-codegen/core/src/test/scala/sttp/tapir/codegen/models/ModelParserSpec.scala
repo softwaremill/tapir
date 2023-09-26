@@ -93,6 +93,28 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     ))
   }
 
+  it should "parse endpoint with single security entry" in {
+    val res = parser
+      .parse(TestHelpers.simpleSecurityYaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    res shouldBe (Right(
+      TestHelpers.simpleSecurityDocs
+    ))
+  }
+
+  it should "parse endpoint with complex security entry" in {
+    val res = parser
+      .parse(TestHelpers.complexSecurityYaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    res shouldBe (Right(
+      TestHelpers.complexSecurityDocs
+    ))
+  }
+
   it should "parse uuids" in {
     val yaml =
       """
@@ -131,7 +153,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
 
   it should "parse enums" in {
     val yaml =
-      """
+      """type: string
         |enum:
         |- paperback
         |- hardback""".stripMargin
@@ -142,7 +164,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[OpenapiSchemaType])
 
     res shouldBe Right(
-      OpenapiSchemaEnum(Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
+      OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
     )
   }
 }

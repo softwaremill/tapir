@@ -5,6 +5,17 @@ There are two kind of one-of inputs/outputs:
 * `oneOf` outputs where the arbitrary-output variants can represent different content using different outputs, and
 * `oneOfBody` input/output where the body-only variants represent the same content, but with different content types
 
+```eval_rst
+.. note::
+
+  ``oneOf`` and ``oneOfBody`` outputs are not related to ``oneOf:`` schemas when 
+  `generating <https://tapir.softwaremill.com/en/latest/docs/openapi.html>`_ OpenAPI documentation.
+  
+  Such schemas are generated for coproducts - e.g. ``sealed trait`` families - given an appropriate codec. See the
+  documentation on 
+  `coproducts <https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#sealed-traits-coproducts>`_ for details.
+```
+
 ## `oneOf` outputs
 
 Outputs with multiple variants can be specified using the `oneOf` output. Each variant is defined using a one-of 

@@ -30,16 +30,16 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        Future.succeededFuture(RawValue(Option(rc.getBodyAsString(defaultCharset.toString)).getOrElse("")))
+        Future.succeededFuture(RawValue(Option(rc.body().asString(defaultCharset.toString)).getOrElse("")))
       case RawBodyType.ByteArrayBody =>
-        Future.succeededFuture(RawValue(Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)))
+        Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)))
       case RawBodyType.ByteBufferBody =>
-        Future.succeededFuture(RawValue(Option(rc.getBody).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
+        Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
       case RawBodyType.InputStreamBody =>
-        val bytes = Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)
+        val bytes = Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)
         Future.succeededFuture(RawValue(new ByteArrayInputStream(bytes)))
       case RawBodyType.InputStreamRangeBody =>
-        val bytes = Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)
+        val bytes = Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)
         Future.succeededFuture(RawValue(InputStreamRange(() => new ByteArrayInputStream(bytes))))
       case RawBodyType.FileBody =>
         rc.fileUploads().asScala.headOption match {
@@ -48,12 +48,12 @@ class VertxRequestBody[F[_], S <: Streams[S]](
               val file = FileRange(new File(upload.uploadedFileName()))
               RawValue(file, Seq(file))
             }
-          case None if rc.getBody != null =>
+          case None if rc.body().buffer() != null =>
             val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
             val fs = rc.vertx.fileSystem
             val result = fs
               .createFile(filePath)
-              .flatMap(_ => fs.writeFile(filePath, rc.getBody))
+              .flatMap(_ => fs.writeFile(filePath, rc.body().buffer()))
               .flatMap(_ =>
                 Future.succeededFuture {
                   val file = FileRange(new File(filePath))

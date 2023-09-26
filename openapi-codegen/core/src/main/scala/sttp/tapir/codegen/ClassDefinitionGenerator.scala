@@ -21,20 +21,29 @@ class ClassDefinitionGenerator {
           generateClass(name, obj)
         case (name, obj: OpenapiSchemaEnum) =>
           generateEnum(name, obj, targetScala3)
-        case _ => throw new NotImplementedError("Only objects and enums supported!")
+        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
+        case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
   }
 
+  private[codegen] def generateMap(name: String, valueSchema: OpenapiSchemaType): Seq[String] = {
+    val valueSchemaName = valueSchema match {
+      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
+    }
+    Seq(s"""type $name = Map[String, $valueSchemaName]""")
+  }
+
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
   private[codegen] def generateEnum(name: String, obj: OpenapiSchemaEnum, targetScala3: Boolean): Seq[String] = if (targetScala3) {
-    s"""enum $name {
+    s"""enum $name derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
        |  case ${obj.items.map(_.value).mkString(", ")}
        |}""".stripMargin :: Nil
   } else {
     val members = obj.items.map { i => s"case object ${i.value} extends $name" }
     s"""|sealed trait $name extends EnumEntry
-        |object $name extends Enum[$name] {
+        |object $name extends Enum[$name] with CirceEnum[$name] {
         |  val values = findValues
         |${indent(2)(members.mkString("\n"))}
         |}""".stripMargin :: Nil

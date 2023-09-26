@@ -25,6 +25,7 @@ The modules are categorised using the following levels:
 | finatra   | stabilising  |
 | http4s    | stabilising  |
 | netty     | experimental |
+| pekko-http| stabilising  |
 | play      | stabilising  |
 | vertx     | stabilising  |
 | zio1-http | experimental |
@@ -67,6 +68,7 @@ The modules are categorised using the following levels:
 | zio           | experimental |
 | zio1          | stabilising  |
 | zio-prelude   | experimental |
+| iron          | experimental |
 
 ## JSON modules
 
@@ -79,6 +81,7 @@ The modules are categorised using the following levels:
 | spray-json | stabilising  |
 | tethys     | stabilising  |
 | upickle    | stabilising  |
+| pickler    | experimental |
 | zio-json   | experimental |
 | zio1-json  | experimental |
 

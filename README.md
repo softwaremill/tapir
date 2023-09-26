@@ -17,6 +17,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
   * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
+  * [Pekko HTTP](https://tapir.softwaremill.com/en/latest/server/pekkohttp.html) `Route`s/`Directive`s
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
   * [Vert.X](https://tapir.softwaremill.com/en/latest/server/vertx.html) `Router => Route`
   * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
@@ -56,7 +57,8 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 | <a href="https://www.kelkoogroup.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kelkoogroup.png" alt="Kelkoo group" width="160"/></a> | <a href="https://www.softwaremill.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="SoftwareMill" width="160"/></a> | <a href="https://www.carvana.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/carvana.svg" alt="Carvana" width="160"/></a> |
 | <a href="https://www.moneyfarm.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a> | <a href="https://www.ocadogroup.com/about-us/ocado-technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado Technology" width="160"/></a> | <a href="https://www.wegtam.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a> |
 | <a href="https://www.broad.app"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a> | <a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a> | <a href="https://www.colisweb.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a> |
-| <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> |
+| <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> | <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a> | 
+| | <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a> | |
 
 ## Teaser
 
@@ -129,7 +131,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.6.4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.7.5"
 ```
 
 Then, import:

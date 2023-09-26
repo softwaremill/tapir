@@ -44,9 +44,7 @@ val server: HttpServer =
 If you want it to scale please read about the `executor` configuration option below and set it accordingly. 
 
 Given the `com.sun.net.httpserver` package is standardised and a part of public JDK API since JDK 18 (JEP 408) this server can be 
-considered stable. Thanks to it being distributed with JDK this Tapir package has no external dependencies at all!
-
-This server doesn't support multipart http requests.
+considered stable.
 
 ## Configuration
 

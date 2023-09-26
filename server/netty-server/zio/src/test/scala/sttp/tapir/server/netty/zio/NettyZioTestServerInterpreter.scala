@@ -10,8 +10,6 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import zio.{CancelableFuture, Runtime, Task, Unsafe}
 
-import java.net.InetSocketAddress
-
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Task, ZioStreams, NettyZioServerOptions[Any], Task[Route[Task]]] {
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Task[Route[Task]] = {
