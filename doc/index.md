@@ -1,9 +1,8 @@
 # tapir
 
-Declarative, type-safe web endpoints library.
-
-<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="moia" width="160"/>
+<div style="text-align: center">
+<p>Declarative, type-safe web endpoints library.</p>
+<img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="tapir" height="100" width="100" />
 </div>
 
 ## Intro
