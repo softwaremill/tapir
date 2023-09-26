@@ -2,6 +2,10 @@
 
 Declarative, type-safe web endpoints library.
 
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="moia" width="160"/>
+</div>
+
 ## Intro
 
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
