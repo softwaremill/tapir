@@ -107,9 +107,9 @@ Thank you!
 <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<div />
+<div></div>
 <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a>
-<div />
+<div></div>
 </div>
 
 ## Code teaser
