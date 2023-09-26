@@ -2,11 +2,11 @@ package sttp.tapir.json.pickler
 
 import _root_.upickle.implicits.*
 import _root_.upickle.implicits.{macros => uMacros}
+import sttp.tapir.internal.EnumMacros.*
 import sttp.tapir.SchemaType
 import sttp.tapir.SchemaType.SProduct
 
 import scala.quoted.*
-
 import compiletime.*
 
 /** Macros, mostly copied from uPickle, and modified to allow our customizations like passing writers/readers as parameters, adjusting
@@ -93,22 +93,3 @@ private[pickler] object macros:
     Expr.block(statements, '{})
   }
 
-  transparent inline def isScalaEnum[X]: Boolean = inline compiletime.erasedValue[X] match
-    case _: Null         => false
-    case _: Nothing      => false
-    case _: reflect.Enum => allChildrenObjectsOrEnumCases[X]
-    case _               => false
-
-  /** Checks whether all children of type T are objects or enum cases or sealed parents of such. Useful for determining whether an enum is
-    * indeed an enum, or will be desugared to a sealed hierarchy, in which case it's not really an enumeration in context of schemas and
-    * JSON codecs.
-    */
-  inline def allChildrenObjectsOrEnumCases[T]: Boolean = ${ allChildrenObjectsOrEnumCasesImpl[T] }
-
-  import scala.quoted._
-
-  def allChildrenObjectsOrEnumCasesImpl[T: Type](using q: Quotes): Expr[Boolean] =
-    import quotes.reflect.*
-    val tpe = TypeRepr.of[T]
-    val symbol = tpe.typeSymbol
-    Expr(symbol.children.nonEmpty && !symbol.children.exists(c => c.isClassDef && !(c.flags is Flags.Sealed)))

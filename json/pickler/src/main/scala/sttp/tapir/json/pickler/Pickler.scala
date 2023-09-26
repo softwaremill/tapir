@@ -1,5 +1,6 @@
 package sttp.tapir.json.pickler
 
+import sttp.tapir.internal.EnumMacros.*
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, Value}

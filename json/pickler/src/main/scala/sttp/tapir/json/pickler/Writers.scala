@@ -3,6 +3,7 @@ package sttp.tapir.json.pickler
 import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{WritersVersionSpecific, macros => upickleMacros}
+import sttp.tapir.internal.EnumMacros.*
 import sttp.tapir.Schema
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
@@ -64,7 +65,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
         )
     }
 
-    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !macros.isScalaEnum[T] then
+    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isScalaEnum[T] then
       annotate[T](
         writer,
         upickleMacros.tagName[T],
@@ -76,8 +77,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
-  inline def macroSumW[T: ClassTag](inline childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(
-      using Configuration
+  inline def macroSumW[T: ClassTag](inline childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(using
+      Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
     val writers: List[TaggedWriter[_ <: T]] = childWriters
