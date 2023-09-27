@@ -55,12 +55,11 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     val httpExchange = jdkHttpRequest(request)
     val boundary = extractBoundary(httpExchange)
 
-    parseMultipartBody(httpExchange, boundary).flatMap(parsedPart =>
+    parseMultipartBody(httpExchange.getRequestBody, boundary).flatMap(parsedPart =>
       parsedPart.getName.flatMap(name =>
         m.partType(name)
           .map(partType => {
-            val bodyInputStream = new ByteArrayInputStream(parsedPart.body)
-            val bodyRawValue = toRaw(request, partType, bodyInputStream)
+            val bodyRawValue = toRaw(request, partType, parsedPart.body)
             Part(
               name,
               bodyRawValue.value,

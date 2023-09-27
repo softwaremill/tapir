@@ -1,12 +1,17 @@
 package sttp.tapir.server.jdkhttp.internal
 
-import com.sun.net.httpserver.HttpExchange
 import sttp.model.Header
-import java.io.{BufferedReader, InputStreamReader}
+import sttp.tapir.Defaults.createTempFile
+import sttp.tapir.TapirFile
 
-case class ParsedMultiPart(headers: Map[String, Seq[String]], body: Array[Byte]) {
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, FileOutputStream, InputStream, OutputStream}
+import scala.annotation.tailrec
+
+case class ParsedMultiPart(headers: Map[String, Seq[String]], body: InputStream) {
   def getHeader(headerName: String): Option[String] = headers.get(headerName).flatMap(_.headOption)
-  def fileItemHeaders: Seq[Header] = headers.toSeq.flatMap { case (name, values) => values.map(value => Header(name, value)) }
+  def fileItemHeaders: Seq[Header] = headers.toSeq.flatMap { case (name, values) =>
+    values.map(value => Header(name, value))
+  }
 
   def getDispositionParams: Map[String, String] = {
     val headerValue = getHeader("content-disposition")
@@ -44,11 +49,15 @@ case class ParsedMultiPart(headers: Map[String, Seq[String]], body: Array[Byte])
 }
 
 object ParsedMultiPart {
-  def empty: ParsedMultiPart = new ParsedMultiPart(Map.empty, Array.empty)
+  def empty: ParsedMultiPart = new ParsedMultiPart(
+    Map.empty,
+    new ByteArrayInputStream(Array.empty)
+  )
 
   sealed trait ParseState
   case object Default extends ParseState
   case object AfterBoundary extends ParseState
+  case object AfterParsedBody extends ParseState
   case object AfterHeaderSpace extends ParseState
 
   private case class ParseData(
@@ -56,36 +65,109 @@ object ParsedMultiPart {
       completedParts: List[ParsedMultiPart],
       parseState: ParseState
   ) {
+    def done(): ParseData = this
     def changeState(state: ParseState): ParseData = this.copy(parseState = state)
     def addHeader(header: String): ParseData = this.copy(currentPart = currentPart.addHeader(header))
-    def addBody(body: Array[Byte]): ParseData = this.copy(currentPart = currentPart.copy(body = currentPart.body ++ body))
-    def completePart(): ParseData = this.currentPart.getName match {
+    def completePart(body: InputStream): ParseData = this.currentPart.getName match {
       case Some(_) =>
         this.copy(
-          completedParts = completedParts :+ currentPart,
+          completedParts = completedParts :+ currentPart.copy(body = body),
           currentPart = empty,
-          parseState = AfterBoundary
+          parseState = AfterParsedBody
         )
-      case None => changeState(AfterBoundary)
+      case None => changeState(AfterParsedBody)
     }
   }
 
-  def parseMultipartBody(httpExchange: HttpExchange, boundary: String): Seq[ParsedMultiPart] = {
-    val reader = new BufferedReader(new InputStreamReader(httpExchange.getRequestBody))
-    val initialParseState: ParseData = ParseData(empty, List.empty, Default)
+  private def toTruncatedInputStream(streamAndFile: PartStream, stopAt: Int): InputStream = streamAndFile match {
+    case ByteStream(stream) =>
+      val bytes = stream.toByteArray
+      new ByteArrayInputStream(bytes.slice(0, stopAt))
+    case FileStream(f, fileOutputStream) =>
+      fileOutputStream.getChannel.truncate(stopAt.toLong)
+      fileOutputStream.close()
+      new FileInputStream(f)
+  }
+
+  private def readUntilNewline(inputStream: InputStream): Array[Byte] =
     Iterator
-      .continually(reader.readLine())
-      .takeWhile(_ != null)
-      .foldLeft(initialParseState) { case (state, line) =>
-        state.parseState match {
-          case Default if line.startsWith(boundary)           => state.changeState(AfterBoundary)
-          case Default                                        => state
-          case AfterBoundary if line.trim.isEmpty             => state.changeState(AfterHeaderSpace)
-          case AfterBoundary                                  => state.addHeader(line)
-          case AfterHeaderSpace if !line.startsWith(boundary) => state.addBody(line.getBytes())
-          case AfterHeaderSpace                               => state.completePart()
-        }
+      .continually(inputStream.read())
+      .sliding(2)
+      .takeWhile(twoChars => twoChars != Seq('\r', '\n') && twoChars != Seq('\n') && !twoChars.lastOption.contains(-1))
+      .map(_.head.toByte)
+      .toArray
+
+  private def readStringUntilNewline(inputStream: InputStream) = {
+    val bytes = readUntilNewline(inputStream)
+    new String(bytes)
+  }
+
+  def parseMultipartBody(inputStream: InputStream, boundary: String): Seq[ParsedMultiPart] = {
+    val boundaryBytes = boundary.getBytes
+
+    @tailrec
+    def recursivelyParseState(state: ParseData): ParseData = state.parseState match {
+      case Default =>
+        val readString = readStringUntilNewline(inputStream)
+        if (readString == boundary) recursivelyParseState(state.changeState(AfterBoundary))
+        else state.done()
+      case AfterBoundary =>
+        val line = readStringUntilNewline(inputStream)
+        if (line.trim.isBlank) recursivelyParseState(state.changeState(AfterHeaderSpace))
+        else recursivelyParseState(state.addHeader(line))
+      case AfterParsedBody =>
+        val line = readStringUntilNewline(inputStream)
+        if (line.trim.isBlank) state.done()
+        else recursivelyParseState(state.addHeader(line).changeState(AfterBoundary))
+      case AfterHeaderSpace =>
+        val partInputStream = parseMultipartBodyPart(inputStream, boundaryBytes)
+        recursivelyParseState(state.completePart(partInputStream))
+    }
+
+    recursivelyParseState(ParseData(empty, List.empty, Default)).completedParts
+  }
+
+  private val TempFileThreshold = 52_428_800
+  private sealed trait PartStream {
+    val stream: OutputStream
+    def convertToFileIfThresholdMet(numReadBytes: Int): PartStream = this match {
+      case ByteStream(os) if numReadBytes >= TempFileThreshold =>
+        val newFile = createTempFile()
+        val fileOutputStream = new FileOutputStream(newFile)
+        os.writeTo(fileOutputStream)
+        os.close()
+        FileStream(newFile, fileOutputStream)
+      case _ => this
+    }
+    def write(byte: Int): Unit = this.stream.write(byte)
+  }
+  private case class FileStream(tempFile: TapirFile, stream: FileOutputStream) extends PartStream
+  private case class ByteStream(stream: ByteArrayOutputStream = new ByteArrayOutputStream()) extends PartStream
+
+  private def parseMultipartBodyPart(is: InputStream, boundaryBytes: Array[Byte]): InputStream = {
+    @tailrec
+    def recursivelyParseBodyBytes(outputStream: PartStream, lastXBytes: Array[Byte], numReadBytes: Int): InputStream = {
+      val currentByte = is.read()
+      if (currentByte == -1) throw new IllegalArgumentException("Parsing multipart failed, ran out of bytes before finding boundary")
+      val partStream = outputStream.convertToFileIfThresholdMet(numReadBytes)
+      partStream.write(currentByte)
+
+      val updatedLastXBytes =
+        if (lastXBytes.length < boundaryBytes.length) lastXBytes :+ currentByte.toByte
+        else lastXBytes.tail :+ currentByte.toByte
+
+      val reachedBoundary = updatedLastXBytes.sameElements(boundaryBytes)
+      if (!reachedBoundary) {
+        recursivelyParseBodyBytes(partStream, updatedLastXBytes, numReadBytes + 1)
+      } else {
+        val boundaryIdx = updatedLastXBytes.indexOfSlice(boundaryBytes)
+        readUntilNewline(is): Unit
+        val bytesToRemove = updatedLastXBytes.length - boundaryIdx + 1
+        val sizeWithoutBoundary = numReadBytes - bytesToRemove
+        toTruncatedInputStream(partStream, sizeWithoutBoundary)
       }
-      .completedParts
+    }
+
+    recursivelyParseBodyBytes(ByteStream(), new Array[Byte](boundaryBytes.length), 0)
   }
 }
