@@ -46,9 +46,10 @@ object Validator extends ValidatorMacros {
 
   // string
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
-  def minLength[T <: String](value: Int): Validator.Primitive[T] = MinLength(value)
-  def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
-  def fixedLength[T <: String](value: Int): Validator[T] = MinLength(value).and(MaxLength(value))
+  def minLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator.Primitive[T] = MinLength(value, countCodePoints)
+  def maxLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator.Primitive[T] = MaxLength(value, countCodePoints)
+  def fixedLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator[T] =
+    MinLength(value, countCodePoints).and(MaxLength(value, countCodePoints))
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
 
   // iterable
@@ -111,11 +112,17 @@ object Validator extends ValidatorMacros {
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.matches(value))
   }
-  case class MinLength[T <: String](value: Int) extends Primitive[T] {
-    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.size >= value)
+  case class MinLength[T <: String](value: Int, countCodePoints: Boolean = false) extends Primitive[T] {
+    override def doValidate(t: T): ValidationResult = {
+      val size = if (countCodePoints) t.codePointCount(0, t.size) else t.size
+      ValidationResult.validWhen(size >= value)
+    }
   }
-  case class MaxLength[T <: String](value: Int) extends Primitive[T] {
-    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.size <= value)
+  case class MaxLength[T <: String](value: Int, countCodePoints: Boolean = false) extends Primitive[T] {
+    override def doValidate(t: T): ValidationResult = {
+      val size = if (countCodePoints) t.codePointCount(0, t.size) else t.size
+      ValidationResult.validWhen(size <= value)
+    }
   }
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size >= value)
@@ -186,8 +193,8 @@ object Validator extends ValidatorMacros {
       case Min(value, exclusive)             => Some(s"${if (exclusive) ">" else ">="}$value")
       case Max(value, exclusive)             => Some(s"${if (exclusive) "<" else "<="}$value")
       case Pattern(value)                    => Some(s"~$value")
-      case MinLength(value)                  => Some(s"length>=$value")
-      case MaxLength(value)                  => Some(s"length<=$value")
+      case MinLength(value, _)               => Some(s"length>=$value")
+      case MaxLength(value, _)               => Some(s"length<=$value")
       case MinSize(value)                    => Some(s"size>=$value")
       case MaxSize(value)                    => Some(s"size<=$value")
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
