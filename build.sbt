@@ -2037,6 +2037,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
