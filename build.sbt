@@ -30,8 +30,8 @@ lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extensi
 
 concurrentRestrictions in Global ++= Seq(
   Tags.limit(Tags.Test, 1),
-  // By default dependencies of test can be run in parallel, it includeds Scala Native/Scala.js linkers
-  // Limit them to lower memory usage, especially when targetting LLVM
+  // By default dependencies of test can be run in parallel, it includes Scala Native/Scala.js linkers
+  // Limit them to lower memory usage, especially when targeting LLVM
   Tags.limit(NativeTags.Link, 1),
   Tags.limit(ScalaJSTags.Link, 1)
 )
