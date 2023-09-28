@@ -1,5 +1,6 @@
 package sttp.tapir.json.pickler
 
+import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.{Error, Value}
@@ -68,7 +69,7 @@ object Pickler:
               s"Unexpected product type (case class) ${implicitly[ClassTag[T]].runtimeClass.getSimpleName()}, this method should only be used with sum types (like sealed hierarchy)"
             )
           case _: Mirror.SumOf[T] =>
-            inline if (isScalaEnum[T])
+            inline if (isEnumeration[T])
               error("oneOfUsingField cannot be used with enums. Try Pickler.derivedEnumeration instead.")
             else {
               given schemaV: Schema[V] = discriminatorPickler.schema
@@ -277,7 +278,7 @@ object Pickler:
       case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
       case _: Mirror.SumOf[T] =>
         val schema: Schema[T] =
-          inline if (isScalaEnum[T])
+          inline if (isEnumeration[T])
             Schema.derivedEnumeration[T].defaultStringBased
           else
             Schema.derived[T]

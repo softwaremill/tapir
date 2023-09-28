@@ -1,9 +1,8 @@
 package sttp.tapir.macros
 
+import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Validator
-import sttp.tapir.{Schema, SchemaType}
-
-import scala.compiletime
+import sttp.tapir.Schema
 
 import scala.quoted.*
 
@@ -27,16 +26,7 @@ private[tapir] object ValidatorMacros {
       report.errorAndAbort("Can only enumerate values of a sealed trait, class or enum.")
     }
 
-    def flatChildren(s: Symbol): List[Symbol] = s.children.toList.flatMap { c =>
-      if (c.isClassDef) {
-        if (!(c.flags is Flags.Sealed))
-          report.errorAndAbort("All children must be objects or enum cases, or sealed parent of such.")
-        else
-          flatChildren(c)
-      } else List(c)
-    }
-
-    val instances = flatChildren(symbol).distinct
+    val instances = enumerationTypeChildren[T](failOnError = true).distinct
       .sortBy(_.name)
       .map(x =>
         tpe.memberType(x).asType match {

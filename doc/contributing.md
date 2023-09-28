@@ -2,12 +2,21 @@
 
 All suggestions welcome :)!
 
-If you'd like to contribute, see the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! 
+If you'd like to contribute, see the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one!
 Or report your own. If you have an idea you'd like to discuss, that's always a good option.
 
-If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
-[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or 
+If you are having doubts on the _why_ or _how_ something works, don't hesitate to ask a question on
+[discourse](https://softwaremill.community/c/tapir) or via github. This probably means that the documentation, scaladocs or
 code is unclear and can be improved for the benefit of all.
+
+## Conventions
+
+### Enumerations
+
+Scala 3 introduces `enum`, which can be used to represent sealed hierarchies with simpler syntax, or actual "true" enumerations,
+that is parameterless enums or sealed traits with only case objects as children. Tapir needs to treat the latter differently,
+in order to allow using OpenAPI `enum` elements and derive JSON codecs which represent them as simple values (without discriminator).
+Let's use the name `enumeration` in Tapir codebase to represent these "true" enumerations and avoid ambiguity.
 
 ## Acknowledgments
 
