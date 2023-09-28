@@ -1,13 +1,15 @@
 package sttp.tapir.json.pickler
 
+import _root_.upickle.{default => udefault}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema
+import sttp.tapir.Schema.annotations.{default, encodedName}
 import sttp.tapir.generic.Configuration
-import sttp.tapir.SchemaType
-import sttp.tapir.Schema.annotations.encodedName
-import sttp.tapir.Schema.annotations.default
+import sttp.tapir.{Schema, SchemaType}
+import upickle.AttributeTagged
+import upickle.core.{ObjVisitor, Visitor}
+
 import java.util.UUID
 
 import Fixtures.*
@@ -61,6 +63,21 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     jsonStr shouldBe """{"fieldA":"field_a_value","fieldB":{"fieldA11":7954}}"""
     resultObj shouldBe Value(TopClass("field_a_value_2", InnerClass(-321)))
+  }
+
+  object CustomPickle extends AttributeTagged {
+    def getReader: udefault.Reader[FlatClass] = udefault.macroR[FlatClass]
+    def getWriter: this.Writer[FlatClass] = new Writer[FlatClass] {
+      override def write0[V](out: Visitor[?, V], v: FlatClass): V = out.visitString(s"custom-${v.fieldA}", 1)
+    }
+  }
+
+  it should "work with provided own readers and writers" in {
+    given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
+    given customReader: udefault.Reader[FlatClass] = CustomPickle.getReader
+    given customWriter: CustomPickle.Writer[FlatClass] = CustomPickle.getWriter
+
+    Pickler.derived[FlatClass].toCodec.encode(FlatClass(5, "txt")) shouldBe """"custom-5""""
   }
 
   it should "fail to derive a Pickler when there's a Schema but missing ReadWriter" in {

@@ -183,7 +183,9 @@ pResponse.schema
 
 ## Using existing µPickle Readers and Writers
 
-If you have a case where you would like to use an already defined `upickle.default.ReadWriter[T]`, you can still derive a `Pickler[T]`, but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in the given (implicit) scope. With such a setup, you can proceed with `Pickler.derived[T]`.
+If you have a case where you would like to use an existing custom `ReadWriter[T]`, you can still derive a `Pickler[T]`, 
+but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in the given (implicit) scope. With such a setup, 
+you can proceed with `Pickler.derived[T]`.
 
 ## Divergences from default µPickle behavior
 
