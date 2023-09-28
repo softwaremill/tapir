@@ -46,8 +46,41 @@ object Validator extends ValidatorMacros {
 
   // string
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
+
+  /** Create a validator for minimum length constraints on strings.
+    *
+    * @param value
+    *   The minimum allowed length.
+    * @param countCodePoints
+    *   A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+    *   validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+    *   more accurate length validation for strings containing such characters. Defaults to false, where length is validated based on the
+    *   number of `Char` values in the string.
+    */
   def minLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator.Primitive[T] = MinLength(value, countCodePoints)
+
+  /** Create a validator for maximum length constraints on strings.
+   *
+   * @param value
+   * The maximum allowed length.
+   * @param countCodePoints
+   * A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+   * validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+   * more accurate length validation for strings containing such characters. Defaults to false, where length is validated based on the
+   * number of `Char` values in the string.
+   */
   def maxLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator.Primitive[T] = MaxLength(value, countCodePoints)
+
+  /** Create a validator for fixed length constraints on strings.
+   *
+   * @param value
+   * The fixed allowed length.
+   * @param countCodePoints
+   * A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+   * validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+   * more accurate length validation for strings containing such characters. Defaults to false, where length is validated based on the
+   * number of `Char` values in the string.
+   */
   def fixedLength[T <: String](value: Int, countCodePoints: Boolean = false): Validator[T] =
     MinLength(value, countCodePoints).and(MaxLength(value, countCodePoints))
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
