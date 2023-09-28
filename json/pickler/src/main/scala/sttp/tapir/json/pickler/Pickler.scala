@@ -253,19 +253,24 @@ object Pickler:
   private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], Configuration, Mirror.Of[T]): Pickler[T] =
     Pickler(
       new TapirPickle[T] {
-        val rw: ReadWriter[T] = summonFrom {
-          case foundTapirRW: ReadWriter[T] =>
-            foundTapirRW
-          case foundUpickleDefaultRW: _root_.upickle.default.ReadWriter[T] => // there is BOTH schema and ReadWriter in scope
-            foundUpickleDefaultRW.asInstanceOf[ReadWriter[T]]
+        override lazy val reader: Reader[T] = summonFrom {
+          case foundR: _root_.upickle.core.Types#Reader[T] =>
+            foundR.asInstanceOf[Reader[T]]
           case _ =>
             errorForType[T](
-              "Found implicit Schema[%s] but couldn't find a uPickle ReadWriter for this type. Either provide a ReadWriter, or remove the Schema from scope and let Pickler derive its own."
+              "Found implicit Schema[%s] but couldn't find a uPickle Reader for this type. Either provide a Reader/ReadWriter, or remove the Schema from scope and let Pickler derive all on its own."
             )
             null
         }
-        override lazy val reader = rw
-        override lazy val writer = rw
+        override lazy val writer: Writer[T] = summonFrom {
+          case foundW: _root_.upickle.core.Types#Writer[T] =>
+            foundW.asInstanceOf[Writer[T]]
+          case _ =>
+            errorForType[T](
+              "Found implicit Schema[%s] but couldn't find a uPickle Writer for this type. Either provide a Writer/ReadWriter, or remove the Schema from scope and let Pickler derive all on its own."
+            )
+            null
+        }
       },
       schema
     )
