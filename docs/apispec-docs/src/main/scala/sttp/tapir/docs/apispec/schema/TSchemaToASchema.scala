@@ -122,8 +122,8 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
           exclusiveMaximum = Option(exclusive).filter(identity)
         )
       case Validator.Pattern(value)                  => aschema.copy(pattern = Some(Pattern(value)))
-      case Validator.MinLength(value)                => aschema.copy(minLength = Some(value))
-      case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
+      case Validator.MinLength(value, _)             => aschema.copy(minLength = Some(value))
+      case Validator.MaxLength(value, _)             => aschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)                  => aschema.copy(maxItems = Some(value))
       case Validator.Custom(_, _)                    => aschema
