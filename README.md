@@ -202,7 +202,7 @@ To verify that the code snippet in docs compile, run `compileDocumentation`. A f
 
 ### Importing into IntelliJ
 
-By default, when importing to IntelliJ, only the Scala 2.13/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
+By default, when importing to IntelliJ, only the Scala 3/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
 
 If you'd like to work on a different platform or Scala version, simply change this setting temporarily so that the correct subprojects are imported. For example:
 
