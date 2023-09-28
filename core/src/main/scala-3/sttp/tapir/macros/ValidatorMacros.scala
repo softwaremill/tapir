@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import sttp.tapir.internal.EnumMacros.*
+import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Validator
 import sttp.tapir.Schema
 

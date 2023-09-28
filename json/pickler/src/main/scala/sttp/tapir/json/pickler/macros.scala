@@ -2,7 +2,7 @@ package sttp.tapir.json.pickler
 
 import _root_.upickle.implicits.*
 import _root_.upickle.implicits.{macros => uMacros}
-import sttp.tapir.internal.EnumMacros.*
+import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.SchemaType
 import sttp.tapir.SchemaType.SProduct
 
@@ -92,4 +92,3 @@ private[pickler] object macros:
 
     Expr.block(statements, '{})
   }
-

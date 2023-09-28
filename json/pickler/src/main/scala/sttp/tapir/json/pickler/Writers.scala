@@ -3,7 +3,7 @@ package sttp.tapir.json.pickler
 import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{WritersVersionSpecific, macros => upickleMacros}
-import sttp.tapir.internal.EnumMacros.*
+import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Schema
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
@@ -65,7 +65,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
         )
     }
 
-    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isScalaEnum[T] then
+    inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isEnumeration[T] then
       annotate[T](
         writer,
         upickleMacros.tagName[T],
