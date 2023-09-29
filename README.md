@@ -182,10 +182,21 @@ code is unclear and be improved for the benefit of all.
 In order to develop the documentation, you can use the `doc/watch.sh` script, which runs Sphinx using Python.
 Use `doc/requirements.txt` to set up your Python environment with `pip`. If you're using Nix, you can just run `nix develop`
 in the `doc` directory to set up a working shell with all the dependencies.
-n
+
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
 you can run `core/mimaReportBinaryIssues` from the sbt console.
+However, be aware that tags from the repository aren’t automatically fetched during forking; hence, the command will not operate without first fetching the tags.
 
+After forking and cloning the repository, add the original repository as a remote:
+
+```
+git remote add upstream git@github.com:softwaremill/tapir.git
+```
+
+Fetch the tags from the upstream:
+```
+git fetch --tags upstream
+```
 ### Testing locally
 
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
