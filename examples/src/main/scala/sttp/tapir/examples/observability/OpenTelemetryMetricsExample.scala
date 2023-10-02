@@ -1,8 +1,6 @@
 package sttp.tapir.examples.observability
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import io.opentelemetry.api.OpenTelemetry
@@ -14,8 +12,8 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -90,15 +88,13 @@ object OpenTelemetryMetricsExample extends App with StrictLogging {
 
   val openTelemetryMetrics = OpenTelemetryMetrics.default[Future](otel)
 
-  val serverOptions: AkkaHttpServerOptions =
-    AkkaHttpServerOptions.customiseInterceptors
+  val serverOptions: NettyFutureServerOptions =
+    NettyFutureServerOptions.customiseInterceptors
       // Adds an interceptor which collects metrics by executing callbacks
       .metricsInterceptor(openTelemetryMetrics.metricsInterceptor())
       .options
 
-  val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(personEndpoint)
-
-  Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
+  Await.ready(NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start(), 1.minute)
 
   logger.info(s"Server started. POST persons under http://localhost:8080/person.")
 }
