@@ -31,6 +31,17 @@ import scala.concurrent.{Await, Future}
   * Please refer to the <a href="https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/">exporter
   * configuration</a> if you need to use a different host/port.
   *
+  * The example code requires the following dependencies:
+  * {{{
+  *   val openTelemetryVersion = <OpenTelemetry version>
+  *
+  *   libraryDependencies ++= Seq(
+  *     "io.opentelemetry" % "opentelemetry-sdk" % openTelemetryVersion,
+  *     "io.opentelemetry" % "opentelemetry-sdk-metrics" % openTelemetryVersion,
+  *     "io.opentelemetry" % "opentelemetry-exporter-otlp" % openTelemetryVersion
+ *    )
+  * }}}
+  *
   * Once this example app and the collector are running, and after you send some requests to the `/person` endpoint, you should start seeing
   * the metrics in the collector logs (look for `InstrumentationScope tapir 1.0.0`), e.g.:
   * {{{
