@@ -91,10 +91,6 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
             val (tag, w) = super.findWriter(v)
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
             (overriddenTag, w)
-          case discriminator: EnumValueDiscriminator[T] =>
-            val (t, writer) = super.findWriter(v)
-            val overriddenTag = discriminator.encode(v.asInstanceOf[T])
-            (overriddenTag, writer)
 
           case _: DefaultSubtypeDiscriminator[T] =>
             val (t, writer) = super.findWriter(v)

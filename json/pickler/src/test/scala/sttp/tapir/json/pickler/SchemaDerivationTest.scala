@@ -1,22 +1,35 @@
 package sttp.tapir.json.pickler
 
-import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.annotations._
 import sttp.tapir.Schema.{SName, schemaForBoolean}
-import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import sttp.tapir.generic.Configuration
+import org.scalatest.prop.TableDrivenPropertyChecks
+import sttp.tapir.SchemaMacroTestData.Pet
+import sttp.tapir.SchemaMacroTestData.User
+import sttp.tapir.SchemaMacroTestData.{Entity => MEntity}
+import sttp.tapir.SchemaMacroTestData.{Person => MPerson}
+import sttp.tapir.SchemaMacroTestData.{User => MUser}
+import sttp.tapir.SchemaMacroTestData.{Organization => MOrganization}
+import sttp.tapir.SchemaMacroTestData.Cat
+import sttp.tapir.SchemaMacroTestData.Dog
+import sttp.tapir.SchemaMacroTestData.Hamster
+import sttp.tapir.SchemaMacroTestData.Wrapper
+import sttp.tapir.SchemaMacroTestData.WrapperT
+import sttp.tapir.SchemaMacroTestData.Letters
+import org.scalatest.Assertions
+import sttp.tapir.SchemaMacroTestData.Countries
 
-class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
-  import SchemaGenericAutoTest._
-
+class SchemaDerivationTest extends AsyncFlatSpec with Matchers with TableDrivenPropertyChecks {
+  import SchemaDerivationTest._
   import generic.auto._
+
   def implicitlySchema[T: Pickler]: Schema[T] = summon[Pickler[T]].schema
 
   "Schema auto derivation" should "find schema for simple types" in {
@@ -81,6 +94,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       List(field(FieldName("g1"), stringSchema), field(FieldName("g2"), expectedASchema))
     )
   }
+
 
   it should "find schema for case classes with collections" in {
     implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
@@ -191,7 +205,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitlySchema[Test1]
 
     // when
-    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"))
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.<local SchemaDerivationTest>.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
       List(
         field(FieldName("f1"), implicitlySchema[String]),
@@ -362,7 +376,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedCatSchema = Schema(
       SProduct[Cat](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("cat name"))),
           field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
         )
       ),
@@ -372,7 +386,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedDogSchema = Schema(
       SProduct[Dog](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
         )
       ),
@@ -382,7 +396,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedHamsterSchema = Schema(
       SProduct[Hamster](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
         )
       ),
@@ -391,8 +405,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
     val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
 
-    List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
-      .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
+    subtypes should contain allOf (expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
   }
 
   it should "add validators for collection and option elements" in {
@@ -409,10 +422,135 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schema.applyValidation(ValidateEachTest(List(6, 0, 10), Some("1234"))) should have size 1
     schema.applyValidation(ValidateEachTest(List(6, 10), Some("12"))) should have size 1
   }
+
+  // derivation tests copied from core/SchemaMacroTest
+
+  it should "work with custom naming configuration" in {
+    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+    val actual = implicitlySchema[D].modify(_.someFieldName)(_.description("something"))
+    actual.name shouldBe Some(SName("sttp.tapir.json.pickler.D"))
+    actual.schemaType shouldBe SProduct[D](
+      List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
+    )
+  }
+
+  it should "add discriminator based on a trait method" in {
+    val sUser = implicitlySchema[MUser]
+    val sOrganization = implicitlySchema[MOrganization]
+
+    forAll(
+      Table(
+        "schema",
+        Schema.oneOfUsingField[Wrapper, String]({ x => x.e.kind(x.s) }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Wrapper, String](x => x.e.kind(x.s), _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Wrapper, String](_.e.kind, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[MEntity, String](_.kind, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[MEntity, String]({ x => x.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[MEntity, String]({ _.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType
+      )
+    ) {
+      _.asInstanceOf[SCoproduct[_]].discriminator shouldBe Some(
+        SDiscriminator(
+          FieldName("kind"),
+          Map(
+            "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+            "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
+          )
+        )
+      )
+    }
+  }
+
+  it should "extract type params for discriminator based on a trait method" in {
+    val sUser = implicitlySchema[MUser]
+    val sOrganization = implicitlySchema[MOrganization]
+
+    val schema = Schema
+      .oneOfUsingField[WrapperT[String, Int, String], String]({ x => x.e.kind(x.a) }, _.toString)("user" -> sUser, "org" -> sOrganization)
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+
+    schemaType.discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("kind"),
+        Map(
+          "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+          "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
+        )
+      )
+    )
+
+    schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
+  }
+
+  it should "add the discriminator as a field when using oneOfUsingField" in {
+    val schema =
+      Pickler
+        .oneOfUsingField[MEntity, String](_.kind, _.toString)("user" -> Pickler.derived[MUser], "org" -> Pickler.derived[MOrganization])
+        .schema
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+
+    schemaType.discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("kind"),
+        Map(
+          "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+          "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
+        )
+      )
+    )
+
+    schemaType.subtypes.foreach { childSchema =>
+      val childProduct = childSchema.schemaType.asInstanceOf[SProduct[_]]
+      childProduct.fields.find(_.name.name == "kind") shouldBe Some(SProductField(FieldName("kind"), Schema.string, (_: Any) => None))
+    }
+    succeed
+  }
+
+  // TODO https://github.com/softwaremill/tapir/issues/3170
+  // it should "create a one-of wrapped schema" in {
+  //   val schema = Pickler.oneOfWrapped[MEntity].schema
+  //   val schemaType: SCoproduct[MEntity] = schema.schemaType.asInstanceOf[SCoproduct[MEntity]]
+  //
+  //   schemaType.discriminator shouldBe None
+  //   schemaType.subtypes shouldBe List(
+  //     Schema.wrapWithSingleFieldProduct(Schema.derived[MOrganization]),
+  //     Schema.wrapWithSingleFieldProduct(Schema.derived[MUser])
+  //   )
+  //   schemaType.subtypeSchema(MUser("x", "y")) shouldBe Some(
+  //     SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[MUser]), MUser("x", "y"))
+  //   )
+  //   schemaType.subtypeSchema(MOrganization("a")) shouldBe Some(
+  //     SchemaWithValue(Schema.wrapWithSingleFieldProduct(Schema.derived[MOrganization]), MOrganization("a"))
+  //   )
+  // }
+
+  it should "create and enrich a schema for an enum" in {
+    val expected = Schema[Letters](SString())
+      .validate(
+        Validator.enumeration[Letters](
+          List(Letters.A, Letters.B, Letters.C),
+          (v: Letters) => Option(v),
+          Some(SName("sttp.tapir.SchemaMacroTestData.Letters"))
+        )
+      )
+      .description("it's a small alphabet")
+
+    val actual: Schema[Letters] = Pickler.derived[Letters].schema
+
+    actual.schemaType shouldBe expected.schemaType
+    (actual.validator, expected.validator) match {
+      case (Validator.Enumeration(va, Some(ea), Some(_)), Validator.Enumeration(ve, Some(ee), Some(ne))) =>
+        va shouldBe ve
+        ea(Letters.A) shouldBe ee(Letters.A)
+        // in Scala2 the name is "sttp.tapir.SchemaMacroTestData.Letters", in Scala3: "sttp.tapir.SchemaMacroTestData$.Letters"
+        ne.fullName should endWith("Letters")
+      case _ => Assertions.fail()
+    }
+    actual.description shouldBe expected.description
+  }
 }
 
-object SchemaGenericAutoTest {
-  import generic.auto._
+object SchemaDerivationTest {
   def implicitlySchema[A: Pickler]: Schema[A] = summon[Pickler[A]].schema
 
   private[json] val stringSchema = implicitlySchema[String]
