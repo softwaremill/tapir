@@ -1,20 +1,20 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.sse.ServerSentEvent
 
-class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
+class PekkoServerSentEventsTest extends AsyncFunSuite with Matchers {
 
-  implicit val materializer: Materializer = Materializer(ActorSystem("AkkaHttpServerInterpreterTest"))
+  implicit val materializer: Materializer = Materializer(ActorSystem("PekkoHttpServerInterpreterTest"))
 
   test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
     val sse = Source.single(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
-    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
+    val serialised = PekkoServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -32,7 +32,7 @@ class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
 
   test("serialiseSSEToBytes should omit fields that are not set") {
     val sse = Source.single(ServerSentEvent(Some("data"), None, Some("id1"), None))
-    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
+    val serialised = PekkoServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -57,7 +57,7 @@ class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
         None
       )
     )
-    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
+    val serialised = PekkoServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -89,7 +89,7 @@ class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
         |""".stripMargin
       )
     )
-    val parsed = AkkaServerSentEvents.parseBytesToSSE(sseBytes)
+    val parsed = PekkoServerSentEvents.parseBytesToSSE(sseBytes)
     val futureEvents = parsed.runFold(List.empty[ServerSentEvent])((acc, event) => acc :+ event)
     futureEvents.map(events =>
           events shouldBe List(

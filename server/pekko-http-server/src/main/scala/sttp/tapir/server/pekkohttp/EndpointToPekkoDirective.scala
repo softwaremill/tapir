@@ -1,14 +1,14 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.reject
-import akka.http.scaladsl.server.{Directive1, RequestContext, StandardRoute}
-import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
-import akka.stream.Materializer
-import akka.stream.scaladsl.{FileIO, Sink}
-import akka.util.ByteString
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.server.Directives.reject
+import org.apache.pekko.http.scaladsl.server.{Directive1, RequestContext, StandardRoute}
+import org.apache.pekko.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{FileIO, Sink}
+import org.apache.pekko.util.ByteString
 import sttp.capabilities.WebSockets
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, Part}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.internal._
@@ -18,10 +18,10 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyTyp
 import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
-  def apply[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets]): Directive1[I] = {
-    import akka.http.scaladsl.server.Directives._
-    import akka.http.scaladsl.server._
+private[pekkohttp] class EndpointToPekkoDirective(serverOptions: PekkoHttpServerOptions) {
+  def apply[I, E, O](e: Endpoint[I, E, O, PekkoStreams with WebSockets]): Directive1[I] = {
+    import org.apache.pekko.http.scaladsl.server.Directives._
+    import org.apache.pekko.http.scaladsl.server._
 
     extractRequestContext.flatMap { ctx =>
       extractExecutionContext.flatMap { implicit ec =>
@@ -32,7 +32,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
             }
           }
 
-          onSuccess(decodeBody(ctx, DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx)))).flatMap {
+          onSuccess(decodeBody(ctx, DecodeInputs(e.input, new PekkoDecodeInputsContext(ctx)))).flatMap {
             case values: DecodeInputsResult.Values =>
               InputValues(e.input, values) match {
                 case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
@@ -60,7 +60,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
         serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(ctx.log)
-        StandardRoute(new OutputToAkkaRoute().apply(ServerDefaults.StatusCodes.error.code, output, value))
+        StandardRoute(new OutputToPekkoRoute().apply(ServerDefaults.StatusCodes.error.code, output, value))
     }
   }
 

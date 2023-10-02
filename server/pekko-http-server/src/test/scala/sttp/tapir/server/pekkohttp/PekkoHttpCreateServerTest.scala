@@ -1,16 +1,16 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Directives
-import akka.stream.scaladsl.{Flow, Source}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.server.Directives
+import org.apache.pekko.stream.scaladsl.{Flow, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.client3._
-import sttp.client3.akkahttp.AkkaHttpBackend
+import sttp.client3.pekkohttp.PekkoHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
@@ -29,7 +29,7 @@ import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
 
-class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
+class PekkoHttpCreateServerTest extends TestSuite with EitherValues {
   def randomUUID = Some(UUID.randomUUID().toString)
   val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
   val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
@@ -40,13 +40,13 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
+      val interpreter = new PekkoHttpTestServerInterpreter()(actorSystem)
       val createServerTest = new CreateServerTest(interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter.toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
@@ -62,7 +62,7 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
             .serverLogic[Future](_ => {
               Source(List(sse1, sse2)).asRight[Unit].unit(new FutureMonad())
             })
-          val route = AkkaHttpServerInterpreter.toRoute(e)
+          val route = PekkoHttpServerInterpreter.toRoute(e)
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
@@ -71,11 +71,11 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
                   basicRequest
                     .get(uri"http://localhost:$port/sse")
                     .response(
-                      asStreamUnsafe(AkkaStreams).mapRight(stream =>
-                        AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                      asStreamUnsafe(PekkoStreams).mapRight(stream =>
+                        PekkoServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
                       )
                     )
-                    .send(AkkaHttpBackend.usingActorSystem(actorSystem))
+                    .send(PekkoHttpBackend.usingActorSystem(actorSystem))
                     .flatMap(_.body.value.transform(sse => sse shouldBe List(sse1, sse2), ex => fail(ex)))
                 )
               }
@@ -85,8 +85,8 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
       )
 
       new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
-        new ServerStreamingTests(backend, createServerTest, AkkaStreams).tests() ++
-        new ServerWebSocketTests(backend, createServerTest, AkkaStreams) {
+        new ServerStreamingTests(backend, createServerTest, PekkoStreams).tests() ++
+        new ServerWebSocketTests(backend, createServerTest, PekkoStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
         new ServerAuthenticationTests(backend, createServerTest).tests() ++

@@ -1,52 +1,52 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.http.scaladsl.server._
+import org.apache.pekko.http.scaladsl.server._
 import sttp.capabilities.WebSockets
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-@deprecated("Use AkkaHttpServerInterpreter", since = "0.17.1")
-trait TapirAkkaHttpServer {
-  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(implicit
-      serverOptions: AkkaHttpServerOptions
+@deprecated("Use PekkoHttpServerInterpreter", since = "0.17.1")
+trait TapirPekkoHttpServer {
+  implicit class RichPekkoHttpEndpoint[I, E, O](e: Endpoint[I, E, O, PekkoStreams with WebSockets])(implicit
+      serverOptions: PekkoHttpServerOptions
   ) {
-    @deprecated("Use AkkaHttpServerInterpreter.toDirective", since = "0.17.1")
+    @deprecated("Use PekkoHttpServerInterpreter.toDirective", since = "0.17.1")
     def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
-      new EndpointToAkkaServer(serverOptions).toDirective(e)
+      new EndpointToPekkoServer(serverOptions).toDirective(e)
 
-    @deprecated("Use AkkaHttpServerInterpreter.toRoute", since = "0.17.1")
+    @deprecated("Use PekkoHttpServerInterpreter.toRoute", since = "0.17.1")
     def toRoute(logic: I => Future[Either[E, O]]): Route =
-      new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))
+      new EndpointToPekkoServer(serverOptions).toRoute(e.serverLogic(logic))
 
-    @deprecated("Use AkkaHttpServerInterpreter.toRouteRecoverErrors", since = "0.17.1")
+    @deprecated("Use PekkoHttpServerInterpreter.toRouteRecoverErrors", since = "0.17.1")
     def toRouteRecoverErrors(
         logic: I => Future[O]
     )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
-      new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
+      new EndpointToPekkoServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
     }
   }
 
-  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future])(implicit
-      serverOptions: AkkaHttpServerOptions
+  implicit class RichPekkoHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, PekkoStreams with WebSockets, Future])(implicit
+      serverOptions: PekkoHttpServerOptions
   ) {
-    @deprecated("Use AkkaHttpServerInterpreter.toDirective", since = "0.17.1")
+    @deprecated("Use PekkoHttpServerInterpreter.toDirective", since = "0.17.1")
     def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
-      new EndpointToAkkaServer(serverOptions).toDirective(serverEndpoint.endpoint)
+      new EndpointToPekkoServer(serverOptions).toDirective(serverEndpoint.endpoint)
 
-    @deprecated("Use AkkaHttpServerInterpreter.toRoute", since = "0.17.1")
-    def toRoute: Route = new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
+    @deprecated("Use PekkoHttpServerInterpreter.toRoute", since = "0.17.1")
+    def toRoute: Route = new EndpointToPekkoServer(serverOptions).toRoute(serverEndpoint)
   }
 
-  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]])(implicit
-      serverOptions: AkkaHttpServerOptions
+  implicit class RichPekkoHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, PekkoStreams with WebSockets, Future]])(implicit
+      serverOptions: PekkoHttpServerOptions
   ) {
-    @deprecated("Use AkkaHttpServerInterpreter.toRoute", since = "0.17.1")
+    @deprecated("Use PekkoHttpServerInterpreter.toRoute", since = "0.17.1")
     def toRoute: Route = {
-      new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoints)
+      new EndpointToPekkoServer(serverOptions).toRoute(serverEndpoints)
     }
   }
 }

@@ -1,12 +1,12 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
 import java.net.URI
 
-import akka.http.scaladsl.server.RequestContext
+import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.model.Method
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
-private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest {
+private[pekkohttp] class PekkoServerRequest(ctx: RequestContext) extends ServerRequest {
   override def method: Method = Method(ctx.request.method.value.toUpperCase)
   override def protocol: String = ctx.request.protocol.value
   override def uri: URI = new URI(ctx.request.uri.toString())

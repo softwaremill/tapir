@@ -1,16 +1,16 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
 import java.nio.charset.{Charset, StandardCharsets}
 
-import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model.ws.Message
-import akka.http.scaladsl.model.{StatusCode => AkkaStatusCode, _}
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Source, StreamConverters}
-import akka.util.ByteString
-import sttp.capabilities.akka.AkkaStreams
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult
+import org.apache.pekko.http.scaladsl.model.ws.Message
+import org.apache.pekko.http.scaladsl.model.{StatusCode => PekkoStatusCode, _}
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Route
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Flow, Source, StreamConverters}
+import org.apache.pekko.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, HeaderNames, Part}
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
@@ -19,34 +19,34 @@ import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketB
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Materializer) {
+private[pekkohttp] class OutputToPekkoRoute(implicit ec: ExecutionContext, mat: Materializer) {
   private type EntityFromLength = Option[Long] => ResponseEntity
 
-  def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
+  def apply[O](defaultStatusCode: PekkoStatusCode, output: EndpointOutput[O], v: O): Route = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
 
-    val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
-    val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
+    val statusCode = outputValues.statusCode.map(c => PekkoStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
+    val pekkoHeaders = parseHeadersOrThrow(outputValues.headers)
 
     outputValues.body match {
       case Some(Left(entityFromLength)) =>
         val entity = entityFromLength(outputValues.contentLength)
-        val entity2 = overrideContentTypeIfDefined(entity, akkaHeaders)
-        complete(HttpResponse(entity = entity2, status = statusCode, headers = akkaHeaders))
+        val entity2 = overrideContentTypeIfDefined(entity, pekkoHeaders)
+        complete(HttpResponse(entity = entity2, status = statusCode, headers = pekkoHeaders))
       case Some(Right(flow)) =>
-        respondWithHeaders(akkaHeaders) {
+        respondWithHeaders(pekkoHeaders) {
           handleWebSocketMessages(flow)
         }
-      case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
+      case None => complete(HttpResponse(statusCode, headers = pekkoHeaders))
     }
   }
 
   // We can only create the entity once we know if its size is defined; depending on this, the body might end up
   // as a chunked or normal response. That's why here we return a function creating the entity basing on the length,
   // which might be only known when all other outputs are encoded.
-  private val encodeOutputs: EncodeOutputs[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] = new EncodeOutputs(
-    new EncodeOutputBody[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] {
-      override val streams: AkkaStreams = AkkaStreams
+  private val encodeOutputs: EncodeOutputs[EntityFromLength, Flow[Message, Message, Any], PekkoStreams] = new EncodeOutputs(
+    new EncodeOutputBody[EntityFromLength, Flow[Message, Message, Any], PekkoStreams] {
+      override val streams: PekkoStreams = PekkoStreams
       override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): EntityFromLength =
         contentLength =>
           rawValueToResponseEntity(
@@ -60,8 +60,8 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
 
       override def webSocketPipeToBody[REQ, RESP](
           pipe: Flow[REQ, RESP, Any],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
-      ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, PekkoStreams]
+      ): Flow[Message, Message, Any] = PekkoWebSockets.pipeToBody(pipe, o)
     }
   )
 
@@ -88,7 +88,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
     }
   }
 
-  private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStreams.BinaryStream): ResponseEntity = {
+  private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: PekkoStreams.BinaryStream): ResponseEntity = {
     contentLength match {
       case None    => HttpEntity(contentType, stream)
       case Some(l) => HttpEntity(contentType, l, stream)
@@ -142,7 +142,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
     }
 
   private def overrideContentTypeIfDefined[RE <: ResponseEntity](re: RE, headers: Seq[HttpHeader]): RE = {
-    import akka.http.scaladsl.model.headers.`Content-Type`
+    import org.apache.pekko.http.scaladsl.model.headers.`Content-Type`
     headers
       .collectFirst { case `Content-Type`(ct) =>
         ct

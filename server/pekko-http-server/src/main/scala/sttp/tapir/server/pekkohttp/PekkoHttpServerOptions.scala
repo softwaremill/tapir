@@ -1,23 +1,23 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
 import java.io.File
 
-import akka.event.LoggingAdapter
-import akka.http.scaladsl.server.RequestContext
+import org.apache.pekko.event.LoggingAdapter
+import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
 import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
 
 import scala.concurrent.Future
 
-case class AkkaHttpServerOptions(
+case class PekkoHttpServerOptions(
     createFile: RequestContext => Future[File],
     decodeFailureHandler: DecodeFailureHandler,
     logRequestHandling: LogRequestHandling[LoggingAdapter => Unit]
 )
 
-object AkkaHttpServerOptions {
-  implicit lazy val default: AkkaHttpServerOptions =
-    AkkaHttpServerOptions(
+object PekkoHttpServerOptions {
+  implicit lazy val default: PekkoHttpServerOptions =
+    PekkoHttpServerOptions(
       defaultCreateFile,
       ServerDefaults.decodeFailureHandler,
       defaultLogRequestHandling

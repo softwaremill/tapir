@@ -1,19 +1,19 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
-import akka.stream.Materializer
-import akka.stream.scaladsl.Flow
-import akka.util.ByteString
-import sttp.capabilities.akka.AkkaStreams
+import org.apache.pekko.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.{WebSocketClosed, WebSocketFrame}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-private[akkahttp] object AkkaWebSockets {
+private[pekkohttp] object PekkoWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, PekkoStreams]
   )(implicit ec: ExecutionContext, mat: Materializer): Flow[Message, Message, Any] = {
     Flow[Message]
       .mapAsync(1)(messageToFrame(_))

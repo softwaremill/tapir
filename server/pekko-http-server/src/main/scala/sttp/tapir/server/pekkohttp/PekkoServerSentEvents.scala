@@ -1,19 +1,19 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Framing, Source}
-import akka.util.ByteString
-import sttp.capabilities.akka.AkkaStreams
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.{Flow, Framing, Source}
+import org.apache.pekko.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.sse.ServerSentEvent
 
-object AkkaServerSentEvents {
+object PekkoServerSentEvents {
 
-  def serialiseSSEToBytes: Source[ServerSentEvent, Any] => AkkaStreams.BinaryStream = sseStream =>
+  def serialiseSSEToBytes: Source[ServerSentEvent, Any] => PekkoStreams.BinaryStream = sseStream =>
     sseStream.map(sse => {
       ByteString(s"${sse.toString()}\n\n")
     })
 
-  def parseBytesToSSE: AkkaStreams.BinaryStream => Source[ServerSentEvent, Any] = stream => stream.via(parse)
+  def parseBytesToSSE: PekkoStreams.BinaryStream => Source[ServerSentEvent, Any] = stream => stream.via(parse)
 
   private val parse: Flow[ByteString, ServerSentEvent, NotUsed] =
     Framing

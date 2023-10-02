@@ -1,20 +1,20 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
-import akka.http.scaladsl.model.{HttpHeader, Uri}
-import akka.http.scaladsl.server.RequestContext
+import org.apache.pekko.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
+import org.apache.pekko.http.scaladsl.model.{HttpHeader, Uri}
+import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
 import java.util.Locale
 
-private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
+private[pekkohttp] class PekkoDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
 
   private val EmptyContentType = "none/none"
 
-  // Add low-level headers that have been removed by akka-http.
-  // https://doc.akka.io/docs/akka-http/current/common/http-model.html?language=scala#http-headers
+  // Add low-level headers that have been removed by pekko-http.
+  // https://doc.pekko.io/docs/pekko-http/current/common/http-model.html?language=scala#http-headers
   // https://github.com/softwaremill/tapir/issues/331
   private lazy val allHeaders: List[HttpHeader] = {
     val contentLength = req.request.entity.contentLengthOption.map(`Content-Length`(_))
@@ -25,8 +25,8 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
   override def method: Method = Method(req.request.method.value)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     req.unmatchedPath match {
-      case Uri.Path.Slash(pathTail)      => new AkkaDecodeInputsContext(req.withUnmatchedPath(pathTail)).nextPathSegment
-      case Uri.Path.Segment(s, pathTail) => (Some(s), new AkkaDecodeInputsContext(req.withUnmatchedPath(pathTail)))
+      case Uri.Path.Slash(pathTail)      => new PekkoDecodeInputsContext(req.withUnmatchedPath(pathTail)).nextPathSegment
+      case Uri.Path.Segment(s, pathTail) => (Some(s), new PekkoDecodeInputsContext(req.withUnmatchedPath(pathTail)))
       case _                             => (None, this)
     }
   }
@@ -38,5 +38,5 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
   override def queryParameter(name: String): Seq[String] = req.request.uri.query().getAll(name).reverse
   override def queryParameters: QueryParams = QueryParams.fromSeq(req.request.uri.query())
   override def bodyStream: Any = req.request.entity.dataBytes
-  override def serverRequest: ServerRequest = new AkkaServerRequest(req)
+  override def serverRequest: ServerRequest = new PekkoServerRequest(req)
 }

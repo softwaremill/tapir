@@ -88,6 +88,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiVertx.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
+  pekkoHttpServer.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
   finatraServer.projectRefs ++
@@ -690,6 +691,20 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, serverTests % Test)
+
+lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-http-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-pekko-http-server",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekkoHttp,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.pekkoSttpShared,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.pekkoSttp % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

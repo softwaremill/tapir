@@ -1,49 +1,49 @@
-package sttp.tapir.server.akkahttp
+package sttp.tapir.server.pekkohttp
 
-import akka.http.scaladsl.server.{Directive, Route}
+import org.apache.pekko.http.scaladsl.server.{Directive, Route}
 import sttp.capabilities.WebSockets
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-trait AkkaHttpServerInterpreter {
-  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(implicit
-      serverOptions: AkkaHttpServerOptions
+trait PekkoHttpServerInterpreter {
+  def toDirective[I, E, O](e: Endpoint[I, E, O, PekkoStreams with WebSockets])(implicit
+      serverOptions: PekkoHttpServerOptions
   ): Directive[(I, Future[Either[E, O]] => Route)] =
-    new EndpointToAkkaServer(serverOptions).toDirective(e)
+    new EndpointToPekkoServer(serverOptions).toDirective(e)
 
-  def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(logic: I => Future[Either[E, O]])(implicit
-      serverOptions: AkkaHttpServerOptions
+  def toRoute[I, E, O](e: Endpoint[I, E, O, PekkoStreams with WebSockets])(logic: I => Future[Either[E, O]])(implicit
+      serverOptions: PekkoHttpServerOptions
   ): Route =
-    new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))
+    new EndpointToPekkoServer(serverOptions).toRoute(e.serverLogic(logic))
 
   def toRouteRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, AkkaStreams with WebSockets]
-  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], serverOptions: AkkaHttpServerOptions): Route = {
-    new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
+      e: Endpoint[I, E, O, PekkoStreams with WebSockets]
+  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], serverOptions: PekkoHttpServerOptions): Route = {
+    new EndpointToPekkoServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
   }
 
   //
 
-  def toDirective[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future])(implicit
-      serverOptions: AkkaHttpServerOptions
+  def toDirective[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, PekkoStreams with WebSockets, Future])(implicit
+      serverOptions: PekkoHttpServerOptions
   ): Directive[(I, Future[Either[E, O]] => Route)] =
-    new EndpointToAkkaServer(serverOptions).toDirective(serverEndpoint.endpoint)
+    new EndpointToPekkoServer(serverOptions).toDirective(serverEndpoint.endpoint)
 
-  def toRoute[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future])(implicit
-      serverOptions: AkkaHttpServerOptions
-  ): Route = new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
+  def toRoute[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, PekkoStreams with WebSockets, Future])(implicit
+      serverOptions: PekkoHttpServerOptions
+  ): Route = new EndpointToPekkoServer(serverOptions).toRoute(serverEndpoint)
 
   //
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]])(implicit
-      serverOptions: AkkaHttpServerOptions
+  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, PekkoStreams with WebSockets, Future]])(implicit
+      serverOptions: PekkoHttpServerOptions
   ): Route = {
-    new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoints)
+    new EndpointToPekkoServer(serverOptions).toRoute(serverEndpoints)
   }
 }
 
-object AkkaHttpServerInterpreter extends AkkaHttpServerInterpreter
+object PekkoHttpServerInterpreter extends PekkoHttpServerInterpreter
