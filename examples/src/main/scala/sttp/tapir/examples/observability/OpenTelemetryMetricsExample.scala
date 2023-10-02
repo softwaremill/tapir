@@ -39,7 +39,7 @@ import scala.concurrent.{Await, Future}
   *     "io.opentelemetry" % "opentelemetry-sdk" % openTelemetryVersion,
   *     "io.opentelemetry" % "opentelemetry-sdk-metrics" % openTelemetryVersion,
   *     "io.opentelemetry" % "opentelemetry-exporter-otlp" % openTelemetryVersion
- *    )
+  *    )
   * }}}
   *
   * Once this example app and the collector are running, and after you send some requests to the `/person` endpoint, you should start seeing
