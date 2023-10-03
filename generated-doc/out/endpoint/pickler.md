@@ -9,7 +9,7 @@ In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (whic
 To use pickler, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.7.5"
+"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.7.6"
 ```
 
 Please note that it is available only for Scala 3 and Scala.JS 3.
@@ -183,7 +183,9 @@ pResponse.schema
 
 ## Using existing µPickle Readers and Writers
 
-If you have a case where you would like to use an already defined `upickle.default.ReadWriter[T]`, you can still derive a `Pickler[T]`, but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in the given (implicit) scope. With such a setup, you can proceed with `Pickler.derived[T]`.
+If you have a case where you would like to use an existing custom `ReadWriter[T]`, you can still derive a `Pickler[T]`, 
+but you have to provide both your `ReadWriter[T]` and a `Schema[T]` in the given (implicit) scope. With such a setup, 
+you can proceed with `Pickler.derived[T]`.
 
 ## Divergences from default µPickle behavior
 
