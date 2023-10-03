@@ -1,10 +1,10 @@
-package sttp.tapir.redoc.akkahttp
+package sttp.tapir.redoc.pekkohttp
 
-import akka.http.scaladsl.model.{ContentTypes, HttpCharsets, HttpEntity, MediaType, StatusCodes}
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpCharsets, HttpEntity, MediaType, StatusCodes}
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Route
 
-class RedocAkkaHttp(title: String, yaml: String, yamlName: String = "docs.yaml", redocVersion: String = "2.0.0-rc.23") {
+class RedocPekkoHttp(title: String, yaml: String, yamlName: String = "docs.yaml", redocVersion: String = "2.0.0-rc.23") {
   lazy val html: String =
     s"""
        |<!DOCTYPE html>
