@@ -2,10 +2,10 @@ package sttp.tapir.swagger.akkahttp
 
 import java.util.Properties
 
-import akka.http.scaladsl.server.{PathMatcher, Route}
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.Uri.Path
+import org.apache.pekko.http.scaladsl.server.{PathMatcher, Route}
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.Uri.Path
 
 /** Usage: add `new SwaggerAkka(yaml).routes` to your akka-http routes. Docs will be available using the `/docs` path.
   *
