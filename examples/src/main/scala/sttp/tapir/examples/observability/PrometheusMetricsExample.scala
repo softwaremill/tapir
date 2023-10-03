@@ -1,23 +1,20 @@
 package sttp.tapir.examples.observability
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.io.StdIn
 
 object PrometheusMetricsExample extends App with StrictLogging {
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
 
   case class Person(name: String)
 
@@ -32,24 +29,29 @@ object PrometheusMetricsExample extends App with StrictLogging {
 
   val prometheusMetrics = PrometheusMetrics.default[Future]()
 
-  val serverOptions: AkkaHttpServerOptions =
-    AkkaHttpServerOptions.customiseInterceptors
+  val serverOptions: NettyFutureServerOptions =
+    NettyFutureServerOptions.customiseInterceptors
       // Adds an interceptor which collects metrics by executing callbacks
       .metricsInterceptor(prometheusMetrics.metricsInterceptor())
       .options
 
-  val routes: Route =
-    AkkaHttpServerInterpreter(serverOptions).toRoute(
+    val endpoints =
       List(
         personEndpoint,
         // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
         prometheusMetrics.metricsEndpoint
       )
-    )
 
-  Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
+  val program = for {
+    binding <- NettyFutureServer().port(8080).addEndpoints(endpoints, serverOptions).start()
+    _ <- Future {
+      logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
+      logger.info("The metrics are available at http://localhost:8080/metrics")
+      logger.info("Press ENTER key to exit.")
+      StdIn.readLine()
+    }
+    stop <- binding.stop()
+  } yield stop
 
-  logger.info(
-    "Server started. POST persons under http://localhost:8080/person and then GET metrics from http://localhost:8080/metrics"
-  )
+  Await.result(program, Duration.Inf)
 }
