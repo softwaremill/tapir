@@ -14,6 +14,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
