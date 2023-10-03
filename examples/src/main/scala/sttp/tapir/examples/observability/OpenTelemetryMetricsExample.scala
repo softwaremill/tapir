@@ -94,5 +94,5 @@ object OpenTelemetryMetricsExample extends App with StrictLogging {
 
   Await.ready(NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start(), 1.minute)
 
-  logger.info(s"Server started. POST persons under http://localhost:8080/person.")
+  logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
 }
