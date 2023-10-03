@@ -17,6 +17,7 @@ import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.io.StdIn
 
 /** This example uses a gRPC <a href="https://opentelemetry.io/docs/concepts/components/#exporters">exporter</a> to send metrics to a <a href="https://opentelemetry.io/docs/collector/">collector</a>, which by
   * default is expected to be running on `localhost:4317`.
@@ -92,7 +93,15 @@ object OpenTelemetryMetricsExample extends App with StrictLogging {
       .metricsInterceptor(openTelemetryMetrics.metricsInterceptor())
       .options
 
-  Await.ready(NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start(), 1.minute)
+  val program = for {
+    binding <- NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start()
+    _ <- Future {
+      logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
+      logger.info("Press ENTER key to exit.")
+      StdIn.readLine()
+    }
+    stop <- binding.stop()
+  } yield stop
 
-  logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
+  Await.result(program, Duration.Inf)
 }
