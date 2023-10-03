@@ -50,7 +50,7 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, upickleMacros.tagName[T])
     else reader
 
-  inline def macroSumR[T](derivedChildReaders: Tuple, subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
+  inline def macroSumR[T](derivedChildReaders: List[Any], subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
     subtypeDiscriminator match {
       case discriminator: CustomSubtypeDiscriminator[T] =>
@@ -70,13 +70,13 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
         new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
       case discriminator: EnumValueDiscriminator[T] =>
         val readersForPossibleValues: Seq[TaggedReader[T]] =
-          discriminator.validator.possibleValues.zip(derivedChildReaders.toList).map { case (enumValue, reader) =>
+          discriminator.validator.possibleValues.zip(derivedChildReaders).map { case (enumValue, reader) =>
             TaggedReader.Leaf[T](discriminator.encode(enumValue), reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
           }
         new TaggedReader.Node[T](readersForPossibleValues: _*)
 
       case _: DefaultSubtypeDiscriminator[T] =>
-        val readers = derivedChildReaders.toList.asInstanceOf[List[TaggedReader[T]]]
+        val readers = derivedChildReaders.asInstanceOf[List[TaggedReader[T]]]
         Reader.merge(readers: _*)
     }
 }

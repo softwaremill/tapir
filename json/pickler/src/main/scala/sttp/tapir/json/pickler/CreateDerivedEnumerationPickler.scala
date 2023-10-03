@@ -1,11 +1,15 @@
 package sttp.tapir.json.pickler
 
+import _root_.upickle.implicits.{macros => upickleMacros}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.macros.CreateDerivedEnumerationSchema
 import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
+import upickle.core.{Annotator, Types}
 
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
+
+import compiletime.*
 
 /** A builder allowing deriving Pickler for enums, used by [[Pickler.derivedEnumeration]]. Can be used to set non-standard encoding logic,
   * schema type or default value for an enum.
@@ -26,32 +30,62 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
       encode: Option[T => Any] = Some(identity),
       schemaType: SchemaType[T] = SchemaType.SString[T](),
       default: Option[T] = None
-  )(using m: Mirror.Of[T]): Pickler[T] = {
+  )(using m: Mirror.SumOf[T]): Pickler[T] = {
     val schema: Schema[T] = new CreateDerivedEnumerationSchema(validator, schemaAnnotations).apply(
       encode,
       schemaType,
       default
     )
     given Configuration = Configuration.default
-    given SubtypeDiscriminator[T] = EnumValueDiscriminator[T](
+    given subtypeDiscriminator: SubtypeDiscriminator[T] = EnumValueDiscriminator[T](
       encode.map(_.andThen(_.toString)).getOrElse(_.toString),
       validator
     )
-    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = Pickler.summonChildPicklerInstances[T, m.MirroredElemTypes]
-    Pickler.picklerSum(schema, childPicklers)
+
+    lazy val childReadWriters = buildEnumerationReadWriters[T, m.MirroredElemTypes]
+    val tapirPickle = new TapirPickle[T] {
+      override lazy val reader: Reader[T] =
+        macroSumR[T](childReadWriters.map(_._1), subtypeDiscriminator)
+
+      override lazy val writer: Writer[T] =
+        macroSumW[T](childReadWriters.map(_._2), subtypeDiscriminator)
+    }
+    new Pickler[T](tapirPickle, schema)
   }
+
+  private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Types#Reader[_], Types#Writer[_])] =
+    inline erasedValue[Cases] match {
+      case _: (enumerationCase *: enumerationCasesTail) =>
+        val processedHead = readWriterForEnumerationCase[enumerationCase]
+        val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail]
+        (processedHead +: processedTail)
+      case _: EmptyTuple.type => Nil
+    }
+
+  private inline def readWriterForEnumerationCase[C]: (Types#Reader[C], Types#Writer[C]) =
+    val pickle = new TapirPickle[C] { 
+      // We probably don't need a separate TapirPickle for each C, this could be optimized. 
+      // https://github.com/softwaremill/tapir/issues/3192
+      override lazy val writer = annotate[C](
+        SingletonWriter[C](null.asInstanceOf[C]),
+        upickleMacros.tagName[C],
+        Annotator.Checker.Val(upickleMacros.getSingleton[C])
+      )
+      override lazy val reader = annotate[C](SingletonReader[C](upickleMacros.getSingleton[C]), upickleMacros.tagName[C])
+    }
+    (pickle.reader, pickle.writer)
 
   /** Creates the Pickler assuming the low-level representation is a `String`. The encoding function passes the object unchanged (which
     * means `.toString` will be used to represent the enumeration in JSON and documentation). Typically you don't need to explicitly use
     * `Pickler.derivedEnumeration[T].defaultStringBased`, as this is the default behavior of [[Pickler.derived]] for enums.
     */
-  inline def defaultStringBased(using Mirror.Of[T]) = apply()
+  inline def defaultStringBased(using Mirror.SumOf[T]) = apply()
 
   /** Creates the Pickler assuming the low-level representation is a `String`. Provide your custom encoding function for representing an
     * enum value as a String. It will be used to represent the enumeration in JSON and documentation. This approach is recommended if you
     * need to encode enums using a common field in their base trait, or another specific logic for extracting string representation.
     */
-  inline def customStringBased(encode: T => String)(using Mirror.Of[T]): Pickler[T] =
+  inline def customStringBased(encode: T => String)(using Mirror.SumOf[T]): Pickler[T] =
     apply(
       Some(encode),
       schemaType = SchemaType.SString[T](),

@@ -1,6 +1,7 @@
 package sttp.tapir.json.pickler
 
 import _root_.upickle.{default => udefault}
+import magnolia1.SealedTrait
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
@@ -360,28 +361,6 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     decoded shouldBe Value(inputObject)
   }
 
-  it should "work2" in {
-    sealed trait Entity {
-      def kind: String
-    }
-    case class Person(firstName: String, lastName: String) extends Entity {
-      def kind: String = "person"
-    }
-    case class Organization(name: String) extends Entity {
-      def kind: String = "org"
-    }
-
-    import sttp.tapir.*
-    import sttp.tapir.json.*
-
-    val pPerson = Pickler.derived[Person]
-    val pOrganization = Pickler.derived[Organization]
-    given pEntity: Pickler[Entity] =
-      Pickler.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> pPerson, "org" -> pOrganization)
-
-    // { "$type": "person", "firstName": "Jessica", "lastName": "West" }
-    pEntity.toCodec.encode(Person("Jessica", "West"))
-  }
   it should "Set discriminator value using oneOfUsingField" in {
     // given
     val picklerOk = Pickler.derived[StatusOk]
@@ -521,6 +500,21 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     encoded shouldBe """{"color":"color-number-3"}"""
     codec.decode(encoded) shouldBe Value(inputObj)
+  }
+
+  it should "handle sealed hierarchies consisting of objects only" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+    val inputObj = SealedVariantContainer(VariantA)
+    
+    // when
+    val pickler = Pickler.derived[SealedVariantContainer]
+    val codec = pickler.toCodec
+    val encoded = codec.encode(inputObj)
+
+    // then
+    encoded shouldBe """{"v":"VariantA"}"""
+
   }
 
   it should "handle value classes" in {

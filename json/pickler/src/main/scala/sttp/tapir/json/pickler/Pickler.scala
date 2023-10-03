@@ -277,19 +277,20 @@ object Pickler:
     )
 
   private[pickler] inline def buildNewPickler[T: ClassTag]()(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
-    // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
-    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
-    inline m match {
-      case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
-      case _: Mirror.SumOf[T] =>
-        val schema: Schema[T] =
-          inline if (isEnumeration[T])
-            Schema.derivedEnumeration[T].defaultStringBased
-          else
-            Schema.derived[T]
-        given SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
-        picklerSum(schema, childPicklers)
-    }
+    inline m match 
+      case p: Mirror.ProductOf[T] =>
+        // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
+        lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
+        picklerProduct(p, childPicklers)
+      case sum: Mirror.SumOf[T] =>
+        inline if (isEnumeration[T])
+          new CreateDerivedEnumerationPickler(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T]).defaultStringBased(using sum)
+        else
+          val schema = Schema.derived[T]
+          lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
+          given SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
+          picklerSum(schema, childPicklers)
+    
 
   private[pickler] inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
       m: Mirror.Of[T],
@@ -372,7 +373,7 @@ object Pickler:
           subtypeDiscriminator
         )
       override lazy val reader: Reader[T] =
-        macroSumR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader), subtypeDiscriminator)
+        macroSumR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader).productIterator.toList, subtypeDiscriminator)
 
     }
     new Pickler[T](tapirPickle, schema)
