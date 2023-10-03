@@ -27,28 +27,33 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     *   The low-level representation of the enumeration. Defaults to a string.
     */
   inline def apply(
-      encode: Option[T => Any] = Some(identity),
+      encode: T => Any = identity,
       schemaType: SchemaType[T] = SchemaType.SString[T](),
       default: Option[T] = None
   )(using m: Mirror.SumOf[T]): Pickler[T] = {
     val schema: Schema[T] = new CreateDerivedEnumerationSchema(validator, schemaAnnotations).apply(
-      encode,
+      Some(encode),
       schemaType,
       default
     )
-    given Configuration = Configuration.default
-    given subtypeDiscriminator: SubtypeDiscriminator[T] = EnumValueDiscriminator[T](
-      encode.map(_.andThen(_.toString)).getOrElse(_.toString),
-      validator
-    )
-
     lazy val childReadWriters = buildEnumerationReadWriters[T, m.MirroredElemTypes]
     val tapirPickle = new TapirPickle[T] {
-      override lazy val reader: Reader[T] =
-        macroSumR[T](childReadWriters.map(_._1), subtypeDiscriminator)
+      override lazy val reader: Reader[T] = {
+        val readersForPossibleValues: Seq[TaggedReader[T]] =
+          validator.possibleValues.zip(childReadWriters.map(_._1)).map { case (enumValue, reader) =>
+            TaggedReader.Leaf[T](encode(enumValue).toString, reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+          }
+        new TaggedReader.Node[T](readersForPossibleValues: _*)
+      }
 
       override lazy val writer: Writer[T] =
-        macroSumW[T](childReadWriters.map(_._2), subtypeDiscriminator)
+        new TaggedWriter.Node[T](childReadWriters.map(_._2.asInstanceOf[TaggedWriter[T]]): _*) {
+          override def findWriter(v: Any): (String, ObjectWriter[T]) =
+            val (t, writer) = super.findWriter(v)
+            // Here our custom encoding transforms the value of a singleton object
+            val overriddenTag = encode(v.asInstanceOf[T]).toString
+            (overriddenTag, writer)
+        }
     }
     new Pickler[T](tapirPickle, schema)
   }
@@ -56,15 +61,20 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
   private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Types#Reader[_], Types#Writer[_])] =
     inline erasedValue[Cases] match {
       case _: (enumerationCase *: enumerationCasesTail) =>
-        val processedHead = readWriterForEnumerationCase[enumerationCase]
+        val processedHead = readWriterForEnumerationCase[enumerationCase] 
         val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail]
         (processedHead +: processedTail)
       case _: EmptyTuple.type => Nil
     }
 
+  /** Enumeration cases and case objects in an enumeration need special writers and readers, which are generated here, instead of being
+   * taken from child picklers. For example, for enum Color and case values Red and Blue, a Writer should just use the object Red or Blue 
+   * and serialize it to "Red" or "Blue". If user needs to encode the singleton object using a custom function, this
+   * happens on a higher level - the top level of coproduct reader and writer.
+    */
   private inline def readWriterForEnumerationCase[C]: (Types#Reader[C], Types#Writer[C]) =
-    val pickle = new TapirPickle[C] { 
-      // We probably don't need a separate TapirPickle for each C, this could be optimized. 
+    val pickle = new TapirPickle[C] {
+      // We probably don't need a separate TapirPickle for each C, this could be optimized.
       // https://github.com/softwaremill/tapir/issues/3192
       override lazy val writer = annotate[C](
         SingletonWriter[C](null.asInstanceOf[C]),
@@ -87,7 +97,7 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     */
   inline def customStringBased(encode: T => String)(using Mirror.SumOf[T]): Pickler[T] =
     apply(
-      Some(encode),
+      encode,
       schemaType = SchemaType.SString[T](),
       default = None
     )

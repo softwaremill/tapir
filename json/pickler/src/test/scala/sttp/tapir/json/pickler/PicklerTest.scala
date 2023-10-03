@@ -88,6 +88,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     """)
   }
 
+  // Configuration
+
   it should "use encodedName from configuration" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
@@ -126,6 +128,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
     // then
     obj shouldBe Value(TopClass("field_a_value", InnerClass(7954)))
   }
+
+  // Picklers for simple types and wrappers like Option, List, etc.
 
   it should "derive picklers for Option fields" in {
     import generic.auto.* // for Pickler auto-derivation
@@ -251,6 +255,8 @@ class PicklerTest extends AnyFlatSpec with Matchers {
       pickler.schema shouldBe Schema.derived[ClassWithMapCustomKey]
     }
   }
+
+  // coproducts  
   it should "handle a simple ADT (no customizations)" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
