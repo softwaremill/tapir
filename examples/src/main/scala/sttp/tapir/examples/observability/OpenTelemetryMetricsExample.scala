@@ -1,6 +1,5 @@
 package sttp.tapir.examples.observability
 
-import akka.actor.ActorSystem
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import io.opentelemetry.api.OpenTelemetry
@@ -57,8 +56,6 @@ import scala.concurrent.{Await, Future}
   * }}}
   */
 object OpenTelemetryMetricsExample extends App with StrictLogging {
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
 
   case class Person(name: String)
 
