@@ -82,6 +82,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )
   }
 
+
   it should "find schema for case classes with collections" in {
     implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
     implicitlySchema[C].schemaType shouldBe SProduct[C](
