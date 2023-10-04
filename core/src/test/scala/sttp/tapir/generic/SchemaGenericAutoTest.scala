@@ -350,7 +350,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedCatSchema = Schema(
       SProduct[Cat](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("cat name"))),
           field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
         )
       ),
@@ -360,7 +360,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedDogSchema = Schema(
       SProduct[Dog](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
         )
       ),
@@ -370,7 +370,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedHamsterSchema = Schema(
       SProduct[Hamster](
         List(
-          field(FieldName("name"), stringSchema.copy(description = Some("name"))),
+          field(FieldName("name", "pet_name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
         )
       ),

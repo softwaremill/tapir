@@ -79,3 +79,14 @@ object Fixtures:
   }
 
   case class StatusResponse(status: Status)
+
+  case class SealedVariantContainer(v: SealedVariant)
+
+  sealed trait SealedVariant
+  case object VariantA extends SealedVariant
+  case object VariantB extends SealedVariant
+  case object VariantC extends SealedVariant
+
+  sealed trait NotAllSealedVariant
+  case object NotAllSealedVariantA extends NotAllSealedVariant
+  case class NotAllSealedVariantB(innerField: Int) extends NotAllSealedVariant

@@ -46,7 +46,7 @@ object Pickler:
     * @param discriminatorPickler
     *   The pickler that is used when adding the discriminator as a field to child picklers (if it's not yet added).
     */
-  inline def oneOfUsingField[T: ClassTag, V](extractor: T => V, asString: V => String)(
+  inline def oneOfUsingField[T: ClassTag, V](inline extractor: T => V, inline asString: V => String)(
       mapping: (V, Pickler[_ <: T])*
   )(using m: Mirror.Of[T], c: Configuration, discriminatorPickler: Pickler[V]): Pickler[T] =
 
@@ -202,8 +202,6 @@ object Pickler:
 
   inline given picklerForAnyVal[T <: AnyVal]: Pickler[T] = ${ picklerForAnyValImpl[T] }
 
-  //
-
   private inline def errorForType[T](inline template: String): Null = ${ errorForTypeImpl[T]('template) }
 
   private def errorForTypeImpl[T: Type](template: Expr[String])(using Quotes): Expr[Null] = {
@@ -277,19 +275,20 @@ object Pickler:
     )
 
   private[pickler] inline def buildNewPickler[T: ClassTag]()(using m: Mirror.Of[T], c: Configuration): Pickler[T] =
-    // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
-    lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
-    inline m match {
-      case p: Mirror.ProductOf[T] => picklerProduct(p, childPicklers)
-      case _: Mirror.SumOf[T] =>
-        val schema: Schema[T] =
-          inline if (isEnumeration[T])
-            Schema.derivedEnumeration[T].defaultStringBased
-          else
-            Schema.derived[T]
-        given SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
-        picklerSum(schema, childPicklers)
-    }
+    inline m match 
+      case p: Mirror.ProductOf[T] =>
+        // The lazy modifier is necessary for preventing infinite recursion in the derived instance for recursive types such as Lst
+        lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
+        picklerProduct(p, childPicklers)
+      case sum: Mirror.SumOf[T] =>
+        inline if (isEnumeration[T])
+          new CreateDerivedEnumerationPickler(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T]).defaultStringBased(using sum)
+        else
+          val schema = Schema.derived[T]
+          lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
+          given SubtypeDiscriminator[T] = DefaultSubtypeDiscriminator[T]()
+          picklerSum(schema, childPicklers)
+    
 
   private[pickler] inline def summonChildPicklerInstances[T: ClassTag, Fields <: Tuple](using
       m: Mirror.Of[T],
@@ -372,7 +371,7 @@ object Pickler:
           subtypeDiscriminator
         )
       override lazy val reader: Reader[T] =
-        macroSumR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader), subtypeDiscriminator)
+        macroSumR[T](childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader).productIterator.toList, subtypeDiscriminator)
 
     }
     new Pickler[T](tapirPickle, schema)

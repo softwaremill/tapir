@@ -1,14 +1,13 @@
 package sttp.tapir.json.pickler
 
-import sttp.tapir.SchemaType.{SProduct, SProductField, SRef}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct, SProductField, SRef, SchemaWithValue}
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
 
 import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters.ConcurrentMapHasAsScala
 import scala.quoted.*
 import scala.reflect.ClassTag
-import sttp.tapir.Validator
 
 private[pickler] object SchemaDerivation:
   private[pickler] val deriveInProgress: scala.collection.mutable.Map[String, Unit] = new ConcurrentHashMap[String, Unit]().asScala
@@ -25,9 +24,23 @@ private[pickler] object SchemaDerivation:
   )(using Quotes, Type[TFields]): Expr[Schema[T]] =
     new SchemaDerivation(genericDerivationConfig).productSchemaImpl(childSchemas)
 
+  inline def coproductSchema[T, TFields <: Tuple](
+      genericDerivationConfig: Configuration,
+      childSchemas: Tuple.Map[TFields, Schema]
+  ): Schema[T] =
+    ${ coproductSchemaImpl('genericDerivationConfig, 'childSchemas) }
+
+  def coproductSchemaImpl[T: Type, TFields <: Tuple](
+      genericDerivationConfig: Expr[Configuration],
+      childSchemas: Expr[Tuple.Map[TFields, Schema]]
+  )(using Quotes, Type[TFields]): Expr[Schema[T]] =
+    new SchemaDerivation(genericDerivationConfig).coproductSchemaImpl(childSchemas)
+
 private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(using Quotes):
 
   import quotes.reflect.*
+
+  // products
 
   private def productSchemaImpl[T: Type, TFields <: Tuple](
       childSchemas: Expr[Tuple.Map[TFields, Schema]]
@@ -35,7 +48,10 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
     val tpe = TypeRepr.of[T]
     val typeInfo = TypeInfo.forType(tpe)
     val annotations = Annotations.onType(tpe)
-    '{ Schema[T](schemaType = ${ productSchemaType(childSchemas) }, name = Some(${ typeNameToSchemaName(typeInfo, annotations) })) }
+    val schema = withCache(typeInfo, annotations) {
+      '{ Schema[T](schemaType = ${ productSchemaType(childSchemas) }, name = Some(${ typeNameToSchemaName(typeInfo, annotations) })) }
+    }
+    enrichSchema(schema, annotations)
 
   private def productSchemaType[T: Type, TFields <: Tuple](
       childSchemas: Expr[Tuple.Map[TFields, Schema]]
@@ -69,7 +85,61 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       })
     }
 
-  // helper methods
+  // coproducts
+
+  private def coproductSchemaImpl[T: Type, TFields <: Tuple](
+      childSchemas: Expr[Tuple.Map[TFields, Schema]]
+  )(using Quotes, Type[TFields]): Expr[Schema[T]] = {
+    val tpe = TypeRepr.of[T]
+    val typeInfo = TypeInfo.forType(tpe)
+    val annotations = Annotations.onType(tpe)
+    val schema = withCache(typeInfo, annotations) {
+      '{
+        Schema[T](
+          schemaType = ${ coproductSchemaType[T, TFields](tpe, childSchemas) },
+          name = Some(${ typeNameToSchemaName(typeInfo, annotations) })
+        )
+      }
+    }
+    enrichSchema(schema, annotations)
+  }
+
+  private def coproductSchemaType[T: Type, TFields <: Tuple](tpe: TypeRepr, childSchemas: Expr[Tuple.Map[TFields, Schema]])(using
+      Type[TFields]
+  ): Expr[SCoproduct[T]] =
+
+    val childSchemasArray = '{ $childSchemas.toArray }
+    val childNameTagSchemaExprList = tpe.typeSymbol.children.zipWithIndex.map { case (childSymbol, i) =>
+      // see https://github.com/lampepfl/dotty/discussions/15157#discussioncomment-2728606
+      val childTpe =
+        if childSymbol.flags.is(Flags.Module) then TypeIdent(childSymbol.owner).tpe.memberType(childSymbol) else TypeIdent(childSymbol).tpe
+      childTpe.asType match
+        case '[c] =>
+          val childSchema: Expr[Schema[c]] = '{ $childSchemasArray(${ Expr(i) }).asInstanceOf[Schema[c]] }
+          val classTag = summonClassTag[c]
+          val name = typeNameToSchemaName(TypeInfo.forType(childTpe), Annotations.onType(childTpe))
+          '{ ($name, $classTag, $childSchema) }
+    }
+
+    '{
+      val childTagAndSchema: List[(Schema.SName, ClassTag[_], Schema[_])] = ${ Expr.ofList(childNameTagSchemaExprList) }
+      val baseCoproduct = SCoproduct(childTagAndSchema.map(_._3), None)((t: T) =>
+        childTagAndSchema
+          .map((_, ct, s) => (ct.unapply(t), s))
+          .collectFirst { case (Some(v), s) => SchemaWithValue(s.asInstanceOf[Schema[Any]], v) }
+      )
+      $genericDerivationConfig.discriminator match {
+        case Some(d) =>
+          val discriminatorMapping: Map[String, SRef[_]] = childTagAndSchema
+            .map(_._1)
+            .map(schemaName => $genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName))
+            .toMap
+          baseCoproduct.addDiscriminatorField(FieldName(d), discriminatorMapping = discriminatorMapping)
+        case None =>
+          baseCoproduct
+      }
+    }
+// helper methods
 
   private def summonClassTag[T: Type]: Expr[ClassTag[T]] = Expr.summon[ClassTag[T]] match
     case None     => report.errorAndAbort(s"Cannot find a ClassTag for ${Type.show[T]}!")
@@ -163,7 +233,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       val topLevel: List[Term] = tpe.typeSymbol.annotations.filter(filterAnnotation)
       val inherited: List[Term] =
         tpe.baseClasses
-          .filterNot(isObjectOrScala)
+          .filterNot(isObjectOrScalaOrJava)
           .collect {
             case s if s != tpe.typeSymbol => s.annotations
           } // skip self
@@ -173,17 +243,17 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
 
     def onParams(tpe: TypeRepr): Map[String, Annotations] =
       def paramAnns: List[(String, List[Term])] = groupByParamName {
-        (fromConstructor(tpe.typeSymbol) ++ fromDeclarations(tpe.typeSymbol))
+        (fromConstructor(tpe.typeSymbol) ++ fromDeclarations(tpe.typeSymbol, includeMethods = false))
           .filter { case (_, anns) => anns.nonEmpty }
       }
 
       def inheritedParamAnns: List[(String, List[Term])] =
         groupByParamName {
           tpe.baseClasses
-            .filterNot(isObjectOrScala)
+            .filterNot(isObjectOrScalaOrJava)
             .collect {
               case s if s != tpe.typeSymbol =>
-                (fromConstructor(s) ++ fromDeclarations(s)).filter { case (_, anns) =>
+                (fromConstructor(s) ++ fromDeclarations(s, includeMethods = true)).filter { case (_, anns) =>
                   anns.nonEmpty
                 }
             }
@@ -193,10 +263,10 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       def fromConstructor(from: Symbol): List[(String, List[Term])] =
         from.primaryConstructor.paramSymss.flatten.map { field => field.name -> field.annotations.filter(filterAnnotation) }
 
-      def fromDeclarations(from: Symbol): List[(String, List[Term])] =
+      def fromDeclarations(from: Symbol, includeMethods: Boolean): List[(String, List[Term])] =
         from.declarations.collect {
           // using TypeTest
-          case field: Symbol if (field.tree match { case _: ValDef => true; case _ => false }) =>
+          case field: Symbol if (field.tree match { case _: ValDef => true; case _: DefDef if includeMethods => true; case _ => false }) =>
             field.name -> field.annotations.filter(filterAnnotation)
         }
 
@@ -211,8 +281,8 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       val params = topLevel.keySet ++ inherited.keySet
       params.map(p => p -> Annotations(topLevel.getOrElse(p, Nil), inherited.getOrElse(p, Nil))).toMap
 
-    private def isObjectOrScala(bc: Symbol) =
-      bc.name.contains("java.lang.Object") || bc.fullName.startsWith("scala.")
+    private def isObjectOrScalaOrJava(bc: Symbol) =
+      bc.name.contains("java.lang.Object") || bc.fullName.startsWith("scala.") || bc.fullName.startsWith("java.")
 
     private def filterAnnotation(a: Term): Boolean =
       a.tpe.typeSymbol.maybeOwner.isNoSymbol ||

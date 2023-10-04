@@ -33,6 +33,7 @@ object SchemaMacroTestData {
 
   sealed abstract class Pet {
     @description("name")
+    @encodedName("pet_name")
     def name: String
   }
 
