@@ -192,3 +192,5 @@ you can proceed with `Pickler.derived[T]`.
 * Tapir pickler serialises None values as `null`, instead of wrapping the value in an array
 * Value classes (case classes extending AnyVal) will be serialised as simple values
 
+
+
