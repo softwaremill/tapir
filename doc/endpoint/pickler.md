@@ -87,7 +87,7 @@ import sttp.tapir.generic.Configuration
 given customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
 ```
 
-## Sealed traits / coproducts
+## Enums / sealed traits / coproducts
 
 Pickler derivation for coproduct types (enums with parameters / sealed hierarchies) works automatically, by adding a `$type` discriminator field with the full class name. This is the default behavior of uPickle, but it can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
 Selaed hierarchies with all cases being objects are treated differently, considered as [enumerations](#enumerations).
