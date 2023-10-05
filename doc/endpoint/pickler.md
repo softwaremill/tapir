@@ -79,26 +79,42 @@ However, this can negatively impact compilation performance, as the same pickler
 
 ## Configuring pickler derivation
 
-It is possible to configure schema and codec derivation by providing an implicit `sttp.tapir.generic.Configuration`, just as for standalone [schema derivation](schemas.md). This configuration allows switching field naming policy to `snake_case`, `kebab_case`, or an arbitrary transformation function, as well as setting the field name for the coproduct (sealed hierarchy) type discriminator, which is discussed in details in further sections.
+It is possible to configure schema and codec derivation by providing an implicit `sttp.tapir.pickler.PicklerConfiguration`. This configuration allows switching field naming policy to `snake_case`, `kebab_case`, or an arbitrary transformation function, as well as setting the field name/value for the coproduct (sealed hierarchy) type discriminator, which is discussed in details in further sections.
 
 ```scala 
-import sttp.tapir.generic.Configuration
+import sttp.tapir.pickler.PicklerConfiguration
 
-given customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
+given customConfiguration: PicklerConfiguration = 
+  PicklerConfiguration
+    .default
+    .withSnakeCaseMemberNames
 ```
 
 ## Enums / sealed traits / coproducts
 
-Pickler derivation for coproduct types (enums with parameters / sealed hierarchies) works automatically, by adding a `$type` discriminator field with the full class name. This is the default behavior of uPickle, but it can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
+Pickler derivation for coproduct types (enums with parameters / sealed hierarchies) works automatically, by adding a `$type` discriminator field with the short class name. 
+
+```scala 
+import sttp.tapir.pickler.PicklerConfiguration
+
+// encodes a case object as { "$type": "MyType" }
+given PicklerConfiguration = PicklerConfiguration.default
+```
+
+This behavior can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
 Selaed hierarchies with all cases being objects are treated differently, considered as [enumerations](#enumerations).
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used during automatic and semi-automatic derivation:
 
 ```scala 
-import sttp.tapir.generic.Configuration
+import sttp.tapir.pickler.PicklerConfiguration
 
-given customConfiguration: Configuration =
-  Configuration.default.withDiscriminator("who_am_i")
+// encodes a case object as { "who_am_i": "full.pkg.path.MyType" }
+given customConfiguration: PicklerConfiguration =
+  PicklerConfiguration
+    .default
+    .withDiscriminator("who_am_i")
+    .withFullDiscriminatorValues 
 ```
 
 The discriminator will be added as a field to all coproduct child codecs and schemas, if it’s not yet present. The schema of the added field will always be a Schema.string. Finally, the mapping between the discriminator field values and the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
@@ -181,7 +197,7 @@ case class ColorResponse(color1: ColorEnum, color2: ColorEnum)
 given Pickler[ColorEnum] = Pickler.derived
 val pResponse = Pickler.derived[ColorResponse]
 
-// {"color1":{"$type":"my.app.Pink","intensity":85},"color2":{"$type":"my.app.Green"}}
+// {"color1":{"$type":"Pink","intensity":85},"color2":{"$type":"Green"}}
 pResponse.toCodec.encode(
   ColorResponse(Pink(85), Green)
 )
@@ -221,6 +237,5 @@ you can proceed with `Pickler.derived[T]`.
 
 * Tapir pickler serialises None values as `null`, instead of wrapping the value in an array
 * Value classes (case classes extending AnyVal) will be serialised as simple values
-
-
+* Discriminator field value is a short class name, instead of full package with class name
 
