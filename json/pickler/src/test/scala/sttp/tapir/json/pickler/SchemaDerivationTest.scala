@@ -1,6 +1,5 @@
 package sttp.tapir.json.pickler
 
-import org.scalatest.Assertions
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.annotations._
@@ -11,7 +10,6 @@ import sttp.tapir.TestUtil.field
 import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
-import sttp.tapir.generic.Configuration
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -81,7 +79,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       List(field(FieldName("g1"), stringSchema), field(FieldName("g2"), expectedASchema))
     )
   }
-
 
   it should "find schema for case classes with collections" in {
     implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
@@ -213,19 +210,19 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for a simple case class and use snake case naming transformation" in {
     val expectedSnakeCaseNaming =
       expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some_field_name"), stringSchema)))
-    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
     implicitlySchema[D].schemaType shouldBe expectedSnakeCaseNaming
   }
 
   it should "find schema for a simple case class and use kebab case naming transformation" in {
     val expectedKebabCaseNaming =
       expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
-    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withKebabCaseMemberNames
     implicitlySchema[D].schemaType shouldBe expectedKebabCaseNaming
   }
 
   it should "not transform names which are annotated with a custom name" in {
-    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
     val schema = implicitlySchema[L]
     schema shouldBe Schema[L](
       SProduct(
@@ -244,7 +241,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i")
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i")
     val schemaType = implicitlySchema[Entity].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
@@ -287,8 +284,22 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )
   }
 
+  it should "generate default coproduct schema with a $type discriminator" in {
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default
+    implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("$type"),
+        Map(
+          "Organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "Person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "UnknownEntity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
+        )
+      )
+    )
+  }
+
   it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -302,7 +313,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -316,7 +327,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -330,7 +341,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -344,7 +355,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -364,7 +375,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SProduct[Cat](
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
-          field(FieldName("catFood"), stringSchema.copy(description = Some("cat food")))
+          field(FieldName("catFood"), stringSchema.copy(description = Some("cat food"))),
+          field(FieldName("$type"), Schema(SString()))
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Cat"))
@@ -374,7 +386,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SProduct[Dog](
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("name"))),
-          field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food")))
+          field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food"))),
+          field(FieldName("$type"), Schema(SString()))
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Dog"))
@@ -384,16 +397,14 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SProduct[Hamster](
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("name"))),
-          field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?")))
+          field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?"))),
+          field(FieldName("$type"), Schema(SString()))
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Hamster"))
     )
 
-    val subtypes = schemaType.asInstanceOf[SCoproduct[Pet]].subtypes
-
-    List(expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
-      .foldLeft(Assertions.succeed)((_, schema) => subtypes.contains(schema) shouldBe true)
+    schemaType.asInstanceOf[SCoproduct[Pet]].subtypes should contain allOf (expectedCatSchema, expectedDogSchema, expectedHamsterSchema)
   }
 
   it should "add validators for collection and option elements" in {

@@ -5,22 +5,19 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema.annotations.{default, encodedName}
-import sttp.tapir.generic.Configuration
 import sttp.tapir.{Schema, SchemaType}
 import upickle.core.{ObjVisitor, Visitor}
-
-import java.util.UUID
 
 import Fixtures.*
 
 class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler customization"
-  
+
   it should "use encodedName from configuration" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
-    given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
+    given config: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
 
     // when
     val derived = Pickler.derived[TopClass]
@@ -45,7 +42,7 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
   it should "Decode in a Reader using custom encodedName" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
-    given schemaConfig: Configuration = Configuration.default.withSnakeCaseMemberNames
+    given config: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
 
     // when
     val derived = Pickler.derived[TopClass]
@@ -69,7 +66,7 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
     val object2 = codecCc2.decode("""{"fieldA":"msgCc12"}""")
     val object3 =
       codecCc3.decode(
-        """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}"""
+        """{"fieldA":{"$type":"ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}"""
       )
 
     // then

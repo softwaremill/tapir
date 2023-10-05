@@ -1,7 +1,6 @@
 package sttp.tapir.json.pickler
 
 import _root_.upickle.implicits.{macros => upickleMacros}
-import sttp.tapir.generic.Configuration
 import sttp.tapir.macros.CreateDerivedEnumerationSchema
 import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import upickle.core.{Annotator, Types}
@@ -61,16 +60,16 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
   private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Types#Reader[_], Types#Writer[_])] =
     inline erasedValue[Cases] match {
       case _: (enumerationCase *: enumerationCasesTail) =>
-        val processedHead = readWriterForEnumerationCase[enumerationCase] 
+        val processedHead = readWriterForEnumerationCase[enumerationCase]
         val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail]
         (processedHead +: processedTail)
       case _: EmptyTuple.type => Nil
     }
 
   /** Enumeration cases and case objects in an enumeration need special writers and readers, which are generated here, instead of being
-   * taken from child picklers. For example, for enum Color and case values Red and Blue, a Writer should just use the object Red or Blue 
-   * and serialize it to "Red" or "Blue". If user needs to encode the singleton object using a custom function, this
-   * happens on a higher level - the top level of coproduct reader and writer.
+    * taken from child picklers. For example, for enum Color and case values Red and Blue, a Writer should just use the object Red or Blue
+    * and serialize it to "Red" or "Blue". If user needs to encode the singleton object using a custom function, this happens on a higher
+    * level - the top level of coproduct reader and writer.
     */
   private inline def readWriterForEnumerationCase[C]: (Types#Reader[C], Types#Writer[C]) =
     val pickle = new TapirPickle[C] {

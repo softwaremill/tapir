@@ -9,6 +9,7 @@ import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
 
 import scala.reflect.ClassTag
+import sttp.tapir.Schema.SName
 
 /** A modification of upickle.implicits.Writers, implemented in order to provide our custom JSON encoding and typeclass derivation logic:
   *
@@ -77,12 +78,11 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
-  inline def macroSumW[T: ClassTag](inline childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(using
+  inline def macroSumW[T: ClassTag](childPicklers: => List[Pickler[? <: T]], subtypeDiscriminator: SubtypeDiscriminator[T])(using
       Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val writers: List[TaggedWriter[_ <: T]] = childWriters
-      .asInstanceOf[List[TaggedWriter[_ <: T]]]
+    val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[_ <: T]])
 
     new TaggedWriter.Node[T](writers: _*) {
       override def findWriter(v: Any): (String, ObjectWriter[T]) = {
@@ -92,9 +92,10 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
             (overriddenTag, w)
 
-          case _: DefaultSubtypeDiscriminator[T] =>
+          case DefaultSubtypeDiscriminator[T](_, toValue) =>
             val (t, writer) = super.findWriter(v)
-            (t, writer)
+            val t2 = toValue(SName(t, Nil)) // TODO
+            (t2, writer)
         }
       }
     }

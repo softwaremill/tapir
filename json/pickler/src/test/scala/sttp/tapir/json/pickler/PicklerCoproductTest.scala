@@ -5,7 +5,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema.annotations.{default, encodedName}
-import sttp.tapir.generic.Configuration
 import sttp.tapir.{Schema, SchemaType}
 import upickle.core.{ObjVisitor, Visitor}
 
@@ -26,14 +25,14 @@ class PicklerCoproductTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorTimeout"},"fieldB":"msg18"}"""
-    jsonStr2 shouldBe """{"fieldA":{"$type":"sttp.tapir.json.pickler.Fixtures.CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
+    jsonStr1 shouldBe """{"fieldA":{"$type":"ErrorTimeout"},"fieldB":"msg18"}"""
+    jsonStr2 shouldBe """{"fieldA":{"$type":"CustomError","msg":"customErrMsg"},"fieldB":"msg18"}"""
   }
 
   it should "apply custom field name encoding" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
-    given schemaConfig: Configuration = Configuration.default.copy(toEncodedName = _.toUpperCase())
+    given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(toEncodedName = _.toUpperCase())
     case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
 
     // when
@@ -42,14 +41,14 @@ class PicklerCoproductTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = derived.toCodec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18"))
 
     // then
-    jsonStr1 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.pickler.Fixtures.ErrorTimeout"},"FIELDB":"msg18"}"""
-    jsonStr2 shouldBe """{"FIELDA":{"$type":"sttp.tapir.json.pickler.Fixtures.CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
+    jsonStr1 shouldBe """{"FIELDA":{"$type":"ErrorTimeout"},"FIELDB":"msg18"}"""
+    jsonStr2 shouldBe """{"FIELDA":{"$type":"CustomError","MSG":"customErrMsg"},"FIELDB":"msg18"}"""
   }
 
   it should "apply custom discriminator name" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
-    given schemaConfig: Configuration = Configuration.default.withDiscriminator("kind")
+    given PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("kind")
     case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
     val inputObj1 = MyCaseClass(CustomError("customErrMsg2"), "msg19")
     val inputObj2 = MyCaseClass(ErrorNotFound, "")
@@ -61,8 +60,8 @@ class PicklerCoproductTest extends AnyFlatSpec with Matchers {
     val jsonStr2 = codec.encode(inputObj2)
 
     // then
-    jsonStr1 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.pickler.Fixtures.CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
-    jsonStr2 shouldBe """{"fieldA":{"kind":"sttp.tapir.json.pickler.Fixtures.ErrorNotFound"},"fieldB":""}"""
+    jsonStr1 shouldBe """{"fieldA":{"kind":"CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
+    jsonStr2 shouldBe """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}"""
     codec.decode(jsonStr1) shouldBe Value(inputObj1)
     codec.decode(jsonStr2) shouldBe Value(inputObj2)
   }
@@ -79,7 +78,24 @@ class PicklerCoproductTest extends AnyFlatSpec with Matchers {
     val decoded = codec.decode(jsonStr)
 
     // then
-    jsonStr shouldBe """{"status":{"$type":"sttp.tapir.json.pickler.Fixtures.StatusBadRequest","bF":55}}"""
+    jsonStr shouldBe """{"status":{"$type":"StatusBadRequest","bF":55}}"""
+    decoded shouldBe Value(inputObject)
+  }
+
+  it should "use custom discriminator name function" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    given PicklerConfiguration = PicklerConfiguration.default.withFullKebabCaseDiscriminatorValues
+    val picklerResponse = Pickler.derived[StatusResponse]
+    val inputObject = StatusResponse(StatusBadRequest(65))
+    val codec = picklerResponse.toCodec
+    val jsonStr = codec.encode(inputObject)
+    val decoded = codec.decode(jsonStr)
+
+    // then
+    jsonStr shouldBe """{"status":{"$type":"sttp.tapir.json.pickler.fixtures.status-bad-request","bF":65}}"""
     decoded shouldBe Value(inputObject)
   }
 

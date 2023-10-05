@@ -6,7 +6,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.Schema.annotations.{default, encodedName}
-import sttp.tapir.generic.Configuration
 import sttp.tapir.{Schema, SchemaType}
 import upickle.AttributeTagged
 import upickle.core.{ObjVisitor, Visitor}
@@ -21,7 +20,7 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
 
   it should "build from an existing Schema and upickle.default.ReadWriter" in {
     // given schema and reader / writer in scope
-    given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
+    given Schema[FlatClass] = Schema.derived[FlatClass]
     given rw: _root_.upickle.default.ReadWriter[FlatClass] = _root_.upickle.default.macroRW[FlatClass]
 
     // when
@@ -75,9 +74,9 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
   }
 
   it should "work with provided own readers and writers" in {
-    given givenSchemaForCc: Schema[FlatClass] = Schema.derived[FlatClass]
-    given customReader: udefault.Reader[FlatClass] = CustomPickle.getReader
-    given customWriter: CustomPickle.Writer[FlatClass] = CustomPickle.getWriter
+    given Schema[FlatClass] = Schema.derived[FlatClass]
+    given udefault.Reader[FlatClass] = CustomPickle.getReader
+    given CustomPickle.Writer[FlatClass] = CustomPickle.getWriter
 
     Pickler.derived[FlatClass].toCodec.encode(FlatClass(5, "txt")) shouldBe """"custom-5""""
   }
