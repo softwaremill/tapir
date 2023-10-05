@@ -3,13 +3,13 @@ package sttp.tapir.json.pickler
 import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{WritersVersionSpecific, macros => upickleMacros}
-import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Schema
+import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
+import sttp.tapir.internal.EnumerationMacros.*
 
 import scala.reflect.ClassTag
-import sttp.tapir.Schema.SName
 
 /** A modification of upickle.implicits.Writers, implemented in order to provide our custom JSON encoding and typeclass derivation logic:
   *
