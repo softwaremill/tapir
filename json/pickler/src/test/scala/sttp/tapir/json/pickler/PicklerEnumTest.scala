@@ -3,7 +3,6 @@ package sttp.tapir.json.pickler
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.generic.Configuration
 import sttp.tapir.{Schema, SchemaType}
 import upickle.core.ObjVisitor
 
@@ -80,7 +79,7 @@ class PicklerEnumTest extends AnyFlatSpec with Matchers {
     // given
     import generic.auto.* // for Pickler auto-derivation
     val inputObj = SealedVariantContainer(VariantA)
-    
+
     // when
     val pickler = Pickler.derived[SealedVariantContainer]
     val codec = pickler.toCodec

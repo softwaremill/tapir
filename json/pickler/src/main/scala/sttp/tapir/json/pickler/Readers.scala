@@ -29,9 +29,7 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
   }
 
-  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]])(using
-      m: Mirror.ProductOf[T]
-  ): Reader[T] =
+  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]], m: Mirror.ProductOf[T]): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
 
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
@@ -69,11 +67,14 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
 
         new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
 
-      case DefaultSubtypeDiscriminator[T](_, toValue) =>
+      case discriminator: DefaultSubtypeDiscriminator[T] =>
         val readers = childPicklers.map(cp => {
           (cp.schema.name, cp.innerUpickle.reader) match {
             case (Some(sName), wrappedReader: Readers#LeafWrapper[_]) =>
-              TaggedReader.Leaf[T](toValue(sName), wrappedReader.r.asInstanceOf[Reader[T]])
+              TaggedReader.Leaf[T](
+                discriminator.toValue(sName),
+                wrappedReader.r.asInstanceOf[Reader[T]]
+              )
             case _ =>
               cp.innerUpickle.reader.asInstanceOf[Reader[T]]
           }

@@ -28,9 +28,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
   inline def macroProductW[T: ClassTag](
       schema: Schema[T],
       childWriters: => List[Any],
-      childDefaults: => List[Option[Any]]
-  )(using
-      Configuration
+      childDefaults: => List[Option[Any]],
+      config: PicklerConfiguration
   ) =
     lazy val writer = new CaseClassWriter[T] {
       def length(v: T) = upickleMacros.writeLength[T](outerThis, v)
@@ -69,7 +68,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
     inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isEnumeration[T] then
       annotate[T](
         writer,
-        upickleMacros.tagName[T],
+        schema.name.map(config.toDiscriminatorValue).getOrElse(upickleMacros.tagName[T]),
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
     else if upickleMacros.isSingleton[T]
@@ -91,11 +90,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
             val (tag, w) = super.findWriter(v)
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
             (overriddenTag, w)
-
-          case DefaultSubtypeDiscriminator[T](_, toValue) =>
-            val (t, writer) = super.findWriter(v)
-            val t2 = toValue(SName(t, Nil)) // TODO
-            (t2, writer)
+          case _ =>
+            super.findWriter(v)
         }
       }
     }

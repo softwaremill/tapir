@@ -346,13 +346,16 @@ object Pickler:
         macroProductW[T](
           schema,
           childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.writer).productIterator.toList,
-          childDefaults
+          childDefaults,
+          config
         )
       override lazy val reader: Reader[T] =
-        macroProductR[T](schema, childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader), childDefaults)(
-          using product
+        macroProductR[T](
+          schema,
+          childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader),
+          childDefaults,
+          product
         )
-
     }
     Pickler[T](tapirPickle, schema)
 

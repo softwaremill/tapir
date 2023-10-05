@@ -82,7 +82,7 @@ class PicklerCoproductTest extends AnyFlatSpec with Matchers {
     decoded shouldBe Value(inputObject)
   }
 
-  it should "use custom discriminator name function" in {
+  it should "use custom discriminator value function" in {
     // given
     import generic.auto.* // for Pickler auto-derivation
 
