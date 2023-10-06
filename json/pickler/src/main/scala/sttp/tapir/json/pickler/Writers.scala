@@ -81,7 +81,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[_ <: T]])
+    val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.writer.asInstanceOf[TaggedWriter[_ <: T]])
 
     new TaggedWriter.Node[T](writers: _*) {
       override def findWriter(v: Any): (String, ObjectWriter[T]) = {

@@ -44,17 +44,17 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
           }
         new TaggedReader.Node[T](readersForPossibleValues: _*)
       }
-
-      override lazy val writer: Writer[T] =
-        new TaggedWriter.Node[T](childReadWriters.map(_._2.asInstanceOf[TaggedWriter[T]]): _*) {
-          override def findWriter(v: Any): (String, ObjectWriter[T]) =
-            val (t, writer) = super.findWriter(v)
-            // Here our custom encoding transforms the value of a singleton object
-            val overriddenTag = encode(v.asInstanceOf[T]).toString
-            (overriddenTag, writer)
-        }
     }
-    new Pickler[T](tapirPickle, schema)
+    val writer: UWriter[T] =
+      new TapirPickle.TaggedWriter.Node[T](childReadWriters.map(_._2.asInstanceOf[TapirPickle.TaggedWriter[T]]): _*) {
+        override def findWriter(v: Any): (String, TapirPickle.ObjectWriter[T]) =
+          val (t, writer) = super.findWriter(v)
+          // Here our custom encoding transforms the value of a singleton object
+          val overriddenTag = encode(v.asInstanceOf[T]).toString
+          (overriddenTag, writer)
+      }
+
+    new Pickler[T](tapirPickle, writer, schema)
   }
 
   private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Types#Reader[_], Types#Writer[_])] =
@@ -71,18 +71,17 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     * and serialize it to "Red" or "Blue". If user needs to encode the singleton object using a custom function, this happens on a higher
     * level - the top level of coproduct reader and writer.
     */
-  private inline def readWriterForEnumerationCase[C]: (Types#Reader[C], Types#Writer[C]) =
+  private inline def readWriterForEnumerationCase[C]: (Types#Reader[C], UWriter[C]) =
+    val writer = TapirPickle.annotate[C](
+        TapirPickle.SingletonWriter[C](null.asInstanceOf[C]),
+        upickleMacros.tagName[C],
+        Annotator.Checker.Val(upickleMacros.getSingleton[C]))
     val pickle = new TapirPickle[C] {
       // We probably don't need a separate TapirPickle for each C, this could be optimized.
       // https://github.com/softwaremill/tapir/issues/3192
-      override lazy val writer = annotate[C](
-        SingletonWriter[C](null.asInstanceOf[C]),
-        upickleMacros.tagName[C],
-        Annotator.Checker.Val(upickleMacros.getSingleton[C])
-      )
       override lazy val reader = annotate[C](SingletonReader[C](upickleMacros.getSingleton[C]), upickleMacros.tagName[C])
     }
-    (pickle.reader, pickle.writer)
+    (pickle.reader, writer)
 
   /** Creates the Pickler assuming the low-level representation is a `String`. The encoding function passes the object unchanged (which
     * means `.toString` will be used to represent the enumeration in JSON and documentation). Typically you don't need to explicitly use

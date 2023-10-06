@@ -1,6 +1,9 @@
 package sttp.tapir.json.pickler
 
 import sttp.tapir._
+import upickle.core.Types
+
+type UWriter[T] = Types#Writer[T]
 
 def jsonBody[T: Pickler]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(summon[Pickler[T]].toCodec)
 

@@ -173,6 +173,26 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
       pickler.schema shouldBe Schema.derived[ClassWithEither]
     }
   }
+  
+  it should "derive picklers for Either fields with product types" in {
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    val pickler = Pickler.derived[ClassWithEither2]
+    val codec = pickler.toCodec
+    val obj1 = ClassWithEither2("fieldA 1", Right(SimpleTestResult("err3")))
+    val obj2 = ClassWithEither2("fieldA 2", Left(SimpleTestResult("it is fine2")))
+    val jsonStr1 = codec.encode(obj1)
+    val jsonStr2 = codec.encode(obj2)
+
+    // then
+    jsonStr1 shouldBe """{"fieldA":"fieldA 1","fieldB":[1,{"msg":"err3"}]}"""
+    jsonStr2 shouldBe """{"fieldA":"fieldA 2","fieldB":[0,{"msg":"it is fine2"}]}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler.schema shouldBe Schema.derived[ClassWithEither2]
+    }
+  }
 
   it should "derive picklers for Map with String key" in {
     import generic.auto.* // for Pickler auto-derivation
@@ -215,7 +235,8 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
 
   it should "handle value classes" in {
     // when
-    val pickler = Pickler.derived[ClassWithValues]
+    val p2 = summon[Pickler[UserName]]
+    val pickler = Pickler.derived[ClassWithValues]    
     val codec = pickler.toCodec
     val inputObj = ClassWithValues(UserId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")), UserName("Alan"), age = 65)
     val encoded = codec.encode(inputObj)

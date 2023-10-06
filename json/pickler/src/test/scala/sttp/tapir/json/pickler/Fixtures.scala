@@ -53,6 +53,7 @@ object Fixtures:
   case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
   case class SimpleTestResult(msg: String)
   case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
+  case class ClassWithEither2(fieldA: String, fieldB: Either[SimpleTestResult, SimpleTestResult])
   case class ClassWithMap(field: Map[String, SimpleTestResult])
   case class ClassWithMapCustomKey(field: Map[UUID, SimpleTestResult])
   case class UserId(value: UUID) extends AnyVal

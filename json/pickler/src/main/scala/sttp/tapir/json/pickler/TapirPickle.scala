@@ -1,6 +1,7 @@
 package sttp.tapir.json.pickler
 
 import _root_.upickle.AttributeTagged
+import upickle.Api
 
 /** Our custom modification of uPickle encoding/decoding logic. A standard way to use uPickle is to import `upickle.default` object which
   * allows generating Reader[T]/Writer[T]. We create our own object with same API as `upickle.default`, but modified logic, which can be
@@ -8,11 +9,11 @@ import _root_.upickle.AttributeTagged
   */
 trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
   def reader: this.Reader[T]
-  def writer: this.Writer[T]
 
+object TapirPickle extends AttributeTagged with Readers with Writers:
   // This ensures that None is encoded as null instead of an empty array
   override given OptionWriter[T: Writer]: Writer[Option[T]] =
-    summon[Writer[T]].comapNulls[Option[T]] {
+    summon[UWriter[T]].comapNulls[Option[T]] {
       case None    => null.asInstanceOf[T]
       case Some(x) => x
     }
