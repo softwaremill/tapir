@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Schema.SName
-import sttp.tapir._
+import sttp.tapir.{Schema => TSchema, _}
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap
@@ -15,20 +15,26 @@ class SchemasForEndpoints(
     additionalOutputs: List[EndpointOutput[_]]
 ) {
 
+  /** @return
+    *   A tuple: the first element can be used to create the components section in the docs. The second can be used to resolve (possible)
+    *   top-level references from parameters / bodies.
+    */
   def apply(): (ListMap[SchemaId, ReferenceOr[ASchema]], Schemas) = {
-    val keyedSchemas = ToKeyedSchemas.unique(
+    val keyedCombinedSchemas: Iterable[KeyedSchema] = ToKeyedSchemas.uniqueCombined(
       es.flatMap(e =>
         forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)
       ) ++ additionalOutputs.flatMap(forOutput(_))
     )
-    val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
+    val keysToIds: Map[SchemaKey, SchemaId] = calculateUniqueIds(keyedCombinedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
 
-    val toSchemaReference = new ToSchemaReference(keysToIds)
+    val toSchemaReference = new ToSchemaReference(keysToIds, keyedCombinedSchemas.toMap)
     val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
-    val schemas = new Schemas(tschemaToASchema, toSchemaReference, markOptionsAsNullable)
-    val keysToSchemas = keyedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
-    val schemaIds = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
+    val keysToSchemas: ListMap[SchemaKey, ReferenceOr[ASchema]] = keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
+    val schemaIds: Map[SchemaKey, (SchemaId, ReferenceOr[ASchema])] = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
+
+    val schemas = new Schemas(tschemaToASchema, toSchemaReference, markOptionsAsNullable)
+
     (schemaIds.values.toListMap, schemas)
   }
 
@@ -48,6 +54,7 @@ class SchemasForEndpoints(
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
+
   private def forOutput(output: EndpointOutput[_]): List[KeyedSchema] = {
     output match {
       case EndpointOutput.OneOf(variants, _)       => variants.flatMap(variant => forOutput(variant.output)).toList

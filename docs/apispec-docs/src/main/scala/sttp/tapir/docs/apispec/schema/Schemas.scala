@@ -12,12 +12,12 @@ class Schemas(
   def apply[T](codec: Codec[T, _, _]): ReferenceOr[ASchema] = apply(codec.schema)
 
   def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
-    SchemaKey(schema) match {
-      case Some(key) => Left(toSchemaReference.map(key))
+    schema.name match {
+      case Some(name) => Left(toSchemaReference.map(schema, name))
       case None =>
         schema.schemaType match {
           case TSchemaType.SArray(nested @ TSchema(_, Some(name), isOptional, _, _, _, _, _, _, _, _)) =>
-            Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(SchemaKey(nested, name))))))
+            Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(nested, name)))))
               .map(s => if (isOptional && markOptionsAsNullable) s.copy(nullable = Some(true)) else s)
           case TSchemaType.SOption(ts) => apply(ts)
           case _                       => tschemaToASchema(schema)

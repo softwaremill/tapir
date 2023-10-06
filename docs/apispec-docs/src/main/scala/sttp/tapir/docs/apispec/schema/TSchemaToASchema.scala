@@ -8,7 +8,7 @@ import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve nested references. */
+/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve nested references. */
 private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
   def apply[T](schema: TSchema[T], isOptionElement: Boolean = false): ReferenceOr[ASchema] = {
     val nullable = markOptionsAsNullable && isOptionElement
@@ -25,10 +25,10 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
           )
         )
       case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(SchemaKey(nested, name))))))
+        Right(ASchema(SchemaType.Array).copy(items = Some(Left(toSchemaReference.map(nested, name)))))
       case TSchemaType.SArray(el) => Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
       case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
-        Left(toSchemaReference.map(SchemaKey(nested, name)))
+        Left(toSchemaReference.map(nested, name))
       case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
@@ -41,7 +41,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
               schemas
                 .filterNot(_.hidden)
                 .map {
-                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(SchemaKey(nested, name)))
+                  case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => Left(toSchemaReference.map(nested, name))
                   case t                                                          => apply(t)
                 }
                 .sortBy {
@@ -56,9 +56,9 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName),
             properties = extractProperties(fields),
-            additionalProperties = Some(SchemaKey(valueSchema) match {
-              case Some(key) => Left(toSchemaReference.map(key))
-              case _         => apply(valueSchema)
+            additionalProperties = Some(valueSchema.name match {
+              case Some(name) => Left(toSchemaReference.map(valueSchema, name))
+              case _          => apply(valueSchema)
             }).filterNot(_ => valueSchema.hidden)
           )
         )
@@ -81,9 +81,9 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
     fields
       .filterNot(_.schema.hidden)
       .map { f =>
-        SchemaKey(f.schema) match {
-          case Some(key) => f.name.encodedName -> Left(toSchemaReference.map(key))
-          case None      => f.name.encodedName -> apply(f.schema)
+        f.schema.name match {
+          case Some(name) => f.name.encodedName -> Left(toSchemaReference.map(f.schema, name))
+          case None       => f.name.encodedName -> apply(f.schema)
         }
       }
       .toListMap

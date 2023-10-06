@@ -23,6 +23,8 @@ class VerifyYamlMultiCustomiseSchemaTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e), Info("Schemas", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
+    println(actualYaml)
+
     actualYamlNoIndent shouldBe expectedYaml
   }
 
