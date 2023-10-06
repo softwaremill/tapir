@@ -3,10 +3,11 @@ package sttp.tapir.json.pickler
 import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{WritersVersionSpecific, macros => upickleMacros}
-import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.Schema
+import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
+import sttp.tapir.internal.EnumerationMacros.*
 
 import scala.reflect.ClassTag
 
@@ -27,9 +28,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
   inline def macroProductW[T: ClassTag](
       schema: Schema[T],
       childWriters: => List[Any],
-      childDefaults: => List[Option[Any]]
-  )(using
-      Configuration
+      childDefaults: => List[Option[Any]],
+      config: PicklerConfiguration
   ) =
     lazy val writer = new CaseClassWriter[T] {
       def length(v: T) = upickleMacros.writeLength[T](outerThis, v)
@@ -68,7 +68,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
     inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isEnumeration[T] then
       annotate[T](
         writer,
-        upickleMacros.tagName[T],
+        schema.name.map(config.toDiscriminatorValue).getOrElse(upickleMacros.tagName[T]),
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
     else if upickleMacros.isSingleton[T]
@@ -77,12 +77,11 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
-  inline def macroSumW[T: ClassTag](inline childWriters: => List[Any], subtypeDiscriminator: SubtypeDiscriminator[T])(using
+  inline def macroSumW[T: ClassTag](childPicklers: => List[Pickler[? <: T]], subtypeDiscriminator: SubtypeDiscriminator[T])(using
       Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val writers: List[TaggedWriter[_ <: T]] = childWriters
-      .asInstanceOf[List[TaggedWriter[_ <: T]]]
+    val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[_ <: T]])
 
     new TaggedWriter.Node[T](writers: _*) {
       override def findWriter(v: Any): (String, ObjectWriter[T]) = {
@@ -91,14 +90,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
             val (tag, w) = super.findWriter(v)
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
             (overriddenTag, w)
-          case discriminator: EnumValueDiscriminator[T] =>
-            val (t, writer) = super.findWriter(v)
-            val overriddenTag = discriminator.encode(v.asInstanceOf[T])
-            (overriddenTag, writer)
-
-          case _: DefaultSubtypeDiscriminator[T] =>
-            val (t, writer) = super.findWriter(v)
-            (t, writer)
+          case _ =>
+            super.findWriter(v)
         }
       }
     }
