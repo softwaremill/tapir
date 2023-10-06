@@ -81,6 +81,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiAkka.projectRefs ++
   swaggerUiPekko.projectRefs ++
   redocAkka.projectRefs ++
+  redocPekko.projectRefs ++
   swaggerUiHttp4s.projectRefs ++
   redocHttp4s.projectRefs ++
   swaggerUiFinatra.projectRefs ++
@@ -617,6 +618,17 @@ lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+
+lazy val redocPekko: ProjectMatrix = (projectMatrix in file("docs/redoc-pekko-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-redoc-pekko-http",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekkoHttp,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
