@@ -2,12 +2,10 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
-import scala.collection.mutable.ListBuffer
+private[docs] object ToKeyedSchemas {
+  def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
 
-private[docs] class ToKeyedSchemas {
-  private[docs] def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
-
-  private[docs] def apply(schema: TSchema[_]): List[KeyedSchema] = {
+  def apply(schema: TSchema[_]): List[KeyedSchema] = {
     val thisSchema = SchemaKey(schema).map(_ -> schema).toList
     val nestedSchemas = schema match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _)            => apply(o)
@@ -27,9 +25,6 @@ private[docs] class ToKeyedSchemas {
   private def productSchemas[T](st: TSchemaType.SProduct[T]): List[KeyedSchema] = st.fields.flatMap(a => apply(a.schema))
 
   private def coproductSchemas[T](st: TSchemaType.SCoproduct[T]): List[KeyedSchema] = st.subtypes.flatMap(apply)
-}
-
-private[docs] object ToKeyedSchemas {
 
   /** Keeps only the first object data for each [[SchemaKey]]. In case of recursive objects, the first one is the most complete as it
     * contains the built-up structure, unlike subsequent ones, which only represent leaves (#354, later extended for #2358, so that the

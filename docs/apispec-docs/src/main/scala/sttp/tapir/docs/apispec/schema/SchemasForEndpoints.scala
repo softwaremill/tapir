@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Schema.SName
-import sttp.tapir.{Schema => TSchema, _}
+import sttp.tapir._
 import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap
@@ -10,7 +10,6 @@ import scala.collection.immutable.ListMap
 class SchemasForEndpoints(
     es: Iterable[AnyEndpoint],
     schemaName: SName => String,
-    toKeyedSchemas: ToKeyedSchemas,
     markOptionsAsNullable: Boolean,
     additionalOutputs: List[EndpointOutput[_]]
 ) {
@@ -42,10 +41,10 @@ class SchemasForEndpoints(
     input match {
       case EndpointInput.FixedMethod(_, _, _)     => List.empty
       case EndpointInput.FixedPath(_, _, _)       => List.empty
-      case EndpointInput.PathCapture(_, codec, _) => toKeyedSchemas(codec)
+      case EndpointInput.PathCapture(_, codec, _) => ToKeyedSchemas(codec)
       case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, _, codec, _)    => toKeyedSchemas(codec)
-      case EndpointInput.Cookie(_, codec, _)      => toKeyedSchemas(codec)
+      case EndpointInput.Query(_, _, codec, _)    => ToKeyedSchemas(codec)
+      case EndpointInput.Cookie(_, codec, _)      => ToKeyedSchemas(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_, _]            => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
@@ -64,7 +63,7 @@ class SchemasForEndpoints(
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
-        toKeyedSchemas(wrapped.codec) ++ toKeyedSchemas(wrapped.requests) ++ toKeyedSchemas(wrapped.responses)
+        ToKeyedSchemas(wrapped.codec) ++ ToKeyedSchemas(wrapped.requests) ++ ToKeyedSchemas(wrapped.responses)
       case op: EndpointIO[_] => forIO(op)
     }
   }
@@ -72,11 +71,11 @@ class SchemasForEndpoints(
   private def forIO(io: EndpointIO[_]): List[KeyedSchema] = {
     io match {
       case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)                                => toKeyedSchemas(codec)
+      case EndpointIO.Header(_, codec, _)                                => ToKeyedSchemas(codec)
       case EndpointIO.Headers(_, _)                                      => List.empty
-      case EndpointIO.Body(_, codec, _)                                  => toKeyedSchemas(codec)
+      case EndpointIO.Body(_, codec, _)                                  => ToKeyedSchemas(codec)
       case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => toKeyedSchemas(codec.schema)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => ToKeyedSchemas(codec.schema)
       case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                               => List.empty
       case EndpointIO.Empty(_, _)                                        => List.empty

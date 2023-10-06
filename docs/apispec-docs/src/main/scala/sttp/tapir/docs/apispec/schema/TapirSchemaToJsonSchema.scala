@@ -6,9 +6,6 @@ import sttp.tapir.{Schema => TSchema}
 import scala.collection.immutable.ListMap
 
 object TapirSchemaToJsonSchema {
-
-  private val toKeyedSchemas = new ToKeyedSchemas
-
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
@@ -17,7 +14,7 @@ object TapirSchemaToJsonSchema {
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ReferenceOr[ASchema] = {
 
-    val asKeyedSchemas = toKeyedSchemas(schema).drop(1)
+    val asKeyedSchemas = ToKeyedSchemas(schema).drop(1)
     val keyedSchemas = ToKeyedSchemas.uniqueCombined(asKeyedSchemas)
 
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
