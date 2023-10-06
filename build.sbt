@@ -79,6 +79,7 @@ lazy val allAggregates = core.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
   swaggerUiAkka.projectRefs ++
+  swaggerUiPekko.projectRefs ++
   redocAkka.projectRefs ++
   swaggerUiHttp4s.projectRefs ++
   redocHttp4s.projectRefs ++
@@ -592,6 +593,18 @@ lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+
+lazy val swaggerUiPekko: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-pekko-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-swagger-ui-pekko-http",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekkoHttp,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams,
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
