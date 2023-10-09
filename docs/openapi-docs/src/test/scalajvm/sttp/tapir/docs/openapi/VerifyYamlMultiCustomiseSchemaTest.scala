@@ -23,8 +23,6 @@ class VerifyYamlMultiCustomiseSchemaTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e), Info("Schemas", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    println(actualYaml)
-
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -34,6 +32,18 @@ class VerifyYamlMultiCustomiseSchemaTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e), Info("Schemas", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("top-level body references") {
+    val e = endpoint.get.in(jsonBody[Data1].schema(_.description("d1"))).out(jsonBody[Data1].schema(_.description("d2")))
+    val expectedYaml = load("multi_customise_schema/top_level_body.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e), Info("Schemas", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    println(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
   }
