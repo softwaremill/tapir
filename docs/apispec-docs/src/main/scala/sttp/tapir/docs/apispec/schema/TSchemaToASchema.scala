@@ -9,8 +9,6 @@ import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal._
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-import scala.util.chaining._
-
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve nested references. */
 private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
   def apply[T](schema: TSchema[T], isOptionElement: Boolean = false): ASchema = {
@@ -68,11 +66,12 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
     if (result.$ref.isEmpty) {
       // only customising non-reference schemas; references might get enriched with some meta-data if there
       // are multiple different customisations of the referenced schema in ToSchemaReference (#1203)
-      result
-        .pipe(s => if (nullable) s.copy(nullable = Some(true)) else s)
-        .pipe(addMetadata(_, schema))
-        .pipe(addTitle(_, schema))
-        .pipe(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
+      var s = result
+      s = if (nullable) s.copy(nullable = Some(true)) else s
+      s = addMetadata(s, schema)
+      s = addTitle(s, schema)
+      s = addConstraints(s, primitiveValidators, schemaIsWholeNumber)
+      s
     } else result
   }
 
