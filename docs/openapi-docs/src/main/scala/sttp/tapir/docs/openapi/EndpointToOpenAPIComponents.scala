@@ -1,6 +1,5 @@
 package sttp.tapir.docs.openapi
 
-import sttp.apispec.ReferenceOr
 import sttp.apispec.{Schema => ASchema}
 import sttp.apispec.openapi.Components
 import sttp.tapir.docs.apispec.SecuritySchemes
@@ -10,7 +9,7 @@ import sttp.tapir.internal.{IterableToListMap, SortListMap}
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenAPIComponents(
-    idToSchema: ListMap[SchemaId, ReferenceOr[ASchema]],
+    idToSchema: ListMap[SchemaId, ASchema],
     securitySchemes: SecuritySchemes
 ) {
   def components: Option[Components] = {

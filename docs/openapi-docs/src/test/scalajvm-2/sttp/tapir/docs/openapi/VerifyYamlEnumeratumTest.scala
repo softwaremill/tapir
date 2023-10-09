@@ -50,11 +50,13 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     val actualYaml =
       OpenAPIDocsInterpreter().toOpenAPI(ep, Info("Fruits", "1.0")).toYaml
 
+    // TODO fix test
+
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   // #1800
-  test("should use first specified default value") {
+  test("should use different default values") {
     val expectedYaml = load("enum/expected_enumeratum_enum_using_first_specified_default_value.yml")
     val ep1 = endpoint
       .in("fruit-by-type1")
@@ -68,6 +70,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     val actualYaml =
       OpenAPIDocsInterpreter().toOpenAPI(List(ep1, ep2), Info("Fruits", "1.0")).toYaml
 
+    // TODO fix test
+    
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
@@ -94,6 +98,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     val actualYaml =
       OpenAPIDocsInterpreter().toOpenAPI(ep, Info("Fruits", "1.0")).toYaml
 
+    // TODO fix test    
+    
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 

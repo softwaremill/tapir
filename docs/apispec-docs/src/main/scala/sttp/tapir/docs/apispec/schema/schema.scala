@@ -8,10 +8,13 @@ package object schema {
     val shortName = info.fullName.split('.').last
     (shortName +: info.typeParameterShortNames).mkString("_")
   }
+
   /*
-  SchemaId - used in the documentation to identify a schema in the components section, and to use in in references
-  SchemaKey - used as a key to differentiate between schemas when collecting all used schemas within an endpoint
-  SName - the name of the class + type parameters associated with a schema
+  SchemaId:  Used in the documentation to identify a schema in the components section, and to use in in references.
+             Typically contains the type name, possibly with a suffix for disambiguation.
+  SchemaKey: Used as a key to differentiate between schemas when collecting all used schemas within an endpoint.
+             Each schema key corresponds to an entry in the components section.
+  SName:     The name of the class + type parameters associated with a schema.
    */
 
   private[docs] type KeyedSchema = (SchemaKey, TSchema[_])

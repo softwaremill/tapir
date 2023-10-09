@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: ClassWithNestedOptionalField
+  title: Schemas
   version: '1.0'
 paths:
   /:
@@ -10,7 +10,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClassWithNestedOptionalField'
+              $ref: '#/components/schemas/Data2'
         required: true
       responses:
         '200':
@@ -23,19 +23,23 @@ paths:
                 type: string
 components:
   schemas:
-    ClassWithNestedOptionalField:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Nested'
-    Nested:
+    Data1:
       required:
-      - nestedValue
+        - x
       type: object
       properties:
-        nestedValue:
+        x:
           type: string
-      default:
-        nestedValue: foo
-      example:
-        nestedValue: foo
+    Data2:
+      required:
+        - a
+        - b
+      type: object
+      properties:
+        a:
+          $ref: '#/components/schemas/Data1'
+          description: aaa
+          deprecated: true
+        b:
+          $ref: '#/components/schemas/Data1'
+          description: bbb
