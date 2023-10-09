@@ -1,5 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.tapir.Schema.Title
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 private[docs] object ToKeyedSchemas {
@@ -50,7 +51,8 @@ private[docs] object ToKeyedSchemas {
     if (s1.default != s2.default) result = result.copy(default = None)
     if (s1.encodedExample != s2.encodedExample) result = result.copy(encodedExample = None)
     if (s1.deprecated != s2.deprecated) result = result.deprecated(false)
-    // TODO: attributes
+    if (s1.attributes.get(Title.Attribute) != s2.attributes.get(Title.Attribute))
+      result = result.copy(attributes = result.attributes.remove(Title.Attribute))
     result
   }
 }

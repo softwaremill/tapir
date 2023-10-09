@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.apispec.{Schema => ASchema, _}
+import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.Schema.SName
 import sttp.tapir._
 import sttp.tapir.internal.IterableToListMap
@@ -18,7 +18,7 @@ class SchemasForEndpoints(
     *   A tuple: the first element can be used to create the components section in the docs. The second can be used to resolve (possible)
     *   top-level references from parameters / bodies.
     */
-  def apply(): (ListMap[SchemaId, ReferenceOr[ASchema]], Schemas) = {
+  def apply(): (ListMap[SchemaId, ASchema], Schemas) = {
     val keyedCombinedSchemas: Iterable[KeyedSchema] = ToKeyedSchemas.uniqueCombined(
       es.flatMap(e =>
         forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)
@@ -29,8 +29,8 @@ class SchemasForEndpoints(
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedCombinedSchemas.toMap)
     val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
 
-    val keysToSchemas: ListMap[SchemaKey, ReferenceOr[ASchema]] = keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
-    val schemaIds: Map[SchemaKey, (SchemaId, ReferenceOr[ASchema])] = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
+    val keysToSchemas: ListMap[SchemaKey, ASchema] = keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
+    val schemaIds: Map[SchemaKey, (SchemaId, ASchema)] = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
     val schemas = new Schemas(tschemaToASchema, toSchemaReference, markOptionsAsNullable)
 

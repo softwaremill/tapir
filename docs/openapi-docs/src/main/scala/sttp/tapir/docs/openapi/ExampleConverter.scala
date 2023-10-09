@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.apispec._
-import sttp.apispec.openapi.Example
+import sttp.apispec.openapi.{Example, ReferenceOr}
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Codec, EndpointIO, Schema => TSchema}

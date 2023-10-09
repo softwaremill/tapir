@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.StatusCode
-import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.apispec.openapi._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
@@ -125,7 +125,7 @@ private[openapi] class EndpointToOperationResponse(
             Header(
               description = info.description,
               required = Some(true),
-              schema = Option(Right(ASchema(ASchemaType.String)))
+              schema = Option(ASchema(ASchemaType.String))
             )
           )
         )
