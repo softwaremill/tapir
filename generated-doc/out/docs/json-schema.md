@@ -3,13 +3,13 @@
 You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.7.6"
+"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.8.0"
 ```
 
 Schema generation can now be performed like in the following example:
 
 ```scala
-import sttp.apispec.{ReferenceOr, Schema => ASchema}
+import sttp.apispec.{Schema => ASchema}
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema._
 import sttp.tapir.generic.auto._
@@ -21,7 +21,7 @@ import sttp.tapir.generic.auto._
   case class Child(childName: String) // to illustrate unique name generation // to illustrate unique name generation
   val tSchema = implicitly[Schema[Parent]]
 
-  val jsonSchema: ReferenceOr[ASchema] = TapirSchemaToJsonSchema(
+  val jsonSchema: ASchema = TapirSchemaToJsonSchema(
     tSchema,
     markOptionsAsNullable = true,
     metaSchema = MetaSchemaDraft04 // default
@@ -44,7 +44,7 @@ you will get a codec for `sttp.apispec.Schema`:
 import io.circe.Printer
 import io.circe.syntax._
 import sttp.apispec.circe._
-import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema._
 import sttp.tapir.generic.auto._
@@ -57,12 +57,12 @@ import sttp.tapir.Schema.annotations.title
   case class Child(childName: String)
   val tSchema = implicitly[Schema[Parent]]
 
-  val jsonSchema: ReferenceOr[ASchema] = TapirSchemaToJsonSchema(
+  val jsonSchema: ASchema = TapirSchemaToJsonSchema(
     tSchema,
     markOptionsAsNullable = true)
   
   // JSON serialization
-  val schemaAsJson = jsonSchema.getOrElse(ASchema(ASchemaType.Null)).asJson
+  val schemaAsJson = jsonSchema.asJson
   val schemaStr: String = Printer.spaces2.print(schemaAsJson.deepDropNullValues)
 ```
 
