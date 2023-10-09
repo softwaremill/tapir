@@ -32,15 +32,15 @@ jobs:
           ~/.coursier
         key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
     - name: Compile
-      run: sbt -v compile compileDocumentation
+      run: sbt -J-Djdk.util.zip.disableZip64ExtraFieldValidation=true -v compile compileDocumentation
     - name: Test
       if: matrix.target-platform != 'JS'
-      run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
+      run: sbt -J-Djdk.util.zip.disableZip64ExtraFieldValidation=true -v mimaReportBinaryIssues test${{ matrix.target-platform }}
       # Temporarily call JS tests for each subproject explicitly as a workaround until
       # https://github.com/scala-js/scala-js/issues/4317 has a solution
     - name: Test Scala.js
       if: matrix.target-platform == 'JS'
-      run: sbt coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
+      run: sbt -J-Djdk.util.zip.disableZip64ExtraFieldValidation=true coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
     - name: Cleanup
       run: |
         rm -rf "$HOME/.ivy2/local" || true
@@ -70,9 +70,9 @@ jobs:
             ~/.coursier
           key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
       - name: Compile
-        run: sbt compile
+        run: sbt -J-Djdk.util.zip.disableZip64ExtraFieldValidation=true compile
       - name: Publish artifacts
-        run: sbt ci-release
+        run: sbt -J-Djdk.util.zip.disableZip64ExtraFieldValidation=true ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
