@@ -235,7 +235,6 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
 
   it should "handle value classes" in {
     // when
-    val p2 = summon[Pickler[UserName]]
     val pickler = Pickler.derived[ClassWithValues]    
     val codec = pickler.toCodec
     val inputObj = ClassWithValues(UserId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")), UserName("Alan"), age = 65)

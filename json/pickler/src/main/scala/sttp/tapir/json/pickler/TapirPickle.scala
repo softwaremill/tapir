@@ -7,13 +7,11 @@ import upickle.Api
   * allows generating Reader[T]/Writer[T]. We create our own object with same API as `upickle.default`, but modified logic, which can be
   * found in Readers and Writers traits.
   */
-trait TapirPickle[T] extends AttributeTagged with Readers with Writers:
-  def reader: this.Reader[T]
-
-object TapirPickle extends AttributeTagged with Readers with Writers:
+private object TapirPickle extends AttributeTagged with Readers with Writers:
+  type UWriter[T] = Writer[T]
   // This ensures that None is encoded as null instead of an empty array
   override given OptionWriter[T: Writer]: Writer[Option[T]] =
-    summon[UWriter[T]].comapNulls[Option[T]] {
+    summon[Writer[T]].comapNulls[Option[T]] {
       case None    => null.asInstanceOf[T]
       case Some(x) => x
     }

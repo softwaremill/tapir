@@ -57,10 +57,10 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
         // Originally product readers have this value set to class name when they are derived individually,
         // so we need to 'fix' them here using discriminator settings.
         val readersFromMapping = discriminator.mapping
-          .map { case (k, v) => (k, v.innerUpickle.reader) }
+          .map { case (k, v) => (k, v.reader) }
           .map {
-            case (k, leaf) if leaf.isInstanceOf[LeafWrapper[_]] =>
-              TaggedReader.Leaf[T](discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+            case (k, leaf: Readers#LeafWrapper[T]) =>
+              TaggedReader.Leaf[T](discriminator.asString(k), leaf.r.asInstanceOf[Reader[T]]) // TODO 
             case (_, otherKindOfReader) =>
               otherKindOfReader
           }
@@ -69,14 +69,14 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
 
       case discriminator: DefaultSubtypeDiscriminator[T] =>
         val readers = childPicklers.map(cp => {
-          (cp.schema.name, cp.innerUpickle.reader) match {
+          (cp.schema.name, cp.reader) match {
             case (Some(sName), wrappedReader: Readers#LeafWrapper[_]) =>
               TaggedReader.Leaf[T](
                 discriminator.toValue(sName),
                 wrappedReader.r.asInstanceOf[Reader[T]]
               )
             case _ =>
-              cp.innerUpickle.reader.asInstanceOf[Reader[T]]
+              cp.reader.asInstanceOf[Reader[T]]
           }
         })
         Reader.merge(readers: _*)
