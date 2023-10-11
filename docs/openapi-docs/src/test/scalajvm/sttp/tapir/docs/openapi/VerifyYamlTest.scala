@@ -666,7 +666,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should mark optional class fields as nullable by inlining them when configured to do so") {
+  test("should mark optional class fields as nullable when configured to do so") {
     case class Bar(bar: Int)
     case class ClassWithOptionClassField(optionalObjField: Option[Bar], requiredStringField: String)
 

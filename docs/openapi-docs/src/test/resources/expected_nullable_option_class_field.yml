@@ -40,15 +40,9 @@ components:
         - requiredStringField
       type: object
       properties:
-        optionalObjField:
-          required:
-            - bar
-          type:
-            - object
-            - 'null'
-          properties:
-            bar:
-              type: integer
-              format: int32
+        optionalClassField:
+          oneOf:
+            - $ref: '#/components/schemas/Bar'
+            - type: 'null'
         requiredStringField:
           type: string
