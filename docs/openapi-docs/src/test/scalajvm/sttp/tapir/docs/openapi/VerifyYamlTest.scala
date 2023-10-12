@@ -48,6 +48,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should match the expected yaml when using OpenAPI 3.0") {
+    val expectedYaml = load("expected.yml")
+
+    val actualYaml =
+      OpenAPIDocsInterpreter().toOpenAPI(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0")).toYaml3_0_3
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should match the expected yaml when there are external references") {
     val external_reference: PublicEndpoint[Unit, Problem, Unit, Any] =
       endpoint.errorOut(jsonBody[Problem])
