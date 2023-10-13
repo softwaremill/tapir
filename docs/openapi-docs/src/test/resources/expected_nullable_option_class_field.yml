@@ -40,7 +40,7 @@ components:
         - requiredStringField
       type: object
       properties:
-        optionalClassField:
+        optionalObjField:
           oneOf:
             - $ref: '#/components/schemas/Bar'
             - type: 'null'

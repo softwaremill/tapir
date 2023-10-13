@@ -29,10 +29,9 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
       case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) => {
         val ref = toSchemaReference.map(nested, name)
         if (!markOptionsAsNullable) ref
-        else
-          ASchema.oneOf(List(ref), ref.discriminator).copy(nullable = Some(true))
+        else ASchema.oneOf(List(ref, ASchema(SchemaType.Null)), None)
       }
-      case TSchemaType.SOption(el)                                                         => apply(el, isOptionElement = true)
+      case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
       case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
       case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime)
