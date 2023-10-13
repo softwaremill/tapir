@@ -676,6 +676,20 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should mark optional class fields as nullable when configured to do so") {
+    case class Bar(bar: Int)
+    case class ClassWithOptionClassField(optionalObjField: Option[Bar], requiredStringField: String)
+
+    val e = endpoint.in(jsonBody[ClassWithOptionClassField]).out(stringBody).post
+    val expectedYaml = load("expected_nullable_option_class_field.yml")
+
+    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
+
+    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionClassField", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should generate default and example values for nested optional fields") {
     case class Nested(nestedValue: String)
     case class ClassWithNestedOptionalField(
