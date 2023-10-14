@@ -55,8 +55,7 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
           .header(HeaderNames.AcceptCharset, acceptCharset)
           .send(backend)
           .map { response =>
-            response.code shouldBe code
-            response.body shouldBe body
+            (response.code, response.body) shouldBe (code, body)
           }
       })
     },
@@ -79,6 +78,22 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
       testNameSuffix = "not take into account the accept charset header when the body media type doesn't specify one"
     )(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(uri"$baseUri/api/echo").header(HeaderNames.AcceptCharset, "utf8").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(out_json_json_different_parameters, testNameSuffix = "matches content type on accept parameters")(_ =>
+      pureResult(Organization("sml").asRight[Unit])
+    ) { (backend, baseUri) =>
+      val r1 = basicRequest
+        .header(HeaderNames.Accept, "application/json; name=unknown")
+        .get(uri"$baseUri/content-negotiation/organization-parameters")
+        .send(backend)
+        .map(_.body shouldBe Right("{\"name\":\"unknown\"}"))
+      
+      val r2 = basicRequest
+        .get(uri"$baseUri/content-negotiation/organization-parameters")
+        .send(backend)
+        .map(_.body shouldBe Right("{\"name\":\"sml\"}"))
+        
+      r1 >> r2
     }
   )
 }
