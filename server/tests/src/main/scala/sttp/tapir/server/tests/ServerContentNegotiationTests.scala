@@ -55,7 +55,8 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
           .header(HeaderNames.AcceptCharset, acceptCharset)
           .send(backend)
           .map { response =>
-            (response.code, response.body) shouldBe (code, body)
+            response.code shouldBe code
+            response.body shouldBe body
           }
       })
     },
