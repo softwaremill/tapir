@@ -67,7 +67,7 @@ object OpenapiModels {
   case class OpenapiParameter(
       name: String,
       in: String,
-      required: Boolean,
+      required: Option[Boolean],
       description: Option[String],
       schema: OpenapiSchemaType
   )
