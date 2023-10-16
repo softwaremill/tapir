@@ -255,11 +255,11 @@ object OpenapiSchemaType {
         .downField("type")
         .as[Option[String]]
         .ensure(DecodingFailure("Given type is not object!", c.history))(v => v.forall(_ == "object"))
-      f <- c.downField("properties").as[Map[String, OpenapiSchemaType]]
+      f <- c.downField("properties").as[Option[Map[String, OpenapiSchemaType]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
-      OpenapiSchemaObject(f, r.getOrElse(Seq.empty), nb.getOrElse(false))
+      OpenapiSchemaObject(f.getOrElse(Map.empty), r.getOrElse(Seq.empty), nb.getOrElse(false))
     }
   }
 
@@ -275,7 +275,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array")
+      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array" || v == "object")
       f <- c.downField("items").as[OpenapiSchemaType]
       nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
@@ -289,8 +289,8 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaSimpleType].widen,
       Decoder[OpenapiSchemaMixedType].widen,
       Decoder[OpenapiSchemaNot].widen,
-      Decoder[OpenapiSchemaObject].widen,
       Decoder[OpenapiSchemaMap].widen,
+      Decoder[OpenapiSchemaObject].widen,
       Decoder[OpenapiSchemaArray].widen
     ).reduceLeft(_ or _)
 }
