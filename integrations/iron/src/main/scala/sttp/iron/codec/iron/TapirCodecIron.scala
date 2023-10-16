@@ -49,23 +49,11 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
         }
       }(identity)
 
-  inline given refinedTypeSchema[T](using mirror: RefinedTypeOps.Mirror[T])(using
-    inline vSchema: Schema[mirror.BaseType],
-    inline constraint: Constraint[mirror.BaseType, mirror.ConstraintType],
-    inline validatorTranslation: ValidatorForPredicate[mirror.BaseType, mirror.ConstraintType]
-  ): Schema[T] =
-    val ops = new RefinedTypeOpsImpl[mirror.BaseType, mirror.ConstraintType, T] {}
-    import ops.*
-    summon[Schema[mirror.IronType]].map(input => Some(ops(input)))(_.value)
+  given refinedTypeSchema[T](using m: RefinedTypeOps.Mirror[T], ev: Schema[m.IronType]): Schema[T] =
+    ev.asInstanceOf[Schema[T]]
 
-  inline given refinedTypeCodec[R, T, CF <: CodecFormat] (using mirror: RefinedTypeOps.Mirror[T])(using
-    inline tm: Codec[R, mirror.BaseType, CF],
-    inline constraint: Constraint[mirror.BaseType, mirror.ConstraintType],
-    inline validatorTranslation: ValidatorForPredicate[mirror.BaseType, mirror.ConstraintType]
-  ): Codec[R, T, CF] =
-    val ops = new RefinedTypeOpsImpl[mirror.BaseType, mirror.ConstraintType, T] {}
-    import ops.*
-    summon[Codec[R, mirror.IronType, CF]].map(ops(_))(_.value)
+  given refinedTypeCodec[R, T, CF <: CodecFormat] (using m: RefinedTypeOps.Mirror[T], ev: Codec[R, m.IronType, CF]): Codec[R, T, CF] =
+    ev.asInstanceOf[Codec[R, T, CF]]
 
   inline given (using
       inline vSchema: Schema[String],
