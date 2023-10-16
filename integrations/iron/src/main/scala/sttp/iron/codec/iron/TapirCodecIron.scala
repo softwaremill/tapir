@@ -4,6 +4,8 @@ import io.github.iltotore.iron.Constraint
 import io.github.iltotore.iron.:|
 import io.github.iltotore.iron.refineEither
 import io.github.iltotore.iron.refineOption
+import io.github.iltotore.iron.RefinedTypeOps
+import io.github.iltotore.iron.RefinedTypeOpsImpl
 import io.github.iltotore.iron.constraint.any.*
 import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
@@ -32,7 +34,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   ): Schema[Value :| Predicate] =
     vSchema.validate(validatorTranslation.validator).map[Value :| Predicate](v => v.refineOption[Predicate])(identity)
 
-  inline given [Representation, Value, Predicate, CF <: CodecFormat](using
+  inline given ironTypeCodec[Representation, Value, Predicate, CF <: CodecFormat](using
       inline tm: Codec[Representation, Value, CF],
       inline constraint: Constraint[Value, Predicate],
       inline validatorTranslation: ValidatorForPredicate[Value, Predicate]
@@ -46,6 +48,24 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
             DecodeResult.InvalidValue(validatorTranslation.makeErrors(v, constraint.message))
         }
       }(identity)
+
+  inline given refinedTypeSchema[T](using mirror: RefinedTypeOps.Mirror[T])(using
+    inline vSchema: Schema[mirror.BaseType],
+    inline constraint: Constraint[mirror.BaseType, mirror.ConstraintType],
+    inline validatorTranslation: ValidatorForPredicate[mirror.BaseType, mirror.ConstraintType]
+  ): Schema[T] =
+    val ops = new RefinedTypeOpsImpl[mirror.BaseType, mirror.ConstraintType, T] {}
+    import ops.*
+    summon[Schema[mirror.IronType]].map(input => Some(ops(input)))(_.value)
+
+  inline given refinedTypeCodec[R, T, CF <: CodecFormat] (using mirror: RefinedTypeOps.Mirror[T])(using
+    inline tm: Codec[R, mirror.BaseType, CF],
+    inline constraint: Constraint[mirror.BaseType, mirror.ConstraintType],
+    inline validatorTranslation: ValidatorForPredicate[mirror.BaseType, mirror.ConstraintType]
+  ): Codec[R, T, CF] =
+    val ops = new RefinedTypeOpsImpl[mirror.BaseType, mirror.ConstraintType, T] {}
+    import ops.*
+    summon[Codec[R, mirror.IronType, CF]].map(ops(_))(_.value)
 
   inline given (using
       inline vSchema: Schema[String],
