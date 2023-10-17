@@ -95,7 +95,12 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
         .send(backend)
         .map(_.body shouldBe Right("{\"name\":\"sml\"}"))
 
-      r1 >> r2
+      val r3 = basicRequest
+        .get(uri"$baseUri/content-negotiation/organization-parameters")
+        .send(backend)
+        .map(_.body shouldBe Right("{\"name\":\"unknown\"}"))
+
+      r1 >> r2 >> r3
     }
   )
 }
