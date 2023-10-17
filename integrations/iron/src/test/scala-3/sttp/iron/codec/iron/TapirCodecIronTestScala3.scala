@@ -18,11 +18,6 @@ import io.github.iltotore.iron.constraint.all.*
 import sttp.tapir.Validator
 import sttp.tapir.ValidationError
 
-// Opaque aliases can't be included into class bodies
-type RefinedIntConstraint = Interval.ClosedOpen[0, 10]
-opaque type RefinedInt <: Int = Int :| RefinedIntConstraint
-object RefinedInt extends RefinedTypeOpsImpl[Int, RefinedIntConstraint, RefinedInt]
-
 class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
 
   val schema: Schema[Double :| Positive] = summon[Schema[Double :| Positive]]
@@ -220,7 +215,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     }
   }
 
-  "Instances for opaque refined type" should "correctly derived" in:
+  "Instances for opaque refined type" should "be correctly derived" in:
     summon[Schema[RefinedInt]]
     summon[Codec[String, RefinedInt, TextPlain]]
 
