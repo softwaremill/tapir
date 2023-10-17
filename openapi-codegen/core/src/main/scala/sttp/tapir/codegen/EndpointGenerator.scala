@@ -1,9 +1,9 @@
 package sttp.tapir.codegen
-
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaSimpleType}
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
+import sttp.tapir.codegen.util.JavaEscape
 
 class EndpointGenerator {
 
@@ -107,7 +107,7 @@ class EndpointGenerator {
         param.schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val desc = param.description.fold("")(d => s""".description("$d")""")
+            val desc = param.description.map(d=>JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$t]("${param.name}")$desc)"""
           case x => throw new NotImplementedError(s"Can't create non-simple params to input - found $x")
         }
@@ -135,7 +135,7 @@ class EndpointGenerator {
     // .out(jsonBody[List[Book]])
     responses
       .map { resp =>
-        val d = s""".description("${resp.description}")"""
+        val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
         resp.content match {
           case Nil =>
             resp.code match {
