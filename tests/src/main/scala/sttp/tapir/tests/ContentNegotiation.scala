@@ -1,12 +1,12 @@
 package sttp.tapir.tests
 
 import io.circe.generic.auto._
-import sttp.model.{HeaderNames, StatusCode}
+import sttp.model.{HeaderNames, MediaType, StatusCode}
+import sttp.tapir._
 import sttp.tapir.Codec.XmlCodec
 import sttp.tapir.CodecFormat.TextHtml
-import sttp.tapir.json.circe.jsonBody
+import sttp.tapir.json.circe.{circeCodec, jsonBody}
 import sttp.tapir.tests.data.{Entity, Organization, Person}
-import sttp.tapir._
 
 import java.nio.charset.StandardCharsets
 
@@ -16,6 +16,10 @@ object ContentNegotiation {
 
   // <name>xxx</name>
   private def fromClosedTags(tags: String): Organization = Organization(tags.split(">")(1).split("<").head)
+
+  case class JsonCodecFormatOrganizationName() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.ApplicationJson.copy(otherParameters = Map("name" -> "unknown"))
+  }
 
   implicit val xmlCodecForOrganization: XmlCodec[Organization] =
     Codec.xml(xml => DecodeResult.Value(fromClosedTags(xml)))(o => s"<name>${o.name}-xml</name>")
@@ -47,6 +51,20 @@ object ContentNegotiation {
         sttp.tapir.oneOf[Entity](
           oneOfVariant(StatusCode.Ok, jsonBody[Person]),
           oneOfVariant(StatusCode.Ok, xmlBody[Organization])
+        )
+      )
+
+  val out_json_json_different_parameters: PublicEndpoint[Unit, Unit, Organization, Any] =
+    endpoint.get
+      .in("content-negotiation" / "organization-parameters")
+      .out(
+        sttp.tapir.oneOfBody(
+          jsonBody[Organization].copy(
+            codec = circeCodec[Organization]
+              .map(identity[Organization] _)(_.copy(name = "unknown"))
+              .format(JsonCodecFormatOrganizationName())
+          ),
+          jsonBody[Organization]
         )
       )
 
