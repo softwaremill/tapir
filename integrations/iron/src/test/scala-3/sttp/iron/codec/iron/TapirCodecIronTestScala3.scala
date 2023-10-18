@@ -215,4 +215,8 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     }
   }
 
+  "Instances for opaque refined type" should "be correctly derived" in:
+    summon[Schema[RefinedInt]]
+    summon[Codec[String, RefinedInt, TextPlain]]
+
 }
