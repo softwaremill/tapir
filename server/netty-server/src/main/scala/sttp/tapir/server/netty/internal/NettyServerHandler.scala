@@ -20,10 +20,17 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.{Queue => MutableQueue}
+import scala.concurrent.Future
 
-class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit, maxContentLength: Option[Int])(implicit
-    me: MonadError[F]
+class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => (() => Future[Unit]), maxContentLength: Option[Int])(
+    implicit me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
+
+  // We keep track of the cancellation tokens for all the requests in flight. This gives us
+  // observability into the number of requests in flight and the ability to cancel them all
+  // if the connection gets closed.
+  private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   private val logger = Logger[NettyServerHandler[F]]
 
@@ -39,6 +46,44 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     res.headers().set(CONNECTION, HttpHeaderValues.CLOSE)
     res
   }
+
+  override def handlerAdded(ctx: ChannelHandlerContext): Unit =
+    if (ctx.channel.isActive) {
+      initHandler(ctx)
+    }
+  override def channelActive(ctx: ChannelHandlerContext): Unit = initHandler(ctx)
+
+  override def channelReadComplete(ctx: ChannelHandlerContext): Unit = {
+    logger.trace(s"channelReadComplete: ctx = $ctx")
+    // The normal response to read complete is to issue another read,
+    // but we only want to do that if there are no requests in flight,
+    // this will effectively limit the number of in flight requests that
+    // we'll handle by pushing back on the TCP stream, but it also ensures
+    // we don't get in the way of the request body reactive streams,
+    // which will be using channel read complete and read to implement
+    // their own back pressure
+    if (pendingResponses.isEmpty) {
+      ctx.read()
+    } else {
+      // otherwise forward it, so that any handler publishers downstream
+      // can handle it
+      ctx.fireChannelReadComplete()
+    }
+    ()
+  }
+
+  private[this] def initHandler(ctx: ChannelHandlerContext): Unit =
+    // When the channel closes we want to cancel any pending dispatches.
+    // Since the listener will be executed from the channels EventLoop everything is thread safe.
+    ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
+      logger.debug(s"Http channel to ${ctx.channel.remoteAddress} closed. Cancelling ${pendingResponses.length} responses.")
+      pendingResponses.foreach(_.apply())
+    }
+
+    // AUTO_READ is off, so need to do the first read explicitly.
+    // this method is called when the channel is registered with the event loop,
+    // so ctx.read is automatically safe here w/o needing an isRegistered().
+    val _ = ctx.read()
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
@@ -76,10 +121,16 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
-          unsafeRunAsync { () =>
+          val cancellationSwitch: () => Future[Unit] = unsafeRunAsync { () =>
             runRoute(req)
-              .ensure(me.eval(req.release()))
+              .ensure {
+                me.eval {
+                  pendingResponses.dequeue()
+                  req.release()
+                }
+              }
           } // exceptions should be handled
+          pendingResponses.enqueue(cancellationSwitch)
         case req: StreamedHttpRequest =>
           unsafeRunAsync { () =>
             runRoute(req)
