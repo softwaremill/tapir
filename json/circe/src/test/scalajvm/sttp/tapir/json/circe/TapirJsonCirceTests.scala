@@ -55,6 +55,15 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     error.underlying shouldBe a[Errors]
   }
 
+  it should "include JSON specific errors when converting a decode failure to a string" in {
+    val input = """{"items":[]}"""
+
+    val asString = customerCodec.decode(input).toString
+    
+    asString should startWith("Error")
+    asString should include("Missing required field")
+  }
+
   it should "return a coproduct schema for a Json" in {
     schemaForCirceJson.schemaType shouldBe a[SCoproduct[_]]
   }
