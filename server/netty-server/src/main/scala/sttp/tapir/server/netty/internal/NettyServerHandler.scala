@@ -72,18 +72,14 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     ()
   }
 
-  private[this] def initHandler(ctx: ChannelHandlerContext): Unit =
+  private[this] def initHandler(ctx: ChannelHandlerContext): Unit = {
     // When the channel closes we want to cancel any pending dispatches.
     // Since the listener will be executed from the channels EventLoop everything is thread safe.
-    ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
+    val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
       logger.debug(s"Http channel to ${ctx.channel.remoteAddress} closed. Cancelling ${pendingResponses.length} responses.")
       pendingResponses.foreach(_.apply())
     }
-
-    // AUTO_READ is off, so need to do the first read explicitly.
-    // this method is called when the channel is registered with the event loop,
-    // so ctx.read is automatically safe here w/o needing an isRegistered().
-    val _ = ctx.read()
+  }
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 

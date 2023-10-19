@@ -57,9 +57,10 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       NettyZioDomainSocketBinding(socket, stop)
     }
 
-  private def unsafeRunAsync(runtime: zio.Runtime[R])(block: () => RIO[R, Unit]): () => Future[Unit] =
+  private def unsafeRunAsync(runtime: zio.Runtime[R])(block: () => RIO[R, Unit]): () => Future[Unit] = {
     val cancelable = Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(block()))
     () => cancelable.cancel().map(_ => ())(Implicits.global)
+  }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]

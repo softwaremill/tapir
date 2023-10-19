@@ -49,9 +49,10 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       NettyFutureDomainSocketBinding(socket, stop)
     }
 
-  private def unsafeRunAsync(block: () => Future[Unit]): () => Future[Unit] =
+  private def unsafeRunAsync(block: () => Future[Unit]): () => Future[Unit] = {
     block()
     () => Future.unit // noop cancellation handler, we can't cancel native Futures
+  }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): Future[(SA, () => Future[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
