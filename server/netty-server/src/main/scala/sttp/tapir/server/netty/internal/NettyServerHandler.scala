@@ -79,25 +79,6 @@ class NettyServerHandler[F[_]](
     }
   override def channelActive(ctx: ChannelHandlerContext): Unit = initHandler(ctx)
 
-  override def channelReadComplete(ctx: ChannelHandlerContext): Unit = {
-    logger.trace(s"channelReadComplete: ctx = $ctx")
-    // The normal response to read complete is to issue another read,
-    // but we only want to do that if there are no requests in flight,
-    // this will effectively limit the number of in flight requests that
-    // we'll handle by pushing back on the TCP stream, but it also ensures
-    // we don't get in the way of the request body reactive streams,
-    // which will be using channel read complete and read to implement
-    // their own back pressure
-    if (pendingResponses.isEmpty) {
-      ctx.read()
-    } else {
-      // otherwise forward it, so that any handler publishers downstream
-      // can handle it
-      ctx.fireChannelReadComplete()
-    }
-    ()
-  }
-
   private[this] def initHandler(ctx: ChannelHandlerContext): Unit = {
     if (eventLoopContext == null) {
       // Initialize our ExecutionContext
