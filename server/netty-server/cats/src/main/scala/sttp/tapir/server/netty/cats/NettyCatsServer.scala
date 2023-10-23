@@ -17,6 +17,8 @@ import java.nio.file.{Path, Paths}
 import java.util.UUID
 import sttp.capabilities.fs2.Fs2Streams
 import scala.concurrent.Future
+import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.netty.NettyResponse
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))
@@ -54,8 +56,8 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       NettyCatsDomainSocketBinding(socket, stop)
     }
 
-  private def unsafeRunAsync(block: () => F[Unit]): () => Future[Unit] =
-    options.dispatcher.unsafeRunCancelable(block())
+  private def unsafeRunAsync(block: () => F[ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
+    options.dispatcher.unsafeToFutureCancelable(block())
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()

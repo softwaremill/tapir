@@ -11,6 +11,7 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import sttp.tapir.server.model.ServerResponse
 
 case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureServerOptions, config: NettyConfig)(implicit
     ec: ExecutionContext
@@ -49,9 +50,10 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       NettyFutureDomainSocketBinding(socket, stop)
     }
 
-  private def unsafeRunAsync(block: () => Future[Unit]): () => Future[Unit] = {
-    block()
-    () => Future.unit // noop cancellation handler, we can't cancel native Futures
+  private def unsafeRunAsync(
+      block: () => Future[ServerResponse[NettyResponse]]
+  ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = {
+    (block(), () => Future.unit) // noop cancellation handler, we can't cancel native Futures
   }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): Future[(SA, () => Future[Unit])] = {
@@ -62,7 +64,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, (f: () => Future[Unit]) => unsafeRunAsync(f), config.maxContentLength),
+        new NettyServerHandler(route, unsafeRunAsync, config.maxContentLength),
         eventLoopGroup,
         socketOverride
       )
