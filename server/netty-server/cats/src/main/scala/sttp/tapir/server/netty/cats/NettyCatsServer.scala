@@ -5,20 +5,19 @@ import cats.effect.{Async, IO, Resource}
 import cats.syntax.all._
 import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
-import sttp.capabilities.fs2.Fs2Streams
 import scala.concurrent.Future
-import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.NettyResponse
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))

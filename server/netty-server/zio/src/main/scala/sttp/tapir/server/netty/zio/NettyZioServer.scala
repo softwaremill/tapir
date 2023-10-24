@@ -4,19 +4,18 @@ import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio.{RIO, Unsafe, ZIO}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits
-import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.NettyResponse
+import scala.concurrent.Future
 
 case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
   def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
