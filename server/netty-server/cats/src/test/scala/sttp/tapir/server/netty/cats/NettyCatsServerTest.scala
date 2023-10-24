@@ -31,7 +31,9 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             multipart = false,
             maxContentLength = Some(NettyCatsTestServerInterpreter.maxContentLength)
           )
-            .tests() ++ new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests()
+            .tests() ++ 
+            new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
+            new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
