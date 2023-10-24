@@ -1433,7 +1433,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
       "io.netty" % "netty-all" % Versions.nettyAll,
-      "com.typesafe.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams
+      "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams
     )
       ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
