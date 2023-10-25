@@ -42,14 +42,14 @@ Example:
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.client.play.PlayClientInterpreter
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import play.api.libs.ws.StandaloneWSClient
 
-def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
+def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient) {
   val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
   
@@ -68,4 +68,4 @@ def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
 Multipart requests are not supported.
 
 Streaming capabilities:
-- only `AkkaStreams` is supported
+- only `PekkoStreams` is supported
