@@ -19,8 +19,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
-/** This example uses a gRPC <a href="https://opentelemetry.io/docs/concepts/components/#exporters">exporter</a> to send metrics to a <a href="https://opentelemetry.io/docs/collector/">collector</a>, which by
-  * default is expected to be running on `localhost:4317`.
+/** This example uses a gRPC <a href="https://opentelemetry.io/docs/concepts/components/#exporters">exporter</a> to send metrics to a <a
+  * href="https://opentelemetry.io/docs/collector/">collector</a>, which by default is expected to be running on `localhost:4317`.
   *
   * You can run a collector locally using Docker with the following command:
   * {{{

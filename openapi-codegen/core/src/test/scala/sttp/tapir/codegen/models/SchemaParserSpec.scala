@@ -161,7 +161,9 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .leftMap(err => err: Error)
       .flatMap(_.as[Seq[OpenapiResponseContent]])
 
-    res shouldBe Right(Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false))))
+    res shouldBe Right(
+      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false)))
+    )
   }
 
 }

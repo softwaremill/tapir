@@ -143,7 +143,6 @@ object BooksPicklerExample extends App with StrictLogging {
     logger.info("Result of listing request with limit 3: " + result)
   }
 
-
   logger.info("Welcome to the Tapir Library example!")
 
   logger.info("Starting the server ...")
