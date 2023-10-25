@@ -95,92 +95,57 @@ class NettyServerHandler[F[_]](
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
-    def runRoute(req: HttpRequest): F[ServerResponse[NettyResponse]] = {
+    def writeError500(req: HttpRequest, reason: Throwable): Unit = {
+      logger.error("Error while processing the request", reason)
+      // send 500
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+      res.handleCloseAndKeepAliveHeaders(req)
 
-      route(NettyServerRequest(req))
-        .map {
-          case Some(response) => response
-          case None           => ServerResponse.notFound
-        }
+      ctx.writeAndFlush(res).closeIfNeeded(req)
+
+    }
+
+    def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
+      val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
+        route(NettyServerRequest(req))
+          .map {
+            case Some(response) => response
+            case None           => ServerResponse.notFound
+          }
+      }
+      pendingResponses.enqueue(cancellationSwitch)
+      lastResponseSent = lastResponseSent.flatMap[Unit] { _ =>
+        runningFuture.transform {
+          case Success(serverResponse) =>
+            pendingResponses.dequeue()
+            try {
+              handleResponse(ctx, req, serverResponse)
+              releaseReq()
+              Success(())
+            } catch {
+              case NonFatal(ex) =>
+                writeError500(req, ex)
+                Failure(ex)
+            }
+          case Failure(NonFatal(ex)) =>
+            writeError500(req, ex)
+            Failure(ex)
+          case Failure(ex) => Failure(ex)
+        }(eventLoopContext)
+      }(eventLoopContext)
     }
 
     if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
     } else {
-      request match { // TODO refactor repetitions
+      request match {
         case full: FullHttpRequest =>
           val req = full.retain()
-          val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-            runRoute(req)
-          }
-          pendingResponses.enqueue(cancellationSwitch)
-          lastResponseSent = lastResponseSent.flatMap[Unit] { _ =>
-            runningFuture.transform {
-              case Success(serverResponse) =>
-                pendingResponses.dequeue()
-                try {
-                  handleResponse(ctx, req, serverResponse)
-                  req.release()
-                  Success(())
-                } catch {
-                  case NonFatal(ex) =>
-                    logger.error("Error while processing the request", ex)
-                    // send 500
-                    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-                    res.handleCloseAndKeepAliveHeaders(req)
-
-                    ctx.writeAndFlush(res).closeIfNeeded(req)
-                    Failure(ex)
-                }
-              case Failure(NonFatal(ex)) =>
-                logger.error("Error while processing the request", ex)
-                // send 500
-                val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-                res.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.writeAndFlush(res).closeIfNeeded(req)
-                Failure(ex)
-              case Failure(ex) => Failure(ex)
-            }(eventLoopContext)
-          }(eventLoopContext)
+          runRoute(req, () => req.release())
         case req: StreamedHttpRequest =>
-          val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-            runRoute(req)
-          }
-          pendingResponses.enqueue(cancellationSwitch)
-          lastResponseSent = lastResponseSent.flatMap[Unit] { _ =>
-            runningFuture.transform {
-              case Success(serverResponse) =>
-                pendingResponses.dequeue()
-                try {
-                  handleResponse(ctx, req, serverResponse)
-                  Success(())
-                } catch {
-                  case NonFatal(ex) =>
-                    logger.error("Error while processing the request", ex)
-                    // send 500
-                    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-                    res.handleCloseAndKeepAliveHeaders(req)
-
-                    ctx.writeAndFlush(res).closeIfNeeded(req)
-                    Failure(ex)
-                }
-              case Failure(NonFatal(ex)) =>
-                logger.error("Error while processing the request", ex)
-                // send 500
-                val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-                res.handleCloseAndKeepAliveHeaders(req)
-
-                ctx.writeAndFlush(res).closeIfNeeded(req)
-                Failure(ex)
-              case Failure(ex) => Failure(ex)
-            }(eventLoopContext)
-          }(eventLoopContext)
+          runRoute(req)
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
 
@@ -253,22 +218,22 @@ class NettyServerHandler[F[_]](
 
     if (!HttpUtil.is100ContinueExpected(req) && !HttpUtil.isKeepAlive(req)) {
       val future: ChannelFuture = ctx.writeAndFlush(EntityTooLargeClose.retainedDuplicate())
-      future.addListener(new ChannelFutureListener() {
+      val _ = future.addListener(new ChannelFutureListener() {
         override def operationComplete(future: ChannelFuture) = {
           if (!future.isSuccess()) {
             logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
           }
-          ctx.close()
+          val _ = ctx.close()
         }
       })
     } else {
-      ctx
+      val _ = ctx
         .writeAndFlush(EntityTooLarge.retainedDuplicate())
         .addListener(new ChannelFutureListener() {
           override def operationComplete(future: ChannelFuture) = {
             if (!future.isSuccess()) {
               logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
-              ctx.close()
+              val _ = ctx.close()
             }
           }
         })
