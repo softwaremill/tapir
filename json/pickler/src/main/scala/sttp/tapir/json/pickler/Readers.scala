@@ -29,9 +29,7 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
   }
 
-  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]])(using
-      m: Mirror.ProductOf[T]
-  ): Reader[T] =
+  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]], m: Mirror.ProductOf[T]): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
 
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
@@ -50,7 +48,7 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, upickleMacros.tagName[T])
     else reader
 
-  inline def macroSumR[T](derivedChildReaders: Tuple, subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
+  inline def macroSumR[T](childPicklers: List[Pickler[_]], subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
     subtypeDiscriminator match {
       case discriminator: CustomSubtypeDiscriminator[T] =>
@@ -68,15 +66,19 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
           }
 
         new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
-      case discriminator: EnumValueDiscriminator[T] =>
-        val readersForPossibleValues: Seq[TaggedReader[T]] =
-          discriminator.validator.possibleValues.zip(derivedChildReaders.toList).map { case (enumValue, reader) =>
-            TaggedReader.Leaf[T](discriminator.encode(enumValue), reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
-          }
-        new TaggedReader.Node[T](readersForPossibleValues: _*)
 
-      case _: DefaultSubtypeDiscriminator[T] =>
-        val readers = derivedChildReaders.toList.asInstanceOf[List[TaggedReader[T]]]
+      case discriminator: DefaultSubtypeDiscriminator[T] =>
+        val readers = childPicklers.map(cp => {
+          (cp.schema.name, cp.innerUpickle.reader) match {
+            case (Some(sName), wrappedReader: Readers#LeafWrapper[_]) =>
+              TaggedReader.Leaf[T](
+                discriminator.toValue(sName),
+                wrappedReader.r.asInstanceOf[Reader[T]]
+              )
+            case _ =>
+              cp.innerUpickle.reader.asInstanceOf[Reader[T]]
+          }
+        })
         Reader.merge(readers: _*)
     }
 }

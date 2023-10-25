@@ -146,4 +146,24 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe Right(Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaString(false), false))))
   }
 
+  it should "parse array of object without properties yaml" in {
+    // https://swagger.io/docs/specification/basic-structure/
+    val yaml =
+      """application/json:
+        |  schema:
+        |    type: array
+        |    items:
+        |      type: object
+        |      """.stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[Seq[OpenapiResponseContent]])
+
+    res shouldBe Right(
+      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false)))
+    )
+  }
+
 }

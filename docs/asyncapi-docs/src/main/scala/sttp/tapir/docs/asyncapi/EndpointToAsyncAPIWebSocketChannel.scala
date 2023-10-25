@@ -1,6 +1,6 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.apispec.{Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Tag, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.apispec.asyncapi._
 import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
@@ -48,13 +48,13 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       name: String,
       codec: Codec[_, _, _ <: CodecFormat],
       info: EndpointIO.Info[_]
-  ): ((String, Codec[_, _, _ <: CodecFormat]), Either[Reference, ASchema]) = {
+  ): ((String, Codec[_, _, _ <: CodecFormat]), ASchema) = {
     val schemaRef = schemas(codec)
     schemaRef match {
-      case Right(schema) =>
-        val schemaWithDescription = if (schema.description.isEmpty) schemaRef.map(_.copy(description = info.description)) else schemaRef
+      case schema if schema.$ref.isEmpty =>
+        val schemaWithDescription = if (schema.description.isEmpty) schemaRef.copy(description = info.description) else schemaRef
         val schemaWithDeprecation =
-          if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.map(_.copy(deprecated = Some(info.deprecated)))
+          if (schema.deprecated.isEmpty && info.deprecated) schemaWithDescription.copy(deprecated = Some(info.deprecated))
           else schemaWithDescription
         (name, codec) -> schemaWithDeprecation
       case _ => (name, codec) -> schemaRef
@@ -63,7 +63,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
-      name -> Right(Parameter(info.description, schemas(codec).toOption, None, DocsExtensions.fromIterable(info.docsExtensions)))
+      name -> Right(Parameter(info.description, Some(schemas(codec)), None, DocsExtensions.fromIterable(info.docsExtensions)))
     }.toListMap
   }
 
@@ -86,7 +86,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     )
   }
 
-  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _ <: CodecFormat]), ReferenceOr[ASchema])]): Option[ASchema] = {
+  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _ <: CodecFormat]), ASchema)]): Option[ASchema] = {
     if (fields.isEmpty) None
     else
       Some {

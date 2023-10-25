@@ -290,4 +290,55 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val res = gen.classDefs(doc, false)
     "import enumeratum._;" + res.get shouldCompile ()
   }
+
+  import cats.implicits._
+  import io.circe._
+  import io.circe.yaml.parser
+
+  it should "" in {
+    val quotedString = """a "quoted" string"""
+    val yaml =
+      s"""
+        |openapi: 3.0.0
+        |info:
+        |  version: required field, not relevant for test
+        |  title: required field, not relevant for test
+        |paths:
+        |  /foo:
+        |    get:
+        |      description: hello
+        |      parameters:
+        |        - name: search
+        |          in: query
+        |          required: true
+        |          description: $quotedString
+        |          schema:
+        |            type: string
+        |      responses:
+        |        '200':
+        |          description: required field, not relevant for test
+        |""".stripMargin
+
+    val parserRes: Either[Error, OpenapiDocument] = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    val res: String = parserRes match {
+      case Left(value) => throw new Exception(value)
+      case Right(doc)  => new EndpointGenerator().endpointDefs(doc)
+    }
+
+    val compileUnit =
+      s"""
+         |import sttp.tapir._
+         |
+         |object TapirGeneratedEndpoints {
+         |  $res
+         |}
+         |  """.stripMargin
+    println(compileUnit)
+    compileUnit shouldCompile ()
+
+  }
 }

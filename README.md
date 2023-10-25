@@ -131,7 +131,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.7.5"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.8.2"
 ```
 
 Then, import:
@@ -182,10 +182,21 @@ code is unclear and be improved for the benefit of all.
 In order to develop the documentation, you can use the `doc/watch.sh` script, which runs Sphinx using Python.
 Use `doc/requirements.txt` to set up your Python environment with `pip`. If you're using Nix, you can just run `nix develop`
 in the `doc` directory to set up a working shell with all the dependencies.
-n
+
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
 you can run `core/mimaReportBinaryIssues` from the sbt console.
+However, be aware that tags from the repository aren’t automatically fetched during forking; hence, the command will not operate without first fetching the tags.
 
+After forking and cloning the repository, add the original repository as a remote:
+
+```
+git remote add upstream git@github.com:softwaremill/tapir.git
+```
+
+Fetch the tags from the upstream:
+```
+git fetch --tags upstream
+```
 ### Testing locally
 
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
@@ -202,7 +213,7 @@ To verify that the code snippet in docs compile, run `compileDocumentation`. A f
 
 ### Importing into IntelliJ
 
-By default, when importing to IntelliJ, only the Scala 2.13/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
+By default, when importing to IntelliJ, only the Scala 3/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
 
 If you'd like to work on a different platform or Scala version, simply change this setting temporarily so that the correct subprojects are imported. For example:
 

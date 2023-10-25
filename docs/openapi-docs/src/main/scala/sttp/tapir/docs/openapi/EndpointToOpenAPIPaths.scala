@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.Method
-import sttp.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.apispec.openapi._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
@@ -105,7 +105,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = EndpointInputToParameterConverter.from(header, schemas(header.codec))
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) =
-    EndpointInputToParameterConverter.from(header, Right(ASchema(ASchemaType.String)))
+    EndpointInputToParameterConverter.from(header, ASchema(ASchemaType.String))
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = EndpointInputToParameterConverter.from(p, schemas(p.codec))
 

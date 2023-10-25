@@ -46,9 +46,67 @@ object Validator extends ValidatorMacros {
 
   // string
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
-  def minLength[T <: String](value: Int): Validator.Primitive[T] = MinLength(value)
-  def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
-  def fixedLength[T <: String](value: Int): Validator[T] = MinLength(value).and(MaxLength(value))
+
+  /** Create a validator for minimum length constraints on strings.
+    *
+    * @param value
+    *   The minimum allowed length.
+    */
+  def minLength[T <: String](value: Int): Validator.Primitive[T] = minLength(value, countCodePoints = false)
+
+  /** Create a validator for minimum length constraints on strings.
+    *
+    * @param value
+    *   The minimum allowed length.
+    * @param countCodePoints
+    *   A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+    *   validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+    *   more accurate length validation for strings containing such characters (like emojis). Defaults to false, where length is validated
+    *   based on the number of `Char` values in the string.
+    */
+  def minLength[T <: String](value: Int, countCodePoints: Boolean): Validator.Primitive[T] =
+    MinLength(value, countCodePoints)
+
+  /** Create a validator for maximum length constraints on strings.
+    *
+    * @param value
+    *   The maximum allowed length.
+    */
+  def maxLength[T <: String](value: Int): Validator.Primitive[T] = maxLength(value, countCodePoints = false)
+
+  /** Create a validator for maximum length constraints on strings.
+    *
+    * @param value
+    *   The maximum allowed length.
+    * @param countCodePoints
+    *   A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+    *   validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+    *   more accurate length validation for strings containing such characters (like emojis). Defaults to false, where length is validated
+    *   based on the number of `Char` values in the string.
+    */
+  def maxLength[T <: String](value: Int, countCodePoints: Boolean): Validator.Primitive[T] =
+    MaxLength(value, countCodePoints)
+
+  /** Create a validator for fixed length constraints on strings.
+    *
+    * @param value
+    *   The fixed allowed length.
+    */
+  def fixedLength[T <: String](value: Int): Validator[T] = fixedLength(value, countCodePoints = false)
+
+  /** Create a validator for fixed length constraints on strings.
+    *
+    * @param value
+    *   The fixed allowed length.
+    * @param countCodePoints
+    *   A boolean parameter that determines whether the validation will consider code points or character count. When set to true, the
+    *   validator will consider characters that are represented using two code units (a surrogate pair) in UTF-16 encoding allowing for a
+    *   more accurate length validation for strings containing such characters (like emojis). Defaults to false, where length is validated
+    *   based on the number of `Char` values in the string.
+    */
+  def fixedLength[T <: String](value: Int, countCodePoints: Boolean): Validator[T] =
+    MinLength(value, countCodePoints).and(MaxLength(value, countCodePoints))
+
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
 
   // iterable
@@ -111,12 +169,41 @@ object Validator extends ValidatorMacros {
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.matches(value))
   }
-  case class MinLength[T <: String](value: Int) extends Primitive[T] {
-    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.size >= value)
+
+  case class MinLength[T <: String](value: Int, countCodePoints: Boolean) extends Primitive[T] {
+    // The auxiliary constructor, custom copy methods, and the custom apply method in the companion object
+    // have been introduced to maintain binary compatibility while adding a new field to the case class
+    def this(value: Int) = this(value, false)
+    def copy[TT <: String](value: Int): MinLength[TT] = MinLength[TT](value, false)
+    def copy[TT <: String](value: Int = this.value, countCodePoints: Boolean = this.countCodePoints): MinLength[TT] =
+      MinLength[TT](value, countCodePoints)
+
+    override def doValidate(t: T): ValidationResult = {
+      val size = if (countCodePoints) t.codePointCount(0, t.size) else t.size
+      ValidationResult.validWhen(size >= value)
+    }
   }
-  case class MaxLength[T <: String](value: Int) extends Primitive[T] {
-    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(t.size <= value)
+  object MinLength {
+    def apply[T <: String](value: Int) = new MinLength[T](value, false)
   }
+
+  case class MaxLength[T <: String](value: Int, countCodePoints: Boolean) extends Primitive[T] {
+    // The auxiliary constructor, custom copy methods, and the custom apply method in the companion object
+    // have been introduced to maintain binary compatibility while adding a new field to the case class
+    def this(value: Int) = this(value, false)
+    def copy[TT <: String](value: Int): MaxLength[TT] = MaxLength[TT](value, false)
+    def copy[TT <: String](value: Int = this.value, countCodePoints: Boolean = this.countCodePoints): MaxLength[TT] =
+      MaxLength[TT](value, countCodePoints)
+
+    override def doValidate(t: T): ValidationResult = {
+      val size = if (countCodePoints) t.codePointCount(0, t.size) else t.size
+      ValidationResult.validWhen(size <= value)
+    }
+  }
+  object MaxLength {
+    def apply[T <: String](value: Int) = new MaxLength[T](value, false)
+  }
+
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size >= value)
   }
@@ -186,8 +273,8 @@ object Validator extends ValidatorMacros {
       case Min(value, exclusive)             => Some(s"${if (exclusive) ">" else ">="}$value")
       case Max(value, exclusive)             => Some(s"${if (exclusive) "<" else "<="}$value")
       case Pattern(value)                    => Some(s"~$value")
-      case MinLength(value)                  => Some(s"length>=$value")
-      case MaxLength(value)                  => Some(s"length<=$value")
+      case MinLength(value, _)               => Some(s"length>=$value")
+      case MaxLength(value, _)               => Some(s"length<=$value")
       case MinSize(value)                    => Some(s"size>=$value")
       case MaxSize(value)                    => Some(s"size<=$value")
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))

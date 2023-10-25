@@ -31,8 +31,8 @@ lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extensi
 
 concurrentRestrictions in Global ++= Seq(
   Tags.limit(Tags.Test, 1),
-  // By default dependencies of test can be run in parallel, it includeds Scala Native/Scala.js linkers
-  // Limit them to lower memory usage, especially when targetting LLVM
+  // By default dependencies of test can be run in parallel, it includes Scala Native/Scala.js linkers
+  // Limit them to lower memory usage, especially when targeting LLVM
   Tags.limit(NativeTags.Link, 1),
   Tags.limit(ScalaJSTags.Link, 1)
 )
@@ -189,6 +189,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   protobuf.projectRefs ++
   pbDirectProtobuf.projectRefs ++
   grpcExamples.projectRefs ++
+  pekkoGrpcExamples.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
   asyncapiDocs.projectRefs ++
@@ -201,6 +202,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   akkaGrpcServer.projectRefs ++
   pekkoHttpServer.projectRefs ++
+  pekkoGrpcServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
   armeriaServerZio.projectRefs ++
@@ -396,7 +398,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.3")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.4")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.6",
@@ -418,7 +420,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "org.scala-js" %%% "scalajs-dom" % "2.7.0",
+        "org.scala-js" %%% "scalajs-dom" % "2.8.0",
         // TODO: remove once https://github.com/scalatest/scalatest/issues/2116 is fixed
         ("org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0").cross(CrossVersion.for3Use2_13) % Test,
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
@@ -895,8 +897,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.23.5",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.5" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.24.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.24.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -986,6 +988,23 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
     protobuf,
     pbDirectProtobuf,
     akkaGrpcServer
+  )
+
+lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-examples"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-pekko-grpc-examples",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-discovery" % "1.0.1"
+    ),
+    fork := true
+  )
+  .enablePlugins(PekkoGrpcPlugin)
+  .jvmPlatform(scalaVersions = scala2Versions)
+  .dependsOn(
+    protobuf,
+    pbDirectProtobuf,
+    pekkoGrpcServer
   )
 
 // metrics
@@ -1216,6 +1235,17 @@ lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grp
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(serverCore, akkaHttpServer)
+
+lazy val pekkoGrpcServer: ProjectMatrix = (projectMatrix in file("server/pekko-grpc-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-pekko-grpc-server",
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.0.1"
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, pekkoHttpServer)
 
 lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
   .settings(commonJvmSettings)
@@ -2008,6 +2038,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,

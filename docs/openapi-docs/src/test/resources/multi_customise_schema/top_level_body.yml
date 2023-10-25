@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Schemas
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Data1'
+              description: d1
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Data1'
+                description: d2
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Data1:
+      required:
+        - x
+      type: object
+      properties:
+        x:
+          type: string

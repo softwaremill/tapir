@@ -27,6 +27,7 @@ object AttributeKey extends AttributeKeyMacros
 case class AttributeMap private (private val storage: Map[String, Any]) {
   def get[T](k: AttributeKey[T]): Option[T] = storage.get(k.typeName).asInstanceOf[Option[T]]
   def put[T](k: AttributeKey[T], v: T): AttributeMap = copy(storage = storage + (k.typeName -> v))
+  def remove[T](k: AttributeKey[T]): AttributeMap = copy(storage = storage - k.typeName)
 
   def isEmpty: Boolean = storage.isEmpty
   def nonEmpty: Boolean = storage.nonEmpty

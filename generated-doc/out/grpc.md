@@ -13,6 +13,8 @@ from these endpoints' definitions.
   necessary to add this module for generating proto files with the `protobuf` module.
 * `akkaGrpcServer` - a module that provides `AkkaGrpcServerInterpreter` implementation. It should be used to serve tapir
   grpc endpoints.
+* `pekkoGrpcServer` - a module that provides `PekkoGrpcServerInterpreter` implementation. It can be used as an
+  alternative to `akkaGrpcServer`.
 * `grpcExamples` - contains example use cases
 
 ## Defining endpoints

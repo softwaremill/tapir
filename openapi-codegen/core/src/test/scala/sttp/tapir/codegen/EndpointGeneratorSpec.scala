@@ -30,7 +30,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(Resolved(OpenapiParameter("asd-id", "path", true, None, OpenapiSchemaString(false)))),
+              parameters = Seq(Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaString(false)))),
               responses = Seq(
                 OpenapiResponse(
                   "200",
@@ -136,7 +136,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(Resolved(OpenapiParameter("id", "path", true, None, OpenapiSchemaString(true)))),
+              parameters = Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaString(true)))),
               responses = Seq(
                 OpenapiResponse("202", "Processing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
                 OpenapiResponse("404", "couldn't find thing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
@@ -152,7 +152,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(Resolved(OpenapiParameter("id", "path", true, None, OpenapiSchemaString(true)))),
+              parameters = Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaString(true)))),
               responses = Seq(
                 OpenapiResponse("204", "No body", Nil),
                 OpenapiResponse("403", "Not authorised", Nil)
