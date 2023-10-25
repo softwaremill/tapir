@@ -12,8 +12,8 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.tests._
 
-import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{Semaphore, TimeoutException}
 import scala.concurrent.duration._
 
 class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit
@@ -23,12 +23,14 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
   import createServerTest._
 
   def tests(): List[Test] = List({
+    val canceledSemaphore = new Semaphore(1)
     val canceled: AtomicBoolean = new AtomicBoolean(false)
     testServerLogic(
       endpoint
         .out(plainBody[String])
         .serverLogic { _ =>
-          (async.sleep(15.seconds) >> pureResult("processing finished".asRight)).onCancel(m.eval(canceled.set(true)))
+          (m.eval(canceledSemaphore.acquire())) >> (async.sleep(15.seconds) >> pureResult("processing finished".asRight))
+            .onCancel(m.eval(canceled.set(true)) >> m.eval(canceledSemaphore.release()))
         },
       "Client cancelling request triggers cancellation on the server"
     ) { (backend, baseUri) =>
@@ -37,8 +39,11 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
       }
 
       resp.handleErrorWith {
-        case _: TimeoutException =>
-          IO(assert(canceled.get(), "Cancellation expected, but not registered!"))
+        case _: TimeoutException => // expected, this is how we trigged client-side cancellation
+          IO(canceledSemaphore.acquire())
+            .timeout(3.seconds)
+            .handleError(_ => IO.eval(fail("Timeout when waiting for cancellation to be handled as expected"))) >>
+            IO(assert(canceled.get(), "Cancellation expected, but not registered!"))
         case other =>
           IO(fail(s"TimeoutException expected, but got $other"))
       }
