@@ -1,12 +1,12 @@
 package sttp.tapir.server.play
 
-import akka.NotUsed
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
-import akka.util.ByteString
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.{FileIO, Source, StreamConverters}
+import org.apache.pekko.util.ByteString
 import play.api.http.{HeaderNames, HttpChunk, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData}
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
@@ -14,9 +14,9 @@ import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOu
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
+class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] {
 
-  override val streams: AkkaStreams = AkkaStreams
+  override val streams: PekkoStreams = PekkoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): PlayResponseBody = {
     Right(fromRawValue(v, headers, bodyType))
@@ -88,10 +88,10 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
       tapirFile: FileRange,
       start: Long,
       bytesTotal: Long
-  ): AkkaStreams.BinaryStream =
+  ): PekkoStreams.BinaryStream =
     toRangedStream(FileIO.fromPath(tapirFile.file.toPath, ChunkSize, startPosition = start), bytesTotal)
 
-  private def toRangedStream(initialStream: AkkaStreams.BinaryStream, bytesTotal: Long): AkkaStreams.BinaryStream =
+  private def toRangedStream(initialStream: PekkoStreams.BinaryStream, bytesTotal: Long): PekkoStreams.BinaryStream =
     initialStream
       .scan((0L, ByteString.empty)) { case ((bytesConsumed, _), next) =>
         val bytesInNext = next.length
@@ -122,7 +122,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, AkkaStreams] {
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, PekkoStreams]
   ): PlayResponseBody = Left(PlayWebSockets.pipeToBody(pipe, o))
 
   private def rawPartsToFilePart[T](

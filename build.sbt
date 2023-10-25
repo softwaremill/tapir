@@ -1377,10 +1377,10 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .settings(
     name := "tapir-play-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-server" % Versions.playServer,
-      "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
-      "com.typesafe.play" %% "play" % Versions.playServer,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "org.playframework" %% "play-server" % Versions.playServer,
+      "org.playframework" %% "play" % Versions.playServer,
+      "org.playframework" %% "play-pekko-http-server" % Versions.playServer,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
