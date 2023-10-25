@@ -39,7 +39,7 @@ class NettyFs2StreamingCancellationTest[OPTIONS, ROUTE](createServerTest: Create
         .timeout(300.millis)
         .attempt >>
         IO.sleep(600.millis)
-          .flatMap(r =>
+          .flatMap(_ =>
             buffer.size.flatMap(accumulated =>
               IO(
                 assert(
