@@ -1949,12 +1949,12 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
   .settings(
     name := "tapir-play-client",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-ahc-ws-standalone" % Versions.playClient,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+      "org.playframework" %% "play-ahc-ws-standalone" % Versions.playClient,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared % Optional,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams % Optional
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(clientCore, clientTests % Test)
 
 import scala.collection.JavaConverters._
