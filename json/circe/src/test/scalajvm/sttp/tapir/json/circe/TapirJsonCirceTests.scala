@@ -59,7 +59,7 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     val input = """{"items":[]}"""
 
     val asString = customerCodec.decode(input).toString
-    
+
     asString should startWith("Error")
     asString should include("Missing required field")
   }

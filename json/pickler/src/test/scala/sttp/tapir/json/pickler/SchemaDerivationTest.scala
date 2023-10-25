@@ -299,7 +299,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (kebab case subtype names)" in {
-    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withKebabCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -313,7 +314,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (snake case subtype names)" in {
-    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withSnakeCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -341,7 +343,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full kebab case subtype names)" in {
-    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withFullKebabCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),
@@ -355,7 +358,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "generate one-of schema using the given discriminator (full snake case subtype names)" in {
-    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withFullSnakeCaseDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
       SDiscriminator(
         FieldName("who_am_i"),

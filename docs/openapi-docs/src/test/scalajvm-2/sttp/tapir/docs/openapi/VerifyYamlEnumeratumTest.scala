@@ -71,7 +71,7 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
       OpenAPIDocsInterpreter().toOpenAPI(List(ep1, ep2), Info("Fruits", "1.0")).toYaml
 
     // TODO fix test
-    
+
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
@@ -98,8 +98,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     val actualYaml =
       OpenAPIDocsInterpreter().toOpenAPI(ep, Info("Fruits", "1.0")).toYaml
 
-    // TODO fix test    
-    
+    // TODO fix test
+
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 

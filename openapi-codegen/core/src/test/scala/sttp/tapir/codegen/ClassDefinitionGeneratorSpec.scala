@@ -2,7 +2,15 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaConstantString, OpenapiSchemaEnum, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -318,7 +326,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc) =>  new EndpointGenerator().endpointDefs(doc)
+      case Right(doc)  => new EndpointGenerator().endpointDefs(doc)
     }
 
     val compileUnit =
@@ -331,8 +339,6 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |  """.stripMargin
     println(compileUnit)
     compileUnit shouldCompile ()
-
-
 
   }
 }
