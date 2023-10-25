@@ -61,7 +61,11 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
   private def unsafeRunAsync(
       runtime: zio.Runtime[R]
   )(block: () => RIO[R, ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = {
-    val cancelable = Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(block()))
+    val cancelable = Unsafe.unsafe(implicit u =>
+      runtime.unsafe.runToFuture(
+        block()
+      )
+    )
     (cancelable, () => cancelable.cancel().map(_ => ())(Implicits.global))
   }
 
