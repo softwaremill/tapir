@@ -810,7 +810,7 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
   .settings(
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %%% "play-json" % Versions.playJson,
+      "org.playframework" %%% "play-json" % Versions.playJson,
       scalaTest.value % Test
     )
   )
