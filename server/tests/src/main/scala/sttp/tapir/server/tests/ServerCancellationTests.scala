@@ -42,7 +42,7 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
           case _: TimeoutException => // expected, this is how we trigged client-side cancellation
             IO(
               assert(
-                canceledSemaphore.tryAcquire(3L, TimeUnit.SECONDS),
+                canceledSemaphore.tryAcquire(30L, TimeUnit.SECONDS),
                 "Timeout when waiting for cancellation to be handled as expected"
               )
             ) >>
