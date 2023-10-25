@@ -10,26 +10,31 @@ import zio.stream.ZStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStreams] {
+class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] {
   override val streams: ZioStreams = ZioStreams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ZioHttpResponseBody =
-    rawValueToEntity(bodyType, v)
+  override def fromRawValue[R](
+      v: R,
+      headers: HasHeaders,
+      format: CodecFormat,
+      bodyType: RawBodyType[R]
+  ): ZioResponseBody =
+    Right(rawValueToEntity(bodyType, v))
 
   override def fromStreamValue(
       v: streams.BinaryStream,
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): ZioHttpResponseBody = ZioStreamHttpResponseBody(v, None)
+  ): ZioResponseBody = Right(ZioStreamHttpResponseBody(v, None))
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
-  ): ZioHttpResponseBody =
-    ZioStreamHttpResponseBody(ZStream.empty, None) // TODO
+  ): ZioResponseBody =
+    Left(ZioWebSockets.pipeToBody(pipe, o))
 
-  private def rawValueToEntity[R](bodyType: RawBodyType[R], r: R): ZioHttpResponseBody = {
+  private def rawValueToEntity[R](bodyType: RawBodyType[R], r: R): ZioHttpResponseBody =
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
@@ -71,5 +76,4 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioHttpResponseBody, ZioStrea
           .getOrElse(ZioStreamHttpResponseBody(ZStream.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length)))
       case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
     }
-  }
 }

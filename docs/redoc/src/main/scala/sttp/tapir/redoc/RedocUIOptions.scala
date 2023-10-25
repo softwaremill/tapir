@@ -16,6 +16,10 @@ package sttp.tapir.redoc
   *   Should relative paths be used for yaml references and redirects. Defaults to `true`.
   * @param redocVersion
   *   Version of Redoc library
+  * @param redocOptions
+  *   Options to pass to the Redoc library (see https://redocly.com/docs/api-reference-docs/configuration/functionality/)
+  * @param redocThemeOptionsJson
+  *   Theming options to pass to the Redoc library (see https://redocly.com/docs/api-reference-docs/configuration/theming/). Must be a valid JSON if not empty
   */
 case class RedocUIOptions(
     pathPrefix: List[String],
@@ -23,7 +27,9 @@ case class RedocUIOptions(
     htmlName: String,
     contextPath: List[String],
     useRelativePaths: Boolean,
-    redocVersion: String
+    redocVersion: String,
+    redocOptions: Option[String],
+    redocThemeOptionsJson: Option[String]
 ) {
   def pathPrefix(pathPrefix: List[String]): RedocUIOptions = copy(pathPrefix = pathPrefix)
   def specName(specName: String): RedocUIOptions = copy(specName = specName)
@@ -31,9 +37,12 @@ case class RedocUIOptions(
   def contextPath(contextPath: List[String]): RedocUIOptions = copy(contextPath = contextPath)
   def withRelativePaths: RedocUIOptions = copy(useRelativePaths = true)
   def withAbsolutePaths: RedocUIOptions = copy(useRelativePaths = false)
-  def redocVersion(redocVersion: String): RedocUIOptions = copy(redocVersion = redocVersion)
+  def redocVersion(redocVersion: String): RedocUIOptions = copy(redocVersion = redocVersion)  
+  def redocOptions(redocOptions: String): RedocUIOptions = copy(redocOptions = Some(redocOptions))
+  def redocThemeOptionsJson(redocThemeOptionsJson: String): RedocUIOptions =
+    copy(redocThemeOptionsJson = Some(redocThemeOptionsJson))
 }
 
 object RedocUIOptions {
-  val default: RedocUIOptions = RedocUIOptions(List("docs"), "docs.yaml", "index.html", Nil, useRelativePaths = true, "2.0.0-rc.56")
+  val default: RedocUIOptions = RedocUIOptions(List("docs"), "docs.yaml", "index.html", Nil, useRelativePaths = true, "2.0.0-rc.56", None, None)
 }

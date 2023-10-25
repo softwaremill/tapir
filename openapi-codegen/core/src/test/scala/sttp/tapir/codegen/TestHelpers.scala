@@ -35,7 +35,6 @@ object TestHelpers {
       |    parameters:
       |    - name: genre
       |      in: path
-      |      required: true
       |      schema:
       |        type: string
       |    - $ref: '#/components/parameters/year'
@@ -157,10 +156,12 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             parameters = Seq(
-              Resolved(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false))),
+              Resolved(OpenapiParameter("genre", "path", Some(true), None, OpenapiSchemaString(false))),
               Ref[OpenapiParameter]("#/components/parameters/offset"),
-              Resolved(OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false))),
-              Resolved(OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false)))
+              Resolved(
+                OpenapiParameter("limit", "query", Some(true), Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false))
+              ),
+              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
               OpenapiResponse(
@@ -178,9 +179,11 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "post",
             parameters = Seq(
-              Resolved(OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false))),
-              Resolved(OpenapiParameter("limit", "query", true, Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false))),
-              Resolved(OpenapiParameter("X-Auth-Token", "header", true, None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false))),
+              Resolved(
+                OpenapiParameter("limit", "query", Some(true), Some("Maximum number of books to retrieve"), OpenapiSchemaInt(false))
+              ),
+              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
               OpenapiResponse(
@@ -219,7 +222,7 @@ object TestHelpers {
           )
         ),
         parameters = Seq(
-          Resolved(OpenapiParameter("genre", "path", true, None, OpenapiSchemaString(false))),
+          Resolved(OpenapiParameter("genre", "path", None, None, OpenapiSchemaString(false))),
           Ref("#/components/parameters/year")
         )
       )
@@ -232,8 +235,8 @@ object TestHelpers {
         securitySchemes = Map.empty,
         parameters = Map(
           "#/components/parameters/offset" ->
-            OpenapiParameter("offset", "query", true, Some("Offset at which to start fetching books"), OpenapiSchemaInt(false)),
-          "#/components/parameters/year" -> OpenapiParameter("year", "path", true, None, OpenapiSchemaInt(false))
+            OpenapiParameter("offset", "query", Some(true), Some("Offset at which to start fetching books"), OpenapiSchemaInt(false)),
+          "#/components/parameters/year" -> OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false))
         )
       )
     )
@@ -315,7 +318,7 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             parameters = Seq(
-              Resolved(OpenapiParameter("name", "query", true, None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("name", "query", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
               OpenapiResponse(
@@ -416,7 +419,7 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             Seq(
-              Resolved(OpenapiParameter("name", "path", true, None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("name", "path", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
               OpenapiResponse(

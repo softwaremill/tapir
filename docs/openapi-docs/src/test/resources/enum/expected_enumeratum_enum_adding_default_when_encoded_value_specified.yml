@@ -32,9 +32,9 @@ components:
       properties:
         fruitType:
           $ref: '#/components/schemas/FruitType'
+          default: PEAR
     FruitType:
       type: string
-      default: PEAR
       enum:
         - APPLE
         - PEAR

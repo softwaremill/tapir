@@ -1,6 +1,6 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.apispec.{ReferenceOr, Schema => ASchema}
+import sttp.apispec.{Schema => ASchema}
 import sttp.apispec.asyncapi.{Components, Message}
 import sttp.tapir.docs.apispec.SecuritySchemes
 import sttp.tapir.docs.apispec.schema.SchemaId
@@ -9,7 +9,7 @@ import sttp.tapir.internal.IterableToListMap
 import scala.collection.immutable.ListMap
 
 private[asyncapi] class EndpointToAsyncAPIComponents(
-    idToSchema: ListMap[SchemaId, ReferenceOr[ASchema]],
+    idToSchema: ListMap[SchemaId, ASchema],
     keyToMessage: ListMap[MessageKey, Message],
     securitySchemes: SecuritySchemes
 ) {

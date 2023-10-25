@@ -57,7 +57,8 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 | <a href="https://www.kelkoogroup.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kelkoogroup.png" alt="Kelkoo group" width="160"/></a> | <a href="https://www.softwaremill.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="SoftwareMill" width="160"/></a> | <a href="https://www.carvana.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/carvana.svg" alt="Carvana" width="160"/></a> |
 | <a href="https://www.moneyfarm.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a> | <a href="https://www.ocadogroup.com/about-us/ocado-technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado Technology" width="160"/></a> | <a href="https://www.wegtam.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a> |
 | <a href="https://www.broad.app"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a> | <a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a> | <a href="https://www.colisweb.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a> |
-| <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> |
+| <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> | <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a> | 
+| | <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a> | |
 
 ## Teaser
 
@@ -130,7 +131,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.7.3"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.8.2"
 ```
 
 Then, import:
@@ -181,10 +182,21 @@ code is unclear and be improved for the benefit of all.
 In order to develop the documentation, you can use the `doc/watch.sh` script, which runs Sphinx using Python.
 Use `doc/requirements.txt` to set up your Python environment with `pip`. If you're using Nix, you can just run `nix develop`
 in the `doc` directory to set up a working shell with all the dependencies.
-n
+
 The `core` module needs to remain binary-compatible with earlier versions. To check if your changes meet this requirement,
 you can run `core/mimaReportBinaryIssues` from the sbt console.
+However, be aware that tags from the repository aren’t automatically fetched during forking; hence, the command will not operate without first fetching the tags.
 
+After forking and cloning the repository, add the original repository as a remote:
+
+```
+git remote add upstream git@github.com:softwaremill/tapir.git
+```
+
+Fetch the tags from the upstream:
+```
+git fetch --tags upstream
+```
 ### Testing locally
 
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
@@ -201,7 +213,7 @@ To verify that the code snippet in docs compile, run `compileDocumentation`. A f
 
 ### Importing into IntelliJ
 
-By default, when importing to IntelliJ, only the Scala 2.13/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
+By default, when importing to IntelliJ, only the Scala 3/JVM subprojects will be imported. This is controlled by the `ideSkipProject` setting in `build.sbt` (inside `commonSettings`).
 
 If you'd like to work on a different platform or Scala version, simply change this setting temporarily so that the correct subprojects are imported. For example:
 

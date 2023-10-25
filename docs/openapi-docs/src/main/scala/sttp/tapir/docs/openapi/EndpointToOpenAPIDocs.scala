@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.apispec.openapi._
 import sttp.tapir._
-import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToKeyedSchemas}
+import sttp.tapir.docs.apispec.schema.SchemasForEndpoints
 import sttp.tapir.docs.apispec.{DocsExtension, DocsExtensions, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 
@@ -16,10 +16,8 @@ private[openapi] object EndpointToOpenAPIDocs {
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
-    val toKeyedSchemas = new ToKeyedSchemas
     val additionalOutputs = es2.flatMap(e => options.defaultDecodeFailureOutput(e.input)).toSet.toList
-    val (idToSchema, schemas) =
-      new SchemasForEndpoints(es2, options.schemaName, toKeyedSchemas, options.markOptionsAsNullable, additionalOutputs).apply()
+    val (idToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, options.markOptionsAsNullable, additionalOutputs).apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2, apiKeyAuthTypeName = "apiKey")
     val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenAPIComponents(idToSchema, securitySchemes)

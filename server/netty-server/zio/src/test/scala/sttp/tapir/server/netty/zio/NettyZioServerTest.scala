@@ -11,6 +11,8 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.Task
 
+import scala.concurrent.Future
+
 class NettyZioServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
@@ -28,7 +30,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
-          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()))).void
+          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_])).void
         }
         .map { case (tests, _) => tests }
     }

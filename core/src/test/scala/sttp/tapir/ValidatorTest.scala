@@ -125,6 +125,13 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v("abc") shouldBe empty
   }
 
+  it should "validate for minLength of string and include unicode characters" in {
+    val expected = 3
+    val v = Validator.minLength[String](expected, countCodePoints = true)
+    v("a\uD83E\uDD73") shouldBe List(ValidationError(v, "a\uD83E\uDD73"))
+    v("ab\uD83E\uDD73") shouldBe empty
+  }
+
   it should "validate for maxLength of string" in {
     val expected = 1
     val v = Validator.maxLength[String](expected)
@@ -132,11 +139,27 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v("a") shouldBe empty
   }
 
+  it should "validate for maxLength of string and include unicode characters" in {
+    val expected = 1
+    val v = Validator.maxLength[String](expected, countCodePoints = true)
+    v("a\uD83E\uDD73") shouldBe List(ValidationError(v, "a\uD83E\uDD73"))
+    v("\uD83E\uDD73") shouldBe empty
+  }
+
   it should "validate for fixedLength of string" in {
-    val v = Validator.fixedLength[String](3)
-    v("ab") shouldBe List(ValidationError(Validator.minLength(3), "ab"))
-    v("abcd") shouldBe List(ValidationError(Validator.maxLength(3), "abcd"))
+    val expected = 3
+    val v = Validator.fixedLength[String](expected)
+    v("ab") shouldBe List(ValidationError(Validator.minLength(expected), "ab"))
+    v("abcd") shouldBe List(ValidationError(Validator.maxLength(expected), "abcd"))
     v("abc") shouldBe empty
+  }
+
+  it should "validate for fixedLength of string and include unicode characters" in {
+    val expected = 3
+    val v = Validator.fixedLength[String](expected, countCodePoints = true)
+    v("\uD83E\uDD73") shouldBe List(ValidationError(Validator.minLength(expected, true), "\uD83E\uDD73"))
+    v("abc\uD83E\uDD73") shouldBe List(ValidationError(Validator.maxLength(expected, true), "abc\uD83E\uDD73"))
+    v("ab\uD83E\uDD73") shouldBe empty
   }
 
   it should "validate for nonEmptyString of string" in {

@@ -8,32 +8,42 @@ object Redoc {
 
   val defaultRedocVersion = "2.0.0-rc.56"
 
-  def redocHtml(title: String, specUrl: String, redocVersion: String = defaultRedocVersion): String = s"""
-    |<!DOCTYPE html>
-    |<html>
-    |<head>
-    |  <title>$title</title>
-    |  <!-- needed for adaptive design -->
-    |  <meta charset="utf-8"/>
-    |  <meta name="viewport" content="width=device-width, initial-scale=1">
-    |  <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-    |
-    |  <!--
-    |  ReDoc doesn't change outer page styles
-    |  -->
-    |  <style>
-    |    body {
-    |      margin: 0;
-    |      padding: 0;
-    |    }
-    |  </style>
-    |</head>
-    |<body>
-    |<redoc spec-url='$specUrl' expand-responses="200,201"></redoc>
-    |<script src="https://cdn.jsdelivr.net/npm/redoc@$redocVersion/bundles/redoc.standalone.js"></script>
-    |</body>
-    |</html>
-    |""".stripMargin
+  def redocHtml(
+    title: String,
+    specUrl: String,
+    redocVersion: String = defaultRedocVersion,
+    redocOptions: Option[String] = None,
+    redocThemeOptionsJson: Option[String] = None
+  ): String = {
+    val options = redocOptions.filterNot(_.isEmpty).getOrElse("")
+    val themeOptions = redocThemeOptionsJson.filterNot(_.isEmpty).fold("")(json => s"theme='$json'")
+    s"""
+       |<!DOCTYPE html>
+       |<html>
+       |<head>
+       |  <title>$title</title>
+       |  <!-- needed for adaptive design -->
+       |  <meta charset="utf-8"/>
+       |  <meta name="viewport" content="width=device-width, initial-scale=1">
+       |  <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+       |
+       |  <!--
+       |  ReDoc doesn't change outer page styles
+       |  -->
+       |  <style>
+       |    body {
+       |      margin: 0;
+       |      padding: 0;
+       |    }
+       |  </style>
+       |</head>
+       |<body>
+       |  <redoc spec-url='$specUrl' expand-responses="200,201" $options $themeOptions></redoc>
+       |  <script src="https://cdn.jsdelivr.net/npm/redoc@$redocVersion/bundles/redoc.standalone.js"></script>
+       |</body>
+       |</html>
+       |""".stripMargin
+  }
 
   def apply[F[_]](
       title: String,
@@ -60,7 +70,13 @@ object Redoc {
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
 
     val specPrefix = if (options.useRelativePaths) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
-    val html: String = redocHtml(title, s"$specPrefix/$specName", options.redocVersion)
+    val html: String = redocHtml(
+      title,
+      s"$specPrefix/$specName",
+      options.redocVersion,
+      options.redocOptions,
+      options.redocThemeOptionsJson
+    )
     val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
 
     val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)

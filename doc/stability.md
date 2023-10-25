@@ -81,6 +81,7 @@ The modules are categorised using the following levels:
 | spray-json | stabilising  |
 | tethys     | stabilising  |
 | upickle    | stabilising  |
+| pickler    | experimental |
 | zio-json   | experimental |
 | zio1-json  | experimental |
 

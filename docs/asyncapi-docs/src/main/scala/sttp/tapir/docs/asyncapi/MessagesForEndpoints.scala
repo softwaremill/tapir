@@ -11,7 +11,7 @@ import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
 
-private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String, toKeyedSchemas: ToKeyedSchemas) {
+private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String) {
   private type CodecData = Either[(SName, MediaType), TSchema[_]]
 
   private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, _ <: CodecFormat], info: EndpointIO.Info[T])
@@ -28,7 +28,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName
   }
 
   private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
-    toKeyedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
+    ToKeyedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
       case Some(os) => Left((os._1.name, codec.format.mediaType))
       case None     => Right(codec.schema.copy(description = None, deprecated = false))
     }

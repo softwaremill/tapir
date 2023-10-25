@@ -1,6 +1,9 @@
 # tapir
 
-Declarative, type-safe web endpoints library.
+<div style="text-align: center">
+<p>Declarative, type-safe web endpoints library.</p>
+<img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="tapir" height="100" width="100" />
+</div>
 
 ## Intro
 
@@ -103,8 +106,13 @@ Thank you!
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
 <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a>
-<div></div>
 <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
+<a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<div></div>
+<a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a>
+<div></div>
 </div>
 
 ## Code teaser
@@ -214,6 +222,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    endpoint/validation
    endpoint/contenttype
    endpoint/json
+   endpoint/pickler
    endpoint/xml
    endpoint/forms
    endpoint/security
