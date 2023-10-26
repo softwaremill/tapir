@@ -115,7 +115,7 @@ class NettyServerHandler[F[_]](
           }
       }
       pendingResponses.enqueue(cancellationSwitch)
-      lastResponseSent = lastResponseSent.flatMap[Unit] { _ =>
+      lastResponseSent = lastResponseSent.transformWith { _ =>
         runningFuture.transform {
           case Success(serverResponse) =>
             pendingResponses.dequeue()
