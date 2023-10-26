@@ -9,7 +9,7 @@ To expose endpoint as a [play-server](https://www.playframework.com/) first add 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-pekko-http-server" % "@PLAY_HTTP_SERVER_VERSION@"
+"org.playframework" %% "play-pekko-http-server" % "@PLAY_HTTP_SERVER_VERSION@"
 ```
 
 or
