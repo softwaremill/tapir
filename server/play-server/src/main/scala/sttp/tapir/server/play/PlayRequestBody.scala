@@ -1,11 +1,11 @@
 package sttp.tapir.server.play
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{FileIO, Source}
-import akka.util.ByteString
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{FileIO, Source}
+import org.apache.pekko.util.ByteString
 import play.api.mvc.{Request, Result}
 import play.core.parsers.Multipart
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
@@ -19,9 +19,9 @@ import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
-) extends RequestBody[Future, AkkaStreams] {
+) extends RequestBody[Future, PekkoStreams] {
 
-  override val streams: AkkaStreams = AkkaStreams
+  override val streams: PekkoStreams = PekkoStreams
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     import mat.executionContext
@@ -33,7 +33,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = playRequest(serverRequest).body
 
   private def toRaw[R](
-      request: Request[AkkaStreams.BinaryStream],
+      request: Request[PekkoStreams.BinaryStream],
       bodyType: RawBodyType[R],
       charset: Option[Charset],
       body: () => Source[ByteString, Any],
@@ -74,7 +74,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   }
 
   private def multiPartRequestToRawBody(
-      request: Request[AkkaStreams.BinaryStream],
+      request: Request[PekkoStreams.BinaryStream],
       m: RawBodyType.MultipartBody,
       body: () => Source[ByteString, Any]
   )(implicit

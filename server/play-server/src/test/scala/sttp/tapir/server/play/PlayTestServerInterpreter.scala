@@ -1,16 +1,16 @@
 package sttp.tapir.server.play
 
-import akka.actor.ActorSystem
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import org.apache.pekko.actor.ActorSystem
 import play.api.Mode
 import play.api.http.ParserConfiguration
 import play.api.mvc.{Handler, PlayBodyParsers, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
-import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
+import play.core.server.{DefaultPekkoHttpServerComponents, ServerConfig}
 import sttp.capabilities.WebSockets
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
@@ -18,10 +18,10 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, PlayServerOptions, Routes] {
+    extends TestServerInterpreter[Future, PekkoStreams with WebSockets, PlayServerOptions, Routes] {
   import actorSystem.dispatcher
 
-  override def route(es: List[ServerEndpoint[AkkaStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
+  override def route(es: List[ServerEndpoint[PekkoStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
     val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors()).options
       // increase the default maxMemoryBuffer to 10M so that tests pass
       .copy(playBodyParsers = PlayBodyParsers(conf = ParserConfiguration(maxMemoryBuffer = 1024000)))
@@ -29,7 +29,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
-    val components = new DefaultAkkaHttpServerComponents {
+    val components = new DefaultPekkoHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
       override lazy val actorSystem: ActorSystem =
         ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))

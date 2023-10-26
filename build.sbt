@@ -20,6 +20,7 @@ val scala3 = "3.3.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
+val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
@@ -809,13 +810,13 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
   .settings(
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %%% "play-json" % Versions.playJson,
+      "org.playframework" %%% "play-json" % Versions.playJson,
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
@@ -1406,14 +1407,14 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .settings(
     name := "tapir-play-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-server" % Versions.playServer,
-      "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
-      "com.typesafe.play" %% "play" % Versions.playServer,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "org.playframework" %% "play-server" % Versions.playServer,
+      "org.playframework" %% "play" % Versions.playServer,
+      "org.playframework" %% "play-pekko-http-server" % Versions.playServer,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
@@ -1948,12 +1949,12 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
   .settings(
     name := "tapir-play-client",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-ahc-ws-standalone" % Versions.playClient,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+      "org.playframework" %% "play-ahc-ws-standalone" % Versions.playClient,
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared % Optional,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams % Optional
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(clientCore, clientTests % Test)
 
 import scala.collection.JavaConverters._
@@ -2123,7 +2124,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     publishArtifact := false,
     name := "doc",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-netty-server" % Versions.playServer,
+      "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
