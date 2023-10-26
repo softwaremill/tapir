@@ -3,22 +3,22 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.8.3"
 ```
 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.20"
+"org.playframework" %% "play-pekko-http-server" % "3.0.0"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.20"
+"org.playframework" %% "play-netty-server" % "3.0.0"
 ```
 
-depending on whether you want to use netty or akka based http-server under the hood.
+depending on whether you want to use netty or Pekko based http-server under the hood.
 
 Then import the object:
 
@@ -30,12 +30,13 @@ The `toRoutes` method requires a single, or a list of `ServerEndpoint`s, which c
 [server logic](logic.md) to an endpoint. For example:
 
 ```scala
+import org.apache.pekko.stream.Materializer
+import play.api.routing.Router.Routes
 import sttp.tapir._
 import sttp.tapir.server.play.PlayServerInterpreter
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import akka.stream.Materializer
-import play.api.routing.Router.Routes
 
 implicit val materializer: Materializer = ???
 
