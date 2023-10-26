@@ -40,6 +40,8 @@ class NettyServerHandler[F[_]](
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
 
+  // Cancellation handling with eventLoopContext, lastResponseSent, and pendingResponses has been adapted
+  // from http4s: https://github.com/http4s/http4s-netty/pull/396/files
   // By using the Netty event loop assigned to this channel we get two benefits:
   //  1. We can avoid the necessary hopping around of threads since Netty pipelines will
   //     only pass events up and down from within the event loop to which it is assigned.
