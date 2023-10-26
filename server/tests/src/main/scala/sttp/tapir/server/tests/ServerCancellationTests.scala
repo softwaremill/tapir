@@ -11,7 +11,7 @@ import sttp.tapir._
 import sttp.tapir.tests._
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{Semaphore, TimeUnit, TimeoutException}
+import java.util.concurrent.{Semaphore, TimeUnit}
 import scala.concurrent.duration._
 
 class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE])(implicit
@@ -32,14 +32,14 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
         },
       "Client cancelling request triggers cancellation on the server"
     ) { (backend, baseUri) =>
-      val resp: IO[_] = basicRequest.get(uri"$baseUri").send(backend).timeout(300.millis)
+      val resp: IO[_] = basicRequest.get(uri"$baseUri").readTimeout(300.millis).send(backend)
 
       resp
         .map { case result =>
           fail(s"Expected cancellation, but received a result: $result")
         }
         .handleErrorWith {
-          case _: TimeoutException => // expected, this is how we trigged client-side cancellation
+          case _: SttpClientException.TimeoutException => // expected, this is how we trigged client-side cancellation
             IO(
               assert(
                 canceledSemaphore.tryAcquire(30L, TimeUnit.SECONDS),
