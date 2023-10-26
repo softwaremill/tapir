@@ -23,7 +23,7 @@ class NettyFs2StreamingCancellationTest[OPTIONS, ROUTE](createServerTest: Create
   def tests(): List[Test] = List({
     val buffer = Queue.unbounded[IO, Byte].unsafeRunSync()
     val body_20_slowly_emitted_bytes =
-      fs2.Stream.awakeEvery[IO](100.milliseconds).map(_ => 42.toByte).evalMap(b => { buffer.offer(b) >> IO.pure(b) }).take(200)
+      fs2.Stream.awakeEvery[IO](100.milliseconds).map(_ => 42.toByte).evalMap(b => { buffer.offer(b) >> IO.pure(b) }).take(100)
     testServer(
       endpoint.get
         .in("streamCanceled")
