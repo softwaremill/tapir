@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import com.typesafe.netty.http.StreamedHttpRequest
+import org.playframework.netty.http.StreamedHttpRequest
 import fs2.Chunk
 import fs2.interop.reactivestreams.StreamSubscriber
 import fs2.io.file.{Files, Path}

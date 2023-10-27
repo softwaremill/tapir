@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.internal
 
-import com.typesafe.netty.http.StreamedHttpRequest
+import org.playframework.netty.http.StreamedHttpRequest
 import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.FullHttpRequest
 import sttp.capabilities.zio.ZioStreams
