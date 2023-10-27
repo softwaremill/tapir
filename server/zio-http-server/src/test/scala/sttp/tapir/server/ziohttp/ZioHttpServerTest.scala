@@ -34,7 +34,7 @@ import zio.Unsafe
 import zio.ZEnvironment
 import zio.ZIO
 import zio.ZLayer
-import zio.http.HttpAppMiddleware
+import zio.http.Middleware
 import zio.http.Path
 import zio.http.Request
 import zio.http.URL
@@ -50,6 +50,7 @@ import java.nio.charset.Charset
 import java.time
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
 class ZioHttpServerTest extends TestSuite {
 
   // zio-http tests often fail with "Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [DEFAULT], parser state [STATUS_LINE]"
@@ -77,6 +78,9 @@ class ZioHttpServerTest extends TestSuite {
         val eventConfig = ZLayer.succeed(new EventLoopGroups.Config {
           def channelType = ChannelType.AUTO
           val nThreads = 0
+          val shutdownQuietPeriod = 0
+          val shutdownTimeOut = 0
+          val shutdownTimeUnit = scala.concurrent.duration.SECONDS
         })
 
         val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
@@ -108,7 +112,7 @@ class ZioHttpServerTest extends TestSuite {
                 .out(stringBody)
                 .zServerLogic[Any](_ => p.await.timeout(time.Duration.ofSeconds(1)) *> ZIO.succeed("Ok"))
               int = ZioHttpInterpreter().toHttp(ep)
-              route = int @@ HttpAppMiddleware.allowZIO((_: Request) => p.succeed(()).as(true))
+              route = int @@ Middleware.allowZIO((_: Request) => p.succeed(()).as(true))
               result <- route
                 .runZIO(Request.get(url = URL(Path.empty / "p1")))
                 .flatMap(response => response.body.asString)
@@ -126,7 +130,7 @@ class ZioHttpServerTest extends TestSuite {
                 .out(stringBody)
                 .zServerLogic[Any](_ => ref.updateAndGet(_ + 1).map(_.toString))
               route = ZioHttpInterpreter()
-                .toHttp(ep) @@ HttpAppMiddleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
+                .toHttp(ep) @@ Middleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
               result <- route
                 .runZIO(Request.get(url = URL(Path.empty / "p1")))
                 .flatMap(response => response.body.asString)

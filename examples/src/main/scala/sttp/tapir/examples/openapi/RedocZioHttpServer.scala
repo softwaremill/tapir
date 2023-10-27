@@ -20,12 +20,12 @@ object RedocZioHttpServer extends ZIOAppDefault {
       else ZIO.fail("Unknown pet id")
     }
 
-  val petRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(petEndpoint)
+  val petRoutes: HttpApp[Any] = ZioHttpInterpreter().toHttp(petEndpoint)
 
-  val redocRoutes: HttpApp[Any, Throwable] =
+  val redocRoutes: HttpApp[Any] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
-  val app = (petRoutes ++ redocRoutes).withDefaultErrorResponse
+  val app = (petRoutes ++ redocRoutes)
 
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
