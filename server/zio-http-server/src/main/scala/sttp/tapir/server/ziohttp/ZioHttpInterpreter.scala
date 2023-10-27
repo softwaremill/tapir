@@ -42,8 +42,8 @@ trait ZioHttpInterpreter[R] {
 
       interpreter
         .apply(ZioHttpServerRequest(req))
-        .foldZIO(
-          error => ZIO.fail(Response.internalServerError(error.getMessage)),
+        .foldCauseZIO(
+          cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
           {
             case RequestResult.Response(resp) =>
               resp.body match {
@@ -53,12 +53,12 @@ trait ZioHttpInterpreter[R] {
               }
 
             case RequestResult.Failure(_) =>
-              ZIO.fail(Response.internalServerError(
-                s"The path: ${req.path} matches the shape of some endpoint, but none of the " +
-                  s"endpoints decoded the request successfully, and the decode failure handler didn't provide a " +
-                  s"response. ZIO Http requires that if the path shape matches some endpoints, the request " +
-                  s"should be handled by tapir."
-              ))
+              val msg = s"The path: ${req.path} matches the shape of some endpoint, but none of the " +
+                s"endpoints decoded the request successfully, and the decode failure handler didn't provide a " +
+                s"response. ZIO Http requires that if the path shape matches some endpoints, the request " +
+                s"should be handled by tapir."
+
+              ZIO.logError(msg) *> ZIO.fail(Response.internalServerError(msg))
           }
         )
     }
