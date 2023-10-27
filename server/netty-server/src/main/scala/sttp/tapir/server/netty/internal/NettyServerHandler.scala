@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.internal
 
-import com.typesafe.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
+import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._

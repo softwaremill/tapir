@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty
 
-import com.typesafe.netty.http.HttpStreamsServerHandler
+import org.playframework.netty.http.HttpStreamsServerHandler
 import io.netty.channel.epoll.{Epoll, EpollEventLoopGroup, EpollServerSocketChannel}
 import io.netty.channel.kqueue.{KQueue, KQueueEventLoopGroup, KQueueServerSocketChannel}
 import io.netty.channel.nio.NioEventLoopGroup
