@@ -1,6 +1,7 @@
 package sttp.tapir.server.interceptor.decodefailure
 
 import sttp.model.{Header, HeaderNames, StatusCode}
+import sttp.monad.MonadError
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, MultipartDecodeException}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.internal.RichEndpoint
@@ -10,7 +11,7 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Val
 
 import scala.annotation.tailrec
 
-trait DecodeFailureHandler {
+trait DecodeFailureHandler[F[_]] {
 
   /** Given the context in which a decode failure occurred (the request, the input and the failure), returns an optional response to the
     * request. `None` indicates that no action should be taken, and the request might be passed for decoding to other endpoints.
@@ -18,7 +19,21 @@ trait DecodeFailureHandler {
     * Inputs are decoded in the following order: path, method, query, headers, body. Hence, if there's a decode failure on a query
     * parameter, any method & path inputs of the input must have matched and must have been decoded successfully.
     */
-  def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]]
+  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
+}
+
+object DecodeFailureHandler {
+  def apply[F[_]](f: DecodeFailureContext => F[Option[ValuedEndpointOutput[_]]]): DecodeFailureHandler[F] =
+    new DecodeFailureHandler[F] {
+      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+        f(ctx)
+    }
+
+  def pure[F[_]](f: DecodeFailureContext => Option[ValuedEndpointOutput[_]]): DecodeFailureHandler[F] =
+    new DecodeFailureHandler[F] {
+      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+        monad.unit(f(ctx))
+    }
 }
 
 /** A decode failure handler, which:
@@ -27,21 +42,20 @@ trait DecodeFailureHandler {
   *   - in case a response is sent, creates the response using `response`, given the status code, headers, and the created failure message.
   *     By default, the headers might include authentication challenge.
   */
-case class DefaultDecodeFailureHandler(
+case class DefaultDecodeFailureHandler[F[_]](
     respond: DecodeFailureContext => Option[(StatusCode, List[Header])],
     failureMessage: DecodeFailureContext => String,
     response: (StatusCode, List[Header], String) => ValuedEndpointOutput[_]
-) extends DecodeFailureHandler {
-  def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]] = {
-    respond(ctx) match {
-      case Some((sc, hs)) =>
+) extends DecodeFailureHandler[F] {
+  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+    monad.unit(
+      respond(ctx).map { case (sc, hs) =>
         val failureMsg = failureMessage(ctx)
-        Some(response(sc, hs, failureMsg))
-      case None => None
-    }
-  }
+        response(sc, hs, failureMsg)
+      }
+    )
 
-  def response(messageOutput: String => ValuedEndpointOutput[_]): DefaultDecodeFailureHandler =
+  def response(messageOutput: String => ValuedEndpointOutput[_]): DefaultDecodeFailureHandler[F] =
     copy(response = (s, h, m) => messageOutput(m).prepend(statusCode.and(headers), (s, h)))
 }
 
@@ -76,10 +90,10 @@ object DefaultDecodeFailureHandler {
     * Exceptions can be either handled by the server logic, and converted to an error output value. Uncaught exceptions can be handled using
     * the [[sttp.tapir.server.interceptor.exception.ExceptionInterceptor]].
     */
-  val default: DefaultDecodeFailureHandler = DefaultDecodeFailureHandler(
+  def apply[F[_]]: DefaultDecodeFailureHandler[F] = DefaultDecodeFailureHandler[F](
     respond(_),
-    FailureMessages.failureMessage,
-    failureResponse
+    FailureMessages.failureMessage(_),
+    failureResponse _
   )
 
   /** A [[default]] handler which responds with a `404 Not Found`, instead of a `401 Unauthorized` or `400 Bad Request`, in case any input
@@ -89,8 +103,8 @@ object DefaultDecodeFailureHandler {
     * Hence, the information if the endpoint exists, but needs authentication is hidden from the client. However, the existence of the
     * endpoint might still be revealed using timing attacks.
     */
-  val hideEndpointsWithAuth: DefaultDecodeFailureHandler =
-    default.copy(respond = ctx => respondNotFoundIfHasAuth(ctx, default.respond(ctx)))
+  def hideEndpointsWithAuth[F[_]]: DefaultDecodeFailureHandler[F] =
+    DefaultDecodeFailureHandler[F].copy(respond = ctx => respondNotFoundIfHasAuth(ctx, respond(ctx)))
 
   def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
     server.model.ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
@@ -246,16 +260,15 @@ object DefaultDecodeFailureHandler {
               s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but got ${ve.invalidValue}"
             case Validator.Max(value, exclusive) =>
               s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but got ${ve.invalidValue}"
-            // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
-            case p: Validator.Pattern[T] => s"expected $valueName to match: ${p.value}, but got: ${quoteIfString(ve.invalidValue)}"
-            case m: Validator.MinLength[T] =>
-              s"expected $valueName to have length greater than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
-            case m: Validator.MaxLength[T] =>
-              s"expected $valueName to have length less than or equal to ${m.value}, but got: ${quoteIfString(ve.invalidValue)}"
-            case m: Validator.MinSize[T, Iterable] @unchecked =>
-              s"expected size of $valueName to be greater than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
-            case m: Validator.MaxSize[T, Iterable] @unchecked =>
-              s"expected size of $valueName to be less than or equal to ${m.value}, but got ${size(ve.invalidValue)}"
+            case Validator.Pattern(value) => s"expected $valueName to match: $value, but got: ${quoteIfString(ve.invalidValue)}"
+            case Validator.MinLength(value, _) =>
+              s"expected $valueName to have length greater than or equal to $value, but got: ${quoteIfString(ve.invalidValue)}"
+            case Validator.MaxLength(value, _) =>
+              s"expected $valueName to have length less than or equal to $value, but got: ${quoteIfString(ve.invalidValue)}"
+            case Validator.MinSize(value) =>
+              s"expected size of $valueName to be greater than or equal to $value, but got ${size(ve.invalidValue)}"
+            case Validator.MaxSize(value) =>
+              s"expected size of $valueName to be less than or equal to $value, but got ${size(ve.invalidValue)}"
             case Validator.Custom(_, _) => s"expected $valueName to pass validation, but got: ${quoteIfString(ve.invalidValue)}"
             case Validator.Enumeration(possibleValues, encode, _) =>
               val encodedPossibleValues =

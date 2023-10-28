@@ -6,7 +6,7 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
 
-class DecodeFailureInterceptor[F[_]](handler: DecodeFailureHandler) extends EndpointInterceptor[F] {
+class DecodeFailureInterceptor[F[_]](handler: DecodeFailureHandler[F]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[A, U, I](
@@ -22,7 +22,7 @@ class DecodeFailureInterceptor[F[_]](handler: DecodeFailureHandler) extends Endp
       override def onDecodeFailure(
           ctx: DecodeFailureContext
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
-        handler(ctx) match {
+        handler(ctx).flatMap {
           case None               => endpointHandler.onDecodeFailure(ctx)
           case Some(valuedOutput) => responder(ctx.request, valuedOutput).map(Some(_))
         }
