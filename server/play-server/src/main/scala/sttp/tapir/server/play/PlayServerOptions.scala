@@ -18,7 +18,7 @@ case class PlayServerOptions(
     deleteFile: TapirFile => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
-    decodeFailureHandler: DecodeFailureHandler,
+    decodeFailureHandler: DecodeFailureHandler[Future],
     interceptors: List[Interceptor[Future]]
 ) {
   def prependInterceptor(i: Interceptor[Future]): PlayServerOptions = copy(interceptors = i :: interceptors)
