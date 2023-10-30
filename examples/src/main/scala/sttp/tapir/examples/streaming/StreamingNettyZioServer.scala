@@ -4,7 +4,6 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.client3._
 import sttp.model.HeaderNames
 import sttp.tapir.{CodecFormat, PublicEndpoint}
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.zio.NettyZioServer
 import sttp.tapir.ztapir._
 import zio.interop.catz._
