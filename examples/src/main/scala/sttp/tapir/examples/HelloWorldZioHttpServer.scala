@@ -32,14 +32,14 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
       .out(jsonBody[AddResult])
 
   // converting the endpoint descriptions to the Http type
-  val app: HttpApp[Any, Throwable] =
+  val app: HttpApp[Any] =
     ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) ++
       ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 
   // starting the server
   override def run =
     Server
-      .serve(app.withDefaultErrorResponse)
+      .serve(app)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live

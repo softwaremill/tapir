@@ -17,24 +17,24 @@ class ZioHttpTestServerInterpreter(
     channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
 )(implicit
     trace: Trace
-) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
+) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], HttpApp[Any]] {
 
   override def route(
       es: List[ServerEndpoint[ZioStreams with WebSockets, Task]],
       interceptors: Interceptors
-  ): Http[Any, Throwable, Request, Response] = {
+  ): HttpApp[Any] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[HttpApp[Any]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
 
     val effect: ZIO[Scope, Throwable, Int] =
       (for {
         driver <- ZIO.service[Driver]
         result <- driver.start(trace)
-        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _).withDefaultErrorResponse, ZEnvironment())
+        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
       } yield result.port)
         .provideSome[Scope](
           zio.test.driver,

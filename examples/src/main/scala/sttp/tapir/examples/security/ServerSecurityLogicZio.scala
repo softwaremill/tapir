@@ -55,7 +55,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
   // ---
 
   // interpreting as an app
-  val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
+  val routes: HttpApp[Any] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
 
   override def run: ZIO[Scope, Throwable, ExitCode] = {
     def testWith(backend: SttpBackend[Task, Any], port: Int, path: String, salutation: String, token: String): Task[String] =
@@ -68,7 +68,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
         .map(_.body)
 
     (for {
-      port <- Server.install(routes.withDefaultErrorResponse)
+      port <- Server.install(routes)
       backend <- AsyncHttpClientZioBackend.scoped()
       _ <- testWith(backend, port, "hello", "Hello", "berries").map(r => assert(r == "Hello, Papa Smurf!"))
       _ <- testWith(backend, port, "hello", "Cześć", "berries").map(r => assert(r == "Cześć, Papa Smurf!"))

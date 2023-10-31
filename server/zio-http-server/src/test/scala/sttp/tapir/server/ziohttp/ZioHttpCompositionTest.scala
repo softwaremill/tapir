@@ -15,7 +15,7 @@ class ZioHttpCompositionTest(
       Task,
       Any,
       ZioHttpServerOptions[Any],
-      Http[Any, Throwable, zio.http.Request, zio.http.Response]
+      HttpApp[Any]
     ]
 ) {
   import createServerTest._
@@ -26,11 +26,9 @@ class ZioHttpCompositionTest(
         val ep1 = endpoint.get.in("p1").zServerLogic[Any](_ => ZIO.unit)
         val ep3 = endpoint.get.in("p3").zServerLogic[Any](_ => ZIO.fail(new RuntimeException("boom")))
 
-        val route1: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep1)
-        val route2: HttpApp[Any, Nothing] = Http.collect { case Method.GET -> Root / "p2" =>
-          zio.http.Response.ok
-        }
-        val route3: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(ep3)
+        val route1: HttpApp[Any] = ZioHttpInterpreter().toHttp(ep1)
+        val route2: HttpApp[Any] = Routes(Method.GET / "p2" -> handler(zio.http.Response.ok)).toHttpApp
+        val route3: HttpApp[Any] = ZioHttpInterpreter().toHttp(ep3)
 
         NonEmptyList.of(route3, route1, route2)
       }
