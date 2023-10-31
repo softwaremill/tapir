@@ -4,17 +4,21 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
+import zio.http.WebSocketConfig
 import zio.{Cause, RIO, Task, ZIO}
 
 case class ZioHttpServerOptions[R](
     createFile: ServerRequest => Task[TapirFile],
     deleteFile: TapirFile => RIO[R, Unit],
-    interceptors: List[Interceptor[RIO[R, *]]]
+    interceptors: List[Interceptor[RIO[R, *]]],
+    customWebSocketConfig: ServerRequest => Option[WebSocketConfig]
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
     copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
     copy(interceptors = interceptors :+ i)
+  def withCustomWebSocketConfig(f: ServerRequest => WebSocketConfig): ZioHttpServerOptions[R] =
+    copy(customWebSocketConfig = f.andThen(Some(_)))
 
   def widen[R2 <: R]: ZioHttpServerOptions[R2] = this.asInstanceOf[ZioHttpServerOptions[R2]]
 }
@@ -28,7 +32,8 @@ object ZioHttpServerOptions {
         ZioHttpServerOptions(
           defaultCreateFile,
           defaultDeleteFile,
-          ci.interceptors
+          ci.interceptors,
+          _ => None
         )
     ).serverLog(defaultServerLog[R])
 
