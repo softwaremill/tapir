@@ -117,23 +117,29 @@ class NettyServerHandler[F[_]](
           }
       }
       pendingResponses.enqueue(cancellationSwitch)
-      lastResponseSent = lastResponseSent.transformWith { _ =>
+      lastResponseSent = lastResponseSent.flatMap { _ =>
         runningFuture.transform {
           case Success(serverResponse) =>
             pendingResponses.dequeue()
             try {
-              handleResponse(ctx, req, serverResponse)
-              releaseReq()
+              handleResponse(ctx, req, serverResponse)              
               Success(())
             } catch {
               case NonFatal(ex) =>
-                writeError500(req, ex)
+                writeError500(req, ex)              
                 Failure(ex)
+            } finally {
+              val _ = releaseReq()
             }
           case Failure(NonFatal(ex)) =>
-            writeError500(req, ex)
-            Failure(ex)
-          case Failure(ex) => Failure(ex)
+            try {
+              writeError500(req, ex)
+              Failure(ex)
+            }
+            finally {
+              val _ = releaseReq()
+            }
+          case Failure(fatalException) => Failure(fatalException)
         }(eventLoopContext)
       }(eventLoopContext)
     }
