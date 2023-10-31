@@ -10,6 +10,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.Task
+import zio.interop.catz._
 
 import scala.concurrent.Future
 
@@ -26,7 +27,8 @@ class NettyZioServerTest extends TestSuite with EitherValues {
 
           val tests =
             new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
-              new ServerStreamingTests(createServerTest, ZioStreams).tests()
+              new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+              new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

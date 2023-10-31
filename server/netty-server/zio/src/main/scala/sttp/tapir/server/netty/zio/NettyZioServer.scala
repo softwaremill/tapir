@@ -4,15 +4,18 @@ import io.netty.channel._
 import io.netty.channel.unix.DomainSocketAddress
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
 import zio.{RIO, Unsafe, ZIO}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
+import scala.concurrent.ExecutionContext.Implicits
+import scala.concurrent.Future
 
 case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
   def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
@@ -55,6 +58,17 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       NettyZioDomainSocketBinding(socket, stop)
     }
 
+  private def unsafeRunAsync(
+      runtime: zio.Runtime[R]
+  )(block: () => RIO[R, ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = {
+    val cancelable = Unsafe.unsafe(implicit u =>
+      runtime.unsafe.runToFuture(
+        block()
+      )
+    )
+    (cancelable, () => cancelable.cancel().map(_ => ())(Implicits.global))
+  }
+
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]
     routes <- ZIO.foreach(routes)(identity)
@@ -67,7 +81,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         config,
         new NettyServerHandler[RIO[R, *]](
           route,
-          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f())),
+          unsafeRunAsync(runtime),
           config.maxContentLength
         ),
         eventLoopGroup,
