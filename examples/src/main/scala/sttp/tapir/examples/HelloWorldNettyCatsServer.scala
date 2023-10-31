@@ -1,6 +1,7 @@
 package sttp.tapir.examples
 
 import cats.effect.IO
+import cats.effect.syntax.all._
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
 import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
@@ -52,5 +53,6 @@ object HelloWorldNettyCatsServer extends App {
         assert(host == declaredHost, "Hosts don't match")
       }
     }
+    .guarantee()
     .unsafeRunSync()
 }
