@@ -11,6 +11,7 @@ import upickle.AttributeTagged
 import upickle.core.{ObjVisitor, Visitor}
 
 import java.util.UUID
+import java.util.TimeZone
 
 import Fixtures.*
 
@@ -79,6 +80,14 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
     given CustomPickle.Writer[FlatClass] = CustomPickle.getWriter
 
     Pickler.derived[FlatClass].toCodec.encode(FlatClass(5, "txt")) shouldBe """"custom-5""""
+  }
+
+  it should "work with provider uPickle ReadWriter on a non-mirrored type" in {
+    given Schema[TimeZone] = Schema(SchemaType.SString())
+    given udefault.ReadWriter[TimeZone] = upickle.default.readwriter[String].bimap[TimeZone](_.getID, TimeZone.getTimeZone)
+    val ptz: Pickler[TimeZone] = Pickler.derived
+
+    ptz.toCodec.encode(TimeZone.getTimeZone("America/Los_Angeles")) shouldBe "\"America/Los_Angeles\""
   }
 
   it should "fail to derive a Pickler when there's a Schema but missing ReadWriter" in {

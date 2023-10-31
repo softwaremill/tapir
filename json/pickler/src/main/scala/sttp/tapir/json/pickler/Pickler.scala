@@ -30,10 +30,15 @@ object Pickler:
     *
     * The in-scope [[PicklerConfiguration]] instance is used to customise field names and other behavior.
     */
-  inline def derived[T: ClassTag](using PicklerConfiguration, Mirror.Of[T]): Pickler[T] =
-    summonFrom {
+  inline def derived[T: ClassTag](using PicklerConfiguration): Pickler[T] =
+    summonFrom {      
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
-      case _                 => buildNewPickler[T]()
+      case _                 => 
+        summonFrom {
+          case m: Mirror.Of[T] => buildNewPickler[T]()
+          case _ => errorForType[T]("Cannot derive Pickler[%s], you need to provide both Schema and uPickle ReadWriter for this type.")
+
+        }
     }
 
   /** Create a coproduct pickler (e.g. for an `enum` or `sealed trait`), where the value of the discriminator between child types is a read
@@ -102,7 +107,7 @@ object Pickler:
       case _ =>
         error("Unexpected non-enum type passed to derivedEnumeration")
 
-  inline given nonMirrorPickler[T](using PicklerConfiguration, NotGiven[Mirror.Of[T]]): Pickler[T] =
+  private[tapir] inline given nonMirrorPickler[T](using PicklerConfiguration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     summonFrom {
       // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
       case m: Mirror.Of[T] =>
@@ -252,7 +257,7 @@ object Pickler:
           }
     }
 
-  private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], PicklerConfiguration, Mirror.Of[T]): Pickler[T] =
+  private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], PicklerConfiguration): Pickler[T] =
     Pickler(
       new TapirPickle[T] {
         override lazy val reader: Reader[T] = summonFrom {
@@ -320,7 +325,7 @@ object Pickler:
   private inline def deriveRec[T, FieldType](using config: PicklerConfiguration): Pickler[FieldType] =
     inline erasedValue[T] match
       case _: FieldType => error("Infinite recursive derivation")
-      case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config, summonInline[Mirror.Of[FieldType]])
+      case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config)
 
       // Extract child RWs from child picklers
       // create a new RW from scratch using children rw and fields of the product
