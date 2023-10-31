@@ -107,7 +107,7 @@ object Pickler:
       case _ =>
         error("Unexpected non-enum type passed to derivedEnumeration")
 
-  private[tapir] inline given nonMirrorPickler[T](using PicklerConfiguration, NotGiven[Mirror.Of[T]]): Pickler[T] =
+  private[pickler] inline given nonMirrorPickler[T](using PicklerConfiguration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     summonFrom {
       // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
       case m: Mirror.Of[T] =>

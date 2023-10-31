@@ -10,8 +10,7 @@ import sttp.tapir.{Schema, SchemaType}
 import upickle.AttributeTagged
 import upickle.core.{ObjVisitor, Visitor}
 
-import java.util.UUID
-import java.util.TimeZone
+import java.util.{TimeZone, UUID}
 
 import Fixtures.*
 
