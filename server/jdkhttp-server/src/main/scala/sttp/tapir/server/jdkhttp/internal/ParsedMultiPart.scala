@@ -66,58 +66,55 @@ case class ParsedMultiPart() {
 }
 
 object ParsedMultiPart {
+
   sealed trait ParseStatus {}
   private case object LookForInitialBoundary extends ParseStatus
   private case object ParsePartHeaders extends ParseStatus
   private case object ParsePartBody extends ParseStatus
-  private case object LookForEndOrNewLine extends ParseStatus
-  private val CRLF = Array[Byte]('\r', '\n')
 
-  private class ParseState(boundaryBytes: Array[Byte], multipartFileThresholdBytes: Long) {
+  private val CRLF = Array[Byte]('\r', '\n')
+  private val END_DELIMITER = Array[Byte]('-', '-')
+  private val bufferSize = 8192
+
+  private class ParseState(boundary: Array[Byte], multipartFileThresholdBytes: Long) {
     var completedParts: List[ParsedMultiPart] = List.empty
-    private val prefixedBoundaryBytes = CRLF ++ boundaryBytes
-    private val bufferSize = 8192
-    private val circularBuffer = new CircularBuffer(bufferSize)
+    private val buffer = new mutable.ArrayBuffer[Byte](bufferSize)
     private var done = false
     private var currentPart: ParsedMultiPart = new ParsedMultiPart()
-    private var numMatchedBoundaryChars = 0
     private var bodySize: Int = 0
     private var stream: PartStream = ByteStream()
     private var parseState: ParseStatus = LookForInitialBoundary
 
+    private val initialBoundaryMatcher = new KMPMatcher(boundary ++ CRLF)
+    private val bodyBoundaryMatcher = new KMPMatcher(CRLF ++ boundary ++ CRLF)
+    private val endMatcher = new KMPMatcher(CRLF ++ boundary ++ END_DELIMITER)
+
     def isDone: Boolean = done
 
     def updateStateWith(currentByte: Int): Unit = {
-      circularBuffer.addByte(currentByte.toByte)
+      buffer.addOne(currentByte.toByte)
       this.parseState match {
         case LookForInitialBoundary => parseInitialBoundary(currentByte)
         case ParsePartHeaders       => parsePartHeaders()
         case ParsePartBody          => parsePartBody(currentByte)
-        case LookForEndOrNewLine    => lookForEndOrNewLine()
       }
     }
 
-    private def lookForEndOrNewLine(): Unit = {
-      if (circularBuffer.endsWith(CRLF)) changeState(ParsePartHeaders)
-      else if (circularBuffer.endsWith(Array('-', '-'))) done = true
-    }
-
     private def parseInitialBoundary(currentByte: Int): Unit = {
-      val foundBoundary = lookForBoundary(currentByte, boundaryBytes)
+      val foundBoundary = initialBoundaryMatcher.matchByte(currentByte.toByte)
       if (foundBoundary) {
-        changeState(LookForEndOrNewLine)
+        changeState(ParsePartHeaders)
       }
     }
 
     private def parsePartHeaders(): Unit = {
-      if (circularBuffer.endsWith(CRLF)) {
-        circularBuffer.getString match {
-          case "--\r\n"                          => done = true
+      if (buffer.endsWith(CRLF)) {
+        buffer.view.map(_.toChar).mkString match {
           case headerLine if !headerLine.isBlank => addHeader(headerLine)
           case _                                 => changeState(ParsePartBody)
         }
-        circularBuffer.reset()
-      } else if (circularBuffer.isFull) {
+        buffer.clear()
+      } else if (buffer.length >= bufferSize) {
         throw new RuntimeException(
           s"Reached max size of $bufferSize bytes before reaching newline when parsing header."
         )
@@ -126,11 +123,16 @@ object ParsedMultiPart {
 
     private def parsePartBody(currentByte: Int): Unit = {
       bodySize += 1
-      val foundBoundary = lookForBoundary(currentByte, prefixedBoundaryBytes)
+      val foundFinalBoundary = endMatcher.matchByte(currentByte.toByte)
+      val foundBoundary = bodyBoundaryMatcher.matchByte(currentByte.toByte) || foundFinalBoundary
       convertStreamToFileIfThresholdMet()
+
+      if (foundFinalBoundary) done = true
+
       if (foundBoundary) {
-        val bytes = circularBuffer.getBytes
-        val bytesToWrite = bytes.slice(0, bytes.length - prefixedBoundaryBytes.length)
+        val minus = if (foundFinalBoundary) endMatcher.getDelimiter.length else bodyBoundaryMatcher.getDelimiter.length
+
+        val bytesToWrite = buffer.view.slice(0, buffer.length - minus)
         bytesToWrite.foreach(byte => stream.underlying.write(byte.toInt))
         val bodyInputStream = stream match {
           case FileStream(tempFile, stream) => stream.close(); new FileInputStream(tempFile)
@@ -139,27 +141,14 @@ object ParsedMultiPart {
         completePart(bodyInputStream)
         stream = ByteStream()
         bodySize = 0
-      } else if (numMatchedBoundaryChars == 0) {
-        circularBuffer.getBytes.foreach(byte => stream.underlying.write(byte.toInt))
-        circularBuffer.reset()
-      }
-    }
-
-    private def lookForBoundary(currentByte: Int, boundary: Array[Byte]): Boolean = {
-      if (currentByte == boundary(numMatchedBoundaryChars)) {
-        numMatchedBoundaryChars += 1
-        if (numMatchedBoundaryChars == boundary.length) {
-          numMatchedBoundaryChars = 0
-          true
-        } else false
-      } else {
-        numMatchedBoundaryChars = 0
-        false
+      } else if (bodyBoundaryMatcher.getMatches == 0 && endMatcher.getMatches == 0) {
+        buffer.foreach(byte => stream.underlying.write(byte.toInt))
+        buffer.clear()
       }
     }
 
     private def changeState(state: ParseStatus): Unit = {
-      circularBuffer.reset()
+      buffer.clear()
       this.parseState = state
     }
     private def addHeader(header: String): Unit = this.currentPart.addHeader(header)
@@ -170,7 +159,7 @@ object ParsedMultiPart {
           this.currentPart = new ParsedMultiPart()
         case None =>
       }
-      this.changeState(LookForEndOrNewLine)
+      this.changeState(ParsePartHeaders)
     }
 
     private sealed trait PartStream { val underlying: OutputStream }
