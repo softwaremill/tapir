@@ -42,8 +42,10 @@ trait ZioHttpInterpreter[R] {
             zioHttpServerOptions.deleteFile
           )
 
+          val serverRequest = ZioHttpServerRequest(request)
+
           interpreter
-            .apply(ZioHttpServerRequest(request))
+            .apply(serverRequest)
             .foldCauseZIO(
               cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
               {
@@ -51,7 +53,7 @@ trait ZioHttpInterpreter[R] {
                   resp.body match {
                     case None              => handleHttpResponse(resp, None)
                     case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                    case Some(Left(body))  => handleWebSocketResponse(body)
+                    case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
                   }
 
                 case RequestResult.Failure(_) =>
@@ -63,15 +65,19 @@ trait ZioHttpInterpreter[R] {
     )
   }
 
-  private def handleWebSocketResponse(webSocketHandler: WebSocketHandler): ZIO[Any, Nothing, Response] = {
-    Handler.webSocket { channel =>
+  private def handleWebSocketResponse(
+      webSocketHandler: WebSocketHandler,
+      webSocketConfig: Option[WebSocketConfig]
+  ): ZIO[Any, Nothing, Response] = {
+    val app = Handler.webSocket { channel =>
       for {
         channelEventsQueue <- zio.Queue.unbounded[WebSocketChannelEvent]
         messageReceptionFiber <- channel.receiveAll { message => channelEventsQueue.offer(message) }.fork
         webSocketStream <- webSocketHandler(stream.ZStream.fromQueue(channelEventsQueue))
         _ <- webSocketStream.mapZIO(channel.send).runDrain
       } yield messageReceptionFiber.join
-    }.toResponse
+    }
+    webSocketConfig.fold(app)(app.withConfig).toResponse
   }
 
   private def handleHttpResponse(
