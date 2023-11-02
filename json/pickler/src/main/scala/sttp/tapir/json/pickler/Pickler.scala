@@ -33,12 +33,8 @@ object Pickler:
   inline def derived[T: ClassTag](using PicklerConfiguration): Pickler[T] =
     summonFrom {
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
-      case _ =>
-        summonFrom {
-          case m: Mirror.Of[T] => buildNewPickler[T]()
-          case _ => errorForType[T]("Cannot derive Pickler[%s], you need to provide both Schema and uPickle ReadWriter for this type.")
-
-        }
+      case m: Mirror.Of[T]   => buildNewPickler[T]()
+      case _ => errorForType[T]("Cannot derive Pickler[%s], you need to provide both Schema and uPickle ReadWriter for this type.")
     }
 
   /** Create a coproduct pickler (e.g. for an `enum` or `sealed trait`), where the value of the discriminator between child types is a read
