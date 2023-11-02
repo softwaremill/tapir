@@ -1,17 +1,21 @@
 package sttp.tapir.server.netty
 
 import io.netty.channel._
+import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
+import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil._
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
-import sttp.tapir.server.model.ServerResponse
+import java.util.concurrent.atomic.AtomicBoolean
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureServerOptions, config: NettyConfig)(implicit
     ec: ExecutionContext
@@ -60,23 +64,57 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[Future] = new FutureMonad()
     val route = Route.combine(routes)
+    val channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, unsafeRunAsync, config.maxContentLength),
+        new NettyServerHandler(route, unsafeRunAsync, config.maxContentLength, channelGroup, isShuttingDown),
         eventLoopGroup,
         socketOverride
       )
 
-    nettyChannelFutureToScala(channelFuture).map(ch => (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup)))
+    nettyChannelFutureToScala(channelFuture).map(ch =>
+      (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout))
+    )
   }
 
-  private def stop(ch: Channel, eventLoopGroup: EventLoopGroup): Future[Unit] = {
-    nettyFutureToScala(ch.close()).flatMap { _ =>
-      if (config.shutdownEventLoopGroupOnClose) {
-        nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
-      } else Future.successful(())
+  private def waitForClosedChannels(
+      channelGroup: ChannelGroup,
+      startNanos: Long,
+      gracefulShutdownTimeoutNanos: Option[Long]
+  ): Future[Unit] =
+    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
+      Future {
+        blocking {
+          Thread.sleep(100)
+        }
+      }.flatMap(_ => {
+        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
+      })
+    } else {
+      Future.successful(())
+    }
+
+  private def stop(
+      ch: Channel,
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Future[Unit] = {
+    isShuttingDown.set(true)
+    waitForClosedChannels(
+      channelGroup,
+      startNanos = System.nanoTime(),
+      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toMillis * 1000000)
+    ).flatMap { _ =>
+      nettyFutureToScala(ch.close()).flatMap { _ =>
+        if (config.shutdownEventLoopGroupOnClose) {
+          nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+        } else Future.successful(())
+      }
     }
   }
 }

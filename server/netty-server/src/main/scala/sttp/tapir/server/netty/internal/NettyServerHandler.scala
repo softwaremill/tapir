@@ -26,6 +26,8 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext
+import io.netty.channel.group.ChannelGroup
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -35,7 +37,9 @@ import scala.concurrent.ExecutionContext
 class NettyServerHandler[F[_]](
     route: Route[F],
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
-    maxContentLength: Option[Int]
+    maxContentLength: Option[Int],
+    channelGroup: ChannelGroup,
+    isShuttingDown: AtomicBoolean
 )(implicit
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
@@ -79,7 +83,10 @@ class NettyServerHandler[F[_]](
     if (ctx.channel.isActive) {
       initHandler(ctx)
     }
-  override def channelActive(ctx: ChannelHandlerContext): Unit = initHandler(ctx)
+  override def channelActive(ctx: ChannelHandlerContext): Unit = {
+    channelGroup.add(ctx.channel)
+    initHandler(ctx)
+  }
 
   private[this] def initHandler(ctx: ChannelHandlerContext): Unit = {
     if (eventLoopContext == null) {
@@ -97,6 +104,7 @@ class NettyServerHandler[F[_]](
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
+    println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> running new request, isShuttingDown = ${isShuttingDown.get()}")
     def writeError500(req: HttpRequest, reason: Throwable): Unit = {
       logger.error("Error while processing the request", reason)
       // send 500
@@ -105,7 +113,6 @@ class NettyServerHandler[F[_]](
       res.handleCloseAndKeepAliveHeaders(req)
 
       ctx.writeAndFlush(res).closeIfNeeded(req)
-
     }
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
@@ -122,11 +129,11 @@ class NettyServerHandler[F[_]](
           case Success(serverResponse) =>
             pendingResponses.dequeue()
             try {
-              handleResponse(ctx, req, serverResponse)              
+              handleResponse(ctx, req, serverResponse)
               Success(())
             } catch {
               case NonFatal(ex) =>
-                writeError500(req, ex)              
+                writeError500(req, ex)
                 Failure(ex)
             } finally {
               val _ = releaseReq()
@@ -135,8 +142,7 @@ class NettyServerHandler[F[_]](
             try {
               writeError500(req, ex)
               Failure(ex)
-            }
-            finally {
+            } finally {
               val _ = releaseReq()
             }
           case Failure(fatalException) => Failure(fatalException)
@@ -291,7 +297,7 @@ class NettyServerHandler[F[_]](
     }
 
     def handleCloseAndKeepAliveHeaders(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request))
+      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get())
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
@@ -300,7 +306,7 @@ class NettyServerHandler[F[_]](
 
   private implicit class RichChannelFuture(val cf: ChannelFuture) {
     def closeIfNeeded(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request)) {
+      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get()) {
         cf.addListener(ChannelFutureListener.CLOSE)
       }
     }
