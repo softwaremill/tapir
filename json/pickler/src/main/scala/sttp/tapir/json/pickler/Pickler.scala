@@ -132,7 +132,7 @@ object Pickler:
       // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we want a NotGiven in the method signature
       case m: Mirror.Of[T] =>
         errorForType[T](
-          "Found unexpected Mirror. Failed to summon a Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*"
+          "Found unexpected Mirror. Failed to summon a Pickler[%s]. Please report it as an issue at https://github.com/softwaremill/tapir/issues. To avoid this issue, try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*"
         )
     }
 
