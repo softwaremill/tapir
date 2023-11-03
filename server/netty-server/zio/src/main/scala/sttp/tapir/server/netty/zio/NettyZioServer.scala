@@ -1,7 +1,9 @@
 package sttp.tapir.server.netty.zio
 
 import io.netty.channel._
+import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
+import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
@@ -9,13 +11,16 @@ import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
-import zio.{RIO, Unsafe, ZIO}
+import zio.{RIO, Task, Unsafe, ZIO, durationInt}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
   def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
@@ -73,6 +78,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
     runtime <- ZIO.runtime[R]
     routes <- ZIO.foreach(routes)(identity)
     eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+    channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    isShuttingDown = new AtomicBoolean(false)
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
       val route: Route[RIO[R, *]] = Route.combine(routes)
@@ -82,7 +89,9 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         new NettyServerHandler[RIO[R, *]](
           route,
           unsafeRunAsync(runtime),
-          config.maxContentLength
+          config.maxContentLength,
+          channelGroup,
+          isShuttingDown
         ),
         eventLoopGroup,
         socketOverride
@@ -91,19 +100,43 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
     binding <- nettyChannelFutureToScala(channelFuture).map(ch =>
       (
         ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup)
+        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
       )
     )
   } yield binding
 
-  private def stop(ch: Channel, eventLoopGroup: EventLoopGroup): RIO[R, Unit] = {
-    ZIO.suspend {
-      nettyFutureToScala(ch.close()).flatMap { _ =>
-        if (config.shutdownEventLoopGroupOnClose) {
-          nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
-        } else ZIO.succeed(())
-      }
+  private def waitForClosedChannels(
+      channelGroup: ChannelGroup,
+      startNanos: Long,
+      gracefulShutdownTimeoutNanos: Option[Long]
+  ): Task[Unit] =
+    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
+      ZIO.sleep(100.millis) *>
+        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
+    } else {
+      ZIO.unit
     }
+
+  private def stop(
+      ch: Channel,
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): RIO[R, Unit] = {
+    ZIO.attempt(isShuttingDown.set(true)) *>
+      waitForClosedChannels(
+        channelGroup,
+        startNanos = System.nanoTime(),
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toMillis * 1000000)
+      ) *>
+      ZIO.suspend {
+        nettyFutureToScala(ch.close()).flatMap { _ =>
+          if (config.shutdownEventLoopGroupOnClose) {
+            nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+          } else ZIO.succeed(())
+        }
+      }
   }
 }
 
