@@ -102,11 +102,12 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    Async[F].delay(isShuttingDown.set(true)) >> Sync[F].delay(println(">>>> waiting for closed channels")) >> waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toMillis * 1000000)
-    ) >> Sync[F].delay(println(">>>>>>>>> waiting complete, proceeding with shutdown")) >>
+    Async[F].delay(isShuttingDown.set(true)) >>
+      waitForClosedChannels(
+        channelGroup,
+        startNanos = System.nanoTime(),
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+      ) >>
       Async[F].defer {
         nettyFutureToScala(ch.close()).flatMap { _ =>
           if (config.shutdownEventLoopGroupOnClose) {

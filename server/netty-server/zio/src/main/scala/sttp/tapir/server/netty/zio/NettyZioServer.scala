@@ -128,7 +128,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),
-        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toMillis * 1000000)
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
       ) *>
       ZIO.suspend {
         nettyFutureToScala(ch.close()).flatMap { _ =>

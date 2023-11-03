@@ -10,10 +10,8 @@ object FutureUtil {
     val p = Promise[Channel]()
     nettyFuture.addListener((future: ChannelFuture) =>
       p.complete(
-        if (future.isSuccess) {
-          println(">>>>>>>>>>>>>>>>>>>>>>>>>>>> A channel is born")
-          Success(future.channel())
-        } else if (future.isCancelled) Failure(new CancellationException)
+        if (future.isSuccess) Success(future.channel())
+        else if (future.isCancelled) Failure(new CancellationException)
         else Failure(future.cause())
       )
     )

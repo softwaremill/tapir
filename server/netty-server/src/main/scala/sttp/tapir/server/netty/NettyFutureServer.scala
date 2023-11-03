@@ -94,7 +94,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
       })
     } else {
-      Future.successful(())
+      Future.unit
     }
 
   private def stop(
@@ -108,7 +108,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toMillis * 1000000)
+      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     ).flatMap { _ =>
       nettyFutureToScala(ch.close()).flatMap { _ =>
         if (config.shutdownEventLoopGroupOnClose) {
