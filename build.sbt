@@ -2046,7 +2046,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
-    publishArtifact := false
+    publishArtifact := false,
+    Compile / run / fork := true
   )
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
