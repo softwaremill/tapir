@@ -104,14 +104,19 @@ class NettyServerHandler[F[_]](
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
-    println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> running new request, isShuttingDown = ${isShuttingDown.get()}")
     def writeError500(req: HttpRequest, reason: Throwable): Unit = {
       logger.error("Error while processing the request", reason)
-      // send 500
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
       res.handleCloseAndKeepAliveHeaders(req)
 
+      ctx.writeAndFlush(res).closeIfNeeded(req)
+    }
+
+    def writeError503(req: HttpRequest): Unit = {
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+      res.handleCloseAndKeepAliveHeaders(req)
       ctx.writeAndFlush(res).closeIfNeeded(req)
     }
 
@@ -150,7 +155,10 @@ class NettyServerHandler[F[_]](
       }(eventLoopContext)
     }
 
-    if (HttpUtil.is100ContinueExpected(request)) {
+    if (isShuttingDown.get()) {
+      logger.info("Rejecting request, server is shutting down")
+      writeError503(request)
+    } else if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
     } else {
