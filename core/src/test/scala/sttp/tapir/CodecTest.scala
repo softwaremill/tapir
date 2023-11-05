@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets
 import java.time._
 import java.util.{Date, UUID}
 import scala.reflect.ClassTag
+import scala.util.Try
 
 // see also CodecTestDateTime and CodecDelimitedTest
 class CodecTest extends AnyFlatSpec with Matchers with Checkers with Inside {
@@ -89,12 +90,12 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers with Inside {
   }
 
   it should "provide an emap function" in {
-    val codec: Codec[String, Int, TextPlain] = Codec.string.emap(_.toIntOption.toRight("Not an int"))(_.toString)
+    val codec: Codec[String, Int, TextPlain] = Codec.string.emap(s => Try(s.toInt).toEither.left.map(_.getMessage))(_.toString)
     codec.encode(10) should be("10")
     codec.decode("10") should be(DecodeResult.Value(10))
-    inside(codec.decode("foo")) { case e: DecodeResult.Error =>
-      e.original should be("foo")
-      e.error.getMessage should be("Not an int")
+    inside(codec.decode("foo")) { case DecodeResult.Error(original, error) =>
+      original should be("foo")
+      error.getMessage should be("""For input string: "foo"""")
     }
   }
 
