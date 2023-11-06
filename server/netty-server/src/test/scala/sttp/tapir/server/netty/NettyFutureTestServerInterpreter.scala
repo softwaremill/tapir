@@ -8,8 +8,9 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.FiniteDuration
 
-class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, customConfig: Option[NettyConfig => NettyConfig] = None)(implicit
+class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit
     ec: ExecutionContext
 ) extends TestServerInterpreter[Future, Any, NettyFutureServerOptions, FutureRoute] {
 
@@ -18,14 +19,14 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, custom
     NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(routes: NonEmptyList[FutureRoute]): Resource[IO, (Port, IO[Unit])] = {
+  override def serverWithStop(routes: NonEmptyList[FutureRoute], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, IO[Unit])] = {
     val config =
       NettyConfig.defaultNoStreaming
         .eventLoopGroup(eventLoopGroup)
         .randomPort
         .withDontShutdownEventLoopGroupOnClose
         .noGracefulShutdown
-    val customizedConfig = customConfig.map(transformation => transformation(config)).getOrElse(config)
+    val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettyFutureServerOptions.default
     val bind = IO.fromFuture(IO.delay(NettyFutureServer(options, customizedConfig).addRoutes(routes.toList).start()))
 

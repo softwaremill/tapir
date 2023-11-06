@@ -84,7 +84,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       channelGroup: ChannelGroup,
       startNanos: Long,
       gracefulShutdownTimeoutNanos: Option[Long]
-  ): Future[Unit] =
+  ): Future[Unit] =    
     if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
       Future {
         blocking {
