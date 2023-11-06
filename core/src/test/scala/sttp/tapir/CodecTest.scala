@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, Inside}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -15,9 +15,10 @@ import java.nio.charset.StandardCharsets
 import java.time._
 import java.util.{Date, UUID}
 import scala.reflect.ClassTag
+import scala.util.Try
 
 // see also CodecTestDateTime and CodecDelimitedTest
-class CodecTest extends AnyFlatSpec with Matchers with Checkers {
+class CodecTest extends AnyFlatSpec with Matchers with Checkers with Inside {
 
   private implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
     scheme <- Gen.alphaLowerStr if scheme.nonEmpty
@@ -86,6 +87,16 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
     codec.decode("10") should matchPattern { case DecodeResult.InvalidValue(_) => }
     codec.schema.validator should not be (Validator.pass)
+  }
+
+  it should "provide a mapEither function" in {
+    val codec: Codec[String, Int, TextPlain] = Codec.string.mapEither(s => Try(s.toInt).toEither.left.map(_.getMessage))(_.toString)
+    codec.encode(10) should be("10")
+    codec.decode("10") should be(DecodeResult.Value(10))
+    inside(codec.decode("foo")) { case DecodeResult.Error(original, error) =>
+      original should be("foo")
+      error.getMessage should be("""For input string: "foo"""")
+    }
   }
 
   case class Member(age: Int) {
