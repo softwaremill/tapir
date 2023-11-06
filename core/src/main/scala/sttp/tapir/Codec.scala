@@ -99,8 +99,10 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     *   [[map]]
     * @see
     *   [[mapDecode]]
+    * @see
+    *   [[mapValidate]]
     */
-  def emap[HH](f: H => Either[String, HH])(g: HH => H): Codec[L, HH, CF] =
+  def mapEither[HH](f: H => Either[String, HH])(g: HH => H): Codec[L, HH, CF] =
     mapDecode(s => DecodeResult.fromEitherString(s.toString, f(s)))(g)
 
   /** Adds the given validator to the codec's schema, and maps this codec to the given higher-level type `HH`.

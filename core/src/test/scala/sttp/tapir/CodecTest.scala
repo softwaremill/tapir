@@ -89,8 +89,8 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers with Inside {
     codec.schema.validator should not be (Validator.pass)
   }
 
-  it should "provide an emap function" in {
-    val codec: Codec[String, Int, TextPlain] = Codec.string.emap(s => Try(s.toInt).toEither.left.map(_.getMessage))(_.toString)
+  it should "provide a mapEither function" in {
+    val codec: Codec[String, Int, TextPlain] = Codec.string.mapEither(s => Try(s.toInt).toEither.left.map(_.getMessage))(_.toString)
     codec.encode(10) should be("10")
     codec.decode("10") should be(DecodeResult.Value(10))
     inside(codec.decode("foo")) { case DecodeResult.Error(original, error) =>
