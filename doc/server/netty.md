@@ -63,6 +63,21 @@ NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None)
 NettyFutureServer(NettyConfig.defaultNoStreaming.socketBacklog(256))
 ```
 
+## Graceful shutdown
+
+A Netty server has to be properly closed using function `NettyFutureServerBinding.stop()` (and analogous functions available in Cats and ZIO bindings). This function ensures that the server will wait at most 10 seconds for in-flight requests to complete, while rejecting all new requests with 503 during this period. Afterwards, it closes all server resources.
+You can customize this behavior in `NettyConfig`:
+
+```scala mdoc:compile-only
+import sttp.tapir.server.netty.NettyConfig
+import scala.concurrent.duration._
+
+// adjust the waiting time to your needs
+val config = NettyConfig.defaultNoStreaming.withGracefulShutdownTimeout(5.seconds)
+// or if you don't want the server to wait for in-flight requests
+val config2 = NettyConfig.defaultNoStreaming.noGracefulShutdown
+```
+
 ## Domain socket support
 
 There is possibility to use Domain socket instead of TCP for handling traffic.
