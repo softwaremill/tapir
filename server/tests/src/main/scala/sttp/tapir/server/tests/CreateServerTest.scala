@@ -41,7 +41,7 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
       runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test
+  ): Test = testServerLogic(e, testNameSuffix, interceptors)(runTest(IO.unit))
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
@@ -49,7 +49,7 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
 
   def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test
+  ): Test = testServer(name, rs)(runTest(IO.unit))
 }
 
 class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
@@ -82,7 +82,7 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     testServerWithStop(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
       NonEmptyList.of(interpreter.route(e, interceptors)),
-      gracefulShutdownTimeout,
+      gracefulShutdownTimeout
     )(runTest)
   }
   override def testServerLogic(
