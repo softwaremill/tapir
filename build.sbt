@@ -1434,8 +1434,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
       "io.netty" % "netty-all" % Versions.nettyAll,
-      "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
-      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp
+      "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams
     )
       ++ loggerDependencies,
     // needed because of https://github.com/coursier/coursier/issues/2016
@@ -1448,8 +1447,7 @@ lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
-      "com.softwaremill.sttp.client4" %% "cats" % "4.0.0-M6"
+      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
     )
   )
 
