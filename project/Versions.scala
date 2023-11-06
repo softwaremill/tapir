@@ -18,7 +18,7 @@ object Versions {
   val swaggerUi = "5.9.0"
   val upickle = "3.1.3"
   val playJson = "3.0.0"
-  val finatra = "23.11.0"
+  val finatra = "22.12.0"
   val catbird = "21.12.0"
   val json4s = "4.0.6"
   val nettyReactiveStreams = "3.0.0"
