@@ -109,6 +109,7 @@ case class NettyConfig(
   def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
+  def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
 }
 
 object NettyConfig {

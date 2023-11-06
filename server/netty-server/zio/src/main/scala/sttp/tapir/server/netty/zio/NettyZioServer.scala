@@ -114,7 +114,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       ZIO.sleep(100.millis) *>
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
     } else {
-      ZIO.unit
+      ZIO.succeed(channelGroup.close()).unit
     }
 
   private def stop(

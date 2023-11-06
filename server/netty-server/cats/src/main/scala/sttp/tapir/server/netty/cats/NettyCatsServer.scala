@@ -79,7 +79,10 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       )
 
     nettyChannelFutureToScala(channelFuture).map(ch =>
-      (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout))
+      (
+        ch.localAddress().asInstanceOf[SA],
+        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
+      )
     )
   }
 
@@ -92,7 +95,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       Temporal[F].sleep(100.millis) >>
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
     } else {
-      Sync[F].pure(())
+      Sync[F].delay(nettyFutureToScala(channelGroup.close())).void
     }
 
   private def stop(

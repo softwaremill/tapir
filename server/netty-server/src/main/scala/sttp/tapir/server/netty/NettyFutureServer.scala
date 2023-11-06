@@ -94,7 +94,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
       })
     } else {
-      Future.unit
+      nettyFutureToScala(channelGroup.close()).map(_ => ())
     }
 
   private def stop(
