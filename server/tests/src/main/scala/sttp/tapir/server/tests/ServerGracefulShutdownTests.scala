@@ -37,7 +37,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         _ <- runningStop.join
       } yield {
         result.value.isSuccess shouldBe true
-      }).guarantee(stopServer)
+      })
     },
     testServerLogicWithStop(
       endpoint
@@ -59,7 +59,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       } yield {
         (rejected.value.code shouldBe StatusCode.ServiceUnavailable): Unit
         firstResult.value.isSuccess shouldBe true
-      }).guarantee(stopServer)
+      })
     }
   )
 }

@@ -11,6 +11,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 class NettyCatsServerTest extends TestSuite with EitherValues {
 
@@ -23,6 +24,9 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
 
           val interpreter = new NettyCatsTestServerInterpreter(eventLoopGroup, dispatcher)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+          implicit val ioSleeper: Sleeper[IO] = new Sleeper[IO] {
+            override def sleep(duration: FiniteDuration): IO[Unit] = IO.sleep(duration)
+          }
 
           val tests = new AllServerTests(
             createServerTest,
@@ -34,7 +38,8 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             .tests() ++
             new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
             new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests() ++
-            new NettyFs2StreamingCancellationTest(createServerTest).tests()
+            new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
+            new ServerGracefulShutdownTests(createServerTest).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

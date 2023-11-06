@@ -19,7 +19,10 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     NettyFutureServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(routes: NonEmptyList[FutureRoute], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, IO[Unit])] = {
+  override def serverWithStop(
+      routes: NonEmptyList[FutureRoute],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, IO[Unit])] = {
     val config =
       NettyConfig.defaultNoStreaming
         .eventLoopGroup(eventLoopGroup)
@@ -31,13 +34,11 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     val bind = IO.fromFuture(IO.delay(NettyFutureServer(options, customizedConfig).addRoutes(routes.toList).start()))
 
     Resource
-      .eval(bind)
-      .map(bind => (bind.port, IO.fromFuture(IO.delay(bind.stop()))))
+      .make(bind.map(b => (b, IO.fromFuture(IO.delay(b.stop()))))) { case (_, stop) => stop }
+      .map { case (b, stop) => (b.port, stop) }
   }
-  
+
   override def server(routes: NonEmptyList[FutureRoute]): Resource[IO, Port] = {
-    serverWithStop(routes).flatMap { case (port, stopServer) =>
-      Resource.make(IO.pure(port))(_ => stopServer)
-    }
+    serverWithStop(routes).map(_._1)
   }
 }

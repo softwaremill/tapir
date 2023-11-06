@@ -105,7 +105,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    Async[F].delay(isShuttingDown.set(true)) >>
+    Sync[F].delay(isShuttingDown.set(true)) >>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),

@@ -17,7 +17,10 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
   def route(es: List[ServerEndpoint[R, F]], interceptors: Interceptors = identity): ROUTE
 
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
-  
+
+  /** Exposes additional `stop` effect, which allows stopping the server inside your test. It will be called after the test anyway (assuming
+    * idempotency), but may be useful for some cases where tests need to check specific behavior like returning 503s during shutdown.
+    */
   def serverWithStop(routes: NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, IO[Unit])] =
     server(routes).map(port => (port, IO.unit))
 }

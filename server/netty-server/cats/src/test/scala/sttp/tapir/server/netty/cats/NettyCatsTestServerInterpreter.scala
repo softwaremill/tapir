@@ -9,6 +9,7 @@ import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import sttp.capabilities.fs2.Fs2Streams
+import scala.concurrent.duration.FiniteDuration
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Fs2Streams[IO], NettyCatsServerOptions[IO], Route[IO]] {
@@ -19,19 +20,28 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     NettyCatsServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Route[IO]],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, IO[Unit])] = {
     val config = NettyConfig.defaultWithStreaming
       .eventLoopGroup(eventLoopGroup)
       .randomPort
       .withDontShutdownEventLoopGroupOnClose
       .maxContentLength(NettyCatsTestServerInterpreter.maxContentLength)
       .noGracefulShutdown
+
+    val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettyCatsServerOptions.default[IO](dispatcher)
-    val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, config).addRoutes(routes.toList).start()
+    val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, customizedConfig).addRoutes(routes.toList).start()
 
     Resource
-      .make(bind)(_.stop())
-      .map(_.port)
+      .make(bind.map(b => (b, b.stop()))) { case (_, stop) => stop }
+      .map { case (b, stop) => (b.port, stop) }
+  }
+
+  override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
+    serverWithStop(routes).map(_._1)
   }
 }
 
