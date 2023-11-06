@@ -32,6 +32,14 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
+  def testServerLogicWithStop(
+      e: ServerEndpoint[R, F],
+      testNameSuffix: String = "",
+      interceptors: Interceptors = identity
+  )(
+    runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
+
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
@@ -39,7 +47,8 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
 
 class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE]
+    interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE],
+    stopServer: IO[Unit] = IO.unit
 ) extends CreateServerTest[F, R, OPTIONS, ROUTE]
     with StrictLogging {
 
@@ -56,6 +65,18 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     )(runTest)
   }
 
+  override def testServerLogicWithStop(
+      e: ServerEndpoint[R, F],
+      testNameSuffix: String = "",
+      interceptors: Interceptors = identity
+  )(
+    runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = {
+    testServer(
+      e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
+      NonEmptyList.of(interpreter.route(e, interceptors))
+    )(runTest(stopServer))
+  }
   override def testServerLogic(
       e: ServerEndpoint[R, F],
       testNameSuffix: String = "",

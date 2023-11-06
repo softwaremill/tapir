@@ -25,6 +25,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
       .randomPort
       .withDontShutdownEventLoopGroupOnClose
       .maxContentLength(NettyCatsTestServerInterpreter.maxContentLength)
+      .noGracefulShutdown
     val options = NettyCatsServerOptions.default[IO](dispatcher)
     val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, config).addRoutes(routes.toList).start()
 
