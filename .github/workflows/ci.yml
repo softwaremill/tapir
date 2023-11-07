@@ -38,16 +38,19 @@ jobs:
         cache: 'sbt'
         java-version: ${{ matrix.java }}
     - name: Install sam cli
+      if: matrix.java == '11'
       run: |
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
     - name: Install NPM
+      if: matrix.java == '11'
       run: |
         sudo apt install npm
         npm --version
     - name: Install AWS CDK
+      if: matrix.java == '11'
       run: |
         npm install -g aws-cdk
         cdk --version
