@@ -1452,16 +1452,19 @@ lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   )
 
 lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
-  .settings(libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
+      "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
+    )
+  )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
   ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
     .settings(commonJvmSettings)
     .settings(
       name := s"tapir-netty-server-$proj",
-      libraryDependencies ++= loggerDependencies ++ Seq(
-        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-      ),
+      libraryDependencies ++= loggerDependencies,
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false
     )
