@@ -25,7 +25,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
 
           val interpreter = new NettyZioTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
-          implicit val zioSleeper: Sleeper[Task] = new Sleeper[Task] {
+          val zioSleeper: Sleeper[Task] = new Sleeper[Task] {
             override def sleep(duration: FiniteDuration): Task[Unit] = ZIO.sleep(zio.Duration.fromScala(duration))
           }
 
@@ -33,7 +33,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
             new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
               new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
               new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++
-              new ServerGracefulShutdownTests(createServerTest).tests()
+              new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

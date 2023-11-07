@@ -10,7 +10,7 @@ trait Sleeper[F[_]] {
 }
 
 object Sleeper {
-  implicit def futureSleeper(implicit ec: ExecutionContext): Sleeper[Future] = new Sleeper[Future] {
+  def futureSleeper(implicit ec: ExecutionContext): Sleeper[Future] = new Sleeper[Future] {
     override def sleep(duration: FiniteDuration): Future[Unit] = Future {
       blocking {
         Thread.sleep(duration.toMillis)

@@ -47,6 +47,9 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
+  /** Override for a server to allow running tests which have access to a stop() effect, allowing shutting down the server within the test.
+    * By default, this method just uses a no-op IO.unit.
+    */
   def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = testServer(name, rs)(runTest(IO.unit))

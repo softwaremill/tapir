@@ -24,7 +24,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
 
           val interpreter = new NettyCatsTestServerInterpreter(eventLoopGroup, dispatcher)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
-          implicit val ioSleeper: Sleeper[IO] = new Sleeper[IO] {
+          val ioSleeper: Sleeper[IO] = new Sleeper[IO] {
             override def sleep(duration: FiniteDuration): IO[Unit] = IO.sleep(duration)
           }
 
@@ -39,7 +39,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
             new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests() ++
             new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
-            new ServerGracefulShutdownTests(createServerTest).tests()
+            new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
