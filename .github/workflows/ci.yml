@@ -63,7 +63,7 @@ jobs:
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile documentation
-      if: matrix.target-platform == 'JVM' && matrix.java == "11"
+      if: matrix.target-platform == 'JVM' && matrix.java == '11'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
     - name: Test
       if: matrix.target-platform != 'JS'
@@ -130,7 +130,7 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'sbt'
       - name: Install libidn2-dev libcurl3-dev
-        if: matrix.jdk == '11'
+        if: matrix.java == '11'
         run: |
           sudo apt-get update
           sudo apt-get install libidn2-dev libcurl3-dev
