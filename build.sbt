@@ -260,8 +260,8 @@ lazy val allAggregates: Seq[ProjectReference] = {
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
   if (sys.env.isDefinedAt("JDK_LOOM")) {
-    println("[info] JDK_LOOM defined, including loom-based projects")
-    filteredByNative
+    println("[info] JDK_LOOM defined, including only loom-based projects")
+    filteredByNative.filter(_.toString.contains("Loom"))
   } else {
     println("[info] JDK_LOOM *not* defined, *not* including loom-based-projects")
     filteredByNative.filterNot(_.toString.contains("Loom"))
