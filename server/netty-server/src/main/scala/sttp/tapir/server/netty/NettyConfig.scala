@@ -47,6 +47,10 @@ import scala.concurrent.duration._
   * @param lingerTimeout
   *   Sets the delay for which the Netty waits, while data is being transmitted, before closing a socket after receiving a call to close the
   *   socket
+  *
+  * @param gracefulShutdownTimeout
+  *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
+  *   `None`, closes the channels and terminates the server without waiting.
   */
 case class NettyConfig(
     host: String,
@@ -64,7 +68,8 @@ case class NettyConfig(
     sslContext: Option[SslContext],
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
-    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit
+    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
+    gracefulShutdownTimeout: Option[FiniteDuration]
 ) {
   def host(h: String): NettyConfig = copy(host = h)
 
@@ -102,6 +107,9 @@ case class NettyConfig(
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
   def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
+
+  def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
+  def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
 }
 
 object NettyConfig {
@@ -115,6 +123,7 @@ object NettyConfig {
     connectionTimeout = Some(10.seconds),
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
+    gracefulShutdownTimeout = Some(10.seconds),
     maxContentLength = None,
     maxConnections = None,
     addLoggingHandler = false,
