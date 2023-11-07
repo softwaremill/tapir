@@ -221,6 +221,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio1.projectRefs ++
   jdkhttpServer.projectRefs ++
   nettyServer.projectRefs ++
+  nettyServerLoom.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
   zio1HttpServer.projectRefs ++
@@ -251,13 +252,21 @@ lazy val rawAllAggregates = core.projectRefs ++
   awsCdk.projectRefs
 
 lazy val allAggregates: Seq[ProjectReference] = {
-  if (sys.env.isDefinedAt("STTP_NATIVE")) {
+  val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
     println("[info] STTP_NATIVE defined, including native in the aggregate projects")
     rawAllAggregates
   } else {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
+  if (sys.env.isDefinedAt("JDK_LOOM")) {
+    println("[info] JDK_LOOM defined, including loom-based projects")
+    filteredByNative
+  } else {
+    println("[info] JDK_LOOM *not* defined, *not* including loom-based-projects")
+    filteredByNative.filterNot(_.toString.contains("Loom"))
+  }
+
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
@@ -1442,6 +1451,17 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
+
+lazy val nettyServerLoom: ProjectMatrix =
+  ProjectMatrix("nettyServerLoom", file(s"server/netty-server/loom"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-netty-server-loom",
+      // needed because of https://github.com/coursier/coursier/issues/2016
+      useCoursier := false
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(nettyServer, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(
