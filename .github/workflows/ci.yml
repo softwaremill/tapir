@@ -23,7 +23,7 @@ jobs:
           - scala-version: "2.12"
             target-platform: "Native"
           - scala-version: "2.12"
-            java: "11"
+            java: "21"
           - scala-version: "2.13"
             target-platform: "Native"
           - java: "21"
