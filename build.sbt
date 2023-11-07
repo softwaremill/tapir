@@ -1461,7 +1461,7 @@ lazy val nettyServerLoom: ProjectMatrix =
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false
     )
-    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .jvmPlatform(scalaVersions = scala2_13And3Versions)
     .dependsOn(nettyServer, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
@@ -1501,7 +1501,7 @@ lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"
       "io.helidon.logging" % "helidon-logging-slf4j" % Versions.helidon
     ) ++ loggerDependencies
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
