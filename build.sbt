@@ -224,6 +224,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   nettyServerLoom.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
+  nimaServer.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambdaCore.projectRefs ++
@@ -261,10 +262,10 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("JDK_LOOM")) {
     println("[info] JDK_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(_.toString.contains("Loom"))
+    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("Nima")))
   } else {
     println("[info] JDK_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(_.toString.contains("Loom"))
+    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("Nima")))
   }
 
 }
@@ -1490,6 +1491,18 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(nettyServer, dependency, serverTests % Test)
+
+lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-nima-server",
+    libraryDependencies ++= Seq(
+      "io.helidon.webserver" % "helidon-webserver" % Versions.helidon,
+      "io.helidon.logging" % "helidon-logging-slf4j" % Versions.helidon
+    ) ++ loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(serverCore, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
