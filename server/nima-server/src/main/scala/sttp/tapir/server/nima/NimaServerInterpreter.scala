@@ -41,7 +41,7 @@ trait NimaServerInterpreter {
           tapirResponse.body.fold(ifEmpty = helidonResponse.send()) { tapirInputStream =>
             val helidonOutputStream = helidonResponse.outputStream()
             try {
-              tapirInputStream.transferTo(helidonOutputStream)
+              val _ = tapirInputStream.transferTo(helidonOutputStream)
             } finally {
               helidonOutputStream.close()
             }
