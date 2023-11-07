@@ -6,7 +6,7 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 // if you are using Future or just exploring:
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "@VERSION@"
 
-// if you want to use JDK21 Loom direct style and virtual threads:
+// if you want to use Java 21 Loom virtual threads in direct style:
 "com.softwaremill.sttp.tapir" %% "tapir-netty-loom" % "@VERSION@"
 
 // if you are using cats-effect:
