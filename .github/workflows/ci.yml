@@ -9,8 +9,6 @@ env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
   SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
 jobs:
-  ciLoom:
-    
   ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
