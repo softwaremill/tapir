@@ -8,6 +8,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 class NettyIdServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
@@ -18,8 +19,10 @@ class NettyIdServerTest extends TestSuite with EitherValues {
 
           val interpreter = new NettyIdTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+          val sleeper: Sleeper[Id] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
-          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests()
+          val tests = new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
+            new ServerGracefulShutdownTests(createServerTest, sleeper).tests()
 
           (tests, eventLoopGroup)
         }) { case (_, eventLoopGroup) =>
