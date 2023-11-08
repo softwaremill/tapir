@@ -10,9 +10,10 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     extends TestServerInterpreter[Future, AkkaStreams with WebSockets, AkkaHttpServerOptions, Route] {
@@ -22,9 +23,23 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     AkkaHttpServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(routes: NonEmptyList[Route]): Resource[IO, (Port, KillSwitch)] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Route],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
 
-    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).map(_.localAddress.getPort)
+    Resource
+      .make(
+        bind.map(b =>
+          (
+            b,
+            IO.fromFuture(IO(b.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void
+          )
+        )
+      ) { case (_, stop) =>
+        stop
+      }
+      .map { case (b, stop) => (b.localAddress.getPort, stop) }
   }
 }
