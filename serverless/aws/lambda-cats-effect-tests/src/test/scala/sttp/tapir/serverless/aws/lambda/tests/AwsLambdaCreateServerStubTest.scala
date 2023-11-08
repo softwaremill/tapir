@@ -16,7 +16,9 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest._
-import sttp.tapir.tests.Test
+import sttp.tapir.tests._
+
+import scala.concurrent.duration._
 
 class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerOptions[IO], Route[IO]] {
 
@@ -40,6 +42,15 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3001").unsafeToFuture())
   }
+
+  override def testServerLogicWithStop(
+      e: ServerEndpoint[Any, IO],
+      testNameSuffix: String = "",
+      interceptors: Interceptors = identity,
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  )(
+      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = throw new java.lang.UnsupportedOperationException
 
   override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
