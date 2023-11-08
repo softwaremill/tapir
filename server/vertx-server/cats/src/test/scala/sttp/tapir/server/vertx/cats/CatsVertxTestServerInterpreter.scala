@@ -11,7 +11,9 @@ import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.CatsFFromVFuture
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
+
+import scala.concurrent.duration.FiniteDuration
 
 class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, VertxCatsServerOptions[IO], Router => Route] {
@@ -25,11 +27,15 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
       es.map(interpreter.route(_)(router)).last
   }
 
-  override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Router => Route],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val router = Router.router(vertx)
     routes.toList.foreach(_.apply(router))
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     val listenIO = ioFromVFuture(server.listen(0))
-    Resource.make(listenIO)(s => ioFromVFuture(s.close).void).map(_.actualPort())
+    // Vertx doesn't offer graceful shutdown with timeout OOTB
+    Resource.make(listenIO.map(s => (s.actualPort(), ioFromVFuture(s.close).void))) { case (_, release) => release }
   }
 }
