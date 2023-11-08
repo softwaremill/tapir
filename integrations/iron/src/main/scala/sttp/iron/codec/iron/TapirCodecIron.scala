@@ -5,7 +5,6 @@ import io.github.iltotore.iron.:|
 import io.github.iltotore.iron.refineEither
 import io.github.iltotore.iron.refineOption
 import io.github.iltotore.iron.RefinedTypeOps
-import io.github.iltotore.iron.RefinedTypeOpsImpl
 import io.github.iltotore.iron.constraint.any.*
 import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
