@@ -2,7 +2,9 @@ package sttp.tapir.server.play
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorSystem
+import play.api.Configuration
 import play.api.Mode
 import play.api.http.ParserConfiguration
 import play.api.mvc.{Handler, PlayBodyParsers, RequestHeader}
@@ -13,9 +15,10 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     extends TestServerInterpreter[Future, PekkoStreams with WebSockets, PlayServerOptions, Routes] {
@@ -28,9 +31,21 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 
-  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
+  import play.core.server.PekkoHttpServer
+
+  override def serverWithStop(
+      routes: NonEmptyList[Routes],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val components = new DefaultPekkoHttpServerComponents {
-      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
+      val initialServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
+
+      val customConf =
+        Configuration(
+          ConfigFactory.parseString(s"play { server.terminationTimeout=${gracefulShutdownTimeout.getOrElse(50.millis).toString} }")
+        )
+      override lazy val serverConfig: ServerConfig =
+        initialServerConfig.copy(configuration = customConf.withFallback(initialServerConfig.configuration))
       override lazy val actorSystem: ActorSystem =
         ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))
       override def router: Router =
@@ -47,6 +62,6 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     val bind = IO {
       components.server
     }
-    Resource.make(bind)(s => IO(s.stop())).map(_.mainAddress.getPort)
+    Resource.make(bind.map(s => (s.mainAddress.getPort, IO(s.stop())))) { case (_, release) => release }
   }
 }
