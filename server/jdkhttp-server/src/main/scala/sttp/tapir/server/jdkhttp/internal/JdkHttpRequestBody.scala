@@ -46,7 +46,12 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       .flatMap(
         _.split(";")
           .find(_.trim().startsWith(boundaryPrefix))
-          .map(line => s"--${line.trim().substring(boundaryPrefix.length)}")
+          .map(line => {
+            val boundary = line.trim().substring(boundaryPrefix.length)
+            if (boundary.length > 70)
+              throw new IllegalArgumentException("Multipart boundary must be no longer than 70 characters.")
+            s"--$boundary"
+          })
       )
       .getOrElse(throw new IllegalArgumentException("Unable to extract multipart boundary from multipart request"))
   }
