@@ -3,6 +3,7 @@ package sttp.tapir.server.jdkhttp.internal
 import sttp.model.Header
 import sttp.tapir.Defaults.createTempFile
 import sttp.tapir.TapirFile
+import sttp.tapir.server.jdkhttp.internal.KMPMatcher.{Match, NotMatched}
 
 import java.io.{
   BufferedOutputStream,
@@ -20,7 +21,6 @@ case class ParsedMultiPart() {
   private val headers: mutable.Map[String, Seq[String]] = mutable.Map.empty
 
   def getBody: InputStream = body
-
   def getHeader(headerName: String): Option[String] = headers.get(headerName).flatMap(_.headOption)
   def fileItemHeaders: Seq[Header] = headers.toSeq.flatMap { case (name, values) =>
     values.map(value => Header(name, value))
@@ -86,7 +86,7 @@ object ParsedMultiPart {
     private var parseState: ParseStatus = LookForInitialBoundary
 
     private val initialBoundaryMatcher = new KMPMatcher(boundary ++ CRLF)
-    private val bodyBoundaryMatcher = new KMPMatcher(CRLF ++ boundary ++ CRLF)
+    private val boundaryMatcher = new KMPMatcher(CRLF ++ boundary ++ CRLF)
     private val endMatcher = new KMPMatcher(CRLF ++ boundary ++ END_DELIMITER)
 
     def isDone: Boolean = done
@@ -102,7 +102,7 @@ object ParsedMultiPart {
 
     private def parseInitialBoundary(currentByte: Int): Unit = {
       val foundBoundary = initialBoundaryMatcher.matchByte(currentByte.toByte)
-      if (foundBoundary) {
+      if (foundBoundary == Match) {
         changeState(ParsePartHeaders)
       }
     }
@@ -124,27 +124,38 @@ object ParsedMultiPart {
     private def parsePartBody(currentByte: Int): Unit = {
       bodySize += 1
       val foundFinalBoundary = endMatcher.matchByte(currentByte.toByte)
-      val foundBoundary = bodyBoundaryMatcher.matchByte(currentByte.toByte) || foundFinalBoundary
+      val foundBoundary = boundaryMatcher.matchByte(currentByte.toByte)
       convertStreamToFileIfThresholdMet()
 
-      if (foundFinalBoundary) done = true
-
-      if (foundBoundary) {
-        val minus = if (foundFinalBoundary) endMatcher.getDelimiter.length else bodyBoundaryMatcher.getDelimiter.length
-
-        val bytesToWrite = buffer.view.slice(0, buffer.length - minus)
-        bytesToWrite.foreach(byte => stream.underlying.write(byte.toInt))
-        val bodyInputStream = stream match {
-          case FileStream(tempFile, stream) => stream.close(); new FileInputStream(tempFile)
-          case ByteStream(stream)           => new ByteArrayInputStream(stream.toByteArray)
-        }
-        completePart(bodyInputStream)
-        stream = ByteStream()
-        bodySize = 0
-      } else if (bodyBoundaryMatcher.getMatches == 0 && endMatcher.getMatches == 0) {
-        buffer.foreach(byte => stream.underlying.write(byte.toInt))
-        buffer.clear()
+      (foundBoundary, foundFinalBoundary) match {
+        case (Match, _)                                             => handleEndOfBody(boundaryMatcher.getDelimiter.length)
+        case (_, Match)                                             => done = true; handleEndOfBody(endMatcher.getDelimiter.length)
+        case _ if endMatcher.noMatches && boundaryMatcher.noMatches => writeAllBytes()
+        case (NotMatched(x), NotMatched(y))                         => writeUnmatchedBytes(Math.min(x, y))
       }
+    }
+
+    def writeAllBytes(): Unit = {
+      buffer.foreach(byte => stream.underlying.write(byte.toInt))
+      buffer.clear()
+    }
+
+    def handleEndOfBody(delimiterLength: Int): Unit = {
+      val bytesToWrite = buffer.view.slice(0, buffer.length - delimiterLength)
+      bytesToWrite.foreach(byte => stream.underlying.write(byte.toInt))
+      val bodyInputStream = stream match {
+        case FileStream(tempFile, stream) => stream.close(); new FileInputStream(tempFile)
+        case ByteStream(stream)           => new ByteArrayInputStream(stream.toByteArray)
+      }
+      completePart(bodyInputStream)
+      stream = ByteStream()
+      bodySize = 0
+    }
+
+    def writeUnmatchedBytes(unmatchedBytes: Int): Unit = {
+      val bytesToWrite = buffer.view.slice(0, unmatchedBytes)
+      bytesToWrite.foreach(byte => stream.underlying.write(byte.toInt))
+      buffer.dropInPlace(unmatchedBytes)
     }
 
     private def changeState(state: ParseStatus): Unit = {
