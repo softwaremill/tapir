@@ -72,8 +72,8 @@ object FinatraTestServerInterpreter {
             IO { server.close(Duration.fromMilliseconds(gracefulShutdownTimeout.map(_.toMillis).getOrElse(50))) }
           )
         )
-      ) { case (_, stop) =>
-        stop
+      ) { case (_, release) =>
+        release
       }
   }
 }

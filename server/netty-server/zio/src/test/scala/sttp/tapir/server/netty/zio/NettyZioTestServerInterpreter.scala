@@ -47,7 +47,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
 
     Resource
       .make(bind.map(b => (b.port, IO.fromFuture[Unit](IO(Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(b.stop()))))))) {
-        case (_, stop) => stop
+        case (_, release) => release
       }
   }
 }

@@ -36,7 +36,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, customizedConfig).addRoutes(routes.toList).start()
 
     Resource
-      .make(bind.map(b => (b.port, b.stop()))) { case (_, stop) => stop }
+      .make(bind.map(b => (b.port, b.stop()))) { case (_, release) => release }
   }
 }
 

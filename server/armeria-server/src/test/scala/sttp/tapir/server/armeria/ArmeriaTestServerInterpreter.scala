@@ -42,8 +42,8 @@ trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestS
             IO { val _ = b.stop() }
           )
         )
-      ) { case (_, stop) =>
-        stop
+      ) { case (_, release) =>
+        release
       }
   }
 }

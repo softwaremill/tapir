@@ -37,8 +37,8 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
             IO.fromFuture(IO(b.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void
           )
         )
-      ) { case (_, stop) =>
-        stop
+      ) { case (_, release) =>
+        release
       }
   }
 }
