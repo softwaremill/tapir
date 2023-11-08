@@ -11,9 +11,10 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.http4s.Http4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 object Http4sTestServerInterpreter {
   type Routes = WebSocketBuilder2[IO] => HttpRoutes[IO]
@@ -27,15 +28,23 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
 
-  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Routes],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
-      .withHttpWebSocketApp(service)
-      .resource
-      .map(_.address.getPort)
+    Resource.make(
+      BlazeServerBuilder[IO]
+        .withExecutionContext(ExecutionContext.global)
+        .bindHttp(0, "localhost")
+        .withHttpWebSocketApp(service)
+        .resource
+        .allocated
+        .map { case (server, release) => // Blaze has no graceful shutdown support https://github.com/http4s/blaze/issues/676
+          (server.address.getPort(), release)
+        }
+    ) { case (_, release) => release }
   }
 }
