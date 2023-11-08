@@ -40,8 +40,8 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test = testServerLogic(e, testNameSuffix, interceptors)(runTest(IO.unit))
+      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
@@ -51,7 +51,7 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
     * By default, this method just uses a no-op IO.unit.
     */
   def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = testServer(name, rs)(runTest(IO.unit))
 }
 
