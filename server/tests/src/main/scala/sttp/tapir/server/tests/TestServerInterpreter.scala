@@ -7,7 +7,11 @@ import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests.Port
 import scala.concurrent.duration.FiniteDuration
 
+case class TestServer(port: Port, stop: IO[Unit])
+
 trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
+  type StopServer = IO[Unit]
+
   protected type Interceptors = CustomiseInterceptors[F, OPTIONS] => CustomiseInterceptors[F, OPTIONS]
 
   def route(e: ServerEndpoint[R, F]): ROUTE = route(List(e), (ci: CustomiseInterceptors[F, OPTIONS]) => ci)
@@ -16,7 +20,7 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
 
   def route(es: List[ServerEndpoint[R, F]], interceptors: Interceptors = identity): ROUTE
 
-  def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
+  def server(routes: NonEmptyList[ROUTE], stopTimeout: Option[FiniteDuration] = None): Resource[IO, NettyTestServer]
 
   /** Exposes additional `stop` effect, which allows stopping the server inside your test. It will be called after the test anyway (assuming
     * idempotency), but may be useful for some cases where tests need to check specific behavior like returning 503s during shutdown.
