@@ -22,8 +22,9 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     AkkaHttpServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
+  override def serverWithStop(routes: NonEmptyList[Route]): Resource[IO, (Port, KillSwitch)] = {
     val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
+
     Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).map(_.localAddress.getPort)
   }
 }

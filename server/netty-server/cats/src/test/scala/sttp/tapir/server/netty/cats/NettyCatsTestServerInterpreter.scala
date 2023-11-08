@@ -7,7 +7,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 import sttp.capabilities.fs2.Fs2Streams
 import scala.concurrent.duration.FiniteDuration
 
@@ -23,7 +23,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
   override def serverWithStop(
       routes: NonEmptyList[Route[IO]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, IO[Unit])] = {
+  ): Resource[IO, (Port, KillSwitch)] = {
     val config = NettyConfig.defaultWithStreaming
       .eventLoopGroup(eventLoopGroup)
       .randomPort
@@ -38,10 +38,6 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     Resource
       .make(bind.map(b => (b, b.stop()))) { case (_, stop) => stop }
       .map { case (b, stop) => (b.port, stop) }
-  }
-
-  override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = {
-    serverWithStop(routes).map(_._1)
   }
 }
 

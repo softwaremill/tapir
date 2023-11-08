@@ -7,7 +7,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 import zio.{Runtime, Task, Unsafe}
 
 import scala.concurrent.duration.FiniteDuration
@@ -24,7 +24,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
   override def serverWithStop(
       routes: NonEmptyList[Task[Route[Task]]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, IO[Unit])] = {
+  ): Resource[IO, (Port, KillSwitch)] = {
     val config = NettyConfig.defaultWithStreaming
       .eventLoopGroup(eventLoopGroup)
       .randomPort
@@ -50,9 +50,5 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
         case (_, stop) => stop
       }
       .map { case (b, stop) => (b.port, stop) }
-  }
-
-  override def server(routes: NonEmptyList[Task[Route[Task]]]): Resource[IO, Port] = {
-    serverWithStop(routes).map(_._1)
   }
 }
