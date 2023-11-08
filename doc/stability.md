@@ -24,7 +24,8 @@ The modules are categorised using the following levels:
 | armeria   | stabilising  |
 | finatra   | stabilising  |
 | http4s    | stabilising  |
-| netty     | experimental |
+| netty     | stabilising  |
+| nima      | experimental |
 | pekko-http| stabilising  |
 | play      | stabilising  |
 | vertx     | stabilising  |

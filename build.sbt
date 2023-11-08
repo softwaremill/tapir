@@ -221,8 +221,10 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio1.projectRefs ++
   jdkhttpServer.projectRefs ++
   nettyServer.projectRefs ++
+  nettyServerLoom.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
+  nimaServer.projectRefs ++
   zio1HttpServer.projectRefs ++
   zioHttpServer.projectRefs ++
   awsLambdaCore.projectRefs ++
@@ -251,13 +253,21 @@ lazy val rawAllAggregates = core.projectRefs ++
   awsCdk.projectRefs
 
 lazy val allAggregates: Seq[ProjectReference] = {
-  if (sys.env.isDefinedAt("STTP_NATIVE")) {
+  val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
     println("[info] STTP_NATIVE defined, including native in the aggregate projects")
     rawAllAggregates
   } else {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
+  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+    println("[info] ONLY_LOOM defined, including only loom-based projects")
+    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+  } else {
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
+    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+  }
+
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
@@ -1443,6 +1453,17 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+lazy val nettyServerLoom: ProjectMatrix =
+  ProjectMatrix("nettyServerLoom", file(s"server/netty-server/loom"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-netty-server-loom",
+      // needed because of https://github.com/coursier/coursier/issues/2016
+      useCoursier := false
+    )
+    .jvmPlatform(scalaVersions = scala2_13And3Versions)
+    .dependsOn(nettyServer, serverTests % Test)
+
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(
     libraryDependencies ++= Seq(
@@ -1470,6 +1491,18 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(nettyServer, dependency, serverTests % Test)
+
+lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-nima-server",
+    libraryDependencies ++= Seq(
+      "io.helidon.webserver" % "helidon-webserver" % Versions.helidon,
+      "io.helidon.logging" % "helidon-logging-slf4j" % Versions.helidon
+    ) ++ loggerDependencies
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
+  .dependsOn(serverCore, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
   .settings(commonJvmSettings)
