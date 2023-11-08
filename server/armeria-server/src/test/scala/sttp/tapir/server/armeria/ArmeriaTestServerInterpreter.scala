@@ -35,7 +35,7 @@ trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestS
       .make(
         bind.map(b =>
           (
-            b,
+            b.activeLocalPort(),
             // Ignore returned future for fast test iterations.
             // Armeria server wait for 2 seconds by default to let the boss group gracefully finish all remaining
             // tasks in the queue. Even if graceful shutdown timeouts are set to 0.
@@ -45,6 +45,5 @@ trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestS
       ) { case (_, stop) =>
         stop
       }
-      .map { case (b, stop) => (b.activeLocalPort(), stop) }
   }
 }

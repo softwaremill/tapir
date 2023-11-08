@@ -34,7 +34,6 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
     val bind = IO.fromFuture(IO.delay(NettyFutureServer(options, customizedConfig).addRoutes(routes.toList).start()))
 
     Resource
-      .make(bind.map(b => (b, IO.fromFuture(IO.delay(b.stop()))))) { case (_, stop) => stop }
-      .map { case (b, stop) => (b.port, stop) }
+      .make(bind.map(b => (b.port, IO.fromFuture(IO.delay(b.stop()))))) { case (_, stop) => stop }
   }
 }

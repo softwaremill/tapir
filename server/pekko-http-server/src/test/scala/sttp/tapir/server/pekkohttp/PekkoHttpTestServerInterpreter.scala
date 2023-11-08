@@ -33,13 +33,12 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
       .make(
         bind.map(b =>
           (
-            b,
+            b.localAddress.getPort(),
             IO.fromFuture(IO(b.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void
           )
         )
       ) { case (_, stop) =>
         stop
       }
-      .map { case (b, stop) => (b.localAddress.getPort, stop) }
   }
 }
