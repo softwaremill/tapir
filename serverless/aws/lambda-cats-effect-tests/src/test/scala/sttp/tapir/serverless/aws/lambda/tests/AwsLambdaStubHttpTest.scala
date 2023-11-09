@@ -6,7 +6,9 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaCreateServerStubTest.catsMonadIO
-import sttp.tapir.tests.{Port, Test, TestSuite}
+import sttp.tapir.tests._
+
+import scala.concurrent.duration._
 
 class AwsLambdaStubHttpTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = Resource.eval(
@@ -27,6 +29,9 @@ object AwsLambdaStubHttpTest {
       AwsCatsEffectServerInterpreter(serverOptions).toRoute(es)
     }
 
-    override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???
+    override def serverWithStop(
+        routes: NonEmptyList[Route[IO]],
+        gracefulShutdownTimeout: Option[FiniteDuration]
+    ): Resource[IO, (Port, KillSwitch)] = ???
   }
 }

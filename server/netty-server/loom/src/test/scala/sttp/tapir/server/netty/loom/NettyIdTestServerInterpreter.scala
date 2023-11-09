@@ -17,7 +17,10 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     NettyIdServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(routes: NonEmptyList[IdRoute], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, IO[Unit])] = {
+  override def serverWithStop(
+      routes: NonEmptyList[IdRoute],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, IO[Unit])] = {
     val config =
       NettyConfig.defaultNoStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
@@ -25,11 +28,6 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val bind = IO.blocking(NettyIdServer(options, customizedConfig).addRoutes(routes.toList).start())
 
     Resource
-      .make(bind.map(b => (b, IO.blocking(b.stop())))) { case (_, stop) => stop }
-      .map { case (b, stop) => (b.port, stop) }
-  }
-  
-  override def server(routes: NonEmptyList[IdRoute]): Resource[IO, Port] = {
-    serverWithStop(routes).map(_._1)
+      .make(bind.map(b => (b.port, IO.blocking(b.stop())))) { case (_, stop) => stop }
   }
 }

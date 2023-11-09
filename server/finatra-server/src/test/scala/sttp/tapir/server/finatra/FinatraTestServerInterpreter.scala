@@ -4,12 +4,14 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
+import com.twitter.util.Duration
 import com.twitter.util.Future
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 
 class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraServerOptions, FinatraRoute] {
   override def route(es: List[ServerEndpoint[Any, Future]], interceptors: Interceptors): FinatraRoute = {
@@ -18,11 +20,17 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     es.map(interpreter.toRoute).last
   }
 
-  override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
+  override def serverWithStop(
+      routes: NonEmptyList[FinatraRoute],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, KillSwitch)] = FinatraTestServerInterpreter.serverWithStop(routes, gracefulShutdownTimeout)
 }
 
 object FinatraTestServerInterpreter {
-  def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = {
+  def serverWithStop(
+      routes: NonEmptyList[FinatraRoute],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
@@ -57,7 +65,15 @@ object FinatraTestServerInterpreter {
     }.flatMap(waitUntilHealthy(_, 0))
 
     Resource
-      .make(bind)(httpServer => IO(httpServer.close()))
-      .map(_.httpExternalPort())
+      .make(
+        bind.map(server =>
+          (
+            server.httpExternalPort(),
+            IO { server.close(Duration.fromMilliseconds(gracefulShutdownTimeout.map(_.toMillis).getOrElse(50))) }
+          )
+        )
+      ) { case (_, release) =>
+        release
+      }
   }
 }

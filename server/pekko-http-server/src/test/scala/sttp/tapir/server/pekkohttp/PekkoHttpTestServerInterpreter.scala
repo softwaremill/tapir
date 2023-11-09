@@ -10,8 +10,9 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
+import scala.concurrent.duration._
 import scala.concurrent.Future
 
 class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
@@ -22,8 +23,22 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     PekkoHttpServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Route],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
-    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).map(_.localAddress.getPort)
+
+    Resource
+      .make(
+        bind.map(b =>
+          (
+            b.localAddress.getPort(),
+            IO.fromFuture(IO(b.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void
+          )
+        )
+      ) { case (_, release) =>
+        release
+      }
   }
 }
