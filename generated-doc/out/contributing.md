@@ -18,6 +18,16 @@ that is parameterless enums or sealed traits with only case objects as children.
 in order to allow using OpenAPI `enum` elements and derive JSON codecs which represent them as simple values (without discriminator).
 Let's use the name `enumeration` in Tapir codebase to represent these "true" enumerations and avoid ambiguity.
 
+## JDK version
+
+To ensure that Tapir can be used in a wide range of projects, the CI job uses JDK11 for most of the modules. There are exceptions (like `netty-server-loom` and `nima-server`) which require JDK version >= 21. This requirement is adressed by the build matrix in `.github/workflows/ci.yml`, which runs separate builds on a newer Java version, and sets a `ONLY_LOOM` env variable, used by build.sbt to recognise that it should limit the scope of an aggregated task to these projects only.
+For local development, feel free to use any JDK >= 11. You can be on JDK 21, then with missing `ONLY_LOOM` variable you can still run sbt tasks on projects excluded from aggegate build, for example:
+```scala
+nimaServer/Test/test
+nettyServerLoom/compile
+// etc.
+```
+
 ## Acknowledgments
 
 Tuple-concatenating code is copied from [akka-http](https://github.com/akka/akka-http/blob/master/akka-http/src/main/scala/akka/http/scaladsl/server/util/TupleOps.scala)

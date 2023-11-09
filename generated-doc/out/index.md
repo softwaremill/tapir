@@ -15,6 +15,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
   * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
   * [Netty](server/netty.md) (using `Future`s, cats-effect or ZIO)
+  * [Helidon Níma](server/nima.md) (using JVM 21 Virtual Threads and direct style)
   * [Finatra](server/finatra.md) `http.Controller`
   * [Pekko HTTP](server/pekkohttp.md) `Route`s/`Directive`s
   * [Play](server/play.md) `Route`
@@ -239,6 +240,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    server/http4s
    server/zio-http4s
    server/netty
+   server/nima
    server/finatra
    server/pekkohttp
    server/play
