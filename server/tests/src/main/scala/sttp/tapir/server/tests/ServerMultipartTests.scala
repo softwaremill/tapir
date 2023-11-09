@@ -127,6 +127,33 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.body should include("file1:peach mario")
             r.body should include("file2:daisy luigi")
           }
+      },
+      testServer(in_raw_multipart_out_string, "boundary substring in body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(
+          parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n__\n").asRight[Unit]
+        )
+      ) { (backend, baseUri) =>
+        val testBody = "--AAB\r\n" +
+          "Content-Disposition: form-data; name=\"firstPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "\r\n" +
+          "BODYONE\r\n" +
+          "--AA\r\n" +
+          "--AAB\r\n" +
+          "Content-Disposition: form-data; name=\"secondPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "\r\n" +
+          "BODYTWO\r\n" +
+          "--AAB--\r\n"
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body(testBody)
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.Ok
+            r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
+          }
       }
     )
   }

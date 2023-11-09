@@ -39,6 +39,10 @@ import java.util.logging.{Level, Logger}
   *   Sets the size of server's tcp connection backlog. This is the maximum number of queued incoming connections to allow on the listening
   *   socket. Queued TCP connections exceeding this limit may be rejected by the TCP implementation. If set to 0 or less the system default
   *   for backlog size will be used. Default is 0.
+  *
+  * @param multipartFileThresholdBytes
+  *   Sets the threshold of bytes of a multipart upload to trigger writing the multipart contents to a temporary file rather than keeping it
+  *   entirely in memory. Default is 50MB.
   */
 case class JdkHttpServerOptions(
     interceptors: List[Interceptor[Id]],
@@ -50,7 +54,8 @@ case class JdkHttpServerOptions(
     host: String = "0.0.0.0",
     executor: Option[Executor] = None,
     httpsConfigurator: Option[HttpsConfigurator] = None,
-    backlogSize: Int = 0
+    backlogSize: Int = 0,
+    multipartFileThresholdBytes: Long = 52_428_800
 ) {
   require(0 <= port && port <= 65535, "Port has to be in 1-65535 range or 0 if random!")
   def prependInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)

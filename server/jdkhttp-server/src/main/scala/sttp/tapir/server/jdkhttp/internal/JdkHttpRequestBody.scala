@@ -14,7 +14,7 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Id, NoStreams] {
+private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long) extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
@@ -46,7 +46,12 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       .flatMap(
         _.split(";")
           .find(_.trim().startsWith(boundaryPrefix))
-          .map(line => s"--${line.trim().substring(boundaryPrefix.length)}")
+          .map(line => {
+            val boundary = line.trim().substring(boundaryPrefix.length)
+            if (boundary.length > 70)
+              throw new IllegalArgumentException("Multipart boundary must be no longer than 70 characters.")
+            s"--$boundary"
+          })
       )
       .getOrElse(throw new IllegalArgumentException("Unable to extract multipart boundary from multipart request"))
   }
@@ -55,12 +60,11 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     val httpExchange = jdkHttpRequest(request)
     val boundary = extractBoundary(httpExchange)
 
-    parseMultipartBody(httpExchange, boundary).flatMap(parsedPart =>
+    parseMultipartBody(httpExchange.getRequestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
       parsedPart.getName.flatMap(name =>
         m.partType(name)
           .map(partType => {
-            val bodyInputStream = new ByteArrayInputStream(parsedPart.body)
-            val bodyRawValue = toRaw(request, partType, bodyInputStream)
+            val bodyRawValue = toRaw(request, partType, parsedPart.getBody)
             Part(
               name,
               bodyRawValue.value,
