@@ -7,18 +7,18 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.model.ValuedEndpointOutput
 
 trait RejectHandler[F[_]] {
-  def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
+  def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
 }
 
 object RejectHandler {
-  def apply[F[_]](f: RequestResult.Failure => F[Option[ValuedEndpointOutput[_]]]): RejectHandler[F] = new RejectHandler[F] {
-    override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
-      f(failure)
+  def apply[F[_]](f: RejectContext => F[Option[ValuedEndpointOutput[_]]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      f(ctx)
   }
 
-  def pure[F[_]](f: RequestResult.Failure => Option[ValuedEndpointOutput[_]]): RejectHandler[F] = new RejectHandler[F] {
-    override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
-      monad.unit(f(failure))
+  def pure[F[_]](f: RejectContext => Option[ValuedEndpointOutput[_]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      monad.unit(f(ctx))
   }
 }
 
@@ -26,10 +26,10 @@ case class DefaultRejectHandler[F[_]](
     response: (StatusCode, String) => ValuedEndpointOutput[_],
     defaultStatusCodeAndBody: Option[(StatusCode, String)]
 ) extends RejectHandler[F] {
-  override def apply(failure: RequestResult.Failure)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
+  override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
     import DefaultRejectHandler._
 
-    val statusCodeAndBody = if (hasMethodMismatch(failure)) Some(Responses.MethodNotAllowed) else defaultStatusCodeAndBody
+    val statusCodeAndBody = if (hasMethodMismatch(ctx.failure)) Some(Responses.MethodNotAllowed) else defaultStatusCodeAndBody
     monad.unit(statusCodeAndBody.map(response.tupled))
   }
 }
