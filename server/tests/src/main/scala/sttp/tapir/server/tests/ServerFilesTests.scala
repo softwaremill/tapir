@@ -669,7 +669,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
       NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler.default))
+        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler[F]))
       )
     )
 
