@@ -9,7 +9,6 @@ import sttp.tapir.tests._
 import scala.concurrent.duration.FiniteDuration
 
 trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
-  type StopServer = IO[Unit]
 
   protected type Interceptors = CustomiseInterceptors[F, OPTIONS] => CustomiseInterceptors[F, OPTIONS]
 
