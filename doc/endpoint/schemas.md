@@ -9,6 +9,9 @@ implicit scope during codec derivation, as well as when using [json](json.md) or
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
+There's also a number of [datatype integrations](integrations.md) available, which provide schemas for various 
+third-party libraries.
+
 For case classes and sealed hierarchies, `Schema[_]` values can be derived automatically using
 [Magnolia](https://github.com/softwaremill/magnolia), given that implicit schemas are available for all the case class's
 fields, or all of the implementations of the `enum`/`sealed trait`/`sealed class`.
@@ -17,6 +20,10 @@ Two policies of custom type derivation are available:
 
 * automatic derivation
 * semi automatic derivation
+
+Finally, schemas can be provided by hand, e.g. for Java classes, or other custom types. As a fallback, you can also
+always use `Schema.string[T]` or `Schema.binary[T]`, however this will provide only basic documentation, and won't
+perform any [validation](validation.md).
 
 ## Automatic derivation
 
