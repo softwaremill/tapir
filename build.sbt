@@ -180,6 +180,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   zioMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
+  play29Json.projectRefs ++
   picklerJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
@@ -215,6 +216,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
+  play29Server.projectRefs ++
   vertxServer.projectRefs ++
   vertxServerCats.projectRefs ++
   vertxServerZio.projectRefs ++
@@ -240,6 +242,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   sttpClient.projectRefs ++
   sttpClientWsZio1.projectRefs ++
   playClient.projectRefs ++
+  play29Client.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
   examples.projectRefs ++
@@ -824,6 +827,26 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
       "org.playframework" %%% "play-json" % Versions.playJson,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
+  .dependsOn(core)
+
+lazy val play29Json: ProjectMatrix = (projectMatrix in file("json/play29json"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-json-play29",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %%% "play-json" % Versions.play29Json,
       scalaTest.value % Test
     )
   )
@@ -1431,6 +1454,21 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-play29-server",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-server" % Versions.play29Server,
+      "com.typesafe.play" %% "play" % Versions.play29Server,
+      "com.typesafe.play" %% "play-akka-http-server" % Versions.play29Server,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
+  .dependsOn(serverCore, serverTests % Test)
+
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1997,6 +2035,20 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(clientCore, clientTests % Test)
 
+lazy val play29Client: ProjectMatrix = (projectMatrix in file("client/play29-client"))
+  .settings(clientTestServerSettings)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-play29-client",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-ahc-ws-standalone" % Versions.play29Client,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
+  .dependsOn(clientCore, clientTests % Test)
+
 import scala.collection.JavaConverters._
 
 lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
@@ -2193,12 +2245,15 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     openapiDocs,
     json4s,
     playJson,
+    play29Json,
     playServer,
+    play29Server,
     sprayJson,
     http4sClient,
     http4sServerZio,
     sttpClient,
     playClient,
+    play29Client,
     sttpStubServer,
     tethysJson,
     uPickleJson,
