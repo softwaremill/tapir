@@ -13,8 +13,8 @@ import sttp.tapir.tests._
 
 import scala.concurrent.duration._
 
-class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE], sleeper: Sleeper[F])(implicit
-    m: MonadError[F]
+class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE], sleeper: Sleeper[F])(
+    implicit m: MonadError[F]
 ) extends EitherValues {
   import createServerTest._
 

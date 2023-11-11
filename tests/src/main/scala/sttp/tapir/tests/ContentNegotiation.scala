@@ -70,9 +70,9 @@ object ContentNegotiation {
 
   val in_multipart_mixed_out_string: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get
-        .in("content-negotiation" / "multipart-mixed")
-        .in(sttp.tapir.oneOfBody(ContentTypeRange("multipart", "mixed", "*") -> stringBody))
-        .out(stringBody)
+      .in("content-negotiation" / "multipart-mixed")
+      .in(sttp.tapir.oneOfBody(ContentTypeRange("multipart", "mixed", "*") -> stringBody))
+      .out(stringBody)
 
   val out_default_json_or_xml: PublicEndpoint[Unit, Unit, Organization, Any] =
     endpoint.get

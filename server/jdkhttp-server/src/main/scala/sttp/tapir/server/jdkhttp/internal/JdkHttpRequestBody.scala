@@ -14,7 +14,8 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long) extends RequestBody[Id, NoStreams] {
+private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
+    extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
