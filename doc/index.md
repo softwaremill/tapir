@@ -7,11 +7,11 @@
 
 ## Intro
 
-With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
+With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of
 input and output parameters. An endpoint specification can be interpreted as:
 
-* a server, given the "business logic": a function, which computes output parameters based on input parameters. 
-  Currently supported: 
+* a server, given the "business logic": a function, which computes output parameters based on input parameters.
+  Currently supported:
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
   * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
   * [Netty](server/netty.md) (using `Future`s, cats-effect or ZIO)
@@ -19,6 +19,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Finatra](server/finatra.md) `http.Controller`
   * [Pekko HTTP](server/pekkohttp.md) `Route`s/`Directive`s
   * [Play](server/play.md) `Route`
+  * [Play 2.9](server/play29.md) `Route`
   * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
@@ -29,6 +30,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   Currently supported:
   * [sttp](client/sttp.md)
   * [Play](client/play.md)
+  * [Play 2.9](client/play29.md)
   * [Http4s](client/http4s.md)
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md)
@@ -132,7 +134,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Book], Any] = 
+val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Book], Any] =
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksQuery])
@@ -162,7 +164,7 @@ def bookListingLogic(bfy: BooksQuery,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-  
+
 val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
@@ -172,7 +174,7 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter()
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
@@ -260,7 +262,7 @@ We offer commercial support for sttp and related technologies, as well as develo
 .. toctree::
    :maxdepth: 2
    :caption: Client interpreters
-   
+
    client/sttp
    client/play
    client/http4s
@@ -282,9 +284,9 @@ We offer commercial support for sttp and related technologies, as well as develo
 .. toctree::
    :maxdepth: 2
    :caption: Generators
-   
+
    generator/sbt-openapi-codegen
-   
+
 .. toctree::
    :maxdepth: 2
    :caption: Other subjects
