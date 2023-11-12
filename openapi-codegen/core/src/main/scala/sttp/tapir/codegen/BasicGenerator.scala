@@ -2,6 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaBoolean,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
@@ -66,6 +67,8 @@ object BasicGenerator {
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
+      case OpenapiSchemaAny(nb) =>
+        ("io.circe.Json", nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
