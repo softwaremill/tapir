@@ -3,6 +3,7 @@ package sttp.tapir.codegen
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaConstantString,
   OpenapiSchemaEnum,
@@ -100,6 +101,23 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)), Seq("texts"), false)
+          )
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+  }
+
+  it should "generate class with any type" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("anyType" -> OpenapiSchemaAny(false)), Seq("anyType"), false)
           )
         )
       )

@@ -83,6 +83,10 @@ object OpenapiSchemaType {
     val nullable = false
   }
 
+  case class OpenapiSchemaAny(
+      nullable: Boolean
+  ) extends OpenapiSchemaSimpleType
+
   case class OpenapiSchemaConstantString(
       value: String
   ) extends OpenapiSchemaType {
@@ -251,10 +255,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
-      _ <- c
-        .downField("type")
-        .as[Option[String]]
-        .ensure(DecodingFailure("Given type is not object!", c.history))(v => v.forall(_ == "object"))
+      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
       f <- c.downField("properties").as[Option[Map[String, OpenapiSchemaType]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       nb <- c.downField("nullable").as[Option[Boolean]]
@@ -283,6 +284,15 @@ object OpenapiSchemaType {
     }
   }
 
+  implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
+    for {
+      _ <- c.downField("type").as[Option[String]].ensure(DecodingFailure("Type must not be defined!", c.history))(_.isEmpty)
+      nb <- c.downField("nullable").as[Option[Boolean]]
+    } yield {
+      OpenapiSchemaAny(nb.getOrElse(false))
+    }
+  }
+
   implicit lazy val OpenapiSchemaTypeDecoder: Decoder[OpenapiSchemaType] =
     List[Decoder[OpenapiSchemaType]](
       Decoder[OpenapiSchemaEnum].widen,
@@ -291,6 +301,7 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaNot].widen,
       Decoder[OpenapiSchemaMap].widen,
       Decoder[OpenapiSchemaObject].widen,
-      Decoder[OpenapiSchemaArray].widen
+      Decoder[OpenapiSchemaArray].widen,
+      Decoder[OpenapiSchemaAny].widen
     ).reduceLeft(_ or _)
 }
