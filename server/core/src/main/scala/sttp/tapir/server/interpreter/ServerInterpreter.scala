@@ -9,6 +9,7 @@ import sttp.tapir.server.{model, _}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
+import sttp.tapir.EndpointInfo
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
@@ -132,7 +133,7 @@ class ServerInterpreter[R, F[_], B, S](
         case Right(u) =>
           for {
             // 5. decoding the body of regular inputs, computing the input value, and running the main logic
-            values <- resultOrValueFrom(decodeBody(request, inputValues))
+            values <- resultOrValueFrom(decodeBody(request, inputValues, se.endpoint.info))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
@@ -146,7 +147,8 @@ class ServerInterpreter[R, F[_], B, S](
 
   private def decodeBody(
       request: ServerRequest,
-      result: DecodeBasicInputsResult
+      result: DecodeBasicInputsResult,
+      endpointInfo: EndpointInfo
   ): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
@@ -154,10 +156,10 @@ class ServerInterpreter[R, F[_], B, S](
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
               case Some(Left(body))                                          => decodeBody(request, values, body)
-              case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body)
+              case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, endpointInfo)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
-          case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) => decodeStreamingBody(request, values, bodyInput)
+          case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) => decodeStreamingBody(request, values, bodyInput, endpointInfo)
           case None                                                                => (values: DecodeBasicInputsResult).unit
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
