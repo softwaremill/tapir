@@ -38,7 +38,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
     val endpoints =
       List(
         personEndpoint,
-        // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
+        // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `PrometheusRegistry` to plain text response
         prometheusMetrics.metricsEndpoint
       )
 
