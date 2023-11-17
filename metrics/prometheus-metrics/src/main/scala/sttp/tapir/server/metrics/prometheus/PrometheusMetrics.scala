@@ -109,7 +109,6 @@ object PrometheusMetrics {
     Metric[F, Counter](
       Counter
         .builder()
-//        .namespace(namespace)
         .name(metricNameWithNamespace(namespace, "request_total"))
         .help("Total HTTP requests")
         .labelNames(labels.namesForRequest ++ labels.namesForResponse: _*)
@@ -136,7 +135,6 @@ object PrometheusMetrics {
     Metric[F, Histogram](
       Histogram
         .builder()
-//        .namespace(namespace)
         .name(metricNameWithNamespace(namespace, "request_duration_seconds"))
         .help("Duration of HTTP requests")
         .labelNames(labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)
