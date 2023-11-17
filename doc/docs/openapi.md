@@ -351,8 +351,11 @@ most artifacts in that directory. To avoid a `NullPointerException`, you need to
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "maven", "org.webjars", "swagger-ui", "pom.properties") =>
     MergeStrategy.singleOrError
-  case x =>
+  case PathList("META-INF", "resources", "webjars", "swagger-ui", _*)               =>
+    MergeStrategy.singleOrError
+  case PathList("META-INF", _*)                                                     => MergeStrategy.discard // Optional, but usually required
+  case x                                                                            =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+      oldStrategy(x)
 }
 ```
