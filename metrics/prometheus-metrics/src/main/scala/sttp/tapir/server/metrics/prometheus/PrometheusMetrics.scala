@@ -61,7 +61,7 @@ object PrometheusMetrics {
       output.toString
     })
 
-  def metricNameWithNamespace(namespace: String, metricName: String) = s"${namespace}_${metricName}"
+  private def metricNameWithNamespace(namespace: String, metricName: String) = s"${namespace}_${metricName}"
 
   /** Using the default namespace and labels, registers the following metrics:
     *
