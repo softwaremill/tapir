@@ -51,10 +51,12 @@ object PrometheusMetrics {
 
   implicit val schemaForPrometheusRegistry: Schema[PrometheusRegistry] = Schema.string[PrometheusRegistry]
 
+  private val prometheusExpositionFormat = ExpositionFormats.init()
+
   implicit val prometheusRegistryCodec: Codec[String, PrometheusRegistry, CodecFormat.TextPlain] =
     Codec.anyString(TextPlain())(_ => DecodeResult.Value(new PrometheusRegistry()))(r => {
       val output = new ByteArrayOutputStream()
-      ExpositionFormats.init().getPrometheusTextFormatWriter.write(output, r.scrape())
+      prometheusExpositionFormat.getPrometheusTextFormatWriter.write(output, r.scrape())
       output.close()
       output.toString
     })
