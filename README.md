@@ -197,6 +197,13 @@ Fetch the tags from the upstream:
 ```
 git fetch --tags upstream
 ```
+
+## Scoping which projects are included by `sbt`
+
+* when `STTP_NATIVE` is set, Scala native projects are included in the build (when running `sbt`)
+* when `ALSO_LOOM` is set, projects using virtual threads and requiring Java 21 are included in the build 
+* when `ONLY_LOOM` is set, only projects using virtual threads are included in the build
+
 ### Testing locally
 
 The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
