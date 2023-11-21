@@ -676,6 +676,19 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should mark optional fields as nullable when configured to do so using OpenAPI 3.0") {
+    case class ClassWithOptionField(optionalIntField: Option[Int], requiredStringField: String)
+
+    val e = endpoint.in(jsonBody[ClassWithOptionField]).out(stringBody)
+    val expectedYaml = load("expected_nullable_option_field_303.yml")
+
+    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
+
+    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionField", "1.0")).copy(openapi = "3.0.3").toYaml3_0_3
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should mark optional class fields as nullable when configured to do so") {
     case class Bar(bar: Int)
     case class ClassWithOptionClassField(optionalObjField: Option[Bar], requiredStringField: String)
@@ -686,6 +699,21 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
 
     val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionClassField", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should mark optional class fields as nullable when configured to do so using OpenAPI 3.0") {
+    case class Bar(bar: Int)
+    case class ClassWithOptionClassField(optionalObjField: Option[Bar], requiredStringField: String)
+
+    val e = endpoint.in(jsonBody[ClassWithOptionClassField]).out(stringBody).post
+    val expectedYaml = load("expected_nullable_option_class_field_303.yml")
+
+    val options = OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
+
+    val actualYaml =
+      OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("ClassWithOptionClassField", "1.0")).copy(openapi = "3.0.3").toYaml3_0_3
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
