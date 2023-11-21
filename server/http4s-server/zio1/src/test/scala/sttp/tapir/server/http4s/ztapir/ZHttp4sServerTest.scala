@@ -10,7 +10,7 @@ import sttp.tapir._
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
-import zio.{RIO, UIO}
+import zio.{RIO, Task, UIO}
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
@@ -53,7 +53,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
     )
 
     new AllServerTests(createServerTest, interpreter, backend).tests() ++
-      new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+      new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ZioStreams)(_ => Task.unit) ++
       new ServerWebSocketTests(createServerTest, ZioStreams) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => zio.stream.Stream.empty

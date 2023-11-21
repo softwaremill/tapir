@@ -10,6 +10,7 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
+import sttp.tapir.AttributeKey
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
@@ -107,7 +108,7 @@ class ServerInterpreter[R, F[_], B, S](
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
       // 3. computing the security input value
-      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs))
+      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs, se.info))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
       inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
@@ -152,15 +153,17 @@ class ServerInterpreter[R, F[_], B, S](
   ): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
+        val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
               case Some(Left(body))                                          => decodeBody(request, values, body)
-              case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, endpointInfo)
+              case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
-          case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) => decodeStreamingBody(request, values, bodyInput, endpointInfo)
-          case None                                                                => (values: DecodeBasicInputsResult).unit
+          case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) =>
+            decodeStreamingBody(request, values, bodyInput, maxBodyLength)
+          case None => (values: DecodeBasicInputsResult).unit
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
@@ -168,9 +171,10 @@ class ServerInterpreter[R, F[_], B, S](
   private def decodeStreamingBody(
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
-      bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]
+      bodyInput: EndpointIO.StreamBodyWrapper[Any, Any],
+      maxBodyLength: Option[Long]
   ): F[DecodeBasicInputsResult] =
-    (bodyInput.codec.decode(requestBody.toStream(request)) match {
+    (bodyInput.codec.decode(requestBody.toStream(request, maxBodyLength)) match {
       case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
       case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
     }).unit

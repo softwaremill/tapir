@@ -12,13 +12,7 @@ case class MaxContentLength(value: Long)
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
   def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]]
-  def toStream(serverRequest: ServerRequest, endpointInfo: EndpointInfo): streams.BinaryStream = {
-    endpointInfo.attributes.get(AttributeKey[MaxContentLength]) match {
-      case Some(MaxContentLength(maxBytes)) => streams.limitBytes(toStream(serverRequest), maxBytes)
-      case None => toStream(serverRequest)
-    }
-  }
-  def toStream(serverRequest: ServerRequest): streams.BinaryStream
+  def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
 
 }
 

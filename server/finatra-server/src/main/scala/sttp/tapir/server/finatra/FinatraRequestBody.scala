@@ -114,7 +114,8 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
       .map(_.toList)
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException()
 
   private def finatraRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
 }

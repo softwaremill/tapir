@@ -148,7 +148,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
     val readStream = new FakeStream()
-    val stream = streams.fs2.fs2ReadStreamCompatible[IO](opts)(implicitly).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](opts)(implicitly).fromReadStream(readStream, None)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -174,7 +174,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
   it should "drain read stream with small buffer" in {
     val count = 100
     val readStream = new FakeStream()
-    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream, None)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -205,7 +205,7 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     val ex = new Exception("!")
     val count = 50
     val readStream = new FakeStream()
-    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
+    val stream = streams.fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream, None)
     (for {
       resultFiber <- stream
         .chunkN(4)

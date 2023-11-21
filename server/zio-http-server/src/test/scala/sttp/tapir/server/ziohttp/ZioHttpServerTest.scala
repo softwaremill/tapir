@@ -50,6 +50,7 @@ import java.nio.charset.Charset
 import java.time
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import zio.stream.ZSink
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -242,6 +243,9 @@ class ZioHttpServerTest extends TestSuite {
 
         implicit val m: MonadError[Task] = new RIOMonadError[Any]
 
+        def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+          zStream.run(ZSink.drain)
+
         new ServerBasicTests(
           createServerTest,
           interpreter,
@@ -262,7 +266,7 @@ class ZioHttpServerTest extends TestSuite {
             file = false,
             options = false
           ).tests() ++
-          new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
           new ServerWebSocketTests(createServerTest, ZioStreams) {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)

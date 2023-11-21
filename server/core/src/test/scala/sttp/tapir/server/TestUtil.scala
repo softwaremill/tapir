@@ -15,7 +15,7 @@ object TestUtil {
   object TestRequestBody extends RequestBody[Id, NoStreams] {
     override val streams: Streams[NoStreams] = NoStreams
     override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
-    override def toStream(serverRequest: ServerRequest): streams.BinaryStream = ???
+    override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
   }
 
   object UnitToResponseBody extends ToResponseBody[Unit, NoStreams] {

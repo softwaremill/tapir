@@ -9,6 +9,7 @@ import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class VertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
@@ -26,7 +27,7 @@ class VertxServerTest extends TestSuite {
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
-        ).tests() ++ new ServerStreamingTests(createServerTest, VertxStreams).tests() ++
+        ).tests() ++ new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(VertxStreams)(_ => Future.unit) ++
         (new ServerWebSocketTests(createServerTest, VertxStreams) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()

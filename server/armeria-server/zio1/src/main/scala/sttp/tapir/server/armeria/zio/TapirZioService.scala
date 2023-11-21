@@ -72,7 +72,7 @@ private object ZioStreamCompatible {
       override def asStreamMessage(stream: Stream[Throwable, Byte]): Publisher[HttpData] =
         runtime.unsafeRun(stream.mapChunks(c => Chunk.single(HttpData.wrap(c.toArray))).toPublisher)
 
-      override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[Throwable, Byte] =
+      override def fromArmeriaStream(publisher: Publisher[HttpData], maxBytes: Option[Long]): Stream[Throwable, Byte] =
         publisher.toStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
     }
   }
