@@ -263,6 +263,9 @@ lazy val allAggregates: Seq[ProjectReference] = {
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
     filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
+    println("[info] ALSO_LOOM defined, including also loom-based projects")
+    filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
     filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
@@ -1024,7 +1027,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.16.0",
+      "io.prometheus" % "prometheus-metrics-core" % "1.1.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.1.0",
       scalaTest.value % Test
     )
   )
