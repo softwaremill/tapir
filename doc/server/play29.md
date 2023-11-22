@@ -3,7 +3,7 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-play29-server" % "@VERSION@"
 ```
 
 and (if you don't already depend on Play)
@@ -101,7 +101,7 @@ class ApiRouter @Inject() () extends SimpleRouter {
 }
 ```
 
-Find more details about how to bind a `Router` to your application in the [Play framework documentation](https://www.playframework.com/documentation/2.8.x/ScalaSirdRouter#Binding-sird-Router).
+Find more details about how to bind a `Router` to your application in the [Play framework documentation](https://www.playframework.com/documentation/2.9.x/ScalaSirdRouter#Binding-sird-Router).
 
 ## Web sockets
 
