@@ -31,7 +31,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   private val exampleRequestBody = new RequestBody[TestEffect, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
     override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
-    override def toStream(serverRequest: ServerRequest): streams.BinaryStream = ???
+    override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
   }
 
   private val exampleToResponse: ToResponseBody[ResponseBodyType, RequestBodyType] = new ToResponseBody[ResponseBodyType, RequestBodyType] {
