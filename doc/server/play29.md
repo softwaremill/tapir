@@ -29,8 +29,8 @@ import sttp.tapir.server.play.PlayServerInterpreter
 The `toRoutes` method requires a single, or a list of `ServerEndpoint`s, which can be created by adding
 [server logic](logic.md) to an endpoint. For example:
 
-```scala mdoc:compile-only
-import org.apache.akka.stream.Materializer
+```scala
+import akka.stream.Materializer
 import play.api.routing.Router.Routes
 import sttp.tapir._
 import sttp.tapir.server.play.PlayServerInterpreter
