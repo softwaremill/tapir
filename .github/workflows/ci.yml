@@ -50,9 +50,10 @@ jobs:
         sam --version
     - name: Install NPM
       if: matrix.java == '11'
-      run: |
-        sudo apt install npm
-        npm --version
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - run: npm --version
     - name: Install AWS CDK
       if: matrix.java == '11'
       run: |
