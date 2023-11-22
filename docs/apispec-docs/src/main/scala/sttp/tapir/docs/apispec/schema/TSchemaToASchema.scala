@@ -32,7 +32,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
         // the initial list of schemas.
         val propagated = propagateMetadataForOption(schema, opt).element
         val ref = toSchemaReference.map(propagated, name)
-        if (!markOptionsAsNullable) ref else ASchema.oneOf(List(ref, ASchema(SchemaType.Null)), None)
+        if (!markOptionsAsNullable) ref else ref.copy(nullable = Some(true))
       case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
       case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
