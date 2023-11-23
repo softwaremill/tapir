@@ -146,8 +146,10 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointInput.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointIO.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
     }
   }
 
