@@ -14,8 +14,12 @@ import zio.{Task, ZIO}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import zio.stream.ZSink
 
 class NettyZioServerTest extends TestSuite with EitherValues {
+  def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+    zStream.run(ZSink.drain)
+
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
@@ -30,8 +34,15 @@ class NettyZioServerTest extends TestSuite with EitherValues {
           }
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
-              new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+            new AllServerTests(
+              createServerTest,
+              interpreter,
+              backend,
+              staticContent = false,
+              multipart = false,
+              maxContentLength = Some(300)
+            ).tests() ++
+              new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++
               new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()
 

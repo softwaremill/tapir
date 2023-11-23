@@ -76,8 +76,10 @@ private object ZioStreamCompatible {
             .getOrThrowFiberFailure()
         )
 
-      override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[Throwable, Byte] =
-        publisher.toZIOStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
+      override def fromArmeriaStream(publisher: Publisher[HttpData], maxBytes: Option[Long]): Stream[Throwable, Byte] = {
+        val stream = publisher.toZIOStream().mapConcatChunk(httpData => Chunk.fromArray(httpData.array()))
+        maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
+      }
     }
   }
 }

@@ -119,8 +119,9 @@ package object streams {
         .toEither
         .fold(throw _, identity)
 
-    override def fromReadStream(readStream: ReadStream[Buffer]): Stream[Throwable, Byte] =
+    override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): Stream[Throwable, Byte] = {
       fromReadStreamInternal(readStream).mapConcatChunk(buffer => Chunk.fromArray(buffer.getBytes))
+    }
 
     private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[Throwable, T] =
       runtime

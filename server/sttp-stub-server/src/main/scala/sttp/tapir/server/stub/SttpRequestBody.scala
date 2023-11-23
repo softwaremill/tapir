@@ -14,7 +14,7 @@ import scala.annotation.tailrec
 class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] =
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {
@@ -29,7 +29,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
       case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
     }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = body(serverRequest) match {
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
     case Right(stream) => stream
     case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
   }

@@ -8,10 +8,12 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.interpreter.{RawValue, RequestBody, RequestBodyToRawException}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
+import io.netty.buffer.ByteBuf
+import sttp.tapir.DecodeResult
 
 class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     monadError: MonadError[F]
@@ -19,29 +21,44 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): F[RawValue[RAW]] = {
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): F[RawValue[RAW]] = {
+
+    def byteBuf: F[ByteBuf] = {
+      val buf = nettyRequest(serverRequest).content()
+      maxBytes
+        .map(max =>
+          if (buf.readableBytes() > max)
+            monadError.error[ByteBuf](RequestBodyToRawException(DecodeResult.BodyTooLarge(max)))
+          else
+            monadError.unit(buf)
+        )
+        .getOrElse(monadError.unit(buf))
+    }
 
     /** [[ByteBufUtil.getBytes(io.netty.buffer.ByteBuf)]] copies buffer without affecting reader index of the original. */
-    def requestContentAsByteArray = ByteBufUtil.getBytes(nettyRequest(serverRequest).content())
+    def requestContentAsByteArray: F[Array[Byte]] = byteBuf.map(ByteBufUtil.getBytes)
 
     bodyType match {
-      case RawBodyType.StringBody(charset) => monadError.unit(RawValue(nettyRequest(serverRequest).content().toString(charset)))
-      case RawBodyType.ByteArrayBody       => monadError.unit(RawValue(requestContentAsByteArray))
-      case RawBodyType.ByteBufferBody      => monadError.unit(RawValue(ByteBuffer.wrap(requestContentAsByteArray)))
-      case RawBodyType.InputStreamBody     => monadError.unit(RawValue(new ByteBufInputStream(nettyRequest(serverRequest).content())))
+      case RawBodyType.StringBody(charset) => byteBuf.map(buf => RawValue(buf.toString(charset)))
+      case RawBodyType.ByteArrayBody       => requestContentAsByteArray.map(ba => RawValue(ba))
+      case RawBodyType.ByteBufferBody      => requestContentAsByteArray.map(ba => RawValue(ByteBuffer.wrap(ba)))
+      case RawBodyType.InputStreamBody     => byteBuf.map(buf => RawValue(new ByteBufInputStream(buf)))
       case RawBodyType.InputStreamRangeBody =>
-        monadError.unit(RawValue(InputStreamRange(() => new ByteBufInputStream(nettyRequest(serverRequest).content()))))
+        byteBuf.map(buf => RawValue(InputStreamRange(() => new ByteBufInputStream(buf))))
       case RawBodyType.FileBody =>
-        createFile(serverRequest)
-          .map(file => {
-            Files.write(file.toPath, requestContentAsByteArray)
-            RawValue(FileRange(file), Seq(FileRange(file)))
-          })
+        requestContentAsByteArray.flatMap(ba =>
+          createFile(serverRequest)
+            .map(file => {
+              Files.write(file.toPath, ba)
+              RawValue(FileRange(file), Seq(FileRange(file)))
+            })
+        )
       case _: RawBodyType.MultipartBody => ???
     }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException()
 
   private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 }

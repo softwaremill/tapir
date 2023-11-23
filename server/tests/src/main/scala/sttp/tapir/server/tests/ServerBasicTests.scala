@@ -23,6 +23,7 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
+import sttp.tapir.server.interpreter.MaxContentLength
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
@@ -745,9 +746,25 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   )
 
   def maxContentLengthTests(): List[Test] = List(
-    testServer(in_string_out_string, "returns 413 on exceeded max content length")(_ =>
-      pureResult(List.fill(maxContentLength.getOrElse(0) + 1)('x').mkString.asRight[Unit])
-    ) { (backend, baseUri) => basicRequest.post(uri"$baseUri/api/echo").body("irrelevant").send(backend).map(_.code.code shouldBe 413) }
+    {
+      val maxContentLength = 300
+      testServer(
+        in_string_out_string.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxContentLength.toLong)),
+        "returns 413 on exceeded max content length (request)"
+      )(_ => pureResult("ok".asRight[Unit])) { (backend, baseUri) =>
+        val tooLargeBody: String = List.fill(maxContentLength + 1)('x').mkString
+        basicRequest.post(uri"$baseUri/api/echo").body(tooLargeBody).send(backend).map(_.code shouldBe StatusCode.PayloadTooLarge)
+      }
+    }, {
+      val maxContentLength = 300
+      testServer(
+        in_string_out_string.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxContentLength.toLong)),
+        "returns OK on content length below or equal max (request)"
+      )(_ => pureResult("ok".asRight[Unit])) { (backend, baseUri) =>
+        val fineBody: String = List.fill(maxContentLength)('x').mkString
+        basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
+      }
+    }
   )
 
   def exceptionTests(): List[Test] = List(

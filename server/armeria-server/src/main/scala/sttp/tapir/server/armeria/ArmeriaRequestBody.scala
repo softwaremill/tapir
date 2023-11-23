@@ -23,13 +23,13 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
 
   override val streams: Streams[S] = streamCompatible.streams
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     streamCompatible
-      .fromArmeriaStream(armeriaCtx(serverRequest).request().filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]])
+      .fromArmeriaStream(armeriaCtx(serverRequest).request().filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]], maxBytes)
       .asInstanceOf[streams.BinaryStream]
   }
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val ctx = armeriaCtx(serverRequest)
     val request = ctx.request()
 

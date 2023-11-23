@@ -124,6 +124,7 @@ object DefaultDecodeFailureHandler {
         respondUnsupportedMediaType
       case (_: EndpointIO.FixedHeader[_], _)                         => respondBadRequest
       case (_: EndpointIO.Headers[_], _)                             => respondBadRequest
+      case (_, _: DecodeResult.BodyTooLarge)                         => respondPayloadTooLarge
       case (_: EndpointIO.Body[_, _], _)                             => respondBadRequest
       case (_: EndpointIO.OneOfBody[_, _], _: DecodeResult.Mismatch) => respondUnsupportedMediaType
       case (_: EndpointIO.StreamBodyWrapper[_, _], _)                => respondBadRequest
@@ -143,6 +144,7 @@ object DefaultDecodeFailureHandler {
   }
   private val respondBadRequest = Some(onlyStatus(StatusCode.BadRequest))
   private val respondUnsupportedMediaType = Some(onlyStatus(StatusCode.UnsupportedMediaType))
+  private val respondPayloadTooLarge = Some(onlyStatus(StatusCode.PayloadTooLarge))
 
   def respondNotFoundIfHasAuth(
       ctx: DecodeFailureContext,
@@ -224,10 +226,12 @@ object DefaultDecodeFailureHandler {
             }
             .mkString(", ")
         )
-      case Missing        => Some("missing")
-      case Multiple(_)    => Some("multiple values")
-      case Mismatch(_, _) => Some("value mismatch")
-      case _              => None
+      case Missing                => Some("missing")
+      case Multiple(_)            => Some("multiple values")
+      case Mismatch(_, _)         => Some("value mismatch")
+      case BodyTooLarge(maxBytes) => Some(s"Content length limit: $maxBytes bytes")
+      case _: Error               => None
+      case _: InvalidValue        => None
     }
 
     def combineSourceAndDetail(source: String, detail: Option[String]): String =

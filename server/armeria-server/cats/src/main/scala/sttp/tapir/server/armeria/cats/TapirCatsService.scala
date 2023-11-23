@@ -84,8 +84,10 @@ private object Fs2StreamCompatible {
           dispatcher
         )
 
-      override def fromArmeriaStream(publisher: Publisher[HttpData]): Stream[F, Byte] =
-        publisher.toStreamBuffered[F](4).flatMap(httpData => Stream.chunk(Chunk.array(httpData.array())))
+      override def fromArmeriaStream(publisher: Publisher[HttpData], maxBytes: Option[Long]): Stream[F, Byte] = {
+        val stream = publisher.toStreamBuffered[F](4).flatMap(httpData => Stream.chunk(Chunk.array(httpData.array())))
+        maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
+      }
     }
   }
 }

@@ -51,7 +51,7 @@ private[armeria] final case class TapirFutureService(
 private object ArmeriaStreamCompatible extends StreamCompatible[ArmeriaStreams] {
   override val streams: ArmeriaStreams = ArmeriaStreams
 
-  override def fromArmeriaStream(s: Publisher[HttpData]): Publisher[HttpData] = s
+  override def fromArmeriaStream(s: Publisher[HttpData], maxBytes: Option[Long]): Publisher[HttpData] = s
 
   override def asStreamMessage(s: Publisher[HttpData]): Publisher[HttpData] = s
 }

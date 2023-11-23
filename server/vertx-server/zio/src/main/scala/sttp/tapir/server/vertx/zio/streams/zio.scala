@@ -103,8 +103,10 @@ package object streams {
       }).toEither
         .fold(throw _, identity)
 
-    override def fromReadStream(readStream: ReadStream[Buffer]): Stream[Throwable, Byte] =
-      fromReadStreamInternal(readStream).mapConcatChunk(buffer => Chunk.fromArray(buffer.getBytes))
+    override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): Stream[Throwable, Byte] = {
+      val stream = fromReadStreamInternal(readStream).mapConcatChunk(buffer => Chunk.fromArray(buffer.getBytes))
+      maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
+    }
 
     private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[Throwable, T] =
       unsafeRunSync(for {

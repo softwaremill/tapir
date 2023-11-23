@@ -35,6 +35,7 @@ object DecodeResult {
     }
   }
   case class Mismatch(expected: String, actual: String) extends Failure
+  case class BodyTooLarge(maxBytes: Long) extends Failure
 
   /** A validation error that occurred when decoding the value, that is, when some `Validator` failed. */
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure

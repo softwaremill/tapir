@@ -54,7 +54,7 @@ class ZioHttpServerTest extends TestSuite {
           // Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [f2 content], parser state [STATUS_LINE]
           new AllServerTests(createServerTest, interpreter, backend, basic = false, staticContent = false, multipart = false, file = true)
             .tests() ++
-          new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ZioStreams)(_ => Task.unit) ++
           new ZioHttpCompositionTest(createServerTest).tests() // ++
         // TODO: only works with zio2
         // additionalTests()
