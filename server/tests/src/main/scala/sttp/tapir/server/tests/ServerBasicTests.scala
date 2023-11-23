@@ -50,7 +50,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       customiseDecodeFailureHandlerTests() ++
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
-      (if (maxContentLength.nonEmpty) maxContentLengthTests() else Nil) ++
+      maxContentLength.map(maxContentLengthTests).getOrElse(Nil) ++
       exceptionTests()
 
   def basicTests(): List[Test] = List(
@@ -747,12 +747,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     }
   )
 
-  val maxLength = 300
-  private def limited[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], maxBytes: Int) =
-    endpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxBytes.toLong))
-
   def testPayloadTooLarge[I](
-      testedEndpoint: PublicEndpoint[I, Unit, I, Any]
+      testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+      maxLength: Int,
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
     "returns 413 on exceeded max content length (request)"
@@ -762,23 +759,24 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   }
   def testPayloadWithinLimit[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+      maxLength: Int,
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "returns OK on content length below or equal max (request)",
+    "returns OK on content length  below or equal max (request)",
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
   }
 
-  def maxContentLengthTests(): List[Test] = List(
-    testPayloadTooLarge(in_string_out_string),
-    testPayloadTooLarge(in_byte_array_out_byte_array),
-    testPayloadTooLarge(in_file_out_file),
-    testPayloadTooLarge(in_byte_buffer_out_byte_buffer),
-    testPayloadWithinLimit(in_string_out_string),
-    testPayloadWithinLimit(in_byte_array_out_byte_array),
-    testPayloadWithinLimit(in_file_out_file),
-    testPayloadWithinLimit(in_byte_buffer_out_byte_buffer)
+  def maxContentLengthTests(maxLength: Int): List[Test] = List(
+    testPayloadTooLarge(in_string_out_string, maxLength),
+    testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),
+    testPayloadTooLarge(in_file_out_file, maxLength),
+    testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
+    testPayloadWithinLimit(in_string_out_string, maxLength),
+    testPayloadWithinLimit(in_byte_array_out_byte_array, maxLength),
+    testPayloadWithinLimit(in_file_out_file, maxLength),
+    testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength)
   )
 
   def exceptionTests(): List[Test] = List(
