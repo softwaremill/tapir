@@ -30,7 +30,10 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     toRaw(request, bodyType, charset, () => request.body, None)
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = playRequest(serverRequest).body
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val stream = playRequest(serverRequest).body
+    maxBytes.map(AkkaStreams.limitBytes(stream, _)).getOrElse(stream)
+  }
 
   private def toRaw[R](
       request: Request[AkkaStreams.BinaryStream],
