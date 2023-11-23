@@ -345,10 +345,7 @@ lazy val rootProject = (project in file("."))
     testFinatra := (Test / test).all(filterProject(p => p.contains("finatra"))).value,
     compileScoped := Def.inputTaskDyn {
       val args = spaceDelimited("<arg>").parsed
-      Def.task {
-        Def.taskDyn((Compile / compile).all(filterByVersionAndPlatform(args.head, args(1))))
-        Def.taskDyn((Test / compile).all(filterByVersionAndPlatform(args.head, args(1))))
-      }
+      Def.taskDyn((Test / compile).all(filterByVersionAndPlatform(args.head, args(1))))
     }.evaluated,
     testScoped := Def.inputTaskDyn {
       val args = spaceDelimited("<arg>").parsed
