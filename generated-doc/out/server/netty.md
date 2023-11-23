@@ -7,7 +7,7 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.9.1"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-loom" % "1.9.1"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.9.1"
 
 // if you are using cats-effect:
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.9.1"
@@ -44,7 +44,7 @@ val binding: Future[NettyFutureServerBinding] =
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-The `tapir-netty-loom` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style.
+The `tapir-netty-server-loom` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style.
 
 ```scala
 import sttp.tapir._
