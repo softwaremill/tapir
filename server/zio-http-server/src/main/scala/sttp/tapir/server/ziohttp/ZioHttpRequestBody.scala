@@ -2,16 +2,17 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities
 import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.{FileRange, InputStreamRange}
+import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.{BodyMaxLengthExceededException, RawValue, RequestBody}
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
+import sttp.tapir.server.interpreter.RawValue
+import sttp.tapir.server.interpreter.RequestBody
 import zio.http.Request
-import zio.stream.Stream
 import zio.{RIO, Task, ZIO}
+import zio.stream.Stream
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import sttp.capabilities.StreamMaxLengthExceededException
 
 class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
@@ -28,28 +29,15 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
     case RawBodyType.MultipartBody(_, _) => ZIO.fail(new UnsupportedOperationException("Multipart is not supported"))
   }
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
-    toZioStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
-
-  private def toZioStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Stream[Throwable, Byte] = {
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val inputStream = stream(serverRequest)
-    maxBytes.map(ZioStreams.limitBytes(inputStream, _)).getOrElse(inputStream)
+    maxBytes.map(ZioStreams.limitBytes(inputStream, _)).getOrElse(inputStream).asInstanceOf[streams.BinaryStream]
   }
 
   private def stream(serverRequest: ServerRequest): Stream[Throwable, Byte] =
     zioHttpRequest(serverRequest).body.asStream
 
-  private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = {
-    val body = zioHttpRequest(serverRequest).body
-    if (body.isComplete) {
-      maxBytes.map(limit => body.asArray.filterOrFail(_.length <= limit)(new BodyMaxLengthExceededException(limit))).getOrElse(body.asArray)
-    } else
-      toZioStream(serverRequest, maxBytes).runCollect
-        .catchSomeDefect { case e: StreamMaxLengthExceededException =>
-          ZIO.fail(e)
-        }
-        .map(_.toArray)
-  }
+  private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = zioHttpRequest(serverRequest).body.asArray
 
   private def zioHttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
 }
