@@ -33,7 +33,8 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     }).asInstanceOf[RawValue[R]].unit
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException
 
   private def awsRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[AwsRequest]
 }

@@ -33,9 +33,9 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
       case InputStreamRangeBody =>
         nettyRequestBytes(serverRequest).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
       case FileBody =>
-        createFile(serverRequest)
+        createFile(serverRequest) 
           .flatMap(tapirFile => {
-            toStream(serverRequest)
+            toStream(serverRequest, maxBytes = None) // TODO createFile() should also have maxBytes
               .run(ZSink.fromFile(tapirFile))
               .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
           })
@@ -44,17 +44,17 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
     }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = {
-
-    serverRequest.underlying
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val stream = serverRequest.underlying
       .asInstanceOf[StreamedHttpRequest]
       .toZIOStream()
       .flatMap(httpContent => ZStream.fromChunk(Chunk.fromByteBuffer(httpContent.content.nioBuffer())))
+    maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
   }
 
   private def nettyRequestBytes(serverRequest: ServerRequest): RIO[Env, Array[Byte]] = serverRequest.underlying match {
     case req: FullHttpRequest   => ZIO.succeed(ByteBufUtil.getBytes(req.content()))
-    case _: StreamedHttpRequest => toStream(serverRequest).run(ZSink.collectAll[Byte]).map(_.toArray)
+    case _: StreamedHttpRequest => toStream(serverRequest, maxBytes = None).run(ZSink.collectAll[Byte]).map(_.toArray) // TODO
     case other => ZIO.fail(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
   }
 

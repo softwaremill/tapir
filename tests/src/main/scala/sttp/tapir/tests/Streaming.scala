@@ -12,6 +12,10 @@ object Streaming {
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 
+  def in_stream_out_string[S](s: Streams[S]): PublicEndpoint[s.BinaryStream, Unit, String, S] = {
+    endpoint.post.in("api" / "echo").in(streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))).out(stringBody)
+  }
+
   def in_stream_out_stream_with_content_length[S](
       s: Streams[S]
   ): PublicEndpoint[(Long, s.BinaryStream), Unit, (Long, s.BinaryStream), S] = {

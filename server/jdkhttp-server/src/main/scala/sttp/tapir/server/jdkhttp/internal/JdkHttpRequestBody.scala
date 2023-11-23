@@ -14,7 +14,8 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long) extends RequestBody[Id, NoStreams] {
+private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
+    extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
@@ -76,9 +77,10 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     )
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException(
-    "Streaming is not supported"
-  )
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException(
+      "Streaming is not supported"
+    )
 
   private def jdkHttpRequest(serverRequest: ServerRequest): HttpExchange =
     serverRequest.underlying.asInstanceOf[HttpExchange]

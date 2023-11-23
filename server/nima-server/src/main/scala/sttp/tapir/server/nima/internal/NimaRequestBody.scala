@@ -32,7 +32,8 @@ private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) exte
     }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException()
 
   private def nimaRequest(serverRequest: ServerRequest): JavaNimaServerRequest =
     serverRequest.underlying.asInstanceOf[JavaNimaServerRequest]

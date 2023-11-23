@@ -10,7 +10,7 @@ object Versions {
   val helidon = "4.0.0"
   val sttp = "3.9.1"
   val sttpModel = "1.7.6"
-  val sttpShared = "1.3.16"
+  val sttpShared = "1.3.17"
   val sttpApispec = "0.7.2"
   val akkaHttp = "10.2.10"
   val akkaStreams = "2.6.20"

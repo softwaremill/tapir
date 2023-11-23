@@ -19,6 +19,6 @@ class ArmeriaZioServerTest extends TestSuite {
 
     new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
       new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerStreamingTests(createServerTest, ZioStreams).tests()
+      new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ZioStreams)(_ => Task.unit)
   }
 }

@@ -22,7 +22,10 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     val r = http4sRequest(serverRequest)
     toRawFromStream(serverRequest, r.body, bodyType, r.charset)
   }
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = http4sRequest(serverRequest).body
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val stream = http4sRequest(serverRequest).body
+    maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
+  }
 
   private def http4sRequest(serverRequest: ServerRequest): Request[F] = serverRequest.underlying.asInstanceOf[Request[F]]
 

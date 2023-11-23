@@ -10,6 +10,7 @@ import _root_.zio.RIO
 import _root_.zio.blocking.Blocking
 import sttp.tapir.ztapir.RIOMonadError
 import zio.stream.ZStream
+import zio.Task
 
 class ZioVertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
@@ -27,7 +28,7 @@ class ZioVertxServerTest extends TestSuite {
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+        new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ZioStreams)(_ => Task.unit) ++
         new ServerWebSocketTests(createServerTest, ZioStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

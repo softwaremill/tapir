@@ -107,8 +107,10 @@ object fs2 {
           }
         }
 
-      override def fromReadStream(readStream: ReadStream[Buffer]): Stream[F, Byte] =
-        fromReadStreamInternal(readStream).map(buffer => Chunk.array(buffer.getBytes)).unchunks
+      override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): Stream[F, Byte] = {
+        val stream = fromReadStreamInternal(readStream).map(buffer => Chunk.array(buffer.getBytes)).unchunks
+        maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
+      }
 
       private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[F, T] =
         opts.dispatcher.unsafeRunSync {
