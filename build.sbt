@@ -845,15 +845,23 @@ lazy val play29Json: ProjectMatrix = (projectMatrix in file("json/play29json"))
   .settings(commonSettings: _*)
   .settings(
     name := "tapir-json-play29",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "main" / "scala",
+    Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "test" / "scala",
     libraryDependencies ++= Seq(
       "com.typesafe.play" %%% "play-json" % Versions.play29Json,
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = Seq(
+      Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "test" / "scalajvm"
+    )
+  )
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
+      Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "test" / "scalajs",
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
