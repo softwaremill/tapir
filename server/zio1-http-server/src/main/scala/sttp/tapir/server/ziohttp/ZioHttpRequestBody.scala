@@ -29,7 +29,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
       case RawBodyType.FileBody =>
         for {
           tmpFile <- serverOptions.createFile(serverRequest)
-          _ <- toStream(serverRequest, None)
+          _ <- toStream(serverRequest, maxBytes)
             .asInstanceOf[Stream[Throwable, Byte]]
             .run(ZSink.fromFile(tmpFile.toPath))
             .provideLayer(Blocking.live)

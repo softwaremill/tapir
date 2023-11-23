@@ -40,9 +40,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
     zioHttpRequest(serverRequest).body.asStream
 
   private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = {
-    val maxBytes: Option[Long] = Some(30L) // TODO
     val body = zioHttpRequest(serverRequest).body
-    println("Checking against maxBytes")
     if (body.isComplete) {
       maxBytes.map(limit => body.asArray.filterOrFail(_.length <= limit)(new BodyMaxLengthExceededException(limit))).getOrElse(body.asArray)
     } else
