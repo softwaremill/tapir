@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: ClassWithOptionField
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassWithOptionField'
+              required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    ClassWithOptionField:
+      required:
+      - requiredStringField
+      type: object
+      properties:
+        optionalIntField:
+          type: integer
+          format: int32
+          nullable: true
+        requiredStringField:
+          type: string

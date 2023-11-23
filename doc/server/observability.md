@@ -52,7 +52,7 @@ Add the following dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "@VERSION@"
 ```
 
-`PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
+`PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
 well as an endpoint definition to read the metrics & expose them to the Prometheus server.
 
 For example, using `NettyFutureServerInterpreter`:
@@ -92,18 +92,18 @@ To create and add custom metrics:
 ```scala mdoc:compile-only
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.metrics.{EndpointMetric, Metric}
-import io.prometheus.client.{CollectorRegistry, Counter}
+import io.prometheus.metrics.core.metrics.{Counter, Gauge, Histogram}
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import scala.concurrent.Future
 
 // Metric for counting responses labeled by path, method and status code
 val responsesTotal = Metric[Future, Counter](
   Counter
-    .build()
-    .namespace("tapir")
-    .name("responses_total")
+    .builder()
+    .name("tapir_responses_total")
     .help("HTTP responses")
     .labelNames("path", "method", "status")
-    .register(CollectorRegistry.defaultRegistry),
+    .register(PrometheusRegistry.defaultRegistry),
   onRequest = { (req, counter, _) =>
     Future.successful(
       EndpointMetric()
@@ -112,14 +112,14 @@ val responsesTotal = Metric[Future, Counter](
             val path = ep.showPathTemplate()
             val method = req.method.method
             val status = res.code.toString()
-            counter.labels(path, method, status).inc()
+            counter.labelValues(path, method, status).inc()
           }
         }
     )
   }
 )
 
-val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
+val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.defaultRegistry)
   .addCustom(responsesTotal)
 ```
 
