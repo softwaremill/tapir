@@ -103,6 +103,8 @@ class PlayServerTest extends TestSuite {
             .unsafeToFuture()
         }
       )
+      def drainAkka(stream: AkkaStreams.BinaryStream): Future[Unit] =
+        stream.runWith(Sink.ignore).map(_ => ())
 
       new ServerBasicTests(
         createServerTest,
@@ -113,7 +115,7 @@ class PlayServerTest extends TestSuite {
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
-        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
+        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(AkkaStreams)(drainAkka) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
