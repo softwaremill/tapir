@@ -3,7 +3,7 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.9.1"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.9.2"
 ```
 
 and (if you don't already depend on Play) 
