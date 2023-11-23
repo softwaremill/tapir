@@ -44,7 +44,7 @@ object Versions {
   val vertx = "4.5.0"
   val jsScalaJavaTime = "2.5.0"
   val nativeScalaJavaTime = "2.4.0-M3"
-  val jwtScala = "9.4.4"
+  val jwtScala = "9.4.5"
   val derevo = "0.13.0"
   val newtype = "0.4.4"
   val monixNewtype = "0.2.3"
