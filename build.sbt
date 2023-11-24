@@ -2218,6 +2218,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocVariables := Map(
       "VERSION" -> version.value,
       "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
+      "PLAY29_HTTP_SERVER_VERSION" -> Versions.play29Server,
       "JSON4S_VERSION" -> Versions.json4s
     ),
     mdocOut := file("generated-doc/out"),

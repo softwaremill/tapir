@@ -19,7 +19,6 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [Finatra](server/finatra.md) `http.Controller`
   * [Pekko HTTP](server/pekkohttp.md) `Route`s/`Directive`s
   * [Play](server/play.md) `Route`
-  * [Play 2.9](server/play29.md) `Route`
   * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
   * [ZIO Http](server/ziohttp.md) `Http`
   * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
@@ -30,7 +29,6 @@ input and output parameters. An endpoint specification can be interpreted as:
   Currently supported:
   * [sttp](client/sttp.md)
   * [Play](client/play.md)
-  * [Play 2.9](client/play29.md)
   * [Http4s](client/http4s.md)
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md)
