@@ -34,7 +34,7 @@ private[http4s] object Http4sWebSockets {
         }
         .map { f =>
           o.requests.decode(f) match {
-            case x: DecodeResult.Value[_]      => x.v
+            case x: DecodeResult.Value[REQ]      => x.v
             case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
           }
         }
@@ -100,7 +100,7 @@ private[http4s] object Http4sWebSockets {
   ): Stream[F, WebSocketFrame] = {
     if (doAuto) {
       s.evalMapFilter {
-        case ping: WebSocketFrame.Ping => pongs.offer(WebSocketFrame.Pong(ping.payload)).as(None)
+        case ping: WebSocketFrame.Ping => pongs.offer(WebSocketFrame.Pong(ping.payload)).as[Option[WebSocketFrame]](None)
         case f                         => f.some.pure[F]
       }
     } else s
