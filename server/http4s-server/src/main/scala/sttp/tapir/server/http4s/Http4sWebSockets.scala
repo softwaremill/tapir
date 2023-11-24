@@ -17,7 +17,7 @@ private[http4s] object Http4sWebSockets {
       pipe: Pipe[F, REQ, RESP],
       o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
-    Queue.bounded[F, WebSocketFrame](1).map { pongs => (in: Stream[F, Http4sWebSocketFrame]) =>
+    Queue.bounded[F, WebSocketFrame](2).map { pongs => (in: Stream[F, Http4sWebSocketFrame]) =>
       val sttpFrames = in.map(http4sFrameToFrame)
       val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
       val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
@@ -28,15 +28,16 @@ private[http4s] object Http4sWebSockets {
       }
 
       (autoPongs
-        .map {
-          case _: WebSocketFrame.Close if !o.decodeCloseRequests => None
-          case f =>
-            o.requests.decode(f) match {
-              case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
-              case DecodeResult.Value(v)         => Some(v)
-            }
+        .takeWhile {
+          case _: WebSocketFrame.Close if !o.decodeCloseRequests => false
+          case _                                                 => true
         }
-        .unNoneTerminate
+        .map { f =>
+          o.requests.decode(f) match {
+            case x: DecodeResult.Value[_]      => x.v
+            case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
+          }
+        }
         .through(pipe)
         .map(o.responses.encode)
         .mergeHaltL(Stream.repeatEval(pongs.take))
@@ -47,22 +48,21 @@ private[http4s] object Http4sWebSockets {
 
   private def http4sFrameToFrame(f: Http4sWebSocketFrame): WebSocketFrame =
     f match {
-      case t: Http4sWebSocketFrame.Text    => WebSocketFrame.Text(t.str, t.last, None)
-      case Http4sWebSocketFrame.Ping(data) => WebSocketFrame.Ping(data.toArray)
-      case Http4sWebSocketFrame.Pong(data) => WebSocketFrame.Pong(data.toArray)
-      case c: Http4sWebSocketFrame.Close   => WebSocketFrame.Close(c.closeCode, "")
-      case _                               => WebSocketFrame.Binary(f.data.toArray, f.last, None)
+      case t: Http4sWebSocketFrame.Text  => WebSocketFrame.Text(t.str, t.last, None)
+      case x: Http4sWebSocketFrame.Ping  => WebSocketFrame.Ping(x.data.toArray)
+      case x: Http4sWebSocketFrame.Pong  => WebSocketFrame.Pong(x.data.toArray)
+      case c: Http4sWebSocketFrame.Close => WebSocketFrame.Close(c.closeCode, "")
+      case _                             => WebSocketFrame.Binary(f.data.toArray, f.last, None)
     }
 
-  private def frameToHttp4sFrame(w: WebSocketFrame): Http4sWebSocketFrame = {
+  private def frameToHttp4sFrame(w: WebSocketFrame): Http4sWebSocketFrame =
     w match {
-      case WebSocketFrame.Text(p, finalFragment, _)   => Http4sWebSocketFrame.Text(p, finalFragment)
-      case WebSocketFrame.Binary(p, finalFragment, _) => Http4sWebSocketFrame.Binary(ByteVector(p), finalFragment)
-      case WebSocketFrame.Ping(p)                     => Http4sWebSocketFrame.Ping(ByteVector(p))
-      case WebSocketFrame.Pong(p)                     => Http4sWebSocketFrame.Pong(ByteVector(p))
-      case WebSocketFrame.Close(code, reason)         => Http4sWebSocketFrame.Close(code, reason).fold(throw _, identity)
+      case x: WebSocketFrame.Text   => Http4sWebSocketFrame.Text(x.payload, x.finalFragment)
+      case x: WebSocketFrame.Binary => Http4sWebSocketFrame.Binary(ByteVector(x.payload), x.finalFragment)
+      case x: WebSocketFrame.Ping   => Http4sWebSocketFrame.Ping(ByteVector(x.payload))
+      case x: WebSocketFrame.Pong   => Http4sWebSocketFrame.Pong(ByteVector(x.payload))
+      case x: WebSocketFrame.Close  => Http4sWebSocketFrame.Close(x.statusCode, x.reasonText).fold(throw _, identity)
     }
-  }
 
   private def optionallyConcatenateFrames[F[_]](s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] = {
     if (doConcatenate) {
@@ -87,7 +87,7 @@ private[http4s] object Http4sWebSockets {
   private def optionallyIgnorePong[F[_]](s: Stream[F, WebSocketFrame], doIgnore: Boolean): Stream[F, WebSocketFrame] = {
     if (doIgnore) {
       s.filter {
-        case WebSocketFrame.Pong(_) => false
+        case _: WebSocketFrame.Pong => false
         case _                      => true
       }
     } else s
@@ -99,11 +99,9 @@ private[http4s] object Http4sWebSockets {
       doAuto: Boolean
   ): Stream[F, WebSocketFrame] = {
     if (doAuto) {
-      s.evalMap {
-        case WebSocketFrame.Ping(payload) => pongs.offer(WebSocketFrame.Pong(payload)).map(_ => none[WebSocketFrame])
-        case f                            => f.some.pure[F]
-      }.collect { case Some(f) =>
-        f
+      s.evalMapFilter {
+        case ping: WebSocketFrame.Ping => pongs.offer(WebSocketFrame.Pong(ping.payload)).as(None)
+        case f                         => f.some.pure[F]
       }
     } else s
   }
