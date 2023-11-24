@@ -26,15 +26,12 @@ private[http4s] object Http4sWebSockets {
         case Some((interval, frame)) => Stream.awakeEvery[F](interval).map(_ => frame)
         case None                    => Stream.empty
       }
+      val decodeClose = optionallyDecodeClose(autoPongs, o.decodeCloseRequests)
 
-      (autoPongs
-        .takeWhile {
-          case _: WebSocketFrame.Close if !o.decodeCloseRequests => false
-          case _                                                 => true
-        }
+      (decodeClose
         .map { f =>
           o.requests.decode(f) match {
-            case x: DecodeResult.Value[REQ]      => x.v
+            case x: DecodeResult.Value[REQ]    => x.v
             case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
           }
         }
@@ -105,4 +102,12 @@ private[http4s] object Http4sWebSockets {
       }
     } else s
   }
+
+  private def optionallyDecodeClose[F[_]](s: Stream[F, WebSocketFrame], doDecodeClose: Boolean): Stream[F, WebSocketFrame] =
+    if (!doDecodeClose) {
+      s.takeWhile {
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      }
+    } else s
 }
