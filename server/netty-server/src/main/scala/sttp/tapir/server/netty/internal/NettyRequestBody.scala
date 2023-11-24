@@ -8,12 +8,13 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.server.interpreter.{RawValue, RequestBody, RequestBodyToRawException}
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import io.netty.buffer.ByteBuf
 import sttp.tapir.DecodeResult
+import sttp.capabilities.StreamMaxLengthExceededException
 
 class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     monadError: MonadError[F]
@@ -28,7 +29,7 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
       maxBytes
         .map(max =>
           if (buf.readableBytes() > max)
-            monadError.error[ByteBuf](RequestBodyToRawException(DecodeResult.BodyTooLarge(max)))
+            monadError.error[ByteBuf](StreamMaxLengthExceededException(max))
           else
             monadError.unit(buf)
         )

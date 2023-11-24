@@ -10,12 +10,13 @@ import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.{RawValue, RequestBody, RequestBodyToRawException}
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import sttp.tapir.DecodeResult
+import sttp.capabilities.StreamMaxLengthExceededException
 
 private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit val monad: Async[F])
     extends RequestBody[F, Fs2Streams[F]] {
@@ -30,7 +31,7 @@ private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[T
         maxBytes
           .map(max =>
             if (buf.readableBytes() > max)
-              monad.raiseError[Array[Byte]](RequestBodyToRawException(DecodeResult.BodyTooLarge(max)))
+              monad.raiseError[Array[Byte]](StreamMaxLengthExceededException(max))
             else
               monad.delay(ByteBufUtil.getBytes(buf))
           )

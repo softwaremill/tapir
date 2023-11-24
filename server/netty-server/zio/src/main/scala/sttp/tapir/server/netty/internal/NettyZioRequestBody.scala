@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.FullHttpRequest
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.RawBodyType._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.{RawValue, RequestBody, RequestBodyToRawException}
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import zio.interop.reactivestreams._
 import zio.stream.{ZStream, _}
@@ -15,6 +15,7 @@ import zio.{Chunk, RIO, ZIO}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import sttp.tapir.DecodeResult
+import sttp.capabilities.StreamMaxLengthExceededException
 
 private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[Env, TapirFile])
     extends RequestBody[RIO[Env, *], ZioStreams] {
@@ -29,7 +30,7 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
         maxBytes
           .map(max =>
             if (buf.readableBytes() > max)
-              ZIO.fail(RequestBodyToRawException(DecodeResult.BodyTooLarge(max)))
+              ZIO.fail(StreamMaxLengthExceededException(max))
             else
               ZIO.succeed(ByteBufUtil.getBytes(buf))
           )
@@ -50,7 +51,7 @@ private[netty] class NettyZioRequestBody[Env](createFile: ServerRequest => RIO[E
       case InputStreamRangeBody =>
         nettyRequestBytes.map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
       case FileBody =>
-        createFile(serverRequest) 
+        createFile(serverRequest)
           .flatMap(tapirFile => {
             toStream(serverRequest, maxBytes)
               .run(ZSink.fromFile(tapirFile))

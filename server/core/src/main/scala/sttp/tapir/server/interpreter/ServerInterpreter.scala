@@ -199,10 +199,8 @@ class ServerInterpreter[R, F[_], B, S](
         }
       }
       .handleError {
-        case RequestBodyToRawException(failure) =>
-          (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
-        case StreamMaxLengthExceededException(maxBytes) =>
-          (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.BodyTooLarge(maxBytes)): DecodeBasicInputsResult).unit
+        case e: StreamMaxLengthExceededException =>
+          (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
       }
   }
 
