@@ -10,11 +10,13 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.interpreter.RequestBody
 
 object NettyServerInterpreter {
   def toRoute[F[_]: MonadError](
       ses: List[ServerEndpoint[Any, F]],
       interceptors: List[Interceptor[F]],
+      requestBody: Option[RequestBody[F, NoStreams]],
       createFile: ServerRequest => F[TapirFile],
       deleteFile: TapirFile => F[Unit],
       runAsync: RunAsync[F]
@@ -22,7 +24,7 @@ object NettyServerInterpreter {
     implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
     val serverInterpreter = new ServerInterpreter[Any, F, NettyResponse, NoStreams](
       FilterServerEndpoints(ses),
-      new NettyRequestBody(createFile),
+      requestBody.getOrElse(new NettyRequestBody(createFile)),
       new NettyToResponseBody,
       RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
       deleteFile

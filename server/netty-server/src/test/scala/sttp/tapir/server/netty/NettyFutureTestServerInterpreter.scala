@@ -24,7 +24,7 @@ class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implic
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, (Port, KillSwitch)] = {
     val config =
-      NettyConfig.defaultNoStreaming
+      NettyConfig.defaultWithStreaming
         .eventLoopGroup(eventLoopGroup)
         .randomPort
         .withDontShutdownEventLoopGroupOnClose
