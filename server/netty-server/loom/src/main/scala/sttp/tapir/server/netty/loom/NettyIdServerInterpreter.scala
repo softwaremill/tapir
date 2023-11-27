@@ -12,6 +12,7 @@ trait NettyIdServerInterpreter {
     NettyServerInterpreter.toRoute[Id](
       ses,
       nettyServerOptions.interceptors,
+      requestBody = None,
       nettyServerOptions.createFile,
       nettyServerOptions.deleteFile,
       new RunAsync[Id] {
