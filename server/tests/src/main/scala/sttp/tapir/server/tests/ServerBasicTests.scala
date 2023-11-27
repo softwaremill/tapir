@@ -35,7 +35,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     supportsUrlEncodedPathSegments: Boolean = true,
     supportsMultipleSetCookieHeaders: Boolean = true,
     invulnerableToUnsanitizedHeaders: Boolean = true,
-    maxContentLength: Option[Int] = None
+    maxContentLength: Boolean = false
 )(implicit
     m: MonadError[F]
 ) {
@@ -50,7 +50,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       customiseDecodeFailureHandlerTests() ++
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
-      maxContentLength.map(maxContentLengthTests).getOrElse(Nil) ++
+      (if (maxContentLength) maxContentLengthTests else Nil) ++
       exceptionTests()
 
   def basicTests(): List[Test] = List(
@@ -749,7 +749,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
 
   def testPayloadTooLarge[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-      maxLength: Int,
+      maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
     "returns 413 on exceeded max content length (request)"
@@ -759,25 +759,28 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   }
   def testPayloadWithinLimit[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-      maxLength: Int,
+      maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "returns OK on content length  below or equal max (request)",
+    "returns OK on content length  below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
   }
 
-  def maxContentLengthTests(maxLength: Int): List[Test] = List(
-    testPayloadTooLarge(in_string_out_string, maxLength),
-    testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),
-    testPayloadTooLarge(in_file_out_file, maxLength),
-    testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
-    testPayloadWithinLimit(in_string_out_string, maxLength),
-    testPayloadWithinLimit(in_byte_array_out_byte_array, maxLength),
-    testPayloadWithinLimit(in_file_out_file, maxLength),
-    testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength)
-  )
+  def maxContentLengthTests: List[Test] = {
+    val maxLength = 16484 // To generate a few chunks of default size 8192 + some extra bytes
+    List(
+      testPayloadTooLarge(in_string_out_string, maxLength),
+      testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),
+      testPayloadTooLarge(in_file_out_file, maxLength),
+      testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
+      testPayloadWithinLimit(in_string_out_string, maxLength),
+      testPayloadWithinLimit(in_byte_array_out_byte_array, maxLength),
+      testPayloadWithinLimit(in_file_out_file, maxLength),
+      testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength)
+    )
+  }
 
   def exceptionTests(): List[Test] = List(
     testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { (backend, baseUri) =>

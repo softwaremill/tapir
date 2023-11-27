@@ -28,7 +28,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     oneOfBody: Boolean = true,
     cors: Boolean = true,
     options: Boolean = true,
-    maxContentLength: Option[Int] = None
+    maxContentLength: Boolean = false
 )(implicit
     m: MonadError[F]
 ) {
