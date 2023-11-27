@@ -25,7 +25,6 @@ import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 import sttp.tapir.server.interpreter.MaxContentLength
 import sttp.tapir.tests.Files.in_file_out_file
-import java.io.File
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
@@ -774,8 +773,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testPayloadTooLarge(in_string_out_string, maxLength),
       testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),
       testPayloadTooLarge(in_file_out_file, maxLength),
+      testPayloadTooLarge(in_input_stream_out_input_stream, maxLength),
       testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
       testPayloadWithinLimit(in_string_out_string, maxLength),
+      testPayloadWithinLimit(in_input_stream_out_input_stream, maxLength),
       testPayloadWithinLimit(in_byte_array_out_byte_array, maxLength),
       testPayloadWithinLimit(in_file_out_file, maxLength),
       testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength)
