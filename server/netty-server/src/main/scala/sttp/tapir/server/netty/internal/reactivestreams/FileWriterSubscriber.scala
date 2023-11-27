@@ -1,14 +1,11 @@
 package sttp.tapir.server.netty.internal.reactivestreams
 
-import java.nio.ByteBuffer
+import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.{Publisher, Subscription}
+
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{Path, StandardOpenOption}
-import org.reactivestreams.{Subscriber, Subscription}
-import io.netty.handler.codec.http.HttpContent
-import java.io.IOException
-import scala.concurrent.Promise
-import org.reactivestreams.Publisher
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 
 class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpContent] {
   private var subscription: Subscription = _
@@ -37,6 +34,7 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
         }
 
         override def failed(exc: Throwable, attachment: Unit): Unit = {
+          subscription.cancel()
           onError(exc)
         }
       }
@@ -55,9 +53,9 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
 }
 
 object FileWriterSubscriber {
-  def writeAll(publisher: Publisher[HttpContent], path: Path, maxBytes: Long): Future[Unit] = {
-    val subscriber = new LimitedLengthSubscriber(maxBytes, new FileWriterSubscriber(path))
-    publisher.subscribe(subscriber)
+  def writeAll(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Future[Unit] = {
+    val subscriber = new FileWriterSubscriber(path)
+    publisher.subscribe(maxBytes.map(new LimitedLengthSubscriber(_, subscriber)).getOrElse(subscriber))
     subscriber.future
   }
 }

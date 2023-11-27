@@ -1,45 +1,39 @@
 package sttp.tapir.server.netty.internal.reactivestreams
 
-import org.reactivestreams.{Publisher, Subscriber, Subscription}
+import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.{Subscriber, Subscription}
+import sttp.capabilities.StreamMaxLengthExceededException
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Promise
-import io.netty.handler.codec.http.HttpContent
-import scala.concurrent.Future
-import io.netty.buffer.ByteBufUtil
-import sttp.capabilities.StreamMaxLengthExceededException
 
 // based on org.asynchttpclient.request.body.generator.ReactiveStreamsBodyGenerator.SimpleSubscriber
 // Requests all data at once and loads it into memory
+private[netty] class LimitedLengthSubscriber[R](maxBytes: Long, delegate: Subscriber[HttpContent]) extends Subscriber[HttpContent] {
+  private var subscription: Subscription = _
+  private var bytesReadSoFar = 0L
 
-private[netty] class LimitedLengthSubscriber[R](maxBytes: Long, delegate: PromisingSubscriber[R, HttpContent])
-    extends PromisingSubscriber[R, HttpContent] {
-  private var size = 0L
-
-  override def future: Future[R] = delegate.future
-
-  override def onSubscribe(s: Subscription): Unit =
+  override def onSubscribe(s: Subscription): Unit = {
+    subscription = s
     delegate.onSubscribe(s)
+  }
 
   override def onNext(content: HttpContent): Unit = {
-    assert(content != null)
-    size = size + content.content.readableBytes()
-    if (size > maxBytes)
+    bytesReadSoFar = bytesReadSoFar + content.content.readableBytes()
+    if (bytesReadSoFar > maxBytes) {
+      subscription.cancel()
       onError(StreamMaxLengthExceededException(maxBytes))
-    else
+      subscription = null
+    } else
       delegate.onNext(content)
   }
 
   override def onError(t: Throwable): Unit = {
-    assert(t != null)
-    delegate.onError(t)
+    if (subscription != null)
+      delegate.onError(t)
   }
 
   override def onComplete(): Unit = {
-    delegate.onComplete()
+    if (subscription != null)
+      delegate.onComplete()
   }
-}
-
-object LimitedLengthSubscriber {
-  def ()
 }

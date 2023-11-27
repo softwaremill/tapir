@@ -2,31 +2,28 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
+import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{
-  ByteBufNettyResponseContent,
-  ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent
-}
+import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
+import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
+import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
 import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
-import java.io.{InputStream, RandomAccessFile}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-
-private[internal] class RangedChunkedStream(raw: InputStream, length: Long) extends ChunkedStream(raw) {
-
-  override def isEndOfInput(): Boolean =
-    super.isEndOfInput || transferredBytes == length
-}
+import java.util.concurrent.ForkJoinPool
+import scala.concurrent.ExecutionContext
 
 class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
+  // TODO cleanup
+  lazy val blockingEc: ExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool)
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
@@ -42,44 +39,31 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         val byteBuffer = v.asInstanceOf[ByteBuffer]
         (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
-      case RawBodyType.InputStreamBody =>
-        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(v))
+      case RawBodyType.InputStreamBody => 
+        (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
       case RawBodyType.InputStreamRangeBody =>
-        (ctx: ChannelHandlerContext) => ChunkedStreamNettyResponseContent(ctx.newPromise(), wrap(v))
+        (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
-      case RawBodyType.FileBody =>
-        (ctx: ChannelHandlerContext) => ChunkedFileNettyResponseContent(ctx.newPromise(), wrap(v))
+      case RawBodyType.FileBody => {
+        (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
+
+      }
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
   }
 
-  private def wrap(streamRange: InputStreamRange): ChunkedStream = {
-    streamRange.range
-      .map(r => new RangedChunkedStream(streamRange.inputStreamFromRangeStart(), r.contentLength))
-      .getOrElse(new ChunkedStream(streamRange.inputStream()))
+  private def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
+    new InputStreamPublisher(streamRange, DefaultChunkSize, blockingEc)
   }
 
-  private def wrap(content: InputStream): ChunkedStream = {
-    new ChunkedStream(content)
+  private def wrap(fileRange: FileRange): Publisher[HttpContent] = {
+    new FileRangePublisher(fileRange, DefaultChunkSize)
   }
 
-  private def wrap(content: FileRange): ChunkedFile = {
-    val file = content.file
-    val maybeRange = for {
-      range <- content.range
-      start <- range.start
-      end <- range.end
-    } yield (start, end + NettyToResponseBody.IncludingLastOffset)
-
-    maybeRange match {
-      case Some((start, end)) => {
-        val randomAccessFile = new RandomAccessFile(file, NettyToResponseBody.ReadOnlyAccessMode)
-        new ChunkedFile(randomAccessFile, start, end - start, NettyToResponseBody.DefaultChunkSize)
-      }
-      case None => new ChunkedFile(file)
-    }
+  private def wrap(content: InputStream): Publisher[HttpContent] = {
+    wrap(InputStreamRange(() => content, range = None))
   }
 
   override def fromStreamValue(
