@@ -35,7 +35,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             interpreter,
             backend,
             multipart = false,
-            maxContentLength = Some(NettyCatsTestServerInterpreter.maxContentLength)
+            maxContentLength = Some(300000)
           )
             .tests() ++
             new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(Fs2Streams[IO])(drainFs2) ++

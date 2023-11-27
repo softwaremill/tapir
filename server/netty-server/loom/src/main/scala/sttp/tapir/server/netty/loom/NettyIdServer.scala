@@ -95,7 +95,6 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       new NettyServerHandler(
         route,
         unsafeRunF,
-        config.maxContentLength,
         channelGroup,
         isShuttingDown
       ),

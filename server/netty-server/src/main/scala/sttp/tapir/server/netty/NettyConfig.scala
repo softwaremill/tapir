@@ -17,9 +17,6 @@ import scala.concurrent.duration._
 /** Netty configuration, used by [[NettyFutureServer]] and other server implementations to configure the networking layer, the Netty
   * processing pipeline, and start & stop the server.
   *
-  * @param maxContentLength
-  *   The max content length passed to the [[io.netty.handler.codec.http.HttpObjectAggregator]] handler.
-  *
   * @param maxConnections
   *   The maximum number of concurrent connections allowed by the server. Any connections above this limit will be closed right after they
   *   are opened.
@@ -56,7 +53,6 @@ case class NettyConfig(
     host: String,
     port: Int,
     shutdownEventLoopGroupOnClose: Boolean,
-    maxContentLength: Option[Int],
     maxConnections: Option[Int],
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
@@ -78,9 +74,6 @@ case class NettyConfig(
 
   def withShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = true)
   def withDontShutdownEventLoopGroupOnClose: NettyConfig = copy(shutdownEventLoopGroupOnClose = false)
-
-  def maxContentLength(m: Int): NettyConfig = copy(maxContentLength = Some(m))
-  def noMaxContentLength: NettyConfig = copy(maxContentLength = None)
 
   def maxConnections(m: Int): NettyConfig = copy(maxConnections = Some(m))
 
@@ -124,7 +117,6 @@ object NettyConfig {
     socketTimeout = Some(60.seconds),
     lingerTimeout = Some(60.seconds),
     gracefulShutdownTimeout = Some(10.seconds),
-    maxContentLength = None,
     maxConnections = None,
     addLoggingHandler = false,
     sslContext = None,
@@ -136,7 +128,7 @@ object NettyConfig {
   def defaultInitPipelineNoStreaming(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpObjectAggregator(cfg.maxContentLength.getOrElse(Integer.MAX_VALUE)))
+    pipeline.addLast(new HttpObjectAggregator((Integer.MAX_VALUE)))
     pipeline.addLast(new ChunkedWriteHandler())
     pipeline.addLast(handler)
     ()

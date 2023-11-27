@@ -28,7 +28,6 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
       .eventLoopGroup(eventLoopGroup)
       .randomPort
       .withDontShutdownEventLoopGroupOnClose
-      .maxContentLength(NettyCatsTestServerInterpreter.maxContentLength)
       .noGracefulShutdown
 
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
@@ -38,8 +37,4 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     Resource
       .make(bind.map(b => (b.port, b.stop()))) { case (_, release) => release }
   }
-}
-
-object NettyCatsTestServerInterpreter {
-  val maxContentLength = 10000
 }

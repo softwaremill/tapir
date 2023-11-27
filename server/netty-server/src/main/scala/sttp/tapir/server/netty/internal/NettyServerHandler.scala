@@ -35,7 +35,6 @@ import scala.util.{Failure, Success}
 class NettyServerHandler[F[_]](
     route: Route[F],
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
-    maxContentLength: Option[Int],
     channelGroup: ChannelGroup,
     isShuttingDown: AtomicBoolean
 )(implicit
@@ -177,16 +176,11 @@ class NettyServerHandler[F[_]](
     serverResponse.handle(
       ctx = ctx,
       byteBufHandler = (channelPromise, byteBuf) => {
-
-        if (maxContentLength.exists(_ < byteBuf.readableBytes))
-          writeEntityTooLargeResponse(ctx, req)
-        else {
-          val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
-          res.setHeadersFrom(serverResponse)
-          res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
-          res.handleCloseAndKeepAliveHeaders(req)
-          ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
-        }
+        val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
+        res.setHeadersFrom(serverResponse)
+        res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
+        res.handleCloseAndKeepAliveHeaders(req)
+        ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
       },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         val resHeader: DefaultHttpResponse =
@@ -233,32 +227,6 @@ class NettyServerHandler[F[_]](
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
     )
-
-  private def writeEntityTooLargeResponse(ctx: ChannelHandlerContext, req: HttpRequest): Unit = {
-
-    if (!HttpUtil.is100ContinueExpected(req) && !HttpUtil.isKeepAlive(req)) {
-      val future: ChannelFuture = ctx.writeAndFlush(EntityTooLargeClose.retainedDuplicate())
-      val _ = future.addListener(new ChannelFutureListener() {
-        override def operationComplete(future: ChannelFuture) = {
-          if (!future.isSuccess()) {
-            logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
-          }
-          val _ = ctx.close()
-        }
-      })
-    } else {
-      val _ = ctx
-        .writeAndFlush(EntityTooLarge.retainedDuplicate())
-        .addListener(new ChannelFutureListener() {
-          override def operationComplete(future: ChannelFuture) = {
-            if (!future.isSuccess()) {
-              logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
-              val _ = ctx.close()
-            }
-          }
-        })
-    }
-  }
 
   private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
     def handle(

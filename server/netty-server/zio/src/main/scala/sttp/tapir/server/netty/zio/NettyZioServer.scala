@@ -89,7 +89,6 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         new NettyServerHandler[RIO[R, *]](
           route,
           unsafeRunAsync(runtime),
-          config.maxContentLength,
           channelGroup,
           isShuttingDown
         ),
