@@ -7,7 +7,6 @@ import sttp.capabilities.StreamMaxLengthExceededException
 import scala.collection.JavaConverters._
 
 // based on org.asynchttpclient.request.body.generator.ReactiveStreamsBodyGenerator.SimpleSubscriber
-// Requests all data at once and loads it into memory
 private[netty] class LimitedLengthSubscriber[R](maxBytes: Long, delegate: Subscriber[HttpContent]) extends Subscriber[HttpContent] {
   private var subscription: Subscription = _
   private var bytesReadSoFar = 0L

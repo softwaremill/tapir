@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
 
-// Requests all data at once and loads it into memory
 private[netty] class SimpleSubscriber() extends PromisingSubscriber[ByteBuffer, HttpContent] {
   private var subscription: Subscription = _
   private val chunks = new ConcurrentLinkedQueue[Array[Byte]]()
