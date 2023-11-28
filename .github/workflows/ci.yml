@@ -2,6 +2,7 @@ name: CI
 on:
   pull_request:
   push:
+    branches: ['**']
     tags: [v*]
 env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
@@ -189,7 +190,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  #
   label:
     name: Attach automerge label
     # only for PRs by softwaremill-ci
