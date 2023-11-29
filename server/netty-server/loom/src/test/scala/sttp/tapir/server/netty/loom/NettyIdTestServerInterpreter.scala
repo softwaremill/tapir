@@ -22,7 +22,7 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, (Port, IO[Unit])] = {
     val config =
-      NettyConfig.defaultNoStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
+      NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettyIdServerOptions.default
     val bind = IO.blocking(NettyIdServer(options, customizedConfig).addRoutes(routes.toList).start())

@@ -24,7 +24,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
       routes: NonEmptyList[Route[IO]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, (Port, KillSwitch)] = {
-    val config = NettyConfig.defaultWithStreaming
+    val config = NettyConfig.default
       .eventLoopGroup(eventLoopGroup)
       .randomPort
       .withDontShutdownEventLoopGroupOnClose

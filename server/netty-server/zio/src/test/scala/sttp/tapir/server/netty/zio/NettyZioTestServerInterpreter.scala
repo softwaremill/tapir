@@ -25,7 +25,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
       routes: NonEmptyList[Task[Route[Task]]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, (Port, KillSwitch)] = {
-    val config = NettyConfig.defaultWithStreaming
+    val config = NettyConfig.default
       .eventLoopGroup(eventLoopGroup)
       .randomPort
       .withDontShutdownEventLoopGroupOnClose

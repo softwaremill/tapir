@@ -140,9 +140,9 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
 }
 
 object NettyZioServer {
-  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.defaultWithStreaming)
+  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.default)
   def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] =
-    NettyZioServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
+    NettyZioServer(Vector.empty, options, NettyConfig.default)
   def apply[R](config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], config)
   def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, options, config)
 }

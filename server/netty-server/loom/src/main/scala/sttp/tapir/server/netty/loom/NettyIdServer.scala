@@ -141,10 +141,10 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 }
 
 object NettyIdServer {
-  def apply(): NettyIdServer = NettyIdServer(Vector.empty, NettyIdServerOptions.default, NettyConfig.defaultNoStreaming)
+  def apply(): NettyIdServer = NettyIdServer(Vector.empty, NettyIdServerOptions.default, NettyConfig.default)
 
   def apply(serverOptions: NettyIdServerOptions): NettyIdServer =
-    NettyIdServer(Vector.empty, serverOptions, NettyConfig.defaultNoStreaming)
+    NettyIdServer(Vector.empty, serverOptions, NettyConfig.default)
 
   def apply(config: NettyConfig): NettyIdServer =
     NettyIdServer(Vector.empty, NettyIdServerOptions.default, config)

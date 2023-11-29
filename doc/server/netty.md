@@ -80,7 +80,7 @@ NettyFutureServer().port(9090).addEndpoints(???)
 NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None).options)
 
 // customise Netty config
-NettyFutureServer(NettyConfig.defaultNoStreaming.socketBacklog(256))
+NettyFutureServer(NettyConfig.default.socketBacklog(256))
 ```
 
 ## Graceful shutdown
@@ -93,9 +93,9 @@ import sttp.tapir.server.netty.NettyConfig
 import scala.concurrent.duration._
 
 // adjust the waiting time to your needs
-val config = NettyConfig.defaultNoStreaming.withGracefulShutdownTimeout(5.seconds)
+val config = NettyConfig.default.withGracefulShutdownTimeout(5.seconds)
 // or if you don't want the server to wait for in-flight requests
-val config2 = NettyConfig.defaultNoStreaming.noGracefulShutdown
+val config2 = NettyConfig.default.noGracefulShutdown
 ```
 
 ## Domain socket support
