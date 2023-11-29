@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.loom
 
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
+import sttp.tapir.server.netty.internal.{NettyIdToResponseBody, NettyRequestBody, NettyServerInterpreter, RunAsync}
 
 trait NettyIdServerInterpreter {
   def nettyServerOptions: NettyIdServerOptions
@@ -12,8 +12,8 @@ trait NettyIdServerInterpreter {
     NettyServerInterpreter.toRoute[Id](
       ses,
       nettyServerOptions.interceptors,
-      requestBody = None,
-      nettyServerOptions.createFile,
+      new NettyRequestBody(nettyServerOptions.createFile),
+      new NettyIdToResponseBody,
       nettyServerOptions.deleteFile,
       new RunAsync[Id] {
         override def apply[T](f: => Id[T]): Unit = {

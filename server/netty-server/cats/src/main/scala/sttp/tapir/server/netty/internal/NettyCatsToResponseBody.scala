@@ -17,14 +17,26 @@ import sttp.tapir.server.netty.NettyResponseContent._
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: NettyToResponseBody)
-    extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
+class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F]) extends ToResponseBody[NettyResponse, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
+
+      case RawBodyType.StringBody(charset) =>
+        val bytes = v.asInstanceOf[String].getBytes(charset)
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
+
+      case RawBodyType.ByteArrayBody =>
+        val bytes = v.asInstanceOf[Array[Byte]]
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(bytes))
+
+      case RawBodyType.ByteBufferBody =>
+        val byteBuffer = v.asInstanceOf[ByteBuffer]
+        (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
       case RawBodyType.InputStreamBody =>
         val stream = inputStreamToFs2(() => v)
@@ -41,22 +53,20 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
         val path = Path.fromNioPath(tapirFile.file.toPath)
         val stream = tapirFile.range
           .flatMap(r =>
-            r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, NettyToResponseBody.DefaultChunkSize, s._1, s._2))
+            r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, NettyFutureToResponseBody.DefaultChunkSize, s._1, s._2))
           )
-          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
+          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyFutureToResponseBody.DefaultChunkSize, Flags.Read))
 
         (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), fs2StreamToPublisher(stream))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
-
-      case _ => delegate.fromRawValue(v, headers, format, bodyType)
     }
   }
 
   private def inputStreamToFs2(inputStream: () => InputStream) =
     fs2.io.readInputStream(
       Sync[F].blocking(inputStream()),
-      NettyToResponseBody.DefaultChunkSize
+      NettyFutureToResponseBody.DefaultChunkSize
     )
 
   private def fs2StreamToPublisher(stream: streams.BinaryStream): Publisher[HttpContent] = {
@@ -64,7 +74,7 @@ class NettyCatsToResponseBody[F[_]: Async](dispatcher: Dispatcher[F], delegate: 
     // dispatcher, which results in a Resource[], which is hard to afford here
     StreamUnicastPublisher(
       stream
-        .chunkLimit(NettyToResponseBody.DefaultChunkSize)
+        .chunkLimit(NettyFutureToResponseBody.DefaultChunkSize)
         .map { chunk =>
           val bytes: Chunk.ArraySlice[Byte] = chunk.compact
 

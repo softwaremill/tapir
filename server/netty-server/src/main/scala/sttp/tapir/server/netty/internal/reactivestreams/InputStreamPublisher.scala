@@ -6,12 +6,13 @@ import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import sttp.tapir.InputStreamRange
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import scala.concurrent.blocking
 import scala.concurrent.Future
 import scala.util.Success
 import scala.util.Failure
 import scala.concurrent.ExecutionContext
 
-class InputStreamPublisher(range: InputStreamRange, chunkSize: Int, blockingEc: ExecutionContext) extends Publisher[HttpContent] {
+class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec: ExecutionContext) extends Publisher[HttpContent] {
   override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
     val subscription = new InputStreamSubscription(subscriber, range, chunkSize)
@@ -42,8 +43,10 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int, blockingEc: 
           case _                                        => chunkSize
         }
         Future {
-          stream.readNBytes(expectedBytes) // Blocking I/IO
-        }(blockingEc)
+          blocking {
+            stream.readNBytes(expectedBytes)
+          }
+        }
           .onComplete {
             case Success(bytes) =>
               val bytesRead = bytes.length
@@ -65,7 +68,7 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int, blockingEc: 
             case Failure(e) =>
               stream.close()
               subscriber.onError(e)
-          }(blockingEc)
+          }
       }
     }
 

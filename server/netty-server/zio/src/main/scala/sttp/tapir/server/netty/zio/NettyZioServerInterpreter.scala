@@ -27,7 +27,7 @@ trait NettyZioServerInterpreter[R] {
       val serverInterpreter = new ServerInterpreter[ZioStreams, F, NettyResponse, ZioStreams](
         FilterServerEndpoints(widenedSes),
         new NettyZioRequestBody(widenedServerOptions.createFile),
-        new NettyToStreamsResponseBody[ZioStreams](delegate = new NettyToResponseBody(), ZioStreamCompatible(runtime)),
+        new NettyToStreamsResponseBody[ZioStreams](ZioStreamCompatible(runtime)),
         RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
         widenedServerOptions.deleteFile
       )

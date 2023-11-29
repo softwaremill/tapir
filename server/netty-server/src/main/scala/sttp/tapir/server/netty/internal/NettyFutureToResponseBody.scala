@@ -10,20 +10,17 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
-import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
+import sttp.tapir.server.netty.internal.NettyFutureToResponseBody.DefaultChunkSize
 import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
 import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import java.util.concurrent.ForkJoinPool
 import scala.concurrent.ExecutionContext
 
-class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
+class NettyFutureToResponseBody(implicit ec: ExecutionContext) extends ToResponseBody[NettyResponse, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
-  // TODO cleanup
-  lazy val blockingEc: ExecutionContext = ExecutionContext.fromExecutor(new ForkJoinPool)
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
@@ -39,14 +36,14 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
         val byteBuffer = v.asInstanceOf[ByteBuffer]
         (ctx: ChannelHandlerContext) => ByteBufNettyResponseContent(ctx.newPromise(), Unpooled.wrappedBuffer(byteBuffer))
 
-      case RawBodyType.InputStreamBody => 
+      case RawBodyType.InputStreamBody =>
         (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
       case RawBodyType.InputStreamRangeBody =>
         (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
-      case RawBodyType.FileBody => {
-        (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
+      case RawBodyType.FileBody => { (ctx: ChannelHandlerContext) =>
+        ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
       }
 
@@ -55,7 +52,7 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   }
 
   private def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
-    new InputStreamPublisher(streamRange, DefaultChunkSize, blockingEc)
+    new InputStreamPublisher(streamRange, DefaultChunkSize)
   }
 
   private def wrap(fileRange: FileRange): Publisher[HttpContent] = {
@@ -79,7 +76,7 @@ class NettyToResponseBody extends ToResponseBody[NettyResponse, NoStreams] {
   ): NettyResponse = throw new UnsupportedOperationException
 }
 
-private[internal] object NettyToResponseBody {
+private[internal] object NettyFutureToResponseBody {
   val DefaultChunkSize = 8192
   val IncludingLastOffset = 1
   val ReadOnlyAccessMode = "r"

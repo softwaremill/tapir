@@ -7,6 +7,7 @@ import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
 
 import scala.concurrent.{ExecutionContext, Future}
 import sttp.tapir.server.netty.internal.NettyFutureRequestBody
+import sttp.tapir.server.netty.internal.NettyFutureToResponseBody
 
 trait NettyFutureServerInterpreter {
   def nettyServerOptions: NettyFutureServerOptions
@@ -22,8 +23,8 @@ trait NettyFutureServerInterpreter {
     NettyServerInterpreter.toRoute(
       ses,
       nettyServerOptions.interceptors,
-      Some(new NettyFutureRequestBody(nettyServerOptions.createFile)),
-      nettyServerOptions.createFile,
+      new NettyFutureRequestBody(nettyServerOptions.createFile),
+      new NettyFutureToResponseBody,
       nettyServerOptions.deleteFile,
       FutureRunAsync
     )
