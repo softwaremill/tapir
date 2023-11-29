@@ -191,6 +191,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
+  # `automerge` label is attached iff there is exactly one file changed by steward and this file belongs to a
+  # whitelist specified by `labeler.yml`
   label:
     name: Attach automerge label
     # only for PRs by softwaremill-ci
