@@ -768,7 +768,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   }
 
   def maxContentLengthTests: List[Test] = {
-    val maxLength = 16484 // To generate a few chunks of default size 8192 + some extra bytes
+    val maxLength = 17000 // To generate a few chunks of default size 8192 + some extra bytes
     List(
       testPayloadTooLarge(in_string_out_string, maxLength),
       testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),

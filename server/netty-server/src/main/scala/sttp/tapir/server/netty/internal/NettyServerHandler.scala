@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
-import io.netty.handler.codec.http.HttpHeaderNames.{CONNECTION, CONTENT_LENGTH}
 import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
@@ -62,19 +61,6 @@ class NettyServerHandler[F[_]](
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   private val logger = Logger[NettyServerHandler[F]]
-
-  private val EntityTooLarge: FullHttpResponse = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
-    res.headers().set(CONTENT_LENGTH, 0)
-    res
-  }
-
-  private val EntityTooLargeClose: FullHttpResponse = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
-    res.headers().set(CONTENT_LENGTH, 0)
-    res.headers().set(CONNECTION, HttpHeaderValues.CLOSE)
-    res
-  }
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -210,6 +196,14 @@ class NettyServerHandler[F[_]](
 
         res.setHeadersFrom(serverResponse)
         res.handleCloseAndKeepAliveHeaders(req)
+
+        channelPromise.addListener((future: ChannelFuture) => {
+          // A reactive publisher silently closes the channel and fails the channel promise, so we need
+          // to listen on it and log failure details
+          if (!future.isSuccess()) {
+            logger.error("Error when streaming HTTP response", future.cause())
+          }
+        })
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
       },

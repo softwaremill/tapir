@@ -33,6 +33,9 @@ class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher
       }
     }
 
+    /** Can be called multiple times by request(n), or concurrently by channel.read() callback. The readingInProgress check ensures that
+      * calls are serialized. A channel.read() operation will be started only if another isn't running. This method is non-blocking.
+      */
     private def readNextChunkIfNeeded(): Unit = {
       if (demand.get() > 0 && !isCompleted.get() && readingInProgress.compareAndSet(false, true)) {
         val pos = position.get()
@@ -52,6 +55,9 @@ class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher
                 subscriber.onComplete()
               } else {
                 val bytesToRead = Math.min(bytesRead, expectedBytes)
+                // The buffer is modified only by one thread at a time, because only one channel.read()
+                // is running at a time, and because buffer.clear() calls before the read are guarded
+                // by readingInProgress.compareAndSet.
                 buffer.flip()
                 val bytes = new Array[Byte](bytesToRead)
                 buffer.get(bytes)
@@ -63,7 +69,9 @@ class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher
                 } else {
                   demand.decrementAndGet()
                   readingInProgress.set(false)
-                  readNextChunkIfNeeded() // Read next chunk if there's more demand
+                  // Either this call, or a call from request(n) will win the race to
+                  // actually start a new read.
+                  readNextChunkIfNeeded()
                 }
               }
             }

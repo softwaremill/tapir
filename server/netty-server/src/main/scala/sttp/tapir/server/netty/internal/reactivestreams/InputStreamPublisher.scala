@@ -5,12 +5,10 @@ import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import sttp.tapir.InputStreamRange
 
+import java.io.InputStream
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import scala.concurrent.blocking
-import scala.concurrent.Future
-import scala.util.Success
-import scala.util.Failure
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future, blocking}
+import scala.util.{Failure, Success, Try}
 
 class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec: ExecutionContext) extends Publisher[HttpContent] {
   override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
@@ -21,7 +19,7 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec:
 
   private class InputStreamSubscription(subscriber: Subscriber[_ >: HttpContent], range: InputStreamRange, chunkSize: Int)
       extends Subscription {
-    private val stream = range.inputStreamFromRangeStart()
+    private lazy val stream: InputStream = range.inputStreamFromRangeStart()
     private val demand = new AtomicLong(0L)
     private val position = new AtomicLong(range.range.flatMap(_.start).getOrElse(0L))
     private val isCompleted = new AtomicBoolean(false)
@@ -35,6 +33,10 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec:
       }
     }
 
+    /** Non-blocking by itself, starts an asynchronous operation with blocking stream.readNBytes. Can be called multiple times by
+      * request(n), or concurrently by onComplete callback. The readingInProgress check ensures that calls are serialized. A
+      * stream.readNBytes operation will be started only if another isn't running.
+      */
     private def readNextChunkIfNeeded(): Unit = {
       if (demand.get() > 0 && !isCompleted.get() && readingInProgress.compareAndSet(false, true)) {
         val pos = position.get()
@@ -66,7 +68,7 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec:
                 }
               }
             case Failure(e) =>
-              stream.close()
+              val _ = Try(stream.close())
               subscriber.onError(e)
           }
       }
@@ -74,7 +76,7 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec:
 
     override def cancel(): Unit = {
       isCompleted.set(true)
-      stream.close()
+      val _ = Try(stream.close())
     }
   }
 }
