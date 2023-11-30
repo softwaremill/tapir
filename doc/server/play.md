@@ -21,7 +21,7 @@ or
 "org.playframework" %% "play-netty-server" % "@PLAY29_HTTP_SERVER_VERSION@"
 ```
 
-depending on whether you want to use netty or Akka based http-server under the hood.
+depending on whether you want to use netty or Akka based http-server under the hood. Please note that Play 2.9 server is available only for Scala 2.13.
 
 To expose an endpoint as a [play-server](https://www.playframework.com/), using **Play 3.0 with Pekko**, add the following dependencies:
 
