@@ -96,9 +96,10 @@ private[http4s] object Http4sWebSockets {
       doAuto: Boolean
   ): Stream[F, WebSocketFrame] = {
     if (doAuto) {
-      s.evalMapFilter {
-        case ping: WebSocketFrame.Ping => pongs.offer(WebSocketFrame.Pong(ping.payload)).as[Option[WebSocketFrame]](None)
-        case f                         => f.some.pure[F]
+      val trueF = true.pure[F]
+      s.evalFilter {
+        case ping: WebSocketFrame.Ping => pongs.offer(WebSocketFrame.Pong(ping.payload)).map(_ => false)
+        case _                         => trueF
       }
     } else s
   }
