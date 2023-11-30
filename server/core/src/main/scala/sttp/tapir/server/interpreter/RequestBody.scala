@@ -5,8 +5,6 @@ import sttp.model.Part
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
-case class MaxContentLength(value: Long)
-
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
   def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]]
