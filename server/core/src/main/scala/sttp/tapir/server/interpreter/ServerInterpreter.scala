@@ -9,7 +9,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.server.{model, _}
-import sttp.tapir.{AttributeKey, DecodeResult, EndpointIO, EndpointInfo, EndpointInput, TapirFile}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
@@ -198,9 +197,8 @@ class ServerInterpreter[R, F[_], B, S](
               .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
         }
       }
-      .handleError {
-        case e: StreamMaxLengthExceededException =>
-          (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
+      .handleError { case e: StreamMaxLengthExceededException =>
+        (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
       }
   }
 
