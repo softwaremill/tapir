@@ -6,7 +6,7 @@
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
-## Intro
+## Introduction
 
 With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of
 input and output parameters. An endpoint specification can be interpreted as:
