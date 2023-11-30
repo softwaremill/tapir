@@ -4,18 +4,17 @@ import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
 
-import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
 
-private[netty] class SimpleSubscriber() extends PromisingSubscriber[ByteBuffer, HttpContent] {
+private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte], HttpContent] {
   private var subscription: Subscription = _
   private val chunks = new ConcurrentLinkedQueue[Array[Byte]]()
   private var size = 0
-  private val resultPromise = Promise[ByteBuffer]()
+  private val resultPromise = Promise[Array[Byte]]()
 
-  override def future: Future[ByteBuffer] = resultPromise.future
+  override def future: Future[Array[Byte]] = resultPromise.future
 
   override def onSubscribe(s: Subscription): Unit = {
     subscription = s
@@ -35,16 +34,18 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[ByteBuffer, 
   }
 
   override def onComplete(): Unit = {
-    val result = ByteBuffer.allocate(size)
-    chunks.asScala.foreach(result.put)
-    result.flip()
+    val result = new Array[Byte](size)
+    chunks.asScala.foldLeft(0)((currentPosition, array) => {
+      System.arraycopy(array, 0, result, currentPosition, array.length)
+      currentPosition + array.length
+    })
     chunks.clear()
     resultPromise.success(result)
   }
 }
 
 object SimpleSubscriber {
-  def readAll(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[ByteBuffer] = {
+  def processAll(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[Array[Byte]] = {
     val subscriber = new SimpleSubscriber()
     publisher.subscribe(maxBytes.map(max => new LimitedLengthSubscriber(max, subscriber)).getOrElse(subscriber))
     subscriber.future

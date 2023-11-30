@@ -779,7 +779,13 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testPayloadWithinLimit(in_input_stream_out_input_stream, maxLength),
       testPayloadWithinLimit(in_byte_array_out_byte_array, maxLength),
       testPayloadWithinLimit(in_file_out_file, maxLength),
-      testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength)
+      testPayloadWithinLimit(in_byte_buffer_out_byte_buffer, maxLength),
+      testServer(
+        in_string_out_string,
+        "testkc"
+      )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
+        basicRequest.post(uri"$baseUri/api/echo").body("").send(backend).map(_.code shouldBe StatusCode.Ok)
+      }
     )
   }
 

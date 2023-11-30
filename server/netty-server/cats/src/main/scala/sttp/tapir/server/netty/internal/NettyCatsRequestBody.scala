@@ -2,74 +2,47 @@ package sttp.tapir.server.netty.internal
 
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import org.playframework.netty.http.StreamedHttpRequest
 import fs2.Chunk
 import fs2.interop.reactivestreams.StreamSubscriber
 import fs2.io.file.{Files, Path}
-import io.netty.buffer.ByteBufUtil
-import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
+import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.Publisher
 import sttp.capabilities.fs2.Fs2Streams
+import sttp.monad.MonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
+import sttp.tapir.server.netty.internal.reactivestreams.NettyRequestBody
+import sttp.tapir.TapirFile
 
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
-import sttp.tapir.DecodeResult
-import sttp.capabilities.StreamMaxLengthExceededException
-
-private[netty] class NettyCatsRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit val monad: Async[F])
-    extends RequestBody[F, Fs2Streams[F]] {
+private[netty] class NettyCatsRequestBody[F[_]: Async](val createFile: ServerRequest => F[TapirFile])
+    extends NettyRequestBody[F, Fs2Streams[F]] {
 
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
+  override implicit val monad: MonadError[F] = new CatsMonadError()
 
-    def nettyRequestBytes: F[Array[Byte]] = serverRequest.underlying match {
-      case req: FullHttpRequest =>
-        val buf = req.content()
-        maxBytes
-          .map(max =>
-            if (buf.readableBytes() > max)
-              monad.raiseError[Array[Byte]](StreamMaxLengthExceededException(max))
-            else
-              monad.delay(ByteBufUtil.getBytes(buf))
-          )
-          .getOrElse(monad.delay(ByteBufUtil.getBytes(buf)))
-      case _: StreamedHttpRequest => toStream(serverRequest, maxBytes).compile.to(Chunk).map(_.toArray[Byte])
-      case other => monad.raiseError(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
-    }
-    bodyType match {
-      case RawBodyType.StringBody(charset) => nettyRequestBytes.map(bs => RawValue(new String(bs, charset)))
-      case RawBodyType.ByteArrayBody =>
-        nettyRequestBytes.map(RawValue(_))
-      case RawBodyType.ByteBufferBody =>
-        nettyRequestBytes.map(bs => RawValue(ByteBuffer.wrap(bs)))
-      case RawBodyType.InputStreamBody =>
-        nettyRequestBytes.map(bs => RawValue(new ByteArrayInputStream(bs)))
-      case RawBodyType.InputStreamRangeBody =>
-        nettyRequestBytes.map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
-      case RawBodyType.FileBody =>
-        createFile(serverRequest)
-          .flatMap(tapirFile => {
-            toStream(serverRequest, maxBytes)
-              .through(
-                Files[F](Files.forAsync[F]).writeAll(Path.fromNioPath(tapirFile.toPath))
-              )
-              .compile
-              .drain
-              .map(_ => RawValue(FileRange(tapirFile), Seq(FileRange(tapirFile))))
-          })
-      case _: RawBodyType.MultipartBody => ???
-    }
-  }
+  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]] =
+    publisherToStream(publisher, maxBytes).compile.to(Chunk).map(_.toArray[Byte])
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
-    val nettyRequest = serverRequest.underlying.asInstanceOf[StreamedHttpRequest]
+  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
+    toStream(serverRequest, maxBytes)
+      .through(
+        Files[F](Files.forAsync[F]).writeAll(Path.fromNioPath(file.toPath))
+      )
+      .compile
+      .drain
+
+  override def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = fs2.Stream
-      .eval(StreamSubscriber[F, HttpContent](NettyRequestBody.DefaultChunkSize))
-      .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
+      .eval(StreamSubscriber[F, HttpContent](NettyIdRequestBody.DefaultChunkSize))
+      .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
       .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
     maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
   }
+
+  override def failedStream(e: => Throwable): streams.BinaryStream =
+    fs2.Stream.raiseError(e)
+
+  override def emptyStream: streams.BinaryStream =
+    fs2.Stream.empty
 }

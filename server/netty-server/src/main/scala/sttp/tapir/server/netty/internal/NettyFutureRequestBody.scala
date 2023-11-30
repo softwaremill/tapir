@@ -1,64 +1,40 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.handler.codec.http.FullHttpRequest
-import sttp.capabilities
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
-import sttp.tapir.model.ServerRequest
-import sttp.monad.syntax._
-import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-
-import java.nio.ByteBuffer
+import io.netty.handler.codec.http.HttpContent
 import org.playframework.netty.http.StreamedHttpRequest
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
-import reactivestreams._
-import java.io.ByteArrayInputStream
+import org.reactivestreams.Publisher
+import sttp.capabilities
+import sttp.monad.{FutureMonad, MonadError}
+import sttp.tapir.capabilities.NoStreams
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.TapirFile
 
-class NettyFutureRequestBody(createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
-    extends RequestBody[Future, NoStreams] {
+import scala.concurrent.{ExecutionContext, Future}
+
+import reactivestreams._
+
+class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
+    extends NettyRequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): Future[RawValue[RAW]] = {
+  override implicit val monad: MonadError[Future] = new FutureMonad()
 
-    def byteBuf: Future[ByteBuffer] = 
-      serverRequest.underlying match {
-        case r: StreamedHttpRequest => SimpleSubscriber.readAll(r, maxBytes)
-        // This can still happen in case an EmptyHttpRequest is received
-        case r: FullHttpRequest => Future.successful {
-          val underlyingBuf = r.content().nioBuffer()
-          if (underlyingBuf.hasArray()) 
-            underlyingBuf
-          else
-            ByteBuffer.wrap(new Array[Byte](0))
-        } 
-        case other => Future.failed(new UnsupportedOperationException(s"Unexpected request type: ${other.getClass.getName()}"))
+  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[Array[Byte]] =
+    SimpleSubscriber.processAll(publisher, maxBytes)
+
+  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
+    serverRequest.underlying match {
+      case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
+      case _                      => monad.unit(())
     }
 
-    def requestContentAsByteArray: Future[Array[Byte]] = byteBuf.map(_.array)
-
-    bodyType match {
-      case RawBodyType.StringBody(charset) => requestContentAsByteArray.map(ba => RawValue(new String(ba, charset)))
-      case RawBodyType.ByteArrayBody       => requestContentAsByteArray.map(ba => RawValue(ba))
-      case RawBodyType.ByteBufferBody      => byteBuf.map(buf => RawValue(buf))
-      // InputStreamBody and InputStreamRangeBody can be further optimized to avoid loading all data in memory
-      case RawBodyType.InputStreamBody => requestContentAsByteArray.map(ba => RawValue(new ByteArrayInputStream(ba)))
-      case RawBodyType.InputStreamRangeBody =>
-        requestContentAsByteArray.map(ba => RawValue(InputStreamRange(() => new ByteArrayInputStream(ba))))
-      case RawBodyType.FileBody =>
-        createFile(serverRequest)
-          .flatMap(file =>
-            FileWriterSubscriber
-              .writeAll(nettyRequest(serverRequest), file.toPath, maxBytes)
-              .map(_ => RawValue(FileRange(file), Seq(FileRange(file))))
-          )
-      case _: RawBodyType.MultipartBody => ???
-    }
-  }
-
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+  override def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
 
-  private def nettyRequest(serverRequest: ServerRequest): StreamedHttpRequest = serverRequest.underlying.asInstanceOf[StreamedHttpRequest]
+  override def emptyStream: streams.BinaryStream =
+    throw new UnsupportedOperationException()
+
+  override def failedStream(e: => Throwable): streams.BinaryStream =
+    throw new UnsupportedOperationException()
 }

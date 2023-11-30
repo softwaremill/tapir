@@ -13,10 +13,9 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import io.netty.buffer.ByteBuf
-import sttp.tapir.DecodeResult
 import sttp.capabilities.StreamMaxLengthExceededException
 
-class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
+class NettyIdRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
     monadError: MonadError[F]
 ) extends RequestBody[F, NoStreams] {
 
@@ -36,7 +35,6 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
         .getOrElse(monadError.unit(buf))
     }
 
-    /** [[ByteBufUtil.getBytes(io.netty.buffer.ByteBuf)]] copies buffer without affecting reader index of the original. */
     def requestContentAsByteArray: F[Array[Byte]] = byteBuf.map(ByteBufUtil.getBytes)
 
     bodyType match {
@@ -64,6 +62,6 @@ class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
   private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 }
 
-private[internal] object NettyRequestBody {
+private[internal] object NettyIdRequestBody {
   val DefaultChunkSize = 8192
 }
