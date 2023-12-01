@@ -25,7 +25,7 @@ class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
     serverRequest.underlying match {
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
-      case _                      => monad.unit(())
+      case _                      => monad.unit(()) // Empty request
     }
   
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = 
