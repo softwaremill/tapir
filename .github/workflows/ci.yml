@@ -103,13 +103,6 @@ jobs:
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
-#    - name: Test Report
-#      uses: dorny/test-reporter@v1
-#      if: success() || failure() # run regardless previous step succeeded or failed
-#      with:
-#        name: 'Tests results (${{ matrix.scala-version }}, ${{ matrix.target-platform }}, ${{ matrix.java }})'
-#        path: '**/test-reports/TEST*.xml'
-#        reporter: java-junit
     - name: Prepare release notes
       uses: release-drafter/release-drafter@v5
       with:
