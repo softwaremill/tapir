@@ -10,22 +10,21 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RequestBody
 import sttp.tapir.RawBodyType
 import sttp.tapir.TapirFile
+import sttp.tapir.server.netty.internal.StreamCompatible
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.FileRange
 import sttp.tapir.InputStreamRange
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import sttp.capabilities.Streams
 
-trait NettyRequestBody[F[_], S] extends RequestBody[F, S] {
+trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
   val DefaultChunkSize = 8192
   implicit def monad: MonadError[F]
   def createFile: ServerRequest => F[TapirFile]
   def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
   def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
-  def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream
-  def failedStream(e: => Throwable): streams.BinaryStream
-  def emptyStream: streams.BinaryStream
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): F[RawValue[RAW]] = {
     bodyType match {
@@ -47,15 +46,6 @@ trait NettyRequestBody[F[_], S] extends RequestBody[F, S] {
     }
   }
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
-    serverRequest.underlying match {
-      case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // means EmptyHttpRequest, but that class is not public
-        emptyStream
-      case publisher: StreamedHttpRequest =>
-        publisherToStream(publisher, maxBytes)
-      case other =>
-        failedStream(new UnsupportedOperationException(s"Unexpected Netty request of type: ${other.getClass().getName()}"))
-    }
 
   // Used by different netty backends to handle raw body input
   def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =

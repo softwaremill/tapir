@@ -16,10 +16,11 @@ import fs2.io.file.Flags
 import fs2.interop.reactivestreams.StreamUnicastPublisher
 import cats.effect.kernel.Sync
 import fs2.Chunk
+import fs2.interop.reactivestreams.StreamSubscriber
 
-private[cats] object Fs2StreamCompatible {
+object Fs2StreamCompatible {
 
-  def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatible[Fs2Streams[F]] = {
+private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatible[Fs2Streams[F]] = {
     new StreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 
@@ -50,6 +51,20 @@ private[cats] object Fs2StreamCompatible {
             },
           dispatcher
         )
+
+      override def fromPublisher(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
+        val stream = fs2.Stream
+          .eval(StreamSubscriber[F, HttpContent](NettyToResponseBody.DefaultChunkSize))
+          .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
+          .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
+        maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
+      }
+
+      override def failedStream(e: => Throwable): streams.BinaryStream =
+        fs2.Stream.raiseError(e)
+
+      override def emptyStream: streams.BinaryStream =
+        fs2.Stream.empty
 
       private def inputStreamToFs2(inputStream: () => InputStream) =
         fs2.io.readInputStream(

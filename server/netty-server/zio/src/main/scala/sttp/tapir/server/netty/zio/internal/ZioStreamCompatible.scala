@@ -45,6 +45,20 @@ private[zio] object ZioStreamCompatible {
             .run(stream.mapChunks(c => Chunk.single(new DefaultHttpContent(Unpooled.wrappedBuffer(c.toArray)): HttpContent)).toPublisher)
             .getOrThrowFiberFailure()
         )
+
+      override def fromPublisher(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
+        val stream =
+          Adapters
+            .publisherToStream(publisher, 16)
+            .flatMap(httpContent => ZStream.fromChunk(Chunk.fromByteBuffer(httpContent.content.nioBuffer())))
+        maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
+      }
+
+      override def failedStream(e: => Throwable): streams.BinaryStream =
+        ZStream.fail(e)
+
+      override def emptyStream: streams.BinaryStream =
+        ZStream.empty
     }
   }
 }

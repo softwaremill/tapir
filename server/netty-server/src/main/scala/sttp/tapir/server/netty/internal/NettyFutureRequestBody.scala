@@ -5,9 +5,9 @@ import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.monad.{FutureMonad, MonadError}
+import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.TapirFile
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +17,6 @@ class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])
     extends NettyRequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
-
   override implicit val monad: MonadError[Future] = new FutureMonad()
 
   override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[Array[Byte]] =
@@ -28,13 +27,7 @@ class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(())
     }
-
-  override def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream =
-    throw new UnsupportedOperationException()
-
-  override def emptyStream: streams.BinaryStream =
-    throw new UnsupportedOperationException()
-
-  override def failedStream(e: => Throwable): streams.BinaryStream =
+  
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = 
     throw new UnsupportedOperationException()
 }
