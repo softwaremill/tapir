@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import reactivestreams._
 
-class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
+private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
     extends NettyRequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams

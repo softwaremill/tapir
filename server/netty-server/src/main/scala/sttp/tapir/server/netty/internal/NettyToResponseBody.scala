@@ -78,6 +78,6 @@ private[netty] class NettyToResponseBody[F[_]](implicit me: MonadError[F]) exten
   ): NettyResponse = throw new UnsupportedOperationException
 }
 
-object NettyToResponseBody {
+private[netty] object NettyToResponseBody {
   val DefaultChunkSize = 8192
 }
