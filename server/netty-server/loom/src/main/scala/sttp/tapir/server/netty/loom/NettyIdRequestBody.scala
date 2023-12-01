@@ -1,71 +1,26 @@
 package sttp.tapir.server.netty.loom
 
-import io.netty.handler.codec.http.FullHttpRequest
-import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
+import io.netty.handler.codec.http.HttpContent
+import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.monad.MonadError
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
-import sttp.tapir.model.ServerRequest
-import sttp.monad.syntax._
+import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import io.netty.buffer.ByteBuf
-import sttp.capabilities.StreamMaxLengthExceededException
-import sttp.tapir.server.netty.internal.reactivestreams.SimpleSubscriber
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.netty.internal.reactivestreams.NettyRequestBody
 
 class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, NoStreams] {
 
-  override implicit val monad: MonadError[Id] = idMonad 
+  override implicit val monad: MonadError[Id] = idMonad
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] = 
-      SimpleSubscriber.processAll(publisher, maxBytes)
+  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] =
+    ??? // TODO
+    // SimpleSubscriber.processAll(publisher, maxBytes) returns Future
 
-  def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit = 
-    Files.write(fi)
-
-  def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream
-
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
-
-    def byteBuf: ByteBuf = {
-      val buf = nettyRequest(serverRequest).content()
-      maxBytes
-        .map(max =>
-          if (buf.readableBytes() > max)
-            monadError.error[ByteBuf](StreamMaxLengthExceededException(max))
-          else
-            monadError.unit(buf)
-        )
-        .getOrElse(monadError.unit(buf))
-    }
-
-    def requestContentAsByteArray: Array[Byte] = byteBuf.map(ByteBufUtil.getBytes)
-
-    bodyType match {
-      case RawBodyType.StringBody(charset) => byteBuf.map(buf => RawValue(buf.toString(charset)))
-      case RawBodyType.ByteArrayBody       => requestContentAsByteArray.map(ba => RawValue(ba))
-      case RawBodyType.ByteBufferBody      => requestContentAsByteArray.map(ba => RawValue(ByteBuffer.wrap(ba)))
-      case RawBodyType.InputStreamBody     => byteBuf.map(buf => RawValue(new ByteBufInputStream(buf)))
-      case RawBodyType.InputStreamRangeBody =>
-        byteBuf.map(buf => RawValue(InputStreamRange(() => new ByteBufInputStream(buf))))
-      case RawBodyType.FileBody =>
-        requestContentAsByteArray.flatMap(ba =>
-          createFile(serverRequest)
-            .map(file => {
-              Files.write(file.toPath, ba)
-              RawValue(FileRange(file), Seq(FileRange(file)))
-            })
-        )
-      case _: RawBodyType.MultipartBody => ???
-    }
-  }
+  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
+    ??? // TODO
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
-
-  private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
 }

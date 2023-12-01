@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.loom
 
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.internal.{NettyToResponseBody, NettyIdRequestBody, NettyServerInterpreter, RunAsync}
+import sttp.tapir.server.netty.internal.{NettyToResponseBody, NettyServerInterpreter, RunAsync}
 
 trait NettyIdServerInterpreter {
   def nettyServerOptions: NettyIdServerOptions
