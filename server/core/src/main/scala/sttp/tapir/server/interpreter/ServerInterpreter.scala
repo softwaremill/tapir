@@ -7,7 +7,7 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
+import sttp.tapir.server.model.{MaxContentLength, ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.server.{model, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo

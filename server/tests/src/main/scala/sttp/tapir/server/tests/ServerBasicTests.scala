@@ -15,6 +15,8 @@ import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.EndpointExtensions._
+import sttp.tapir.server.model._
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.tests.Basic._
 import sttp.tapir.tests.TestUtil._
@@ -23,7 +25,6 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
-import sttp.tapir.server.interpreter.MaxContentLength
 import sttp.tapir.tests.Files.in_file_out_file
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
@@ -750,7 +751,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
       maxLength: Int
   ) = testServer(
-    testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
+    testedEndpoint.maxRequestBodyLength(maxLength.toLong),
     "returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val tooLargeBody: String = List.fill(maxLength + 1)('x').mkString

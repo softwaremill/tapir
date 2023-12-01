@@ -9,7 +9,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.Streaming._
-import sttp.tapir.server.interpreter.MaxContentLength
+import sttp.tapir.server.model.MaxContentLength
 import sttp.tapir.AttributeKey
 import cats.effect.IO
 import sttp.capabilities.fs2.Fs2Streams
