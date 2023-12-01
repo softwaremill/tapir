@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.internal.reactivestreams
+package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
@@ -27,10 +27,12 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] into a raw array of bytes.
     *
-    * @param publisher reactive publisher emitting byte chunks.
+    * @param publisher
+    *   reactive publisher emitting byte chunks.
     * @param maxBytes
     *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
-    * @return An effect which finishes with a single array of all collected bytes.
+    * @return
+    *   An effect which finishes with a single array of all collected bytes.
     */
   def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
 
@@ -42,7 +44,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     *   an empty file where bytes should be stored.
     * @param maxBytes
     *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
-    * @return an effect which finishes when all data is written to the file.
+    * @return
+    *   an effect which finishes when all data is written to the file.
     */
   def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
 

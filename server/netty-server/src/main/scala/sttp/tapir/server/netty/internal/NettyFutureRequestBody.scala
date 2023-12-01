@@ -8,10 +8,9 @@ import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.netty.internal.reactivestreams._
 
 import scala.concurrent.{ExecutionContext, Future}
-
-import reactivestreams._
 
 private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
     extends NettyRequestBody[Future, NoStreams] {

@@ -5,7 +5,6 @@ import io.netty.handler.codec.http.FullHttpRequest
 import org.playframework.netty.http.StreamedHttpRequest
 import sttp.capabilities.Streams
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.netty.internal.reactivestreams.NettyRequestBody
 
 /** Common logic for processing streaming request body in all Netty backends which support streaming. */
 private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
