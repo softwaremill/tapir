@@ -10,7 +10,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RequestBody
 import sttp.tapir.RawBodyType
 import sttp.tapir.TapirFile
-import sttp.tapir.server.netty.internal.StreamCompatible
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.FileRange
 import sttp.tapir.InputStreamRange
@@ -51,7 +50,7 @@ trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
   def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
     serverRequest.underlying match {
       case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER =>
-        monad.unit(Array[Byte](0))
+        monad.unit(Array.empty[Byte])
       case req: StreamedHttpRequest =>
         publisherToBytes(req, maxBytes)
       case other => monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
