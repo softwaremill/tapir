@@ -7,6 +7,7 @@ import sttp.capabilities.Streams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.reactivestreams.NettyRequestBody
 
+/** Common logic for processing streaming request body in all Netty backends which support streaming. */
 trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
 
   val streamCompatible: StreamCompatible[S]
@@ -20,5 +21,5 @@ trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBody[
         streamCompatible.fromPublisher(publisher, maxBytes)
       case other =>
         streamCompatible.failedStream(new UnsupportedOperationException(s"Unexpected Netty request of type: ${other.getClass().getName()}"))
-    }).asInstanceOf[streams.BinaryStream]
+    }).asInstanceOf[streams.BinaryStream] // Scala can't figure out that it's the same type as streamCompatible.streams.BinaryStream
 }

@@ -6,12 +6,17 @@ import sttp.capabilities.Streams
 import sttp.model.HasHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.internal.NettyToResponseBody._
 import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
+/** Common logic for producing response body in all Netty backends that support streaming. These backends use streaming libraries
+  * like fs2 or zio-streams to obtain reactive Publishers representing responses like InputStreamBody, InputStreamRangeBody or FileBody. 
+  * Other kinds of raw responses like directly available String, ByteArray or ByteBuffer can be returned without wrapping into a Publisher.
+  */
 class NettyToStreamsResponseBody[S <: Streams[S]](streamCompatible: StreamCompatible[S]) extends ToResponseBody[NettyResponse, S] {
 
   override val streams: S = streamCompatible.streams
@@ -32,17 +37,17 @@ class NettyToStreamsResponseBody[S <: Streams[S]](streamCompatible: StreamCompat
 
       case RawBodyType.InputStreamBody =>
         (ctx: ChannelHandlerContext) =>
-          new ReactivePublisherNettyResponseContent(ctx.newPromise(), streamCompatible.publisherFromInputStream(() => v, length = None))
+          new ReactivePublisherNettyResponseContent(ctx.newPromise(), streamCompatible.publisherFromInputStream(() => v, DefaultChunkSize, length = None))
 
       case RawBodyType.InputStreamRangeBody =>
         (ctx: ChannelHandlerContext) =>
           new ReactivePublisherNettyResponseContent(
             ctx.newPromise(),
-            streamCompatible.publisherFromInputStream(v.inputStreamFromRangeStart, length = v.range.map(_.contentLength))
+            streamCompatible.publisherFromInputStream(v.inputStreamFromRangeStart, DefaultChunkSize, length = v.range.map(_.contentLength))
           )
 
       case RawBodyType.FileBody =>
-        (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), streamCompatible.publisherFromFile(v))
+        (ctx: ChannelHandlerContext) => new ReactivePublisherNettyResponseContent(ctx.newPromise(), streamCompatible.publisherFromFile(v, DefaultChunkSize))
 
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }

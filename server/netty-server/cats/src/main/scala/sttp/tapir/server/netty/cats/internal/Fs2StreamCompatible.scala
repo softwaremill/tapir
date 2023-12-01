@@ -24,37 +24,35 @@ private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatibl
     new StreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 
-      override def fromFile(fileRange: FileRange): streams.BinaryStream = {
+      override def fromFile(fileRange: FileRange, chunkSize: Int): streams.BinaryStream = {
         val path = Path.fromNioPath(fileRange.file.toPath)
         fileRange.range
           .flatMap(r =>
-            r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, NettyToResponseBody.DefaultChunkSize, s._1, s._2))
+            r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, chunkSize, s._1, s._2))
           )
-          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, NettyToResponseBody.DefaultChunkSize, Flags.Read))
+          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, chunkSize, Flags.Read))
       }
 
-      override def fromInputStream(is: () => InputStream, length: Option[Long]): streams.BinaryStream =
+      override def fromInputStream(is: () => InputStream, chunkSize: Int, length: Option[Long]): streams.BinaryStream =
         length match {
-          case Some(limitedLength) => inputStreamToFs2(is).take(limitedLength)
-          case None                => inputStreamToFs2(is)
+          case Some(limitedLength) => inputStreamToFs2(is, chunkSize).take(limitedLength)
+          case None                => inputStreamToFs2(is, chunkSize)
         }
 
       override def asPublisher(stream: fs2.Stream[F, Byte]): Publisher[HttpContent] =
         // Deprecated constructor, but the proposed one does roughly the same, forcing a dedicated
         // dispatcher, which results in a Resource[], which is hard to afford here
         StreamUnicastPublisher(
-          stream
-            .chunkLimit(NettyToResponseBody.DefaultChunkSize)
-            .map { chunk =>
+          stream.mapChunks { chunk =>
               val bytes: Chunk.ArraySlice[Byte] = chunk.compact
-              new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length))
+              Chunk.singleton(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length)))
             },
           dispatcher
         )
 
       override def fromPublisher(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
         val stream = fs2.Stream
-          .eval(StreamSubscriber[F, HttpContent](NettyToResponseBody.DefaultChunkSize))
+          .eval(StreamSubscriber[F, HttpContent](bufferSize = 2))
           .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
           .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
         maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
@@ -66,10 +64,10 @@ private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatibl
       override def emptyStream: streams.BinaryStream =
         fs2.Stream.empty
 
-      private def inputStreamToFs2(inputStream: () => InputStream) =
+      private def inputStreamToFs2(inputStream: () => InputStream, chunkSize: Int) =
         fs2.io.readInputStream(
           Sync[F].blocking(inputStream()),
-          NettyToResponseBody.DefaultChunkSize
+          chunkSize
         )
     }
   }

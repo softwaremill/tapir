@@ -3,11 +3,9 @@ package sttp.tapir.server.netty
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.NettyFutureServerInterpreter.FutureRunAsync
-import sttp.tapir.server.netty.internal.{NettyServerInterpreter, RunAsync}
+import sttp.tapir.server.netty.internal.{NettyFutureRequestBody, NettyServerInterpreter, NettyToResponseBody, RunAsync}
 
 import scala.concurrent.{ExecutionContext, Future}
-import sttp.tapir.server.netty.internal.NettyFutureRequestBody
-import sttp.tapir.server.netty.internal.NettyToResponseBody
 
 trait NettyFutureServerInterpreter {
   def nettyServerOptions: NettyFutureServerOptions

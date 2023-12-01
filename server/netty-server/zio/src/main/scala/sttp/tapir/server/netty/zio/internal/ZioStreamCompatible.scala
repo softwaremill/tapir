@@ -18,12 +18,12 @@ private[zio] object ZioStreamCompatible {
     new StreamCompatible[ZioStreams] {
       override val streams: ZioStreams = ZioStreams
 
-      override def fromFile(fileRange: FileRange): streams.BinaryStream = {
+      override def fromFile(fileRange: FileRange, chunkSize: Int): streams.BinaryStream = {
         fileRange.range
           .flatMap(r =>
             r.startAndEnd.map { case (fStart, _) =>
               ZStream
-                .fromPath(fileRange.file.toPath)
+                .fromPath(fileRange.file.toPath, chunkSize)
                 .drop(fStart.toInt)
                 .take(r.contentLength)
             }
@@ -33,10 +33,10 @@ private[zio] object ZioStreamCompatible {
           )
       }
 
-      override def fromInputStream(is: () => InputStream, length: Option[Long]): streams.BinaryStream =
+      override def fromInputStream(is: () => InputStream, chunkSize: Int, length: Option[Long]): streams.BinaryStream =
         length match {
-          case Some(limitedLength) => ZStream.fromInputStream(is()).take(limitedLength.toInt)
-          case None                => ZStream.fromInputStream(is())
+          case Some(limitedLength) => ZStream.fromInputStream(is(), chunkSize).take(limitedLength.toInt)
+          case None                => ZStream.fromInputStream(is(), chunkSize)
         }
 
       override def asPublisher(stream: Stream[Throwable, Byte]): Publisher[HttpContent] =
@@ -49,8 +49,9 @@ private[zio] object ZioStreamCompatible {
       override def fromPublisher(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
         val stream =
           Adapters
-            .publisherToStream(publisher, 16)
-            .flatMap(httpContent => ZStream.fromChunk(Chunk.fromByteBuffer(httpContent.content.nioBuffer())))
+            .publisherToStream(publisher, bufferSize = 2)
+            .map(httpContent => Chunk.fromByteBuffer(httpContent.content.nioBuffer()))
+            .flattenChunks
         maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
       }
 

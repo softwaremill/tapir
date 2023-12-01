@@ -8,11 +8,21 @@ import java.nio.file.{Path, StandardOpenOption}
 import scala.concurrent.{Future, Promise}
 import java.util.concurrent.LinkedBlockingQueue
 
+/** A Reactive Streams subscriber which receives chunks of bytes and writes them to a file.
+  */
 class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpContent] {
   private var subscription: Subscription = _
+
+  /** JDK interface to write asynchronously to a file */
   private var fileChannel: AsynchronousFileChannel = _
+
+  /** Current position in the file */
   private var position: Long = 0
+
+  /** Used to signal completion, so that external code can represent writing to a file as Future[Unit] */
   private val resultPromise = Promise[Unit]()
+
+  /** An alternative way to signal completion, so that non-effectful servers can await on the response (like netty-loom) */
   private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Unit]]()
 
   override def future: Future[Unit] = resultPromise.future

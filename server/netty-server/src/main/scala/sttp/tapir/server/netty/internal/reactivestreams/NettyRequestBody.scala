@@ -17,12 +17,33 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import sttp.capabilities.Streams
 
-trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
+/** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
+private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
-  val DefaultChunkSize = 8192
   implicit def monad: MonadError[F]
+
+  /** Backend-specific implementation for creating a file. */
   def createFile: ServerRequest => F[TapirFile]
+
+  /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] into a raw array of bytes.
+    *
+    * @param publisher reactive publisher emitting byte chunks.
+    * @param maxBytes
+    *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
+    * @return An effect which finishes with a single array of all collected bytes.
+    */
   def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
+
+  /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
+    *
+    * @param serverRequest
+    *   can have underlying `Publisher[HttpContent]` or an empty `FullHttpRequest`
+    * @param file
+    *   an empty file where bytes should be stored.
+    * @param maxBytes
+    *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
+    * @return an effect which finishes when all data is written to the file.
+    */
   def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): F[RawValue[RAW]] = {
@@ -33,8 +54,10 @@ trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
       case RawBodyType.ByteBufferBody =>
         readAllBytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)))
       case RawBodyType.InputStreamBody =>
+        // Possibly can be optimized to avoid loading all data eagerly into memory
         readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)))
       case RawBodyType.InputStreamRangeBody =>
+        // Possibly can be optimized to avoid loading all data eagerly into memory
         readAllBytes(serverRequest, maxBytes).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
       case RawBodyType.FileBody =>
         for {
@@ -45,11 +68,9 @@ trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
     }
   }
 
-
-  // Used by different netty backends to handle raw body input
-  def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
+  private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
     serverRequest.underlying match {
-      case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER =>
+      case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
         monad.unit(Array.empty[Byte])
       case req: StreamedHttpRequest =>
         publisherToBytes(req, maxBytes)

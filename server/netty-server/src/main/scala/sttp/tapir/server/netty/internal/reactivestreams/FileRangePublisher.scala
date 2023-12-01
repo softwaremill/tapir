@@ -10,6 +10,8 @@ import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
+/** A Reactive Streams publisher which emits chunks of HttpContent read from a given file.
+  */
 class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher[HttpContent] {
   override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
@@ -44,6 +46,7 @@ class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher
           case _                                        => chunkSize
         }
         buffer.clear()
+        // Async call, so readNextChunkIfNeeded() finishes immediately after firing this
         channel.read(
           buffer,
           pos,
