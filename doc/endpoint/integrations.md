@@ -66,6 +66,18 @@ The iron codecs contain a validator which apply the constraint to validated valu
 
 Similarly to `tapir-refined`, you can find the predicate logic in `integrations/iron/src/main/scala/sttp/iron/codec/iron/TapirCodecIron.scala` and provide your own given `ValidatorForPredicate[T, P]` in scope using `ValidatorForPredicate.fromPrimitiveValidator`
 
+When using `tapir-iron` in the server, `tapir-iron-server` might become useful.
+It defines custom exception and `ironFailureHandler` and `ironDecodeFailureInterceptor` to use
+in server options.
+
+Without this handler or interceptor in JSON parsing errors are hidden from the 
+user as those might contain sensitive information. However, JSON parsing errors
+from `iron` are not sensitive and contain useful information. Use those error
+message to construct `IronException` in your JSON decoder and throw it when parsing fails 
+
+With `ironDecodeFailureInterceptor` when `IronException` is thrown from the JSON decoder it
+is matched, and it's error message is used in the response body.
+
 ## Enumeratum integration
 
 The `tapir-enumeratum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)

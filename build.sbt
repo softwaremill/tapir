@@ -166,6 +166,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   iron.projectRefs ++
+  ironServerCore.projectRefs ++
   zio1.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
@@ -678,6 +679,18 @@ lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
     scalaVersions = List(scala3)
   )
   .dependsOn(core)
+
+lazy val ironServerCore: ProjectMatrix = (projectMatrix in file("integrations/iron-server-core"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-iron-server-core",
+    libraryDependencies ++= Seq(
+      "io.github.iltotore" %% "iron" % Versions.iron % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .dependsOn(serverCore, iron, circeJson % Test, serverCore % "test -> test")
 
 lazy val zio1: ProjectMatrix = (projectMatrix in file("integrations/zio1"))
   .settings(commonSettings)
