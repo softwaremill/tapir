@@ -5,18 +5,18 @@ import org.reactivestreams.{Publisher, Subscription}
 
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{Path, StandardOpenOption}
-import java.util.concurrent.Semaphore
 import scala.concurrent.{Future, Promise}
+import java.util.concurrent.LinkedBlockingQueue
 
 class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpContent] {
   private var subscription: Subscription = _
   private var fileChannel: AsynchronousFileChannel = _
   private var position: Long = 0
   private val resultPromise = Promise[Unit]()
-  private val resultBlockingSemaphore: Semaphore = new Semaphore(0)
+  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Unit]]()
 
   override def future: Future[Unit] = resultPromise.future
-  def waitForResultBlocking(): Unit = resultBlockingSemaphore.acquire()
+  private def waitForResultBlocking(): Either[Throwable, Unit] = resultBlockingQueue.take()
 
   override def onSubscribe(s: Subscription): Unit = {
     this.subscription = s
@@ -46,13 +46,14 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
 
   override def onError(t: Throwable): Unit = {
     fileChannel.close()
+    resultBlockingQueue.add(Left(t))
     resultPromise.failure(t)
   }
 
   override def onComplete(): Unit = {
     fileChannel.close()
+    val _ = resultBlockingQueue.add(Right(()))
     resultPromise.success(())
-    resultBlockingSemaphore.release()
   }
 }
 
@@ -66,6 +67,6 @@ object FileWriterSubscriber {
   def processAllBlocking(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Unit = {
     val subscriber = new FileWriterSubscriber(path)
     publisher.subscribe(maxBytes.map(new LimitedLengthSubscriber(_, subscriber)).getOrElse(subscriber))
-    subscriber.waitForResultBlocking()
+    subscriber.waitForResultBlocking().left.foreach(e => throw e)
   }
 }

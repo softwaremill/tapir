@@ -15,10 +15,10 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
   private val chunks = new ConcurrentLinkedQueue[Array[Byte]]()
   private var size = 0
   private val resultPromise = Promise[Array[Byte]]()
-  private val resultBlockingQueue: BlockingQueue[Array[Byte]] = new LinkedBlockingQueue[Array[Byte]]()
+  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]]()
 
   override def future: Future[Array[Byte]] = resultPromise.future
-  def resultBlocking: Array[Byte] = resultBlockingQueue.poll()
+  def resultBlocking(): Either[Throwable, Array[Byte]] = resultBlockingQueue.take()
 
   override def onSubscribe(s: Subscription): Unit = {
     subscription = s
@@ -31,9 +31,10 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
     chunks.add(a)
     subscription.request(1)
   }
-
+      
   override def onError(t: Throwable): Unit = {
     chunks.clear()
+    resultBlockingQueue.add(Left(t))
     resultPromise.failure(t)
   }
 
@@ -44,7 +45,7 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
       currentPosition + array.length
     })
     chunks.clear()
-    resultBlockingQueue.add(result)
+    val _ = resultBlockingQueue.add(Right(result))
     resultPromise.success(result)
   }
 }
@@ -59,6 +60,9 @@ object SimpleSubscriber {
   def processAllBlocking(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] = {
     val subscriber = new SimpleSubscriber()
     publisher.subscribe(maxBytes.map(max => new LimitedLengthSubscriber(max, subscriber)).getOrElse(subscriber))
-    subscriber.resultBlocking
+    subscriber.resultBlocking() match {
+      case Right(result) => result
+      case Left(e) => throw e
+    }
   }
 }
