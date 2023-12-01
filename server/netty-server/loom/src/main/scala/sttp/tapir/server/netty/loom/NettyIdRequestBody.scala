@@ -14,10 +14,20 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import io.netty.buffer.ByteBuf
 import sttp.capabilities.StreamMaxLengthExceededException
+import sttp.tapir.server.netty.internal.reactivestreams.SimpleSubscriber
 
-class NettyIdRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Id, NoStreams] {
+class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, NoStreams] {
 
+  override implicit val monad: MonadError[Id] = idMonad 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
+
+  def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] = 
+      SimpleSubscriber.processAll(publisher, maxBytes)
+
+  def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit = 
+    Files.write(fi)
+
+  def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
 

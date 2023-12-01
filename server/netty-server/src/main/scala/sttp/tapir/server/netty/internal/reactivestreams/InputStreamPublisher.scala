@@ -7,10 +7,11 @@ import sttp.tapir.InputStreamRange
 
 import java.io.InputStream
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import scala.concurrent.{ExecutionContext, Future, blocking}
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 
-class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec: ExecutionContext) extends Publisher[HttpContent] {
+class InputStreamPublisher[F[_]](range: InputStreamRange, chunkSize: Int)(implicit monad: MonadError[F]) extends Publisher[HttpContent] {
   override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
     val subscription = new InputStreamSubscription(subscriber, range, chunkSize)
@@ -44,32 +45,34 @@ class InputStreamPublisher(range: InputStreamRange, chunkSize: Int)(implicit ec:
           case Some(endPos) if pos + chunkSize > endPos => (endPos - pos + 1).toInt
           case _                                        => chunkSize
         }
-        Future {
-          blocking {
+
+        val _ = monad
+          .blocking(
             stream.readNBytes(expectedBytes)
-          }
-        }
-          .onComplete {
-            case Success(bytes) =>
-              val bytesRead = bytes.length
-              if (bytesRead == 0) {
+          )
+          .map { bytes =>
+            val bytesRead = bytes.length
+            if (bytesRead == 0) {
+              cancel()
+              subscriber.onComplete()
+            } else {
+              position.addAndGet(bytesRead.toLong)
+              subscriber.onNext(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes)))
+              if (bytesRead < expectedBytes) {
                 cancel()
                 subscriber.onComplete()
               } else {
-                position.addAndGet(bytesRead.toLong)
-                subscriber.onNext(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes)))
-                if (bytesRead < expectedBytes) {
-                  cancel()
-                  subscriber.onComplete()
-                } else {
-                  demand.decrementAndGet()
-                  readingInProgress.set(false)
-                  readNextChunkIfNeeded()
-                }
+                demand.decrementAndGet()
+                readingInProgress.set(false)
+                readNextChunkIfNeeded()
               }
-            case Failure(e) =>
+            }
+          }
+          .handleError {
+            case e => {
               val _ = Try(stream.close())
-              subscriber.onError(e)
+              monad.unit(subscriber.onError(e))
+            }
           }
       }
     }

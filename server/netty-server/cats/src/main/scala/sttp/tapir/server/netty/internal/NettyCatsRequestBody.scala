@@ -34,7 +34,7 @@ private[netty] class NettyCatsRequestBody[F[_]: Async](val createFile: ServerReq
 
   override def publisherToStream(publisher: Publisher[HttpContent], maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = fs2.Stream
-      .eval(StreamSubscriber[F, HttpContent](NettyIdRequestBody.DefaultChunkSize))
+      .eval(StreamSubscriber[F, HttpContent](DefaultChunkSize))
       .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
       .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
     maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)

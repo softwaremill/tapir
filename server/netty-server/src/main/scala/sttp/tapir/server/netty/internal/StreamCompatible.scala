@@ -3,7 +3,7 @@ package sttp.tapir.server.netty.internal
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.Publisher
 import sttp.capabilities.Streams
-import sttp.tapir.{FileRange, TapirFile}
+import sttp.tapir.FileRange
 
 import java.io.InputStream
 
@@ -11,7 +11,6 @@ private[netty] trait StreamCompatible[S <: Streams[S]] {
   val streams: S
   def fromFile(file: FileRange): streams.BinaryStream
   def fromInputStream(is: () => InputStream, length: Option[Long]): streams.BinaryStream
-  def fromNettyStream(s: Publisher[HttpContent]): streams.BinaryStream
   def asPublisher(s: streams.BinaryStream): Publisher[HttpContent]
 
   def publisherFromFile(file: FileRange): Publisher[HttpContent] =

@@ -1,11 +1,9 @@
 package sttp.tapir.server.netty.internal.reactivestreams
 
-import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
-import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
@@ -20,6 +18,7 @@ import java.nio.ByteBuffer
 
 trait NettyRequestBody[F[_], S] extends RequestBody[F, S] {
 
+  val DefaultChunkSize = 8192
   implicit def monad: MonadError[F]
   def createFile: ServerRequest => F[TapirFile]
   def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
@@ -43,8 +42,7 @@ trait NettyRequestBody[F[_], S] extends RequestBody[F, S] {
         for {
           file <- createFile(serverRequest)
           _ <- writeToFile(serverRequest, file, maxBytes)
-        }
-        yield RawValue(FileRange(file), Seq(FileRange(file)))
+        } yield RawValue(FileRange(file), Seq(FileRange(file)))
       case _: RawBodyType.MultipartBody => monad.error(new UnsupportedOperationException())
     }
   }

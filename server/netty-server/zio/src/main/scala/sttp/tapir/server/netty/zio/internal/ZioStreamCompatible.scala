@@ -45,9 +45,6 @@ private[zio] object ZioStreamCompatible {
             .run(stream.mapChunks(c => Chunk.single(new DefaultHttpContent(Unpooled.wrappedBuffer(c.toArray)): HttpContent)).toPublisher)
             .getOrThrowFiberFailure()
         )
-
-      override def fromNettyStream(publisher: Publisher[HttpContent]): Stream[Throwable, Byte] =
-        publisher.toZIOStream().mapConcatChunk(httpContent => Chunk.fromByteBuffer(httpContent.content.nioBuffer()))
     }
   }
 }

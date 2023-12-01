@@ -6,20 +6,20 @@ import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.model.HasHeaders
+import sttp.monad.MonadError
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
-import sttp.tapir.server.netty.internal.NettyFutureToResponseBody.DefaultChunkSize
+import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
 import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
 import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import scala.concurrent.ExecutionContext
 
-class NettyFutureToResponseBody(implicit ec: ExecutionContext) extends ToResponseBody[NettyResponse, NoStreams] {
+class NettyToResponseBody[F[_]](implicit me: MonadError[F]) extends ToResponseBody[NettyResponse, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
@@ -44,15 +44,13 @@ class NettyFutureToResponseBody(implicit ec: ExecutionContext) extends ToRespons
 
       case RawBodyType.FileBody => { (ctx: ChannelHandlerContext) =>
         ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
-
       }
-
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
     }
   }
 
   private def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
-    new InputStreamPublisher(streamRange, DefaultChunkSize)
+    new InputStreamPublisher[F](streamRange, DefaultChunkSize)
   }
 
   private def wrap(fileRange: FileRange): Publisher[HttpContent] = {
@@ -76,8 +74,6 @@ class NettyFutureToResponseBody(implicit ec: ExecutionContext) extends ToRespons
   ): NettyResponse = throw new UnsupportedOperationException
 }
 
-private[internal] object NettyFutureToResponseBody {
+object NettyToResponseBody {
   val DefaultChunkSize = 8192
-  val IncludingLastOffset = 1
-  val ReadOnlyAccessMode = "r"
 }
