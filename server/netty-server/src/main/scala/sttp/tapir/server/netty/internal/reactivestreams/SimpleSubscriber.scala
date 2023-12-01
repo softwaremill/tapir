@@ -7,7 +7,6 @@ import org.reactivestreams.{Publisher, Subscription}
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte], HttpContent] {
@@ -45,7 +44,7 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
       currentPosition + array.length
     })
     chunks.clear()
-    val _ = resultBlockingQueue.add(Right(result))
+    resultBlockingQueue.add(Right(result))
     resultPromise.success(result)
   }
 }
