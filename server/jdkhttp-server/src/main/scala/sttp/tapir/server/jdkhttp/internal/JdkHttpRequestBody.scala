@@ -18,7 +18,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
     val request = jdkHttpRequest(serverRequest)
     toRaw(serverRequest, bodyType, request.getRequestBody)
   }

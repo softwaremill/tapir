@@ -20,7 +20,7 @@ import scala.collection.immutable.Seq
 class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBody[Future, NoStreams] {
   override val streams: NoStreams = NoStreams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     val request = finatraRequest(serverRequest)
     toRaw(request, bodyType, request.content, request.charset.map(Charset.forName))
   }

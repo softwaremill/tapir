@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.cats
 
 import cats.effect.Async
 import cats.effect.std.Dispatcher
+import internal.Fs2StreamCompatible
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -11,6 +12,7 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
+import sttp.tapir.server.netty.cats.internal.NettyCatsRequestBody
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
 trait NettyCatsServerInterpreter[F[_]] {
@@ -31,8 +33,8 @@ trait NettyCatsServerInterpreter[F[_]] {
 
     val serverInterpreter = new ServerInterpreter[Fs2Streams[F], F, NettyResponse, Fs2Streams[F]](
       FilterServerEndpoints(ses),
-      new NettyCatsRequestBody(createFile),
-      new NettyCatsToResponseBody(nettyServerOptions.dispatcher, delegate = new NettyToResponseBody),
+      new NettyCatsRequestBody(createFile, Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
+      new NettyToStreamsResponseBody(Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
       RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
       deleteFile
     )

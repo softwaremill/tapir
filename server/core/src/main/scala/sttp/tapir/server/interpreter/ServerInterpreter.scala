@@ -1,13 +1,14 @@
 package sttp.tapir.server.interpreter
 
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.{model, _}
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
+import sttp.tapir.server.model.{MaxContentLength, ServerResponse, ValuedEndpointOutput}
+import sttp.tapir.server.{model, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
@@ -157,7 +158,7 @@ class ServerInterpreter[R, F[_], B, S](
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(Left(body))                                          => decodeBody(request, values, body)
+              case Some(Left(body))                                          => decodeBody(request, values, body, maxBodyLength)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
@@ -182,17 +183,23 @@ class ServerInterpreter[R, F[_], B, S](
   private def decodeBody[RAW, T](
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
-      bodyInput: EndpointIO.Body[RAW, T]
+      bodyInput: EndpointIO.Body[RAW, T],
+      maxBodyLength: Option[Long]
   ): F[DecodeBasicInputsResult] = {
-    requestBody.toRaw(request, bodyInput.bodyType).flatMap { v =>
-      bodyInput.codec.decode(v.value) match {
-        case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
-        case failure: DecodeResult.Failure =>
-          v.createdFiles
-            .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
-            .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+    requestBody
+      .toRaw(request, bodyInput.bodyType, maxBodyLength)
+      .flatMap { v =>
+        bodyInput.codec.decode(v.value) match {
+          case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+          case failure: DecodeResult.Failure =>
+            v.createdFiles
+              .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
+              .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+        }
       }
-    }
+      .handleError { case e: StreamMaxLengthExceededException =>
+        (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
+      }
   }
 
   private def unsupportedInputMediaTypeResponse(

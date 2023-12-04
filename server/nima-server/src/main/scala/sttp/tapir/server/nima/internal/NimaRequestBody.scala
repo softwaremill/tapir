@@ -14,7 +14,7 @@ import java.nio.file.{Files, StandardCopyOption}
 private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
     def asInputStream = nimaRequest(serverRequest).content().inputStream()
     def asByteArray = asInputStream.readAllBytes()
 

@@ -14,7 +14,7 @@ import scala.annotation.tailrec
 class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] =
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {

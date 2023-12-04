@@ -6,7 +6,7 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
-import sttp.tapir.server.netty.zio.internal.ZioStreamCompatible
+import sttp.tapir.server.netty.zio.internal.{NettyZioRequestBody, ZioStreamCompatible}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint, _}
 import zio._
@@ -26,8 +26,8 @@ trait NettyZioServerInterpreter[R] {
       implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
       val serverInterpreter = new ServerInterpreter[ZioStreams, F, NettyResponse, ZioStreams](
         FilterServerEndpoints(widenedSes),
-        new NettyZioRequestBody(widenedServerOptions.createFile),
-        new NettyToStreamsResponseBody[ZioStreams](delegate = new NettyToResponseBody(), ZioStreamCompatible(runtime)),
+        new NettyZioRequestBody(widenedServerOptions.createFile, ZioStreamCompatible(runtime)),
+        new NettyToStreamsResponseBody[ZioStreams](ZioStreamCompatible(runtime)),
         RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
         widenedServerOptions.deleteFile
       )

@@ -1,5 +1,9 @@
 # Migrating
 
+## From 1.9.3 to 1.9.4
+
+- `NettyConfig.defaultNoStreaming` has been removed, use `NettyConfig.default`.
+
 ## From 1.4 to 1.5
 
 - `badRequestOnPathErrorIfPathShapeMatches` and `badRequestOnPathInvalidIfPathShapeMatches` have been removed from `DefaultDecodeFailureHandler`. These flags were causing confusion and incosistencies caused by specifics of ZIO and Play backends. Before tapir 1.5, keeping defaults (`false` and `true` respectively for these flags) meant that some path segment decoding failures (specifically, errors - when an exception has been thrown during decoding, but not for e.g. enumeration mismatches) were translated to a "no-match", meaning that the next endpoint was attempted. From 1.5, tapir defaults to a 400 Bad Request response to be sent instead, on all path decoding failures.

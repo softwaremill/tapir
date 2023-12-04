@@ -28,7 +28,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
   private val exampleRequestBody = new RequestBody[TestEffect, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
+    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): TestEffect[RawValue[R]] = ???
     override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
   }
 

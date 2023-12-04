@@ -21,7 +21,7 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
     ec: ExecutionContext
 ) extends RequestBody[Future, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
-  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] =
+  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] =
     toRawFromEntity(request, akkeRequestEntity(request), bodyType)
   override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = akkeRequestEntity(request).dataBytes

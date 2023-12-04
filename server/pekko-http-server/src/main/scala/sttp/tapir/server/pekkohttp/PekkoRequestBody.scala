@@ -21,7 +21,7 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
     ec: ExecutionContext
 ) extends RequestBody[Future, PekkoStreams] {
   override val streams: PekkoStreams = PekkoStreams
-  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] =
+  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] =
     toRawFromEntity(request, akkeRequestEntity(request), bodyType)
   override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = akkeRequestEntity(request).dataBytes

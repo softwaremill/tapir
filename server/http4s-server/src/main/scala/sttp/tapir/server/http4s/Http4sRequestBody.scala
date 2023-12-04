@@ -18,7 +18,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
 ) extends RequestBody[F, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val r = http4sRequest(serverRequest)
     toRawFromStream(serverRequest, r.body, bodyType, r.charset)
   }

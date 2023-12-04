@@ -10,6 +10,7 @@ import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, ValidationError, Validator, server, _}
 
 import scala.annotation.tailrec
+import sttp.capabilities.StreamMaxLengthExceededException
 
 trait DecodeFailureHandler[F[_]] {
 
@@ -122,11 +123,12 @@ object DefaultDecodeFailureHandler {
       case (_: EndpointIO.Header[_], _) => respondBadRequest
       case (fh: EndpointIO.FixedHeader[_], _: DecodeResult.Mismatch) if fh.h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
-      case (_: EndpointIO.FixedHeader[_], _)                         => respondBadRequest
-      case (_: EndpointIO.Headers[_], _)                             => respondBadRequest
-      case (_: EndpointIO.Body[_, _], _)                             => respondBadRequest
-      case (_: EndpointIO.OneOfBody[_, _], _: DecodeResult.Mismatch) => respondUnsupportedMediaType
-      case (_: EndpointIO.StreamBodyWrapper[_, _], _)                => respondBadRequest
+      case (_: EndpointIO.FixedHeader[_], _)                               => respondBadRequest
+      case (_: EndpointIO.Headers[_], _)                                   => respondBadRequest
+      case (_, DecodeResult.Error(_, _: StreamMaxLengthExceededException)) => respondPayloadTooLarge
+      case (_: EndpointIO.Body[_, _], _)                                   => respondBadRequest
+      case (_: EndpointIO.OneOfBody[_, _], _: DecodeResult.Mismatch)       => respondUnsupportedMediaType
+      case (_: EndpointIO.StreamBodyWrapper[_, _], _)                      => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
       // a path shape mismatch
@@ -143,6 +145,7 @@ object DefaultDecodeFailureHandler {
   }
   private val respondBadRequest = Some(onlyStatus(StatusCode.BadRequest))
   private val respondUnsupportedMediaType = Some(onlyStatus(StatusCode.UnsupportedMediaType))
+  private val respondPayloadTooLarge = Some(onlyStatus(StatusCode.PayloadTooLarge))
 
   def respondNotFoundIfHasAuth(
       ctx: DecodeFailureContext,
@@ -224,10 +227,12 @@ object DefaultDecodeFailureHandler {
             }
             .mkString(", ")
         )
-      case Missing        => Some("missing")
-      case Multiple(_)    => Some("multiple values")
-      case Mismatch(_, _) => Some("value mismatch")
-      case _              => None
+      case Missing                                              => Some("missing")
+      case Multiple(_)                                          => Some("multiple values")
+      case Mismatch(_, _)                                       => Some("value mismatch")
+      case Error(_, StreamMaxLengthExceededException(maxBytes)) => Some(s"Content length limit: $maxBytes bytes")
+      case _: Error                                             => None
+      case _: InvalidValue                                      => None
     }
 
     def combineSourceAndDetail(source: String, detail: Option[String]): String =

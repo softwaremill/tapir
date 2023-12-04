@@ -29,7 +29,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val ctx = armeriaCtx(serverRequest)
     val request = ctx.request()
 

@@ -73,7 +73,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, unsafeRunAsync, config.maxContentLength, channelGroup, isShuttingDown),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown),
         eventLoopGroup,
         socketOverride
       )
@@ -123,9 +123,9 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
 
 object NettyCatsServer {
   def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.defaultWithStreaming)
+    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.default)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
+    NettyCatsServer(Vector.empty, options, NettyConfig.default)
   def apply[F[_]: Async](dispatcher: Dispatcher[F], config: NettyConfig): NettyCatsServer[F] =
     NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), config)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F], config: NettyConfig): NettyCatsServer[F] =

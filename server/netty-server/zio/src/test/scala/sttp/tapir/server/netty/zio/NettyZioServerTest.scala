@@ -34,7 +34,14 @@ class NettyZioServerTest extends TestSuite with EitherValues {
           }
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false).tests() ++
+            new AllServerTests(
+              createServerTest,
+              interpreter,
+              backend,
+              staticContent = false,
+              multipart = false,
+              maxContentLength = true
+            ).tests() ++
               new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++
               new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()

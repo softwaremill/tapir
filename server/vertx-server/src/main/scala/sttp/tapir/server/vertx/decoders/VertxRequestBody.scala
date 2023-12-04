@@ -26,7 +26,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
