@@ -17,7 +17,7 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
   private var fileChannel: AsynchronousFileChannel = _
 
   /** Current position in the file */
-  private var position: Long = 0
+  @volatile private var position: Long = 0
 
   /** Used to signal completion, so that external code can represent writing to a file as Future[Unit] */
   private val resultPromise = Promise[Unit]()

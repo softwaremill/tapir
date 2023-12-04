@@ -63,17 +63,9 @@ import sttp.tapir.server.model.EndpointExtensions._
 val limitedEndpoint = endpoint.maxRequestBodyLength(maxBytes = 163484L)
 ```
 
-The `EndpointsExtensions` utility is available in `tapir-server` core module. If you can't depend on it where your endpoint 
-definitions are located, you can directly put an attribute:
-
-```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.server.model.MaxContentLength
-
-val limitedEndpoint = endpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(16384L))
-```
-Such protection would prevent loading all the input data into memory if it exceeds the limit. Instead, it will result 
-in a `HTTP 413` response to the client. 
+The `EndpointsExtensions` utility is available in `tapir-server` core module. 
+Such protection prevents loading all the input data if it exceeds the limit. Instead, it will result  in a `HTTP 413` 
+response to the client. 
 Please note that in case of endpoints with `streamBody` input type, the server logic receives a reference to a lazily
 evaluated stream, so actual length verification will happen only when the logic performs streams processing, not earlier.
 

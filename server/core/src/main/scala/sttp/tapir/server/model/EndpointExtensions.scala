@@ -6,13 +6,16 @@ import sttp.tapir.AttributeKey
 /** Can be used as an endpoint attribute.
   * @example
   *   {{{
-  * endpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(16384L))
+  * endpoint.attribute(MaxContentLength.attributeKey, MaxContentLength(16384L))
   *   }}}
   */
 case class MaxContentLength(value: Long) extends AnyVal
 
+object MaxContentLength {
+  val attributeKey: AttributeKey[MaxContentLength] = AttributeKey[MaxContentLength]
+}
+
 object EndpointExtensions {
-  private val MaxContentLengthAttributeKey: AttributeKey[MaxContentLength] = AttributeKey[MaxContentLength]
 
   implicit class RichServerEndpoint[E <: EndpointInfoOps[_]](e: E) {
 
@@ -28,6 +31,6 @@ object EndpointExtensions {
       *   maximum allowed size of request body in bytes.
       */
     def maxRequestBodyLength(maxBytes: Long): E =
-      e.attribute(MaxContentLengthAttributeKey, MaxContentLength(maxBytes)).asInstanceOf[E]
+      e.attribute(MaxContentLength.attributeKey, MaxContentLength(maxBytes)).asInstanceOf[E]
   }
 }
