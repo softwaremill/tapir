@@ -4,18 +4,17 @@ The `tapir-zio` module defines type aliases and extension methods which make it 
 [ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http-server` contains an interpreter useful when
 exposing the endpoints using the [ZIO Http](https://github.com/dream11/zio-http) server.
 
-The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the `*-zio1` suffix.
-
+The `*-zio` modules depend on ZIO 2.x.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.9.3"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.9.4"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.9.3"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.9.4"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
