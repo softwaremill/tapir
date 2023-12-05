@@ -27,7 +27,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     import mat.executionContext
     val request = playRequest(serverRequest)
     val charset = request.charset.map(Charset.forName)
-    toRaw(request, bodyType, charset, () => request.body, None)
+    toRaw(request, bodyType, charset, () => toStream(serverRequest, maxBytes), None)
   }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
