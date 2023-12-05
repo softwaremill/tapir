@@ -15,7 +15,8 @@ private[tapir] object ShowPathTemplate {
       includeAuth: Boolean,
       showNoPathAs: String,
       showPathsAs: Option[String],
-      showQueryParamsAs: Option[String]
+      showQueryParamsAs: Option[String],
+      extraPara: Option[Int] = Some(3)
   ): String = {
 
     val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs(includeAuth)

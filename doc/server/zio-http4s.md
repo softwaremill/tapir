@@ -4,8 +4,7 @@ The `tapir-zio` module defines type aliases and extension methods which make it 
 [ZIO](https://zio.dev) and tapir. Moreover, `tapir-zio-http4s-server` contains an interpreter useful when
 exposing the endpoints using the [http4s](https://http4s.org) server.
 
-The `*-zio` modules depend on ZIO 2.x. For ZIO 1.x support, use modules with the `*-zio1` suffix.
-
+The `*-zio` modules depend on ZIO 2.x.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
@@ -15,10 +14,7 @@ You'll need the following dependency for the `ZServerEndpoint` type alias and he
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-// for zio 2:
 "com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "@VERSION@"
-// for zio 1:
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % "@VERSION@"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
