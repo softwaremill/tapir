@@ -66,6 +66,59 @@ The iron codecs contain a validator which apply the constraint to validated valu
 
 Similarly to `tapir-refined`, you can find the predicate logic in `integrations/iron/src/main/scala/sttp/iron/codec/iron/TapirCodecIron.scala` and provide your own given `ValidatorForPredicate[T, P]` in scope using `ValidatorForPredicate.fromPrimitiveValidator`
 
+### Validation
+
+When using `iron` in the server e.g. in case classes that request JSON request body 
+is parsed to, some additional steps need to be taken to properly
+report `iron` validation errors.
+
+[Iron](https://github.com/Iltotore/iron) is operating on type level while regular tapir
+validation works on case classes created from parsed JSON. When `iron` types are used
+in a case class creation is impossible because `iron` does not allow creating guarded type instance.
+Because it is not possible to create case class it looks like JSON parsing error not
+like validation error. In such case no error message is displayed to user.
+
+To properly report such errors it is necessary to recognize them in failure intereptor.
+Custom JSON parsing is necessary anyway, custom exception can be thrown in case of `iron`
+refinement error and then matched in failure interceptor.
+
+Example for `upickle`:
+
+```scala
+case class IronException(originalValue: Any, errorMessage: String) extends Exception
+
+inline given [A, B](using inline reader: Reader[A], inline constraint: Constraint[A, B]): Reader[A :| B] =
+  reader.map(value =>
+    value.refineEither match {
+      case Right(refinedValue) => refinedValue
+      case Left(errorMessage) => throw IronException(value, errorMessage)
+    }
+  )
+```
+
+Then failure handler matching `IronException` is needed. Remember to add it to server
+
+```scala
+
+  def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
+    case Error(_, JsonDecodeException(_, IronException(originalValue, errorMessage))) =>
+      Some(s"Failed to parse value $originalValue. Error: $errorMessage")
+    case other => FailureMessages.failureDetailMessage(other)
+  }
+
+  def failureMessage(ctx: DecodeFailureContext): String = {
+    val base = FailureMessages.failureSourceMessage(ctx.failingInput)
+    val detail = failureDetailMessage(ctx.failure)
+    FailureMessages.combineSourceAndDetail(base, detail)
+  }
+
+  val handler = new DefaultDecodeFailureHandler(default.respond, failureMessage, default.response)
+  val serverOptions = NettyFutureServerOptions.customiseInterceptors.decodeFailureHandler(handler).options
+
+  val ironRoute = NettyFutureServerInterpreter(serverOptions).toRoute(endpoints)
+```
+
+
 ## Enumeratum integration
 
 The `tapir-enumeratum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
