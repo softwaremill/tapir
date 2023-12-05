@@ -68,13 +68,11 @@ The required imports are as follows:
 ```scala
 import sttp.tapir.client.sttp.ws.akkahttp._ // for akka-streams
 import sttp.tapir.client.sttp.ws.fs2._      // for fs2
-import sttp.tapir.client.sttp.ws.zio._      // for zio 2.x
-import sttp.tapir.client.sttp.ws.zio1._     // for zio 1.x
+import sttp.tapir.client.sttp.ws.zio._      // for zio
 ```
 
-No additional dependencies are needed (except for zio1, which needs the `tapir-sttp-client-ws-zio1` dependency), as 
-both of the above implementations are included in the main interpreter, with dependencies on akka-streams, fs2 and zio 
-being marked as optional (hence these are not transitive).
+No additional dependencies are needed, as  both of the above implementations are included in the main interpreter, 
+with dependencies on akka-streams, fs2 and zio being marked as optional (hence these are not transitive).
 
 ## Overwriting the response specification
 

@@ -145,10 +145,8 @@ val attach = VertxCatsServerInterpreter(dispatcher).route(streamedResponse.serve
 Add the following dependency
 
 ```scala
-// for zio2:
+// for zio:
 "com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio" % "1.9.3"
-// for zio1:
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server-zio1" % "1.9.3"
 ```
 
 to use this interpreter with ZIO.
