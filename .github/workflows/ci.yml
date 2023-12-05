@@ -91,10 +91,10 @@ jobs:
     # https://github.com/scala-js/scala-js/issues/4317 has a solution
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '2.12'
-      run: sbt $SBT_JAVA_OPTS catsJS2_12/test circeJsonJS2_12/test clientCoreJS2_12/test clientTestsJS2_12/test coreJS2_12/test enumeratumJS2_12/test jsoniterScalaJS2_12/test newtypeJS2_12/test openapiDocsJS2_12/test playJsonJS2_12/test redocJS2_12/test serverCoreJS2_12/test sttpClientJS2_12/test testingJS2_12/test testsJS2_12/test uPickleJsonJS2_12/test zio1JsonJS2_12/test zioJsonJS2_12/test
+      run: sbt $SBT_JAVA_OPTS catsJS2_12/test circeJsonJS2_12/test clientCoreJS2_12/test clientTestsJS2_12/test coreJS2_12/test enumeratumJS2_12/test jsoniterScalaJS2_12/test newtypeJS2_12/test openapiDocsJS2_12/test playJsonJS2_12/test redocJS2_12/test serverCoreJS2_12/test sttpClientJS2_12/test testingJS2_12/test testsJS2_12/test uPickleJsonJS2_12/test zioJsonJS2_12/test
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '2.13'
-      run: sbt $SBT_JAVA_OPTS catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zio1JsonJS/test zioJsonJS/test
+      run: sbt $SBT_JAVA_OPTS catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zioJsonJS/test
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
