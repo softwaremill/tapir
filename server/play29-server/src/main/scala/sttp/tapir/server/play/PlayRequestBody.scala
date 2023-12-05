@@ -23,7 +23,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
 
   override val streams: AkkaStreams = AkkaStreams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     import mat.executionContext
     val request = playRequest(serverRequest)
     val charset = request.charset.map(Charset.forName)
