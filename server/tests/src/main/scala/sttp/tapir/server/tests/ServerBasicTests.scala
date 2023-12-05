@@ -752,7 +752,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       maxLength: Int
   ) = testServer(
     testedEndpoint.maxRequestBodyLength(maxLength.toLong),
-    "returns 413 on exceeded max content length (request)"
+    "checks payload limit and returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val tooLargeBody: String = List.fill(maxLength + 1)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(tooLargeBody).send(backend).map(_.code shouldBe StatusCode.PayloadTooLarge)
@@ -762,7 +762,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "returns OK on content length  below or equal max (request)"
+    "checks payload limit and returns OK on content length  below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)

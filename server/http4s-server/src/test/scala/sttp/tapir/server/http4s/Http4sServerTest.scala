@@ -136,7 +136,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
       stream.compile.drain.void
 
-    new AllServerTests(createServerTest, interpreter, backend).tests() ++
+    new AllServerTests(createServerTest, interpreter, backend, maxContentLength = true).tests() ++
       new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(Fs2Streams[IO])(drainFs2) ++
       new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
