@@ -60,7 +60,7 @@ Individual endpoints can be annotated with content length limit:
 import sttp.tapir._
 import sttp.tapir.server.model.EndpointExtensions._
 
-val limitedEndpoint = endpoint.maxRequestBodyLength(maxBytes = 163484L)
+val limitedEndpoint = endpoint.maxRequestBodyLength(maxBytes = 16384L)
 ```
 
 The `EndpointsExtensions` utility is available in `tapir-server` core module. 
