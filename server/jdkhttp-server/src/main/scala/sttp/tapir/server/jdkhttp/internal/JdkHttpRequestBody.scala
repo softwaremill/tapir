@@ -20,11 +20,11 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
     val request = jdkHttpRequest(serverRequest)
-    toRaw(serverRequest, bodyType, request.getRequestBody)
+    toRaw(serverRequest, bodyType, request.getRequestBody, maxBytes)
   }
 
-  private def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], body: InputStream): RawValue[RAW] = {
-    def asInputStream: InputStream = body
+  private def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], body: InputStream, maxBytes: Option[Long]): RawValue[RAW] = {
+    def asInputStream: InputStream = maxBytes.map(limit => new FailingLimitedInputStream(body, limit)).getOrElse(body)
     def asByteArray: Array[Byte] = asInputStream.readAllBytes()
 
     bodyType match {
@@ -65,7 +65,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       parsedPart.getName.flatMap(name =>
         m.partType(name)
           .map(partType => {
-            val bodyRawValue = toRaw(request, partType, parsedPart.getBody)
+            val bodyRawValue = toRaw(request, partType, parsedPart.getBody, maxBytes = None)
             Part(
               name,
               bodyRawValue.value,
