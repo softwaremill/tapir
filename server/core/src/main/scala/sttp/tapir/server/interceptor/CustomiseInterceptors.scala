@@ -112,7 +112,8 @@ case class CustomiseInterceptors[F[_], O](
   //
 
   /** Creates the default interceptor stack */
-  def interceptors: List[Interceptor[F]] = prependedInterceptors ++
+  def interceptors: List[Interceptor[F]] = {
+    prependedInterceptors ++
     metricsInterceptor.toList ++
     corsInterceptor.toList ++
     rejectHandler.map(new RejectInterceptor[F](_)).toList ++
@@ -122,6 +123,7 @@ case class CustomiseInterceptors[F[_], O](
     additionalInterceptors ++
     List(new DecodeFailureInterceptor[F](decodeFailureHandler)) ++
     appendedInterceptors
+  }
 
   def options: O = createOptions(this)
 }
