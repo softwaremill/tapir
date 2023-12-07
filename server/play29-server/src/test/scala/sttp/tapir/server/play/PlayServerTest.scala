@@ -114,7 +114,7 @@ class PlayServerTest extends TestSuite {
         invulnerableToUnsanitizedHeaders = false,
         maxContentLength = true
       ).tests() ++
-        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
+        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false, maxContentLengthSupport = true).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
         new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(AkkaStreams)(drainAkka) ++
         new PlayServerWithContextTest(backend).tests() ++

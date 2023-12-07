@@ -84,14 +84,15 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
                 case Right(_)     => Future.successful(RawValue(file, Seq(file)))
               }
         }
-      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
+      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body, maxBytes)
     }
   }
 
   private def multiPartRequestToRawBody(
       request: Request[PekkoStreams.BinaryStream],
       m: RawBodyType.MultipartBody,
-      body: () => Source[ByteString, Any]
+      body: () => Source[ByteString, Any],
+      maxBytes: Option[Long]
   )(implicit
       mat: Materializer,
       ec: ExecutionContext
@@ -113,7 +114,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
               charset(partType),
               () => Source(data),
               bodyAsFile = None,
-              maxBytes = None
+              maxBytes
             ).map(body => Some(Part(key, body.value)))
           }
         }.toSeq
@@ -127,7 +128,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
                 charset(partType),
                 () => FileIO.fromPath(f.ref.path),
                 Some(f.ref.toFile),
-                maxBytes = None
+                maxBytes
               ).map(body =>
                 Some(
                   Part(

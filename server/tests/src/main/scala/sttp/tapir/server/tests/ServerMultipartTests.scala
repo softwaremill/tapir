@@ -15,6 +15,7 @@ import sttp.tapir.tests.Multipart.{
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import sttp.tapir.tests.data.{FruitAmount, FruitData}
 import sttp.tapir.tests.{MultipleFileUpload, Test, data}
+import sttp.tapir.server.model.EndpointExtensions._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -22,12 +23,39 @@ import scala.concurrent.duration.DurationInt
 class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
-    partOtherHeaderSupport: Boolean = true
+    partOtherHeaderSupport: Boolean = true,
+    maxContentLengthSupport: Boolean = false
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
-    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil)
+    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) :++
+      (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
+
+  def maxContentLengthTests(): List[Test] = List(
+    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(5), "multipart with maxContentLength exceeded")((fa: FruitAmount) =>
+      pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.PayloadTooLarge
+        }
+    },
+    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(500), "multipart with maxContentLength not exceeded")(
+      (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+        }
+    }
+  )
 
   def basicTests(): List[Test] = {
     List(
