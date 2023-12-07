@@ -29,7 +29,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
   import createServerTest._
 
   def tests(): List[Test] =
-    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) :++
+    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) ++
       (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
 
   def maxContentLengthTests(): List[Test] = List(
