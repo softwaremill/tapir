@@ -26,6 +26,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
+  // We can ignore maxBytes here, because vertx native body limit check is attached to endpoints by methods in sttp.tapir.server.vertx.handlers
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {

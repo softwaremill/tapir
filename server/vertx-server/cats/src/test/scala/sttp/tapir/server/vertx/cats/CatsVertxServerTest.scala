@@ -23,11 +23,20 @@ class CatsVertxServerTest extends TestSuite {
       val interpreter = new CatsVertxTestServerInterpreter(vertx, dispatcher)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
+      new AllServerTests(
+        createServerTest,
+        interpreter,
+        backend,
+        multipart = false,
+        reject = false,
+        options = false,
+        maxContentLength = true
+      ).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false
+          partOtherHeaderSupport = false,
+          maxContentLengthSupport = true
         ).tests() ++
         new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(Fs2Streams.apply[IO])(drainFs2) ++
         new ServerWebSocketTests(createServerTest, Fs2Streams.apply[IO]) {

@@ -22,13 +22,24 @@ class ZioVertxServerTest extends TestSuite {
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
+      def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+        zStream.run(ZSink.drain)
+
+      new AllServerTests(
+        createServerTest,
+        interpreter,
+        backend,
+        multipart = false,
+        reject = false,
+        options = false,
+        maxLengthSupported = true
+      ).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ZioStreams)(_ => Task.unit) ++
+        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
         new ServerWebSocketTests(createServerTest, ZioStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
