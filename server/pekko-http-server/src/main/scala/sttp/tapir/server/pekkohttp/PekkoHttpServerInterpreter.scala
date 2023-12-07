@@ -20,11 +20,11 @@ import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.Method
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,7 +55,7 @@ trait PekkoHttpServerInterpreter {
           filterServerEndpoints,
           requestBody(mat, ec),
           toResponseBody(mat, ec),
-          interceptors,
+          interceptors.appended(PekkoStreamSizeExceptionInterceptor),
           pekkoHttpServerOptions.deleteFile
         )
 
