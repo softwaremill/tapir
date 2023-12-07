@@ -44,7 +44,10 @@ trait PekkoHttpServerInterpreter {
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[PekkoResponseBody, PekkoStreams]
   )(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(pekkoHttpServerOptions.interceptors, ses)
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
+      pekkoHttpServerOptions.appendInterceptor(PekkoStreamSizeExceptionInterceptor).interceptors,
+      ses
+    )
 
     extractExecutionContext { implicit ec =>
       extractMaterializer { implicit mat =>
@@ -55,7 +58,7 @@ trait PekkoHttpServerInterpreter {
           filterServerEndpoints,
           requestBody(mat, ec),
           toResponseBody(mat, ec),
-          interceptors.appended(PekkoStreamSizeExceptionInterceptor),
+          interceptors,
           pekkoHttpServerOptions.deleteFile
         )
 
