@@ -1,7 +1,6 @@
 package sttp.tapir.server.play
 
 import org.apache.pekko.actor.ActorSystem
-import enumeratum._
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -17,8 +16,6 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
-import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 class PlayServerTest extends TestSuite {
 
@@ -112,10 +109,18 @@ class PlayServerTest extends TestSuite {
         interpreter,
         multipleValueHeaderSupport = false,
         inputStreamSupport = false,
-        invulnerableToUnsanitizedHeaders = false
+        invulnerableToUnsanitizedHeaders = false,
+        maxContentLength = true
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
+        new AllServerTests(
+          createServerTest,
+          interpreter,
+          backend,
+          basic = false,
+          multipart = false,
+          options = false
+        ).tests() ++
         new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, PekkoStreams) {

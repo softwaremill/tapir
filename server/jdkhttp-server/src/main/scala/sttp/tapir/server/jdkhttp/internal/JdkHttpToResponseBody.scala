@@ -133,12 +133,3 @@ private class ByteBufferBackedInputStream(buf: ByteBuffer) extends InputStream {
   }
 }
 
-private class LimitedInputStream(delegate: InputStream, var limit: Long) extends InputStream {
-  override def read(): Int = {
-    if (limit == 0L) -1
-    else {
-      limit -= 1
-      delegate.read()
-    }
-  }
-}

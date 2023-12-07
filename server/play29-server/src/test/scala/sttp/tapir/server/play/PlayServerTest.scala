@@ -111,7 +111,8 @@ class PlayServerTest extends TestSuite {
         interpreter,
         multipleValueHeaderSupport = false,
         inputStreamSupport = false,
-        invulnerableToUnsanitizedHeaders = false
+        invulnerableToUnsanitizedHeaders = false,
+        maxContentLength = true
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
