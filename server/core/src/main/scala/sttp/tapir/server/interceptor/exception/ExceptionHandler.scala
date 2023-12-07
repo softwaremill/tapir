@@ -25,13 +25,13 @@ object ExceptionHandler {
 }
 
 case class DefaultExceptionHandler[F[_]](response: (StatusCode, String) => ValuedEndpointOutput[_]) extends ExceptionHandler[F] {
-  override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
+  override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
     ctx.e match {
       case StreamMaxLengthExceededException(maxBytes) =>
         monad.unit(Some(response(StatusCode.PayloadTooLarge, s"Payload limit (${maxBytes}B) exceeded")))
-      case other =>
+      case _ =>
         monad.unit(Some(response(StatusCode.InternalServerError, "Internal server error")))
-    }}
+    }
 }
 
 object DefaultExceptionHandler {
