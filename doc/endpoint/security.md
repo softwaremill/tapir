@@ -52,7 +52,7 @@ Optional and multiple authentication inputs have some additional rules as to how
 ## Limiting request body length
 
 *Supported backends*: 
-This feature is available for backends based on http4s, jdkhttp, Netty, and Play. More backends will be added in the near future.
+This feature is available for backends based on http4s, jdkhttp, Netty, pekko-http, akka-http, and Play. More backends will be added in the near future.
 
 Individual endpoints can be annotated with content length limit:
 
