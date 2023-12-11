@@ -1,7 +1,5 @@
 package sttp.tapir.server.vertx.decoders
 
-import io.netty.handler.codec.http.QueryStringDecoder
-
 import java.net.InetSocketAddress
 import io.vertx.core.net.SocketAddress
 import io.vertx.ext.web.RoutingContext
@@ -28,8 +26,7 @@ private[vertx] case class VertxServerRequest(rc: RoutingContext, attributes: Att
   override lazy val headers: Seq[Header] = rc.request.headers.entries.asScala.iterator.map(e => Header(e.getKey, e.getValue)).toList
   override lazy val queryParameters: QueryParams = Uri.unsafeParse(rc.request.uri()).params
   override lazy val pathSegments: List[String] = {
-    val path = Option(rc.request.path).getOrElse("")
-    val segments = path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    val segments = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
     if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
 
