@@ -33,7 +33,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
       (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
 
   def maxContentLengthTests(): List[Test] = List(
-    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(5), "multipart with maxContentLength exceeded")((fa: FruitAmount) =>
+    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(314), "multipart with maxContentLength exceeded")((fa: FruitAmount) =>
       pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
     ) { (backend, baseUri) =>
       basicStringRequest
@@ -44,7 +44,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
           r.code shouldBe StatusCode.PayloadTooLarge
         }
     },
-    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(500), "multipart with maxContentLength not exceeded")(
+    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(315), "multipart with maxContentLength not exceeded")(
       (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
     ) { (backend, baseUri) =>
       basicStringRequest
