@@ -195,7 +195,7 @@ object OpenapiModels {
         .downField("parameters")
         .as[Option[Seq[Resolvable[OpenapiParameter]]]]
         .map(_.getOrElse(Nil))
-      methods <- List("get", "put", "post", "delete", "options", "head", "patch", "patch", "connect")
+      methods <- List("get", "put", "post", "delete", "options", "head", "patch", "connect", "trace")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
     } yield OpenapiPath("--partial--", methods.flatten, parameters)
   }
