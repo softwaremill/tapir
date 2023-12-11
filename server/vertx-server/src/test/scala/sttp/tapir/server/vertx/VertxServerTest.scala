@@ -25,7 +25,7 @@ class VertxServerTest extends TestSuite {
       new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
           createServerTest,
-          partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
+          partContentTypeHeaderSupport = true,
           partOtherHeaderSupport = false
         ).tests() ++ new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(VertxStreams)(_ => Future.unit) ++
         (new ServerWebSocketTests(createServerTest, VertxStreams) {

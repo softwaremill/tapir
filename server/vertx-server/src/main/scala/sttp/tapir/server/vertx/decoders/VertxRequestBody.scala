@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.decoders
 import io.vertx.core.Future
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
-import sttp.model.Part
+import sttp.model.{MediaType, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -85,7 +85,9 @@ class VertxRequestBody[F[_], S <: Streams[S]](
             .map { fu =>
               mp.partType(fu.name())
                 .flatMap(rawBodyType => extractFilePart(fu, rawBodyType))
-                .map(body => Part(fu.name(), body, fileName = Option(fu.fileName())))
+                .map(body =>
+                  Part(fu.name(), body, contentType = MediaType.parse(fu.contentType()).toOption, fileName = Option(fu.fileName()))
+                )
             }
             .toList
             .flatten
