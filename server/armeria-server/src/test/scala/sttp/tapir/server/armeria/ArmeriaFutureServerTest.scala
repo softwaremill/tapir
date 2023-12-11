@@ -16,7 +16,7 @@ class ArmeriaFutureServerTest extends TestSuite {
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
     new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
-      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
       new ServerStreamingTests(createServerTest, maxLengthSupported = false).tests(ArmeriaStreams)(_ => Future.unit)
   }
 }

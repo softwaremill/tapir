@@ -22,7 +22,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, multipart = false, maxContentLength = true).tests() ++
+            new AllServerTests(createServerTest, interpreter, backend, multipart = false).tests() ++
               new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests()
 
           (tests, eventLoopGroup)

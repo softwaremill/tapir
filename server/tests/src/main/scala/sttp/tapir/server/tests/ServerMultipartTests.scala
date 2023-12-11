@@ -24,7 +24,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true,
-    maxContentLengthSupport: Boolean = false
+    maxContentLengthSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 

@@ -46,15 +46,13 @@ class VertxServerTest extends TestSuite {
         backend,
         multipart = false,
         reject = false,
-        options = false,
-        maxContentLength = true
+        options = false
       ).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false,
-          maxContentLengthSupport = true
-        ).tests() ++ new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(VertxStreams)(drainVertx[Buffer]) ++
+          partOtherHeaderSupport = false
+        ).tests() ++ new ServerStreamingTests(createServerTest).tests(VertxStreams)(drainVertx[Buffer]) ++
         (new ServerWebSocketTests(createServerTest, VertxStreams) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()

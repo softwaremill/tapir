@@ -36,14 +36,13 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
       def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
         zStream.run(ZSink.drain)
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false, maxContentLength = true).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false,
-          maxContentLengthSupport = true
+          partOtherHeaderSupport = false
         ).tests() ++ additionalTests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
+        new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
         new ServerWebSocketTests(createServerTest, ZioStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

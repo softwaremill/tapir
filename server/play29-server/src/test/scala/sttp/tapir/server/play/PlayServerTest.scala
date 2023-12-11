@@ -111,12 +111,11 @@ class PlayServerTest extends TestSuite {
         interpreter,
         multipleValueHeaderSupport = false,
         inputStreamSupport = false,
-        invulnerableToUnsanitizedHeaders = false,
-        maxContentLength = true
+        invulnerableToUnsanitizedHeaders = false
       ).tests() ++
-        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false, maxContentLengthSupport = true).tests() ++
+        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(AkkaStreams)(drainAkka) ++
+        new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)

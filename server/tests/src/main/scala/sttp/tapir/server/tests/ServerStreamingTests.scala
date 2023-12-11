@@ -16,7 +16,7 @@ import sttp.capabilities.fs2.Fs2Streams
 
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE],
-    maxLengthSupported: Boolean
+    maxLengthSupported: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {

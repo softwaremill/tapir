@@ -31,15 +31,14 @@ class ZioVertxServerTest extends TestSuite {
         backend,
         multipart = false,
         reject = false,
-        options = false,
-        maxLengthSupported = true
+        options = false
       ).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream) ++
+        new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
         new ServerWebSocketTests(createServerTest, ZioStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

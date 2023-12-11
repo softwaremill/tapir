@@ -21,7 +21,7 @@ class ArmeriaZioServerTest extends TestSuite {
       zStream.run(ZSink.drain)
 
     new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
-      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(ZioStreams)(drainZStream)
+      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
+      new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream)
   }
 }
