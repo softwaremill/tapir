@@ -1,6 +1,5 @@
 package sttp.tapir.server.ziohttp
 
-import io.netty.handler.codec.http.QueryStringDecoder
 import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -18,8 +17,7 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
       None
     )
   override def underlying: Any = req
-  override lazy val pathSegments: List[String] =
-    req.url.path.segments.view.map(s => QueryStringDecoder.decodeComponent(s.replace("+", "%2B"))).toList
+  override lazy val pathSegments: List[String] = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams.map)
   override lazy val method: SttpMethod = SttpMethod(req.method.name.toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(req.url.encode)
