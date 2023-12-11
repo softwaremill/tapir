@@ -36,7 +36,7 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
       def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
         zStream.run(ZSink.drain)
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false, maxContentLength = true).tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
