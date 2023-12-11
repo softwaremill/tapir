@@ -10,13 +10,11 @@ import sttp.tapir.server.model.MaxContentLength
 
 package object handlers {
 
-  private[vertx] lazy val bodyHandler = BodyHandler.create(false)
-
   private[vertx] def multipartHandler(uploadDirectory: String, maxBytes: Option[Long]): Handler[RoutingContext] = { rc =>
     rc.request.setExpectMultipart(true)
     maxBytes
-      .map(bodyHandler.setBodyLimit)
-      .getOrElse(bodyHandler)
+      .map(BodyHandler.create(false).setBodyLimit)
+      .getOrElse(BodyHandler.create(false))
       .setHandleFileUploads(true)
       .setUploadsDirectory(uploadDirectory)
       .handle(rc)
@@ -49,7 +47,7 @@ package object handlers {
       case Some(_: EndpointIO.StreamBodyWrapper[_, _])        => route.handler(streamPauseHandler)
       case Some(_: EndpointOutput.WebSocketBodyWrapper[_, _]) => route.handler(streamPauseHandler)
       case Some(_) =>
-        route.handler(maxBytes.map(bodyHandler.setBodyLimit).getOrElse(bodyHandler))
+        route.handler(maxBytes.map(BodyHandler.create(false).setBodyLimit).getOrElse(BodyHandler.create(false)))
       case None => ()
     }
 
