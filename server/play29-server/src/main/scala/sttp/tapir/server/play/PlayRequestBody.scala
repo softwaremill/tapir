@@ -113,7 +113,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
               charset(partType),
               () => Source(data),
               bodyAsFile = None,
-              maxBytes = maxBytes
+              maxBytes = None
             ).map(body => Some(Part(key, body.value)))
           }
         }.toSeq
@@ -127,7 +127,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
                 charset(partType),
                 () => FileIO.fromPath(f.ref.path),
                 Some(f.ref.toFile),
-                maxBytes = maxBytes
+                maxBytes = None
               ).map(body =>
                 Some(
                   Part(
