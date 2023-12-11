@@ -22,7 +22,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
 ) extends RequestBody[Future, AkkaStreams] {
 
   override val streams: AkkaStreams = AkkaStreams
-  val parsers = serverOptions.playBodyParsers
+  private val parsers = serverOptions.playBodyParsers
+  private lazy val filePartHandler = Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     import mat.executionContext
@@ -97,9 +98,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       mat: Materializer,
       ec: ExecutionContext
   ): Future[RawValue[Seq[RawPart]]] = {
-    val bodyParser = serverOptions.playBodyParsers.multipartFormData(
-      Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
-    )
+    val bodyParser = maxBytes.map(parsers.multipartFormData(filePartHandler, _)).getOrElse(parsers.multipartFormData(filePartHandler))
     bodyParser.apply(request).run(body()).flatMap {
       case Left(r) =>
         Future.failed(new PlayBodyParserException(r))
