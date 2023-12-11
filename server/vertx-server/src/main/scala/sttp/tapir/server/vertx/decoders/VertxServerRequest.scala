@@ -29,7 +29,7 @@ private[vertx] case class VertxServerRequest(rc: RoutingContext, attributes: Att
   override lazy val queryParameters: QueryParams = Uri.unsafeParse(rc.request.uri()).params
   override lazy val pathSegments: List[String] = {
     val path = Option(rc.request.path).getOrElse("")
-    val segments = path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    val segments = path.dropWhile(_ == '/').split("/").view.map(s => QueryStringDecoder.decodeComponent(s.replace("+", "%2B"))).toList
     if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
 

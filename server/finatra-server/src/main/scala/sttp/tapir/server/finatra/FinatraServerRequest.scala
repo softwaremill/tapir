@@ -17,7 +17,8 @@ case class FinatraServerRequest(request: Request, attributes: AttributeMap = Att
   override lazy val queryParameters: QueryParams =
     QueryParams.fromMultiMap(request.params.keys.toList.map(k => k -> request.params.getAll(k).toList).toMap)
   override lazy val pathSegments: List[String] = {
-    val segments = request.path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    val segments =
+      request.path.dropWhile(_ == '/').split("/").view.map(s => QueryStringDecoder.decodeComponent(s.replace("+", "%2B"))).toList
     if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
   override def underlying: Any = request
