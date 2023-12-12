@@ -4,6 +4,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaBoolean,
+  OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
   OpenapiSchemaFloat,
@@ -61,6 +62,8 @@ object BasicGenerator {
         ("Int", nb)
       case OpenapiSchemaLong(nb) =>
         ("Long", nb)
+      case OpenapiSchemaDateTime(nb) =>
+        ("java.time.Instant", nb)
       case OpenapiSchemaUUID(nb) =>
         ("java.util.UUID", nb)
       case OpenapiSchemaString(nb) =>
