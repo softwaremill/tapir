@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.tapir.Schema.annotations.{default, description, encodedExample, encodedName, format, validate}
+import sttp.tapir.Schema.annotations.{default, description, encodedExample, encodedName, format, hidden, validate}
 
 object SchemaAnnotationsTestData {
   @description("my-string")
@@ -10,5 +10,6 @@ object SchemaAnnotationsTestData {
   @Schema.annotations.deprecated
   @encodedName("encoded-name")
   @validate(Validator.pass[MyString])
+  @hidden
   case class MyString(value: String)
 }
