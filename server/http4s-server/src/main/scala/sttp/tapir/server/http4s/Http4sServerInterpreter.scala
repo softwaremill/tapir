@@ -18,6 +18,7 @@ import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, Serve
 import sttp.tapir.server.model.ServerResponse
 
 import scala.reflect.ClassTag
+import cats.NonEmptyParallel
 
 class Http4sInvalidWebSocketUse(val message: String) extends Exception
 
@@ -27,7 +28,8 @@ class Http4sInvalidWebSocketUse(val message: String) extends Exception
 trait Context[T]
 
 trait Http4sServerInterpreter[F[_]] {
-  implicit def fa: Async[F]
+  implicit def fa: Async[F] 
+  implicit def nep: NonEmptyParallel[F]
 
   def http4sServerOptions: Http4sServerOptions[F] = Http4sServerOptions.default[F]
 
@@ -146,15 +148,17 @@ trait Http4sServerInterpreter[F[_]] {
 
 object Http4sServerInterpreter {
 
-  def apply[F[_]]()(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
+  def apply[F[_]]()(implicit _fa: Async[F], _nep: NonEmptyParallel[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
+      override implicit def nep: NonEmptyParallel[F] = _nep
     }
   }
 
-  def apply[F[_]](serverOptions: Http4sServerOptions[F])(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
+  def apply[F[_]](serverOptions: Http4sServerOptions[F])(implicit _fa: Async[F], _nep: NonEmptyParallel[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
+      override implicit def nep: NonEmptyParallel[F] = _nep
       override def http4sServerOptions: Http4sServerOptions[F] = serverOptions
     }
   }

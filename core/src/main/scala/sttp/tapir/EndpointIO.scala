@@ -736,6 +736,7 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     requestsInfo: Info[REQ],
     responsesInfo: Info[RESP],
     concatenateFragmentedFrames: Boolean,
+    ignorePing: Boolean,
     ignorePong: Boolean,
     autoPongOnPing: Boolean,
     decodeCloseRequests: Boolean,
@@ -773,6 +774,14 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     */
   def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(concatenateFragmentedFrames = c)
+
+  /** Note: some interpreters ignore this setting.
+    *
+    * @param i
+    * If `true`, [[WebSocketFrame.Ping]] frames will be ignored and won't be passed to the codecs for decoding. Note that only some
+    * interpreters expose ping-pong frames.
+    */
+  def ignorePing(i: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(ignorePing = i)
 
   /** Note: some interpreters ignore this setting.
     * @param i

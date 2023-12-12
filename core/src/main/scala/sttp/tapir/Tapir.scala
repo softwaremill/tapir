@@ -182,6 +182,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
         EndpointIO.Info.empty,
         EndpointIO.Info.empty,
         concatenateFragmentedFrames = true,
+        ignorePing = false,
         ignorePong = true,
         autoPongOnPing = true,
         decodeCloseRequests = requests.schema.isOptional,

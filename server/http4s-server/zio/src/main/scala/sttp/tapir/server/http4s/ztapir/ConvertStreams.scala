@@ -141,6 +141,7 @@ object ConvertStreams {
       w2.requestsInfo,
       w2.responsesInfo,
       w2.concatenateFragmentedFrames,
+      w2.ignorePing,
       w2.ignorePong,
       w2.autoPongOnPing,
       w2.decodeCloseRequests,

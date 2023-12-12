@@ -1,5 +1,6 @@
 package sttp.tapir.server.http4s
 
+import cats.NonEmptyParallel
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.io.file.Files
@@ -17,7 +18,7 @@ import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 import java.io.InputStream
 import java.nio.charset.Charset
 
-private[http4s] class Http4sToResponseBody[F[_]: Async](
+private[http4s] class Http4sToResponseBody[F[_]: Async: NonEmptyParallel](
     serverOptions: Http4sServerOptions[F]
 ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
