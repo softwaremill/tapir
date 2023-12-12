@@ -2086,7 +2086,8 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -2107,7 +2108,8 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     nettyServerZio,
     zioHttpServer,
     zioJson,
-    redocBundle
+    redocBundle,
+    sttpStubServer
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
