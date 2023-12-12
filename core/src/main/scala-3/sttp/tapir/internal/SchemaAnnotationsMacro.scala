@@ -68,6 +68,7 @@ private[tapir] object SchemaAnnotationsMacro {
             .getOrElse(sa),
         sa => firstAnnArg(FormatAnn).map(arg => '{ ${ sa }.copy(format = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => annotations.find { _.tpe <:< DeprecatedAnn }.map(_ => '{ ${ sa }.copy(deprecated = Some(true)) }).getOrElse(sa),
+        sa => annotations.find { _.tpe <:< HiddenAnn }.map(_ => '{ ${ sa }.copy(hidden = Some(true)) }).getOrElse(sa),
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) }
