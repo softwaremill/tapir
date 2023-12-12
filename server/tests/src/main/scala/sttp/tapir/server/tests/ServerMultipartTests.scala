@@ -5,6 +5,8 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
+import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.tests.Multipart.{
   in_file_list_multipart_out_multipart,
   in_file_multipart_out_multipart,
@@ -13,7 +15,7 @@ import sttp.tapir.tests.Multipart.{
   in_simple_multipart_out_string
 }
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.tapir.tests.data.{FruitAmount, FruitData}
+import sttp.tapir.tests.data.{DoubleFruit, FruitAmount, FruitData}
 import sttp.tapir.tests.{MultipleFileUpload, Test, data}
 import sttp.tapir.server.model.EndpointExtensions._
 
@@ -33,23 +35,23 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
       (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
 
   def maxContentLengthTests(): List[Test] = List(
-    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(314), "multipart with maxContentLength exceeded")((fa: FruitAmount) =>
-      pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
-    ) { (backend, baseUri) =>
+    testServer(
+      endpoint.post
+        .in("api" / "echo" / "multipart")
+        .in(multipartBody[DoubleFruit])
+        .out(stringBody)
+        .maxRequestBodyLength(15000),
+      "multipart with maxContentLength"
+    )((df: DoubleFruit) => pureResult(("ok").asRight[Unit])) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
-        .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
+        .multipartBody(multipart("fruitA", "pineapple".repeat(1100)), multipart("fruitB", "maracuja".repeat(1200)))
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.PayloadTooLarge
-        }
-    },
-    testServer(in_simple_multipart_out_multipart.maxRequestBodyLength(315), "multipart with maxContentLength not exceeded")(
-      (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
-    ) { (backend, baseUri) =>
-      basicStringRequest
+        } >> basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
-        .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
+        .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.Ok
