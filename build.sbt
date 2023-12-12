@@ -2083,6 +2083,8 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     name := "tapir-examples3",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
     ),
@@ -2091,14 +2093,18 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   )
   .jvmPlatform(scalaVersions = List(scala3))
   .dependsOn(
+    datadogMetrics,
+    zioMetrics,
     circeJson,
     http4sServer,
     pekkoHttpServer,
     nettyServer,
+    http4sClient,
     picklerJson,
     sttpClient,
     swaggerUiBundle,
     http4sServerZio,
+    nettyServerZio,
     zioHttpServer,
     zioJson
   )
