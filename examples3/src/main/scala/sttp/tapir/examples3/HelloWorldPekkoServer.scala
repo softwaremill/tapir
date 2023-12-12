@@ -1,14 +1,14 @@
-package sttp.tapir.examples
+package sttp.tapir.examples3
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
-import sttp.tapir._
+import sttp.client3.*
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 
 object HelloWorldPekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()

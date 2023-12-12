@@ -1,11 +1,11 @@
-package sttp.tapir.examples
+package sttp.tapir.examples3
 
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
-import sttp.tapir.examples.UserAuthenticationLayer._
+import sttp.tapir.examples3.UserAuthenticationLayer.*
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio.Console.printLine

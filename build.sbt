@@ -22,7 +22,7 @@ val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-val examplesScalaVersions = List(scala2_13)
+//val examplesScalaVersions = List(scala3)
 val documentationScalaVersion = scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
@@ -542,7 +542,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(http4sTapir := { (genPerfTestTask("http4s.Tapir", "OneRoute")).value })
   .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
   .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(core, akkaHttpServer, http4sServer)
 
 // integrations
@@ -2043,7 +2043,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     publishArtifact := false,
     Compile / run / fork := true
   )
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(
     akkaHttpServer,
     pekkoHttpServer,
@@ -2082,6 +2082,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .settings(
     name := "tapir-examples3",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
     ),
@@ -2092,10 +2093,14 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .dependsOn(
     circeJson,
     http4sServer,
+    pekkoHttpServer,
     nettyServer,
     picklerJson,
     sttpClient,
-    swaggerUiBundle
+    swaggerUiBundle,
+    http4sServerZio,
+    zioHttpServer,
+    zioJson
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
