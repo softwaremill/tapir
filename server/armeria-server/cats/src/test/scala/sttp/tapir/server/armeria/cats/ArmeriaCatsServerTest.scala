@@ -16,8 +16,8 @@ class ArmeriaCatsServerTest extends TestSuite {
     def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
       stream.compile.drain.void
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
-      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(Fs2Streams[IO])(drainFs2)
+    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false, maxContentLength = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
+      new ServerStreamingTests(createServerTest).tests(Fs2Streams[IO])(drainFs2)
   }
 }

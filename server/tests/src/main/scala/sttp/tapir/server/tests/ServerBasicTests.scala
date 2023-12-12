@@ -36,7 +36,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     supportsUrlEncodedPathSegments: Boolean = true,
     supportsMultipleSetCookieHeaders: Boolean = true,
     invulnerableToUnsanitizedHeaders: Boolean = true,
-    maxContentLength: Boolean = false
+    maxContentLength: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {

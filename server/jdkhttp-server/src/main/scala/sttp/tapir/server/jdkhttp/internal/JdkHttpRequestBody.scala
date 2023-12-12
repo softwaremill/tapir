@@ -37,7 +37,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
         val file = createFile(serverRequest)
         Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
         RawValue(FileRange(file), Seq(FileRange(file)))
-      case m: RawBodyType.MultipartBody => RawValue.fromParts(multiPartRequestToRawBody(serverRequest, m))
+      case m: RawBodyType.MultipartBody => RawValue.fromParts(multiPartRequestToRawBody(serverRequest, asInputStream, m))
     }
   }
 
@@ -57,11 +57,11 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       .getOrElse(throw new IllegalArgumentException("Unable to extract multipart boundary from multipart request"))
   }
 
-  private def multiPartRequestToRawBody(request: ServerRequest, m: RawBodyType.MultipartBody): Seq[RawPart] = {
+  private def multiPartRequestToRawBody(request: ServerRequest, requestBody: InputStream, m: RawBodyType.MultipartBody): Seq[RawPart] = {
     val httpExchange = jdkHttpRequest(request)
     val boundary = extractBoundary(httpExchange)
 
-    parseMultipartBody(httpExchange.getRequestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
+    parseMultipartBody(requestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
       parsedPart.getName.flatMap(name =>
         m.partType(name)
           .map(partType => {

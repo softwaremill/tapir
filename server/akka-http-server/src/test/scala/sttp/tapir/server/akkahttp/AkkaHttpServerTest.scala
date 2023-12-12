@@ -156,7 +156,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         stream.runWith(Sink.ignore).map(_ => ())
 
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(AkkaStreams)(drainAkka) ++
+        new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
         new ServerWebSocketTests(createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)

@@ -22,7 +22,7 @@ class NettyIdServerTest extends TestSuite with EitherValues {
           val sleeper: Sleeper[Id] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false, maxContentLength = true)
+            new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
               .tests() ++
               new ServerGracefulShutdownTests(createServerTest, sleeper).tests()
 

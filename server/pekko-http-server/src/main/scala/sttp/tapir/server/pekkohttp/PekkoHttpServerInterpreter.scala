@@ -20,11 +20,11 @@ import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.Method
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,7 +44,10 @@ trait PekkoHttpServerInterpreter {
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[PekkoResponseBody, PekkoStreams]
   )(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(pekkoHttpServerOptions.interceptors, ses)
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
+      pekkoHttpServerOptions.appendInterceptor(PekkoStreamSizeExceptionInterceptor).interceptors,
+      ses
+    )
 
     extractExecutionContext { implicit ec =>
       extractMaterializer { implicit mat =>

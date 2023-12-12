@@ -44,7 +44,10 @@ trait AkkaHttpServerInterpreter {
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
   )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(akkaHttpServerOptions.interceptors, ses)
+    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
+      akkaHttpServerOptions.appendInterceptor(AkkaStreamSizeExceptionInterceptor).interceptors,
+      ses
+    )
 
     extractExecutionContext { implicit ec =>
       extractMaterializer { implicit mat =>

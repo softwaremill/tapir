@@ -14,7 +14,7 @@ class JdkHttpServerTest extends TestSuite with EitherValues {
           val interpreter = new JdkHttpTestServerInterpreter()
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false, maxContentLength = true).tests() ++
+          new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
             new AllServerTests(createServerTest, interpreter, backend, basic = false).tests()
         })
     }

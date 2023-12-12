@@ -109,8 +109,7 @@ class PlayServerTest extends TestSuite {
         interpreter,
         multipleValueHeaderSupport = false,
         inputStreamSupport = false,
-        invulnerableToUnsanitizedHeaders = false,
-        maxContentLength = true
+        invulnerableToUnsanitizedHeaders = false
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(
@@ -121,7 +120,7 @@ class PlayServerTest extends TestSuite {
           multipart = false,
           options = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest, maxLengthSupported = true).tests(PekkoStreams)(drainPekko) ++
+        new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(createServerTest, PekkoStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
