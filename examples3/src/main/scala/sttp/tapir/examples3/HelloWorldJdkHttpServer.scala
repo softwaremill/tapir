@@ -1,9 +1,9 @@
-package sttp.tapir.examples
+package sttp.tapir.examples3
 
 import sttp.client3.{HttpURLConnectionBackend, Identity, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.server.jdkhttp._
-import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
+import sttp.tapir.server.jdkhttp.*
+import sttp.tapir.*
 
 object HelloWorldJdkHttpServer extends App {
 

@@ -2110,6 +2110,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     http4sServer,
     pekkoHttpServer,
     nettyServer,
+    jdkhttpServer,
     nettyServerCats,
     http4sClient,
     picklerJson,
