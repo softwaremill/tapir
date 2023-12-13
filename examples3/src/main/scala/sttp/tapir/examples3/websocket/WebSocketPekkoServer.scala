@@ -1,24 +1,24 @@
-package sttp.tapir.examples.websocket
+package sttp.tapir.examples3.websocket
 
+import io.circe.generic.auto.*
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.stream.scaladsl.Flow
-import io.circe.generic.auto._
-import sttp.tapir.generic.auto._
+import sttp.apispec.asyncapi.Server
+import sttp.apispec.asyncapi.circe.yaml.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.pekkohttp.PekkoHttpBackend
-import sttp.apispec.asyncapi.Server
-import sttp.apispec.asyncapi.circe.yaml._
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.ws.WebSocket
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object WebSocketPekkoServer extends App {
@@ -52,7 +52,7 @@ object WebSocketPekkoServer extends App {
       val backend: SttpBackend[Future, WebSockets] = PekkoHttpBackend.usingActorSystem(actorSystem)
       // Client which interacts with the web socket
       basicRequest
-        .response(asWebSocket { ws: WebSocket[Future] =>
+        .response(asWebSocket { (ws: WebSocket[Future]) =>
           for {
             _ <- ws.sendText("world")
             _ <- ws.sendText("there")

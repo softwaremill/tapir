@@ -2082,7 +2082,10 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .settings(
     name := "tapir-examples3",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
@@ -2117,6 +2120,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     zioJson,
     redocBundle,
     sttpStubServer,
+    asyncapiDocs
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
