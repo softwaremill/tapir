@@ -2082,11 +2082,14 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
   .settings(
     name := "tapir-examples3",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
       scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
@@ -2109,7 +2112,8 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     zioHttpServer,
     zioJson,
     redocBundle,
-    sttpStubServer
+    sttpStubServer,
+    opentelemetryMetrics
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
