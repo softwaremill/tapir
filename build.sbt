@@ -2109,6 +2109,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     circeJson,
     http4sServer,
     pekkoHttpServer,
+    armeriaServer,
     nettyServer,
     jdkhttpServer,
     nettyServerCats,
