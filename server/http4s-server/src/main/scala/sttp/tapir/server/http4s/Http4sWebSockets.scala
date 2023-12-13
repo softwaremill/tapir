@@ -1,9 +1,8 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Temporal, Sync}
-import cats.NonEmptyParallel
+import cats.effect.Temporal
+import cats.{Applicative, Monad}
 import cats.syntax.all._
-import cats.{Monad, NonEmptyParallel, Applicative}
 import fs2._
 import fs2.concurrent.Channel
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
@@ -12,13 +11,14 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
+import cats.effect.implicits.parallelForGenSpawn
 
 private[http4s] object Http4sWebSockets {
-  def pipeToBody[F[_]: NonEmptyParallel: Temporal, REQ, RESP](
+  def pipeToBody[F[_]: Temporal, REQ, RESP](
                                    pipe: Pipe[F, REQ, RESP],
                                    o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
                                  ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
-    if ((!o.concatenateFragmentedFrames) && (!o.ignorePing) && (!o.ignorePong) && (!o.autoPongOnPing) && o.autoPing.isEmpty) {
+    if ((!o.concatenateFragmentedFrames) && (!o.ignorePong) && (!o.autoPongOnPing) && o.autoPing.isEmpty) {
       // fast track: lift Http4sWebSocketFrames into REQ, run through pipe, convert RESP back to Http4sWebSocketFrame
 
       (in: Stream[F, Http4sWebSocketFrame]) =>
@@ -42,14 +42,14 @@ private[http4s] object Http4sWebSockets {
           val decodeClose = optionallyDecodeClose(in, o.decodeCloseRequests)
           val sttpFrames = decodeClose.map(http4sFrameToFrame)
           val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
-          val autoPongs = optionallyAutoPong(concatenated, c, o.autoPongOnPing)
-          val ignorePingPongs = optionallyIgnorePingPong(autoPongs, o.ignorePing, o.ignorePong)
+          val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
+          val autoPongs = optionallyAutoPong(ignorePongs, c, o.autoPongOnPing)
           val autoPings = o.autoPing match {
             case Some((interval, frame)) => (c.send(Chunk(frameToHttp4sFrame(frame))) >> Temporal[F].sleep(interval)).foreverM[Unit]
             case None => Applicative[F].unit
           }
 
-          val outputProducer = ignorePingPongs
+          val outputProducer = autoPongs
             .map { f =>
               o.requests.decode(f) match {
                 case x: DecodeResult.Value[REQ] => x.v
@@ -105,26 +105,14 @@ private[http4s] object Http4sWebSockets {
       }.collect { case (_, Some(f)) => f }
     } else s
 
-  private def optionallyIgnorePingPong[F[_]](s: Stream[F, WebSocketFrame], ignorePing: Boolean, ignorePong: Boolean): Stream[F, WebSocketFrame] =
-    (ignorePing, ignorePong) match {
-      case (false, false) => s
-      case (true, false) =>
-        s.filter {
-          case _: WebSocketFrame.Ping => false
-          case _ => true
-        }
-      case (false, true) =>
-        s.filter {
-          case _: WebSocketFrame.Pong => false
-          case _ => true
-        }
-      case (true, true) =>
-        s.filter {
-          case _: WebSocketFrame.Ping => false
-          case _: WebSocketFrame.Pong => false
-          case _ => true
-        }
-    }
+  private def optionallyIgnorePong[F[_]](s: Stream[F, WebSocketFrame], doIgnore: Boolean): Stream[F, WebSocketFrame] = {
+    if (doIgnore) {
+      s.filter {
+        case _: WebSocketFrame.Pong => false
+        case _ => true
+      }
+    } else s
+  }
 
   private def optionallyAutoPong[F[_] : Monad](
                                                 s: Stream[F, WebSocketFrame],

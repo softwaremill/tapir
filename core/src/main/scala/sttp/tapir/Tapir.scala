@@ -133,8 +133,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *   A supported streams implementation.
     */
   def streamBinaryBody[S](
-      s: Streams[S]
-  )(format: CodecFormat): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+                           s: Streams[S]
+                         )(format: CodecFormat): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, Schema.binary), EndpointIO.Info.empty, None, Nil)
 
   /** Creates a stream body with a text schema.
@@ -146,8 +146,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *   An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamTextBody[S](
-      s: Streams[S]
-  )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+                         s: Streams[S]
+                       )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset, Nil)
 
   /** Creates a stream body with the given schema.
@@ -161,18 +161,18 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *   An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamBody[S, T](
-      s: Streams[S]
-  )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+                        s: Streams[S]
+                      )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset, Nil)
 
   // the intermediate class is needed so that the S type parameter can be inferred
   final class WebSocketBodyBuilder[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat] {
     def apply[S](
-        s: Streams[S]
-    )(implicit
-        requests: Codec[WebSocketFrame, REQ, REQ_CF],
-        responses: Codec[WebSocketFrame, RESP, RESP_CF]
-    ): WebSocketBodyOutput[s.Pipe[REQ, RESP], REQ, RESP, s.Pipe[REQ, RESP], S] =
+                  s: Streams[S]
+                )(implicit
+                  requests: Codec[WebSocketFrame, REQ, REQ_CF],
+                  responses: Codec[WebSocketFrame, RESP, RESP_CF]
+                ): WebSocketBodyOutput[s.Pipe[REQ, RESP], REQ, RESP, s.Pipe[REQ, RESP], S] =
       WebSocketBodyOutput(
         s,
         requests,
@@ -182,7 +182,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
         EndpointIO.Info.empty,
         EndpointIO.Info.empty,
         concatenateFragmentedFrames = true,
-        ignorePing = false,
         ignorePong = true,
         autoPongOnPing = true,
         decodeCloseRequests = requests.schema.isOptional,
@@ -203,8 +202,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def webSocketBody[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat]: WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF] =
     new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
   def webSocketBodyRaw[S](
-      s: Streams[S]
-  ): WebSocketBodyOutput[s.Pipe[WebSocketFrame, WebSocketFrame], WebSocketFrame, WebSocketFrame, s.Pipe[
+                           s: Streams[S]
+                         ): WebSocketBodyOutput[s.Pipe[WebSocketFrame, WebSocketFrame], WebSocketFrame, WebSocketFrame, s.Pipe[
     WebSocketFrame,
     WebSocketFrame
   ], S] =
@@ -297,9 +296,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantClassMatcher[T](
-      output: EndpointOutput[T],
-      runtimeClass: Class[_]
-  ): OneOfVariant[T] = {
+                                   output: EndpointOutput[T],
+                                   runtimeClass: Class[_]
+                                 ): OneOfVariant[T] = {
     // when used with a primitive type or Unit, the class tag will correspond to the primitive type, but at runtime
     // we'll get boxed values
     val rc = primitiveToBoxedClasses.getOrElse(runtimeClass, runtimeClass)
@@ -312,17 +311,17 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantClassMatcher[T](
-      code: StatusCode,
-      output: EndpointOutput[T],
-      runtimeClass: Class[_]
-  ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
+                                   code: StatusCode,
+                                   output: EndpointOutput[T],
+                                   runtimeClass: Class[_]
+                                 ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
   /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
     *
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantValueMatcher[T](output: EndpointOutput[T])(
-      matcher: PartialFunction[Any, Boolean]
+    matcher: PartialFunction[Any, Boolean]
   ): OneOfVariant[T] =
     OneOfVariant(output, matcher.lift.andThen(_.getOrElse(false)))
 
@@ -332,7 +331,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantValueMatcher[T](code: StatusCode, output: EndpointOutput[T])(
-      matcher: PartialFunction[Any, Boolean]
+    matcher: PartialFunction[Any, Boolean]
   ): OneOfVariant[T] =
     OneOfVariant(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
 
@@ -341,11 +340,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantExactMatcher[T: ClassTag](
-      output: EndpointOutput[T]
-  )(
-      firstExactValue: T,
-      rest: T*
-  ): OneOfVariant[T] =
+                                             output: EndpointOutput[T]
+                                           )(
+                                             firstExactValue: T,
+                                             rest: T*
+                                           ): OneOfVariant[T] =
     oneOfVariantValueMatcher(output)(exactMatch(rest.toSet + firstExactValue))
 
   /** Create a one-of-variant which uses `output` if the provided value exactly matches one of the values provided in the second argument
@@ -354,12 +353,12 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfVariantExactMatcher[T: ClassTag](
-      code: StatusCode,
-      output: EndpointOutput[T]
-  )(
-      firstExactValue: T,
-      rest: T*
-  ): OneOfVariant[T] =
+                                             code: StatusCode,
+                                             output: EndpointOutput[T]
+                                           )(
+                                             firstExactValue: T,
+                                             rest: T*
+                                           ): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
 
   /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
@@ -424,9 +423,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * as specified by the body's codec. This is only used when choosing which body to decode.
     */
   def oneOfBody[T](
-      first: (ContentTypeRange, EndpointIO.Body[_, T]),
-      others: (ContentTypeRange, EndpointIO.Body[_, T])*
-  ): EndpointIO.OneOfBody[T, T] =
+                    first: (ContentTypeRange, EndpointIO.Body[_, T]),
+                    others: (ContentTypeRange, EndpointIO.Body[_, T])*
+                  ): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Left(b)) }, Mapping.id)
 
   /** Streaming variant of [[oneOfBody]].
@@ -435,11 +434,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * as specified by the body's codec. This is only used when choosing which body to decode.
     */
   def oneOfBody[T](
-      first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
-      // this is needed so that the signature is different from the previous method
-      second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
-      others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
-  ): EndpointIO.OneOfBody[T, T] =
+                    first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+                    // this is needed so that the signature is different from the previous method
+                    second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+                    others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
+                  ): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
       (first +: second +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) },
       Mapping.id

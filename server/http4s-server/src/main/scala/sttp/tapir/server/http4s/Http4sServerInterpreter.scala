@@ -18,7 +18,6 @@ import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, Serve
 import sttp.tapir.server.model.ServerResponse
 
 import scala.reflect.ClassTag
-import cats.NonEmptyParallel
 
 class Http4sInvalidWebSocketUse(val message: String) extends Exception
 
@@ -28,8 +27,7 @@ class Http4sInvalidWebSocketUse(val message: String) extends Exception
 trait Context[T]
 
 trait Http4sServerInterpreter[F[_]] {
-  implicit def fa: Async[F] 
-  implicit def nep: NonEmptyParallel[F]
+  implicit def fa: Async[F]
 
   def http4sServerOptions: Http4sServerOptions[F] = Http4sServerOptions.default[F]
 
@@ -45,8 +43,8 @@ trait Http4sServerInterpreter[F[_]] {
     toWebSocketRoutes(List(se))
 
   def toWebSocketRoutes(
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = wsb => toRoutes(serverEndpoints, Some(wsb))
+                         serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]
+                       ): WebSocketBuilder2[F] => HttpRoutes[F] = wsb => toRoutes(serverEndpoints, Some(wsb))
 
   def toContextRoutes[T: ClassTag](se: ServerEndpoint[Fs2Streams[F] with Context[T], F]): ContextRoutes[T, F] =
     toContextRoutes(contextAttributeKey[T], List(se), None)
@@ -55,8 +53,8 @@ trait Http4sServerInterpreter[F[_]] {
     toContextRoutes(contextAttributeKey[T], ses, None)
 
   private def createInterpreter[T](
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]]
-  ): ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {
+                                    serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]]
+                                  ): ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, Http4sResponseBody[F]] = new Http4sBodyListener[F]
 
@@ -70,19 +68,19 @@ trait Http4sServerInterpreter[F[_]] {
   }
 
   private def toResponse[T](
-      interpreter: ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]],
-      serverRequest: Http4sServerRequest[F],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): OptionT[F, Response[F]] =
+                             interpreter: ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]],
+                             serverRequest: Http4sServerRequest[F],
+                             webSocketBuilder: Option[WebSocketBuilder2[F]]
+                           ): OptionT[F, Response[F]] =
     OptionT(interpreter(serverRequest).flatMap {
       case _: RequestResult.Failure         => none.pure[F]
       case RequestResult.Response(response) => serverResponseToHttp4s(response, webSocketBuilder).map(_.some)
     })
 
   private def toRoutes(
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): HttpRoutes[F] = {
+                        serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
+                        webSocketBuilder: Option[WebSocketBuilder2[F]]
+                      ): HttpRoutes[F] = {
     val interpreter = createInterpreter(serverEndpoints)
 
     Kleisli { (req: Request[F]) =>
@@ -92,10 +90,10 @@ trait Http4sServerInterpreter[F[_]] {
   }
 
   private def toContextRoutes[T](
-      contextAttributeKey: AttributeKey[T],
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): ContextRoutes[T, F] = {
+                                  contextAttributeKey: AttributeKey[T],
+                                  serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]],
+                                  webSocketBuilder: Option[WebSocketBuilder2[F]]
+                                ): ContextRoutes[T, F] = {
     val interpreter = createInterpreter(serverEndpoints)
 
     Kleisli { (contextRequest: ContextRequest[F, T]) =>
@@ -108,9 +106,9 @@ trait Http4sServerInterpreter[F[_]] {
   }
 
   private def serverResponseToHttp4s(
-      response: ServerResponse[Http4sResponseBody[F]],
-      webSocketBuilder: Option[WebSocketBuilder2[F]]
-  ): F[Response[F]] = {
+                                      response: ServerResponse[Http4sResponseBody[F]],
+                                      webSocketBuilder: Option[WebSocketBuilder2[F]]
+                                    ): F[Response[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
 
     val statusCode = statusCodeToHttp4sStatus(response.code)
@@ -148,17 +146,15 @@ trait Http4sServerInterpreter[F[_]] {
 
 object Http4sServerInterpreter {
 
-  def apply[F[_]]()(implicit _fa: Async[F], _nep: NonEmptyParallel[F]): Http4sServerInterpreter[F] = {
+  def apply[F[_]]()(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
-      override implicit def nep: NonEmptyParallel[F] = _nep
     }
   }
 
-  def apply[F[_]](serverOptions: Http4sServerOptions[F])(implicit _fa: Async[F], _nep: NonEmptyParallel[F]): Http4sServerInterpreter[F] = {
+  def apply[F[_]](serverOptions: Http4sServerOptions[F])(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
-      override implicit def nep: NonEmptyParallel[F] = _nep
       override def http4sServerOptions: Http4sServerOptions[F] = serverOptions
     }
   }
