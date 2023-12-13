@@ -1,18 +1,18 @@
 package sttp.tapir.examples.security
 
-import cats.effect._
-import cats.syntax.all._
-import io.circe.generic.auto._
+import cats.effect.*
+import cats.syntax.all.*
+import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import sttp.model.StatusCode
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import java.time.Instant

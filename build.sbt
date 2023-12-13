@@ -2084,6 +2084,8 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
+      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
