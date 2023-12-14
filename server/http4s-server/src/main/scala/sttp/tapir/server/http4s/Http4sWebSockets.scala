@@ -45,7 +45,7 @@ private[http4s] object Http4sWebSockets {
           val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
           val autoPongs = optionallyAutoPong(ignorePongs, c, o.autoPongOnPing)
           val autoPings = o.autoPing match {
-            case Some((interval, frame)) => (c.send(Chunk(frameToHttp4sFrame(frame))) >> Temporal[F].sleep(interval)).foreverM[Unit]
+            case Some((interval, frame)) => (c.send(Chunk.singleton(frameToHttp4sFrame(frame))) >> Temporal[F].sleep(interval)).foreverM[Unit]
             case None => Applicative[F].unit
           }
 
@@ -64,7 +64,7 @@ private[http4s] object Http4sWebSockets {
 
           c.stream
             .concurrently(Stream.exec((outputProducer >> c.close.void, autoPings).parTupled.void))
-            .append(Stream(Chunk(frameToHttp4sFrame(WebSocketFrame.close))))
+            .append(Stream(Chunk.singleton(frameToHttp4sFrame(WebSocketFrame.close))))
             .unchunks
       }
     }
@@ -122,7 +122,7 @@ private[http4s] object Http4sWebSockets {
     if (doAuto) {
       val trueF = true.pure[F]
       s.evalFilter {
-        case ping: WebSocketFrame.Ping => c.send(Chunk(frameToHttp4sFrame(WebSocketFrame.Pong(ping.payload)))).map(_ => false)
+        case ping: WebSocketFrame.Ping => c.send(Chunk.singleton(frameToHttp4sFrame(WebSocketFrame.Pong(ping.payload)))).map(_ => false)
         case _ => trueF
       }
     } else s
