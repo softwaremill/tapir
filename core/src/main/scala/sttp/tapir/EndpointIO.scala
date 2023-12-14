@@ -240,11 +240,11 @@ object EndpointInput extends EndpointInputMacros {
 
   /** An input with authentication credentials metadata, used when generating documentation. */
   case class Auth[T, TYPE <: AuthType](
-                                        input: Single[T],
-                                        challenge: WWWAuthenticateChallenge,
-                                        authType: TYPE,
-                                        info: AuthInfo
-                                      ) extends Single[T] {
+      input: Single[T],
+      challenge: WWWAuthenticateChallenge,
+      authType: TYPE,
+      info: AuthInfo
+  ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, TYPE]
     override def show: String = if (isInputEmpty) s"auth(-)"
     else
@@ -285,11 +285,11 @@ object EndpointInput extends EndpointInputMacros {
     }
     case class ApiKey() extends AuthType
     case class OAuth2(
-                       authorizationUrl: Option[String],
-                       tokenUrl: Option[String],
-                       scopes: ListMap[String, String],
-                       refreshUrl: Option[String]
-                     ) extends AuthType {
+        authorizationUrl: Option[String],
+        tokenUrl: Option[String],
+        scopes: ListMap[String, String],
+        refreshUrl: Option[String]
+    ) extends AuthType {
       def requiredScopes(requiredScopes: Seq[String]): ScopedOAuth2 = ScopedOAuth2(this, requiredScopes)
     }
     case class ScopedOAuth2(oauth2: OAuth2, requiredScopes: Seq[String]) extends AuthType {
@@ -298,12 +298,12 @@ object EndpointInput extends EndpointInputMacros {
   }
 
   case class AuthInfo(
-                       securitySchemeName: Option[String],
-                       description: Option[String],
-                       attributes: AttributeMap,
-                       group: Option[String],
-                       bearerFormat: Option[String]
-                     ) {
+      securitySchemeName: Option[String],
+      description: Option[String],
+      attributes: AttributeMap,
+      group: Option[String],
+      bearerFormat: Option[String]
+  ) {
     def securitySchemeName(name: String): AuthInfo = copy(securitySchemeName = Some(name))
     def description(d: String): AuthInfo = copy(description = Some(d))
     def group(g: String): AuthInfo = copy(group = Some(g))
@@ -325,12 +325,12 @@ object EndpointInput extends EndpointInputMacros {
   }
 
   case class Pair[T, U, TU](
-                             left: EndpointInput[T],
-                             right: EndpointInput[U],
-                             private[tapir] val combine: CombineParams,
-                             private[tapir] val split: SplitParams
-                           ) extends EndpointInput[TU]
-    with EndpointTransput.Pair[TU] {
+      left: EndpointInput[T],
+      right: EndpointInput[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointInput[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
     override def map[V](m: Mapping[TU, V]): EndpointInput[V] = MappedPair[T, U, TU, V](this, m)
   }
@@ -351,10 +351,10 @@ object EndpointOutput extends EndpointOutputMacros {
   //
 
   case class StatusCode[T](
-                            documentedCodes: Map[Either[sttp.model.StatusCode, StatusCodeRange], Info[Unit]],
-                            codec: Codec[sttp.model.StatusCode, T, TextPlain],
-                            info: Info[T]
-                          ) extends Atom[T] {
+      documentedCodes: Map[Either[sttp.model.StatusCode, StatusCodeRange], Info[Unit]],
+      codec: Codec[sttp.model.StatusCode, T, TextPlain],
+      info: Info[T]
+  ) extends Atom[T] {
     override private[tapir] type ThisType[X] = StatusCode[X]
     override private[tapir] type L = sttp.model.StatusCode
     override private[tapir] type CF = TextPlain
@@ -411,9 +411,9 @@ object EndpointOutput extends EndpointOutputMacros {
     * checking the run-time class of the value, due to type erasure (if `O` has type parameters).
     */
   case class OneOfVariant[O] private[tapir] (
-                                              output: EndpointOutput[O],
-                                              appliesTo: Any => Boolean
-                                            )
+      output: EndpointOutput[O],
+      appliesTo: Any => Boolean
+  )
 
   case class OneOf[O, T](variants: List[OneOfVariant[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
@@ -441,12 +441,12 @@ object EndpointOutput extends EndpointOutputMacros {
   }
 
   case class Pair[T, U, TU](
-                             left: EndpointOutput[T],
-                             right: EndpointOutput[U],
-                             private[tapir] val combine: CombineParams,
-                             private[tapir] val split: SplitParams
-                           ) extends EndpointOutput[TU]
-    with EndpointTransput.Pair[TU] {
+      left: EndpointOutput[T],
+      right: EndpointOutput[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointOutput[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
     override def map[V](m: Mapping[TU, V]): EndpointOutput[V] = MappedPair[T, U, TU, V](this, m)
   }
@@ -558,12 +558,12 @@ object EndpointIO {
   }
 
   case class Pair[T, U, TU](
-                             left: EndpointIO[T],
-                             right: EndpointIO[U],
-                             private[tapir] val combine: CombineParams,
-                             private[tapir] val split: SplitParams
-                           ) extends EndpointIO[TU]
-    with EndpointTransput.Pair[TU] {
+      left: EndpointIO[T],
+      right: EndpointIO[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointIO[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointIO[X]
     override def map[V](m: Mapping[TU, V]): EndpointIO[V] = MappedPair[T, U, TU, V](this, m)
   }
@@ -585,11 +585,11 @@ object EndpointIO {
       Example(value, name, summary, description)
 
     def copy[TT](
-                  value: TT = this.value,
-                  name: Option[String] = this.name,
-                  summary: Option[String] = this.summary,
-                  description: Option[String] = this.description
-                ): Example[TT] = Example(value, name, summary, description)
+        value: TT = this.value,
+        name: Option[String] = this.name,
+        summary: Option[String] = this.summary,
+        description: Option[String] = this.description
+    ): Example[TT] = Example(value, name, summary, description)
   }
 
   object Example {
@@ -601,11 +601,11 @@ object EndpointIO {
   }
 
   case class Info[T](
-                      description: Option[String],
-                      examples: List[Example[T]],
-                      deprecated: Boolean,
-                      attributes: AttributeMap
-                    ) {
+      description: Option[String],
+      examples: List[Example[T]],
+      deprecated: Boolean,
+      attributes: AttributeMap
+  ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(value: T): Info[T] = example(Example.of(value))
@@ -694,12 +694,12 @@ However, this decreases type safety, as the streaming requirement is lost.
 BS == streams.BinaryStream, but we can't express this using dependent types here.
  */
 case class StreamBodyIO[BS, T, S](
-                                   streams: Streams[S],
-                                   codec: Codec[BS, T, CodecFormat],
-                                   info: Info[T],
-                                   charset: Option[Charset],
-                                   encodedExamples: List[Example[Any]]
-                                 ) extends EndpointTransput.Atom[T] {
+    streams: Streams[S],
+    codec: Codec[BS, T, CodecFormat],
+    info: Info[T],
+    charset: Option[Charset],
+    encodedExamples: List[Example[Any]]
+) extends EndpointTransput.Atom[T] {
   override private[tapir] type ThisType[X] = StreamBodyIO[BS, X, S]
   override private[tapir] type L = BS
   override private[tapir] type CF = CodecFormat
@@ -728,20 +728,20 @@ Same rationale as for StreamBodyIO applies.
 P == streams.Pipe, but we can't express this using dependent types here.
  */
 case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
-                                                                streams: Streams[S],
-                                                                requests: Codec[WebSocketFrame, REQ, CodecFormat],
-                                                                responses: Codec[WebSocketFrame, RESP, CodecFormat],
-                                                                codec: Codec[PIPE_REQ_RESP, T, CodecFormat],
-                                                                info: Info[T],
-                                                                requestsInfo: Info[REQ],
-                                                                responsesInfo: Info[RESP],
-                                                                concatenateFragmentedFrames: Boolean,
-                                                                ignorePong: Boolean,
-                                                                autoPongOnPing: Boolean,
-                                                                decodeCloseRequests: Boolean,
-                                                                decodeCloseResponses: Boolean,
-                                                                autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]
-                                                              ) extends EndpointTransput.Atom[T] {
+    streams: Streams[S],
+    requests: Codec[WebSocketFrame, REQ, CodecFormat],
+    responses: Codec[WebSocketFrame, RESP, CodecFormat],
+    codec: Codec[PIPE_REQ_RESP, T, CodecFormat],
+    info: Info[T],
+    requestsInfo: Info[REQ],
+    responsesInfo: Info[RESP],
+    concatenateFragmentedFrames: Boolean,
+    ignorePong: Boolean,
+    autoPongOnPing: Boolean,
+    decodeCloseRequests: Boolean,
+    decodeCloseResponses: Boolean,
+    autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]
+) extends EndpointTransput.Atom[T] {
   override private[tapir] type ThisType[X] = WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, X, S]
   override private[tapir] type L = PIPE_REQ_RESP
   override private[tapir] type CF = CodecFormat

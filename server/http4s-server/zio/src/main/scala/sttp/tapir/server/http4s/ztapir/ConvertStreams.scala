@@ -14,8 +14,8 @@ import zio.{RIO, Task}
 object ConvertStreams {
 
   def apply[R, C](
-                   se: ZServerEndpoint[R, ZioStreams with C]
-                 ): ServerEndpoint[Fs2Streams[RIO[R, *]] with C, RIO[R, *]] =
+      se: ZServerEndpoint[R, ZioStreams with C]
+  ): ServerEndpoint[Fs2Streams[RIO[R, *]] with C, RIO[R, *]] =
     ServerEndpoint(
       Endpoint(
         forInput(se.securityInput).asInstanceOf[EndpointInput[se.SECURITY_INPUT]],
@@ -112,7 +112,7 @@ object ConvertStreams {
   }
 
   private def fs2PipeToZioPipeCodec[A, B]
-  : Codec[fs2.Pipe[Task, A, B], zio.stream.Stream[Throwable, A] => zio.stream.Stream[Throwable, B], OctetStream] =
+      : Codec[fs2.Pipe[Task, A, B], zio.stream.Stream[Throwable, A] => zio.stream.Stream[Throwable, B], OctetStream] =
     Codec
       .id[fs2.Pipe[Task, A, B], OctetStream](OctetStream(), Schema.binary)
       .map { (fs2Pipe: fs2.Pipe[Task, A, B]) => (zioStreamA: zio.stream.Stream[Throwable, A]) =>
@@ -122,8 +122,8 @@ object ConvertStreams {
       }
 
   private def apply[R, PIPE_REQ_RESP, REQ, RESP, T, S](
-                                                        w: WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S]
-                                                      ): WebSocketBodyOutput[fs2.Pipe[Task, REQ, RESP], REQ, RESP, T, Fs2Streams[RIO[R, *]]] = {
+      w: WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S]
+  ): WebSocketBodyOutput[fs2.Pipe[Task, REQ, RESP], REQ, RESP, T, Fs2Streams[RIO[R, *]]] = {
     // we know that:
     // * PIPE_REQ_RESP == zio.stream.Stream[Throwable, REQ] => zio.stream.Stream[Throwable, RESP]
     // * S == ZioStreams

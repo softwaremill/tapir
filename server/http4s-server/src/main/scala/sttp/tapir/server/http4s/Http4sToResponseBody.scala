@@ -18,25 +18,25 @@ import java.io.InputStream
 import java.nio.charset.Charset
 
 private[http4s] class Http4sToResponseBody[F[_]: Async](
-                                                         serverOptions: Http4sServerOptions[F]
-                                                       ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
+    serverOptions: Http4sServerOptions[F]
+) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Http4sResponseBody[F] =
     Right(rawValueToEntity(bodyType, v))
 
   override def fromStreamValue(
-                                v: Stream[F, Byte],
-                                headers: HasHeaders,
-                                format: CodecFormat,
-                                charset: Option[Charset]
-                              ): Http4sResponseBody[F] =
+      v: Stream[F, Byte],
+      headers: HasHeaders,
+      format: CodecFormat,
+      charset: Option[Charset]
+  ): Http4sResponseBody[F] =
     Right((v, None))
 
   override def fromWebSocketPipe[REQ, RESP](
-                                             pipe: streams.Pipe[REQ, RESP],
-                                             o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
-                                           ): Http4sResponseBody[F] = Left(Http4sWebSockets.pipeToBody(pipe, o))
+      pipe: streams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+  ): Http4sResponseBody[F] = Left(Http4sWebSockets.pipeToBody(pipe, o))
 
   private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): (EntityBody[F], Option[Long]) = {
     bodyType match {
