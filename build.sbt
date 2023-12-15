@@ -239,7 +239,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
   examples2.projectRefs ++
-  examples3.projectRefs ++
+  examples.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
   openapiCodegenSbt.projectRefs ++
@@ -2077,10 +2077,10 @@ lazy val examples2: ProjectMatrix = (projectMatrix in file("examples2"))
     protobuf
   )
 
-lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
+lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-examples3",
+    name := "tapir-examples",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
