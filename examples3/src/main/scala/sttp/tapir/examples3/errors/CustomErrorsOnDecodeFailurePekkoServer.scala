@@ -44,7 +44,7 @@ object CustomErrorsOnDecodeFailurePekkoServer extends App {
   val amountRoute: Route = PekkoHttpServerInterpreter(customServerOptions).toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -57,10 +57,9 @@ object CustomErrorsOnDecodeFailurePekkoServer extends App {
     val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=xyz").send(backend).body
     println("Got result: " + result2)
     assert(result2 == Right("Incorrect format!!!"))
+
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    println("Terminating ActorSystem...")
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

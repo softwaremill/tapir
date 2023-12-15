@@ -33,7 +33,7 @@ object ErrorOutputsPekkoServer extends App {
   })
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -44,7 +44,9 @@ object ErrorOutputsPekkoServer extends App {
     val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=21").send(backend).body
     println("Got result (2): " + result2)
     assert(result2 == Right("""{"result":42}"""))
+
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }
