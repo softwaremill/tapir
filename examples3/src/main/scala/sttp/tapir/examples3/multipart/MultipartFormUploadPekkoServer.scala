@@ -5,14 +5,14 @@ import java.io.PrintWriter
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
-import sttp.tapir.generic.auto._
+import sttp.client3.*
+import sttp.tapir.generic.auto.*
 import sttp.model.Part
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object MultipartFormUploadPekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()

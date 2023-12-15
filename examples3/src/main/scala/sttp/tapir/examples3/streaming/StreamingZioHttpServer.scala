@@ -3,12 +3,12 @@ package sttp.tapir.examples.streaming
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HeaderNames
 import sttp.tapir.{CodecFormat, PublicEndpoint}
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.HttpApp
 import zio.http.Server
 import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault, ZLayer}
-import zio.stream._
+import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 import java.time.Duration

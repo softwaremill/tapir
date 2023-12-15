@@ -4,14 +4,14 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Directives.concat
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.model.headers.CookieValueWithMeta
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.tapir.server.{PartialServerEndpointWithSecurityOutput, ServerEndpoint}
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object ServerSecurityLogicRefreshCookiesPekko extends App {

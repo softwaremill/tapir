@@ -1,19 +1,19 @@
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
-import cats.implicits._
+import cats.implicits.*
 import fs2.{Chunk, Stream}
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.HeaderNames
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 // https://github.com/softwaremill/tapir/issues/367
 object StreamingHttp4sFs2Server extends IOApp {

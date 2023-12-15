@@ -3,8 +3,8 @@ package sttp.tapir.examples.static_content
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.duration.DurationInt

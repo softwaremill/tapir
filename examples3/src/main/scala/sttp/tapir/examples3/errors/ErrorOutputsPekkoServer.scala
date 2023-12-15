@@ -3,14 +3,14 @@ package sttp.tapir.examples3.errors
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
-import sttp.tapir.generic.auto._
-import sttp.tapir._
-import sttp.tapir.server.pekkohttp._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.client3.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.server.pekkohttp.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object ErrorOutputsPekkoServer extends App {

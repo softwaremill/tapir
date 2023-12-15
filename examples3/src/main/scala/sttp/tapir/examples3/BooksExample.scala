@@ -1,7 +1,7 @@
 package sttp.tapir.examples3
 
 import com.typesafe.scalalogging.StrictLogging
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 object BooksExample extends App with StrictLogging {
   type Limit = Option[Int]
@@ -16,9 +16,9 @@ object BooksExample extends App with StrictLogging {
   /** Descriptions of endpoints used in the example.
     */
   object Endpoints {
-    import io.circe.generic.auto._
-    import sttp.tapir._
-    import sttp.tapir.json.circe._
+    import io.circe.generic.auto.*
+    import sttp.tapir.*
+    import sttp.tapir.json.circe.*
 
     // All endpoints report errors as strings, and have the common path prefix '/books'
     private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
@@ -83,7 +83,7 @@ object BooksExample extends App with StrictLogging {
 
   //
 
-  import Endpoints._
+  import Endpoints.*
   import sttp.tapir.server.ServerEndpoint
   import scala.concurrent.Future
 
@@ -134,7 +134,7 @@ object BooksExample extends App with StrictLogging {
     import org.apache.pekko.http.scaladsl.Http
 
     import scala.concurrent.Await
-    import scala.concurrent.duration._
+    import scala.concurrent.duration.*
 
     import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 

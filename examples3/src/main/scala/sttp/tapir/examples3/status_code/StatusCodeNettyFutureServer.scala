@@ -1,7 +1,7 @@
 package sttp.tapir.examples.status_code
 
 import sttp.model.{HeaderNames, StatusCode}
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 
 import scala.concurrent.{Await, Future}

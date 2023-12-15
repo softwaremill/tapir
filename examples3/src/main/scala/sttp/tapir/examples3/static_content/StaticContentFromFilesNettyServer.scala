@@ -2,7 +2,7 @@ package sttp.tapir.examples.static_content
 
 import sttp.tapir.server.netty.NettyFutureServer
 import sttp.tapir.emptyInput
-import sttp.tapir.files._
+import sttp.tapir.files.*
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

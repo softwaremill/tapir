@@ -3,10 +3,10 @@ package sttp.tapir.examples.static_content
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.{ContentRangeUnits, Header, HeaderNames, StatusCode}
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import java.nio.file.{Files, Path, StandardOpenOption}

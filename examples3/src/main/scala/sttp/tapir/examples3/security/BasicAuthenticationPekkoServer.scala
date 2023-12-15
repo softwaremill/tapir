@@ -3,14 +3,14 @@ package sttp.tapir.examples.security
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
-import sttp.tapir.model._
-import sttp.tapir.server.pekkohttp._
+import sttp.tapir.*
+import sttp.tapir.model.*
+import sttp.tapir.server.pekkohttp.*
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object BasicAuthenticationPekkoServer extends App {

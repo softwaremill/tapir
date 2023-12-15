@@ -1,16 +1,16 @@
 package sttp.tapir.examples3
 
-import org.http4s._
+import org.http4s.*
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.tapir.examples3.UserAuthenticationLayer.*
-import sttp.tapir.server.http4s.ztapir._
-import sttp.tapir.ztapir._
+import sttp.tapir.server.http4s.ztapir.*
+import sttp.tapir.ztapir.*
 import zio.Console.printLine
-import zio._
-import zio.interop.catz._
+import zio.*
+import zio.interop.catz.*
 
 object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
 

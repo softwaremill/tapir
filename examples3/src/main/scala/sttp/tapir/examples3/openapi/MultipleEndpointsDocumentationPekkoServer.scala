@@ -61,7 +61,7 @@ object MultipleEndpointsDocumentationPekkoServer extends App {
 
   // starting the server
   val routes = {
-    import org.apache.pekko.http.scaladsl.server.Directives._
+    import org.apache.pekko.http.scaladsl.server.Directives.*
     concat(booksListingRoute, addBookRoute, swaggerUIRoute)
   }
 

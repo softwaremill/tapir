@@ -6,12 +6,12 @@ import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
+import sttp.client3.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
-import sttp.tapir._
+import sttp.tapir.*
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object StreamingPekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()

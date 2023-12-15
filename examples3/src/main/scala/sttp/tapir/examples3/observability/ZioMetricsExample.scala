@@ -1,6 +1,6 @@
 package sttp.tapir.examples.observability
 
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
