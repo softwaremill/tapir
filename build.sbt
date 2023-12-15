@@ -238,7 +238,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
-  examples.projectRefs ++
+  examples2.projectRefs ++
   examples3.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
@@ -2015,10 +2015,10 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
 
 // other
 
-lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
+lazy val examples2: ProjectMatrix = (projectMatrix in file("examples2"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-examples",
+    name := "tapir-examples2",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
