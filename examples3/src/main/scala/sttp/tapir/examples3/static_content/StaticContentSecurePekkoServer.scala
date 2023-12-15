@@ -31,7 +31,7 @@ object StaticContentSecurePekkoServer extends App {
   // starting the server
   val route: Route = PekkoHttpServerInterpreter().toRoute(secureFileEndpoints)
 
-  val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(route).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val response1 = basicRequest
@@ -52,7 +52,9 @@ object StaticContentSecurePekkoServer extends App {
 
     assert(response2.code == StatusCode.Ok)
     assert(response2.body == "f1 content")
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

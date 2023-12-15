@@ -47,7 +47,7 @@ object WebSocketPekkoServer extends App {
   val bindAndCheck = Http()
     .newServerAt("localhost", 8080)
     .bindFlow(wsRoute)
-    .flatMap { _ =>
+    .flatMap { binding =>
       // We could have interpreted wsEndpoint as a client, but here we are using sttp client directly
       val backend: SttpBackend[Future, WebSockets] = PekkoHttpBackend.usingActorSystem(actorSystem)
       // Client which interacts with the web socket
@@ -67,7 +67,8 @@ object WebSocketPekkoServer extends App {
         })
         .get(uri"ws://localhost:8080/ping")
         .send(backend)
+        .map(_ => binding)
     }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

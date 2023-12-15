@@ -52,7 +52,7 @@ object ServerSecurityLogicRefreshCookiesPekko extends App {
   val helloWorld1Route: Route = PekkoHttpServerInterpreter().toRoute(secureHelloWorldWithLogic)
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -64,7 +64,9 @@ object ServerSecurityLogicRefreshCookiesPekko extends App {
 
     assert(response.body == "Welcome, Steve!")
     assert(response.unsafeCookies.map(_.value).toList == List("new token"))
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

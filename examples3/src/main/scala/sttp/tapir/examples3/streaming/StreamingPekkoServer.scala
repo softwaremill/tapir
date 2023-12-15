@@ -28,14 +28,16 @@ object StreamingPekkoServer extends App {
   val streamingRoute: Route = PekkoHttpServerInterpreter().toRoute(streamingEndpoint.serverLogicSuccess(_ => Future.successful(testStream)))
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
     println("Got result: " + result)
 
     assert(result == "Hello!" * 10)
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

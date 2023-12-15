@@ -28,7 +28,7 @@ object BasicAuthenticationPekkoServer extends App {
     )
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val unauthorized = basicRequest.get(uri"http://localhost:8080/secret").send(backend)
@@ -40,7 +40,9 @@ object BasicAuthenticationPekkoServer extends App {
     println("Got result: " + result)
     assert(result.code == StatusCode.Ok)
     assert(result.body == Right("Hello, user!"))
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

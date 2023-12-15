@@ -25,7 +25,7 @@ object StaticContentFromFilesPekkoServer extends App {
   val route: Route = PekkoHttpServerInterpreter().toRoute(fileEndpoints)
 
   // starting the server
-  val bindAndCheck: Future[Unit] = Http().newServerAt("localhost", 8080).bindFlow(route).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(route).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val headResponse = basicRequest
@@ -48,7 +48,8 @@ object StaticContentFromFilesPekkoServer extends App {
     assert(getResponse.body.length == 4)
     assert(getResponse.headers.contains(Header(HeaderNames.ContentRange, "bytes 3-6/10")))
 
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }
