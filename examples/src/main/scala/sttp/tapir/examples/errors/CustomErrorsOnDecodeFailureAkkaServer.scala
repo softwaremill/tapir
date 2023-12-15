@@ -23,8 +23,8 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
 
   // by default, decoding errors will be returned as a 400 response with body e.g. "Invalid value for: query parameter amount"
   // the defaults are defined in ServerDefaults
-  // this can be customised by setting the appropriate option in the server options, passed implicitly to toRoute
-  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customiseInterceptors
+  // this can be customised by setting the appropriate option in the server options, passed to ServerInterpreter
+  val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customiseInterceptors
     .decodeFailureHandler(
       DecodeFailureHandler(ctx =>
         ctx.failingInput match {
@@ -39,7 +39,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     )
     .options
 
-  val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
+  val amountRoute: Route = AkkaHttpServerInterpreter(customServerOptions).toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { _ =>
@@ -54,8 +54,11 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     // incorrect request, parameter does not parse, error
     val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=xyz").send(backend).body
     println("Got result: " + result2)
-    assert(result2 == Left("Incorrect format!!!"))
+    assert(result2 == Right("Incorrect format!!!"))
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r =>
+    println("Terminating ActorSystem...")
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }
