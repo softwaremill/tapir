@@ -22,7 +22,7 @@ val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-//val examplesScalaVersions = List(scala3)
+val examplesScalaVersions = List(scala3)
 val documentationScalaVersion = scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
@@ -2100,7 +2100,7 @@ lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .jvmPlatform(scalaVersions = List(scala3))
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     datadogMetrics,
     prometheusMetrics,
