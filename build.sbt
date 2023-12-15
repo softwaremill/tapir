@@ -68,7 +68,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
   ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala2_13) ||
+    (scalaVersion.value == scala3) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
@@ -504,12 +504,19 @@ val http4sVanilla = taskKey[Unit]("http4s-vanilla")
 val http4sTapir = taskKey[Unit]("http4s-tapir")
 val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
 val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
-def genPerfTestTask(servName: String, simName: String) = Def.taskDyn {
-  Def.task {
-    (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
-    (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
-  }
+
+import complete.DefaultParsers._
+
+val perfTestParser: complete.Parser[(String, String)] = {
+  Space ~> token(StringBasic.examples("<server name>")) ~ (Space ~> token(StringBasic.examples("<simulation name>")))
 }
+
+def genPerfTestTask(servName: String, simName: String): Def.Initialize[Task[Unit]] = Def.task {
+  (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
+  (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
+}
+
+lazy val perfTest = inputKey[Unit]("Run performance test")
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -534,16 +541,23 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     fork := true,
     connectInput := true
   )
+  .settings(
+    perfTest := {
+      genPerfTestTask.tupled(perfTestParser.parsed).value
+      // val (servName, simName) = perfTestParser.parsed
+      // genPerfTestTask(servName, simName).value
+    }
+  )
   .settings(akkaHttpVanilla := { (genPerfTestTask("akka.Vanilla", "OneRoute")).value })
   .settings(akkaHttpTapir := { (genPerfTestTask("akka.Tapir", "OneRoute")).value })
   .settings(akkaHttpVanillaMulti := { (genPerfTestTask("akka.VanillaMulti", "MultiRoute")).value })
   .settings(akkaHttpTapirMulti := { (genPerfTestTask("akka.TapirMulti", "MultiRoute")).value })
   .settings(http4sVanilla := { (genPerfTestTask("http4s.Vanilla", "OneRoute")).value })
-  .settings(http4sTapir := { (genPerfTestTask("http4s.Tapir", "OneRoute")).value })
+  .settings(http4sTapir := { (genPerfTestTask("netty.TapirMulti", "PostBytes256")).value })
   .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
-  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
+  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "PostString")).value })
   .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(core, akkaHttpServer, http4sServer)
+  .dependsOn(core, akkaHttpServer, http4sServer, nettyServer)
 
 // integrations
 

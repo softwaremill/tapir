@@ -26,11 +26,12 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
 
   override def onNext(content: HttpContent): Unit = {
     val a = ByteBufUtil.getBytes(content.content())
+    content.release()
     size += a.length
     chunks.add(a)
     subscription.request(1)
   }
-      
+
   override def onError(t: Throwable): Unit = {
     chunks.clear()
     resultBlockingQueue.add(Left(t))
@@ -61,7 +62,7 @@ object SimpleSubscriber {
     publisher.subscribe(maxBytes.map(max => new LimitedLengthSubscriber(max, subscriber)).getOrElse(subscriber))
     subscriber.resultBlocking() match {
       case Right(result) => result
-      case Left(e) => throw e
+      case Left(e)       => throw e
     }
   }
 }

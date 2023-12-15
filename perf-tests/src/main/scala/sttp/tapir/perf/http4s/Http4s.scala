@@ -11,6 +11,9 @@ import org.http4s.server.Router
 import sttp.tapir.perf
 import sttp.tapir.perf.Common
 import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.integ.cats.effect.CatsMonadError
+import sttp.monad.MonadError
+import sttp.tapir.server.ServerEndpoint
 
 object Vanilla {
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
@@ -27,13 +30,18 @@ object Vanilla {
     )
 }
 
-object Tapir {
+object Tapir extends perf.apis.SimpleGetEndpoints {
+
+  implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
+
+  val serverEndpointGens = replyingWithDummyStr[IO](
+    List(gen_get_in_string_out_string, gen_post_in_string_out_string)
+  )
+
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
       Http4sServerInterpreter[IO]().toRoutes(
-        (0 to nRoutes)
-          .map((n: Int) => Common.genTapirEndpoint(n).serverLogic(id => IO(((id + n).toString).asRight[String])))
-          .toList
+        genServerEndpoints(serverEndpointGens)(nRoutes).toList
       )
     })
 }
@@ -51,4 +59,5 @@ object Http4s {
 object TapirServer extends App { Http4s.runServer(Tapir.router(1)).unsafeRunSync() }
 object TapirMultiServer extends App { Http4s.runServer(Tapir.router(128)).unsafeRunSync() }
 object VanillaServer extends App { Http4s.runServer(Vanilla.router(1)).unsafeRunSync() }
+object PostStringServer extends App { Http4s.runServer(Vanilla.router(1)).unsafeRunSync() }
 object VanillaMultiServer extends App { Http4s.runServer(Vanilla.router(128)).unsafeRunSync() }
