@@ -28,18 +28,13 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   case class IronException(error: String) extends Exception(error)
 
   type Guard = Match["^[A-Z][a-z]+$"]
-  type Name = String :| Guard
   type Age = Int :| Positive
 
-  case class Person(name: Name, age: Age)
+  case class Person(name: String, age: Age)
 
-  inline given Encoder[Name] = summon[Encoder[String]].contramap(_.toString)
   inline given Encoder[Age] = summon[Encoder[Int]].contramap(_.asInstanceOf[Int])
-  inline given (using inline constraint: Constraint[String, Guard]): Decoder[Name] = summon[Decoder[String]].map(unrefinedValue =>
-    unrefinedValue.refineEither[Guard] match
-      case Right(value) => value
-      case Left(errorMessage) => throw IronException(s"Could not refine value $unrefinedValue: $errorMessage")
-  )
+
+  // Decoder throwing custom exception when refinement fails
   inline given (using inline constraint: Constraint[Int, Positive]): Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
     unrefinedValue.refineEither[Positive] match
       case Right(value) => value
@@ -59,6 +54,8 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   val addPersonServerEndpoint = addPerson
     .serverLogic[IO](person => IO.pure[Either[String, String]](Right(s"It's OK! Got $person")))
 
+  // Handle failure, when error contains custom exception it means iron refinement failed
+  // and we can add the failure details to the error message.
   private def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
     case Error(_, JsonDecodeException(_, IronException(errorMessage))) => Some(errorMessage)
     case Error(_, IronException(errorMessage)) => Some(errorMessage)
@@ -77,6 +74,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
     DefaultDecodeFailureHandler.failureResponse
   )
 
+  // Interceptor
   def ironDecodeFailureInterceptor[T[_]] = new DecodeFailureInterceptor[T](ironFailureHandler[T])
 
   private val declaredPort = 9090
@@ -85,6 +83,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   override def run = NettyCatsServer
     .io()
     .use { server =>
+      // Don't forget to add the interceptor to server options
       val optionsWithInterceptor = server.options.prependInterceptor(ironDecodeFailureInterceptor)
       for {
         binding <- server
@@ -117,6 +116,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
             val response = basicRequest.response(asStringAlways).post(url).body(invalidPersonJson).send(backend)
             println(s"Response status ${response.code}, body: ${response.body}")
             assert(response.code == StatusCode(400))
+            // Iron refinement failed - details should be received in response body
             assert(response.body == "Invalid value for: body (Could not refine value -1: Should be strictly positive)")
           }
           .guarantee(binding.stop())
