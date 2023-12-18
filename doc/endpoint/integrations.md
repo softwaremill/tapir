@@ -68,54 +68,75 @@ Similarly to `tapir-refined`, you can find the predicate logic in `integrations/
 
 ### Validation
 
-When using `iron` in the server e.g. in case classes that request JSON request body 
+When using `iron` in the server e.g. in case classes that JSON request body 
 is parsed to, some additional steps need to be taken to properly
 report `iron` validation errors.
 
 [Iron](https://github.com/Iltotore/iron) is operating on type level while regular tapir
 validation works on case classes created from parsed JSON. When `iron` types are used
-in a case class creation is impossible because `iron` does not allow creating guarded type instance.
-Because it is not possible to create case class it looks like JSON parsing error not
+in a case class, and passed values are invalid for `iron` types, creation is impossible because `iron` 
+does not allow creating guarded type instance.
+Because it is not possible to create case class for `ServerInterpreter` it looks like JSON parsing error not
 like validation error. In such case no error message is displayed to user.
 
-To properly report such errors it is necessary to recognize them in failure intereptor.
-Custom JSON parsing is necessary anyway, custom exception can be thrown in case of `iron`
+To properly report `iron` errors it is necessary to recognize them in failure intereptor.
+Custom JSON parsing is necessary anyway so custom exception can be thrown in case of `iron`
 refinement error and then matched in failure interceptor.
 
-Example for `upickle`:
+Example for `circe`:
 
 ```scala
-case class IronException(originalValue: Any, errorMessage: String) extends Exception
+case class IronException(error: String) extends Exception(error)
 
-inline given [A, B](using inline reader: Reader[A], inline constraint: Constraint[A, B]): Reader[A :| B] =
-  reader.map(value =>
-    value.refineEither match {
-      case Right(refinedValue) => refinedValue
-      case Left(errorMessage) => throw IronException(value, errorMessage)
-    }
-  )
+inline given (using inline constraint: Constraint[Int, Positive]): Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
+  unrefinedValue.refineEither[Positive] match
+    case Right(value) => value
+    case Left(errorMessage) => throw IronException(s"Could not refine value $unrefinedValue: $errorMessage")
+)
 ```
 
-Then failure handler matching `IronException` is needed. Remember to add it to server
+Then failure handler matching `IronException` is needed. Remember to create the interceptor:
 
 ```scala
+private def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
+  case Error(_, JsonDecodeException(_, IronException(errorMessage))) => Some(errorMessage)
+  case Error(_, IronException(errorMessage)) => Some(errorMessage)
+  case other => FailureMessages.failureDetailMessage(other)
+}
 
-  def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
-    case Error(_, JsonDecodeException(_, IronException(originalValue, errorMessage))) =>
-      Some(s"Failed to parse value $originalValue. Error: $errorMessage")
-    case other => FailureMessages.failureDetailMessage(other)
+private def failureMessage(ctx: DecodeFailureContext): String = {
+  val base = FailureMessages.failureSourceMessage(ctx.failingInput)
+  val detail = failureDetailMessage(ctx.failure)
+  FailureMessages.combineSourceAndDetail(base, detail)
+}
+
+def ironFailureHandler[T[_]] = new DefaultDecodeFailureHandler[T](
+  DefaultDecodeFailureHandler.respond,
+  failureMessage,
+  DefaultDecodeFailureHandler.failureResponse
+)
+
+def ironDecodeFailureInterceptor[T[_]] = new DecodeFailureInterceptor[T](ironFailureHandler[T])
+```
+
+...and add it to server options:
+
+```scala
+override def run = NettyCatsServer
+  .io()
+  .use { server =>
+    // Don't forget to add the interceptor to server options
+    val optionsWithInterceptor = server.options.prependInterceptor(ironDecodeFailureInterceptor)
+    for {
+      binding <- server
+        .port(port)
+        .host(host)
+        .options(optionsWithInterceptor)
+        .addEndpoint(endpoint)
+        .start()
+      //...
+    }
   }
-
-  def failureMessage(ctx: DecodeFailureContext): String = {
-    val base = FailureMessages.failureSourceMessage(ctx.failingInput)
-    val detail = failureDetailMessage(ctx.failure)
-    FailureMessages.combineSourceAndDetail(base, detail)
-  }
-
-  val handler = new DefaultDecodeFailureHandler(default.respond, failureMessage, default.response)
-  val serverOptions = NettyFutureServerOptions.customiseInterceptors.decodeFailureHandler(handler).options
-
-  val ironRoute = NettyFutureServerInterpreter(serverOptions).toRoute(endpoints)
 ```
 
 
