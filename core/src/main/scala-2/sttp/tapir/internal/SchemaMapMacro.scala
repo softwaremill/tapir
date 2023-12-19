@@ -9,7 +9,7 @@ private[tapir] object SchemaMapMacro {
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
     import c.universe._
-    generateSchemaForMap[String, V](c)(c.Expr[String => String](q"""identity"""))(schemaForV)
+    generateSchemaForMap[String, V](c)(c.Expr[String => String](q"""_root_.scala.Predef.identity"""))(schemaForV)
   }
 
   /* Extract name and generic type parameters of map value type for object info creation */
@@ -34,8 +34,8 @@ private[tapir] object SchemaMapMacro {
       q"""{
           val s = $schemaForV
           _root_.sttp.tapir.Schema(
-            _root_.sttp.tapir.SchemaType.SOpenProduct(Nil, s)(_.map { case (k, v) => ($keyToString(k), v) }),
-            Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParameters))
+            _root_.sttp.tapir.SchemaType.SOpenProduct(_root_.scala.Nil, s)(_.map { case (k, v) => ($keyToString(k), v) }),
+            _root_.scala.Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParameters))
           )
          }"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
