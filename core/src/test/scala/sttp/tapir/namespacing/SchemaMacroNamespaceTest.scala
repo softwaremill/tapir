@@ -16,4 +16,11 @@ class SchemaMacroNamespaceTest extends AnyFlatSpec with Matchers {
     import sttp.tapir.Codec
     Codec.derivedEnumeration[String, MyProduct](MyProduct.fromString, _.toString)
   }
+
+  it should "compile macro-generated code for shadowed _root_.scala names" in {
+
+    assert(sttp.tapir.testdata.BuiltinTypenameCollisionEnum.schema.name.nonEmpty)
+    assert(sttp.tapir.testdata.BuiltinTypenameCollisionCaseClass.schema.name.nonEmpty)
+  }
+
 }

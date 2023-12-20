@@ -45,31 +45,26 @@ private[tapir] object OneOfMacro {
 
     val schemaForE =
       q"""{
-            import _root_.sttp.tapir.internal._
-            import _root_.sttp.tapir.Schema
-            import _root_.sttp.tapir.Schema._
-            import _root_.sttp.tapir.SchemaType._
-            import _root_.scala.collection.immutable.{List, Map}
-            val mappingAsList = List(..$mapping)
-            val mappingAsMap: Map[$weakTypeV, Schema[_]] = mappingAsList.toMap
+            val mappingAsList = _root_.scala.collection.immutable.List(..$mapping)
+            val mappingAsMap: _root_.scala.collection.immutable.Map[$weakTypeV, _root_.sttp.tapir.Schema[_]] = mappingAsList.toMap
             
             val discriminatorName = _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name))
             // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
             val discriminatorMapping = mappingAsMap.toList.flatMap { 
-                case (k, Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
-                case _ => Nil
+                case (k, _root_.sttp.tapir.Schema(_, _root_.scala.Some(fname), _, _, _, _, _, _, _, _, _)) => _root_.scala.collection.immutable.List($asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(fname))
+                case _ => _root_.scala.Nil
               }
               .toMap
             
-            val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
+            val sname = _root_.sttp.tapir.Schema.SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
             // cast needed because of Scala 2.12
             val subtypes = mappingAsList.map(_._2)
-            Schema((SCoproduct[$weakTypeE](subtypes, None) { e => 
+            _root_.sttp.tapir.Schema((_root_.sttp.tapir.SchemaType.SCoproduct[$weakTypeE](subtypes, _root_.scala.None) { e =>
               val ee: $weakTypeV = $extractor(e)
-              mappingAsMap.get(ee).map(m => SchemaWithValue(m.asInstanceOf[Schema[Any]], e))
+              mappingAsMap.get(ee).map(m => _root_.sttp.tapir.SchemaType.SchemaWithValue(m.asInstanceOf[_root_.sttp.tapir.Schema[Any]], e))
             }).addDiscriminatorField(
               discriminatorName, $discriminatorSchema, discriminatorMapping
-            ), Some(sname))
+            ), _root_.scala.Some(sname))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)
@@ -88,32 +83,27 @@ private[tapir] object OneOfMacro {
       val subclasses = symbol.knownDirectSubclasses.toList.sortBy(_.name.encodedName.toString)
 
       val subclassesSchemas = subclasses.map(subclass =>
-        q"${subclass.name.encodedName.toString} -> Schema.wrapWithSingleFieldProduct(implicitly[Schema[${subclass.asType}]])($conf)"
+        q"${subclass.name.encodedName.toString} -> _root_.sttp.tapir.Schema.wrapWithSingleFieldProduct(_root_.scala.Predef.implicitly[_root_.sttp.tapir.Schema[${subclass.asType}]])($conf)"
       )
 
       val subclassesSchemaCases = subclasses.map { subclass =>
-        cq"""v: ${subclass.asType} => Some(SchemaWithValue(subclassNameToSchemaMap(${subclass.name.encodedName.toString}).asInstanceOf[Schema[Any]], v))"""
+        cq"""v: ${subclass.asType} => _root_.scala.Some(_root_.sttp.tapir.SchemaType.SchemaWithValue(subclassNameToSchemaMap(${subclass.name.encodedName.toString}).asInstanceOf[_root_.sttp.tapir.Schema[Any]], v))"""
       }
 
       val schemaForE = q"""{
-        import _root_.sttp.tapir.Schema
-        import _root_.sttp.tapir.Schema._
-        import _root_.sttp.tapir.SchemaType._
-        import _root_.scala.collection.immutable.{List, Map}
+        val subclassNameToSchema: _root_.scala.collection.immutable.List[(String, _root_.sttp.tapir.Schema[_])] = _root_.scala.collection.immutable.List($subclassesSchemas: _*)
+        val subclassNameToSchemaMap: _root_.scala.collection.immutable.Map[String, _root_.sttp.tapir.Schema[_]] = subclassNameToSchema.toMap
         
-        val subclassNameToSchema: List[(String, Schema[_])] = List($subclassesSchemas: _*)
-        val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
-        
-        val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
+        val sname = _root_.sttp.tapir.Schema.SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(c)(weakTypeE)})
         // cast needed because of Scala 2.12
         val subtypes = subclassNameToSchema.map(_._2)
-        Schema(
-          schemaType = SCoproduct[$weakTypeE](subtypes, None) { e => 
+        _root_.sttp.tapir.Schema(
+          schemaType = _root_.sttp.tapir.SchemaType.SCoproduct[$weakTypeE](subtypes, _root_.scala.None) { e =>
             e match {
               case ..$subclassesSchemaCases
             }
-          }, 
-          name = Some(sname)
+          },
+          name = _root_.scala.Some(sname)
         )
       }"""
 
