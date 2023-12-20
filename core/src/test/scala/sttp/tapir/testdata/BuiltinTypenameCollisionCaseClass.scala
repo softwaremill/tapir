@@ -10,28 +10,8 @@ object BuiltinTypenameCollisionCaseClass {
   case class List(c: String) extends BuiltinTypenameCollisionCaseClass
   case class Nil(b: String) extends BuiltinTypenameCollisionCaseClass
   case class Map(d: Int) extends BuiltinTypenameCollisionCaseClass
-
-  /** can't make this work - it either can't derive schema, or when schema is explicit in companion like below, it fails with next
-    * alphabetical co-product part. Magnolia issue?
-    * {{{
-    *  case class Array(a: Boolean) extends BuiltinTypenameCollisionCaseClass
-    *
-    *  object Array {
-    *    implicit lazy val schema: sttp.tapir.Schema[Array] = Schema(
-    *      sttp.tapir.SchemaType.SProduct(
-    *        scala.List(
-    *          sttp.tapir.SchemaType.SProductField(
-    *            sttp.tapir.FieldName("a"),
-    *            Schema.schemaForBoolean,
-    *            (_: Any) => scala.None
-    *          )
-    *        )
-    *      )
-    *    )
-    *  }
-    * }}}
-    */
-
+  // TODO: magnolia issue - https://github.com/softwaremill/magnolia/pull/504
+  // case class Array(a: Boolean)
   case class Either(e: String) extends BuiltinTypenameCollisionCaseClass
   case class Left(x: Double) extends BuiltinTypenameCollisionCaseClass
   case class Right(y: Double) extends BuiltinTypenameCollisionCaseClass
