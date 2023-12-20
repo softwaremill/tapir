@@ -1,18 +1,20 @@
 package sttp.tapir.examples.errors
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
-import sttp.tapir._
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.Route
+import sttp.tapir.*
+import sttp.tapir.server.pekkohttp.{PekkoHttpServerInterpreter, PekkoHttpServerOptions}
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import sttp.client3._
+import scala.concurrent.duration.*
+import sttp.client3.*
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 
-object CustomErrorsOnDecodeFailureAkkaServer extends App {
+import scala.util.{Failure, Success}
+
+object CustomErrorsOnDecodeFailurePekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
@@ -23,10 +25,10 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
 
   // by default, decoding errors will be returned as a 400 response with body e.g. "Invalid value for: query parameter amount"
   // the defaults are defined in ServerDefaults
-  // this can be customised by setting the appropriate option in the server options, passed implicitly to toRoute
-  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customiseInterceptors
+  // this can be customised by setting the appropriate option in the server options, passed to ServerInterpreter
+  val customServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions.customiseInterceptors
     .decodeFailureHandler(
-      DecodeFailureHandler(ctx =>
+      DecodeFailureHandler(ctx => {
         ctx.failingInput match {
           // when defining how a decode failure should be handled, we need to describe the output to be used, and
           // a value for this output
@@ -35,14 +37,14 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
           // in other cases, using the default behavior
           case _ => DefaultDecodeFailureHandler[Future](ctx)
         }
-      )
+      })
     )
     .options
 
-  val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
+  val amountRoute: Route = PekkoHttpServerInterpreter(customServerOptions).toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -54,8 +56,10 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     // incorrect request, parameter does not parse, error
     val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=xyz").send(backend).body
     println("Got result: " + result2)
-    assert(result2 == Left("Incorrect format!!!"))
+    assert(result2 == Right("Incorrect format!!!"))
+
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

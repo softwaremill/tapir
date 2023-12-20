@@ -1,12 +1,12 @@
 package sttp.tapir.examples
 
-import cats.effect._
-import cats.syntax.all._
+import cats.effect.*
+import cats.syntax.all.*
 import org.http4s.HttpRoutes
-import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import sttp.client3._
-import sttp.tapir._
+import org.http4s.server.Router
+import sttp.client3.*
+import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext

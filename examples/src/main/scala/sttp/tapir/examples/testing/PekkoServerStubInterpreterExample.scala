@@ -2,10 +2,10 @@ package sttp.tapir.examples.testing
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
 import sttp.tapir.server.interceptor.exception.ExceptionHandler

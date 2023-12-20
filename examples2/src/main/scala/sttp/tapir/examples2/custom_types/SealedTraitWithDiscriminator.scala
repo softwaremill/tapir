@@ -1,4 +1,4 @@
-package sttp.tapir.examples.custom_types
+package sttp.tapir.examples2.custom_types
 
 // Note that you'll need the extras.auto._ import, not the usual one
 import io.circe.generic.extras.auto._

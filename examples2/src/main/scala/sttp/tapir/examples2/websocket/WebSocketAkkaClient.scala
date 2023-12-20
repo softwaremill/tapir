@@ -1,4 +1,4 @@
-package sttp.tapir.examples.websocket
+package sttp.tapir.examples2.websocket
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}

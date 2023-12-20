@@ -1,11 +1,11 @@
 package sttp.tapir.examples.openapi
 
-import cats.effect._
-import cats.syntax.all._
+import cats.effect.*
+import cats.syntax.all.*
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.redoc.RedocUIOptions
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.http4s.Http4sServerInterpreter

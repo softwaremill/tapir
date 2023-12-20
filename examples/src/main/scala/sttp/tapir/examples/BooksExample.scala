@@ -1,7 +1,7 @@
 package sttp.tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 object BooksExample extends App with StrictLogging {
   type Limit = Option[Int]
@@ -16,9 +16,9 @@ object BooksExample extends App with StrictLogging {
   /** Descriptions of endpoints used in the example.
     */
   object Endpoints {
-    import io.circe.generic.auto._
-    import sttp.tapir._
-    import sttp.tapir.json.circe._
+    import io.circe.generic.auto.*
+    import sttp.tapir.*
+    import sttp.tapir.json.circe.*
 
     // All endpoints report errors as strings, and have the common path prefix '/books'
     private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
@@ -83,7 +83,7 @@ object BooksExample extends App with StrictLogging {
 
   //
 
-  import Endpoints._
+  import Endpoints.*
   import sttp.tapir.server.ServerEndpoint
   import scala.concurrent.Future
 
@@ -112,7 +112,7 @@ object BooksExample extends App with StrictLogging {
         Right[String, Vector[Book]](Library.getBooks(query))
       }
 
-    // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
+    // interpreting the endpoint description and converting it to an pekko-http route, providing the logic which
     // should be run when the endpoint is invoked.
     List(
       addBook.serverLogic((bookAddLogic _).tupled),
@@ -125,29 +125,29 @@ object BooksExample extends App with StrictLogging {
     import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
     // interpreting the endpoint descriptions as yaml openapi documentation
-    // exposing the docs using SwaggerUI endpoints, interpreted as an akka-http route
+    // exposing the docs using SwaggerUI endpoints, interpreted as an pekko-http route
     SwaggerInterpreter().fromEndpoints(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
   }
 
   def startServer(serverEndpoints: List[ServerEndpoint[Any, Future]]): Unit = {
-    import akka.actor.ActorSystem
-    import akka.http.scaladsl.Http
+    import org.apache.pekko.actor.ActorSystem
+    import org.apache.pekko.http.scaladsl.Http
 
     import scala.concurrent.Await
-    import scala.concurrent.duration._
+    import scala.concurrent.duration.*
 
-    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+    import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
     implicit val actorSystem: ActorSystem = ActorSystem()
     import actorSystem.dispatcher
-    val routes = AkkaHttpServerInterpreter().toRoute(serverEndpoints)
+    val routes = PekkoHttpServerInterpreter().toRoute(serverEndpoints)
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   }
 
   def makeClientRequest(): Unit = {
-    import sttp.client3._
+    import sttp.client3.*
     import sttp.tapir.client.sttp.SttpClientInterpreter
 
     val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))

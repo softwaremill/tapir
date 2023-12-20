@@ -2,15 +2,15 @@ package sttp.tapir.examples.security
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Directives.*
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.HeaderNames
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object ServerSecurityLogicPekko extends App {
@@ -63,7 +63,7 @@ object ServerSecurityLogicPekko extends App {
   val helloWorld1Route: Route = PekkoHttpServerInterpreter().toRoute(secureHelloWorldWithLogic)
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -83,7 +83,9 @@ object ServerSecurityLogicPekko extends App {
     assert(testWith("hello", "Cześć", "berries") == "Cześć, Papa Smurf!")
     assert(testWith("hello", "Hello", "apple") == "1001")
     assert(testWith("hello", "Hello", "smurf") == "Not saying hello to Gargamel!")
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

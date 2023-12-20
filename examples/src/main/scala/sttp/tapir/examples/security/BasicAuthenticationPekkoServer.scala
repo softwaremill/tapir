@@ -3,14 +3,14 @@ package sttp.tapir.examples.security
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
-import sttp.tapir.model._
-import sttp.tapir.server.pekkohttp._
+import sttp.tapir.*
+import sttp.tapir.model.*
+import sttp.tapir.server.pekkohttp.*
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object BasicAuthenticationPekkoServer extends App {
@@ -28,7 +28,7 @@ object BasicAuthenticationPekkoServer extends App {
     )
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val unauthorized = basicRequest.get(uri"http://localhost:8080/secret").send(backend)
@@ -40,7 +40,9 @@ object BasicAuthenticationPekkoServer extends App {
     println("Got result: " + result)
     assert(result.code == StatusCode.Ok)
     assert(result.body == Right("Hello, user!"))
+    
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

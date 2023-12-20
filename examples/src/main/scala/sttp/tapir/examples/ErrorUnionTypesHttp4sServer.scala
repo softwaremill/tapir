@@ -1,4 +1,4 @@
-package sttp.tapir.examples3
+package sttp.tapir.examples
 
 import cats.effect.*
 import cats.syntax.all.*

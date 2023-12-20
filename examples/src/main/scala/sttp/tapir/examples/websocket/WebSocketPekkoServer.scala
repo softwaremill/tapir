@@ -1,24 +1,24 @@
 package sttp.tapir.examples.websocket
 
+import io.circe.generic.auto.*
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.stream.scaladsl.Flow
-import io.circe.generic.auto._
-import sttp.tapir.generic.auto._
+import sttp.apispec.asyncapi.Server
+import sttp.apispec.asyncapi.circe.yaml.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.pekkohttp.PekkoHttpBackend
-import sttp.apispec.asyncapi.Server
-import sttp.apispec.asyncapi.circe.yaml._
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.ws.WebSocket
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 object WebSocketPekkoServer extends App {
@@ -47,12 +47,12 @@ object WebSocketPekkoServer extends App {
   val bindAndCheck = Http()
     .newServerAt("localhost", 8080)
     .bindFlow(wsRoute)
-    .flatMap { _ =>
+    .flatMap { binding =>
       // We could have interpreted wsEndpoint as a client, but here we are using sttp client directly
       val backend: SttpBackend[Future, WebSockets] = PekkoHttpBackend.usingActorSystem(actorSystem)
       // Client which interacts with the web socket
       basicRequest
-        .response(asWebSocket { ws: WebSocket[Future] =>
+        .response(asWebSocket { (ws: WebSocket[Future]) =>
           for {
             _ <- ws.sendText("world")
             _ <- ws.sendText("there")
@@ -67,7 +67,8 @@ object WebSocketPekkoServer extends App {
         })
         .get(uri"ws://localhost:8080/ping")
         .send(backend)
+        .map(_ => binding)
     }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

@@ -22,9 +22,9 @@ object BooksExampleSemiauto extends App with StrictLogging {
   /** Descriptions of endpoints used in the example.
     */
   object Endpoints {
-    import io.circe.generic.auto._
-    import sttp.tapir._
-    import sttp.tapir.json.circe._
+    import io.circe.generic.auto.*
+    import sttp.tapir.*
+    import sttp.tapir.json.circe.*
 
     // All endpoints report errors as strings, and have the common path prefix '/books'
     private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
@@ -89,7 +89,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
 
   //
 
-  import Endpoints._
+  import Endpoints.*
   import sttp.tapir.server.ServerEndpoint
 
   import scala.concurrent.Future
@@ -137,23 +137,23 @@ object BooksExampleSemiauto extends App with StrictLogging {
   }
 
   def startServer(serverEndpoints: List[ServerEndpoint[Any, Future]]): Unit = {
-    import akka.actor.ActorSystem
-    import akka.http.scaladsl.Http
-    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+    import org.apache.pekko.actor.ActorSystem
+    import org.apache.pekko.http.scaladsl.Http
+    import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
     import scala.concurrent.Await
-    import scala.concurrent.duration._
+    import scala.concurrent.duration.*
 
     implicit val actorSystem: ActorSystem = ActorSystem()
     import actorSystem.dispatcher
-    val routes = AkkaHttpServerInterpreter().toRoute(serverEndpoints)
+    val routes = PekkoHttpServerInterpreter().toRoute(serverEndpoints)
     Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   }
 
   def makeClientRequest(): Unit = {
-    import sttp.client3._
+    import sttp.client3.*
     import sttp.tapir.client.sttp.SttpClientInterpreter
 
     val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))

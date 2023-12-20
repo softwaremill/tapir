@@ -1,10 +1,10 @@
 package sttp.tapir.examples.custom_types
 
-import sttp.tapir._
+import sttp.tapir.*
+import sttp.tapir.model.{CommaSeparated, Delimited}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.model.{Delimited, CommaSeparated}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration

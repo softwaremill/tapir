@@ -1,14 +1,14 @@
 package sttp.tapir.examples.streaming
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.HeaderNames
 import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.server.netty.zio.NettyZioServer
-import sttp.tapir.ztapir._
-import zio.interop.catz._
-import zio._
-import zio.stream._
+import sttp.tapir.ztapir.*
+import zio.interop.catz.*
+import zio.*
+import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 

@@ -1,17 +1,17 @@
 package sttp.tapir.examples
 
-import cats.syntax.all._
-import io.circe.generic.auto._
-import org.http4s._
+import cats.syntax.all.*
+import io.circe.generic.auto.*
+import org.http4s.*
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.ztapir._
-import zio.interop.catz._
+import sttp.tapir.ztapir.*
+import zio.interop.catz.*
 import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
 
 object ZioEnvExampleHttp4sServer extends ZIOAppDefault {

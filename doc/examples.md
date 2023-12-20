@@ -1,6 +1,6 @@
 # Examples
 
-The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) and [examples3](https://github.com/softwaremill/tapir/tree/master/examples3/src/main/scala/sttp/tapir/examples3) sub-projects (the latter containing Scala 3-only code) contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
+The [examples](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) and [examples2](https://github.com/softwaremill/tapir/tree/master/examples2/src/main/scala/sttp/tapir/examples2) sub-projects (the latter containing Scala 2-only code) contains a number of runnable tapir usage examples, using various interpreters and showcasing different features.
 
 ## Generate a tapir project
 

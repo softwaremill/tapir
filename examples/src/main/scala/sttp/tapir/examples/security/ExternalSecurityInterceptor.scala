@@ -1,10 +1,10 @@
 package sttp.tapir.examples.security
 
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions}
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.interceptor.{
   DecodeFailureContext,
   DecodeSuccessContext,
