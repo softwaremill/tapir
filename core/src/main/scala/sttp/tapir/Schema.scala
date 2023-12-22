@@ -333,7 +333,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   }
 
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
-    def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
+    def show: String = fullName + (if (typeParameterShortNames.isEmpty) "" else typeParameterShortNames.mkString("[", ",", "]"))
   }
   object SName {
     val Unit: SName = SName(fullName = "Unit")

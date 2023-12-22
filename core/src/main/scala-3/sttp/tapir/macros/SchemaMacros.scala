@@ -1,9 +1,10 @@
 package sttp.tapir.macros
 
-import sttp.tapir.{Validator, Schema, SchemaAnnotations, SchemaType}
+import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
-import magnolia1._
+import magnolia1.*
+import sttp.tapir.Schema.SName
 import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
 
 import scala.quoted.*
@@ -130,6 +131,11 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     * See also [[Schema.wrapWithSingleFieldProduct]], which creates the wrapper product given a schema.
     */
   inline def oneOfWrapped[E](implicit conf: Configuration): Schema[E] = ${ SchemaCompanionMacros.generateOneOfWrapped[E]('conf) }
+
+  /** Derives the schema for a union type `E`. Schemas for all components of the union type must be available in the implicit scope at the
+    * point of invocation.
+    */
+  inline def derivedUnion[E]: Schema[E] = ${ SchemaCompanionMacros.derivedUnion[E] }
 
   /** Create a schema for an [[Enumeration]], where the validator is created using the enumeration's values. The low-level representation of
     * the enum is a `String`, and the enum values in the documentation will be encoded using `.toString`.
@@ -335,6 +341,96 @@ private[tapir] object SchemaCompanionMacros {
       }
     } else {
       report.errorAndAbort(s"Can only derive Schema for values owned by scala.Enumeration")
+    }
+  }
+
+  def derivedUnion[T: Type](using q: Quotes): Expr[Schema[T]] = {
+    import q.reflect.*
+
+    val tpe = TypeRepr.of[T]
+    def typeParams = SNameMacros.extractTypeArguments(tpe)
+
+    // first, finding all of the components of the union type
+    def findOrTypes(t: TypeRepr, failIfNotOrType: Boolean = true): List[TypeRepr] =
+      t.dealias match {
+        // only failing if the top-level type is not an OrType
+        case OrType(l, r) => findOrTypes(l, failIfNotOrType = false) ++ findOrTypes(r, failIfNotOrType = false)
+        case _ if failIfNotOrType =>
+          report.errorAndAbort(s"Can only derive Schemas for union types, got: ${tpe.show}")
+        case _ => List(t)
+      }
+
+    val orTypes = findOrTypes(tpe)
+
+    // then, looking up schemas for each of the components
+    val schemas: List[Expr[Schema[_]]] = orTypes.map { orType =>
+      orType.asType match {
+        case '[f] =>
+          Expr.summon[Schema[f]] match {
+            case Some(subSchema) => subSchema
+            case None =>
+              val typeName = TypeRepr.of[f].show
+              report.errorAndAbort(s"Cannot summon schema for `$typeName`. Make sure schema derivation is properly configured.")
+          }
+      }
+    }
+
+    // then, constructing the name of the schema; if the type is not named, we generate a name by hand by concatenating
+    // names of the components
+    val orTypesNames = Expr.ofList(orTypes.map { orType =>
+      orType.asType match {
+        case '[f] =>
+          val typeParams = SNameMacros.extractTypeArguments(orType)
+          '{ _root_.sttp.tapir.Schema.SName(SNameMacros.typeFullName[f], ${ Expr(typeParams) }) }
+      }
+    })
+
+    val baseName = SNameMacros.typeFullNameFromTpe(tpe)
+    val snameExpr = if baseName.isEmpty then '{ SName(${ orTypesNames }.map(_.show).mkString("_or_")) }
+    else '{ SName(${ Expr(baseName) }, ${ Expr(typeParams) }) }
+
+    // then, generating the method which maps a specific value to a schema, trying to match to one of the components
+    val typesAndSchemas = orTypes.zip(schemas) // both lists have the same length
+    def subtypeSchema(e: Expr[T]) = {
+      val eIdent = e.asTerm match {
+        case Inlined(_, _, ei: Ident) => ei
+        case ei: Ident                => ei
+      }
+
+      // if any of the or-type components is generic, we won't be able to perform a runtime check, to get the correct
+      // schema; in such case, instead of generating a `case ...`, we add a (single!) `case _ => None` to the match
+      var addWildcardToNone = false
+      val baseCases = typesAndSchemas.flatMap { (orType, orTypeSchema) =>
+        def caseThen = Block(Nil, '{ Some(SchemaWithValue($orTypeSchema.asInstanceOf[Schema[Any]], $e)) }.asTerm)
+
+        orType.classSymbol match
+          case None                                  => Some(CaseDef(Ident(orType.termSymbol.termRef), None, caseThen))
+          case Some(sym) if orType.typeArgs.nonEmpty => addWildcardToNone = true; None
+          case Some(sym)                             => Some(CaseDef(Typed(Wildcard(), TypeIdent(sym)), None, caseThen))
+      }
+      val cases =
+        if addWildcardToNone
+        then baseCases :+ CaseDef(Wildcard(), None, Block(Nil, '{ None }.asTerm))
+        else baseCases
+      val t = Match(eIdent, cases)
+
+      t.asExprOf[Option[SchemaWithValue[_]]]
+    }
+
+    // finally, generating code which creates the SCoproduct
+    '{
+      import _root_.sttp.tapir.Schema
+      import _root_.sttp.tapir.Schema._
+      import _root_.sttp.tapir.SchemaType._
+      import _root_.scala.collection.immutable.{List, Map}
+
+      val childSchemas = List(${ Varargs(schemas) }: _*)
+      val sname = $snameExpr
+
+      Schema(
+        schemaType = SCoproduct[T](childSchemas, None) { e => ${ subtypeSchema('{ e }) } },
+        name = Some(sname)
+      )
     }
   }
 }
