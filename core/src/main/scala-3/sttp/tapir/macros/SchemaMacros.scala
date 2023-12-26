@@ -397,19 +397,40 @@ private[tapir] object SchemaCompanionMacros {
         case ei: Ident                => ei
       }
 
-      // if any of the or-type components is generic, we won't be able to perform a runtime check, to get the correct
-      // schema; in such case, instead of generating a `case ...`, we add a (single!) `case _ => None` to the match
-      var addWildcardToNone = false
+      // if an or-type component that is generic appears more than once, we won't be able to perform a runtime check,
+      // to get the correct schema; in such case, instead of generating a `case ...`, we add a (single!)
+      // `case _ => None` to the match
+      val genericTypesThatAppearMoreThanOnce = {
+        var seen = Set[String]()
+        var result = Set[String]()
+
+        orTypes.foreach { orType =>
+          orType.classSymbol match {
+            case Some(sym) if orType.typeArgs.nonEmpty => // is generic
+              if seen.contains(sym.fullName) then result = result + sym.fullName
+              else seen = seen + sym.fullName
+            case _ => // skip
+          }
+        }
+
+        result
+      }
+
       val baseCases = typesAndSchemas.flatMap { (orType, orTypeSchema) =>
         def caseThen = Block(Nil, '{ Some(SchemaWithValue($orTypeSchema.asInstanceOf[Schema[Any]], $e)) }.asTerm)
 
         orType.classSymbol match
-          case None                                  => Some(CaseDef(Ident(orType.termSymbol.termRef), None, caseThen))
-          case Some(sym) if orType.typeArgs.nonEmpty => addWildcardToNone = true; None
-          case Some(sym)                             => Some(CaseDef(Typed(Wildcard(), TypeIdent(sym)), None, caseThen))
+          case None => Some(CaseDef(Ident(orType.termSymbol.termRef), None, caseThen))
+          case Some(sym) if orType.typeArgs.nonEmpty =>
+            if genericTypesThatAppearMoreThanOnce.contains(sym.fullName) then None
+            else
+              val wildcardTypeParameters: List[Tree] =
+                List.fill(orType.typeArgs.length)(TypeBoundsTree(TypeTree.of[Nothing], TypeTree.of[Any]))
+              Some(CaseDef(Typed(Wildcard(), Applied(TypeIdent(sym), wildcardTypeParameters)), None, caseThen))
+          case Some(sym) => Some(CaseDef(Typed(Wildcard(), TypeIdent(sym)), None, caseThen))
       }
       val cases =
-        if addWildcardToNone
+        if genericTypesThatAppearMoreThanOnce.nonEmpty
         then baseCases :+ CaseDef(Wildcard(), None, Block(Nil, '{ None }.asTerm))
         else baseCases
       val t = Match(eIdent, cases)

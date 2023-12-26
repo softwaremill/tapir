@@ -45,7 +45,7 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     coproduct.subtypeSchema(10).map(_.schema.schemaType) shouldBe Some(SchemaType.SInteger())
   }
 
-  it should "derive schema for a union type with generics" in {
+  it should "derive schema for a union type with generics (same type constructor, different arguments)" in {
     // when
     val s: Schema[List[String] | List[Int]] = Schema.derivedUnion[List[String] | List[Int]]
 
@@ -57,6 +57,20 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     coproduct.subtypes should have size 2
     // no subtype schemas for generic types, as there's no runtime tag
     coproduct.subtypeSchema(List("")).map(_.schema.schemaType) shouldBe None
+  }
+
+  it should "derive schema for a union type with generics (different type constructors)" in {
+    // when
+    val s: Schema[List[String] | Vector[Int]] = Schema.derivedUnion[List[String] | Vector[Int]]
+
+    // then
+    s.name.map(_.show) shouldBe Some("scala.collection.immutable.List[String]_or_scala.collection.immutable.Vector[Int]")
+
+    s.schemaType should matchPattern { case SchemaType.SCoproduct(_, _) => }
+    val coproduct = s.schemaType.asInstanceOf[SchemaType.SCoproduct[List[String] | Vector[Int]]]
+    coproduct.subtypes should have size 2
+    coproduct.subtypeSchema(List("")).map(_.schema.schemaType) should matchPattern { case Some(_) => }
+    coproduct.subtypeSchema(Vector(10)).map(_.schema.schemaType) should matchPattern { case Some(_) => }
   }
 
   it should "derive schema for union types with 3 components" in {
