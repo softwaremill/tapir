@@ -81,7 +81,9 @@ integration layer.
 
 This method may be used both with automatic and semi-automatic derivation. 
 
-## Derivation for recursive types in Scala3
+## Scala3-specific derivation
+
+### Derivation for recursive types
 
 In Scala3, any schemas for recursive types need to be provided as typed `implicit def` (not a `given`)!
 For example:
@@ -95,6 +97,25 @@ object RecursiveTest {
 
 The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
 the schema is looked up implicitly, e.g. for `jsonBody`.
+
+### Derivation for union types
+
+Schemas for union types must be declared by hand, using the `Schema.derivedUnion[T]` method. Schemas for all components
+of the union type must be available in the implicit scope at the point of invocation. For example:
+
+```scala
+val s: Schema[String | Int] = Schema.derivedUnion
+```
+
+If the union type is a named alias, the type needs to be provided explicitly, e.g.:
+
+```scala
+type StringOrInt = String | Int
+val s: Schema[StringOrInt] = Schema.derivedUnion[StringOrInt]
+```
+
+If any of the components of the union type is a generic type, any of its validations will be skipped when validating
+the union type, as it's not possible to generate a runtime check for the generic type.
 
 ## Configuring derivation
 
