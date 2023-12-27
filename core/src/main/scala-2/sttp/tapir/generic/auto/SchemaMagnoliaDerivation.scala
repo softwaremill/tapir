@@ -51,7 +51,7 @@ trait SchemaMagnoliaDerivation {
   }
 
   private def subtypeNameToSchemaName(subtype: Subtype[Typeclass, _]): Schema.SName =
-    typeNameToSchemaName(subtype.typeName, mergeAnnotations(subtype.annotations, subtype.inheritedAnnotations))
+    typeNameToSchemaName(subtype.typeName, subtype.annotations)
 
   private def getEncodedName(annotations: Seq[Any]): Option[String] =
     annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
