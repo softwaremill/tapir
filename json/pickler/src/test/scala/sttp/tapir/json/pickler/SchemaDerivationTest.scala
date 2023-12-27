@@ -143,6 +143,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val child2Schema = implicitlySchema[Hericium.Botryoides]
 
     parentSchema.name.map(_.fullName) shouldBe Some("CustomHericium")
+    parentSchema.schemaType.asInstanceOf[SCoproduct[Hericium]].subtypes.flatMap(_.name.map(_.fullName)) should contain allOf (
+      "sttp.tapir.SchemaMacroTestData.Hericium.Abietis", "sttp.tapir.SchemaMacroTestData.Hericium.Botryoides", "CustomErinaceus"
+    )
     child1Schema.name.map(_.fullName) shouldBe Some("CustomErinaceus")
     child2Schema.name.map(_.fullName) shouldBe Some("sttp.tapir.SchemaMacroTestData.Hericium.Botryoides")
   }
