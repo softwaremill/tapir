@@ -18,14 +18,14 @@ trait SchemaMagnoliaDerivation {
 
       override def join[T](ctx: CaseClass[Schema, T]): Schema[T] = {
         val annotations = mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations)
-        withCache(ctx.typeInfo, annotations) {
+        withCache(ctx.typeInfo, ctx.annotations) {
           val result =
             if (ctx.isValueClass) {
               require(ctx.params.nonEmpty, s"Cannot derive schema for generic value class: ${ctx.typeInfo.owner}")
               val valueSchema = ctx.params.head.typeclass
               Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
             } else {
-              Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, annotations)))
+              Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
           enrichSchema(result, annotations)
         }
@@ -54,7 +54,7 @@ trait SchemaMagnoliaDerivation {
       }
 
       private def subtypeNameToSchemaName(subtype: SealedTrait.Subtype[Typeclass, _, ?]): Schema.SName =
-        typeNameToSchemaName(subtype.typeInfo, mergeAnnotations(subtype.annotations, subtype.inheritedAnnotations))
+        typeNameToSchemaName(subtype.typeInfo, subtype.annotations)
 
       private def getEncodedName(annotations: Seq[Any]): Option[String] =
         annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
@@ -77,11 +77,11 @@ trait SchemaMagnoliaDerivation {
 
       override def split[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
         val annotations = mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations)
-        withCache(ctx.typeInfo, annotations) {
+        withCache(ctx.typeInfo, ctx.annotations) {
           val subtypesByName =
             ctx.subtypes.toList
               .map(s =>
-                typeNameToSchemaName(s.typeInfo, mergeAnnotations(s.annotations, s.inheritedAnnotations)) -> s.typeclass
+                typeNameToSchemaName(s.typeInfo, s.annotations) -> s.typeclass
                   .asInstanceOf[Typeclass[T]]
               )
               .toListMap
@@ -101,7 +101,7 @@ trait SchemaMagnoliaDerivation {
             case None => baseCoproduct
           }
 
-          Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, annotations)))
+          Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
         }
       }
 

@@ -62,4 +62,15 @@ object SchemaMacroTestData {
     case object B extends Letters
     case object C extends Letters
   }
+
+  @encodedName("CustomHericium")
+  sealed trait Hericium
+
+  object Hericium {
+
+    @encodedName("CustomErinaceus")
+    final case class Erinaceus(e: String) extends Hericium
+    final case class Abietis(a: Int) extends Hericium
+    final case class Botryoides(b: Boolean) extends Hericium
+  }
 }

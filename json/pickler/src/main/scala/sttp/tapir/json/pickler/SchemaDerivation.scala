@@ -151,7 +151,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       // skip inherited annotations if defined at the top-level
       topLevel ++ inherited.filterNot(i => topLevel.exists(t => t.tpe <:< i.tpe))
 
-    def encodedName: Option[Expr[String]] = all
+    def encodedName: Option[Expr[String]] = topLevel
       .map(_.asExpr)
       .collectFirst { case '{ $en: Schema.annotations.encodedName } => en }
       .map(en => '{ $en.name })

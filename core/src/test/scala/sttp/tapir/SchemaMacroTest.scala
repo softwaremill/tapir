@@ -214,6 +214,16 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     )
   }
 
+  it should "Not propagate encodedName to subtypes of a sealed trait" in {
+    val parentSchema = Schema.derived[Hericium]
+    val child1Schema = Schema.derived[Hericium.Erinaceus]
+    val child2Schema = Schema.derived[Hericium.Botryoides]
+
+    parentSchema.name.map(_.fullName) shouldBe Some("CustomHericium")
+    child1Schema.name.map(_.fullName) shouldBe Some("CustomErinaceus")
+    child2Schema.name.map(_.fullName) shouldBe Some("sttp.tapir.SchemaMacroTestData.Hericium.Botryoides")
+  }
+
   it should "add discriminator based on a trait method" in {
     val sUser = Schema.derived[User]
     val sOrganization = Schema.derived[Organization]

@@ -2,9 +2,9 @@ package sttp.tapir.json.pickler
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema.annotations._
+import sttp.tapir.Schema.annotations.*
 import sttp.tapir.Schema.{SName, schemaForBoolean}
-import sttp.tapir.SchemaMacroTestData.{Cat, Dog, Hamster, Pet}
+import sttp.tapir.SchemaMacroTestData.*
 import sttp.tapir.SchemaType._
 import sttp.tapir.TestUtil.field
 import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
@@ -135,6 +135,16 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         Some(SName("sttp.tapir.json.pickler.H", List("D")))
       )
     )(identity)
+  }
+
+  it should "Not propagate encodedName to subtypes of a sealed trait" in {
+    val parentSchema = implicitlySchema[Hericium]
+    val child1Schema = implicitlySchema[Hericium.Erinaceus]
+    val child2Schema = implicitlySchema[Hericium.Botryoides]
+
+    parentSchema.name.map(_.fullName) shouldBe Some("CustomHericium")
+    child1Schema.name.map(_.fullName) shouldBe Some("CustomErinaceus")
+    child2Schema.name.map(_.fullName) shouldBe Some("sttp.tapir.SchemaMacroTestData.Hericium.Botryoides")
   }
 
   ignore should "add meta-data to schema from annotations" in { // TODO https://github.com/softwaremill/tapir/issues/3167
