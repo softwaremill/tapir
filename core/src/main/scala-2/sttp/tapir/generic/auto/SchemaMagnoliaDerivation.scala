@@ -14,7 +14,6 @@ trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
 
   def join[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    val annotations = mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations)
     withCache(ctx.typeName, ctx.annotations) {
       val result =
         if (ctx.isValueClass) {
@@ -22,9 +21,10 @@ trait SchemaMagnoliaDerivation {
           val valueSchema = ctx.parameters.head.typeclass
           Schema[T](schemaType = valueSchema.schemaType.asInstanceOf[SchemaType[T]], format = valueSchema.format)
         } else {
+          // Not using inherited annotations when generating type name, we don't want @encodedName to be inherited for types
           Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
         }
-      enrichSchema(result, annotations)
+      enrichSchema(result, mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations))
     }
   }
 
