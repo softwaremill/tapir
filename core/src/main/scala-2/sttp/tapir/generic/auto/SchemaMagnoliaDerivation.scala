@@ -32,7 +32,6 @@ trait SchemaMagnoliaDerivation {
     SProduct(
       ctx.parameters.map { p =>
         val annotations = mergeAnnotations(p.annotations, p.inheritedAnnotations)
-        println(s"${p.label}, anns = ${annotations}")
         val pSchema = enrichSchema(p.typeclass, annotations)
         val encodedName = getEncodedName(annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
 
