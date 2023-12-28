@@ -64,13 +64,17 @@ object SchemaMacroTestData {
   }
 
   @encodedName("CustomHericium")
-  sealed trait Hericium
+  sealed trait Hericium {
+    @encodedName("customCommonField")
+    @description("A common field")
+    def commonField: Int
+  }
 
   object Hericium {
 
     @encodedName("CustomErinaceus")
-    final case class Erinaceus(e: String) extends Hericium
-    final case class Abietis(a: Int) extends Hericium
-    final case class Botryoides(b: Boolean) extends Hericium
+    final case class Erinaceus(commonField: Int, e: String) extends Hericium
+    final case class Abietis(commonField: Int, a: Int) extends Hericium
+    final case class Botryoides(commonField: Int, b: Boolean) extends Hericium
   }
 }

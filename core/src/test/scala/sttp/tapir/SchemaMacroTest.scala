@@ -1,6 +1,7 @@
 package sttp.tapir
 
 import org.scalatest.Assertions
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -11,7 +12,7 @@ import sttp.tapir.generic.Configuration
 import sttp.tapir.generic.D
 import sttp.tapir.generic.auto._
 
-class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
+class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Inside {
   import SchemaMacroTestData._
 
   behavior of "apply modification"
@@ -214,7 +215,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     )
   }
 
-  it should "Not propagate encodedName to subtypes of a sealed trait" in {
+  it should "Not propagate type encodedName to subtypes of a sealed trait, but keep inheritance for fields" in {
     val parentSchema = Schema.derived[Hericium]
     val child1Schema = Schema.derived[Hericium.Erinaceus]
     val child2Schema = Schema.derived[Hericium.Botryoides]
@@ -225,6 +226,11 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     )
     child1Schema.name.map(_.fullName) shouldBe Some("CustomErinaceus")
     child2Schema.name.map(_.fullName) shouldBe Some("sttp.tapir.SchemaMacroTestData.Hericium.Botryoides")
+    inside(child2Schema.schemaType.asInstanceOf[SProduct[Hericium.Botryoides]].fields.find(_.name.encodedName == "customCommonField")) {
+      case Some(field) =>
+        field.schema.name.map(_.fullName) shouldBe None
+        field.schema.description shouldBe Some("A common field")
+    }
   }
 
   it should "add discriminator based on a trait method" in {
