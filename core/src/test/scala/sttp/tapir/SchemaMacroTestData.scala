@@ -67,7 +67,7 @@ object SchemaMacroTestData {
   sealed trait Hericium {
     @encodedName("customCommonField")
     @description("A common field")
-    def commonField: Int
+    val commonField: Int
   }
 
   object Hericium {

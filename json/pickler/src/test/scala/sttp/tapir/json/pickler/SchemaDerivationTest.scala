@@ -2,6 +2,7 @@ package sttp.tapir.json.pickler
 
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
 import sttp.tapir.Schema.annotations.*
 import sttp.tapir.Schema.{SName, schemaForBoolean}
 import sttp.tapir.SchemaMacroTestData.*
@@ -11,7 +12,7 @@ import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 
-class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
+class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
   import SchemaGenericAutoTest._
 
   import generic.auto._
@@ -137,7 +138,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )(identity)
   }
 
-  it should "Not propagate encodedName to subtypes of a sealed trait" in {
+  it should "Not propagate type encodedName to subtypes of a sealed trait, but keep inheritance for fields" in {
     val parentSchema = implicitlySchema[Hericium]
     val child1Schema = implicitlySchema[Hericium.Erinaceus]
     val child2Schema = implicitlySchema[Hericium.Botryoides]
@@ -148,6 +149,11 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )
     child1Schema.name.map(_.fullName) shouldBe Some("CustomErinaceus")
     child2Schema.name.map(_.fullName) shouldBe Some("sttp.tapir.SchemaMacroTestData.Hericium.Botryoides")
+    inside(child2Schema.schemaType.asInstanceOf[SProduct[Hericium.Botryoides]].fields.find(_.name.encodedName == "customCommonField")) {
+      case Some(field) =>
+        field.schema.name.map(_.fullName) shouldBe None
+        field.schema.description shouldBe Some("A common field")
+    }
   }
 
   ignore should "add meta-data to schema from annotations" in { // TODO https://github.com/softwaremill/tapir/issues/3167
