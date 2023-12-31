@@ -29,7 +29,7 @@ object Versions {
   val scalaTest = "3.2.17"
   val scalaTestPlusScalaCheck = "3.2.17.0"
   val refined = "0.11.0"
-  val iron = "2.3.0"
+  val iron = "2.4.0"
   val enumeratum = "1.7.3"
   val zio = "2.0.20"
   val zioInteropCats = "23.0.0.8"
