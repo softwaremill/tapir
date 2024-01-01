@@ -9,11 +9,11 @@ object Redoc {
   val defaultRedocVersion = "2.0.0-rc.56"
 
   def redocHtml(
-    title: String,
-    specUrl: String,
-    redocVersion: String = defaultRedocVersion,
-    redocOptions: Option[String] = None,
-    redocThemeOptionsJson: Option[String] = None
+      title: String,
+      specUrl: String,
+      redocVersion: String = defaultRedocVersion,
+      redocOptions: Option[String] = None,
+      redocThemeOptionsJson: Option[String] = None
   ): String = {
     val options = redocOptions.filterNot(_.isEmpty).getOrElse("")
     val themeOptions = redocThemeOptionsJson.filterNot(_.isEmpty).fold("")(json => s"theme='$json'")

@@ -1,16 +1,16 @@
 package sttp.tapir.examples.observability
 
 import com.typesafe.scalalogging.StrictLogging
-import io.circe.generic.auto._
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import io.circe.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
@@ -35,12 +35,12 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .metricsInterceptor(prometheusMetrics.metricsInterceptor())
       .options
 
-    val endpoints =
-      List(
-        personEndpoint,
-        // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
-        prometheusMetrics.metricsEndpoint
-      )
+  val endpoints =
+    List(
+      personEndpoint,
+      // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `PrometheusRegistry` to plain text response
+      prometheusMetrics.metricsEndpoint
+    )
 
   val program = for {
     binding <- NettyFutureServer().port(8080).addEndpoints(endpoints, serverOptions).start()

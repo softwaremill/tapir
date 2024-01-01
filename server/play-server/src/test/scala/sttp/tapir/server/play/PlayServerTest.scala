@@ -1,14 +1,13 @@
 package sttp.tapir.server.play
 
-import akka.actor.ActorSystem
-import enumeratum._
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
 import play.api.http.ParserConfiguration
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.client3._
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.monad.FutureMonad
@@ -17,8 +16,6 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
-import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 class PlayServerTest extends TestSuite {
 
@@ -104,6 +101,9 @@ class PlayServerTest extends TestSuite {
         }
       )
 
+      def drainPekko(stream: PekkoStreams.BinaryStream): Future[Unit] =
+        stream.runWith(Sink.ignore).map(_ => ())
+
       new ServerBasicTests(
         createServerTest,
         interpreter,
@@ -112,10 +112,17 @@ class PlayServerTest extends TestSuite {
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false).tests() ++
-        new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
+        new AllServerTests(
+          createServerTest,
+          interpreter,
+          backend,
+          basic = false,
+          multipart = false,
+          options = false
+        ).tests() ++
+        new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
-        new ServerWebSocketTests(createServerTest, AkkaStreams) {
+        new ServerWebSocketTests(createServerTest, PekkoStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++

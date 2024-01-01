@@ -55,7 +55,7 @@ case class CustomiseInterceptors[F[_], O](
     serverLog: Option[ServerLog[F]] = None,
     notAcceptableInterceptor: Option[NotAcceptableInterceptor[F]] = Some(new NotAcceptableInterceptor[F]()),
     additionalInterceptors: List[Interceptor[F]] = Nil,
-    decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.default,
+    decodeFailureHandler: DecodeFailureHandler[F] = DefaultDecodeFailureHandler[F],
     appendedInterceptors: List[Interceptor[F]] = Nil
 ) {
   def prependInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(prependedInterceptors = prependedInterceptors :+ i)
@@ -82,7 +82,7 @@ case class CustomiseInterceptors[F[_], O](
 
   def addInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(additionalInterceptors = additionalInterceptors :+ i)
 
-  def decodeFailureHandler(d: DecodeFailureHandler): CustomiseInterceptors[F, O] = copy(decodeFailureHandler = d)
+  def decodeFailureHandler(d: DecodeFailureHandler[F]): CustomiseInterceptors[F, O] = copy(decodeFailureHandler = d)
 
   def appendInterceptor(i: Interceptor[F]): CustomiseInterceptors[F, O] = copy(appendedInterceptors = appendedInterceptors :+ i)
 
@@ -99,7 +99,7 @@ case class CustomiseInterceptors[F[_], O](
   ): CustomiseInterceptors[F, O] = {
     copy(
       exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
-      decodeFailureHandler = DefaultDecodeFailureHandler.default.response(errorMessageOutput),
+      decodeFailureHandler = DefaultDecodeFailureHandler[F].response(errorMessageOutput),
       rejectHandler = Some(
         DefaultRejectHandler(
           (s, m) => errorMessageOutput(m).prepend(statusCode, s),

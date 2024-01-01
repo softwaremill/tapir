@@ -6,9 +6,10 @@ import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.{FinatraRoute, FinatraTestServerInterpreter}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Any, FinatraCatsServerOptions[IO], FinatraRoute] {
@@ -20,5 +21,8 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
     es.map(interpreter.toRoute).last
   }
 
-  override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
+  override def serverWithStop(
+      routes: NonEmptyList[FinatraRoute],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = FinatraTestServerInterpreter.serverWithStop(routes, gracefulShutdownTimeout)
 }

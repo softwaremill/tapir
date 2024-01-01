@@ -2,7 +2,16 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaConstantString, OpenapiSchemaEnum, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
+  OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -92,6 +101,23 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" -> OpenapiSchemaObject(Map("texts" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)), Seq("texts"), false)
+          )
+        )
+      )
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+  }
+
+  it should "generate class with any type" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      null,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaObject(Map("anyType" -> OpenapiSchemaAny(false)), Seq("anyType"), false)
           )
         )
       )
@@ -318,7 +344,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc) =>  new EndpointGenerator().endpointDefs(doc)
+      case Right(doc)  => new EndpointGenerator().endpointDefs(doc)
     }
 
     val compileUnit =
@@ -331,8 +357,6 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |  """.stripMargin
     println(compileUnit)
     compileUnit shouldCompile ()
-
-
 
   }
 }

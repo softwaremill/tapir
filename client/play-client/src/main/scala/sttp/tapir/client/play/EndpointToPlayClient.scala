@@ -4,7 +4,7 @@ import play.api.libs.ws.DefaultBodyReadables._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import sttp.capabilities.Streams
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
@@ -146,8 +146,10 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointInput.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointIO.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
     }
   }
 
@@ -204,8 +206,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
 
   private def setStreamingBody[S](streams: Streams[S])(v: streams.BinaryStream, req: StandaloneWSRequest): StandaloneWSRequest = {
     streams match {
-      case AkkaStreams => req.withBody(v.asInstanceOf[AkkaStreams.BinaryStream])
-      case _           => throw new IllegalArgumentException("Only AkkaStreams streaming is supported")
+      case PekkoStreams => req.withBody(v.asInstanceOf[PekkoStreams.BinaryStream])
+      case _            => throw new IllegalArgumentException("Only PekkoStreams streaming is supported")
     }
   }
 
@@ -220,8 +222,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     bodyIsStream(out) match {
       case Some(streams) =>
         streams match {
-          case AkkaStreams => response.body[AkkaStreams.BinaryStream]
-          case _           => throw new IllegalArgumentException("Only AkkaStreams streaming is supported")
+          case PekkoStreams => response.body[PekkoStreams.BinaryStream]
+          case _            => throw new IllegalArgumentException("Only PekkoStreams streaming is supported")
         }
       case None =>
         out.bodyType

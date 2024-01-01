@@ -7,6 +7,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.Task
+import zio.stream.ZSink
 
 class ArmeriaZioServerTest extends TestSuite {
 
@@ -16,9 +17,11 @@ class ArmeriaZioServerTest extends TestSuite {
 
     val interpreter = new ArmeriaZioTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+    def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+      zStream.run(ZSink.drain)
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
-      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerStreamingTests(createServerTest, ZioStreams).tests()
+    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false, maxContentLength = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
+      new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream)
   }
 }

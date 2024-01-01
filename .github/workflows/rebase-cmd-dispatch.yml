@@ -1,0 +1,19 @@
+# On any comment, it will look for '/rebase' in the comment body and in case of hit, it dispatches rebase cmd
+# with event type 'rebase-command' which triggers 'rebase-command` WF that performs the rebase operation.
+name: Slash Command Dispatch
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  slashCommandDispatch:
+    # to fast-skip for typical, non-rebase comments
+    if: contains(github.event.comment.body, '/rebase')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slash Command Dispatch
+        uses: peter-evans/slash-command-dispatch@v3
+        with:
+          token: ${{ secrets.REPO_GITHUB_TOKEN }}
+          commands: rebase
+          permission: write
+          issue-type: pull-request

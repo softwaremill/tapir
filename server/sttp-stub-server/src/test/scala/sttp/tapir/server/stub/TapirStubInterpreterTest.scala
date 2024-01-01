@@ -129,9 +129,13 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
     val rejectHandler =
       RejectHandler.pure[Identity](_ => Some(ValuedEndpointOutput(statusCode, StatusCode.NotAcceptable)))
+
+    val decodeFailureHandler =
+      DefaultDecodeFailureHandler[Identity].copy[Identity](failureMessage = _ => "failed to decode")
+
     // given
     val opts = options
-      .decodeFailureHandler(DefaultDecodeFailureHandler.default.copy(failureMessage = _ => "failed to decode"))
+      .decodeFailureHandler(decodeFailureHandler)
       .exceptionHandler(exceptionHandler)
       .rejectHandler(rejectHandler)
 

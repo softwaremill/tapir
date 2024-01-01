@@ -27,7 +27,7 @@ class RejectInterceptor[F[_]](handler: RejectHandler[F]) extends RequestIntercep
         next(request, endpoints).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
           case f: RequestResult.Failure =>
-            handler(f).flatMap {
+            handler(RejectContext(f, request)).flatMap {
               case Some(value) => responder(request, value).map(RequestResult.Response(_))
               case None        => (f: RequestResult[B]).unit
             }

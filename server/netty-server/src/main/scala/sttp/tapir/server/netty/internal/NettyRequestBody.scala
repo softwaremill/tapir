@@ -1,51 +1,82 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.buffer.{ByteBufInputStream, ByteBufUtil}
-import io.netty.handler.codec.http.FullHttpRequest
-import sttp.capabilities
+import io.netty.buffer.Unpooled
+import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
+import org.playframework.netty.http.StreamedHttpRequest
+import org.reactivestreams.Publisher
 import sttp.monad.MonadError
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
-import sttp.tapir.model.ServerRequest
 import sttp.monad.syntax._
-import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.RequestBody
+import sttp.tapir.RawBodyType
+import sttp.tapir.TapirFile
+import sttp.tapir.server.interpreter.RawValue
+import sttp.tapir.FileRange
+import sttp.tapir.InputStreamRange
+import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import java.nio.file.Files
+import sttp.capabilities.Streams
 
-class NettyRequestBody[F[_]](createFile: ServerRequest => F[TapirFile])(implicit
-    monadError: MonadError[F]
-) extends RequestBody[F, NoStreams] {
+/** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
+private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+  implicit def monad: MonadError[F]
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): F[RawValue[RAW]] = {
+  /** Backend-specific implementation for creating a file. */
+  def createFile: ServerRequest => F[TapirFile]
 
-    /** [[ByteBufUtil.getBytes(io.netty.buffer.ByteBuf)]] copies buffer without affecting reader index of the original. */
-    def requestContentAsByteArray = ByteBufUtil.getBytes(nettyRequest(serverRequest).content())
+  /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] into a raw array of bytes.
+    *
+    * @param publisher
+    *   reactive publisher emitting byte chunks.
+    * @param maxBytes
+    *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
+    * @return
+    *   An effect which finishes with a single array of all collected bytes.
+    */
+  def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
 
+  /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
+    *
+    * @param serverRequest
+    *   can have underlying `Publisher[HttpContent]` or an empty `FullHttpRequest`
+    * @param file
+    *   an empty file where bytes should be stored.
+    * @param maxBytes
+    *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
+    * @return
+    *   an effect which finishes when all data is written to the file.
+    */
+  def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
+
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): F[RawValue[RAW]] = {
     bodyType match {
-      case RawBodyType.StringBody(charset) => monadError.unit(RawValue(nettyRequest(serverRequest).content().toString(charset)))
-      case RawBodyType.ByteArrayBody       => monadError.unit(RawValue(requestContentAsByteArray))
-      case RawBodyType.ByteBufferBody      => monadError.unit(RawValue(ByteBuffer.wrap(requestContentAsByteArray)))
-      case RawBodyType.InputStreamBody     => monadError.unit(RawValue(new ByteBufInputStream(nettyRequest(serverRequest).content())))
+      case RawBodyType.StringBody(charset) => readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
+      case RawBodyType.ByteArrayBody =>
+        readAllBytes(serverRequest, maxBytes).map(RawValue(_))
+      case RawBodyType.ByteBufferBody =>
+        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)))
+      case RawBodyType.InputStreamBody =>
+        // Possibly can be optimized to avoid loading all data eagerly into memory
+        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)))
       case RawBodyType.InputStreamRangeBody =>
-        monadError.unit(RawValue(InputStreamRange(() => new ByteBufInputStream(nettyRequest(serverRequest).content()))))
+        // Possibly can be optimized to avoid loading all data eagerly into memory
+        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
       case RawBodyType.FileBody =>
-        createFile(serverRequest)
-          .map(file => {
-            Files.write(file.toPath, requestContentAsByteArray)
-            RawValue(FileRange(file), Seq(FileRange(file)))
-          })
-      case _: RawBodyType.MultipartBody => ???
+        for {
+          file <- createFile(serverRequest)
+          _ <- writeToFile(serverRequest, file, maxBytes)
+        } yield RawValue(FileRange(file), Seq(FileRange(file)))
+      case _: RawBodyType.MultipartBody => monad.error(new UnsupportedOperationException())
     }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException()
-
-  private def nettyRequest(serverRequest: ServerRequest): FullHttpRequest = serverRequest.underlying.asInstanceOf[FullHttpRequest]
-}
-
-private[internal] object NettyRequestBody {
-  val DefaultChunkSize = 8192
+  private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
+    serverRequest.underlying match {
+      case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
+        monad.unit(Array.empty[Byte])
+      case req: StreamedHttpRequest =>
+        publisherToBytes(req, maxBytes)
+      case other => monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
+    }
 }

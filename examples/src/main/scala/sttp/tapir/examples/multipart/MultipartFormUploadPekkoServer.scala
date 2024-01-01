@@ -5,14 +5,14 @@ import java.io.PrintWriter
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3._
-import sttp.tapir.generic.auto._
+import sttp.client3.*
+import sttp.tapir.generic.auto.*
 import sttp.model.Part
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object MultipartFormUploadPekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -41,7 +41,7 @@ object MultipartFormUploadPekkoServer extends App {
   })
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(setProfileRoute).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(setProfileRoute).map { binding =>
     val testFile = java.io.File.createTempFile("user-123", ".jpg")
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
@@ -56,7 +56,9 @@ object MultipartFormUploadPekkoServer extends App {
     println("Got result: " + result)
 
     assert(result == s"Received: Frodo / Some(hiking) / 33 / Some(${testFile.getName}) (19)")
+
+    binding
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }

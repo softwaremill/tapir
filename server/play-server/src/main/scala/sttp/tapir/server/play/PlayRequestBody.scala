@@ -1,11 +1,11 @@
 package sttp.tapir.server.play
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{FileIO, Source}
-import akka.util.ByteString
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{FileIO, Source}
+import org.apache.pekko.util.ByteString
 import play.api.mvc.{Request, Result}
 import play.core.parsers.Multipart
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
@@ -19,35 +19,46 @@ import scala.collection.compat._
 
 private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     mat: Materializer
-) extends RequestBody[Future, AkkaStreams] {
+) extends RequestBody[Future, PekkoStreams] {
 
-  override val streams: AkkaStreams = AkkaStreams
+  override val streams: PekkoStreams = PekkoStreams
+  private val parsers = serverOptions.playBodyParsers
+  private lazy val filePartHandler = Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     import mat.executionContext
     val request = playRequest(serverRequest)
     val charset = request.charset.map(Charset.forName)
-    toRaw(request, bodyType, charset, () => request.body, None)
+    toRaw(request, bodyType, charset, () => request.body, None, maxBytes)
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = playRequest(serverRequest).body
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val stream = playRequest(serverRequest).body
+    maxBytes.map(PekkoStreams.limitBytes(stream, _)).getOrElse(stream)
+  }
 
   private def toRaw[R](
-      request: Request[AkkaStreams.BinaryStream],
+      request: Request[PekkoStreams.BinaryStream],
       bodyType: RawBodyType[R],
       charset: Option[Charset],
       body: () => Source[ByteString, Any],
-      bodyAsFile: Option[File]
+      bodyAsFile: Option[File],
+      maxBytes: Option[Long]
   )(implicit
       mat: Materializer,
       ec: ExecutionContext
   ): Future[RawValue[R]] = {
     // playBodyParsers is used, so that the maxLength limits from Play configuration are applied
     def bodyAsByteString(): Future[ByteString] = {
-      serverOptions.playBodyParsers.byteString.apply(request).run(body()).flatMap {
-        case Left(result) => Future.failed(new PlayBodyParserException(result))
-        case Right(value) => Future.successful(value)
-      }
+      maxBytes
+        .map(parsers.byteString(_))
+        .getOrElse(parsers.byteString)
+        .apply(request)
+        .run(body())
+        .flatMap {
+          case Left(result) => Future.failed(new PlayBodyParserException(result))
+          case Right(value) => Future.successful(value)
+        }
     }
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
@@ -64,26 +75,30 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
             Future.successful(RawValue(tapirFile, Seq(tapirFile)))
           case None =>
             val file = FileRange(serverOptions.temporaryFileCreator.create().toFile)
-            serverOptions.playBodyParsers.file(file.file).apply(request).run(body()).flatMap {
-              case Left(result) => Future.failed(new PlayBodyParserException(result))
-              case Right(_)     => Future.successful(RawValue(file, Seq(file)))
-            }
+            maxBytes
+              .map(parsers.file(file.file, _))
+              .getOrElse(parsers.file(file.file))
+              .apply(request)
+              .run(body())
+              .flatMap {
+                case Left(result) => Future.failed(new PlayBodyParserException(result))
+                case Right(_)     => Future.successful(RawValue(file, Seq(file)))
+              }
         }
-      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
+      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body, maxBytes)
     }
   }
 
   private def multiPartRequestToRawBody(
-      request: Request[AkkaStreams.BinaryStream],
+      request: Request[PekkoStreams.BinaryStream],
       m: RawBodyType.MultipartBody,
-      body: () => Source[ByteString, Any]
+      body: () => Source[ByteString, Any],
+      maxBytes: Option[Long]
   )(implicit
       mat: Materializer,
       ec: ExecutionContext
   ): Future[RawValue[Seq[RawPart]]] = {
-    val bodyParser = serverOptions.playBodyParsers.multipartFormData(
-      Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
-    )
+    val bodyParser = maxBytes.map(parsers.multipartFormData(filePartHandler, _)).getOrElse(parsers.multipartFormData(filePartHandler))
     bodyParser.apply(request).run(body()).flatMap {
       case Left(r) =>
         Future.failed(new PlayBodyParserException(r))
@@ -97,7 +112,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
               partType,
               charset(partType),
               () => Source(data),
-              None
+              bodyAsFile = None,
+              maxBytes = None
             ).map(body => Some(Part(key, body.value)))
           }
         }.toSeq
@@ -110,7 +126,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
                 partType,
                 charset(partType),
                 () => FileIO.fromPath(f.ref.path),
-                Some(f.ref.toFile)
+                Some(f.ref.toFile),
+                maxBytes = None,
               ).map(body =>
                 Some(
                   Part(

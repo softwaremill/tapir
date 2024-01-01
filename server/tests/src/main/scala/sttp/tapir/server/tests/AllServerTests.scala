@@ -28,7 +28,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     oneOfBody: Boolean = true,
     cors: Boolean = true,
     options: Boolean = true,
-    maxContentLength: Option[Int] = None
+    maxContentLength: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -39,7 +39,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++
       (if (mapping) new ServerMappingTests(createServerTest).tests() else Nil) ++
       (if (metrics) new ServerMetricsTest(createServerTest).tests() else Nil) ++
-      (if (multipart) new ServerMultipartTests(createServerTest).tests() else Nil) ++
+      (if (multipart) new ServerMultipartTests(createServerTest, maxContentLengthSupport = maxContentLength).tests() else Nil) ++
       (if (oneOf) new ServerOneOfTests(createServerTest).tests() else Nil) ++
       (if (reject) new ServerRejectTests(createServerTest, serverInterpreter).tests() else Nil) ++
       (if (staticContent) new ServerFilesTests(serverInterpreter, backend).tests() else Nil) ++

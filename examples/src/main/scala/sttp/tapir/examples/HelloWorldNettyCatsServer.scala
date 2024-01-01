@@ -1,13 +1,12 @@
 package sttp.tapir.examples
 
-import cats.effect.IO
+import cats.effect.{IO, IOApp}
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
-import cats.effect.unsafe.implicits.global
-import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
+import sttp.tapir.server.netty.cats.NettyCatsServer
+import sttp.tapir.*
 
-object HelloWorldNettyCatsServer extends App {
+object HelloWorldNettyCatsServer extends IOApp.Simple {
   // One endpoint on GET /hello with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
@@ -20,37 +19,37 @@ object HelloWorldNettyCatsServer extends App {
   private val declaredHost = "localhost"
 
   // Creating handler for netty bootstrap
-  NettyCatsServer
+  override def run = NettyCatsServer
     .io()
     .use { server =>
+      for {
+        binding <- server
+          .port(declaredPort)
+          .host(declaredHost)
+          .addEndpoint(helloWorldServerEndpoint)
+          .start()
+        result <- IO
+          .blocking {
+            val port = binding.port
+            val host = binding.hostName
+            println(s"Server started at port = ${binding.port}")
 
-      val effect: IO[NettyCatsServerBinding[IO]] = server
-        .port(declaredPort)
-        .host(declaredHost)
-        .addEndpoint(helloWorldServerEndpoint)
-        .start()
+            val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+            val badUrl = uri"http://$host:$port/bad_url"
+            assert(basicRequest.response(asStringAlways).get(badUrl).send(backend).code == StatusCode(404))
 
-      effect.map { binding =>
+            val noQueryParameter = uri"http://$host:$port/hello"
+            assert(basicRequest.response(asStringAlways).get(noQueryParameter).send(backend).code == StatusCode(400))
 
-        val port = binding.port
-        val host = binding.hostName
-        println(s"Server started at port = ${binding.port}")
+            val allGood = uri"http://$host:$port/hello?name=Netty"
+            val body = basicRequest.response(asStringAlways).get(allGood).send(backend).body
 
-        val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
-        val badUrl = uri"http://$host:$port/bad_url"
-        assert(basicRequest.response(asStringAlways).get(badUrl).send(backend).code == StatusCode(404))
-
-        val noQueryParameter = uri"http://$host:$port/hello"
-        assert(basicRequest.response(asStringAlways).get(noQueryParameter).send(backend).code == StatusCode(400))
-
-        val allGood = uri"http://$host:$port/hello?name=Netty"
-        val body = basicRequest.response(asStringAlways).get(allGood).send(backend).body
-
-        println("Got result: " + body)
-        assert(body == "Hello, Netty!")
-        assert(port == declaredPort, "Ports don't match")
-        assert(host == declaredHost, "Hosts don't match")
-      }
+            println("Got result: " + body)
+            assert(body == "Hello, Netty!")
+            assert(port == declaredPort, "Ports don't match")
+            assert(host == declaredHost, "Hosts don't match")
+          }
+          .guarantee(binding.stop())
+      } yield result
     }
-    .unsafeRunSync()
 }

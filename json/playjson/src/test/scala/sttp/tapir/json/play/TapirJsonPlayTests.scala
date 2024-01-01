@@ -13,21 +13,25 @@ import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
+case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
+
+object Customer {
+  implicit val rw: Format[Customer] = Json.format
+}
+
+case class Item(serialNumber: Long, price: Int)
+
+object Item {
+  implicit val itemFmt: Format[Item] = Json.format
+}
+
+case class Order(items: Seq[Item], customer: Customer)
+
+object Order {
+  implicit val orderFmt: Format[Order] = Json.format
+}
+
 class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions with Matchers {
-  case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
-  object Customer {
-    implicit val rw: Format[Customer] = Json.format
-  }
-
-  case class Item(serialNumber: Long, price: Int)
-  object Item {
-    implicit val itemFmt: Format[Item] = Json.format
-  }
-
-  case class Order(items: Seq[Item], customer: Customer)
-  object Order {
-    implicit val orderFmt: Format[Order] = Json.format
-  }
 
   val customerCodec: JsonCodec[Customer] = TapirJsonPlayCodec.readsWritesCodec[Customer]
   val orderCodec: JsonCodec[Order] = TapirJsonPlayCodec.readsWritesCodec[Order]

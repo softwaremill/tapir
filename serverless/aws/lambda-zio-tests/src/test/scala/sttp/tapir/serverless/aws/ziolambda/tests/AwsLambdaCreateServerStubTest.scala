@@ -18,8 +18,10 @@ import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.ziolambda.{AwsZioServerInterpreter, AwsZioServerOptions}
 import sttp.tapir.serverless.aws.ziolambda.tests.AwsLambdaCreateServerStubTest.{awsToSttpResponse, sttpToAwsRequest}
-import sttp.tapir.tests.Test
+import sttp.tapir.tests._
 import sttp.tapir.ztapir.RIOMonadError
+
+import scala.concurrent.duration._
 
 class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServerOptions[Task], Route[Task]] {
 
@@ -48,6 +50,15 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServe
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(transformMonad(route)), uri"http://localhost:3002").unsafeToFuture())
   }
+
+  override def testServerLogicWithStop(
+      e: ServerEndpoint[Any, Task],
+      testNameSuffix: String = "",
+      interceptors: Interceptors = identity,
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  )(
+      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = throw new java.lang.UnsupportedOperationException
 
   override def testServer(name: String, rs: => NonEmptyList[Route[Task]])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]

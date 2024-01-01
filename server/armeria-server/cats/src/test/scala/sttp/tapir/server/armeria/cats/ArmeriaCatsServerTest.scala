@@ -13,9 +13,11 @@ class ArmeriaCatsServerTest extends TestSuite {
 
     val interpreter = new ArmeriaCatsTestServerInterpreter(dispatcher)
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+    def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
+      stream.compile.drain.void
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false).tests() ++
-      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false).tests() ++
-      new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests()
+    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false, maxContentLength = false).tests() ++
+      new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
+      new ServerStreamingTests(createServerTest).tests(Fs2Streams[IO])(drainFs2)
   }
 }

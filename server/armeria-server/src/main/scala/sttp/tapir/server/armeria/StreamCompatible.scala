@@ -7,5 +7,5 @@ import sttp.capabilities.Streams
 private[armeria] trait StreamCompatible[S <: Streams[S]] {
   val streams: S
   def asStreamMessage(s: streams.BinaryStream): Publisher[HttpData]
-  def fromArmeriaStream(s: Publisher[HttpData]): streams.BinaryStream
+  def fromArmeriaStream(s: Publisher[HttpData], maxBytes: Option[Long]): streams.BinaryStream
 }

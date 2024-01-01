@@ -7,8 +7,8 @@ import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
-  def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]]
-  def toStream(serverRequest: ServerRequest): streams.BinaryStream
+  def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]]
+  def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
 }
 
 case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil)

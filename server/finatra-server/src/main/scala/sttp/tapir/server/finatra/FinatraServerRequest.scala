@@ -1,7 +1,6 @@
 package sttp.tapir.server.finatra
 
 import com.twitter.finagle.http.Request
-import io.netty.handler.codec.http.QueryStringDecoder
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -17,7 +16,7 @@ case class FinatraServerRequest(request: Request, attributes: AttributeMap = Att
   override lazy val queryParameters: QueryParams =
     QueryParams.fromMultiMap(request.params.keys.toList.map(k => k -> request.params.getAll(k).toList).toMap)
   override lazy val pathSegments: List[String] = {
-    val segments = request.path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
+    val segments = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
     if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
   override def underlying: Any = request

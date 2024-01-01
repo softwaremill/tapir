@@ -6,9 +6,11 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
 import sttp.tapir.serverless.aws.ziolambda.{AwsZioServerInterpreter, AwsZioServerOptions}
 import sttp.tapir.serverless.aws.lambda.{AwsServerOptions, Route}
-import sttp.tapir.tests.{Port, Test, TestSuite}
+import sttp.tapir.tests._
 import sttp.tapir.ztapir.RIOMonadError
 import zio.Task
+
+import scala.concurrent.duration._
 
 class AwsLambdaStubHttpTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = Resource.eval(
@@ -16,7 +18,7 @@ class AwsLambdaStubHttpTest extends TestSuite {
       import AwsLambdaStubHttpTest.m
 
       val createTestServer = new AwsLambdaCreateServerStubTest
-      new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter).tests() ++
+      new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, maxContentLength = false).tests() ++
         new ServerMetricsTest(createTestServer).tests()
     }
   )
@@ -33,6 +35,9 @@ object AwsLambdaStubHttpTest {
       AwsZioServerInterpreter(serverOptions).toRoute(es)
     }
 
-    override def server(routes: NonEmptyList[Route[Task]]): Resource[IO, Port] = ???
+    override def serverWithStop(
+        routes: NonEmptyList[Route[Task]],
+        gracefulShutdownTimeout: Option[FiniteDuration]
+    ): Resource[IO, (Port, KillSwitch)] = ???
   }
 }

@@ -20,6 +20,7 @@ class SchemaAnnotationsTest extends AnyFlatSpec with Matchers {
       .default(MyString("default"), encoded = Some("encoded-default"))
       .format("utf8")
       .deprecated(true)
+      .hidden(true)
       .name(SName("encoded-name"))
       .validate(Validator.pass[MyString])
   }

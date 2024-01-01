@@ -45,9 +45,32 @@ class VerifyYamlMultiCustomiseSchemaTest extends AnyFunSuite with Matchers {
 
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("deprecated optional reference field, when there's also a non-deprecated one") {
+    val expectedYaml = load("multi_customise_schema/expected_deprecated_optional_field.yml")
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in(jsonBody[HasOptionalDeprecated]), Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("deprecated optional array field, when there's also a non-deprecated one") {
+    val expectedYaml = load("multi_customise_schema/expected_deprecated_array_field.yml")
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in(jsonBody[HasCollectionDeprecated]), Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlMultiCustomiseSchemaTest {
   case class Data1(x: String)
   case class Data2(@deprecated @description("aaa") a: Data1, @description("bbb") b: Data1)
+
+  case class HasOptionalDeprecated(field1: Data1, @Schema.annotations.deprecated field2: Option[Data1])
+  case class HasCollectionDeprecated(field1: List[Data1], @Schema.annotations.deprecated field2: List[Data1])
 }

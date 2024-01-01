@@ -1,12 +1,12 @@
 package sttp.tapir.server.netty.internal
 
-import com.typesafe.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
-import io.netty.handler.codec.http.HttpHeaderNames.{CONNECTION, CONTENT_LENGTH}
+import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
+import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -19,71 +19,138 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
+import scala.collection.mutable.{Queue => MutableQueue}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
-class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) => Unit, maxContentLength: Option[Int])(implicit
+/** @param unsafeRunAsync
+  *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
+  *   Future[Unit]` allowing cancellation of that Future. For example, this can be realized by
+  *   `cats.effect.std.Dispatcher.unsafeToFutureCancelable`.
+  */
+class NettyServerHandler[F[_]](
+    route: Route[F],
+    unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
+    channelGroup: ChannelGroup,
+    isShuttingDown: AtomicBoolean
+)(implicit
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
 
+  // Cancellation handling with eventLoopContext, lastResponseSent, and pendingResponses has been adapted
+  // from http4s: https://github.com/http4s/http4s-netty/pull/396/files
+  // By using the Netty event loop assigned to this channel we get two benefits:
+  //  1. We can avoid the necessary hopping around of threads since Netty pipelines will
+  //     only pass events up and down from within the event loop to which it is assigned.
+  //     That means calls to ctx.read(), and ct.write(..), would have to be trampolined otherwise.
+  //  2. We get serialization of execution: the EventLoop is a serial execution queue so
+  //     we can rest easy knowing that no two events will be executed in parallel.
+  private[this] var eventLoopContext: ExecutionContext = _
+
+  // This is used essentially as a queue, each incoming request attaches callbacks to this
+  // and replaces it to ensure that responses are written out in the same order that they came
+  // in.
+  private[this] var lastResponseSent: Future[Unit] = Future.unit
+
+  // We keep track of the cancellation tokens for all the requests in flight. This gives us
+  // observability into the number of requests in flight and the ability to cancel them all
+  // if the connection gets closed.
+  private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
+
   private val logger = Logger[NettyServerHandler[F]]
 
-  private val EntityTooLarge: FullHttpResponse = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
-    res.headers().set(CONTENT_LENGTH, 0)
-    res
+  override def handlerAdded(ctx: ChannelHandlerContext): Unit =
+    if (ctx.channel.isActive) {
+      initHandler(ctx)
+    }
+  override def channelActive(ctx: ChannelHandlerContext): Unit = {
+    channelGroup.add(ctx.channel)
+    initHandler(ctx)
   }
 
-  private val EntityTooLargeClose: FullHttpResponse = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER)
-    res.headers().set(CONTENT_LENGTH, 0)
-    res.headers().set(CONNECTION, HttpHeaderValues.CLOSE)
-    res
+  private[this] def initHandler(ctx: ChannelHandlerContext): Unit = {
+    if (eventLoopContext == null) {
+      // Initialize our ExecutionContext
+      eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
+
+      // When the channel closes we want to cancel any pending dispatches.
+      // Since the listener will be executed from the channels EventLoop everything is thread safe.
+      val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
+        logger.debug(s"Http channel to ${ctx.channel.remoteAddress} closed. Cancelling ${pendingResponses.length} responses.")
+        pendingResponses.foreach(_.apply())
+      }
+    }
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
-    def runRoute(req: HttpRequest) = {
+    def writeError500(req: HttpRequest, reason: Throwable): Unit = {
+      logger.error("Error while processing the request", reason)
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+      res.handleCloseAndKeepAliveHeaders(req)
 
-      route(NettyServerRequest(req))
-        .map {
-          case Some(response) => response
-          case None           => ServerResponse.notFound
-        }
-        .flatMap((serverResponse: ServerResponse[NettyResponse]) =>
-          // in ZIO, exceptions thrown in .map become defects - instead, we want them represented as errors so that
-          // we get the 500 response, instead of dropping the request
-          try handleResponse(ctx, req, serverResponse).unit
-          catch {
-            case e: Exception => me.error[Unit](e)
-          }
-        )
-        .handleError { case ex: Exception =>
-          logger.error("Error while processing the request", ex)
-          // send 500
-          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-          res.handleCloseAndKeepAliveHeaders(req)
-
-          ctx.writeAndFlush(res).closeIfNeeded(req)
-          me.unit(())
-        }
+      ctx.writeAndFlush(res).closeIfNeeded(req)
     }
 
-    if (HttpUtil.is100ContinueExpected(request)) {
+    def writeError503(req: HttpRequest): Unit = {
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+      res.handleCloseAndKeepAliveHeaders(req)
+      ctx.writeAndFlush(res).closeIfNeeded(req)
+    }
+
+    def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
+      val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
+        route(NettyServerRequest(req))
+          .map {
+            case Some(response) => response
+            case None           => ServerResponse.notFound
+          }
+      }
+      pendingResponses.enqueue(cancellationSwitch)
+      lastResponseSent = lastResponseSent.flatMap { _ =>
+        runningFuture.transform {
+          case Success(serverResponse) =>
+            pendingResponses.dequeue()
+            try {
+              handleResponse(ctx, req, serverResponse)
+              Success(())
+            } catch {
+              case NonFatal(ex) =>
+                writeError500(req, ex)
+                Failure(ex)
+            } finally {
+              val _ = releaseReq()
+            }
+          case Failure(NonFatal(ex)) =>
+            try {
+              writeError500(req, ex)
+              Failure(ex)
+            } finally {
+              val _ = releaseReq()
+            }
+          case Failure(fatalException) => Failure(fatalException)
+        }(eventLoopContext)
+      }(eventLoopContext)
+    }
+
+    if (isShuttingDown.get()) {
+      logger.info("Rejecting request, server is shutting down")
+      writeError503(request)
+    } else if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
     } else {
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
-          unsafeRunAsync { () =>
-            runRoute(req)
-              .ensure(me.eval(req.release()))
-          } // exceptions should be handled
+          runRoute(req, () => req.release())
         case req: StreamedHttpRequest =>
-          unsafeRunAsync { () =>
-            runRoute(req)
-          }
+          runRoute(req)
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
 
@@ -95,16 +162,11 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     serverResponse.handle(
       ctx = ctx,
       byteBufHandler = (channelPromise, byteBuf) => {
-
-        if (maxContentLength.exists(_ < byteBuf.readableBytes))
-          writeEntityTooLargeResponse(ctx, req)
-        else {
-          val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
-          res.setHeadersFrom(serverResponse)
-          res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
-          res.handleCloseAndKeepAliveHeaders(req)
-          ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
-        }
+        val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
+        res.setHeadersFrom(serverResponse)
+        res.handleContentLengthAndChunkedHeaders(Option(byteBuf.readableBytes()))
+        res.handleCloseAndKeepAliveHeaders(req)
+        ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
       },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         val resHeader: DefaultHttpResponse =
@@ -134,6 +196,14 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
         res.setHeadersFrom(serverResponse)
         res.handleCloseAndKeepAliveHeaders(req)
+
+        channelPromise.addListener((future: ChannelFuture) => {
+          // A reactive publisher silently closes the channel and fails the channel promise, so we need
+          // to listen on it and log failure details
+          if (!future.isSuccess()) {
+            logger.error("Error when streaming HTTP response", future.cause())
+          }
+        })
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
       },
@@ -151,32 +221,6 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
     )
-
-  private def writeEntityTooLargeResponse(ctx: ChannelHandlerContext, req: HttpRequest): Unit = {
-
-    if (!HttpUtil.is100ContinueExpected(req) && !HttpUtil.isKeepAlive(req)) {
-      val future: ChannelFuture = ctx.writeAndFlush(EntityTooLargeClose.retainedDuplicate())
-      future.addListener(new ChannelFutureListener() {
-        override def operationComplete(future: ChannelFuture) = {
-          if (!future.isSuccess()) {
-            logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
-          }
-          ctx.close()
-        }
-      })
-    } else {
-      ctx
-        .writeAndFlush(EntityTooLarge.retainedDuplicate())
-        .addListener(new ChannelFutureListener() {
-          override def operationComplete(future: ChannelFuture) = {
-            if (!future.isSuccess()) {
-              logger.warn("Failed to send a 413 Request Entity Too Large.", future.cause())
-              ctx.close()
-            }
-          }
-        })
-    }
-  }
 
   private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
     def handle(
@@ -221,7 +265,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
     }
 
     def handleCloseAndKeepAliveHeaders(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request))
+      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get())
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
@@ -230,7 +274,7 @@ class NettyServerHandler[F[_]](route: Route[F], unsafeRunAsync: (() => F[Unit]) 
 
   private implicit class RichChannelFuture(val cf: ChannelFuture) {
     def closeIfNeeded(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request)) {
+      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get()) {
         cf.addListener(ChannelFutureListener.CLOSE)
       }
     }

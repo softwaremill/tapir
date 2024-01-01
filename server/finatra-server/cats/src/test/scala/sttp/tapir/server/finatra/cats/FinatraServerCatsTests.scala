@@ -12,7 +12,15 @@ class FinatraServerCatsTests extends TestSuite {
     val interpreter = new FinatraCatsTestServerInterpreter(dispatcher)
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    new AllServerTests(createServerTest, interpreter, backend, staticContent = false, reject = false, metrics = false).tests() ++
+    new AllServerTests(
+      createServerTest,
+      interpreter,
+      backend,
+      staticContent = false,
+      reject = false,
+      metrics = false,
+      maxContentLength = false
+    ).tests() ++
       new ServerFilesTests(interpreter, backend, supportSettingContentLength = false).tests()
   }
 }

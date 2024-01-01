@@ -3,10 +3,10 @@ package sttp.tapir.examples.logging
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import sttp.client3.{UriContext, basicRequest}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{RequestInterceptor, RequestResult}
 import sttp.tapir.server.interceptor.RequestInterceptor.RequestResultEffectTransform
+import sttp.tapir.server.interceptor.{RequestInterceptor, RequestResult}
 import sttp.tapir.server.netty.zio.{NettyZioServer, NettyZioServerOptions}
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, durationInt}
 
 object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault {

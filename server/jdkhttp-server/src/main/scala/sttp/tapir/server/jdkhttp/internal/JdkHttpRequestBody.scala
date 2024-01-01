@@ -14,16 +14,17 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Id, NoStreams] {
+private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
+    extends RequestBody[Id, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): RawValue[RAW] = {
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
     val request = jdkHttpRequest(serverRequest)
-    toRaw(serverRequest, bodyType, request.getRequestBody)
+    toRaw(serverRequest, bodyType, request.getRequestBody, maxBytes)
   }
 
-  private def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], body: InputStream): RawValue[RAW] = {
-    def asInputStream: InputStream = body
+  private def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], body: InputStream, maxBytes: Option[Long]): RawValue[RAW] = {
+    def asInputStream: InputStream = maxBytes.map(limit => new FailingLimitedInputStream(body, limit)).getOrElse(body)
     def asByteArray: Array[Byte] = asInputStream.readAllBytes()
 
     bodyType match {
@@ -36,7 +37,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
         val file = createFile(serverRequest)
         Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
         RawValue(FileRange(file), Seq(FileRange(file)))
-      case m: RawBodyType.MultipartBody => RawValue.fromParts(multiPartRequestToRawBody(serverRequest, m))
+      case m: RawBodyType.MultipartBody => RawValue.fromParts(multiPartRequestToRawBody(serverRequest, asInputStream, m))
     }
   }
 
@@ -46,21 +47,25 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       .flatMap(
         _.split(";")
           .find(_.trim().startsWith(boundaryPrefix))
-          .map(line => s"--${line.trim().substring(boundaryPrefix.length)}")
+          .map(line => {
+            val boundary = line.trim().substring(boundaryPrefix.length)
+            if (boundary.length > 70)
+              throw new IllegalArgumentException("Multipart boundary must be no longer than 70 characters.")
+            s"--$boundary"
+          })
       )
       .getOrElse(throw new IllegalArgumentException("Unable to extract multipart boundary from multipart request"))
   }
 
-  private def multiPartRequestToRawBody(request: ServerRequest, m: RawBodyType.MultipartBody): Seq[RawPart] = {
+  private def multiPartRequestToRawBody(request: ServerRequest, requestBody: InputStream, m: RawBodyType.MultipartBody): Seq[RawPart] = {
     val httpExchange = jdkHttpRequest(request)
     val boundary = extractBoundary(httpExchange)
 
-    parseMultipartBody(httpExchange, boundary).flatMap(parsedPart =>
+    parseMultipartBody(requestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
       parsedPart.getName.flatMap(name =>
         m.partType(name)
           .map(partType => {
-            val bodyInputStream = new ByteArrayInputStream(parsedPart.body)
-            val bodyRawValue = toRaw(request, partType, bodyInputStream)
+            val bodyRawValue = toRaw(request, partType, parsedPart.getBody, maxBytes = None)
             Part(
               name,
               bodyRawValue.value,
@@ -72,9 +77,10 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     )
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new UnsupportedOperationException(
-    "Streaming is not supported"
-  )
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    throw new UnsupportedOperationException(
+      "Streaming is not supported"
+    )
 
   private def jdkHttpRequest(serverRequest: ServerRequest): HttpExchange =
     serverRequest.underlying.asInstanceOf[HttpExchange]

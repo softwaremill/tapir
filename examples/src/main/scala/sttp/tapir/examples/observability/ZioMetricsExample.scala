@@ -1,6 +1,6 @@
 package sttp.tapir.examples.observability
 
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
@@ -31,12 +31,12 @@ object ZioMetricsExample extends ZIOAppDefault {
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
-    val app: HttpApp[Any, Throwable] = ZioHttpInterpreter(serverOptions).toHttp(all)
+    val app: HttpApp[Any] = ZioHttpInterpreter(serverOptions).toHttp(all)
 
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
     (for {
-      serverPort <- Server.install(app.withDefaultErrorResponse)
+      serverPort <- Server.install(app)
       _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
       _ <- Console.readLine
     } yield serverPort)

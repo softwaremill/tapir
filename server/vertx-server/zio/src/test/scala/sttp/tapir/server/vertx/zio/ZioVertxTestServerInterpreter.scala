@@ -9,9 +9,10 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 import _root_.zio.{Runtime, Task}
 import sttp.tapir.server.vertx.VertxTestServerInterpreter
+import scala.concurrent.duration.FiniteDuration
 
 class ZioVertxTestServerInterpreter(vertx: Vertx)
     extends TestServerInterpreter[Task, ZioStreams with WebSockets, VertxZioServerOptions[Any], Router => Route] {
@@ -23,11 +24,19 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
     es.map(interpreter.route(_)(runtime)(router)).last
   }
 
-  override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Router => Route],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     routes.toList.foreach(_.apply(router))
-    Resource.eval(VertxTestServerInterpreter.vertxFutureToIo(server.listen(0)).map(_.actualPort()))
+
+    val listenIO = VertxTestServerInterpreter.vertxFutureToIo(server.listen(0))
+    // Vertx doesn't offer graceful shutdown with timeout OOTB
+    Resource.make(listenIO.map(s => (s.actualPort(), VertxTestServerInterpreter.vertxFutureToIo(s.close).void))) { case (_, release) =>
+      release
+    }
   }
 }
 

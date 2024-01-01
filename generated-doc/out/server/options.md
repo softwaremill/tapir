@@ -17,8 +17,9 @@ import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-val customDecodeFailureHandler: DecodeFailureHandler = ???
+val customDecodeFailureHandler: DecodeFailureHandler[Future] = ???
 
 val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customiseInterceptors
@@ -41,10 +42,11 @@ import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customiseInterceptors
-  .decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth)
+  .decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth[Future])
   .options
   
 AkkaHttpServerInterpreter(customServerOptions)

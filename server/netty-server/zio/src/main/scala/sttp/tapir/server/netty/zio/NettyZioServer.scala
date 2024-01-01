@@ -1,18 +1,26 @@
 package sttp.tapir.server.netty.zio
 
 import io.netty.channel._
+import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
+import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
-import zio.{RIO, Unsafe, ZIO}
+import zio.{RIO, Task, Unsafe, ZIO, durationInt}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+
+import scala.concurrent.ExecutionContext.Implicits
+import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
   def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
@@ -55,10 +63,23 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       NettyZioDomainSocketBinding(socket, stop)
     }
 
+  private def unsafeRunAsync(
+      runtime: zio.Runtime[R]
+  )(block: () => RIO[R, ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = {
+    val cancelable = Unsafe.unsafe(implicit u =>
+      runtime.unsafe.runToFuture(
+        block()
+      )
+    )
+    (cancelable, () => cancelable.cancel().map(_ => ())(Implicits.global))
+  }
+
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]
     routes <- ZIO.foreach(routes)(identity)
     eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+    channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    isShuttingDown = new AtomicBoolean(false)
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
       val route: Route[RIO[R, *]] = Route.combine(routes)
@@ -67,8 +88,9 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         config,
         new NettyServerHandler[RIO[R, *]](
           route,
-          (f: () => RIO[R, Unit]) => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f())),
-          config.maxContentLength
+          unsafeRunAsync(runtime),
+          channelGroup,
+          isShuttingDown
         ),
         eventLoopGroup,
         socketOverride
@@ -77,26 +99,50 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
     binding <- nettyChannelFutureToScala(channelFuture).map(ch =>
       (
         ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup)
+        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
       )
     )
   } yield binding
 
-  private def stop(ch: Channel, eventLoopGroup: EventLoopGroup): RIO[R, Unit] = {
-    ZIO.suspend {
-      nettyFutureToScala(ch.close()).flatMap { _ =>
-        if (config.shutdownEventLoopGroupOnClose) {
-          nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
-        } else ZIO.succeed(())
-      }
+  private def waitForClosedChannels(
+      channelGroup: ChannelGroup,
+      startNanos: Long,
+      gracefulShutdownTimeoutNanos: Option[Long]
+  ): Task[Unit] =
+    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
+      ZIO.sleep(100.millis) *>
+        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
+    } else {
+      ZIO.attempt(channelGroup.close()).unit
     }
+
+  private def stop(
+      ch: Channel,
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): RIO[R, Unit] = {
+    ZIO.attempt(isShuttingDown.set(true)) *>
+      waitForClosedChannels(
+        channelGroup,
+        startNanos = System.nanoTime(),
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+      ) *>
+      ZIO.suspend {
+        nettyFutureToScala(ch.close()).flatMap { _ =>
+          if (config.shutdownEventLoopGroupOnClose) {
+            nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+          } else ZIO.succeed(())
+        }
+      }
   }
 }
 
 object NettyZioServer {
-  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.defaultWithStreaming)
+  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.default)
   def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] =
-    NettyZioServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
+    NettyZioServer(Vector.empty, options, NettyConfig.default)
   def apply[R](config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], config)
   def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, options, config)
 }

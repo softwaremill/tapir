@@ -3,12 +3,12 @@ package sttp.tapir.examples.streaming
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HeaderNames
 import sttp.tapir.{CodecFormat, PublicEndpoint}
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.HttpApp
 import zio.http.Server
 import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault, ZLayer}
-import zio.stream._
+import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 import java.time.Duration
@@ -37,12 +37,12 @@ object StreamingZioHttpServer extends ZIOAppDefault {
     ZIO.succeed((size, stream))
   }
 
-  val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(streamingServerEndpoint)
+  val routes: HttpApp[Any] = ZioHttpInterpreter().toHttp(streamingServerEndpoint)
 
   // Test using: curl http://localhost:8080/receive
   override def run: URIO[Any, ExitCode] =
     Server
-      .serve(routes.withDefaultErrorResponse)
+      .serve(routes)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live

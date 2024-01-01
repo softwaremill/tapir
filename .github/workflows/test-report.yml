@@ -1,0 +1,22 @@
+name: 'Test Report'
+on:
+  workflow_run:
+    workflows: ['CI']
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/test-reporter@v1
+        with:
+          artifact: '/tests-results-(.*)/'
+          name: 'Test report for $1'
+          path: '**/test-reports/TEST*.xml'
+          reporter: java-junit

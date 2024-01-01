@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.decoders
 import io.vertx.core.Future
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
-import sttp.model.Part
+import sttp.model.{MediaType, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -26,7 +26,8 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R]): F[RawValue[R]] = {
+  // We can ignore maxBytes here, because vertx native body limit check is attached to endpoints by methods in sttp.tapir.server.vertx.handlers
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
@@ -85,7 +86,9 @@ class VertxRequestBody[F[_], S <: Streams[S]](
             .map { fu =>
               mp.partType(fu.name())
                 .flatMap(rawBodyType => extractFilePart(fu, rawBodyType))
-                .map(body => Part(fu.name(), body, fileName = Option(fu.fileName())))
+                .map(body =>
+                  Part(fu.name(), body, contentType = MediaType.parse(fu.contentType()).toOption, fileName = Option(fu.fileName()))
+                )
             }
             .toList
             .flatten
@@ -95,9 +98,9 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     })
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream =
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     readStreamCompatible
-      .fromReadStream(routingContext(serverRequest).request)
+      .fromReadStream(routingContext(serverRequest).request, maxBytes)
       .asInstanceOf[streams.BinaryStream]
 
   private def extractStringPart[B](part: String, bodyType: RawBodyType[B]): Option[Any] = {

@@ -11,13 +11,14 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.http4s.ztapir.ZHttp4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.{Runtime, Task, Unsafe}
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 object ZHttp4sTestServerInterpreter {
   type F[A] = Task[A]
@@ -33,7 +34,10 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }
 
-  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Routes],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
@@ -48,8 +52,10 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     val runtime = implicitly[zio.Runtime[Any]]
     Resource
       .eval(IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(serverResource.allocated)))))
-      .flatMap { case (port, release) =>
-        Resource.make(IO.pure(port))(_ => IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(release)))))
+      .flatMap { case (port, release) => // Blaze has no graceful shutdown support https://github.com/http4s/blaze/issues/676
+        Resource.make(IO.pure((port, IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(release))))))) {
+          case (_, release) => release
+        }
       }
   }
 }

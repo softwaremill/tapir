@@ -3,7 +3,7 @@
 You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.9.6"
 ```
 
 Schema generation can now be performed like in the following example:
@@ -71,7 +71,7 @@ You can also disable generation of default title fields by setting an option `ad
 
 ```json
 {
-  "$schema" : "https://json-schema.org/draft-04/schema#",
+  "$schema" : "http://json-schema.org/draft-04/schema#",
   "required" : [
     "innerChildField",
     "childDetails"

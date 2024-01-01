@@ -480,7 +480,13 @@ trait TapirComputedInputs { this: Tapir =>
         .flatMap(_.split(",").headOption)
         .orElse(request.header("Remote-Address"))
         .orElse(request.header("X-Real-Ip"))
-        .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
+        .orElse {
+          for {
+            r <- request.connectionInfo.remote
+            a <- Option(r.getAddress)
+            ha <- Option(a.getHostAddress)
+          } yield ha
+        }
     )
 
   def isWebSocket: EndpointInput[Boolean] =

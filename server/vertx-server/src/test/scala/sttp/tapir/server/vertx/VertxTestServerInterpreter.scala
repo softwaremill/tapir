@@ -9,9 +9,10 @@ import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.vertx.streams.VertxStreams
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 class VertxTestServerInterpreter(vertx: Vertx)
     extends TestServerInterpreter[Future, VertxStreams with WebSockets, VertxFutureServerOptions, Router => Route] {
@@ -24,12 +25,16 @@ class VertxTestServerInterpreter(vertx: Vertx)
       es.map(interpreter.route(_)(router)).last
   }
 
-  override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[Router => Route],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     val listenIO = vertxFutureToIo(server.listen(0))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void).map(_.actualPort())
+    // Vertx doesn't offer graceful shutdown with timeout OOTB
+    Resource.make(listenIO.map(s => (s.actualPort(), vertxFutureToIo(s.close()).void))) { case (_, release) => release }
   }
 }
 

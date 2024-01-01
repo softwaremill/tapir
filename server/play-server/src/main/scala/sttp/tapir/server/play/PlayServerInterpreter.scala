@@ -1,15 +1,15 @@
 package sttp.tapir.server.play
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Source}
-import akka.util.ByteString
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Flow, Source}
+import org.apache.pekko.util.ByteString
 import play.api.http.websocket.Message
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.streams.Accumulator
 import play.api.mvc._
 import play.api.routing.Router.Routes
 import sttp.capabilities.WebSockets
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.Method
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
@@ -27,16 +27,16 @@ trait PlayServerInterpreter {
 
   def playServerOptions: PlayServerOptions = PlayServerOptions.default
 
-  private val streamParser: BodyParser[AkkaStreams.BinaryStream] = BodyParser { _ =>
+  private val streamParser: BodyParser[PekkoStreams.BinaryStream] = BodyParser { _ =>
     Accumulator.source[ByteString].map(Right.apply)
   }
 
-  def toRoutes(e: ServerEndpoint[AkkaStreams with WebSockets, Future]): Routes = {
+  def toRoutes(e: ServerEndpoint[PekkoStreams with WebSockets, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes(
-      serverEndpoints: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]
+      serverEndpoints: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
@@ -74,7 +74,7 @@ trait PlayServerInterpreter {
 
       private def getResponse(
           header: RequestHeader,
-          request: Request[AkkaStreams.BinaryStream]
+          request: Request[PekkoStreams.BinaryStream]
       ): Future[Either[Result, Flow[Message, Message, Any]]] = {
         implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
         val serverRequest = PlayServerRequest(header, request)

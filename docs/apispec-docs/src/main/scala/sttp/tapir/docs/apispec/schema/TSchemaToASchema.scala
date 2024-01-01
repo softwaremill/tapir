@@ -26,11 +26,13 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
       case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
         ASchema(SchemaType.Array).copy(items = Some(toSchemaReference.map(nested, name)))
       case TSchemaType.SArray(el) => ASchema(SchemaType.Array).copy(items = Some(apply(el)))
-      case TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) => {
-        val ref = toSchemaReference.map(nested, name)
-        if (!markOptionsAsNullable) ref
-        else ASchema.oneOf(List(ref, ASchema(SchemaType.Null)), None)
-      }
+      case opt @ TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
+        // #3288: in case there are multiple different customisations of the nested schema, we need to propagate the
+        // metadata to properly customise the reference. These are also propagated in ToKeyedSchemas when computing
+        // the initial list of schemas.
+        val propagated = propagateMetadataForOption(schema, opt).element
+        val ref = toSchemaReference.map(propagated, name)
+        if (!markOptionsAsNullable) ref else ref.copy(nullable = Some(true))
       case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
       case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
       case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)

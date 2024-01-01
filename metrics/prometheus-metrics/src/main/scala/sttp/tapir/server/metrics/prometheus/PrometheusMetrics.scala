@@ -1,7 +1,8 @@
 package sttp.tapir.server.metrics.prometheus
 
-import io.prometheus.client.exporter.common.TextFormat
-import io.prometheus.client.{CollectorRegistry, Counter, Gauge, Histogram}
+import io.prometheus.metrics.core.metrics.{Counter, Gauge, Histogram}
+import io.prometheus.metrics.expositionformats.ExpositionFormats
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import sttp.monad.MonadError
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
@@ -9,12 +10,12 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 
-import java.io.StringWriter
+import java.io.ByteArrayOutputStream
 import java.time.{Clock, Duration}
 
 case class PrometheusMetrics[F[_]](
     namespace: String = "tapir",
-    registry: CollectorRegistry = CollectorRegistry.defaultRegistry,
+    registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry,
     metrics: List[Metric[F, _]] = List.empty[Metric[F, _]],
     endpointPrefix: EndpointInput[Unit] = "metrics"
 ) {
@@ -22,8 +23,8 @@ case class PrometheusMetrics[F[_]](
 
   /** An endpoint exposing the current metric values. */
   lazy val metricsEndpoint: ServerEndpoint[Any, F] = ServerEndpoint.public(
-    endpoint.get.in(endpointPrefix).out(plainBody[CollectorRegistry]),
-    (monad: MonadError[F]) => (_: Unit) => monad.eval(Right(registry): Either[Unit, CollectorRegistry])
+    endpoint.get.in(endpointPrefix).out(plainBody[PrometheusRegistry]),
+    (monad: MonadError[F]) => (_: Unit) => monad.eval(Right(registry): Either[Unit, PrometheusRegistry])
   )
 
   /** Registers a `$namespace_request_active{path, method}` gauge (assuming default labels). */
@@ -48,15 +49,19 @@ case class PrometheusMetrics[F[_]](
 
 object PrometheusMetrics {
 
-  implicit val schemaForCollectorRegistry: Schema[CollectorRegistry] = Schema.string[CollectorRegistry]
+  implicit val schemaForPrometheusRegistry: Schema[PrometheusRegistry] = Schema.string[PrometheusRegistry]
 
-  implicit val collectorRegistryCodec: Codec[String, CollectorRegistry, CodecFormat.TextPlain] =
-    Codec.anyString(TextPlain())(_ => DecodeResult.Value(new CollectorRegistry()))(r => {
-      val output = new StringWriter()
-      TextFormat.write004(output, r.metricFamilySamples)
+  private val prometheusExpositionFormat = ExpositionFormats.init()
+
+  implicit val prometheusRegistryCodec: Codec[String, PrometheusRegistry, CodecFormat.TextPlain] =
+    Codec.anyString(TextPlain())(_ => DecodeResult.Value(new PrometheusRegistry()))(r => {
+      val output = new ByteArrayOutputStream()
+      prometheusExpositionFormat.getPrometheusTextFormatWriter.write(output, r.scrape())
       output.close()
       output.toString
     })
+
+  private def metricNameWithNamespace(namespace: String, metricName: String) = s"${namespace}_${metricName}"
 
   /** Using the default namespace and labels, registers the following metrics:
     *
@@ -69,7 +74,7 @@ object PrometheusMetrics {
     */
   def default[F[_]](
       namespace: String = "tapir",
-      registry: CollectorRegistry = CollectorRegistry.defaultRegistry,
+      registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry,
       labels: MetricLabels = MetricLabels.Default
   ): PrometheusMetrics[F] =
     PrometheusMetrics(
@@ -82,32 +87,29 @@ object PrometheusMetrics {
       )
     )
 
-  def requestActive[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Gauge] =
+  def requestActive[F[_]](registry: PrometheusRegistry, namespace: String, labels: MetricLabels): Metric[F, Gauge] =
     Metric[F, Gauge](
       Gauge
-        .build()
-        .namespace(namespace)
-        .name("request_active")
+        .builder()
+        .name(metricNameWithNamespace(namespace, "request_active"))
         .help("Active HTTP requests")
         .labelNames(labels.namesForRequest: _*)
-        .create()
         .register(registry),
       onRequest = { (req, gauge, m) =>
         m.unit {
           EndpointMetric()
-            .onEndpointRequest { ep => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).inc()) }
-            .onResponseBody { (ep, _) => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).dec()) }
-            .onException { (ep, _) => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).dec()) }
+            .onEndpointRequest { ep => m.eval(gauge.labelValues(labels.valuesForRequest(ep, req): _*).inc()) }
+            .onResponseBody { (ep, _) => m.eval(gauge.labelValues(labels.valuesForRequest(ep, req): _*).dec()) }
+            .onException { (ep, _) => m.eval(gauge.labelValues(labels.valuesForRequest(ep, req): _*).dec()) }
         }
       }
     )
 
-  def requestTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Counter] =
+  def requestTotal[F[_]](registry: PrometheusRegistry, namespace: String, labels: MetricLabels): Metric[F, Counter] =
     Metric[F, Counter](
       Counter
-        .build()
-        .namespace(namespace)
-        .name("request_total")
+        .builder()
+        .name(metricNameWithNamespace(namespace, "request_total"))
         .help("Total HTTP requests")
         .labelNames(labels.namesForRequest ++ labels.namesForResponse: _*)
         .register(registry),
@@ -115,24 +117,25 @@ object PrometheusMetrics {
         m.unit {
           EndpointMetric()
             .onResponseBody { (ep, res) =>
-              m.eval(counter.labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res): _*).inc())
+              m.eval(counter.labelValues(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res): _*).inc())
             }
-            .onException { (ep, ex) => m.eval(counter.labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex): _*).inc()) }
+            .onException { (ep, ex) =>
+              m.eval(counter.labelValues(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex): _*).inc())
+            }
         }
       }
     )
 
   def requestDuration[F[_]](
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
       namespace: String,
       labels: MetricLabels,
       clock: Clock = Clock.systemUTC()
   ): Metric[F, Histogram] =
     Metric[F, Histogram](
       Histogram
-        .build()
-        .namespace(namespace)
-        .name("request_duration_seconds")
+        .builder()
+        .name(metricNameWithNamespace(namespace, "request_duration_seconds"))
         .help("Duration of HTTP requests")
         .labelNames(labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)
         .register(registry),
@@ -144,7 +147,7 @@ object PrometheusMetrics {
             .onResponseHeaders { (ep, res) =>
               m.eval(
                 histogram
-                  .labels(
+                  .labelValues(
                     labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.headersValue): _*
                   )
                   .observe(duration)
@@ -153,14 +156,18 @@ object PrometheusMetrics {
             .onResponseBody { (ep, res) =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*)
+                  .labelValues(
+                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*
+                  )
                   .observe(duration)
               )
             }
             .onException { (ep, ex) =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex) ++ List(labels.forResponsePhase.bodyValue): _*)
+                  .labelValues(
+                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex) ++ List(labels.forResponsePhase.bodyValue): _*
+                  )
                   .observe(duration)
               )
             }

@@ -5,6 +5,8 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
+import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.tests.Multipart.{
   in_file_list_multipart_out_multipart,
   in_file_multipart_out_multipart,
@@ -13,8 +15,9 @@ import sttp.tapir.tests.Multipart.{
   in_simple_multipart_out_string
 }
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.tapir.tests.data.{FruitAmount, FruitData}
+import sttp.tapir.tests.data.{DoubleFruit, FruitAmount, FruitData}
 import sttp.tapir.tests.{MultipleFileUpload, Test, data}
+import sttp.tapir.server.model.EndpointExtensions._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -22,12 +25,39 @@ import scala.concurrent.duration.DurationInt
 class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
-    partOtherHeaderSupport: Boolean = true
+    partOtherHeaderSupport: Boolean = true,
+    maxContentLengthSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
-    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil)
+    basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) ++
+      (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
+
+  def maxContentLengthTests(): List[Test] = List(
+    testServer(
+      endpoint.post
+        .in("api" / "echo" / "multipart")
+        .in(multipartBody[DoubleFruit])
+        .out(stringBody)
+        .maxRequestBodyLength(15000),
+      "multipart with maxContentLength"
+    )((df: DoubleFruit) => pureResult(("ok").asRight[Unit])) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipart("fruitA", "pineapple".repeat(1100)), multipart("fruitB", "maracuja".repeat(1200)))
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.PayloadTooLarge
+        } >> basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+        }
+    }
+  )
 
   def basicTests(): List[Test] = {
     List(
@@ -128,6 +158,33 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code shouldBe StatusCode.Ok
             r.body should include("file1:peach mario")
             r.body should include("file2:daisy luigi")
+          }
+      },
+      testServer(in_raw_multipart_out_string, "boundary substring in body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(
+          parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n__\n").asRight[Unit]
+        )
+      ) { (backend, baseUri) =>
+        val testBody = "--AAB\r\n" +
+          "Content-Disposition: form-data; name=\"firstPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "\r\n" +
+          "BODYONE\r\n" +
+          "--AA\r\n" +
+          "--AAB\r\n" +
+          "Content-Disposition: form-data; name=\"secondPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "\r\n" +
+          "BODYTWO\r\n" +
+          "--AAB--\r\n"
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body(testBody)
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.Ok
+            r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
           }
       }
     )

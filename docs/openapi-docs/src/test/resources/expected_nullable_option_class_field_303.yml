@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: ClassWithOptionClassField
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassWithOptionClassField'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Bar:
+      required:
+        - bar
+      type: object
+      properties:
+        bar:
+          type: integer
+          format: int32
+    ClassWithOptionClassField:
+      required:
+        - requiredStringField
+      type: object
+      properties:
+        optionalObjField:
+          allOf:
+            - $ref: '#/components/schemas/Bar'
+          nullable: true
+        requiredStringField:
+          type: string

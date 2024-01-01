@@ -2,7 +2,9 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaBoolean,
+  OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
   OpenapiSchemaFloat,
@@ -60,12 +62,16 @@ object BasicGenerator {
         ("Int", nb)
       case OpenapiSchemaLong(nb) =>
         ("Long", nb)
+      case OpenapiSchemaDateTime(nb) =>
+        ("java.time.Instant", nb)
       case OpenapiSchemaUUID(nb) =>
         ("java.util.UUID", nb)
       case OpenapiSchemaString(nb) =>
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
+      case OpenapiSchemaAny(nb) =>
+        ("io.circe.Json", nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")

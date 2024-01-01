@@ -4,7 +4,7 @@ import sttp.tapir.Validator
 import sttp.tapir.Schema.SName
 
 private[pickler] sealed trait SubtypeDiscriminator[T]:
-  def fieldName: String 
+  def fieldName: String
 
 object SubtypeDiscriminator:
   val DefaultFieldName = "$type"

@@ -3,7 +3,7 @@
 ```eval_rst
 .. note::
 
-  Note that the codecs defined by the tapir integrations are used only when the specific types (e.g. enumerations0 are 
+  Note that the codecs defined by the tapir integrations are used only when the specific types (e.g. enumerations) are 
   used at the top level. Any nested usages (e.g. as part of a json body), need to be separately configured to work with 
   the used json library.
 ```
@@ -14,7 +14,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.9.6"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -24,7 +24,7 @@ Additionally, the `tapir-cats-effect` module contains an implementation of the `
 between the sttp-internal `MonadError` and the cats-effect `Sync` typeclass:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats-effect" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-cats-effect" % "1.9.6"
 ```
 
 ## Refined integration
@@ -33,7 +33,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.9.6"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -54,7 +54,7 @@ If you use [iron](https://github.com/Iltotore/iron), the `tapir-iron` module wil
 validators for `T :| P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-iron" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-iron" % "1.9.6"
 ```
 
 The module is only available for Scala 3 since iron is not designed to work with Scala 2.
@@ -66,13 +66,87 @@ The iron codecs contain a validator which apply the constraint to validated valu
 
 Similarly to `tapir-refined`, you can find the predicate logic in `integrations/iron/src/main/scala/sttp/iron/codec/iron/TapirCodecIron.scala` and provide your own given `ValidatorForPredicate[T, P]` in scope using `ValidatorForPredicate.fromPrimitiveValidator`
 
+### Validation
+
+When using `iron` in the server e.g. in case classes that JSON request body 
+is parsed to, some additional steps need to be taken to properly
+report `iron` validation errors.
+
+[Iron](https://github.com/Iltotore/iron) is operating on type level while regular tapir
+validation works on case classes created from parsed JSON. When `iron` types are used
+in a case class, and passed values are invalid for `iron` types, creation is impossible because `iron` 
+does not allow creating guarded type instance.
+Because it is not possible to create case class for `ServerInterpreter` it looks like JSON parsing error not
+like validation error. In such case no error message is displayed to user.
+
+To properly report `iron` errors it is necessary to recognize them in failure intereptor.
+Custom JSON parsing is necessary anyway so custom exception can be thrown in case of `iron`
+refinement error and then matched in failure interceptor.
+
+Example for `circe`:
+
+```scala
+case class IronException(error: String) extends Exception(error)
+
+inline given (using inline constraint: Constraint[Int, Positive]): Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
+  unrefinedValue.refineEither[Positive] match
+    case Right(value) => value
+    case Left(errorMessage) => throw IronException(s"Could not refine value $unrefinedValue: $errorMessage")
+)
+```
+
+Then failure handler matching `IronException` is needed. Remember to create the interceptor:
+
+```scala
+private def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
+  case Error(_, JsonDecodeException(_, IronException(errorMessage))) => Some(errorMessage)
+  case Error(_, IronException(errorMessage)) => Some(errorMessage)
+  case other => FailureMessages.failureDetailMessage(other)
+}
+
+private def failureMessage(ctx: DecodeFailureContext): String = {
+  val base = FailureMessages.failureSourceMessage(ctx.failingInput)
+  val detail = failureDetailMessage(ctx.failure)
+  FailureMessages.combineSourceAndDetail(base, detail)
+}
+
+def ironFailureHandler[T[_]] = new DefaultDecodeFailureHandler[T](
+  DefaultDecodeFailureHandler.respond,
+  failureMessage,
+  DefaultDecodeFailureHandler.failureResponse
+)
+
+def ironDecodeFailureInterceptor[T[_]] = new DecodeFailureInterceptor[T](ironFailureHandler[T])
+```
+
+...and add it to server options:
+
+```scala
+override def run = NettyCatsServer
+  .io()
+  .use { server =>
+    // Don't forget to add the interceptor to server options
+    val optionsWithInterceptor = server.options.prependInterceptor(ironDecodeFailureInterceptor)
+    for {
+      binding <- server
+        .port(port)
+        .host(host)
+        .options(optionsWithInterceptor)
+        .addEndpoint(endpoint)
+        .start()
+      //...
+    }
+  }
+```
+
+
 ## Enumeratum integration
 
 The `tapir-enumeratum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.9.6"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum._`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -85,7 +159,7 @@ If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapi
 schemas for types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.9.6"
 ```
 
 Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.newtype.TapirCodecNewType` trait to bring the implicit values into scope.
@@ -96,7 +170,7 @@ If you use [monix newtypes](https://github.com/monix/newtypes), the `tapir-monix
 schemas for types which extend `NewtypeWrapped` and `NewsubtypeWrapped` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.9.6"
 ```
 
 Then, `import sttp.tapir.codec.monix.newtype._`, or extend the `sttp.tapir.codec.monix.newtype.TapirCodecMonixNewType` trait to bring the implicit values into scope.
@@ -107,7 +181,7 @@ If you use [ZIO Prelude Newtypes](https://zio.github.io/zio-prelude/docs/newtype
 schemas for types defined using `Newtype` and `Subtype` as long as a codec and a schema for the underlying type already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "1.9.6"
 ```
 
 Then, mix in `sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport` into your newtype to bring the implicit values into scope:
@@ -146,7 +220,7 @@ For details refer to [derevo documentation](https://github.com/tofu-tf/derevo#in
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.9.6"
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:

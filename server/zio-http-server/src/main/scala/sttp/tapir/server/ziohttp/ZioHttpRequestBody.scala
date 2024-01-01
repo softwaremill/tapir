@@ -10,7 +10,7 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 import zio.http.FormField._
 import zio.http.Request
 import zio.http.{MediaType => ZMediaType}
-import zio.stream.Stream
+import zio.stream.{Stream, ZSink, ZStream}
 import zio.{RIO, Task, ZIO}
 
 import java.io.ByteArrayInputStream
@@ -19,16 +19,24 @@ import java.nio.ByteBuffer
 class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW]): Task[RawValue[RAW]] = bodyType match {
-    case RawBodyType.StringBody(defaultCharset) => asByteArray(serverRequest).map(new String(_, defaultCharset)).map(RawValue(_))
-    case RawBodyType.ByteArrayBody              => asByteArray(serverRequest).map(RawValue(_))
-    case RawBodyType.ByteBufferBody             => asByteArray(serverRequest).map(ByteBuffer.wrap).map(RawValue(_))
-    case RawBodyType.InputStreamBody            => asByteArray(serverRequest).map(new ByteArrayInputStream(_)).map(RawValue(_))
-    case RawBodyType.InputStreamRangeBody =>
-      asByteArray(serverRequest).map(bytes => InputStreamRange(() => new ByteArrayInputStream(bytes))).map(RawValue(_))
-    case RawBodyType.FileBody =>
-      serverOptions.createFile(serverRequest).map(d => FileRange(d)).flatMap(file => ZIO.succeed(RawValue(file, Seq(file))))
-    case RawBodyType.MultipartBody(_, _) =>
+  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): Task[RawValue[RAW]] = {
+
+    def asByteArray: Task[Array[Byte]] =
+      (toStream(serverRequest, maxBytes).asInstanceOf[ZStream[Any, Throwable, Byte]]).runCollect.map(_.toArray)
+
+    bodyType match {
+      case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
+      case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
+      case RawBodyType.ByteBufferBody             => asByteArray.map(ByteBuffer.wrap).map(RawValue(_))
+      case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
+      case RawBodyType.InputStreamRangeBody =>
+        asByteArray.map(bytes => InputStreamRange(() => new ByteArrayInputStream(bytes))).map(RawValue(_))
+      case RawBodyType.FileBody =>
+        for {
+          file <- serverOptions.createFile(serverRequest)
+          _ <- (toStream(serverRequest, maxBytes).asInstanceOf[ZStream[Any, Throwable, Byte]]).run(ZSink.fromFile(file)).map(_ => ())
+        } yield RawValue(FileRange(file), Seq(FileRange(file)))
+      case RawBodyType.MultipartBody(_, _) =>
       zioHttpRequest(serverRequest).body.asMultipartForm
         .flatMap(form =>
           ZIO.foreach(form.formData) {
@@ -44,14 +52,16 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
           }
         )
         .map(chunk => RawValue.fromParts(chunk.toSeq))
+    }
   }
 
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = stream(serverRequest).asInstanceOf[streams.BinaryStream]
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val inputStream = stream(serverRequest)
+    maxBytes.map(ZioStreams.limitBytes(inputStream, _)).getOrElse(inputStream).asInstanceOf[streams.BinaryStream]
+  }
 
   private def stream(serverRequest: ServerRequest): Stream[Throwable, Byte] =
     zioHttpRequest(serverRequest).body.asStream
-
-  private def asByteArray(serverRequest: ServerRequest): Task[Array[Byte]] = zioHttpRequest(serverRequest).body.asArray
 
   private def zioHttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
 

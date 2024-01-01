@@ -1,27 +1,27 @@
 package sttp.tapir.examples.websocket
 
 import cats.effect.{ExitCode, IO, IOApp}
-import io.circe.generic.auto._
-import fs2._
+import io.circe.generic.auto.*
+import fs2.*
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
+import sttp.apispec.asyncapi.Server
+import sttp.apispec.asyncapi.circe.yaml.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
-import sttp.apispec.asyncapi.Server
-import sttp.apispec.asyncapi.circe.yaml._
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.ws.WebSocket
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object WebSocketHttp4sServer extends IOApp {
 
@@ -80,7 +80,7 @@ object WebSocketHttp4sServer extends IOApp {
       .use { backend =>
         // Client which interacts with the web socket
         basicRequest
-          .response(asWebSocket { ws: WebSocket[IO] =>
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {
               _ <- ws.sendText("7 bytes")
               _ <- ws.sendText("7 bytes")

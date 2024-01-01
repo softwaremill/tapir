@@ -5,7 +5,6 @@ import io.github.iltotore.iron.:|
 import io.github.iltotore.iron.refineEither
 import io.github.iltotore.iron.refineOption
 import io.github.iltotore.iron.RefinedTypeOps
-import io.github.iltotore.iron.RefinedTypeOpsImpl
 import io.github.iltotore.iron.constraint.any.*
 import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
@@ -52,7 +51,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   given refinedTypeSchema[T](using m: RefinedTypeOps.Mirror[T], ev: Schema[m.IronType]): Schema[T] =
     ev.asInstanceOf[Schema[T]]
 
-  given refinedTypeCodec[R, T, CF <: CodecFormat] (using m: RefinedTypeOps.Mirror[T], ev: Codec[R, m.IronType, CF]): Codec[R, T, CF] =
+  given refinedTypeCodec[R, T, CF <: CodecFormat](using m: RefinedTypeOps.Mirror[T], ev: Codec[R, m.IronType, CF]): Codec[R, T, CF] =
     ev.asInstanceOf[Codec[R, T, CF]]
 
   inline given (using

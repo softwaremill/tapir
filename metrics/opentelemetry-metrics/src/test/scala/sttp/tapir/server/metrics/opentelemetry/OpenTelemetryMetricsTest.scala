@@ -71,7 +71,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       _ => List(serverEp),
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
       _ => ()
     )
 

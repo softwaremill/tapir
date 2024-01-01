@@ -1,18 +1,16 @@
 package sttp.tapir.server.pekkohttp
 
-import org.apache.pekko.http.scaladsl.model.{HttpEntity, Multipart}
+import org.apache.pekko.http.scaladsl.model.{EntityStreamSizeException, HttpEntity, Multipart, RequestEntity}
 import org.apache.pekko.http.scaladsl.server.RequestContext
 import org.apache.pekko.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import org.apache.pekko.stream.scaladsl.{FileIO, Sink, _}
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{FileIO, Sink}
 import org.apache.pekko.util.ByteString
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, RawBodyType, RawPart, InputStreamRange}
-
-import java.io.ByteArrayInputStream
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,27 +19,45 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
     ec: ExecutionContext
 ) extends RequestBody[Future, PekkoStreams] {
   override val streams: PekkoStreams = PekkoStreams
-  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] =
-    toRawFromEntity(request, akkeRequestEntity(request), bodyType)
-  override def toStream(request: ServerRequest): streams.BinaryStream = akkeRequestEntity(request).dataBytes
+  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] =
+    toRawFromEntity(request, requestEntity(request, maxBytes), bodyType)
 
-  private def akkeRequestEntity(request: ServerRequest) = request.underlying.asInstanceOf[RequestContext].request.entity
+  override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    requestEntity(request, maxBytes).dataBytes
+  }
 
-  private def toRawFromEntity[R](request: ServerRequest, body: HttpEntity, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
+  private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {
+    val entity = request.underlying.asInstanceOf[RequestContext].request.entity
+    maxBytes.map(entity.withSizeLimit).getOrElse(entity)
+  }
+
+  private def toRawFromEntity[R](
+      request: ServerRequest,
+      body: HttpEntity,
+      bodyType: RawBodyType[R]
+  ): Future[RawValue[R]] = {
     bodyType match {
       case RawBodyType.StringBody(_)  => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
       case RawBodyType.ByteArrayBody  => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>
-        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(b => RawValue(new ByteArrayInputStream(b)))
+        Future.successful(RawValue(body.dataBytes.runWith(StreamConverters.asInputStream())))
       case RawBodyType.FileBody =>
         serverOptions
           .createFile(request)
-          .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => FileRange(file)).map(f => RawValue(f, Seq(f))))
+          .flatMap(file =>
+            body.dataBytes
+              .runWith(FileIO.toPath(file.toPath))
+              .recoverWith {
+                // We need to dig out EntityStreamSizeException from an external wrapper applied by FileIO sink
+                case e: Exception if e.getCause().isInstanceOf[EntityStreamSizeException] =>
+                  Future.failed(e.getCause())
+              }
+              .map(_ => FileRange(file))
+              .map(f => RawValue(f, Seq(f)))
+          )
       case RawBodyType.InputStreamRangeBody =>
-        implicitly[FromEntityUnmarshaller[Array[Byte]]]
-          .apply(body)
-          .map(b => RawValue(InputStreamRange(() => new ByteArrayInputStream(b))))
+        Future.successful(RawValue(InputStreamRange(() => body.dataBytes.runWith(StreamConverters.asInputStream()))))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts

@@ -1,7 +1,7 @@
 package sttp.tapir.tests
 
 import io.circe.generic.auto._
-import sttp.model.{HeaderNames, MediaType, StatusCode}
+import sttp.model.{ContentTypeRange, HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.Codec.XmlCodec
 import sttp.tapir.CodecFormat.TextHtml
@@ -59,14 +59,20 @@ object ContentNegotiation {
       .in("content-negotiation" / "organization-parameters")
       .out(
         sttp.tapir.oneOfBody(
+          jsonBody[Organization], // first defining the case which should be used when there are no parameters in the `Accept` range
           jsonBody[Organization].copy(
             codec = circeCodec[Organization]
               .map(identity[Organization] _)(_.copy(name = "unknown"))
               .format(JsonCodecFormatOrganizationName())
-          ),
-          jsonBody[Organization]
+          )
         )
       )
+
+  val in_multipart_mixed_out_string: PublicEndpoint[String, Unit, String, Any] =
+    endpoint.get
+      .in("content-negotiation" / "multipart-mixed")
+      .in(sttp.tapir.oneOfBody(ContentTypeRange("multipart", "mixed", "*") -> stringBody))
+      .out(stringBody)
 
   val out_default_json_or_xml: PublicEndpoint[Unit, Unit, Organization, Any] =
     endpoint.get

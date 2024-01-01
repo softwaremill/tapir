@@ -98,9 +98,18 @@ class ServerContentNegotiationTests[F[_], OPTIONS, ROUTE](createServerTest: Crea
       val r3 = basicRequest
         .get(uri"$baseUri/content-negotiation/organization-parameters")
         .send(backend)
-        .map(_.body shouldBe Right("{\"name\":\"unknown\"}"))
+        .map(_.body shouldBe Right("{\"name\":\"sml\"}"))
 
       r1 >> r2 >> r3
+    },
+    // #3253: multipart parameters in the incoming body shouldn't interfere with content negotiation
+    testServer(in_multipart_mixed_out_string)(in => pureResult(in.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .header(HeaderNames.ContentType, "multipart/mixed; boundary=-; deferSpec=20220824")
+        .body("test")
+        .get(uri"$baseUri/content-negotiation/multipart-mixed")
+        .send(backend)
+        .map(_.body shouldBe Right("test"))
     }
   )
 }

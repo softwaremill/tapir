@@ -1,7 +1,6 @@
 name: CI
 on:
   pull_request:
-    branches: ['**']
   push:
     branches: ['**']
     tags: [v*]
@@ -10,39 +9,56 @@ env:
   SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
 jobs:
   ci:
-    # run on external PRs, but not on internal PRs since those will be run by push to branch
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
+    # do not run on internal, non-steward PRs since those will be run by push to branch
+    if: |
+      github.event_name == 'push' || 
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      github.event.pull_request.user.login == 'softwaremill-ci'
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         scala-version: [ "2.12", "2.13", "3" ]
         target-platform: [ "JVM", "JS", "Native" ]
+        java: [ "11", "21" ]
         exclude:
+          - java: "21"
           - scala-version: "2.12"
             target-platform: "Native"
           - scala-version: "2.13"
             target-platform: "Native"
+        include: # Restricted to build only specific Loom-based modules
+          - scala-version: "2.13"
+            target-platform: "JVM"
+            java: "21"
+          - scala-version: "3"
+            target-platform: "JVM"
+            java: "21"
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Set up JDK 11
+    - name: Set up JDK 
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
         cache: 'sbt'
-        java-version: 11
+        java-version: ${{ matrix.java }}
     - name: Install sam cli
+      if: matrix.java == '11'
       run: |
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
     - name: Install NPM
-      run: |
-        sudo apt install npm
-        npm --version
+      if: matrix.java == '11'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - run: npm --version
     - name: Install AWS CDK
+      if: matrix.java == '11'
       run: |
         npm install -g aws-cdk
         cdk --version
@@ -52,17 +68,20 @@ jobs:
         sudo apt-get update
         sudo apt-get install libidn2-dev libcurl3-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
+    - name: Enable Loom-specific modules
+      if: matrix.java == '21'
+      run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile documentation
-      if: matrix.target-platform == 'JVM'
+      if: matrix.target-platform == 'JVM' && matrix.java == '11'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
     - name: Test
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@v2
       with:
-        timeout_minutes: 45
-        max_attempts: 3
+        timeout_minutes: 15
+        max_attempts: 4
         command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
@@ -72,13 +91,18 @@ jobs:
     # https://github.com/scala-js/scala-js/issues/4317 has a solution
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '2.12'
-      run: sbt $SBT_JAVA_OPTS catsJS2_12/test circeJsonJS2_12/test clientCoreJS2_12/test clientTestsJS2_12/test coreJS2_12/test enumeratumJS2_12/test jsoniterScalaJS2_12/test newtypeJS2_12/test openapiDocsJS2_12/test playJsonJS2_12/test redocJS2_12/test serverCoreJS2_12/test sttpClientJS2_12/test testingJS2_12/test testsJS2_12/test uPickleJsonJS2_12/test zio1JsonJS2_12/test zioJsonJS2_12/test
+      run: sbt $SBT_JAVA_OPTS catsJS2_12/test circeJsonJS2_12/test clientCoreJS2_12/test clientTestsJS2_12/test coreJS2_12/test enumeratumJS2_12/test jsoniterScalaJS2_12/test newtypeJS2_12/test openapiDocsJS2_12/test playJsonJS2_12/test redocJS2_12/test serverCoreJS2_12/test sttpClientJS2_12/test testingJS2_12/test testsJS2_12/test uPickleJsonJS2_12/test zioJsonJS2_12/test
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '2.13'
-      run: sbt $SBT_JAVA_OPTS catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zio1JsonJS/test zioJsonJS/test
+      run: sbt $SBT_JAVA_OPTS catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zioJsonJS/test
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
+    - uses: actions/upload-artifact@v3  # upload test results
+      if: success() || failure()        # run this step even if previous step failed
+      with:
+        name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
+        path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
       uses: release-drafter/release-drafter@v5
       with:
@@ -86,9 +110,14 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # identify binary incompatibilities (check build.sbt for details)
   mima:
-    # run on external PRs, but not on internal PRs since those will be run by push to branch
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
+    # do not run on internal, non-steward PRs since those will be run by push to branch
+    if: |
+      github.event_name == 'push' || 
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      github.event.pull_request.user.login == 'softwaremill-ci'
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -109,21 +138,29 @@ jobs:
     needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-22.04
-    env:
-      STTP_NATIVE: 1
+    strategy:
+      matrix: 
+        java: [ "11", "21" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up JDK 11
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: 11
+          java-version: ${{ matrix.java }}
           cache: 'sbt'
       - name: Install libidn2-dev libcurl3-dev
+        if: matrix.java == '11'
         run: |
           sudo apt-get update
           sudo apt-get install libidn2-dev libcurl3-dev
+      - name: Enable Native-specific modules
+        if: matrix.java == '11'
+        run: echo "STTP_NATIVE=1" >> $GITHUB_ENV
+      - name: Enable Loom-specific modules
+        if: matrix.java == '21'
+        run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
       - name: Compile
         run: sbt $SBT_JAVA_OPTS compile
       - name: Publish artifacts
@@ -134,12 +171,14 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       - name: Extract version from commit message
+        if: matrix.java == '11'
         run: |
           version=${GITHUB_REF/refs\/tags\/v/}
           echo "VERSION=$version" >> $GITHUB_ENV
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
+        if: matrix.java == '11'
         uses: release-drafter/release-drafter@v5
         with:
           config-name: release-drafter.yml
@@ -149,3 +188,42 @@ jobs:
           version: "v${{ env.VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  # `automerge` label is attached iff there is exactly one file changed by steward and this file belongs to a
+  # whitelist specified by `labeler.yml`
+  label:
+    name: Attach automerge label
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      # count number of files changed
+      - name: Count number of files changed
+        id: count-changed-files
+        run: |
+               N=$(git diff --name-only -r HEAD^1 HEAD | wc -w)
+               echo "changed_files_num=$N" >> $GITHUB_OUTPUT
+      - name: Launch labeler
+        # skip if more than one file changed
+        if: steps.count-changed-files.outputs.changed_files_num == 1
+        uses: srvaroa/labeler@master
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  auto-merge:
+    name: Auto merge
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
+    needs: [ ci, mima, label ]
+    runs-on: ubuntu-22.04
+    steps:
+      - id: automerge
+        name: automerge
+        uses: "pascalgn/automerge-action@v0.15.6"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MERGE_METHOD: "squash"

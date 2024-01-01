@@ -1,21 +1,28 @@
 package sttp.tapir.server.netty.cats
 
+import cats.effect.kernel.Sync
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, IO, Resource}
+import cats.effect.{Async, IO, Resource, Temporal}
 import cats.syntax.all._
 import io.netty.channel._
+import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
+import io.netty.util.concurrent.DefaultEventExecutor
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
-import sttp.capabilities.fs2.Fs2Streams
+import java.util.concurrent.atomic.AtomicBoolean
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))
@@ -53,38 +60,72 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       NettyCatsDomainSocketBinding(socket, stop)
     }
 
+  private def unsafeRunAsync(block: () => F[ServerResponse[NettyResponse]]): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
+    options.dispatcher.unsafeToFutureCancelable(block())
+
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
+    val channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, (f: () => F[Unit]) => options.dispatcher.unsafeToFuture(f()), config.maxContentLength),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown),
         eventLoopGroup,
         socketOverride
       )
 
-    nettyChannelFutureToScala(channelFuture).map(ch => (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup)))
+    nettyChannelFutureToScala(channelFuture).map(ch =>
+      (
+        ch.localAddress().asInstanceOf[SA],
+        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
+      )
+    )
   }
 
-  private def stop(ch: Channel, eventLoopGroup: EventLoopGroup): F[Unit] = {
-    Async[F].defer {
-      nettyFutureToScala(ch.close()).flatMap { _ =>
-        if (config.shutdownEventLoopGroupOnClose) {
-          nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
-        } else Async[F].unit
-      }
+  private def waitForClosedChannels(
+      channelGroup: ChannelGroup,
+      startNanos: Long,
+      gracefulShutdownTimeoutNanos: Option[Long]
+  ): F[Unit] =
+    if (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
+      Temporal[F].sleep(100.millis) >>
+        waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
+    } else {
+      Sync[F].delay(nettyFutureToScala(channelGroup.close())).void
     }
+
+  private def stop(
+      ch: Channel,
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): F[Unit] = {
+    Sync[F].delay(isShuttingDown.set(true)) >>
+      waitForClosedChannels(
+        channelGroup,
+        startNanos = System.nanoTime(),
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+      ) >>
+      Async[F].defer {
+        nettyFutureToScala(ch.close()).flatMap { _ =>
+          if (config.shutdownEventLoopGroupOnClose) {
+            nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+          } else Async[F].unit
+        }
+      }
   }
 }
 
 object NettyCatsServer {
   def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.defaultWithStreaming)
+    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.default)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, options, NettyConfig.defaultWithStreaming)
+    NettyCatsServer(Vector.empty, options, NettyConfig.default)
   def apply[F[_]: Async](dispatcher: Dispatcher[F], config: NettyConfig): NettyCatsServer[F] =
     NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), config)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F], config: NettyConfig): NettyCatsServer[F] =

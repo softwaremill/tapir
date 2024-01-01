@@ -71,7 +71,7 @@ You can also disable generation of default title fields by setting an option `ad
 
 ```json
 {
-  "$schema" : "https://json-schema.org/draft-04/schema#",
+  "$schema" : "http://json-schema.org/draft-04/schema#",
   "required" : [
     "innerChildField",
     "childDetails"

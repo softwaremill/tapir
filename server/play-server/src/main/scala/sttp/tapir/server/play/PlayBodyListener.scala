@@ -1,6 +1,6 @@
 package sttp.tapir.server.play
 
-import akka.Done
+import org.apache.pekko.Done
 import play.api.http.HttpEntity
 import sttp.tapir.server.interpreter.BodyListener
 

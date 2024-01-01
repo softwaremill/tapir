@@ -1,15 +1,15 @@
 package sttp.tapir.server.play
 
-import akka.stream.Materializer
 import com.typesafe.config.ConfigFactory
-import play.api.http.ParserConfiguration
+import org.apache.pekko.stream.Materializer
 import play.api.Logger
+import play.api.http.ParserConfiguration
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
-import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
@@ -18,7 +18,7 @@ case class PlayServerOptions(
     deleteFile: TapirFile => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
-    decodeFailureHandler: DecodeFailureHandler,
+    decodeFailureHandler: DecodeFailureHandler[Future],
     interceptors: List[Interceptor[Future]]
 ) {
   def prependInterceptor(i: Interceptor[Future]): PlayServerOptions = copy(interceptors = i :: interceptors)

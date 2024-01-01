@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.9.6"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.9.6"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -65,7 +65,7 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.9.6"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -133,7 +133,7 @@ For example, generating the OpenAPI 3.0.3 YAML string can be achieved by perform
 
 Firstly add dependencies:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.9.6"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -163,12 +163,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.9.6"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.9.6"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -347,8 +347,11 @@ most artifacts in that directory. To avoid a `NullPointerException`, you need to
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "maven", "org.webjars", "swagger-ui", "pom.properties") =>
     MergeStrategy.singleOrError
-  case x =>
+  case PathList("META-INF", "resources", "webjars", "swagger-ui", _*)               =>
+    MergeStrategy.singleOrError
+  case PathList("META-INF", _*)                                                     => MergeStrategy.discard // Optional, but usually required
+  case x                                                                            =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+      oldStrategy(x)
 }
 ```

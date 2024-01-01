@@ -22,10 +22,10 @@ private[pekkogrpc] class PekkoGrpcRequestBody(serverOptions: PekkoHttpServerOpti
   private val grpcProtocol = GrpcProtocolNative.newReader(Identity)
 
   override val streams: PekkoStreams = PekkoStreams
-  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R]): Future[RawValue[R]] =
+  override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] =
     toRawFromEntity(request, akkaRequestEntity(request), bodyType)
 
-  override def toStream(request: ServerRequest): streams.BinaryStream = ???
+  override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
 
   private def akkaRequestEntity(request: ServerRequest) = request.underlying.asInstanceOf[RequestContext].request.entity
 

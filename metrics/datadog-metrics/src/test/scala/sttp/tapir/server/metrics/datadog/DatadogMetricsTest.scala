@@ -116,7 +116,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         _ => List(serverEp),
         TestRequestBody,
         UnitToResponseBody,
-        List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
+        List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
         _ => ()
       )
 

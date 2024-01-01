@@ -9,6 +9,9 @@ implicit scope during codec derivation, as well as when using [json](json.md) or
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
+There's also a number of [datatype integrations](integrations.md) available, which provide schemas for various 
+third-party libraries.
+
 For case classes and sealed hierarchies, `Schema[_]` values can be derived automatically using
 [Magnolia](https://github.com/softwaremill/magnolia), given that implicit schemas are available for all the case class's
 fields, or all of the implementations of the `enum`/`sealed trait`/`sealed class`.
@@ -17,6 +20,10 @@ Two policies of custom type derivation are available:
 
 * automatic derivation
 * semi automatic derivation
+
+Finally, schemas can be provided by hand, e.g. for Java classes, or other custom types. As a fallback, you can also
+always use `Schema.string[T]` or `Schema.binary[T]`, however this will provide only basic documentation, and won't
+perform any [validation](validation.md).
 
 ## Automatic derivation
 
@@ -74,7 +81,9 @@ integration layer.
 
 This method may be used both with automatic and semi-automatic derivation. 
 
-## Derivation for recursive types in Scala3
+## Scala3-specific derivation
+
+### Derivation for recursive types
 
 In Scala3, any schemas for recursive types need to be provided as typed `implicit def` (not a `given`)!
 For example:
@@ -88,6 +97,25 @@ object RecursiveTest {
 
 The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
 the schema is looked up implicitly, e.g. for `jsonBody`.
+
+### Derivation for union types
+
+Schemas for union types must be declared by hand, using the `Schema.derivedUnion[T]` method. Schemas for all components
+of the union type must be available in the implicit scope at the point of invocation. For example:
+
+```scala
+val s: Schema[String | Int] = Schema.derivedUnion
+```
+
+If the union type is a named alias, the type needs to be provided explicitly, e.g.:
+
+```scala
+type StringOrInt = String | Int
+val s: Schema[StringOrInt] = Schema.derivedUnion[StringOrInt]
+```
+
+If any of the components of the union type is a generic type, any of its validations will be skipped when validating
+the union type, as it's not possible to generate a runtime check for the generic type.
 
 ## Configuring derivation
 

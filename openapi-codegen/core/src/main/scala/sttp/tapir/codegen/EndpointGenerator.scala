@@ -107,7 +107,7 @@ class EndpointGenerator {
         param.schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val desc = param.description.map(d=>JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+            val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$t]("${param.name}")$desc)"""
           case x => throw new NotImplementedError(s"Can't create non-simple params to input - found $x")
         }

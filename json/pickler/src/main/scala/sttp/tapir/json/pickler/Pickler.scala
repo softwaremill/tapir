@@ -30,10 +30,11 @@ object Pickler:
     *
     * The in-scope [[PicklerConfiguration]] instance is used to customise field names and other behavior.
     */
-  inline def derived[T: ClassTag](using PicklerConfiguration, Mirror.Of[T]): Pickler[T] =
+  inline def derived[T: ClassTag](using PicklerConfiguration): Pickler[T] =
     summonFrom {
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
-      case _                 => buildNewPickler[T]()
+      case m: Mirror.Of[T]   => buildNewPickler[T]()
+      case _ => errorForType[T]("Cannot derive Pickler[%s], you need to provide both Schema and uPickle ReadWriter for this type.")
     }
 
   /** Create a coproduct pickler (e.g. for an `enum` or `sealed trait`), where the value of the discriminator between child types is a read
@@ -104,18 +105,30 @@ object Pickler:
 
   inline given nonMirrorPickler[T](using PicklerConfiguration, NotGiven[Mirror.Of[T]]): Pickler[T] =
     summonFrom {
-      // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we wan't a NotGiven in the method signature
-      case m: Mirror.Of[T] =>
-        errorForType[T]("Failed to summon a Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*")
       case n: NotGiven[Mirror.Of[T]] =>
         Pickler(
           new TapirPickle[T] {
-            // Relying on given writers and readers provided by uPickle Writers and Readers base traits
-            // They should take care of deriving for Int, String, Boolean, Option, List, Map, Array, etc.
-            override lazy val reader = summonInline[Reader[T]]
-            override lazy val writer = summonInline[Writer[T]]
+            override lazy val reader = summonFrom {
+              case r: Reader[T] => r
+              case _ =>
+                errorForType[T](
+                  "Use Pickler.derive[%s] instead of nonMirrorPickler. This method has to be in scope to resolve predefined picklers."
+                )
+            }
+            override lazy val writer = summonFrom {
+              case w: Writer[T] => w
+              case _ =>
+                errorForType[T](
+                  "Use Pickler.derive[%s] instead of nonMirrorPickler. This method has to be in scope to resolve predefined picklers."
+                )
+            }
           },
           summonInline[Schema[T]]
+        )
+      // It turns out that summoning a Pickler can sometimes fall into this branch, even if we explicitly state that we want a NotGiven in the method signature
+      case m: Mirror.Of[T] =>
+        errorForType[T](
+          "Found unexpected Mirror. Failed to summon a Pickler[%s]. Please report it as an issue at https://github.com/softwaremill/tapir/issues. To avoid this issue, try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*"
         )
     }
 
@@ -252,7 +265,7 @@ object Pickler:
           }
     }
 
-  private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], PicklerConfiguration, Mirror.Of[T]): Pickler[T] =
+  private inline def fromExistingSchemaAndRw[T](schema: Schema[T])(using ClassTag[T], PicklerConfiguration): Pickler[T] =
     Pickler(
       new TapirPickle[T] {
         override lazy val reader: Reader[T] = summonFrom {
@@ -320,7 +333,7 @@ object Pickler:
   private inline def deriveRec[T, FieldType](using config: PicklerConfiguration): Pickler[FieldType] =
     inline erasedValue[T] match
       case _: FieldType => error("Infinite recursive derivation")
-      case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config, summonInline[Mirror.Of[FieldType]])
+      case _            => Pickler.derived[FieldType](using summonInline[ClassTag[FieldType]], config)
 
       // Extract child RWs from child picklers
       // create a new RW from scratch using children rw and fields of the product

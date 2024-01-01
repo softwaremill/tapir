@@ -1,41 +1,41 @@
 # Working with JSON
 
 Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
-third-party library to perform the actual json parsing/printing. See below for the list of supported libraries. 
+third-party library to perform the actual json parsing/printing. See below for the list of supported libraries.
 
-All the integrations, when imported into scope, define `jsonBody[T]` and `jsonQuery[T]` methods. 
+All the integrations, when imported into scope, define `jsonBody[T]` and `jsonQuery[T]` methods.
 
-Instead of providing the json codec as an implicit value, this method depends on library-specific implicits being in 
-scope, and basing on these values creates a json codec. The derivation also requires 
-an implicit `Schema[T]` instance, which can be automatically derived. For more details see sections on 
-[schema derivation](schemas.md) and on supporting [custom types](customtypes.md) in general. Such a design provides 
+Instead of providing the json codec as an implicit value, this method depends on library-specific implicits being in
+scope, and basing on these values creates a json codec. The derivation also requires
+an implicit `Schema[T]` instance, which can be automatically derived. For more details see sections on
+[schema derivation](schemas.md) and on supporting [custom types](customtypes.md) in general. Such a design provides
 better error reporting, in case one of the components required to create the json codec is missing.
 
 ```eval_rst
 .. note::
 
   Note that the process of deriving schemas, and deriving library-specific json encoders and decoders is entirely
-  separate (unless you're using the pickler module - see below). The first is controlled by tapir, the second - by the 
-  json library. Any customisation, e.g. for field naming or inheritance strategies, must be done separately for both 
+  separate (unless you're using the pickler module - see below). The first is controlled by tapir, the second - by the
+  json library. Any customisation, e.g. for field naming or inheritance strategies, must be done separately for both
   derivations.
 ```
 
 ## Pickler
 
-Alternatively, instead of deriving schemas and library-specific json encoders and decoders separately, you can use 
-the experimental [pickler](pickler.md) module, which takes care of both derivation in a consistent way, which allows 
+Alternatively, instead of deriving schemas and library-specific json encoders and decoders separately, you can use
+the experimental [pickler](pickler.md) module, which takes care of both derivation in a consistent way, which allows
 customization with a single, common configuration API.
 
 ## Implicit json codecs
 
-If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customCodecJsonBody[T]` method instead. 
-This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
+If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customCodecJsonBody[T]` method instead.
+This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses
 the json codec that is in scope.
 
 ## JSON as string
 
 If you'd like to work with JSON bodies in a serialised `String` form, instead of integrating on a higher level using
-one of the libraries mentioned below, you should use the `stringJsonBody` input/output. Note that in this case, the 
+one of the libraries mentioned below, you should use the `stringJsonBody` input/output. Note that in this case, the
 serialising/deserialising of the body must be part of the [server logic](../server/logic.md).
 
 A schema can be provided in this case as well:
@@ -61,8 +61,8 @@ Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](..
 import sttp.tapir.json.circe._
 ```
 
-The above import brings into scope the `jsonBody[T]` body input/output description, which creates a codec, given an 
-in-scope circe `Encoder`/`Decoder` and a `Schema`. Circe includes a couple of approaches to generating encoders/decoders 
+The above import brings into scope the `jsonBody[T]` body input/output description, which creates a codec, given an
+in-scope circe `Encoder`/`Decoder` and a `Schema`. Circe includes a couple of approaches to generating encoders/decoders
 (manual, semi-auto and auto), so you may choose whatever suits you.
 
 Note that when using Circe's auto derivation, any encoders/decoders for custom types must be in scope as well.
@@ -82,7 +82,7 @@ val bookInput: EndpointIO[Book] = jsonBody[Book]
 
 ### Configuring the circe printer
 
-Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default 
+Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default
 Tapir uses `Printer.nospaces`, which would render:
 
 ```scala mdoc:compile-only
@@ -100,7 +100,7 @@ as
 {"key1":"present","key2":null}
 ```
 
-Suppose we would instead want to omit `null`-values from the object and pretty-print it. You can configure this by 
+Suppose we would instead want to omit `null`-values from the object and pretty-print it. You can configure this by
 overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
 
 ```scala mdoc:compile-only
@@ -157,10 +157,16 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 
 ## Play JSON
 
-To use [Play JSON](https://github.com/playframework/play-json) add the following dependency to your project:
+To use [Play JSON](https://github.com/playframework/play-json) for **Play 3.0**, add the following dependency to your project:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-json-play" % "@VERSION@"
+```
+
+For **Play 2.9** use:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json-play29" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
@@ -169,7 +175,7 @@ Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../
 import sttp.tapir.json.play._
 ```
 
-Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize. 
+Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize.
 
 ## Spray JSON
 
@@ -185,7 +191,7 @@ Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](..
 import sttp.tapir.json.spray._
 ```
 
-Spray JSON requires a `JsonFormat` implicit value in scope for each type you want to serialize. 
+Spray JSON requires a `JsonFormat` implicit value in scope for each type you want to serialize.
 
 ## Tethys JSON
 
@@ -201,7 +207,7 @@ Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](.
 import sttp.tapir.json.tethysjson._
 ```
 
-Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize. 
+Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize.
 
 ## Jsoniter Scala
 
@@ -217,7 +223,7 @@ Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir]
 import sttp.tapir.json.jsoniter._
 ```
 
-Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize. 
+Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize.
 
 ## Json4s
 
@@ -298,9 +304,9 @@ when these methods are called.
 
 ## Optional json bodies
 
-When the body is specified as an option, e.g. `jsonBody[Option[Book]]`, an empty body will be decoded as `None`. 
+When the body is specified as an option, e.g. `jsonBody[Option[Book]]`, an empty body will be decoded as `None`.
 
-This is implemented by passing `null` to the json-library-specific decoder, when the schema specifies that the value is 
+This is implemented by passing `null` to the json-library-specific decoder, when the schema specifies that the value is
 optional, and the body is empty.
 
 ## Next

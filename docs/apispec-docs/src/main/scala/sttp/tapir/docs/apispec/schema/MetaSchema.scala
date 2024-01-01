@@ -5,5 +5,5 @@ sealed trait MetaSchema {
 }
 
 case object MetaSchemaDraft04 extends MetaSchema {
-  override lazy val schemaId: String = "https://json-schema.org/draft-04/schema#"
+  override lazy val schemaId: String = "http://json-schema.org/draft-04/schema#"
 }

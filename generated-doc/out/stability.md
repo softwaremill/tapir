@@ -24,12 +24,12 @@ The modules are categorised using the following levels:
 | armeria   | stabilising  |
 | finatra   | stabilising  |
 | http4s    | stabilising  |
-| netty     | experimental |
+| netty     | stabilising  |
+| nima      | experimental |
 | pekko-http| stabilising  |
 | play      | stabilising  |
 | vertx     | stabilising  |
-| zio1-http | experimental |
-| zio-http  | experimental |
+| zio-http  | stabilising  |
 
 ## Client interpreters
 
@@ -65,8 +65,7 @@ The modules are categorised using the following levels:
 | newtype       | stabilising  |
 | monix-newtype | stabilising  |
 | refined       | stabilising  |
-| zio           | experimental |
-| zio1          | stabilising  |
+| zio           | stabilising  |
 | zio-prelude   | experimental |
 | iron          | experimental |
 
@@ -83,7 +82,6 @@ The modules are categorised using the following levels:
 | upickle    | stabilising  |
 | pickler    | experimental |
 | zio-json   | experimental |
-| zio1-json  | experimental |
 
 ## Testing modules
 

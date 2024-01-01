@@ -7,42 +7,51 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 import zio._
 import zio.http._
 import zio.interop.catz._
+import scala.concurrent.duration.FiniteDuration
 
 class ZioHttpTestServerInterpreter(
     eventLoopGroup: ZLayer[Any, Nothing, EventLoopGroup],
     channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
 )(implicit
     trace: Trace
-) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Http[Any, Throwable, Request, Response]] {
+) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], HttpApp[Any]] {
 
   override def route(
       es: List[ServerEndpoint[ZioStreams with WebSockets, Task]],
       interceptors: Interceptors
-  ): Http[Any, Throwable, Request, Response] = {
+  ): HttpApp[Any] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response]]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[HttpApp[Any]],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     implicit val r: Runtime[Any] = Runtime.default
 
-    val effect: ZIO[Scope, Throwable, Int] =
+    val effect: ZIO[Scope, Throwable, Port] =
       (for {
         driver <- ZIO.service[Driver]
         result <- driver.start(trace)
-        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _).withDefaultErrorResponse, ZEnvironment())
+        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
       } yield result.port)
         .provideSome[Scope](
           zio.test.driver,
           eventLoopGroup,
           channelFactory,
-          ZLayer.succeed(Server.Config.default.port(0).enableRequestStreaming)
+          ZLayer.succeed(
+            Server.Config.default
+              .port(0)
+              .enableRequestStreaming
+              .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
+          )
         )
 
-    Resource.scoped[IO, Any, Int](effect)
+    Resource.make(Resource.scoped[IO, Any, Port](effect).allocated) { case (_, release) => release }
   }
 }

@@ -7,7 +7,12 @@ import sttp.tapir.SchemaType.*
 object SNameMacros {
 
   inline def typeFullName[T] = ${ typeFullNameImpl[T] }
-  private def typeFullNameImpl[T: Type](using q: Quotes) = {
+  private def typeFullNameImpl[T: Type](using q: Quotes): Expr[String] = {
+    import q.reflect.*
+    val tpe = TypeRepr.of[T]
+    Expr(typeFullNameFromTpe(tpe))
+  }
+  def typeFullNameFromTpe(using q: Quotes)(tpe: q.reflect.TypeRepr): String = {
     import q.reflect.*
 
     def normalizedName(s: Symbol): String = if s.flags.is(Flags.Module) then s.name.stripSuffix("$") else s.name
@@ -18,9 +23,7 @@ object SNameMacros {
       else if sym == defn.RootClass then List.empty
       else nameChain(sym.owner) :+ normalizedName(sym)
 
-    val tpe = TypeRepr.of[T]
-
-    Expr(nameChain(tpe.typeSymbol).mkString("."))
+    nameChain(tpe.typeSymbol).mkString(".")
   }
 
   def extractTypeArguments(using q: Quotes)(tpe: q.reflect.TypeRepr): List[String] = {

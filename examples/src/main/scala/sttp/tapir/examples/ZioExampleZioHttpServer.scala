@@ -1,14 +1,13 @@
 package sttp.tapir.examples
 
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.ztapir._
-import zio.http.HttpApp
-import zio.http.Server
+import sttp.tapir.ztapir.*
+import zio.http.{HttpApp, Server}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, ZLayer}
 
 object ZioExampleZioHttpServer extends ZIOAppDefault {
@@ -18,7 +17,7 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   val petEndpoint: PublicEndpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpApp[Any, Throwable] =
+  val petRoutes: HttpApp[Any] =
     ZioHttpInterpreter().toHttp(
       petEndpoint.zServerLogic(petId =>
         if (petId == 35) ZIO.succeed(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
@@ -39,11 +38,11 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
   val swaggerEndpoints: List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter().fromEndpoints[Task](List(petEndpoint), "Our pets", "1.0")
 
   // Starting the server
-  val routes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
+  val routes: HttpApp[Any] = ZioHttpInterpreter().toHttp(List(petServerEndpoint) ++ swaggerEndpoints)
 
   override def run: URIO[Any, ExitCode] =
     Server
-      .serve(routes.withDefaultErrorResponse)
+      .serve(routes)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live

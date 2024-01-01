@@ -27,7 +27,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
             _ => ()
           )
 
@@ -62,7 +62,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
             _ => ()
           )
 
@@ -101,7 +101,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
             _ => ()
           )
 

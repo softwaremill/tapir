@@ -26,7 +26,9 @@ private[tapir] object ValidatorMacros {
       report.errorAndAbort("Can only enumerate values of a sealed trait, class or enum.")
     }
 
-    val instances = enumerationTypeChildren[T](failOnError = true).flatMap(_.toList).distinct
+    val instances = enumerationTypeChildren[T](failOnError = true)
+      .flatMap(_.toList)
+      .distinct
       .sortBy(_.name)
       .map(x =>
         tpe.memberType(x).asType match {

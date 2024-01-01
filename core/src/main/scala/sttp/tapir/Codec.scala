@@ -87,6 +87,24 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   def mapDecode[HH](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
   def map[HH](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
 
+  /** Maps this codec to the given higher-level type `HH`.
+    *
+    * @param f
+    *   decoding function
+    * @param g
+    *   encoding function
+    * @tparam HH
+    *   target type
+    * @see
+    *   [[map]]
+    * @see
+    *   [[mapDecode]]
+    * @see
+    *   [[mapValidate]]
+    */
+  def mapEither[HH](f: H => Either[String, HH])(g: HH => H): Codec[L, HH, CF] =
+    mapDecode(s => DecodeResult.fromEitherString(s.toString, f(s)))(g)
+
   /** Adds the given validator to the codec's schema, and maps this codec to the given higher-level type `HH`.
     *
     * Unlike a `.validate(v).map(f)(g)` invocation, during decoding the validator is run before applying the `f` function. If there are

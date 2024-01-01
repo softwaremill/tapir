@@ -2,6 +2,7 @@ package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaInt,
   OpenapiSchemaMap,
@@ -27,6 +28,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     val yaml = """
       |schemas:
       |  User:
+      |    type: object
       |    properties:
       |      id:
       |        type: integer
@@ -61,6 +63,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     val yaml = """
       |schemas:
       |  User:
+      |    type: object
       |    properties:
       |      attributes:
       |        type: object
@@ -80,6 +83,34 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
           "User" -> OpenapiSchemaObject(
             Map("attributes" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)),
             Seq("attributes"),
+            false
+          )
+        )
+      )
+    )
+  }
+
+  it should "parse any type" in {
+    val yaml = """
+      |schemas:
+      |  User:
+      |    type: object
+      |    properties:
+      |      anyValue: {}
+      |    required:
+      |      - anyValue""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
+
+    res shouldBe Right(
+      OpenapiComponent(
+        Map(
+          "User" -> OpenapiSchemaObject(
+            Map("anyValue" -> OpenapiSchemaAny(false)),
+            Seq("anyValue"),
             false
           )
         )
@@ -161,7 +192,9 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .leftMap(err => err: Error)
       .flatMap(_.as[Seq[OpenapiResponseContent]])
 
-    res shouldBe Right(Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false))))
+    res shouldBe Right(
+      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false)))
+    )
   }
 
 }

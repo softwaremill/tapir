@@ -49,6 +49,26 @@ will show you a password prompt.
 Optional and multiple authentication inputs have some additional rules as to how hey map to documentation, see the
 ["Authentication inputs and security requirements"](../docs/openapi.md) section in the OpenAPI docs for details.
 
+## Limiting request body length
+
+*Unsupported backends*: 
+This feature is available for all server backends *except*: `akka-grpc`, `Armeria`, `Finatra`, `Helidon Nima`, `pekko-grpc`. 
+
+Individual endpoints can be annotated with content length limit:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.model.EndpointExtensions._
+
+val limitedEndpoint = endpoint.maxRequestBodyLength(maxBytes = 16384L)
+```
+
+The `EndpointsExtensions` utility is available in `tapir-server` core module. 
+Such protection prevents loading all the input data if it exceeds the limit. Instead, it will result  in a `HTTP 413` 
+response to the client. 
+Please note that in case of endpoints with `streamBody` input type, the server logic receives a reference to a lazily
+evaluated stream, so actual length verification will happen only when the logic performs streams processing, not earlier.
+
 ## Next
 
 Read on about [streaming support](streaming.md).

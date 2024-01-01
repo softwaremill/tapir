@@ -14,7 +14,7 @@ import sttp.tapir.server.http4s.Http4sServerSentEvents
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.interop.catz._
-import zio.stream.ZStream
+import zio.stream.{ZSink, ZStream}
 import zio.{Task, ZIO}
 
 import java.util.UUID
@@ -50,9 +50,11 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
           .map(_.body.toOption.value shouldBe List(sse1, sse2))
       }
     )
+    def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+      zStream.run(ZSink.drain)
 
     new AllServerTests(createServerTest, interpreter, backend).tests() ++
-      new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+      new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
       new ServerWebSocketTests(createServerTest, ZioStreams) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

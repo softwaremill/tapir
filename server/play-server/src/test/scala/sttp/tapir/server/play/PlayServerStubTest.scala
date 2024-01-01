@@ -1,10 +1,10 @@
 package sttp.tapir.server.play
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer.matFromSystem
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
-import sttp.capabilities.akka.AkkaStreams
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer.matFromSystem
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.client3.testing.SttpBackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.CustomiseInterceptors
@@ -28,7 +28,7 @@ class PlayCreateServerStubTest extends CreateServerStubTest[Future, PlayServerOp
 
 class PlayServerStubTest extends ServerStubTest(new PlayCreateServerStubTest)
 
-class PlayServerStubStreamingTest extends ServerStubStreamingTest(new PlayCreateServerStubTest, AkkaStreams) {
+class PlayServerStubStreamingTest extends ServerStubStreamingTest(new PlayCreateServerStubTest, PekkoStreams) {
 
   /** Must be an instance of streams.BinaryStream */
   override def sampleStream: Any = Source.single(ByteString("hello"))

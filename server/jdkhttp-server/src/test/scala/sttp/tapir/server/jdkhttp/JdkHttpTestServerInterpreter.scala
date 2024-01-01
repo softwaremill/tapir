@@ -4,10 +4,11 @@ import cats.effect.{IO, Resource}
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
+import sttp.tapir.tests._
 
 import java.net.InetSocketAddress
 import scala.annotation.tailrec
+import scala.concurrent.duration.FiniteDuration
 
 class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Id, Any, JdkHttpServerOptions, HttpHandler] {
   override def route(es: List[ServerEndpoint[Any, Id]], interceptors: Interceptors): HttpHandler = {
@@ -16,7 +17,10 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Id, Any, JdkH
     JdkHttpServerInterpreter(serverOptions).toHandler(es)
   }
 
-  override def server(routes: NonEmptyList[HttpHandler]): Resource[IO, Port] = {
+  override def serverWithStop(
+      routes: NonEmptyList[HttpHandler],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, (Port, KillSwitch)] = {
     val server = IO.blocking {
       val server = HttpServer.create(new InetSocketAddress(0), 0)
 
@@ -43,7 +47,8 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Id, Any, JdkH
     }
 
     Resource
-      .make(server)(server => IO.blocking(server.stop(0)))
-      .map(server => server.getAddress.getPort)
+      .make(server.map(s => (s.getAddress.getPort, IO.blocking(s.stop(gracefulShutdownTimeout.map(_.toSeconds.toInt).getOrElse(0)))))) {
+        case (_, release) => release
+      }
   }
 }

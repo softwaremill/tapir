@@ -49,10 +49,10 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.9.6"
 ```
 
-`PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
+`PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
 well as an endpoint definition to read the metrics & expose them to the Prometheus server.
 
 For example, using `NettyFutureServerInterpreter`:
@@ -92,18 +92,18 @@ To create and add custom metrics:
 ```scala
 import sttp.tapir.server.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.metrics.{EndpointMetric, Metric}
-import io.prometheus.client.{CollectorRegistry, Counter}
+import io.prometheus.metrics.core.metrics.{Counter, Gauge, Histogram}
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import scala.concurrent.Future
 
 // Metric for counting responses labeled by path, method and status code
 val responsesTotal = Metric[Future, Counter](
   Counter
-    .build()
-    .namespace("tapir")
-    .name("responses_total")
+    .builder()
+    .name("tapir_responses_total")
     .help("HTTP responses")
     .labelNames("path", "method", "status")
-    .register(CollectorRegistry.defaultRegistry),
+    .register(PrometheusRegistry.defaultRegistry),
   onRequest = { (req, counter, _) =>
     Future.successful(
       EndpointMetric()
@@ -112,14 +112,14 @@ val responsesTotal = Metric[Future, Counter](
             val path = ep.showPathTemplate()
             val method = req.method.method
             val status = res.code.toString()
-            counter.labels(path, method, status).inc()
+            counter.labelValues(path, method, status).inc()
           }
         }
     )
   }
 )
 
-val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
+val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.defaultRegistry)
   .addCustom(responsesTotal)
 ```
 
@@ -128,7 +128,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.9.6"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -155,7 +155,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.9.6"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -222,7 +222,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.8.2"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.9.6"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.

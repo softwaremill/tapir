@@ -1,18 +1,19 @@
 package sttp.tapir.server.vertx.zio
 
+import _root_.zio.stream.ZStream
+import _root_.zio.{Task, ZIO}
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
+import sttp.client3.basicRequest
 import sttp.monad.MonadError
+import sttp.tapir._
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
-import sttp.tapir._
-import _root_.zio.{Task, ZIO}
-import _root_.zio.stream.ZStream
-import org.scalatest.OptionValues
-import sttp.client3.basicRequest
 import sttp.tapir.ztapir.RIOMonadError
-import org.scalatest.matchers.should.Matchers._
+import zio.stream.ZSink
 
 class ZioVertxServerTest extends TestSuite with OptionValues {
   def vertxResource: Resource[IO, Vertx] =
@@ -32,6 +33,8 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           basicRequest.get(baseUri).send(backend).map(_.body.toOption.value should not include "vert.x-eventloop-thread")
         }
       )
+      def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
+        zStream.run(ZSink.drain)
 
       new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
         new ServerMultipartTests(
@@ -39,7 +42,7 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
           partOtherHeaderSupport = false
         ).tests() ++ additionalTests() ++
-        new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+        new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
         new ServerWebSocketTests(createServerTest, ZioStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

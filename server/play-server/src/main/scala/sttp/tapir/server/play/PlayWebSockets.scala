@@ -1,9 +1,9 @@
 package sttp.tapir.server.play
 
-import akka.stream.scaladsl.Flow
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.util.ByteString
 import play.api.http.websocket._
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
@@ -11,7 +11,7 @@ import sttp.ws.WebSocketFrame
 private[play] object PlayWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, PekkoStreams]
   ): Flow[Message, Message, Any] = {
     Flow[Message]
       .map(messageToFrame)

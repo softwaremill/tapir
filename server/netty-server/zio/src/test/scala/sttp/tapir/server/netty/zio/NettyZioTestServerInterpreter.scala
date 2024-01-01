@@ -7,8 +7,10 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.Port
-import zio.{CancelableFuture, Runtime, Task, Unsafe}
+import sttp.tapir.tests._
+import zio.{Runtime, Task, Unsafe}
+
+import scala.concurrent.duration.FiniteDuration
 
 class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Task, ZioStreams, NettyZioServerOptions[Any], Task[Route[Task]]] {
@@ -19,19 +21,33 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     NettyZioServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def server(routes: NonEmptyList[Task[Route[Task]]]): Resource[IO, Port] = {
-    val config = NettyConfig.defaultWithStreaming.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose
+  override def serverWithStop(
+      routes: NonEmptyList[Task[Route[Task]]],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, KillSwitch)] = {
+    val config = NettyConfig.default
+      .eventLoopGroup(eventLoopGroup)
+      .randomPort
+      .withDontShutdownEventLoopGroupOnClose
+      .noGracefulShutdown
+
+    val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettyZioServerOptions.default[R]
 
     val runtime: Runtime[R] = Runtime.default.asInstanceOf[Runtime[R]]
 
-    val server: CancelableFuture[NettyZioServerBinding[R]] =
-      Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(NettyZioServer(options, config).addRoutes(routes.toList).start()))
+    val bind: IO[NettyZioServerBinding[R]] =
+      IO.fromFuture(
+        IO.delay(
+          Unsafe.unsafe(implicit u =>
+            runtime.unsafe.runToFuture(NettyZioServer(options, customizedConfig).addRoutes(routes.toList).start())
+          )
+        )
+      )
 
     Resource
-      .make(IO.fromFuture(IO(server)))(binding =>
-        IO.fromFuture(IO(Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(binding.stop()))))
-      )
-      .map(b => b.port)
+      .make(bind.map(b => (b.port, IO.fromFuture[Unit](IO(Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(b.stop()))))))) {
+        case (_, release) => release
+      }
   }
 }
