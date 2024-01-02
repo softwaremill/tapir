@@ -1,21 +1,21 @@
 package sttp.tapir.examples.observability
 
 import com.typesafe.scalalogging.StrictLogging
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.`export`.PeriodicMetricReader
-import sttp.tapir._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 

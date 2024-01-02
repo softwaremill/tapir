@@ -1,4 +1,4 @@
-package sttp.tapir.examples.security
+package sttp.tapir.examples2.security
 
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend

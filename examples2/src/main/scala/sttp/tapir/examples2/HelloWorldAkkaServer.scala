@@ -1,4 +1,4 @@
-package sttp.tapir.examples
+package sttp.tapir.examples2
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http

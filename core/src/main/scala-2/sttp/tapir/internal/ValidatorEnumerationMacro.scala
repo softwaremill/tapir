@@ -29,7 +29,7 @@ private[tapir] object ValidatorEnumerationMacro {
       } else {
         val instances = subclasses.map(x => Ident(x.asInstanceOf[scala.reflect.internal.Symbols#Symbol].sourceModule.asInstanceOf[Symbol]))
         val validatorEnum =
-          q"_root_.sttp.tapir.Validator.Enumeration($instances, None, Some(_root_.sttp.tapir.Schema.SName(${symbol.fullName})))"
+          q"_root_.sttp.tapir.Validator.Enumeration($instances, _root_.scala.None, _root_.scala.Some(_root_.sttp.tapir.Schema.SName(${symbol.fullName})))"
         Debug.logGeneratedCode(c)(t.typeSymbol.fullName, validatorEnum)
         c.Expr[Validator.Enumeration[E]](validatorEnum)
       }
@@ -54,7 +54,7 @@ private[tapir] object ValidatorEnumerationMacro {
         case Nil          => c.abort(c.enclosingPosition, s"Invalid enum name: ${weakTypeT.toString}")
       }
 
-      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => Option(v), Some(sttp.tapir.Schema.SName(${enumNameComponents
+      q"_root_.sttp.tapir.Validator.enumeration($enumeration.values.toList, v => _root_.scala.Option(v), _root_.scala.Some(sttp.tapir.Schema.SName(${enumNameComponents
           .mkString(".")})))"
     }
   }

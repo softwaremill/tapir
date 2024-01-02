@@ -1,10 +1,10 @@
 package sttp.tapir.examples.custom_types
 
+import io.circe.generic.auto.*
 import io.circe.{Decoder, Encoder}
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 
 object EndpointWithCustomTypes {
   // An over-complicated, example custom type

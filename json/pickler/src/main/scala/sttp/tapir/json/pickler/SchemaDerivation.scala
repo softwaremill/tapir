@@ -94,7 +94,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       finally deriveInProgress.remove(cacheKey)
 
   private def typeNameToSchemaName(typeInfo: TypeInfo, annotations: Annotations): Expr[Schema.SName] =
-    val encodedName: Option[Expr[String]] = annotations.encodedName
+    val encodedName: Option[Expr[String]] = annotations.topLevelEncodedName
 
     encodedName match
       case None =>
@@ -151,7 +151,11 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
       // skip inherited annotations if defined at the top-level
       topLevel ++ inherited.filterNot(i => topLevel.exists(t => t.tpe <:< i.tpe))
 
-    def encodedName: Option[Expr[String]] = all
+    def topLevelEncodedName: Option[Expr[String]] = findEncodedName(topLevel)
+
+    def encodedName: Option[Expr[String]] = findEncodedName(all)
+    
+    private def findEncodedName(terms: List[Term]): Option[Expr[String]] = terms
       .map(_.asExpr)
       .collectFirst { case '{ $en: Schema.annotations.encodedName } => en }
       .map(en => '{ $en.name })

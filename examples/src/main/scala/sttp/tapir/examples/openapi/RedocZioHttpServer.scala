@@ -1,11 +1,11 @@
 package sttp.tapir.examples.openapi
 
-import io.circe.generic.auto._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import io.circe.generic.auto.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import zio.http.HttpApp
 import zio.http.Server
 import zio.Console.{printLine, readLine}

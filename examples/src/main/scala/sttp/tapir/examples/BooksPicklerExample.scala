@@ -1,4 +1,4 @@
-package sttp.tapir.examples3
+package sttp.tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}

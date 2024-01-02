@@ -22,7 +22,7 @@ val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-val examplesScalaVersions = List(scala2_13)
+val examplesScalaVersions = List(scala3)
 val documentationScalaVersion = scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
@@ -238,8 +238,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
+  examples2.projectRefs ++
   examples.projectRefs ++
-  examples3.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
   openapiCodegenSbt.projectRefs ++
@@ -411,7 +411,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.4")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.7",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.8",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -536,8 +536,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.9.5" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.9.5" % "test",
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test",
+      "io.gatling" % "gatling-test-framework" % "3.10.3" % "test",
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -560,9 +560,9 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(http4sVanilla := { (genPerfTestTask("http4s.Vanilla", "OneRoute")).value })
   .settings(http4sTapir := { (genPerfTestTask("netty.TapirMulti", "PostBytes256")).value })
   .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
-  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "PostString")).value })
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
-  .dependsOn(core, akkaHttpServer, http4sServer, nettyServer)
+  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
+  .jvmPlatform(scalaVersions = List(scala2_13))
+  .dependsOn(core, akkaHttpServer, http4sServer)
 
 // integrations
 
@@ -933,8 +933,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.25.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.25.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.26.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.26.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -2034,10 +2034,10 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
 
 // other
 
-lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
+lazy val examples2: ProjectMatrix = (projectMatrix in file("examples2"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-examples",
+    name := "tapir-examples2",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
@@ -2062,7 +2062,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     publishArtifact := false,
     Compile / run / fork := true
   )
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(
     akkaHttpServer,
     pekkoHttpServer,
@@ -2096,25 +2096,54 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     protobuf
   )
 
-lazy val examples3: ProjectMatrix = (projectMatrix in file("examples3"))
+lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-examples3",
+    name := "tapir-examples",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
+      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
+      scalaTest.value
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .jvmPlatform(scalaVersions = List(scala3))
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
+    datadogMetrics,
+    prometheusMetrics,
+    opentelemetryMetrics,
+    zioMetrics,
     circeJson,
     http4sServer,
+    pekkoHttpServer,
+    armeriaServer,
     nettyServer,
+    jdkhttpServer,
+    nettyServerCats,
+    http4sClient,
     picklerJson,
     sttpClient,
-    swaggerUiBundle
+    swaggerUiBundle,
+    http4sServerZio,
+    nettyServerZio,
+    zioHttpServer,
+    zioJson,
+    redocBundle,
+    sttpStubServer,
+    asyncapiDocs,
+    iron
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355

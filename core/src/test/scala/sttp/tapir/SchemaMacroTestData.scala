@@ -62,4 +62,19 @@ object SchemaMacroTestData {
     case object B extends Letters
     case object C extends Letters
   }
+
+  @encodedName("CustomHericium")
+  sealed trait Hericium {
+    @encodedName("customCommonField")
+    @description("A common field")
+    val commonField: Int
+  }
+
+  object Hericium {
+
+    @encodedName("CustomErinaceus")
+    final case class Erinaceus(commonField: Int, e: String) extends Hericium
+    final case class Abietis(commonField: Int, a: Int) extends Hericium
+    final case class Botryoides(commonField: Int, b: Boolean) extends Hericium
+  }
 }

@@ -7,10 +7,10 @@ import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.httpclient.fs2.HttpClientFs2Backend
 import sttp.model.{Header, HeaderNames, Method, QueryParams}
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 /** Proxies requests from /proxy to https://httpbin.org/anything */

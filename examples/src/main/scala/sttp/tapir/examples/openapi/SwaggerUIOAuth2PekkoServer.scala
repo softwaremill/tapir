@@ -1,11 +1,11 @@
 package sttp.tapir.examples.openapi
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.{Route, RouteConcatenation}
-import sttp.tapir._
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.{Route, RouteConcatenation}
+import sttp.tapir.*
 import sttp.tapir.server.PartialServerEndpoint
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import scala.concurrent.duration.DurationInt
@@ -28,7 +28,7 @@ import scala.concurrent.{Await, Future, Promise}
   *
   * Go to: [[http://localhost:3333/docs]] And try authorize by using `Authorize` by providing details of clients and user
   */
-object SwaggerUIOAuth2AkkaServer extends App with RouteConcatenation {
+object SwaggerUIOAuth2PekkoServer extends App with RouteConcatenation {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
@@ -56,14 +56,14 @@ object SwaggerUIOAuth2AkkaServer extends App with RouteConcatenation {
       .serverLogic(_ => word => countCharacters(word))
 
   val countCharactersRoute: Route =
-    AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint)
+    PekkoHttpServerInterpreter().toRoute(countCharactersEndpoint)
 
   val endpoints: List[AnyEndpoint] = List(countCharactersEndpoint).map(_.endpoint)
 
   val swaggerEndpoints = SwaggerInterpreter()
     .fromEndpoints[Future](endpoints, "My App", "1.0")
 
-  val swaggerRoute: Route = AkkaHttpServerInterpreter().toRoute(swaggerEndpoints)
+  val swaggerRoute: Route = PekkoHttpServerInterpreter().toRoute(swaggerEndpoints)
 
   val routes = countCharactersRoute ~ swaggerRoute
 

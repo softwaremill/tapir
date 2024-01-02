@@ -1,11 +1,10 @@
 package sttp.tapir.examples
 
-import cats.effect.IO
-import cats.effect.IOApp
+import cats.effect.{IO, IOApp}
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
-import sttp.tapir.{PublicEndpoint, endpoint, query, stringBody}
 import sttp.tapir.server.netty.cats.NettyCatsServer
+import sttp.tapir.*
 
 object HelloWorldNettyCatsServer extends IOApp.Simple {
   // One endpoint on GET /hello with query parameter `name`

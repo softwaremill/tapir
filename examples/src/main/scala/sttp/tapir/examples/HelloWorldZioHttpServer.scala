@@ -1,13 +1,12 @@
 package sttp.tapir.examples
 
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.ztapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.zio._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.zio.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.http.HttpApp
-import zio.http.Server
-import zio._
+import sttp.tapir.ztapir.*
+import zio.*
+import zio.http.{HttpApp, Server}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 object HelloWorldZioHttpServer extends ZIOAppDefault {

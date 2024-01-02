@@ -2,11 +2,11 @@ package sttp.tapir.examples.client
 
 import cats.effect.{ExitCode, IO, IOApp}
 import com.typesafe.scalalogging.StrictLogging
-import io.circe.generic.auto._
-import sttp.tapir._
+import io.circe.generic.auto.*
+import sttp.tapir.*
 import sttp.tapir.client.http4s.Http4sClientInterpreter
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 
 object Http4sClientExample extends IOApp with StrictLogging {
 
@@ -20,12 +20,12 @@ object Http4sClientExample extends IOApp with StrictLogging {
 
   // Define http4s routes that will be used to test the request.
   private val http4sRoutes = {
-    import io.circe.generic.auto._
-    import io.circe.syntax._
-    import org.http4s._
-    import org.http4s.circe.CirceEntityEncoder._
-    import org.http4s.dsl.io._
-    import org.http4s.implicits._
+    import io.circe.generic.auto.*
+    import io.circe.syntax.*
+    import org.http4s.*
+    import org.http4s.circe.CirceEntityEncoder.*
+    import org.http4s.dsl.io.*
+    import org.http4s.implicits.*
 
     HttpRoutes
       .of[IO] { case GET -> Root / "users" / IntVar(userId) =>

@@ -1,17 +1,17 @@
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
-import cats.implicits._
+import cats.implicits.*
 import fs2.{Chunk, Stream}
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.HeaderNames
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object StreamingNettyFs2Server extends IOApp {
   // corresponds to: GET /receive?name=...

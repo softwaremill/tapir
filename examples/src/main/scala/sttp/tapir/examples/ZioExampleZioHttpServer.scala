@@ -1,14 +1,13 @@
 package sttp.tapir.examples
 
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
-import sttp.tapir.ztapir._
-import zio.http.HttpApp
-import zio.http.Server
+import sttp.tapir.ztapir.*
+import zio.http.{HttpApp, Server}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, ZLayer}
 
 object ZioExampleZioHttpServer extends ZIOAppDefault {

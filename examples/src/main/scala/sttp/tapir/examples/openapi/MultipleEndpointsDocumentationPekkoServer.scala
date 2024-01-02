@@ -1,19 +1,19 @@
 package sttp.tapir.examples.openapi
 
 import java.util.concurrent.atomic.AtomicReference
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import io.circe.generic.auto._
-import sttp.tapir.generic.auto._
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import io.circe.generic.auto.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
-object MultipleEndpointsDocumentationAkkaServer extends App {
+object MultipleEndpointsDocumentationPekkoServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
@@ -47,31 +47,33 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
     )
   )
 
-  val booksListingRoute = AkkaHttpServerInterpreter().toRoute(booksListing.serverLogicSuccess(_ => Future.successful(books.get())))
+  val booksListingRoute = PekkoHttpServerInterpreter().toRoute(booksListing.serverLogicSuccess(_ => Future.successful(books.get())))
   val addBookRoute =
-    AkkaHttpServerInterpreter().toRoute(
+    PekkoHttpServerInterpreter().toRoute(
       addBook.serverLogicSuccess(book => Future.successful { books.getAndUpdate(books => books :+ book); () })
     )
 
   // generating and exposing the documentation in yml
   val swaggerUIRoute =
-    AkkaHttpServerInterpreter().toRoute(
+    PekkoHttpServerInterpreter().toRoute(
       SwaggerInterpreter().fromEndpoints[Future](List(booksListing, addBook), "The tapir library", "1.0.0")
     )
 
   // starting the server
   val routes = {
-    import akka.http.scaladsl.server.Directives._
+    import org.apache.pekko.http.scaladsl.server.Directives.*
     concat(booksListingRoute, addBookRoute, swaggerUIRoute)
   }
 
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { binding =>
     // testing
     println("Go to: http://localhost:8080/docs")
     println("Press any key to exit ...")
     scala.io.StdIn.readLine()
+
+    binding
   }
 
   // cleanup
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, Duration.Inf)
+  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 }
