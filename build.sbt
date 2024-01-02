@@ -562,7 +562,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
   .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
   .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(core, akkaHttpServer, http4sServer)
+  .dependsOn(core, akkaHttpServer, http4sServer, nettyServer)
 
 // integrations
 
