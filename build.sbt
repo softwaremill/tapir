@@ -497,27 +497,11 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .dependsOn(core, files, circeJson, cats)
 
-val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
-val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
-val akkaHttpVanillaMulti = taskKey[Unit]("akka-http-vanilla-multi")
-val akkaHttpTapirMulti = taskKey[Unit]("akka-http-tapir-multi")
-val http4sVanilla = taskKey[Unit]("http4s-vanilla")
-val http4sTapir = taskKey[Unit]("http4s-tapir")
-val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
-val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
-
-def genPerfTestTask(servName: String, simName: String): Def.Initialize[Task[Unit]] = Def.task {
-  (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
-  (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
-}
-
 val perfTestCommand = Command.args("perf", "<servName> <simName>") { (state, args) =>
   args match {
     case Seq(servName, simName) =>
-      // First command
       System.setProperty("tapir.perf.serv-name", servName)
       Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
-
     case _ =>
       println("Usage: perf <servName> <simName>")
       state
@@ -547,14 +531,6 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     fork := true,
     connectInput := true
   )
-  .settings(akkaHttpVanilla := { (genPerfTestTask("akka.Vanilla", "OneRoute")).value })
-  .settings(akkaHttpTapir := { (genPerfTestTask("akka.Tapir", "OneRoute")).value })
-  .settings(akkaHttpVanillaMulti := { (genPerfTestTask("akka.VanillaMulti", "MultiRoute")).value })
-  .settings(akkaHttpTapirMulti := { (genPerfTestTask("akka.TapirMulti", "MultiRoute")).value })
-  .settings(http4sVanilla := { (genPerfTestTask("http4s.Vanilla", "OneRoute")).value })
-  .settings(http4sTapir := { (genPerfTestTask("netty.TapirMulti", "PostBytes256")).value })
-  .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
-  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
   .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(core, akkaHttpServer, http4sServer, nettyServer)
 
