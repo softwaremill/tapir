@@ -138,14 +138,14 @@ class OneRouteSimulation extends TapirPerfTestSimulation {
   setUp(CommonSimulations.testScenario(10.seconds, 0))
 }
 
-class MultiRouteSimulation extends Simulation {
+class MultiRouteSimulation extends TapirPerfTestSimulation {
   setUp(CommonSimulations.testScenario(1.minute, 0))
 }
 
-class PostStringSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_string(1.minute, 0))
+class PostStringSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.scenario_post_string(10.seconds, 0))
 }
 
-class PostLongStringSimulation extends Simulation {
+class PostLongStringSimulation extends TapirPerfTestSimulation {
   setUp(CommonSimulations.scenario_post_long_string(1.minute, 1))
 }
