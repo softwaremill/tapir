@@ -506,12 +506,6 @@ val http4sTapir = taskKey[Unit]("http4s-tapir")
 val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
 val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
 
-import complete.DefaultParsers._
-
-val perfTestParser: complete.Parser[(String, String)] = {
-  Space ~> token(StringBasic.examples("<server name>")) ~ (Space ~> token(StringBasic.examples("<simulation name>")))
-}
-
 def genPerfTestTask(servName: String, simName: String): Def.Initialize[Task[Unit]] = Def.task {
   (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
   (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
