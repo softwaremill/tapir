@@ -13,7 +13,7 @@ import sttp.tapir.perf.apis.ServerRunner
 
 object CommonSimulations {
   private val userCount = 100
-  private val largeInputSize = 5 * 1024 * 1024 * 1024
+  private val largeInputSize = 5 * 1024 * 1024 
   private val baseUrl = "http://127.0.0.1:8080"
 
   def testScenario(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
