@@ -3,9 +3,8 @@ package sttp.tapir.perf.apis
 import sttp.tapir._
 import sttp.monad.MonadError
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.model.EndpointExtensions._
 
-trait SimpleGetEndpoints {
+trait Endpoints {
   type EndpointGen = Int => PublicEndpoint[_, String, String, Any]
   type ServerEndpointGen[F[_]] = Int => ServerEndpoint[Any, F]
 
@@ -26,15 +25,26 @@ trait SimpleGetEndpoints {
       .out(stringBody)
   }
 
+  val gen_post_in_bytes_out_string: EndpointGen = { (n: Int) =>
+    endpoint.post
+      .in("pathBytes" + n.toString)
+      .in(path[Int]("id"))
+      .in(byteArrayBody)
+      .errorOut(stringBody)
+      .out(stringBody)
+  }
+
   val gen_post_in_file_out_string: EndpointGen = { (n: Int) =>
     endpoint.post
       .in("pathFile" + n.toString)
       .in(path[Int]("id"))
       .in(fileBody)
-      .maxRequestBodyLength(300000)
       .errorOut(stringBody)
       .out(stringBody)
   }
+
+  val allEndpoints =
+    List(gen_get_in_string_out_string, gen_post_in_string_out_string, gen_post_in_bytes_out_string, gen_post_in_file_out_string)
 
   def replyingWithDummyStr[F[_]](endpointGens: List[EndpointGen])(implicit
       monad: MonadError[F]

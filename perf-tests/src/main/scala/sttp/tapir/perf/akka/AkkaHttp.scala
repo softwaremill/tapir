@@ -5,10 +5,15 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import sttp.tapir.perf
+import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import sttp.monad.MonadError
+import sttp.monad.FutureMonad
+import scala.concurrent.ExecutionContext
+import cats.effect.IO
 
 object Vanilla {
   val router: Int => Route = (nRoutes: Int) =>
@@ -23,16 +28,16 @@ object Vanilla {
     )
 }
 
-object Tapir {
+object Tapir extends Endpoints {
+  implicit val mErr: MonadError[Future] = new FutureMonad()(ExecutionContext.Implicits.global)
+
+  val serverEndpointGens = replyingWithDummyStr[Future](allEndpoints)
+
+  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
+
   val router: Int => Route = (nRoutes: Int) =>
     AkkaHttpServerInterpreter()(AkkaHttp.executionContext).toRoute(
-      (0 to nRoutes)
-        .map((n: Int) =>
-          perf.Common
-            .genTapirEndpoint(n)
-            .serverLogic((id: Int) => Future.successful(Right((id + n).toString)): Future[Either[String, String]])
-        )
-        .toList
+      genEndpoints(nRoutes)
     )
 }
 
@@ -40,16 +45,21 @@ object AkkaHttp {
   implicit val actorSystem: ActorSystem = ActorSystem("akka-http")
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
 
-  def runServer(router: Route): Unit = {
-    Http()
-      .newServerAt("127.0.0.1", 8080)
-      .bind(router)
-      .flatMap((x) => { Common.blockServer(); x.unbind() })
-      .onComplete(_ => actorSystem.terminate())
+  def runServer(router: Route): IO[ServerRunner.KillSwitch] = {
+    IO.fromFuture(
+      IO(
+        Http()
+          .newServerAt("127.0.0.1", 8080)
+          .bind(router)
+          .map { binding =>
+            IO.fromFuture(IO(binding.unbind().flatMap(_ => actorSystem.terminate()))).void
+          }
+      )
+    )
   }
 }
 
-object TapirServer extends App { AkkaHttp.runServer(Tapir.router(1)) }
-object TapirMultiServer extends App { AkkaHttp.runServer(Tapir.router(128)) }
-object VanillaServer extends App { AkkaHttp.runServer(Vanilla.router(1)) }
-object VanillaMultiServer extends App { AkkaHttp.runServer(Vanilla.router(128)) }
+object TapirServer extends ServerRunner { override def start = AkkaHttp.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def start = AkkaHttp.runServer(Tapir.router(128)) }
+object VanillaServer extends ServerRunner { override def start = AkkaHttp.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def start = AkkaHttp.runServer(Vanilla.router(128)) }

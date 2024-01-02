@@ -1,19 +1,15 @@
 package sttp.tapir.perf.http4s
 
 import cats.effect._
-import cats.effect.unsafe.implicits.global
-import cats.syntax.all._
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl._
 import org.http4s.implicits._
 import org.http4s.server.Router
-import sttp.tapir.perf
-import sttp.tapir.perf.Common
+import sttp.tapir.perf.apis._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.monad.MonadError
-import sttp.tapir.server.ServerEndpoint
 
 object Vanilla {
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
@@ -30,13 +26,11 @@ object Vanilla {
     )
 }
 
-object Tapir extends perf.apis.SimpleGetEndpoints {
+object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
-  val serverEndpointGens = replyingWithDummyStr[IO](
-    List(gen_get_in_string_out_string, gen_post_in_string_out_string)
-  )
+  val serverEndpointGens = replyingWithDummyStr[IO](allEndpoints)
 
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
@@ -46,18 +40,20 @@ object Tapir extends perf.apis.SimpleGetEndpoints {
     })
 }
 
-object Http4s {
-  def runServer(router: HttpRoutes[IO]): IO[ExitCode] = {
+object server {
+  def runServer(router: HttpRoutes[IO]): IO[ServerRunner.KillSwitch] =
     BlazeServerBuilder[IO]
       .bindHttp(8080, "localhost")
       .withHttpApp(router.orNotFound)
       .resource
-      .use(_ => { perf.Common.blockServer(); IO.pure(ExitCode.Success) })
-  }
+      .allocated
+      .map(_._2)
+      .map(_.flatTap { _ =>
+        IO.println("Http4s server closed.")
+      })
 }
 
-object TapirServer extends App { Http4s.runServer(Tapir.router(1)).unsafeRunSync() }
-object TapirMultiServer extends App { Http4s.runServer(Tapir.router(128)).unsafeRunSync() }
-object VanillaServer extends App { Http4s.runServer(Vanilla.router(1)).unsafeRunSync() }
-object PostStringServer extends App { Http4s.runServer(Vanilla.router(1)).unsafeRunSync() }
-object VanillaMultiServer extends App { Http4s.runServer(Vanilla.router(128)).unsafeRunSync() }
+object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def start = server.runServer(Tapir.router(128)) }
+object VanillaServer extends ServerRunner { override def start = server.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def start = server.runServer(Vanilla.router(128)) }

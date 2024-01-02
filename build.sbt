@@ -350,6 +350,7 @@ lazy val rootProject = (project in file("."))
     ideSkipProject := false,
     generateMimeByExtensionDB := GenerateMimeByExtensionDB()
   )
+  .settings(commands += perfTestCommand)
   .aggregate(allAggregates: _*)
 
 // start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
@@ -516,7 +517,18 @@ def genPerfTestTask(servName: String, simName: String): Def.Initialize[Task[Unit
   (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
 }
 
-lazy val perfTest = inputKey[Unit]("Run performance test")
+val perfTestCommand = Command.args("perf", "<servName> <simName>") { (state, args) =>
+  args match {
+    case Seq(servName, simName) =>
+      // First command
+      System.setProperty("tapir.perf.serv-name", servName)
+      Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
+
+    case _ =>
+      println("Usage: perf <servName> <simName>")
+      state
+  }
+}
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -540,13 +552,6 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     fork := true,
     connectInput := true
-  )
-  .settings(
-    perfTest := {
-      genPerfTestTask.tupled(perfTestParser.parsed).value
-      // val (servName, simName) = perfTestParser.parsed
-      // genPerfTestTask(servName, simName).value
-    }
   )
   .settings(akkaHttpVanilla := { (genPerfTestTask("akka.Vanilla", "OneRoute")).value })
   .settings(akkaHttpTapir := { (genPerfTestTask("akka.Tapir", "OneRoute")).value })
