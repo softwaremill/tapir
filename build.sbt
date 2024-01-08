@@ -499,20 +499,19 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
 
 val perfTestCommand = Command("perf", ("perf", "servName simName userCount(optional)"), "run performance tests") { state =>
   val parser = (Space ~> token(StringBasic.examples("servName"))) ~
-               (Space ~> token(StringBasic.examples("simName"))) ~
-               (Space ~> token(StringBasic.examples("userCount"))).? 
-     parser.map {
-        case servName ~ simName ~ userCountOpt =>
-          val userCount = userCountOpt.map(_.trim).getOrElse("1")
-          (servName, simName, userCount)
-      }
-    } { (state, args) =>
-    val (servName, simName, userCount) = args
-      System.setProperty("tapir.perf.serv-name", servName)
-      System.setProperty("tapir.perf.user-count", userCount)
-      // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
-      Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
-    }
+    (Space ~> token(StringBasic.examples("simName"))) ~
+    (Space ~> token(StringBasic.examples("userCount"))).?
+  parser.map { case servName ~ simName ~ userCountOpt =>
+    val userCount = userCountOpt.map(_.trim).getOrElse("1")
+    (servName, simName, userCount)
+  }
+} { (state, args) =>
+  val (servName, simName, userCount) = args
+  System.setProperty("tapir.perf.serv-name", servName)
+  System.setProperty("tapir.perf.user-count", userCount)
+  // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
+  Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
+}
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -520,14 +519,15 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.10.3" % "test",
-      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-server" % Versions.http4s,
+      // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test" exclude(
+        "com.fasterxml.jackson.core", "jackson-databind"
+      ),
+      "io.gatling" % "gatling-test-framework" % "3.10.3" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.1",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ) ++ loggerDependencies,
     publishArtifact := false
