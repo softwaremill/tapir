@@ -5,7 +5,6 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Directives._
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
@@ -25,9 +24,7 @@ object Vanilla {
 }
 
 object Tapir extends Endpoints {
-  implicit val mErr: MonadError[Future] = new FutureMonad()(ExecutionContext.Implicits.global)
-
-  val serverEndpointGens = replyingWithDummyStr[Future](allEndpoints)
+  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
 
   def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
 

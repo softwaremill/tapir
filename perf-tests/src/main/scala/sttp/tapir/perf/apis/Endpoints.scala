@@ -46,10 +46,8 @@ trait Endpoints {
   val allEndpoints =
     List(gen_get_in_string_out_string, gen_post_in_string_out_string, gen_post_in_bytes_out_string, gen_post_in_file_out_string)
 
-  def replyingWithDummyStr[F[_]](endpointGens: List[EndpointGen])(implicit
-      monad: MonadError[F]
-  ): Seq[ServerEndpointGen[F]] =
-    endpointGens.map(gen => gen.andThen(se => se.serverLogicSuccess[F](_ => monad.eval("ok"))))
+  def replyingWithDummyStr[F[_]](endpointGens: List[EndpointGen], reply: String => F[String]): Seq[ServerEndpointGen[F]] =
+    endpointGens.map(gen => gen.andThen(se => se.serverLogicSuccess[F](_ => reply("ok"))))
 
   def genServerEndpoints[F[_]](gens: Seq[ServerEndpointGen[F]])(routeCount: Int): Seq[ServerEndpoint[Any, F]] =
     gens.flatMap(gen => (0 to routeCount).map(i => gen(i)))

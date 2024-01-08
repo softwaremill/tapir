@@ -538,7 +538,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     connectInput := true
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer)
+  .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats)
 
 // integrations
 

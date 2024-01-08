@@ -30,7 +30,7 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
-  val serverEndpointGens = replyingWithDummyStr[IO](allEndpoints)
+  val serverEndpointGens = replyingWithDummyStr(allEndpoints, IO.pure)
 
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {

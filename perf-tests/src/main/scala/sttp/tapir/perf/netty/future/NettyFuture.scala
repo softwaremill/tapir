@@ -14,7 +14,7 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[Future] = new FutureMonad()(ExecutionContext.Implicits.global)
 
-  val serverEndpointGens = replyingWithDummyStr[Future](allEndpoints)
+  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
 
   def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
 }
