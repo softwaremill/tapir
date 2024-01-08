@@ -1,8 +1,9 @@
 package sttp.tapir.perf.apis
 
 import sttp.tapir._
-import sttp.monad.MonadError
+import sttp.tapir.perf.Common._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.model.EndpointExtensions._
 
 trait Endpoints {
   type EndpointGen = Int => PublicEndpoint[_, String, String, Any]
@@ -21,6 +22,7 @@ trait Endpoints {
       .in("path" + n.toString)
       .in(path[Int]("id"))
       .in(stringBody)
+      .maxRequestBodyLength(LargeInputSize + 1024L)
       .errorOut(stringBody)
       .out(stringBody)
   }
@@ -30,6 +32,7 @@ trait Endpoints {
       .in("pathBytes" + n.toString)
       .in(path[Int]("id"))
       .in(byteArrayBody)
+      .maxRequestBodyLength(LargeInputSize + 1024L)
       .errorOut(stringBody)
       .out(stringBody)
   }
@@ -39,6 +42,7 @@ trait Endpoints {
       .in("pathFile" + n.toString)
       .in(path[Int]("id"))
       .in(fileBody)
+      .maxRequestBodyLength(LargeInputSize + 1024L)
       .errorOut(stringBody)
       .out(stringBody)
   }

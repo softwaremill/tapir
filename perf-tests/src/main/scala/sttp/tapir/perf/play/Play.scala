@@ -3,22 +3,24 @@ package sttp.tapir.perf.play
 import cats.effect.IO
 import org.apache.pekko.actor.ActorSystem
 import play.api.Mode
-import play.api.mvc.{Handler, PlayBodyParsers, RequestHeader, _}
+import play.api.mvc._
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.api.routing.sird._
 import play.core.server.{DefaultPekkoHttpServerComponents, ServerConfig}
-import play.mvc.Http.HttpVerbs
+import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
+
 import sttp.tapir.server.play.PlayServerInterpreter
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import org.apache.pekko.util.ByteString
+import play.api.libs.Files
 
-object Vanilla extends Results {
+object Vanilla extends ControllerHelpers { 
   implicit lazy val perfActorSystem: ActorSystem = ActorSystem("vanilla-play")
   implicit lazy val perfExecutionContext: ExecutionContextExecutor = perfActorSystem.dispatcher
-  val verbs = new HttpVerbs {}
-  val pcc = new ActionBuilder[Request, AnyContent] {
+  val anyContentActionBuilder = new ActionBuilder[Request, AnyContent] {
 
     override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
       block(request)
@@ -27,15 +29,69 @@ object Vanilla extends Results {
 
     override val parser: BodyParser[AnyContent] = PlayBodyParsers.apply().anyContent
   }
-  def simpleGet: Action[AnyContent] = pcc.async { implicit request =>
+
+  val byteStringActionBuilder = new ActionBuilder[Request, ByteString] {
+    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
+      block(request)
+
+    override protected def executionContext: ExecutionContext = perfExecutionContext
+
+    override val parser: BodyParser[ByteString] = PlayBodyParsers.apply().byteString(maxLength = LargeInputSize + 1024L)
+  }
+
+  val stringActionBuilder = new ActionBuilder[Request, String] {
+    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
+      block(request)
+
+    override protected def executionContext: ExecutionContext = perfExecutionContext
+
+    override val parser: BodyParser[String] = PlayBodyParsers.apply().text(maxLength = LargeInputSize + 1024L)
+  }
+
+  val fileReqActionBuilder = new ActionBuilder[Request, Files.TemporaryFile] {
+    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
+      block(request)
+
+    override protected def executionContext: ExecutionContext = perfExecutionContext
+
+    override val parser: BodyParser[Files.TemporaryFile] = PlayBodyParsers.apply().temporaryFile
+  }
+
+  def simpleGet: Action[AnyContent] = anyContentActionBuilder.async { implicit request =>
     val param = request.path.split("/").last
     Future.successful(
       Ok(param)
     )
   }
 
-  def genRoutesSingle(number: Int): Routes = { case GET(p"/path$number/$param") =>
-    simpleGet
+  def postBytes: Action[ByteString] = byteStringActionBuilder.async { implicit request =>
+    val param = request.path.split("/").last
+    val byteArray: ByteString = request.body
+    Future.successful(Ok(s"$param-${byteArray.length}"))
+  }
+
+  def postString: Action[String] = stringActionBuilder.async { implicit request =>
+    val param = request.path.split("/").last
+    val str: String = request.body
+    Future.successful(Ok(s"$param-${str.length}"))
+  }
+
+  def postFile: Action[Files.TemporaryFile] = fileReqActionBuilder.async { implicit request =>
+    val param = request.path.split("/").last
+    val file: Files.TemporaryFile = request.body
+    Future.successful(Ok(s"$param-${file.path.toString}"))
+  }
+
+
+  def genRoutesSingle(number: Int): Routes = { 
+    case GET(p"/path$number/$param") =>
+      simpleGet
+    case POST(p"/path$number/$param") =>
+      postString
+    case POST(p"/pathBytes$number/$param") =>
+      postBytes
+    case POST(p"/pathFile$number/$param") =>
+      postFile
   }
   def router: Int => Routes = (nRoutes: Int) => (0 until nRoutes).map(genRoutesSingle).reduceLeft(_ orElse _)
 }

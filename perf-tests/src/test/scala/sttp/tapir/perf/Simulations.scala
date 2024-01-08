@@ -10,9 +10,9 @@ import scala.util.Random
 import cats.effect.IO
 import cats.effect.unsafe.IORuntime
 import sttp.tapir.perf.apis.ServerRunner
+import sttp.tapir.perf.Common._
 
 object CommonSimulations {
-  private val largeInputSize = 5 * 1024 * 1024 
   private val baseUrl = "http://127.0.0.1:8080"
   private val random = new Random()
 
@@ -25,8 +25,8 @@ object CommonSimulations {
   def randomAlphanumByteArray(size: Int): Array[Byte] =
     Random.alphanumeric.take(size).map(_.toByte).toArray
 
-  lazy val constRandomBytes = randomByteArray(largeInputSize)
-  lazy val constRandomAlphanumBytes = randomAlphanumByteArray(largeInputSize)
+  lazy val constRandomBytes = randomByteArray(LargeInputSize)
+  lazy val constRandomAlphanumBytes = randomAlphanumByteArray(LargeInputSize)
 
   def simple_get(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl)
@@ -55,6 +55,7 @@ object CommonSimulations {
       http(s"HTTP POST /path$routeNumber/4")
         .post(s"/path$routeNumber/4")
         .body(StringBody(body))
+        .header("Content-Type", "text/plain")
     )
 
     scenario(s"Repeatedly invoke POST with short string body")
@@ -66,8 +67,8 @@ object CommonSimulations {
   def scenario_post_bytes(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
-      http(s"HTTP POST /path$routeNumber/4")
-        .post(s"/path$routeNumber/4")
+      http(s"HTTP POST /pathBytes$routeNumber/4")
+        .post(s"/pathBytes$routeNumber/4")
         .body(ByteArrayBody(randomByteArray(256)))
     )
 
@@ -130,6 +131,7 @@ abstract class TapirPerfTestSimulation extends Simulation {
   val serverName = s"sttp.tapir.perf.${serverNameParam}Server"
 
   val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
+  // io.gatling.core.json.Json
   val serverStartAction: IO[ServerRunner.KillSwitch] = try { 
     val moduleSymbol = runtimeMirror.staticModule(serverName) 
     val moduleMirror = runtimeMirror.reflectModule(moduleSymbol)
@@ -154,11 +156,23 @@ abstract class TapirPerfTestSimulation extends Simulation {
 }
 
 class SimpleGetSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.simple_get(1.minute, 0))
+  setUp(CommonSimulations.simple_get(10.seconds, 0))
 }
 
 class SimpleGetMultiRouteSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.simple_get(1.minute, 127))
+  setUp(CommonSimulations.simple_get(10.seconds, 127))
+}
+
+class PostBytesSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.scenario_post_bytes(10.seconds, 0))
+}
+
+class PostLongBytesSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.scenario_post_long_bytes(10.seconds, 0))
+}
+
+class PostFilesSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.scenario_post_file(10.seconds, 0))
 }
 
 class PostStringSimulation extends TapirPerfTestSimulation {
@@ -166,5 +180,5 @@ class PostStringSimulation extends TapirPerfTestSimulation {
 }
 
 class PostLongStringSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.scenario_post_long_string(1.minute, 0))
+  setUp(CommonSimulations.scenario_post_long_string(10.seconds, 0))
 }
