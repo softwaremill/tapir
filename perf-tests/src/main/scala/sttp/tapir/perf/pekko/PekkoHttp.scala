@@ -1,19 +1,15 @@
-package sttp.tapir.perf.akka
+package sttp.tapir.perf.pekko
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
-import sttp.tapir.perf
-import sttp.tapir.perf.apis._
-import sttp.tapir.perf.Common
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-
-import scala.concurrent.{ExecutionContextExecutor, Future}
-import sttp.monad.MonadError
-import sttp.monad.FutureMonad
-import scala.concurrent.ExecutionContext
 import cats.effect.IO
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.Route
+import sttp.monad.{FutureMonad, MonadError}
+import sttp.tapir.perf.apis._
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
+
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 object Vanilla {
   val router: Int => Route = (nRoutes: Int) =>
@@ -36,13 +32,13 @@ object Tapir extends Endpoints {
   def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
 
   val router: Int => Route = (nRoutes: Int) =>
-    AkkaHttpServerInterpreter()(AkkaHttp.executionContext).toRoute(
+    PekkoHttpServerInterpreter()(PekkoHttp.executionContext).toRoute(
       genEndpoints(nRoutes)
     )
 }
 
-object AkkaHttp {
-  implicit val actorSystem: ActorSystem = ActorSystem("akka-http")
+object PekkoHttp {
+  implicit val actorSystem: ActorSystem = ActorSystem("tapir-pekko-http")
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
 
   def runServer(router: Route): IO[ServerRunner.KillSwitch] = {
@@ -59,7 +55,7 @@ object AkkaHttp {
   }
 }
 
-object TapirServer extends ServerRunner { override def start = AkkaHttp.runServer(Tapir.router(1)) }
-object TapirMultiServer extends ServerRunner { override def start = AkkaHttp.runServer(Tapir.router(128)) }
-object VanillaServer extends ServerRunner { override def start = AkkaHttp.runServer(Vanilla.router(1)) }
-object VanillaMultiServer extends ServerRunner { override def start = AkkaHttp.runServer(Vanilla.router(128)) }
+object TapirServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(128)) }
+object VanillaServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(128)) }
