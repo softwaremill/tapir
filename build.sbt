@@ -501,6 +501,7 @@ val perfTestCommand = Command.args("perf", "<servName> <simName>") { (state, arg
   args match {
     case Seq(servName, simName) =>
       System.setProperty("tapir.perf.serv-name", servName)
+      // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
       Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
     case _ =>
       println("Usage: perf <servName> <simName>")
