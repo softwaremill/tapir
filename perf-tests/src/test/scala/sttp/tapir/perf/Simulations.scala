@@ -136,7 +136,8 @@ abstract class TapirPerfTestSimulation extends Simulation {
     val instance: ServerRunner = moduleMirror.instance.asInstanceOf[ServerRunner]
     instance.start
   } catch {
-    case _: Throwable =>
+    case e: Throwable =>
+      e.printStackTrace()
       println(s"ERROR! Could not find object $serverName or it doesn't extend ServerRunner")
       sys.exit(-2)
   }
