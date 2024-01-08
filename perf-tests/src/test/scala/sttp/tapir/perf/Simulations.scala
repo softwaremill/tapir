@@ -12,36 +12,9 @@ import cats.effect.unsafe.IORuntime
 import sttp.tapir.perf.apis.ServerRunner
 
 object CommonSimulations {
-  private val userCount = 100
   private val largeInputSize = 5 * 1024 * 1024 
   private val baseUrl = "http://127.0.0.1:8080"
-
-  def testScenario(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
-    val execHttpGet = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
-
-    scenario(s"Repeatedly invoke GET of route number $routeNumber")
-      .during(duration.toSeconds.toInt)(execHttpGet)
-      .inject(atOnceUsers(userCount))
-      .protocols(httpProtocol)
-  }
-
-  def scenario_post_string(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
-    val body = new String(randomAlphanumByteArray(256))
-    val execHttpPost = exec(
-      http(s"HTTP POST /path$routeNumber/4")
-        .post(s"/path$routeNumber/4")
-        .body(StringBody(body))
-    )
-
-    scenario(s"Repeatedly invoke POST with string body of route number $routeNumber")
-      .during(duration.toSeconds.toInt)(execHttpPost)
-      .inject(atOnceUsers(userCount))
-      .protocols(httpProtocol)
-  }
-
-  val random = new Random()
+  private val random = new Random()
 
   def randomByteArray(size: Int): Array[Byte] = {
     val byteArray = new Array[Byte](size)
@@ -55,6 +28,55 @@ object CommonSimulations {
   lazy val constRandomBytes = randomByteArray(largeInputSize)
   lazy val constRandomAlphanumBytes = randomAlphanumByteArray(largeInputSize)
 
+  def simple_get(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
+    val httpProtocol = http.baseUrl(baseUrl)
+    val execHttpGet = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
+
+    scenario(s"Repeatedly invoke GET of route number $routeNumber")
+      .during(duration.toSeconds.toInt)(execHttpGet)
+      .inject(atOnceUsers(userCount))
+      .protocols(httpProtocol)
+  }
+  
+  def getParamOpt(paramName: String): Option[String] = Option(System.getProperty(s"tapir.perf.${paramName}"))
+
+  def getParam(paramName: String): String = 
+    getParamOpt(paramName).getOrElse(
+      throw new IllegalArgumentException(s"Missing tapir.perf.${paramName} system property, ensure you're running perf tests correctly (see perfTests/README.md)")
+    )
+
+  private lazy val userCount = getParam("user-count").toInt
+  // Scenarios
+
+  def scenario_post_string(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
+    val httpProtocol = http.baseUrl(baseUrl)
+    val body = new String(randomAlphanumByteArray(256))
+    val execHttpPost = exec(
+      http(s"HTTP POST /path$routeNumber/4")
+        .post(s"/path$routeNumber/4")
+        .body(StringBody(body))
+    )
+
+    scenario(s"Repeatedly invoke POST with short string body")
+      .during(duration.toSeconds.toInt)(execHttpPost)
+      .inject(atOnceUsers(userCount))
+      .protocols(httpProtocol)
+  
+  }
+  def scenario_post_bytes(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
+    val httpProtocol = http.baseUrl(baseUrl)
+    val execHttpPost = exec(
+      http(s"HTTP POST /path$routeNumber/4")
+        .post(s"/path$routeNumber/4")
+        .body(ByteArrayBody(randomByteArray(256)))
+    )
+
+    scenario(s"Repeatedly invoke POST with short byte array body")
+      .during(duration.toSeconds.toInt)(execHttpPost)
+      .inject(atOnceUsers(userCount))
+      .protocols(httpProtocol)
+  }
+
   def scenario_post_file(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
@@ -64,13 +86,13 @@ object CommonSimulations {
         .header("Content-Type", "application/octet-stream")
     )
 
-    scenario(s"Repeatedly invoke POST with file body of route number $routeNumber")
+    scenario(s"Repeatedly invoke POST with file body")
       .during(duration.toSeconds.toInt)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
   }
 
-  def scenario_post_bytes(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
+  def scenario_post_long_bytes(duration: FiniteDuration, routeNumber: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
       http(s"HTTP POST /pathBytes$routeNumber/4")
@@ -79,7 +101,7 @@ object CommonSimulations {
         .header("Content-Type", "application/octet-stream")
     )
 
-    scenario(s"Repeatedly invoke POST with file body of route number $routeNumber")
+    scenario(s"Repeatedly invoke POST with large byte array")
       .during(duration.toSeconds.toInt)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -94,7 +116,7 @@ object CommonSimulations {
         .header("Content-Type", "application/octet-stream")
     )
 
-    scenario(s"Repeatedly invoke POST with file body of route number $routeNumber")
+    scenario(s"Repeatedly invoke POST with large byte array, interpreted to a String")
       .during(duration.toSeconds.toInt)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -104,13 +126,9 @@ object CommonSimulations {
 abstract class TapirPerfTestSimulation extends Simulation {
 
   implicit val ioRuntime: IORuntime = IORuntime.global
-  val servNameValue = System.getProperty("tapir.perf.serv-name")
-  if (servNameValue == null) {
-    println("Missing tapir.perf.serv-name system property, ensure you're running perf tests correctly (see perfTests/README.md)")
-    sys.exit(-1)
-  }
+  val serverNameParam = CommonSimulations.getParam("serv-name")
+  val serverName = s"sttp.tapir.perf.${serverNameParam}Server"
 
-  val serverName = s"sttp.tapir.perf.${System.getProperty("tapir.perf.serv-name")}Server"
   val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
   val serverStartAction: IO[ServerRunner.KillSwitch] = try { 
     val moduleSymbol = runtimeMirror.staticModule(serverName) 
@@ -134,12 +152,12 @@ abstract class TapirPerfTestSimulation extends Simulation {
   })
 }
 
-class OneRouteSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.testScenario(10.seconds, 0))
+class SimpleGetSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.simple_get(1.minute, 0))
 }
 
-class MultiRouteSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.testScenario(1.minute, 0))
+class SimpleGetMultiRouteSimulation extends TapirPerfTestSimulation {
+  setUp(CommonSimulations.simple_get(1.minute, 127))
 }
 
 class PostStringSimulation extends TapirPerfTestSimulation {
@@ -147,5 +165,5 @@ class PostStringSimulation extends TapirPerfTestSimulation {
 }
 
 class PostLongStringSimulation extends TapirPerfTestSimulation {
-  setUp(CommonSimulations.scenario_post_long_string(1.minute, 1))
+  setUp(CommonSimulations.scenario_post_long_string(1.minute, 0))
 }

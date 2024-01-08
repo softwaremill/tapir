@@ -497,17 +497,22 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .dependsOn(core, files, circeJson, cats)
 
-val perfTestCommand = Command.args("perf", "<servName> <simName>") { (state, args) =>
-  args match {
-    case Seq(servName, simName) =>
+val perfTestCommand = Command("perf", ("perf", "servName simName userCount(optional)"), "run performance tests") { state =>
+  val parser = (Space ~> token(StringBasic.examples("servName"))) ~
+               (Space ~> token(StringBasic.examples("simName"))) ~
+               (Space ~> token(StringBasic.examples("userCount"))).? 
+     parser.map {
+        case servName ~ simName ~ userCountOpt =>
+          val userCount = userCountOpt.map(_.trim).getOrElse("1")
+          (servName, simName, userCount)
+      }
+    } { (state, args) =>
+    val (servName, simName, userCount) = args
       System.setProperty("tapir.perf.serv-name", servName)
+      System.setProperty("tapir.perf.user-count", userCount)
       // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
       Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
-    case _ =>
-      println("Usage: perf <servName> <simName>")
-      state
-  }
-}
+    }
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
