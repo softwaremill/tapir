@@ -2,7 +2,9 @@ package sttp.tapir.perf.play
 
 import cats.effect.IO
 import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.util.ByteString
 import play.api.Mode
+import play.api.libs.Files
 import play.api.mvc._
 import play.api.routing.Router
 import play.api.routing.Router.Routes
@@ -10,80 +12,50 @@ import play.api.routing.sird._
 import play.core.server.{DefaultPekkoHttpServerComponents, ServerConfig}
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
-
 import sttp.tapir.server.play.PlayServerInterpreter
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-import org.apache.pekko.util.ByteString
-import play.api.libs.Files
 
-object Vanilla extends ControllerHelpers { 
+object Vanilla extends ControllerHelpers {
   implicit lazy val perfActorSystem: ActorSystem = ActorSystem("vanilla-play")
   implicit lazy val perfExecutionContext: ExecutionContextExecutor = perfActorSystem.dispatcher
-  val anyContentActionBuilder = new ActionBuilder[Request, AnyContent] {
+  def actionBuilder[T](parserParam: BodyParser[T]): ActionBuilder[Request, T] = new ActionBuilder[Request, T] {
 
     override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
       block(request)
 
     override protected def executionContext: ExecutionContext = perfExecutionContext
 
-    override val parser: BodyParser[AnyContent] = PlayBodyParsers.apply().anyContent
+    override val parser: BodyParser[T] = parserParam
   }
 
-  val byteStringActionBuilder = new ActionBuilder[Request, ByteString] {
-    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
-      block(request)
-
-    override protected def executionContext: ExecutionContext = perfExecutionContext
-
-    override val parser: BodyParser[ByteString] = PlayBodyParsers.apply().byteString(maxLength = LargeInputSize + 1024L)
-  }
-
-  val stringActionBuilder = new ActionBuilder[Request, String] {
-    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
-      block(request)
-
-    override protected def executionContext: ExecutionContext = perfExecutionContext
-
-    override val parser: BodyParser[String] = PlayBodyParsers.apply().text(maxLength = LargeInputSize + 1024L)
-  }
-
-  val fileReqActionBuilder = new ActionBuilder[Request, Files.TemporaryFile] {
-    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
-      block(request)
-
-    override protected def executionContext: ExecutionContext = perfExecutionContext
-
-    override val parser: BodyParser[Files.TemporaryFile] = PlayBodyParsers.apply().temporaryFile
-  }
-
-  def simpleGet: Action[AnyContent] = anyContentActionBuilder.async { implicit request =>
+  val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async { implicit request =>
     val param = request.path.split("/").last
     Future.successful(
       Ok(param)
     )
   }
 
-  def postBytes: Action[ByteString] = byteStringActionBuilder.async { implicit request =>
-    val param = request.path.split("/").last
-    val byteArray: ByteString = request.body
-    Future.successful(Ok(s"$param-${byteArray.length}"))
+  val postBytes: Action[ByteString] = actionBuilder(PlayBodyParsers().byteString(maxLength = LargeInputSize + 1024L)).async {
+    implicit request =>
+      val param = request.path.split("/").last
+      val byteArray: ByteString = request.body
+      Future.successful(Ok(s"$param-${byteArray.length}"))
   }
 
-  def postString: Action[String] = stringActionBuilder.async { implicit request =>
+  val postString: Action[String] = actionBuilder(PlayBodyParsers().text(maxLength = LargeInputSize + 1024L)).async { implicit request =>
     val param = request.path.split("/").last
     val str: String = request.body
     Future.successful(Ok(s"$param-${str.length}"))
   }
 
-  def postFile: Action[Files.TemporaryFile] = fileReqActionBuilder.async { implicit request =>
+  val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers.apply().temporaryFile).async { implicit request =>
     val param = request.path.split("/").last
     val file: Files.TemporaryFile = request.body
     Future.successful(Ok(s"$param-${file.path.toString}"))
   }
 
-
-  def genRoutesSingle(number: Int): Routes = { 
+  def genRoutesSingle(number: Int): Routes = {
     case GET(p"/path$number/$param") =>
       simpleGet
     case POST(p"/path$number/$param") =>
