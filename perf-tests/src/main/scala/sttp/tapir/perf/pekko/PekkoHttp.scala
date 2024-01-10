@@ -9,9 +9,10 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import org.apache.pekko.stream.ActorMaterializer
 
 object Vanilla {
-  val router: Int => Route = (nRoutes: Int) =>
+  val router: Int => ActorSystem => Route = (nRoutes: Int) => (_: ActorSystem) =>
     concat(
       (0 to nRoutes).map((n: Int) =>
         get {
@@ -28,22 +29,22 @@ object Tapir extends Endpoints {
 
   def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
 
-  val router: Int => Route = (nRoutes: Int) =>
-    PekkoHttpServerInterpreter()(PekkoHttp.executionContext).toRoute(
+  def router: Int => ActorSystem => Route = (nRoutes: Int) => (actorSystem: ActorSystem) =>
+    PekkoHttpServerInterpreter()(actorSystem.dispatcher).toRoute(
       genEndpoints(nRoutes)
     )
 }
 
 object PekkoHttp {
-  implicit val actorSystem: ActorSystem = ActorSystem("tapir-pekko-http")
-  implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
-
-  def runServer(router: Route): IO[ServerRunner.KillSwitch] = {
+  def runServer(router: ActorSystem => Route): IO[ServerRunner.KillSwitch] = {
+    // We need to create a new actor system each time server is run
+    implicit val actorSystem: ActorSystem = ActorSystem("tapir-pekko-http")
+    implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
     IO.fromFuture(
       IO(
         Http()
           .newServerAt("127.0.0.1", 8080)
-          .bind(router)
+          .bind(router(actorSystem))
           .map { binding =>
             IO.fromFuture(IO(binding.unbind().flatMap(_ => actorSystem.terminate()))).void
           }

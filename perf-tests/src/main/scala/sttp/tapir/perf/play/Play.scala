@@ -15,82 +15,91 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.play.PlayServerInterpreter
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.ActorMaterializer
 
 object Vanilla extends ControllerHelpers {
-  implicit lazy val perfActorSystem: ActorSystem = ActorSystem("vanilla-play")
-  implicit lazy val perfExecutionContext: ExecutionContextExecutor = perfActorSystem.dispatcher
-  def actionBuilder[T](parserParam: BodyParser[T]): ActionBuilder[Request, T] = new ActionBuilder[Request, T] {
 
-    override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
-      block(request)
+  def genRoutesSingle(actorSystem: ActorSystem)(number: Int): Routes = {
 
-    override protected def executionContext: ExecutionContext = perfExecutionContext
+    def actionBuilder[T](parserParam: BodyParser[T]): ActionBuilder[Request, T] =
+      new ActionBuilder[Request, T] {
 
-    override val parser: BodyParser[T] = parserParam
-  }
+        override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] =
+          block(request)
 
-  val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async { implicit request =>
-    val param = request.path.split("/").last
-    Future.successful(
-      Ok(param)
-    )
-  }
+        override protected def executionContext: ExecutionContext = actorSystem.dispatcher
 
-  val postBytes: Action[ByteString] = actionBuilder(PlayBodyParsers().byteString(maxLength = LargeInputSize + 1024L)).async {
-    implicit request =>
+        override val parser: BodyParser[T] = parserParam
+      }
+
+    implicit val actorSystemForMaterializer: ActorSystem = actorSystem
+
+    val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async {
+      implicit request =>
+        val param = request.path.split("/").last
+        Future.successful(
+          Ok(param)
+        )
+    }
+
+    val postBytes: Action[ByteString] =
+      actionBuilder(PlayBodyParsers().byteString(maxLength = LargeInputSize + 1024L)).async { implicit request =>
+        val param = request.path.split("/").last
+        val byteArray: ByteString = request.body
+        Future.successful(Ok(s"$param-${byteArray.length}"))
+      }
+
+    val postString: Action[String] = actionBuilder(PlayBodyParsers().text(maxLength = LargeInputSize + 1024L)).async { implicit request =>
       val param = request.path.split("/").last
-      val byteArray: ByteString = request.body
-      Future.successful(Ok(s"$param-${byteArray.length}"))
-  }
+      val str: String = request.body
+      Future.successful(Ok(s"$param-${str.length}"))
+    }
 
-  val postString: Action[String] = actionBuilder(PlayBodyParsers().text(maxLength = LargeInputSize + 1024L)).async { implicit request =>
-    val param = request.path.split("/").last
-    val str: String = request.body
-    Future.successful(Ok(s"$param-${str.length}"))
-  }
+    val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers.apply().temporaryFile).async { implicit request =>
+      val param = request.path.split("/").last
+      val file: Files.TemporaryFile = request.body
+      Future.successful(Ok(s"$param-${file.path.toString}"))
+    }
 
-  val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers.apply().temporaryFile).async { implicit request =>
-    val param = request.path.split("/").last
-    val file: Files.TemporaryFile = request.body
-    Future.successful(Ok(s"$param-${file.path.toString}"))
+    {
+      case GET(p"/path$number/$param") =>
+        simpleGet
+      case POST(p"/path$number/$param") =>
+        postString
+      case POST(p"/pathBytes$number/$param") =>
+        postBytes
+      case POST(p"/pathFile$number/$param") =>
+        postFile
+    }
   }
-
-  def genRoutesSingle(number: Int): Routes = {
-    case GET(p"/path$number/$param") =>
-      simpleGet
-    case POST(p"/path$number/$param") =>
-      postString
-    case POST(p"/pathBytes$number/$param") =>
-      postBytes
-    case POST(p"/pathFile$number/$param") =>
-      postFile
-  }
-  def router: Int => Routes = (nRoutes: Int) => (0 until nRoutes).map(genRoutesSingle).reduceLeft(_ orElse _)
+  def router: Int => ActorSystem => Routes = (nRoutes: Int) => (actorSystem: ActorSystem) => (0 until nRoutes).map(genRoutesSingle(actorSystem)).reduceLeft(_ orElse _)
 }
 
 object Tapir extends Endpoints {
   val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
 
   def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-  import Play._
 
-  val router: Int => Routes = (nRoutes: Int) =>
-    PlayServerInterpreter().toRoutes(
-      genEndpoints(nRoutes)
-    )
+  val router: Int => ActorSystem => Routes = (nRoutes: Int) =>
+    (actorSystem: ActorSystem) => {
+      implicit val actorSystemForMaterializer: ActorSystem = actorSystem
+      PlayServerInterpreter().toRoutes(
+        genEndpoints(nRoutes)
+      )
+    }
 }
 
 object Play {
-  implicit lazy val perfActorSystem: ActorSystem = ActorSystem("tapir-play")
-  implicit lazy val executionContext: ExecutionContextExecutor = perfActorSystem.dispatcher
 
-  def runServer(routes: Routes): IO[ServerRunner.KillSwitch] = {
+  def runServer(routes: ActorSystem => Routes): IO[ServerRunner.KillSwitch] = {
+    implicit lazy val perfActorSystem: ActorSystem = ActorSystem(s"tapir-play")
     val components = new DefaultPekkoHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(8080), address = "127.0.0.1", mode = Mode.Test)
       override lazy val actorSystem: ActorSystem = perfActorSystem
       override def router: Router =
         Router.from(
-          List(routes).reduce((a: Routes, b: Routes) => {
+          List(routes(actorSystem)).reduce((a: Routes, b: Routes) => {
             val handler: PartialFunction[RequestHeader, Handler] = { case request =>
               a.applyOrElse(request, b)
             }
