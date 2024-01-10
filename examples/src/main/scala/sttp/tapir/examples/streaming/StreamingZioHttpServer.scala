@@ -32,7 +32,6 @@ object StreamingZioHttpServer extends ZIOAppDefault {
       .zipWith(ZStream[Char]('a', 'b', 'c', 'd').repeat(Schedule.forever))((_, c) => c)
       .take(size)
       .map(_.toByte)
-      .tap(x => ZIO.succeed(println("XXX " + x)))
 
     ZIO.succeed((size, stream))
   }
