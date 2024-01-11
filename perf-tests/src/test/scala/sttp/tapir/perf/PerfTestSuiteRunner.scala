@@ -5,7 +5,7 @@ import cats.syntax.all._
 import fs2.io.file
 import fs2.text
 import sttp.tapir.perf.apis.ServerRunner
-
+import Common._
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -25,14 +25,15 @@ object PerfTestSuiteRunner extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
     if (args.length < 2)
       exitOnIncorrectArgs
-    val shortServerNames = argToList(args(0))
-    val shortSimulationNames = argToList(args(1))
+    val shortServerNames = argToList(args(0), ifAll = TypeScanner.allServers)
+    val shortSimulationNames = argToList(args(1), ifAll = TypeScanner.allSimulations)
+    println(shortServerNames)
+    println(shortSimulationNames)
     if (shortSimulationNames.isEmpty || shortServerNames.isEmpty)
       exitOnIncorrectArgs
 
-    val serverNames = shortServerNames.map(s => s"sttp.tapir.perf.${s}Server")
-    val simulationNames = shortSimulationNames.map(s => s"sttp.tapir.perf.${s}Simulation")
-
+    val serverNames = shortServerNames.map(s => s"${rootPackage}.${s}Server")
+    val simulationNames = shortSimulationNames.map(s => s"${rootPackage}.${s}Simulation")
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")
     val currentTime = LocalDateTime.now().format(formatter)
     // TODO ensure servers and simulations exist
@@ -56,17 +57,22 @@ object PerfTestSuiteRunner extends IOApp {
       .as(ExitCode.Success)
   }
 
-  private def argToList(arg: String): List[String] =
-    try {
-      if (arg.startsWith("[") && arg.endsWith("]"))
-        arraySplitPattern.split(arg.drop(1).dropRight(1)).toList
-      else
-        List(arg)
-    } catch {
-      case NonFatal(e) =>
-        e.printStackTrace()
-        exitOnIncorrectArgs
-    }
+  private def argToList(arg: String, ifAll: List[String]): List[String] = {
+    println(s"------------$arg")
+    if (arg.trim == "*")
+      ifAll
+    else
+      try {
+        if (arg.startsWith("[") && arg.endsWith("]"))
+          arraySplitPattern.split(arg.drop(1).dropRight(1)).toList
+        else
+          List(arg)
+      } catch {
+        case NonFatal(e) =>
+          e.printStackTrace()
+          exitOnIncorrectArgs
+      }
+  }
 
   private def startServerByTypeName(serverName: String): IO[ServerRunner.KillSwitch] = {
     try {
@@ -102,7 +108,7 @@ object PerfTestSuiteRunner extends IOApp {
   }
 
   private def exitOnIncorrectArgs = {
-    println("Usage: perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner serverName simulationName userCount")
+    println(s"Usage: perfTests/Test/runMain ${rootPackage}.PerfTestSuiteRunner serverName simulationName userCount")
     println("Where serverName and simulationName can be a single name, an array of comma separated names, or '*' for all")
     println("The userCount parameter is optional (default value is 1)")
     sys.exit(1)

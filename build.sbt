@@ -511,7 +511,7 @@ val perfTestCommand = Command("perf", ("perf", "servName simName userCount(optio
   System.setProperty("tapir.perf.user-count", userCount)
   val customSimId = s"$simName-$servName-${System.currentTimeMillis}"
   // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
-  val state2= Command.process(s"perfTests/clean", state)
+  val state2 = Command.process(s"perfTests/clean", state)
   Command.process(
     s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation",
     state2
@@ -534,6 +534,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.165" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
