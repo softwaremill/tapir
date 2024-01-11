@@ -140,7 +140,7 @@ class PostLongBytesSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_long_bytes(10.seconds, 0))
 }
 
-class PostFilesSimulation extends Simulation {
+class PostFileSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_file(10.seconds, 0))
 }
 
