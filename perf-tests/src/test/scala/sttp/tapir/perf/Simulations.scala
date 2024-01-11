@@ -124,61 +124,30 @@ object CommonSimulations {
   }
 }
 
-abstract class TapirPerfTestSimulation extends Simulation {
-
-  implicit val ioRuntime: IORuntime = IORuntime.global
-  val serverNameParam = CommonSimulations.getParam("serv-name")
-  val serverName = s"sttp.tapir.perf.${serverNameParam}Server"
-
-  val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
-  // io.gatling.core.json.Json
-  val serverStartAction: IO[ServerRunner.KillSwitch] = try { 
-    val moduleSymbol = runtimeMirror.staticModule(serverName) 
-    val moduleMirror = runtimeMirror.reflectModule(moduleSymbol)
-    val instance: ServerRunner = moduleMirror.instance.asInstanceOf[ServerRunner]
-    instance.start
-  } catch {
-    case e: Throwable =>
-      e.printStackTrace()
-      println(s"ERROR! Could not find object $serverName or it doesn't extend ServerRunner")
-      sys.exit(-2)
-  }
-  var killSwitch: ServerRunner.KillSwitch = IO.unit
-
-  before({
-    println("Starting http server...")
-    killSwitch = serverStartAction.unsafeRunSync()
-  })
-  after({
-    println("Shutting down http server ...")
-    killSwitch.unsafeRunSync()
-  })
-}
-
-class SimpleGetSimulation extends TapirPerfTestSimulation {
+class SimpleGetSimulation extends Simulation {
   setUp(CommonSimulations.simple_get(10.seconds, 0))
 }
 
-class SimpleGetMultiRouteSimulation extends TapirPerfTestSimulation {
+class SimpleGetMultiRouteSimulation extends Simulation {
   setUp(CommonSimulations.simple_get(10.seconds, 127))
 }
 
-class PostBytesSimulation extends TapirPerfTestSimulation {
+class PostBytesSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_bytes(10.seconds, 0))
 }
 
-class PostLongBytesSimulation extends TapirPerfTestSimulation {
+class PostLongBytesSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_long_bytes(10.seconds, 0))
 }
 
-class PostFilesSimulation extends TapirPerfTestSimulation {
+class PostFilesSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_file(10.seconds, 0))
 }
 
-class PostStringSimulation extends TapirPerfTestSimulation {
+class PostStringSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_string(10.seconds, 0))
 }
 
-class PostLongStringSimulation extends TapirPerfTestSimulation {
+class PostLongStringSimulation extends Simulation {
   setUp(CommonSimulations.scenario_post_long_string(10.seconds, 0))
 }

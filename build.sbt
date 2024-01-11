@@ -509,8 +509,15 @@ val perfTestCommand = Command("perf", ("perf", "servName simName userCount(optio
   val (servName, simName, userCount) = args
   System.setProperty("tapir.perf.serv-name", servName)
   System.setProperty("tapir.perf.user-count", userCount)
+  val customSimId = s"$simName-$servName-${System.currentTimeMillis}"
   // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
-  Command.process(s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation", state)
+  val state2= Command.process(s"perfTests/clean", state)
+  Command.process(
+    s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation",
+    state2
+  )
+  // read reports from last directory into report aggregator
+  // generate aggregated report
 }
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
@@ -520,11 +527,12 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test" exclude(
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test" exclude (
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.10.3" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.1",
+      "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
