@@ -85,14 +85,21 @@ private[tapir] object MapToMacro {
   ): Unit = {
     val tupleSymbol = tupleType.typeSymbol
     if (!tupleSymbol.fullName.startsWith("scala.Tuple") && caseClassUtil.fields.nonEmpty) {
-      c.abort(c.enclosingPosition, s"Expected source type to be a tuple, but got: $tupleType")
+      c.abort(c.enclosingPosition, s"Expected source type to be a tuple, but got: ${tupleType.dealias}")
     }
 
     if (caseClassUtil.fields.size != tupleTypeArgs.size) {
-      c.abort(
-        c.enclosingPosition,
-        s"The arity of the source type doesn't match the arity of the target type: $tupleType, ${caseClassUtil.t}"
-      )
+      if (caseClassUtil.fields.size > 22) {
+        c.abort(
+          c.enclosingPosition,
+          s"Cannot map to ${caseClassUtil.t}: arities of up to 22 are supported. If you need more inputs/outputs, map them to classes with less fields, and then combine these classes."
+        )
+      } else {
+        c.abort(
+          c.enclosingPosition,
+          s"The arity of the source type (${tupleTypeArgs.size}) doesn't match the arity of the target type (${caseClassUtil.fields.size}): ${tupleType.dealias}, ${caseClassUtil.t}"
+        )
+      }
     }
 
     caseClassUtil.fields.zip(tupleTypeArgs).foreach { case (caseClassField, tupleArg) =>
