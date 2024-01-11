@@ -9,7 +9,7 @@ object HtmlResultsPrinter {
 
   def print(results: List[GatlingSimulationResult]): String = {
 
-    val headers = "Simulation" :: results.groupBy(_.simulationName).head._2.map(_.serverName).map(stripPkg)
+    val headers = "Simulation" :: results.groupBy(_.simulationName).head._2.map(_.serverName)
     createHtmlTable(headers, results.groupBy(_.simulationName).values.toList)
   }
 
@@ -21,7 +21,7 @@ object HtmlResultsPrinter {
       ),
       tbody(
         for (row <- rows) yield {
-          tr(td(stripPkg(row.head.simulationName)) :: row.map(toColumn), style := cellStyle)
+          tr(td(row.head.simulationName) :: row.map(toColumn), style := cellStyle)
         }
       )
     ).render
@@ -38,6 +38,4 @@ object HtmlResultsPrinter {
       ),
       style := cellStyle
     )
-
-  private def stripPkg(className: String): String = className.split("\\.").last
 }
