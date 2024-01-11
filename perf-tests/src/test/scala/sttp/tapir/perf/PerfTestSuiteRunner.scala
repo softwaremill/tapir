@@ -33,6 +33,8 @@ object PerfTestSuiteRunner extends IOApp {
     val serverNames = shortServerNames.map(s => s"sttp.tapir.perf.${s}Server")
     val simulationNames = shortSimulationNames.map(s => s"sttp.tapir.perf.${s}Simulation")
 
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")
+    val currentTime = LocalDateTime.now().format(formatter)
     // TODO ensure servers and simulations exist
     // TODO Parse user count
     // TODO add comprehensive help
@@ -49,8 +51,8 @@ object PerfTestSuiteRunner extends IOApp {
           _ <- IO.println(serverSimulationResult)
         } yield (serverSimulationResult)
       }
-      .flatTap(writeCsvReport)
-      .flatTap(writeHtmlReport)
+      .flatTap(writeCsvReport(currentTime))
+      .flatTap(writeHtmlReport(currentTime))
       .as(ExitCode.Success)
   }
 
@@ -78,20 +80,18 @@ object PerfTestSuiteRunner extends IOApp {
     }
   }
 
-  private def writeCsvReport(results: List[GatlingSimulationResult]): IO[Unit] = {
+  private def writeCsvReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {
     val csv = CsvResultsPrinter.print(results)
-    writeReportFile(csv, "csv")
+    writeReportFile(csv, "csv", currentTime)
   }
 
-  private def writeHtmlReport(results: List[GatlingSimulationResult]): IO[Unit] = {
+  private def writeHtmlReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {
     val html = HtmlResultsPrinter.print(results)
-    writeReportFile(html, "html")
+    writeReportFile(html, "html", currentTime)
   }
 
-  private def writeReportFile(report: String, extension: String): IO[Unit] = {
+  private def writeReportFile(report: String, extension: String, currentTime: String): IO[Unit] = {
     val baseDir = System.getProperty("user.dir")
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")
-    val currentTime = LocalDateTime.now().format(formatter)
     val targetFilePath = Paths.get(baseDir).resolve(s"tapir-perf-tests-${currentTime}.$extension")
     fs2.Stream
       .emit(report)
