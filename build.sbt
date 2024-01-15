@@ -350,7 +350,6 @@ lazy val rootProject = (project in file("."))
     ideSkipProject := false,
     generateMimeByExtensionDB := GenerateMimeByExtensionDB()
   )
-  .settings(commands += perfTestCommand)
   .aggregate(allAggregates: _*)
 
 // start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
@@ -496,29 +495,6 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     settings = commonNativeSettings
   )
   .dependsOn(core, files, circeJson, cats)
-
-val perfTestCommand = Command("perf", ("perf", "servName simName userCount(optional)"), "run performance tests") { state =>
-  val parser = (Space ~> token(StringBasic.examples("servName"))) ~
-    (Space ~> token(StringBasic.examples("simName"))) ~
-    (Space ~> token(StringBasic.examples("userCount"))).?
-  parser.map { case servName ~ simName ~ userCountOpt =>
-    val userCount = userCountOpt.map(_.trim).getOrElse("1")
-    (servName, simName, userCount)
-  }
-} { (state, args) =>
-  val (servName, simName, userCount) = args
-  System.setProperty("tapir.perf.serv-name", servName)
-  System.setProperty("tapir.perf.user-count", userCount)
-  val customSimId = s"$simName-$servName-${System.currentTimeMillis}"
-  // We have to use a command, because sbt macros can't handle string interpolations with dynamic values in (xxx).toTask("str")
-  val state2 = Command.process(s"perfTests/clean", state)
-  Command.process(
-    s"perfTests/Gatling/testOnly sttp.tapir.perf.${simName}Simulation",
-    state2
-  )
-  // read reports from last directory into report aggregator
-  // generate aggregated report
-}
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
