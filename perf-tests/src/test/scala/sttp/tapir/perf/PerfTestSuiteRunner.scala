@@ -5,12 +5,11 @@ import cats.syntax.all._
 import fs2.io.file
 import fs2.text
 import sttp.tapir.perf.apis.ServerRunner
-import Common._
+
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.reflect.runtime.universe
-import scala.util.control.NonFatal
 
 /** Main entry point for running suites of performance tests and generating aggregated reports. A suite represents a set of Gatling
   * simulations executed on a set of servers, with some additional parameters like concurrent user count. One can run a single simulation on
@@ -19,27 +18,23 @@ import scala.util.control.NonFatal
   */
 object PerfTestSuiteRunner extends IOApp {
 
-  val arraySplitPattern = "\\s*[,]+\\s*".r
   val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
 
   def run(args: List[String]): IO[ExitCode] = {
-    if (args.length < 2)
-      exitOnIncorrectArgs
-    val shortServerNames = argToList(args(0), ifAll = TypeScanner.allServers)
-    val shortSimulationNames = argToList(args(1), ifAll = TypeScanner.allSimulations)
-    println(shortServerNames)
-    println(shortSimulationNames)
-    if (shortSimulationNames.isEmpty || shortServerNames.isEmpty)
-      exitOnIncorrectArgs
+    val params = PerfTestSuiteParams.parse(args)
+    System.setProperty("tapir.perf.user-count", params.users.toString)
+    System.setProperty("tapir.perf.duration-seconds", params.durationSeconds.toString)
+    println("===========================================================================================")
+    println(s"Running a suite of ${params.totalTests} tests, each for ${params.users} users and ${params.duration}")
+    println(s"Servers: ${params.shortServerNames}")
+    println(s"Simulations: ${params.shortSimulationNames}")
+    println(s"Expected total duration: at least ${params.minTotalDuration}")
+    println("Generated suite report paths will be printed to stdout after all tests are finished.")
+    println("===========================================================================================")
 
-    val serverNames = shortServerNames.map(s => s"${rootPackage}.${s}Server")
-    val simulationNames = shortSimulationNames.map(s => s"${rootPackage}.${s}Simulation")
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")
     val currentTime = LocalDateTime.now().format(formatter)
-    // TODO ensure servers and simulations exist
-    // TODO Parse user count
-    // TODO add comprehensive help
-    ((simulationNames.zip(shortSimulationNames), (serverNames.zip(shortServerNames)))
+    ((params.simulationNames, params.serverNames)
       .mapN((x, y) => (x, y)))
       .traverse { case ((simulationName, shortSimulationName), (serverName, shortServerName)) =>
         for {
@@ -55,23 +50,6 @@ object PerfTestSuiteRunner extends IOApp {
       .flatTap(writeCsvReport(currentTime))
       .flatTap(writeHtmlReport(currentTime))
       .as(ExitCode.Success)
-  }
-
-  private def argToList(arg: String, ifAll: List[String]): List[String] = {
-    println(s"------------$arg")
-    if (arg.trim == "*")
-      ifAll
-    else
-      try {
-        if (arg.startsWith("[") && arg.endsWith("]"))
-          arraySplitPattern.split(arg.drop(1).dropRight(1)).toList
-        else
-          List(arg)
-      } catch {
-        case NonFatal(e) =>
-          e.printStackTrace()
-          exitOnIncorrectArgs
-      }
   }
 
   private def startServerByTypeName(serverName: String): IO[ServerRunner.KillSwitch] = {
@@ -105,12 +83,5 @@ object PerfTestSuiteRunner extends IOApp {
       .through(file.Files[IO].writeAll(fs2.io.file.Path.fromNioPath(targetFilePath)))
       .compile
       .drain >> IO.println(s"******* Test Suite report saved to $targetFilePath")
-  }
-
-  private def exitOnIncorrectArgs = {
-    println(s"Usage: perfTests/Test/runMain ${rootPackage}.PerfTestSuiteRunner serverName simulationName userCount")
-    println("Where serverName and simulationName can be a single name, an array of comma separated names, or '*' for all")
-    println("The userCount parameter is optional (default value is 1)")
-    sys.exit(1)
   }
 }
