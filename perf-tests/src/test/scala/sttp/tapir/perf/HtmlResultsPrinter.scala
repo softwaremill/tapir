@@ -4,8 +4,12 @@ import scalatags.Text.all._
 import scalatags.Text
 
 object HtmlResultsPrinter {
-  val tableStyle = "border-collapse: collapse;"
+  val tableStyle = "border-collapse: collapse; font-family: Roboto, Helvetica, Arial, sans-serif;"
   val cellStyle = "border: 1px solid black; padding: 5px;"
+  val headStyle =
+    "border: 1px solid black; padding: 5px; color: rgb(245, 245, 245); background-color: rgb(85, 73, 75)"
+  val simCellStyle =
+    "border: 1px solid black; padding: 5px; color: black; background-color: rgb(243, 112, 94); font-weight: bold"
 
   def print(results: List[GatlingSimulationResult]): String = {
 
@@ -17,11 +21,11 @@ object HtmlResultsPrinter {
 
     table(style := tableStyle)(
       thead(
-        tr(headers.map(header => th(header, style := cellStyle)))
+        tr(headers.map(header => th(header, style := headStyle)))
       ),
       tbody(
         for (row <- rows) yield {
-          tr(td(row.head.simulationName) :: row.map(toColumn), style := cellStyle)
+          tr(td(row.head.simulationName, style := simCellStyle) :: row.map(toColumn), style := cellStyle)
         }
       )
     ).render
