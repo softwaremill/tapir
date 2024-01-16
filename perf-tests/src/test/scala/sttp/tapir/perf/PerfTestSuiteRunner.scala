@@ -40,7 +40,7 @@ object PerfTestSuiteRunner extends IOApp {
         for {
           serverKillSwitch <- startServerByTypeName(serverName)
           _ <- IO
-            .blocking(GatlingRunner.runSimulationBlocking(simulationName))
+            .blocking(GatlingRunner.runSimulationBlocking(simulationName, params))
             .guarantee(serverKillSwitch)
             .ensureOr(errCode => new Exception(s"Gatling failed with code $errCode"))(_ == 0)
           serverSimulationResult <- GatlingLogProcessor.processLast(shortSimulationName, shortServerName)
