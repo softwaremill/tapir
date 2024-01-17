@@ -62,7 +62,7 @@ object Tapir extends Endpoints {
 object server {
   def runServer(router: HttpRoutes[IO]): IO[ServerRunner.KillSwitch] =
     BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
+      .bindHttp(Port, "localhost")
       .withHttpApp(router.orNotFound)
       .resource
       .allocated
