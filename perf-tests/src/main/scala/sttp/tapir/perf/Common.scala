@@ -1,9 +1,9 @@
 package sttp.tapir.perf
 
-import java.util.Date
-import scala.util.Random
 import java.io.File
 import java.nio.file.Path
+import java.util.Date
+import scala.util.Random
 
 object Common {
   val rootPackage = "sttp.tapir.perf"

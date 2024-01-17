@@ -77,7 +77,7 @@ object PekkoHttp {
     IO.fromFuture(
       IO(
         Http()
-          .newServerAt("127.0.0.1", 8080)
+          .newServerAt("127.0.0.1", Port)
           .bind(router(actorSystem))
           .map { binding =>
             IO.fromFuture(IO(binding.unbind().flatMap(_ => actorSystem.terminate()))).void

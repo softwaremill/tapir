@@ -1,18 +1,16 @@
 package sttp.tapir.perf.netty.future
 
-import sttp.tapir.server.ServerEndpoint
-import scala.concurrent.Future
-import sttp.tapir.perf.apis._
-import sttp.monad.MonadError
-import sttp.monad.FutureMonad
-import scala.concurrent.ExecutionContext
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
-import ExecutionContext.Implicits.global
 import cats.effect.IO
+import sttp.tapir.perf.apis._
+import sttp.tapir.perf.Common._
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
+import sttp.tapir.server.ServerEndpoint
+
+import scala.concurrent.ExecutionContext
+import ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object Tapir extends Endpoints {
-
-  implicit val mErr: MonadError[Future] = new FutureMonad()(ExecutionContext.Implicits.global)
 
   val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
 
@@ -22,15 +20,19 @@ object Tapir extends Endpoints {
 object NettyFuture {
 
   def runServer(endpoints: List[ServerEndpoint[Any, Future]]): IO[ServerRunner.KillSwitch] = {
-    val declaredPort = 8080
+    val declaredPort = Port
     val declaredHost = "0.0.0.0"
     // Starting netty server
     val serverBinding: IO[NettyFutureServerBinding] =
-      IO.fromFuture(IO(NettyFutureServer()
-        .port(declaredPort)
-        .host(declaredHost)
-        .addEndpoints(endpoints)
-        .start()))
+      IO.fromFuture(
+        IO(
+          NettyFutureServer()
+            .port(declaredPort)
+            .host(declaredHost)
+            .addEndpoints(endpoints)
+            .start()
+        )
+      )
 
     serverBinding.map(b => IO.fromFuture(IO(b.stop())))
   }

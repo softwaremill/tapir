@@ -14,9 +14,7 @@ import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.play.PlayServerInterpreter
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.ActorMaterializer
+import scala.concurrent.{ExecutionContext, Future}
 
 object Vanilla extends ControllerHelpers {
 
@@ -35,12 +33,11 @@ object Vanilla extends ControllerHelpers {
 
     implicit val actorSystemForMaterializer: ActorSystem = actorSystem
 
-    val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async {
-      implicit request =>
-        val param = request.path.split("/").last
-        Future.successful(
-          Ok(param)
-        )
+    val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async { implicit request =>
+      val param = request.path.split("/").last
+      Future.successful(
+        Ok(param)
+      )
     }
 
     val postBytes: Action[ByteString] =
@@ -73,7 +70,8 @@ object Vanilla extends ControllerHelpers {
         postFile
     }
   }
-  def router: Int => ActorSystem => Routes = (nRoutes: Int) => (actorSystem: ActorSystem) => (0 until nRoutes).map(genRoutesSingle(actorSystem)).reduceLeft(_ orElse _)
+  def router: Int => ActorSystem => Routes = (nRoutes: Int) =>
+    (actorSystem: ActorSystem) => (0 until nRoutes).map(genRoutesSingle(actorSystem)).reduceLeft(_ orElse _)
 }
 
 object Tapir extends Endpoints {
@@ -95,7 +93,7 @@ object Play {
   def runServer(routes: ActorSystem => Routes): IO[ServerRunner.KillSwitch] = {
     implicit lazy val perfActorSystem: ActorSystem = ActorSystem(s"tapir-play")
     val components = new DefaultPekkoHttpServerComponents {
-      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(8080), address = "127.0.0.1", mode = Mode.Test)
+      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
       override lazy val actorSystem: ActorSystem = perfActorSystem
       override def router: Router =
         Router.from(

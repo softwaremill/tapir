@@ -1,31 +1,31 @@
 package sttp.tapir.perf.http4s
 
 import cats.effect._
+import fs2.io.file.{Files, Path => Fs2Path}
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl._
 import org.http4s.implicits._
 import org.http4s.server.Router
-import fs2.io.file.{Files, Path => Fs2Path}
-import sttp.tapir.perf.apis._
-import sttp.tapir.perf.Common._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
-import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.monad.MonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
+import sttp.tapir.perf.Common._
+import sttp.tapir.perf.apis._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 object Vanilla {
-  val router: Int => HttpRoutes[IO] = (nRoutes: Int) => 
+  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router(
       (0 to nRoutes).map((n: Int) =>
         ("/") -> {
           val dsl = Http4sDsl[IO]
           import dsl._
-          HttpRoutes.of[IO] { 
+          HttpRoutes.of[IO] {
             case GET -> Root / s"path$n" / IntVar(id) =>
               Ok((id + n).toString)
             case req @ POST -> Root / s"path$n" / IntVar(id) =>
-              req.as[String].flatMap { _ => 
-                Ok((id +n).toString)
+              req.as[String].flatMap { _ =>
+                Ok((id + n).toString)
               }
             case req @ POST -> Root / s"pathBytes$n" / IntVar(id) =>
               req.as[Array[Byte]].flatMap { bytes =>
@@ -39,7 +39,7 @@ object Vanilla {
                 .compile
                 .drain
                 .flatMap(_ => Ok(s"File saved to ${filePath.toAbsolutePath.toString}"))
-            }
+          }
         }
       ): _*
     )
