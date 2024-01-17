@@ -1,6 +1,7 @@
 package sttp.tapir.perf.netty.cats
 
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.ServerEndpoint
@@ -19,14 +20,19 @@ object NettyCats {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
     // Starting netty server
-    NettyCatsServer.io().allocated.flatMap { case (server, killSwitch) =>
-      server
-        .port(declaredPort)
-        .host(declaredHost)
-        .addEndpoints(endpoints)
-        .start()
-        .map(_ => killSwitch)
-    }
+    NettyCatsServer
+      .io()
+      .flatMap { server =>
+        Resource.make(
+          server
+            .port(declaredPort)
+            .host(declaredHost)
+            .addEndpoints(endpoints)
+            .start()
+        )(binding => binding.stop())
+      }
+      .allocated
+      .map(_._2)
   }
 }
 
