@@ -31,11 +31,12 @@ case class PerfTestSuiteParams(
 
   /** Returns pairs of (fullServerName, shortServerName), for example: (sttp.tapir.perf.pekko.TapirServer, pekko.Tapir)
     */
-  def serverNames: List[(String, String)] = shortServerNames.map(s => s"${rootPackage}.${s}Server").zip(shortServerNames)
+  def serverNames: List[(String, String)] = shortServerNames.map(s => s"${rootPackage}.${s}Server").zip(shortServerNames).distinct
 
   /** Returns pairs of (fullSimulationName, shortSimulationName), for example: (sttp.tapir.perf.SimpleGetSimulation, SimpleGet)
     */
-  def simulationNames: List[(String, String)] = shortSimulationNames.map(s => s"${rootPackage}.${s}Simulation").zip(shortSimulationNames)
+  def simulationNames: List[(String, String)] =
+    shortSimulationNames.map(s => s"${rootPackage}.${s}Simulation").zip(shortSimulationNames).distinct
 }
 
 object PerfTestSuiteParams {
@@ -68,7 +69,7 @@ object PerfTestSuiteParams {
         val params = p.adjustWildcards
         TypeScanner.enusureExist(params.shortServerNames, params.shortSimulationNames) match {
           case Success(_) => params
-          case Failure(ex) => 
+          case Failure(ex) =>
             println(ex.getMessage)
             sys.exit(-1)
         }
