@@ -13,8 +13,8 @@ object HtmlResultsPrinter {
 
   def print(results: List[GatlingSimulationResult]): String = {
 
-    val headers = "Simulation" :: results.groupBy(_.simulationName).head._2.map(_.serverName)
-    createHtmlTable(headers, results.groupBy(_.simulationName).values.toList)
+    val headers = "Server" :: results.groupBy(_.serverName).head._2.map(_.simulationName)
+    createHtmlTable(headers, results.groupBy(_.serverName).values.toList)
   }
 
   private def createHtmlTable(headers: Seq[String], rows: List[List[GatlingSimulationResult]]): String = {
@@ -25,7 +25,7 @@ object HtmlResultsPrinter {
       ),
       tbody(
         for (row <- rows) yield {
-          tr(td(row.head.simulationName, style := simCellStyle) :: row.map(toColumn), style := cellStyle)
+          tr(td(row.head.serverName, style := simCellStyle) :: row.map(toColumn), style := cellStyle)
         }
       )
     ).render
