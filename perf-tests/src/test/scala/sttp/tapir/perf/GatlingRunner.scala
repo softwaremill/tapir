@@ -12,9 +12,9 @@ object GatlingRunner {
       .simulationClass(simulationClassName)
 
     val props =
-      if (params.skipGatlingReports)
-        initialProps.noReports()
-      else initialProps
+      if (params.buildGatlingReports)
+        initialProps
+      else initialProps.noReports()
     Gatling.fromMap(props.build)
   }
 }

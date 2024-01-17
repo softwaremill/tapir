@@ -12,7 +12,7 @@ case class PerfTestSuiteParams(
     shortSimulationNames: List[String] = Nil,
     users: Int = 1,
     durationSeconds: Int = 10,
-    skipGatlingReports: Boolean = false
+    buildGatlingReports: Boolean = false
 ) {
   def adjustWildcards: PerfTestSuiteParams = {
     val withAdjustedServer: PerfTestSuiteParams =
@@ -58,9 +58,9 @@ object PerfTestSuiteParams {
     opt[Int]('d', "duration")
       .action((x, c) => c.copy(durationSeconds = x))
       .text("Single simulation duration in seconds"),
-    opt[Boolean]('g', "skip-gatling-reports")
-      .action((x, c) => c.copy(skipGatlingReports = x))
-      .text("Generate only aggregated suite report, may significantly shorten total time")
+    opt[Unit]('g', "gatling-reports")
+      .action((x, c) => c.copy(buildGatlingReports = true))
+      .text("Generate Gatling reports for individuals sims, may significantly affect total time")
   )
 
   def parse(args: List[String]): PerfTestSuiteParams = {
