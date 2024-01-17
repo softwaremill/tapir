@@ -39,6 +39,7 @@ object PerfTestSuiteRunner extends IOApp {
       .traverse { case ((simulationName, shortSimulationName), (serverName, shortServerName)) =>
         for {
           serverKillSwitch <- startServerByTypeName(serverName)
+          _ <- IO.println(s"Running server $shortServerName")
           _ <- IO
             .blocking(GatlingRunner.runSimulationBlocking(simulationName, params))
             .guarantee(serverKillSwitch)
