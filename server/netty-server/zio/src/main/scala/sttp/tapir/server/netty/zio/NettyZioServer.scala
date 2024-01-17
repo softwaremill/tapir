@@ -78,7 +78,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
     runtime <- ZIO.runtime[R]
     routes <- ZIO.foreach(routes)(identity)
     eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
-    channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    eventExecutor = new DefaultEventExecutor()
+    channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     isShuttingDown = new AtomicBoolean(false)
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
@@ -99,7 +100,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
     binding <- nettyChannelFutureToScala(channelFuture).map(ch =>
       (
         ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
+        () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
       )
     )
   } yield binding
@@ -120,6 +121,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
@@ -132,7 +134,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       ZIO.suspend {
         nettyFutureToScala(ch.close()).flatMap { _ =>
           if (config.shutdownEventLoopGroupOnClose) {
-            nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+            nettyFutureToScala(eventLoopGroup.shutdownGracefully())
+              .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
           } else ZIO.succeed(())
         }
       }
