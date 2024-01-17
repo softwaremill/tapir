@@ -137,8 +137,8 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
     )
     ch.close().get()
     if (config.shutdownEventLoopGroupOnClose) {
-      eventLoopGroup.shutdownGracefully().get(): Unit
-      eventExecutor.shutdownGracefully().get(): Unit
+      val _ = eventLoopGroup.shutdownGracefully().get()
+      val _ = eventExecutor.shutdownGracefully().get()
     }
   }
 }
