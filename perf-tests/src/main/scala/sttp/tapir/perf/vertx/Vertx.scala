@@ -61,7 +61,7 @@ object Vanilla extends Endpoints {
           val filePath = s"${TmpDir.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
           val fs = ctx.vertx.fileSystem
           val _ = fs
-            .createFile(filePath)
+            .createFile(tempFilePath().toString)
             .flatMap(_ => fs.writeFile(filePath, ctx.body().buffer()))
             .flatMap(_ =>
               ctx
