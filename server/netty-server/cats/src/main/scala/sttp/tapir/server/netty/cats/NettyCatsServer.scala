@@ -67,7 +67,8 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
     val route: Route[F] = Route.combine(routes)
-    val channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    val eventExecutor = new DefaultEventExecutor()
+    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
     val channelFuture =
@@ -81,7 +82,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
     nettyChannelFutureToScala(channelFuture).map(ch =>
       (
         ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
+        () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
       )
     )
   }
@@ -102,6 +103,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
@@ -114,7 +116,8 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       Async[F].defer {
         nettyFutureToScala(ch.close()).flatMap { _ =>
           if (config.shutdownEventLoopGroupOnClose) {
-            nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+            nettyFutureToScala(eventLoopGroup.shutdownGracefully())
+              .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
           } else Async[F].unit
         }
       }

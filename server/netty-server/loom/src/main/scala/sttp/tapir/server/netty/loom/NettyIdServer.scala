@@ -87,7 +87,8 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
         }
       )
     }
-    val channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    val eventExecutor = new DefaultEventExecutor()
+    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
     val channelIdFuture = NettyBootstrap(
@@ -106,7 +107,7 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 
     (
       channelId.localAddress().asInstanceOf[SA],
-      () => stop(channelId, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout)
+      () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
     )
   }
 
@@ -124,6 +125,7 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Unit = {
@@ -136,6 +138,7 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
     ch.close().get()
     if (config.shutdownEventLoopGroupOnClose) {
       val _ = eventLoopGroup.shutdownGracefully().get()
+      val _ = eventExecutor.shutdownGracefully().get()
     }
   }
 }

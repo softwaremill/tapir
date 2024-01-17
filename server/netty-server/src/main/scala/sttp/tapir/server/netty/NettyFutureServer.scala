@@ -64,7 +64,8 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[Future] = new FutureMonad()
     val route = Route.combine(routes)
-    val channelGroup = new DefaultChannelGroup(new DefaultEventExecutor()) // thread safe
+    val eventExecutor = new DefaultEventExecutor()
+    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
 
     val channelFuture =
@@ -76,7 +77,10 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       )
 
     nettyChannelFutureToScala(channelFuture).map(ch =>
-      (ch.localAddress().asInstanceOf[SA], () => stop(ch, eventLoopGroup, channelGroup, isShuttingDown, config.gracefulShutdownTimeout))
+      (
+        ch.localAddress().asInstanceOf[SA],
+        () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+      )
     )
   }
 
@@ -101,6 +105,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
@@ -112,7 +117,8 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     ).flatMap { _ =>
       nettyFutureToScala(ch.close()).flatMap { _ =>
         if (config.shutdownEventLoopGroupOnClose) {
-          nettyFutureToScala(eventLoopGroup.shutdownGracefully()).map(_ => ())
+          nettyFutureToScala(eventLoopGroup.shutdownGracefully())
+            .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
         } else Future.successful(())
       }
     }
