@@ -10,9 +10,7 @@ import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis.{Endpoints, ServerRunner}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 
-import java.util.Date
 import scala.concurrent.Future
-import scala.util.Random
 
 object Tapir extends Endpoints {
   val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
@@ -58,16 +56,16 @@ object Vanilla extends Endpoints {
 
       router.post(s"/pathFile$number/4").handler(bodyHandler).handler {
         ctx: RoutingContext =>
-          val filePath = s"${TmpDir.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+          val filePath = tempFilePath()
           val fs = ctx.vertx.fileSystem
           val _ = fs
-            .createFile(tempFilePath().toString)
-            .flatMap(_ => fs.writeFile(filePath, ctx.body().buffer()))
+            .createFile(filePath.toString)
+            .flatMap(_ => fs.writeFile(filePath.toString, ctx.body().buffer()))
             .flatMap(_ =>
               ctx
                 .response()
                 .putHeader("content-type", "text/plain")
-                .end(s"Received binary stored as: ${filePath}")
+                .end(s"Received binary stored as: $filePath")
             )
       }
     }.last
