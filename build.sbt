@@ -821,7 +821,7 @@ lazy val play29Json: ProjectMatrix = (projectMatrix in file("json/play29json"))
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "main" / "scala",
     Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "test" / "scala",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %%% "play-json" % Versions.play29Json,
+      "org.playframework" %%% "play-json" % Versions.play29Json,
       scalaTest.value % Test
     )
   )
