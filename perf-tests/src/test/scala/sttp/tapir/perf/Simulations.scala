@@ -4,12 +4,7 @@ import io.gatling.core.Predef._
 import io.gatling.core.structure.PopulationBuilder
 import io.gatling.http.Predef._
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.reflect.runtime.universe
 import scala.util.Random
-import cats.effect.IO
-import cats.effect.unsafe.IORuntime
-import sttp.tapir.perf.apis.ServerRunner
 import sttp.tapir.perf.Common._
 
 object CommonSimulations {
@@ -25,8 +20,8 @@ object CommonSimulations {
   def randomAlphanumByteArray(size: Int): Array[Byte] =
     Random.alphanumeric.take(size).map(_.toByte).toArray
 
-  lazy val constRandomBytes = randomByteArray(LargeInputSize)
-  lazy val constRandomAlphanumBytes = randomAlphanumByteArray(LargeInputSize)
+  lazy val constRandomLongBytes = randomByteArray(LargeInputSize)
+  lazy val constRandomLongAlphanumBytes = randomAlphanumByteArray(LargeInputSize)
 
   def simple_get(routeNumber: Int): PopulationBuilder = {
     val httpProtocol = http.baseUrl(baseUrl)
@@ -72,7 +67,8 @@ object CommonSimulations {
     val execHttpPost = exec(
       http(s"HTTP POST /pathBytes$routeNumber/4")
         .post(s"/pathBytes$routeNumber/4")
-        .body(ByteArrayBody(randomByteArray(256)))
+        .body(ByteArrayBody(randomAlphanumByteArray(256)))
+        .header("Content-Type", "application/octet-stream")
     )
 
     scenario(s"Repeatedly invoke POST with short byte array body")
@@ -86,7 +82,7 @@ object CommonSimulations {
     val execHttpPost = exec(
       http(s"HTTP POST /pathFile$routeNumber/4")
         .post(s"/pathFile$routeNumber/4")
-        .body(ByteArrayBody(constRandomBytes))
+        .body(ByteArrayBody(constRandomLongBytes))
         .header("Content-Type", "application/octet-stream")
     )
 
@@ -101,7 +97,7 @@ object CommonSimulations {
     val execHttpPost = exec(
       http(s"HTTP POST /pathBytes$routeNumber/4")
         .post(s"/pathBytes$routeNumber/4")
-        .body(ByteArrayBody(constRandomBytes))
+        .body(ByteArrayBody(constRandomLongAlphanumBytes))
         .header("Content-Type", "application/octet-stream")
     )
 
@@ -116,8 +112,8 @@ object CommonSimulations {
     val execHttpPost = exec(
       http(s"HTTP POST /path$routeNumber/4")
         .post(s"/path$routeNumber/4")
-        .body(ByteArrayBody(constRandomAlphanumBytes))
-        .header("Content-Type", "application/octet-stream")
+        .body(ByteArrayBody(constRandomLongAlphanumBytes))
+        .header("Content-Type", "text/plain")
     )
 
     scenario(s"Repeatedly invoke POST with large byte array, interpreted to a String")

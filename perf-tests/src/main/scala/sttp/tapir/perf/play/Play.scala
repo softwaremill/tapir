@@ -53,7 +53,7 @@ object Vanilla extends ControllerHelpers {
       Future.successful(Ok(s"$param-${str.length}"))
     }
 
-    val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers.apply().temporaryFile).async { implicit request =>
+    val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers().temporaryFile).async { implicit request =>
       val param = request.path.split("/").last
       val file: Files.TemporaryFile = request.body
       Future.successful(Ok(s"$param-${file.path.toString}"))
