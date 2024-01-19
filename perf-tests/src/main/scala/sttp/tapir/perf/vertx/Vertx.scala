@@ -10,16 +10,10 @@ import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis.{Endpoints, ServerRunner}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 
-import scala.concurrent.Future
-
 object Tapir extends Endpoints {
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-
   def route: Int => Router => Route = { (nRoutes: Int) => router =>
     val interpreter = VertxFutureServerInterpreter()
-    genEndpoints(nRoutes).map(interpreter.route(_)(router)).last
+    genEndpointsFuture(nRoutes).map(interpreter.route(_)(router)).last
   }
 }
 object Vanilla extends Endpoints {
@@ -27,34 +21,35 @@ object Vanilla extends Endpoints {
   def bodyHandler = BodyHandler.create(false).setBodyLimit(LargeInputSize + 100L)
 
   def route: Int => Router => Route = { (nRoutes: Int) => router =>
-    (0 until nRoutes).map { number =>
-      router.get(s"/path$number/4").handler {
+    (0 until nRoutes).map { n =>
+      router.get(s"/path$n/:id").handler {
         ctx: RoutingContext =>
+          val id = ctx.request().getParam("id").toInt
           val _ = ctx
             .response()
             .putHeader("content-type", "text/plain")
-            .end("Ok")
+            .end(s"${id + n}")
       }
 
-      router.post(s"/path$number/4").handler(bodyHandler).handler {
+      router.post(s"/path$n").handler(bodyHandler).handler {
         ctx: RoutingContext =>
           val body = ctx.body.asString()
           val _ = ctx
             .response()
             .putHeader("content-type", "text/plain")
-            .end(s"Ok, body length = ${body.length}")
+            .end(s"Ok [$n], string length = ${body.length}")
       }
 
-      router.post(s"/pathBytes$number/4").handler(bodyHandler).handler {
+      router.post(s"/pathBytes$n").handler(bodyHandler).handler {
         ctx: RoutingContext =>
           val bytes = ctx.body().asString()
           val _ = ctx
             .response()
             .putHeader("content-type", "text/plain")
-            .end(s"Received ${bytes.length} bytes")
+            .end(s"Ok [$n], bytes length = ${bytes.length}")
       }
 
-      router.post(s"/pathFile$number/4").handler(bodyHandler).handler {
+      router.post(s"/pathFile$n").handler(bodyHandler).handler {
         ctx: RoutingContext =>
           val filePath = tempFilePath()
           val fs = ctx.vertx.fileSystem
@@ -65,7 +60,7 @@ object Vanilla extends Endpoints {
               ctx
                 .response()
                 .putHeader("content-type", "text/plain")
-                .end(s"Received binary stored as: $filePath")
+                .end(s"Ok [$n], file saved to $filePath")
             )
       }
     }.last

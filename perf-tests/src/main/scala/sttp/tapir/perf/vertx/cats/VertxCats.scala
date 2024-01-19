@@ -9,23 +9,19 @@ import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter
 import sttp.tapir.perf.vertx.VertxRunner
 
 object Tapir extends Endpoints {
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, IO.pure)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-
   def route(dispatcher: Dispatcher[IO]): Int => Router => Route = { (nRoutes: Int) => router =>
     val interpreter = VertxCatsServerInterpreter(dispatcher)
-    genEndpoints(nRoutes).map(interpreter.route(_)(router)).last
+    genEndpointsIO(nRoutes).map(interpreter.route(_)(router)).last
   }
 }
 
-class VertxCatsRunner(numRoutes: Int) extends ServerRunner {
+class VertxCatsRunner(numRoutes: Int) {
 
-  override def start =
+  def start: IO[ServerRunner.KillSwitch] =
     Dispatcher.parallel[IO].allocated.flatMap { case (dispatcher, releaseDispatcher) =>
-      VertxRunner.runServer(Tapir.route(dispatcher)(numRoutes)).map(_.flatMap(_ => releaseDispatcher))
+      VertxRunner.runServer(Tapir.route(dispatcher)(numRoutes)).map(releaseVertx => releaseVertx >> releaseDispatcher)
     }
 }
 
-object TapirServer extends VertxCatsRunner(numRoutes = 1)
-object TapirMultiServer extends VertxCatsRunner(numRoutes = 1)
+object TapirServer extends VertxCatsRunner(numRoutes = 1) with ServerRunner
+object TapirMultiServer extends VertxCatsRunner(numRoutes = 1) with ServerRunner

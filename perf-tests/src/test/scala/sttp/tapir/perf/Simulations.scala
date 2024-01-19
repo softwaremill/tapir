@@ -3,9 +3,11 @@ package sttp.tapir.perf
 import io.gatling.core.Predef._
 import io.gatling.core.structure.PopulationBuilder
 import io.gatling.http.Predef._
-
-import scala.util.Random
 import sttp.tapir.perf.Common._
+
+import scala.concurrent.duration._
+import scala.util.Random
+import io.gatling.core.structure.ChainBuilder
 
 object CommonSimulations {
   private val baseUrl = "http://127.0.0.1:8080"
@@ -23,16 +25,6 @@ object CommonSimulations {
   lazy val constRandomLongBytes = randomByteArray(LargeInputSize)
   lazy val constRandomLongAlphanumBytes = randomAlphanumByteArray(LargeInputSize)
 
-  def simple_get(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
-    val execHttpGet = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
-
-    scenario(s"Repeatedly invoke GET of route number $routeNumber")
-      .during(duration)(execHttpGet)
-      .inject(atOnceUsers(userCount))
-      .protocols(httpProtocol)
-  }
-
   def getParamOpt(paramName: String): Option[String] = Option(System.getProperty(s"tapir.perf.${paramName}"))
 
   def getParam(paramName: String): String =
@@ -44,15 +36,41 @@ object CommonSimulations {
 
   private lazy val userCount = getParam("user-count").toInt
   private lazy val duration = getParam("duration-seconds").toInt
+  private val httpProtocol = http.baseUrl(baseUrl)
 
   // Scenarios
+  val warmUpScenario = scenario("Warm-Up Scenario")
+    .exec(
+      http("HTTP GET Warm-Up")
+        .get("/path0/1")
+        .check(status.is(200))
+    )
+    .exec(
+      http("HTTP POST Warm-Up")
+        .post("/path0")
+        .body(StringBody("warmup"))
+        .header("Content-Type", "text/plain")
+        .check(status.is(200))
+    )
+    .inject(
+      constantConcurrentUsers(3).during(5.seconds)
+    )
+    .protocols(httpProtocol)
+
+  def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
+    val execHttpGet: ChainBuilder = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
+
+    scenario(s"Repeatedly invoke GET of route number $routeNumber")
+      .during(duration)(execHttpGet)
+      .inject(atOnceUsers(userCount))
+      .protocols(httpProtocol)
+  }
+
   def scenario_post_string(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
-    val body = new String(randomAlphanumByteArray(256))
     val execHttpPost = exec(
-      http(s"HTTP POST /path$routeNumber/4")
-        .post(s"/path$routeNumber/4")
-        .body(StringBody(body))
+      http(s"HTTP POST /path$routeNumber")
+        .post(s"/path$routeNumber")
+        .body(StringBody(_ => new String(randomAlphanumByteArray(256))))
         .header("Content-Type", "text/plain")
     )
 
@@ -63,11 +81,10 @@ object CommonSimulations {
 
   }
   def scenario_post_bytes(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
-      http(s"HTTP POST /pathBytes$routeNumber/4")
-        .post(s"/pathBytes$routeNumber/4")
-        .body(ByteArrayBody(randomAlphanumByteArray(256)))
+      http(s"HTTP POST /pathBytes$routeNumber")
+        .post(s"/pathBytes$routeNumber")
+        .body(ByteArrayBody(_ => randomAlphanumByteArray(256)))
         .header("Content-Type", "text/plain") // otherwise Play complains
     )
 
@@ -78,10 +95,9 @@ object CommonSimulations {
   }
 
   def scenario_post_file(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
-      http(s"HTTP POST /pathFile$routeNumber/4")
-        .post(s"/pathFile$routeNumber/4")
+      http(s"HTTP POST /pathFile$routeNumber")
+        .post(s"/pathFile$routeNumber")
         .body(ByteArrayBody(constRandomLongBytes))
         .header("Content-Type", "application/octet-stream")
     )
@@ -93,10 +109,9 @@ object CommonSimulations {
   }
 
   def scenario_post_long_bytes(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
-      http(s"HTTP POST /pathBytes$routeNumber/4")
-        .post(s"/pathBytes$routeNumber/4")
+      http(s"HTTP POST /pathBytes$routeNumber")
+        .post(s"/pathBytes$routeNumber")
         .body(ByteArrayBody(constRandomLongAlphanumBytes))
         .header("Content-Type", "text/plain") // otherwise Play complains
     )
@@ -108,10 +123,9 @@ object CommonSimulations {
   }
 
   def scenario_post_long_string(routeNumber: Int): PopulationBuilder = {
-    val httpProtocol = http.baseUrl(baseUrl)
     val execHttpPost = exec(
-      http(s"HTTP POST /path$routeNumber/4")
-        .post(s"/path$routeNumber/4")
+      http(s"HTTP POST /path$routeNumber")
+        .post(s"/path$routeNumber")
         .body(ByteArrayBody(constRandomLongAlphanumBytes))
         .header("Content-Type", "text/plain")
     )
@@ -123,30 +137,32 @@ object CommonSimulations {
   }
 }
 
+import CommonSimulations._
+
 class SimpleGetSimulation extends Simulation {
-  setUp(CommonSimulations.simple_get(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_simple_get(0))): Unit
 }
 
 class SimpleGetMultiRouteSimulation extends Simulation {
-  setUp(CommonSimulations.simple_get(127)): Unit
+  setUp(warmUpScenario.andThen(scenario_simple_get(127))): Unit
 }
 
 class PostBytesSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_bytes(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_post_bytes(0))): Unit
 }
 
 class PostLongBytesSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_long_bytes(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_post_long_bytes(0))): Unit
 }
 
 class PostFileSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_file(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_post_file(0))): Unit
 }
 
 class PostStringSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_string(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_post_string(0))): Unit
 }
 
 class PostLongStringSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_long_string(0)): Unit
+  setUp(warmUpScenario.andThen(scenario_post_long_string(0))): Unit
 }

@@ -44,7 +44,7 @@ object NettyBootstrap {
     nettyConfig.socketConfig.receiveBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_RCVBUF, i))
     nettyConfig.socketConfig.sendBuffer.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_SNDBUF, i))
     nettyConfig.socketConfig.typeOfService.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.IP_TOS, i))
-    nettyConfig.socketTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, i.toSeconds.toInt))
+    // nettyConfig.socketTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_TIMEOUT, i.toSeconds.toInt))
     nettyConfig.lingerTimeout.foreach(i => httpBootstrap.childOption[java.lang.Integer](ChannelOption.SO_LINGER, i.toSeconds.toInt))
     nettyConfig.connectionTimeout.foreach(i =>
       httpBootstrap.childOption[java.lang.Integer](ChannelOption.CONNECT_TIMEOUT_MILLIS, i.toMillis.toInt)

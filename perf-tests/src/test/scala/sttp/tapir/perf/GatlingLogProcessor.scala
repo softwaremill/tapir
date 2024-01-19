@@ -18,8 +18,7 @@ object GatlingLogProcessor {
 
   val LogFileName = "simulation.log"
 
-  /**
-    * Searches for the last modified simulation.log in all simulation logs and calculates results. 
+  /** Searches for the last modified simulation.log in all simulation logs and calculates results.
     */
   def processLast(simulationName: String, serverName: String): IO[GatlingSimulationResult] = {
     for {
@@ -31,7 +30,7 @@ object GatlingLogProcessor {
         .through(text.lines)
         .fold[State](State.initial) { (state, line) =>
           val parts = line.split("\\s+")
-          if (parts.length >= 5 && parts(0) == "REQUEST") {
+          if (parts.length >= 5 && parts(0) == "REQUEST" && parts(3) != "Warm-Up") {
             val requestStartTime = parts(4).toLong
             val minRequestTs = state.minRequestTs.min(requestStartTime)
             val requestEndTime = parts(5).toLong

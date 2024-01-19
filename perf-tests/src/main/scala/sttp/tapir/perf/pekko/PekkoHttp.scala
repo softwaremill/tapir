@@ -11,7 +11,7 @@ import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.ExecutionContextExecutor
 
 object Vanilla {
   val router: Int => ActorSystem => Route = (nRoutes: Int) =>
@@ -25,21 +25,21 @@ object Vanilla {
               }
             },
             post {
-              path(("path" + n.toString) / IntNumber) { id =>
+              path(("path" + n.toString)) {
                 entity(as[String]) { _ =>
-                  complete((n + id).toString)
+                  complete((n).toString)
                 }
               }
             },
             post {
-              path(("pathBytes" + n.toString) / IntNumber) { id =>
+              path(("pathBytes" + n.toString)) {
                 entity(as[Array[Byte]]) { bytes =>
                   complete(s"Received ${bytes.length} bytes")
                 }
               }
             },
             post {
-              path(("pathFile" + n.toString) / IntNumber) { id =>
+              path(("pathFile" + n.toString)) {
                 extractRequestContext { ctx =>
                   entity(as[HttpEntity]) { httpEntity =>
                     val path = tempFilePath()
@@ -58,14 +58,10 @@ object Vanilla {
 }
 
 object Tapir extends Endpoints {
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-
   def router: Int => ActorSystem => Route = (nRoutes: Int) =>
     (actorSystem: ActorSystem) =>
       PekkoHttpServerInterpreter()(actorSystem.dispatcher).toRoute(
-        genEndpoints(nRoutes)
+        genEndpointsFuture(nRoutes)
       )
 }
 

@@ -7,12 +7,7 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.NettyCatsServer
 
-object Tapir extends Endpoints {
-
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, IO.pure)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-}
+object Tapir extends Endpoints
 
 object NettyCats {
 
@@ -36,5 +31,5 @@ object NettyCats {
   }
 }
 
-object TapirServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpoints(1)) }
-object TapirMultiServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpoints(128)) }
+object TapirServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(1)) }
+object TapirMultiServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(128)) }

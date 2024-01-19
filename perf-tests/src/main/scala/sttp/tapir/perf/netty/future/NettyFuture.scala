@@ -10,12 +10,7 @@ import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object Tapir extends Endpoints {
-
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-}
+object Tapir extends Endpoints 
 
 object NettyFuture {
 
@@ -38,5 +33,5 @@ object NettyFuture {
   }
 }
 
-object TapirServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpoints(1)) }
-object TapirMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpoints(128)) }
+object TapirServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(1)) }
+object TapirMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128)) }

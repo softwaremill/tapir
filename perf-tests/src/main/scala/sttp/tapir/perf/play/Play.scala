@@ -33,41 +33,39 @@ object Vanilla extends ControllerHelpers {
 
     implicit val actorSystemForMaterializer: ActorSystem = actorSystem
 
-    val simpleGet: Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async { implicit request =>
+    def simpleGet(n: Int): Action[AnyContent] = actionBuilder(PlayBodyParsers().anyContent).async { implicit request =>
       val param = request.path.split("/").last
       Future.successful(
-        Ok(param)
+        Ok((n + param.toInt).toString)
       )
     }
 
-    val postBytes: Action[ByteString] =
-      actionBuilder(PlayBodyParsers().byteString(maxLength = LargeInputSize + 1024L)).async { implicit request =>
-        val param = request.path.split("/").last
-        val byteArray: ByteString = request.body
-        Future.successful(Ok(s"$param-${byteArray.length}"))
-      }
-
-    val postString: Action[String] = actionBuilder(PlayBodyParsers().text(maxLength = LargeInputSize + 1024L)).async { implicit request =>
-      val param = request.path.split("/").last
-      val str: String = request.body
-      Future.successful(Ok(s"$param-${str.length}"))
+    def postString(n: Int): Action[String] = actionBuilder(PlayBodyParsers().text(maxLength = LargeInputSize + 1024L)).async {
+      implicit request =>
+        val body: String = request.body
+        Future.successful(Ok(s"Ok [$n], string length = ${body.length}"))
     }
 
-    val postFile: Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers().temporaryFile).async { implicit request =>
-      val param = request.path.split("/").last
-      val file: Files.TemporaryFile = request.body
-      Future.successful(Ok(s"$param-${file.path.toString}"))
+    def postBytes(n: Int): Action[ByteString] =
+      actionBuilder(PlayBodyParsers().byteString(maxLength = LargeInputSize + 1024L)).async { implicit request =>
+        val body: ByteString = request.body
+        Future.successful(Ok(s"Ok [$n], bytes length = ${body.length}"))
+      }
+
+    def postFile(n: Int): Action[Files.TemporaryFile] = actionBuilder(PlayBodyParsers().temporaryFile).async { implicit request =>
+      val body: Files.TemporaryFile = request.body
+      Future.successful(Ok(s"Ok [$n], file saved to ${body.toPath}"))
     }
 
     {
-      case GET(p"/path$number/$param") =>
-        simpleGet
-      case POST(p"/path$number/$param") =>
-        postString
-      case POST(p"/pathBytes$number/$param") =>
-        postBytes
-      case POST(p"/pathFile$number/$param") =>
-        postFile
+      case GET(p"/path$number/$_") =>
+        simpleGet(number.toInt)
+      case POST(p"/pathBytes$number") =>
+        postBytes(number.toInt)
+      case POST(p"/pathFile$number") =>
+        postFile(number.toInt)
+      case POST(p"/path$number") =>
+        postString(number.toInt)
     }
   }
   def router: Int => ActorSystem => Routes = (nRoutes: Int) =>
@@ -75,15 +73,11 @@ object Vanilla extends ControllerHelpers {
 }
 
 object Tapir extends Endpoints {
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, Future.successful)
-
-  def genEndpoints(i: Int) = genServerEndpoints(serverEndpointGens)(i).toList
-
   val router: Int => ActorSystem => Routes = (nRoutes: Int) =>
     (actorSystem: ActorSystem) => {
       implicit val actorSystemForMaterializer: ActorSystem = actorSystem
       PlayServerInterpreter().toRoutes(
-        genEndpoints(nRoutes)
+        genEndpointsFuture(nRoutes)
       )
     }
 }

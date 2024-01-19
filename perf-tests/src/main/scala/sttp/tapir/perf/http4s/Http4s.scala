@@ -22,23 +22,23 @@ object Vanilla {
           import dsl._
           HttpRoutes.of[IO] {
             case GET -> Root / s"path$n" / IntVar(id) =>
-              Ok((id + n).toString)
-            case req @ POST -> Root / s"path$n" / IntVar(id) =>
-              req.as[String].flatMap { _ =>
-                Ok((id + n).toString)
+              Ok((id + n.toInt).toString)
+            case req @ POST -> Root / s"path$n" =>
+              req.as[String].flatMap { str =>
+                Ok(s"Ok [$n], string length = ${str.length}")
               }
-            case req @ POST -> Root / s"pathBytes$n" / IntVar(id) =>
+            case req @ POST -> Root / s"pathBytes$n" =>
               req.as[Array[Byte]].flatMap { bytes =>
-                Ok(s"Received ${bytes.length} bytes")
+                Ok(s"Ok [$n], bytes length = ${bytes.length}")
               }
-            case req @ POST -> Root / s"pathFile$n" / IntVar(id) =>
+            case req @ POST -> Root / s"pathFile$n" =>
               val filePath = tempFilePath()
               val sink = Files[IO].writeAll(Fs2Path.fromNioPath(filePath))
               req.body
                 .through(sink)
                 .compile
                 .drain
-                .flatMap(_ => Ok(s"File saved to ${filePath.toAbsolutePath.toString}"))
+                .flatMap(_ => Ok(s"Ok [$n], file saved to ${filePath.toAbsolutePath.toString}"))
           }
         }
       ): _*
@@ -49,12 +49,11 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
-  val serverEndpointGens = replyingWithDummyStr(allEndpoints, IO.pure)
 
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
       Http4sServerInterpreter[IO]().toRoutes(
-        genServerEndpoints(serverEndpointGens)(nRoutes).toList
+        genEndpointsIO(nRoutes)
       )
     })
 }
