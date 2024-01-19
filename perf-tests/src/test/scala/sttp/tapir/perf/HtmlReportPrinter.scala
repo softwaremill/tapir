@@ -3,7 +3,7 @@ package sttp.tapir.perf
 import scalatags.Text.all._
 import scalatags.Text
 
-object HtmlResultsPrinter {
+object HtmlReportPrinter {
   val tableStyle = "border-collapse: collapse; font-family: Roboto, Helvetica, Arial, sans-serif;"
   val cellStyle = "border: 1px solid black; padding: 5px;"
   val headStyle =

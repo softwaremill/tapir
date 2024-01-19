@@ -66,12 +66,12 @@ object PerfTestSuiteRunner extends IOApp {
   }
 
   private def writeCsvReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {
-    val csv = CsvResultsPrinter.print(results)
+    val csv = CsvReportPrinter.print(results)
     writeReportFile(csv, "csv", currentTime)
   }
 
   private def writeHtmlReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {
-    val html = HtmlResultsPrinter.print(results)
+    val html = HtmlReportPrinter.print(results)
     writeReportFile(html, "html", currentTime)
   }
 

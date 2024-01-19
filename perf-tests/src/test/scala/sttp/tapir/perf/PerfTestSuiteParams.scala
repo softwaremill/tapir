@@ -59,7 +59,7 @@ object PerfTestSuiteParams {
       .action((x, c) => c.copy(durationSeconds = x))
       .text("Single simulation duration in seconds"),
     opt[Unit]('g', "gatling-reports")
-      .action((x, c) => c.copy(buildGatlingReports = true))
+      .action((_, c) => c.copy(buildGatlingReports = true))
       .text("Generate Gatling reports for individuals sims, may significantly affect total time")
   )
 

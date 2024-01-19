@@ -1,6 +1,6 @@
 package sttp.tapir.perf
 
-object CsvResultsPrinter {
+object CsvReportPrinter {
   def print(results: List[GatlingSimulationResult]): String = {
 
     val groupedResults = results.groupBy(_.simulationName)

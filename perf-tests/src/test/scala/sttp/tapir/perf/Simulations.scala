@@ -68,7 +68,7 @@ object CommonSimulations {
       http(s"HTTP POST /pathBytes$routeNumber/4")
         .post(s"/pathBytes$routeNumber/4")
         .body(ByteArrayBody(randomAlphanumByteArray(256)))
-        .header("Content-Type", "application/octet-stream")
+        .header("Content-Type", "text/plain") // otherwise Play complains
     )
 
     scenario(s"Repeatedly invoke POST with short byte array body")
@@ -98,7 +98,7 @@ object CommonSimulations {
       http(s"HTTP POST /pathBytes$routeNumber/4")
         .post(s"/pathBytes$routeNumber/4")
         .body(ByteArrayBody(constRandomLongAlphanumBytes))
-        .header("Content-Type", "application/octet-stream")
+        .header("Content-Type", "text/plain") // otherwise Play complains
     )
 
     scenario(s"Repeatedly invoke POST with large byte array")
@@ -124,29 +124,29 @@ object CommonSimulations {
 }
 
 class SimpleGetSimulation extends Simulation {
-  setUp(CommonSimulations.simple_get(0))
+  setUp(CommonSimulations.simple_get(0)): Unit
 }
 
 class SimpleGetMultiRouteSimulation extends Simulation {
-  setUp(CommonSimulations.simple_get(127))
+  setUp(CommonSimulations.simple_get(127)): Unit
 }
 
 class PostBytesSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_bytes(0))
+  setUp(CommonSimulations.scenario_post_bytes(0)): Unit
 }
 
 class PostLongBytesSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_long_bytes(0))
+  setUp(CommonSimulations.scenario_post_long_bytes(0)): Unit
 }
 
 class PostFileSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_file(0))
+  setUp(CommonSimulations.scenario_post_file(0)): Unit
 }
 
 class PostStringSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_string(0))
+  setUp(CommonSimulations.scenario_post_string(0)): Unit
 }
 
 class PostLongStringSimulation extends Simulation {
-  setUp(CommonSimulations.scenario_post_long_string(0))
+  setUp(CommonSimulations.scenario_post_long_string(0)): Unit
 }
