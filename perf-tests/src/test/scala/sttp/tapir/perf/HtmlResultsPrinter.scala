@@ -14,7 +14,7 @@ object HtmlResultsPrinter {
   def print(results: List[GatlingSimulationResult]): String = {
 
     val headers = "Server" :: results.groupBy(_.serverName).head._2.map(_.simulationName)
-    createHtmlTable(headers, results.groupBy(_.serverName).values.toList)
+    createHtmlTable(headers, results.groupBy(_.serverName).values.toList.sortBy(_.head.serverName))
   }
 
   private def createHtmlTable(headers: Seq[String], rows: List[List[GatlingSimulationResult]]): String = {
