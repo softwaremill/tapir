@@ -1,7 +1,7 @@
 package sttp.tapir.perf.vertx
 
-import cats.effect.IO
-import cats.effect.kernel.Resource
+import _root_.cats.effect.IO
+import _root_.cats.effect.kernel.Resource
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.{Future => VFuture, Vertx}
 import io.vertx.ext.web.handler.BodyHandler
