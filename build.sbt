@@ -803,7 +803,7 @@ lazy val play29Json: ProjectMatrix = (projectMatrix in file("json/play29json"))
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "main" / "scala",
     Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "json" / "playjson" / "src" / "test" / "scala",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %%% "play-json" % Versions.play29Json,
+      "org.playframework" %%% "play-json" % Versions.play29Json,
       scalaTest.value % Test
     )
   )
@@ -896,8 +896,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.27.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.27.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.27.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.27.4" % Test,
       scalaTest.value % Test
     )
   )
