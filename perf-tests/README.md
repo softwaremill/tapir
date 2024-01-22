@@ -51,8 +51,8 @@ perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s http4s.Tapir,netty
 After all tests finish successfully, your console output will point to report files, 
 containing aggregated results from the entire suite:
 ```
-[info] ******* Test Suite report saved to /home/kc/code/oss/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.csv
-[info] ******* Test Suite report saved to /home/kc/code/oss/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.html
+[info] ******* Test Suite report saved to /home/alice/projects/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.csv
+[info] ******* Test Suite report saved to /home/alice/projects/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.html
 ```
 
 These reports include information about throughput and latency of each server for each simulation.
