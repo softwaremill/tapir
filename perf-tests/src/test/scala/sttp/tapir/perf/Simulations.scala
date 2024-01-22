@@ -40,21 +40,19 @@ object CommonSimulations {
 
   // Scenarios
   val warmUpScenario = scenario("Warm-Up Scenario")
-    .exec(
-      http("HTTP GET Warm-Up")
-        .get("/path0/1")
-        .check(status.is(200))
+    .during(5.seconds)(
+      exec(
+        http("HTTP GET Warm-Up")
+          .get("/path0/1")
+      )
+        .exec(
+          http("HTTP POST Warm-Up")
+            .post("/path0")
+            .body(StringBody("warmup"))
+            .header("Content-Type", "text/plain")
+        )
     )
-    .exec(
-      http("HTTP POST Warm-Up")
-        .post("/path0")
-        .body(StringBody("warmup"))
-        .header("Content-Type", "text/plain")
-        .check(status.is(200))
-    )
-    .inject(
-      constantConcurrentUsers(3).during(5.seconds)
-    )
+    .inject(atOnceUsers(3))
     .protocols(httpProtocol)
 
   def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
