@@ -154,10 +154,8 @@ val scalaTestPlusScalaCheck = {
   Def.setting("org.scalatestplus" %%% s"scalacheck-$scalaCheckSuffix" % Versions.scalaTestPlusScalaCheck)
 }
 
-lazy val loggerDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.14",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
-)
+lazy val logback = "ch.qos.logback" % "logback-classic" % Versions.logback
+lazy val slf4j = "org.slf4j" % "slf4j-api" % Versions.slf4j
 
 lazy val rawAllAggregates = core.projectRefs ++
   testing.projectRefs ++
@@ -372,10 +370,11 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(
     name := "testing-server",
     publish / skip := true,
-    libraryDependencies ++= loggerDependencies ++ Seq(
+    libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-circe" % Versions.http4s
+      "org.http4s" %% "http4s-circe" % Versions.http4s,
+      logback
     ),
     // the test server needs to be started before running any client tests
     reStart / mainClass := Some("sttp.tapir.client.tests.HttpServer"),
@@ -467,7 +466,10 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   .settings(commonSettings)
   .settings(
     name := "tapir-testing",
-    libraryDependencies ++= Seq(scalaTest.value % Test) ++ loggerDependencies
+    libraryDependencies ++= Seq(
+      scalaTest.value % Test,
+      logback % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
@@ -482,8 +484,9 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "io.circe" %%% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %%% "tagging" % "2.3.4",
       scalaTest.value,
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
-    ) ++ loggerDependencies
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      logback
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
@@ -515,8 +518,9 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
-    ) ++ loggerDependencies,
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      logback
+    ),
     publishArtifact := false
   )
   .settings(Gatling / scalaSource := sourceDirectory.value / "test" / "scala")
@@ -933,10 +937,12 @@ lazy val protobuf: ProjectMatrix = (projectMatrix in file("grpc/protobuf"))
   .settings(commonSettings)
   .settings(
     name := "tapir-grpc-protobuf",
-    libraryDependencies ++= loggerDependencies ++ Seq(
+    libraryDependencies ++= Seq(
+      slf4j,
       scalaTest.value % Test,
       scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test
+      scalaTestPlusScalaCheck.value % Test,
+      logback % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -961,7 +967,8 @@ lazy val grpcExamples: ProjectMatrix = (projectMatrix in file("grpc/examples"))
   .settings(
     name := "tapir-grpc-examples",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-discovery" % "2.6.20"
+      "com.typesafe.akka" %% "akka-discovery" % "2.6.20",
+      slf4j
     ),
     fork := true
   )
@@ -978,7 +985,8 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.0.2"
+      "org.apache.pekko" %% "pekko-discovery" % "1.0.2",
+      slf4j
     ),
     fork := true
   )
@@ -1398,7 +1406,7 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
     name := "tapir-jdkhttp-server",
     libraryDependencies ++= Seq(
       "org.apache.httpcomponents" % "httpmime" % "4.5.14"
-    ) ++ loggerDependencies
+    )
   )
   .jvmPlatform(scalaVersions = List(scala2_13, scala3))
   .dependsOn(serverCore, serverTests % Test)
@@ -1409,9 +1417,9 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
       "io.netty" % "netty-all" % Versions.nettyAll,
-      "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams
-    )
-      ++ loggerDependencies,
+      "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
+      slf4j
+    ),
     // needed because of https://github.com/coursier/coursier/issues/2016
     useCoursier := false
   )
@@ -1419,7 +1427,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val nettyServerLoom: ProjectMatrix =
-  ProjectMatrix("nettyServerLoom", file(s"server/netty-server/loom"))
+  ProjectMatrix("nettyServerLoom", file("server/netty-server/loom"))
     .settings(commonJvmSettings)
     .settings(
       name := "tapir-netty-server-loom",
@@ -1433,7 +1441,8 @@ lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
   .settings(
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
+      "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
+      slf4j
     )
   )
 
@@ -1450,7 +1459,6 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(
       name := s"tapir-netty-server-$proj",
-      libraryDependencies ++= loggerDependencies,
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false
     )
@@ -1464,7 +1472,7 @@ lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"
     libraryDependencies ++= Seq(
       "io.helidon.webserver" % "helidon-webserver" % Versions.helidon,
       "io.helidon.logging" % "helidon-logging-slf4j" % Versions.helidon
-    ) ++ loggerDependencies
+    )
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
@@ -1518,7 +1526,6 @@ lazy val awsLambdaCore: ProjectMatrix = (projectMatrix in file("serverless/aws/l
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-core",
-    libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2Versions)
@@ -1528,7 +1535,6 @@ lazy val awsLambdaZio: ProjectMatrix = (projectMatrix in file("serverless/aws/la
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-zio",
-    libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
     )
@@ -1599,10 +1605,10 @@ lazy val awsLambdaCatsEffect: ProjectMatrix = (projectMatrix in file("serverless
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda",
-    libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp,
-      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
+      slf4j
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -2019,9 +2025,9 @@ lazy val examples2: ProjectMatrix = (projectMatrix in file("examples2"))
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
-      scalaTest.value
+      scalaTest.value,
+      logback
     ),
-    libraryDependencies ++= loggerDependencies,
     publishArtifact := false,
     Compile / run / fork := true
   )
@@ -2077,9 +2083,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
-      scalaTest.value
+      scalaTest.value,
+      logback
     ),
-    libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = examplesScalaVersions)

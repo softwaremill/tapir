@@ -1,7 +1,7 @@
 package sttp.tapir.examples.observability
 
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import io.circe.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
@@ -15,7 +15,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
-object DatadogMetricsExample extends App with StrictLogging {
+object DatadogMetricsExample extends App with Logging {
 
   case class Person(name: String)
 
