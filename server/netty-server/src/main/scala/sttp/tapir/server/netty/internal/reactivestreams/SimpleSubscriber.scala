@@ -25,10 +25,10 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
   }
 
   override def onNext(content: HttpContent): Unit = {
-    val a = ByteBufUtil.getBytes(content.content())
+    val array = ByteBufUtil.getBytes(content.content())
     content.release()
-    size += a.length
-    chunks.add(a)
+    size += array.length
+    chunks.add(array)
     subscription.request(1)
   }
 
