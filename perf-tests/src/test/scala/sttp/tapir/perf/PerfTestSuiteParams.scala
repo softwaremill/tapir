@@ -10,8 +10,8 @@ import scala.util.Success
 case class PerfTestSuiteParams(
     shortServerNames: List[String] = Nil,
     shortSimulationNames: List[String] = Nil,
-    users: Int = 1,
-    durationSeconds: Int = 10,
+    users: Int = PerfTestSuiteParams.defaultUserCount,
+    durationSeconds: Int = PerfTestSuiteParams.defaultDurationSeconds,
     buildGatlingReports: Boolean = false
 ) {
   def adjustWildcards: PerfTestSuiteParams = {
@@ -40,6 +40,8 @@ case class PerfTestSuiteParams(
 }
 
 object PerfTestSuiteParams {
+  val defaultUserCount = 1
+  val defaultDurationSeconds = 10
   val builder = OParser.builder[PerfTestSuiteParams]
   import builder._
   val argParser = OParser.sequence(
@@ -54,13 +56,13 @@ object PerfTestSuiteParams {
       .text("Comma-separated list of short simulation names, or '*' for all"),
     opt[Int]('u', "users")
       .action((x, c) => c.copy(users = x))
-      .text("Number of concurrent users"),
+      .text(s"Number of concurrent users, default is $defaultUserCount"),
     opt[Int]('d', "duration")
       .action((x, c) => c.copy(durationSeconds = x))
-      .text("Single simulation duration in seconds"),
+      .text(s"Single simulation duration in seconds, default is $defaultDurationSeconds"),
     opt[Unit]('g', "gatling-reports")
       .action((_, c) => c.copy(buildGatlingReports = true))
-      .text("Generate Gatling reports for individuals sims, may significantly affect total time")
+      .text("Generate Gatling reports for individuals sims, may significantly affect total time (disabled by default)")
   )
 
   def parse(args: List[String]): PerfTestSuiteParams = {
@@ -77,5 +79,4 @@ object PerfTestSuiteParams {
         sys.exit(-1)
     }
   }
-
 }
