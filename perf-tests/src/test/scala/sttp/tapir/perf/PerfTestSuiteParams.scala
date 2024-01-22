@@ -49,11 +49,11 @@ object PerfTestSuiteParams {
     opt[Seq[String]]('s', "server")
       .required()
       .action((x, c) => c.copy(shortServerNames = x.toList))
-      .text("Comma-separated list of short server names, or '*' for all"),
+      .text(s"Comma-separated list of short server names, or '*' for all. Available servers: ${TypeScanner.allServers.mkString(", ")}"),
     opt[Seq[String]]('m', "sim")
       .required()
       .action((x, c) => c.copy(shortSimulationNames = x.toList))
-      .text("Comma-separated list of short simulation names, or '*' for all"),
+      .text(s"Comma-separated list of short simulation names, or '*' for all. Available simulations: ${TypeScanner.allSimulations.mkString(", ")}"),
     opt[Int]('u', "users")
       .action((x, c) => c.copy(users = x))
       .text(s"Number of concurrent users, default is $defaultUserCount"),
