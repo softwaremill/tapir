@@ -42,11 +42,13 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
       (),
       new java.nio.channels.CompletionHandler[Integer, Unit] {
         override def completed(result: Integer, attachment: Unit): Unit = {
+          httpContent.release()
           position += result
           subscription.request(1)
         }
 
         override def failed(exc: Throwable, attachment: Unit): Unit = {
+          httpContent.release()
           subscription.cancel()
           onError(exc)
         }
