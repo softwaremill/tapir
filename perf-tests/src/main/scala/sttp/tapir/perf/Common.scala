@@ -13,6 +13,6 @@ object Common {
   val WarmupDuration = 5.seconds
   val Port = 8080
   val TmpDir: File = new java.io.File(System.getProperty("java.io.tmpdir")).getAbsoluteFile
-  def tempFilePath(): Path = TmpDir.toPath.resolve(s"tapir-${new Date().getTime}-${Random.nextLong()}")
+  def newTempFilePath(): Path = TmpDir.toPath.resolve(s"tapir-${new Date().getTime}-${Random.nextLong()}")
 
 }

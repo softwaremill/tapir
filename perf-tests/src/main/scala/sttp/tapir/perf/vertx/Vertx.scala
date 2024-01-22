@@ -9,10 +9,12 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis.{Endpoints, ServerRunner}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter
+import sttp.tapir.server.vertx.VertxFutureServerOptions
 
 object Tapir extends Endpoints {
   def route: Int => Router => Route = { (nRoutes: Int) => router =>
-    val interpreter = VertxFutureServerInterpreter()
+    val serverOptions = VertxFutureServerOptions.customiseInterceptors.serverLog(None).options
+    val interpreter = VertxFutureServerInterpreter(serverOptions)
     genEndpointsFuture(nRoutes).map(interpreter.route(_)(router)).last
   }
 }
@@ -51,7 +53,7 @@ object Vanilla extends Endpoints {
 
       router.post(s"/pathFile$n").handler(bodyHandler).handler {
         ctx: RoutingContext =>
-          val filePath = tempFilePath()
+          val filePath = newTempFilePath()
           val fs = ctx.vertx.fileSystem
           val _ = fs
             .createFile(filePath.toString)

@@ -12,6 +12,7 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
 
 object Vanilla {
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
@@ -32,7 +33,7 @@ object Vanilla {
                 Ok(s"Ok [$n], bytes length = ${bytes.length}")
               }
             case req @ POST -> Root / s"pathFile$n" =>
-              val filePath = tempFilePath()
+              val filePath = newTempFilePath()
               val sink = Files[IO].writeAll(Fs2Path.fromNioPath(filePath))
               req.body
                 .through(sink)
@@ -49,10 +50,14 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
+  val serverOptions = Http4sServerOptions
+    .customiseInterceptors[IO]
+    .serverLog(None)
+    .options
 
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
-      Http4sServerInterpreter[IO]().toRoutes(
+      Http4sServerInterpreter[IO](serverOptions).toRoutes(
         genEndpointsIO(nRoutes)
       )
     })

@@ -9,9 +9,9 @@ import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.stream.scaladsl.FileIO
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
-import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
+import sttp.tapir.server.pekkohttp.{PekkoHttpServerInterpreter, PekkoHttpServerOptions}
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object Vanilla {
   val router: Int => ActorSystem => Route = (nRoutes: Int) =>
@@ -42,7 +42,7 @@ object Vanilla {
               path(("pathFile" + n.toString)) {
                 extractRequestContext { ctx =>
                   entity(as[HttpEntity]) { httpEntity =>
-                    val path = tempFilePath()
+                    val path = newTempFilePath()
                     val sink = FileIO.toPath(path)
                     val finishedWriting = httpEntity.dataBytes.runWith(sink)(ctx.materializer)
                     onSuccess(finishedWriting) { _ =>
@@ -58,9 +58,14 @@ object Vanilla {
 }
 
 object Tapir extends Endpoints {
+  val serverOptions = PekkoHttpServerOptions
+    .customiseInterceptors(ExecutionContext.Implicits.global)
+    .serverLog(None)
+    .options
+
   def router: Int => ActorSystem => Route = (nRoutes: Int) =>
     (actorSystem: ActorSystem) =>
-      PekkoHttpServerInterpreter()(actorSystem.dispatcher).toRoute(
+      PekkoHttpServerInterpreter(serverOptions)(actorSystem.dispatcher).toRoute(
         genEndpointsFuture(nRoutes)
       )
 }

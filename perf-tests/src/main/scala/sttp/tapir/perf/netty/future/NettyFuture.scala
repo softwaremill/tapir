@@ -3,25 +3,26 @@ package sttp.tapir.perf.netty.future
 import cats.effect.IO
 import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common._
-import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
+import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions}
 import sttp.tapir.server.ServerEndpoint
 
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object Tapir extends Endpoints 
+object Tapir extends Endpoints
 
 object NettyFuture {
 
   def runServer(endpoints: List[ServerEndpoint[Any, Future]]): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
+    val serverOptions = NettyFutureServerOptions.customiseInterceptors.serverLog(None).options
     // Starting netty server
     val serverBinding: IO[NettyFutureServerBinding] =
       IO.fromFuture(
         IO(
-          NettyFutureServer()
+          NettyFutureServer(serverOptions)
             .port(declaredPort)
             .host(declaredHost)
             .addEndpoints(endpoints)

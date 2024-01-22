@@ -13,6 +13,7 @@ import play.core.server.{DefaultPekkoHttpServerComponents, ServerConfig}
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.play.PlayServerInterpreter
+import sttp.tapir.server.play.PlayServerOptions
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -76,7 +77,9 @@ object Tapir extends Endpoints {
   val router: Int => ActorSystem => Routes = (nRoutes: Int) =>
     (actorSystem: ActorSystem) => {
       implicit val actorSystemForMaterializer: ActorSystem = actorSystem
-      PlayServerInterpreter().toRoutes(
+      implicit val ec: ExecutionContext = actorSystem.dispatcher
+      val serverOptions = PlayServerOptions.customiseInterceptors().serverLog(None).options
+      PlayServerInterpreter(serverOptions).toRoutes(
         genEndpointsFuture(nRoutes)
       )
     }

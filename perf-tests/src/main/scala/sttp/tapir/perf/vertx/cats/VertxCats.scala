@@ -5,12 +5,14 @@ import cats.effect.std.Dispatcher
 import io.vertx.ext.web.Route
 import io.vertx.ext.web.Router
 import sttp.tapir.perf.apis.{Endpoints, ServerRunner}
-import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter
 import sttp.tapir.perf.vertx.VertxRunner
+import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter
+import sttp.tapir.server.vertx.cats.VertxCatsServerOptions
 
 object Tapir extends Endpoints {
   def route(dispatcher: Dispatcher[IO]): Int => Router => Route = { (nRoutes: Int) => router =>
-    val interpreter = VertxCatsServerInterpreter(dispatcher)
+    val serverOptions = VertxCatsServerOptions.customiseInterceptors[IO](dispatcher).serverLog(None).options
+    val interpreter = VertxCatsServerInterpreter(serverOptions)
     genEndpointsIO(nRoutes).map(interpreter.route(_)(router)).last
   }
 }
