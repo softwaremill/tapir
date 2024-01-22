@@ -40,7 +40,7 @@ object CommonSimulations {
 
   // Scenarios
   val warmUpScenario = scenario("Warm-Up Scenario")
-    .during(5.seconds)(
+    .during(WarmupDuration)(
       exec(
         http("HTTP GET Warm-Up")
           .get("/path0/1")

@@ -27,7 +27,7 @@ case class PerfTestSuiteParams(
 
   def totalTests: Int = shortServerNames.length * shortSimulationNames.length
 
-  def minTotalDuration: FiniteDuration = (duration * totalTests.toLong).toMinutes.minutes
+  def minTotalDuration: FiniteDuration = ((duration + WarmupDuration) * totalTests.toLong).toMinutes.minutes
 
   /** Returns pairs of (fullServerName, shortServerName), for example: (sttp.tapir.perf.pekko.TapirServer, pekko.Tapir)
     */
