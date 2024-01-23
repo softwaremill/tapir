@@ -496,35 +496,25 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .dependsOn(core, files, circeJson, cats)
 
-val akkaHttpVanilla = taskKey[Unit]("akka-http-vanilla")
-val akkaHttpTapir = taskKey[Unit]("akka-http-tapir")
-val akkaHttpVanillaMulti = taskKey[Unit]("akka-http-vanilla-multi")
-val akkaHttpTapirMulti = taskKey[Unit]("akka-http-tapir-multi")
-val http4sVanilla = taskKey[Unit]("http4s-vanilla")
-val http4sTapir = taskKey[Unit]("http4s-tapir")
-val http4sVanillaMulti = taskKey[Unit]("http4s-vanilla-multi")
-val http4sTapirMulti = taskKey[Unit]("http4s-tapir-multi")
-def genPerfTestTask(servName: String, simName: String) = Def.taskDyn {
-  Def.task {
-    (Compile / runMain).toTask(s" sttp.tapir.perf.${servName}Server").value
-    (Gatling / testOnly).toTask(s" sttp.tapir.perf.${simName}Simulation").value
-  }
-}
-
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test",
-      "io.gatling" % "gatling-test-framework" % "3.10.3" % "test",
-      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "org.http4s" %% "http4s-server" % Versions.http4s,
+      // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.3" % "test" exclude (
+        "com.fasterxml.jackson.core", "jackson-databind"
+      ),
+      "io.gatling" % "gatling-test-framework" % "3.10.3" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.1",
+      "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
+      "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
+      "com.github.scopt" %% "scopt" % "4.1.0",
+      "io.github.classgraph" % "classgraph" % "4.8.165" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ) ++ loggerDependencies,
     publishArtifact := false
@@ -534,16 +524,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     fork := true,
     connectInput := true
   )
-  .settings(akkaHttpVanilla := { (genPerfTestTask("akka.Vanilla", "OneRoute")).value })
-  .settings(akkaHttpTapir := { (genPerfTestTask("akka.Tapir", "OneRoute")).value })
-  .settings(akkaHttpVanillaMulti := { (genPerfTestTask("akka.VanillaMulti", "MultiRoute")).value })
-  .settings(akkaHttpTapirMulti := { (genPerfTestTask("akka.TapirMulti", "MultiRoute")).value })
-  .settings(http4sVanilla := { (genPerfTestTask("http4s.Vanilla", "OneRoute")).value })
-  .settings(http4sTapir := { (genPerfTestTask("http4s.Tapir", "OneRoute")).value })
-  .settings(http4sVanillaMulti := { (genPerfTestTask("http4s.VanillaMulti", "MultiRoute")).value })
-  .settings(http4sTapirMulti := { (genPerfTestTask("http4s.TapirMulti", "MultiRoute")).value })
   .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(core, akkaHttpServer, http4sServer)
+  .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)
 
 // integrations
 

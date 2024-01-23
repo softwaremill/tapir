@@ -1,19 +1,18 @@
 package sttp.tapir.perf
 
-import sttp.tapir.{PublicEndpoint, endpoint, path, stringBody}
+import java.io.File
+import java.nio.file.Path
+import java.util.Date
 
-import scala.io.StdIn
+import scala.concurrent.duration._
+import scala.util.Random
 
 object Common {
-  def genTapirEndpoint(n: Int): PublicEndpoint[Int, String, String, Any] = endpoint.get
-    .in("path" + n.toString)
-    .in(path[Int]("id"))
-    .errorOut(stringBody)
-    .out(stringBody)
+  val rootPackage = "sttp.tapir.perf"
+  val LargeInputSize = 5 * 1024 * 1024
+  val WarmupDuration = 5.seconds
+  val Port = 8080
+  val TmpDir: File = new java.io.File(System.getProperty("java.io.tmpdir")).getAbsoluteFile
+  def newTempFilePath(): Path = TmpDir.toPath.resolve(s"tapir-${new Date().getTime}-${Random.nextLong()}")
 
-  def blockServer(): Unit = {
-    println(Console.BLUE + "Server now online. Please navigate to http://localhost:8080/path0/1\nPress RETURN to stop..." + Console.RESET)
-    StdIn.readLine()
-    println("Server terminated")
-  }
 }

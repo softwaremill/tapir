@@ -1,54 +1,82 @@
 package sttp.tapir.perf.http4s
 
 import cats.effect._
-import cats.effect.unsafe.implicits.global
-import cats.syntax.all._
+import fs2.io.file.{Files, Path => Fs2Path}
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl._
 import org.http4s.implicits._
 import org.http4s.server.Router
-import sttp.tapir.perf
-import sttp.tapir.perf.Common
+import sttp.monad.MonadError
+import sttp.tapir.integ.cats.effect.CatsMonadError
+import sttp.tapir.perf.Common._
+import sttp.tapir.perf.apis._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
 
 object Vanilla {
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router(
       (0 to nRoutes).map((n: Int) =>
-        ("/path" + n.toString) -> {
+        ("/") -> {
           val dsl = Http4sDsl[IO]
           import dsl._
-          HttpRoutes.of[IO] { case GET -> Root / IntVar(id) =>
-            Ok((id + n).toString)
+          HttpRoutes.of[IO] {
+            case GET -> Root / s"path$n" / IntVar(id) =>
+              Ok((id + n.toInt).toString)
+            case req @ POST -> Root / s"path$n" =>
+              req.as[String].flatMap { str =>
+                Ok(s"Ok [$n], string length = ${str.length}")
+              }
+            case req @ POST -> Root / s"pathBytes$n" =>
+              req.as[Array[Byte]].flatMap { bytes =>
+                Ok(s"Ok [$n], bytes length = ${bytes.length}")
+              }
+            case req @ POST -> Root / s"pathFile$n" =>
+              val filePath = newTempFilePath()
+              val sink = Files[IO].writeAll(Fs2Path.fromNioPath(filePath))
+              req.body
+                .through(sink)
+                .compile
+                .drain
+                .flatMap(_ => Ok(s"Ok [$n], file saved to ${filePath.toAbsolutePath.toString}"))
           }
         }
       ): _*
     )
 }
 
-object Tapir {
+object Tapir extends Endpoints {
+
+  implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
+
+  val serverOptions = Http4sServerOptions
+    .customiseInterceptors[IO]
+    .serverLog(None)
+    .options
+
   val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
     Router("/" -> {
-      Http4sServerInterpreter[IO]().toRoutes(
-        (0 to nRoutes)
-          .map((n: Int) => Common.genTapirEndpoint(n).serverLogic(id => IO(((id + n).toString).asRight[String])))
-          .toList
+      Http4sServerInterpreter[IO](serverOptions).toRoutes(
+        genEndpointsIO(nRoutes)
       )
     })
 }
 
-object Http4s {
-  def runServer(router: HttpRoutes[IO]): IO[ExitCode] = {
+object server {
+  def runServer(router: HttpRoutes[IO]): IO[ServerRunner.KillSwitch] =
     BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
+      .bindHttp(Port, "localhost")
       .withHttpApp(router.orNotFound)
       .resource
-      .use(_ => { perf.Common.blockServer(); IO.pure(ExitCode.Success) })
-  }
+      .allocated
+      .map(_._2)
+      .map(_.flatTap { _ =>
+        IO.println("Http4s server closed.")
+      })
 }
 
-object TapirServer extends App { Http4s.runServer(Tapir.router(1)).unsafeRunSync() }
-object TapirMultiServer extends App { Http4s.runServer(Tapir.router(128)).unsafeRunSync() }
-object VanillaServer extends App { Http4s.runServer(Vanilla.router(1)).unsafeRunSync() }
-object VanillaMultiServer extends App { Http4s.runServer(Vanilla.router(128)).unsafeRunSync() }
+object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def start = server.runServer(Tapir.router(128)) }
+object VanillaServer extends ServerRunner { override def start = server.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def start = server.runServer(Vanilla.router(128)) }
