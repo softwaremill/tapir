@@ -5,6 +5,7 @@ import cats.syntax.all._
 import fs2.io.file
 import fs2.text
 import sttp.tapir.perf.apis.ServerRunner
+import sttp.tapir.perf.Common._
 
 import java.nio.file.Paths
 import java.time.LocalDateTime
@@ -25,7 +26,8 @@ object PerfTestSuiteRunner extends IOApp {
     System.setProperty("tapir.perf.user-count", params.users.toString)
     System.setProperty("tapir.perf.duration-seconds", params.durationSeconds.toString)
     println("===========================================================================================")
-    println(s"Running a suite of ${params.totalTests} tests, each for ${params.users} users and ${params.duration}")
+    println(s"Running a suite of ${params.totalTests} tests, each for ${params.users} users and ${params.duration}.")
+    println(s"Additional warm-up phase of $WarmupDuration will be performed before each simulation.")
     println(s"Servers: ${params.shortServerNames}")
     println(s"Simulations: ${params.shortSimulationNames}")
     println(s"Expected total duration: at least ${params.minTotalDuration}")
