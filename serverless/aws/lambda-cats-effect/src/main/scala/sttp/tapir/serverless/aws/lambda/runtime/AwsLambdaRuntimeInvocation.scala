@@ -58,6 +58,7 @@ object AwsLambdaRuntimeInvocation {
 
     val routeRequest: (RequestEvent, AwsRequest) => F[Either[Throwable, AwsResponse]] = (event, request) =>
       route(request).map(_.asRight[Throwable]).handleError { case e =>
+        // Ascriptions to `Any` needed by Scala 2.12 for disambiguating overloaded methods - see SI-4728.
         logger.error("Failed to process request event {}", event.requestId: Any, e: Any)
         e.asLeft[AwsResponse].unit
       }
@@ -87,6 +88,7 @@ object AwsLambdaRuntimeInvocation {
           logger.info("Request event {} completed successfully", event.requestId)
           sendResponse(event, response)
         case Left(e) =>
+          // Ascriptions to `Any` needed by Scala 2.12 for disambiguating overloaded methods - see SI-4728.
           logger.error("Request event {} failed", event.requestId: Any, e: Any)
           sendError(event, e)
       }
