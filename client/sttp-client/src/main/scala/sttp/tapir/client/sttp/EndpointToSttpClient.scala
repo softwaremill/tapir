@@ -160,6 +160,10 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       codec: Codec[L, H, CF],
       req: PartialAnyRequest
   ): PartialAnyRequest = {
+    // If true, Content-Type header was explicitly set, so the body's default value
+    // or the codec's media type should not override it.
+    val wasContentTypeAlreadySet = req.header(HeaderNames.ContentType).nonEmpty
+
     val encoded = codec.encode(v)
     val req2 = bodyType match {
       case RawBodyType.StringBody(charset)  => req.body(encoded, charset.name())
@@ -185,7 +189,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         req.multipartBody(parts.toList)
     }
 
-    req2.contentType(codec.format.mediaType)
+    if (wasContentTypeAlreadySet) req2 else req2.contentType(codec.format.mediaType)
   }
 
   private def partToSttpPart[T](p: Part[T], bodyType: RawBodyType[T]): Part[RequestBody[Any]] =
