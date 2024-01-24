@@ -37,4 +37,22 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
     uri(Some(true)).toString shouldBe "http://localhost?flag"
     uri(Some(false)).toString shouldBe "http://localhost?flag=false"
   }
+
+  test("dynamic content-type header shouldn't be overridden by body's default one") {
+    // given
+    val testEndpoint = endpoint
+      .in("test")
+      .post
+      .in(header[String](HeaderNames.ContentType))
+      .in(byteArrayBody)
+
+    // when
+    val sttpClientRequest = SttpClientInterpreter()
+      .toRequest(testEndpoint, None)
+      .apply(("image/jpeg", Array.empty))
+
+    // then
+    val actual = sttpClientRequest.headers.find(_.is(HeaderNames.ContentType)).get.value
+    actual shouldEqual "image/jpeg"
+  }
 }
