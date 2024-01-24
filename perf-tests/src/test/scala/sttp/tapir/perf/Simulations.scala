@@ -5,7 +5,6 @@ import io.gatling.core.structure.PopulationBuilder
 import io.gatling.http.Predef._
 import sttp.tapir.perf.Common._
 
-import scala.concurrent.duration._
 import scala.util.Random
 import io.gatling.core.structure.ChainBuilder
 
@@ -34,31 +33,15 @@ object CommonSimulations {
       )
     )
 
-  private lazy val userCount = getParam("user-count").toInt
-  private lazy val duration = getParam("duration-seconds").toInt
-  private val httpProtocol = http.baseUrl(baseUrl)
-
-  // Scenarios
-  val warmUpScenario = scenario("Warm-Up Scenario")
-    .during(WarmupDuration)(
-      exec(
-        http("HTTP GET Warm-Up")
-          .get("/path0/1")
-      )
-        .exec(
-          http("HTTP POST Warm-Up")
-            .post("/path0")
-            .body(StringBody("warmup"))
-            .header("Content-Type", "text/plain")
-        )
-    )
-    .inject(atOnceUsers(3))
-    .protocols(httpProtocol)
+  def userCount = getParam("user-count").toInt
+  def duration = getParam("duration-seconds").toInt
+  def namePrefix = if (getParamOpt("is-warm-up").map(_.toBoolean) == Some(true)) "[WARMUP] " else ""
+  val httpProtocol = http.baseUrl(baseUrl)
 
   def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
     val execHttpGet: ChainBuilder = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
 
-    scenario(s"Repeatedly invoke GET of route number $routeNumber")
+    scenario(s"${namePrefix}Repeatedly invoke GET of route number $routeNumber")
       .during(duration)(execHttpGet)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -72,7 +55,7 @@ object CommonSimulations {
         .header("Content-Type", "text/plain")
     )
 
-    scenario(s"Repeatedly invoke POST with short string body")
+    scenario(s"${namePrefix}Repeatedly invoke POST with short string body")
       .during(duration)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -86,7 +69,7 @@ object CommonSimulations {
         .header("Content-Type", "text/plain") // otherwise Play complains
     )
 
-    scenario(s"Repeatedly invoke POST with short byte array body")
+    scenario(s"${namePrefix}Repeatedly invoke POST with short byte array body")
       .during(duration)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -100,7 +83,7 @@ object CommonSimulations {
         .header("Content-Type", "application/octet-stream")
     )
 
-    scenario(s"Repeatedly invoke POST with file body")
+    scenario(s"${namePrefix}Repeatedly invoke POST with file body")
       .during(duration)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -114,7 +97,7 @@ object CommonSimulations {
         .header("Content-Type", "text/plain") // otherwise Play complains
     )
 
-    scenario(s"Repeatedly invoke POST with large byte array")
+    scenario(s"${namePrefix}Repeatedly invoke POST with large byte array")
       .during(duration)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -128,7 +111,7 @@ object CommonSimulations {
         .header("Content-Type", "text/plain")
     )
 
-    scenario(s"Repeatedly invoke POST with large byte array, interpreted to a String")
+    scenario(s"${namePrefix}Repeatedly invoke POST with large byte array, interpreted to a String")
       .during(duration)(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -138,29 +121,29 @@ object CommonSimulations {
 import CommonSimulations._
 
 class SimpleGetSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_simple_get(0))): Unit
+  setUp(scenario_simple_get(0)): Unit
 }
 
 class SimpleGetMultiRouteSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_simple_get(127))): Unit
+  setUp(scenario_simple_get(127)): Unit
 }
 
 class PostBytesSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_post_bytes(0))): Unit
+  setUp(scenario_post_bytes(0)): Unit
 }
 
 class PostLongBytesSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_post_long_bytes(0))): Unit
+  setUp(scenario_post_long_bytes(0)): Unit
 }
 
 class PostFileSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_post_file(0))): Unit
+  setUp(scenario_post_file(0)): Unit
 }
 
 class PostStringSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_post_string(0))): Unit
+  setUp(scenario_post_string(0)): Unit
 }
 
 class PostLongStringSimulation extends Simulation {
-  setUp(warmUpScenario.andThen(scenario_post_long_string(0))): Unit
+  setUp(scenario_post_long_string(0)): Unit
 }
