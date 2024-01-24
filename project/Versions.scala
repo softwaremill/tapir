@@ -56,7 +56,7 @@ object Versions {
   val scalaCollectionCompat = "2.11.0"
   val fs2 = "3.9.4"
   val decline = "2.4.1"
-  val quicklens = "1.9.6"
+  val quicklens = "1.9.7"
   val openTelemetry = "1.34.1"
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.2.0"
