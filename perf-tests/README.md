@@ -4,11 +4,13 @@ Performance tests are executed by running `PerfTestSuiteRunner`, which is a stan
 each test consist of:
 
 1. Starting a HTTP server (Like Tapir-based Pekko, Vartx, http4s, or a "vanilla", tapirless one)
-2. Sending a bunch of warmup requests
-3. Sending simulation-specific requests
+2. Running a simulation in warm-up mode (5 seconds, 3 concurrent users)
+3. Running a simulation with user-defined duration and concurrent user count
 4. Closing the server
+5. Reading Gatling's simulation.log and building simulation results
 
-The sequence is repeated for a set of servers multiplied by simulations, all configurable as arguments. Command parameters can be viewed by running:
+The sequence is repeated for a set of servers multiplied by simulations. Afterwards, all individual simulation results will be aggregated into a single report. 
+Command parameters can be viewed by running:
 
 ```
 perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner
@@ -57,8 +59,8 @@ containing aggregated results from the entire suite:
 
 These reports include information about throughput and latency of each server for each simulation.
 
-How the aggregation works: After each test the results are read from `simulation.log` produced by Gatling and aggregated by `GatlingLogProcessor`. 
-Entires related to warm-up process are not counted. The processor then uses 'com.codehale.metrics.Histogram' to calculate 
+How the aggregation works: After each non-warmup test the results are read from `simulation.log` produced by Gatling and aggregated by `GatlingLogProcessor`. 
+The processor then uses 'com.codehale.metrics.Histogram' to calculate 
 p99, p95, p75, and p50 percentiles for latencies of all requests sent during the simulation.
 
 ## Adding new servers and simulations
