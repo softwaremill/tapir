@@ -6,6 +6,7 @@ import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
 import complete.DefaultParsers._
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+
 // explicit import to avoid clash with gatling plugin
 import sbtassembly.AssemblyPlugin.autoImport.assembly
 
