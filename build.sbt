@@ -3,15 +3,15 @@ import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
 import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
+import complete.DefaultParsers._
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+// explicit import to avoid clash with gatling plugin
 import sbtassembly.AssemblyPlugin.autoImport.assembly
 
 import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
-
-import complete.DefaultParsers._
 
 val scala2_12 = "2.12.18"
 val scala2_13 = "2.13.12"
