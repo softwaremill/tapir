@@ -20,8 +20,8 @@ object ProtoSchemaGenerator {
 
     val renderedProto = renderer.render(proto)
 
-    logger.debug("Generated protobuf structure: [{}]", renderedProto)
-    logger.info("Writing proto file to the path [{}]", path)
+    logger.debug(s"Generated protobuf structure: [$renderedProto]")
+    logger.info(s"Writing proto file to the path [$path]")
 
     Files.write(
       Paths.get(path),

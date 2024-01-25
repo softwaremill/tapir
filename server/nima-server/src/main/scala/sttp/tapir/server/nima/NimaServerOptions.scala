@@ -37,8 +37,11 @@ object NimaServerOptions {
       noLog = ()
     )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit = exOpt match {
-    case Some(e) => log.debug(msg, e)
-    case None    => log.debug(msg)
-  }
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    if (log.isDebugEnabled) {
+      exOpt match {
+        case Some(e) => log.debug(msg, e)
+        case None => log.debug(msg)
+      }
+    }
 }
