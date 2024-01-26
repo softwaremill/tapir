@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda.runtime
 
 import cats.effect.{Resource, Sync}
 import cats.syntax.either._
-import com.typesafe.scalalogging.StrictLogging
+import org.slf4j.LoggerFactory
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
@@ -16,7 +16,9 @@ import sttp.tapir.serverless.aws.lambda.{AwsRequest, AwsResponse, Route}
 import scala.concurrent.duration.DurationInt
 
 // loosely based on https://github.com/carpe/scalambda/blob/master/native/src/main/scala/io/carpe/scalambda/native/ScalambdaIO.scala
-object AwsLambdaRuntimeInvocation extends StrictLogging {
+object AwsLambdaRuntimeInvocation {
+
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   /** Handles the next, single lambda invocation, read from api at `awsRuntimeApiHost` using `backend`, with the given `route`. */
   def handleNext[F[_]: Sync](
@@ -34,7 +36,7 @@ object AwsLambdaRuntimeInvocation extends StrictLogging {
     val nextEventRequest = basicRequest.get(uri"$runtimeApiInvocationUri/next").response(asStringAlways).readTimeout(0.seconds)
 
     val pollEvent: F[RequestEvent] = {
-      logger.info(s"Fetching request event")
+      logger.info("Fetching request event")
       backend
         .use(nextEventRequest.send(_))
         .flatMap { response =>

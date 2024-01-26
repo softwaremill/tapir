@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.loom
 
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.netty.internal.NettyDefaults
@@ -40,7 +40,7 @@ object NettyIdServerOptions {
     ).serverLog(defaultServerLog)
   }
 
-  private val log = Logger[NettyIdServerInterpreter]
+  private val log = LoggerFactory.getLogger(getClass.getName)
 
   lazy val defaultServerLog: ServerLog[Id] = {
     DefaultServerLog[Id](

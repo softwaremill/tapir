@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.internal
 
-import com.typesafe.scalalogging.Logger
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
@@ -8,6 +7,7 @@ import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -60,7 +60,7 @@ class NettyServerHandler[F[_]](
   // if the connection gets closed.
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
-  private val logger = Logger[NettyServerHandler[F]]
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -79,7 +79,12 @@ class NettyServerHandler[F[_]](
       // When the channel closes we want to cancel any pending dispatches.
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
       val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
-        logger.debug(s"Http channel to ${ctx.channel.remoteAddress} closed. Cancelling ${pendingResponses.length} responses.")
+        if (logger.isDebugEnabled) {
+          logger.debug("Http channel to {} closed. Cancelling {} responses.",
+            ctx.channel.remoteAddress,
+            pendingResponses.length
+          )
+        }
         pendingResponses.foreach(_.apply())
       }
     }

@@ -1,9 +1,9 @@
 package sttp.tapir.examples
 
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import sttp.tapir.generic.auto.*
 
-object BooksExample extends App with StrictLogging {
+object BooksExample extends App with Logging {
   type Limit = Option[Int]
   type AuthToken = String
 

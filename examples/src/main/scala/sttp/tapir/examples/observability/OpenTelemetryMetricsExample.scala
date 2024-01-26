@@ -1,6 +1,6 @@
 package sttp.tapir.examples.observability
 
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import io.circe.generic.auto.*
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter
@@ -57,7 +57,7 @@ import scala.io.StdIn
   *   ...
   * }}}
   */
-object OpenTelemetryMetricsExample extends App with StrictLogging {
+object OpenTelemetryMetricsExample extends App with Logging {
 
   case class Person(name: String)
 

@@ -4,13 +4,15 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption
-import com.typesafe.scalalogging.StrictLogging
+import org.slf4j.LoggerFactory
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.grpc.protobuf.model._
 
-object ProtoSchemaGenerator extends StrictLogging {
+object ProtoSchemaGenerator {
+  
+  private val logger = LoggerFactory.getLogger(getClass.getName)
   def renderToFile(path: String, packageName: PackageName, endpoints: Iterable[AnyEndpoint]): Unit = {
-    logger.info(s"Generating proto file")
+    logger.info("Generating proto file")
 
     val renderer: ProtoRenderer = new ProtoRenderer()
     val interpreter = new ProtobufInterpreter(new EndpointToProtobufMessage(), new EndpointToProtobufService())

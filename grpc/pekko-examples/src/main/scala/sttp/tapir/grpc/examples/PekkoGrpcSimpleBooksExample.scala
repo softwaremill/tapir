@@ -5,7 +5,7 @@ import org.apache.pekko.grpc.GrpcClientSettings
 import org.apache.pekko.http.scaladsl.Http
 import cats.implicits._
 import com.typesafe.config.ConfigFactory
-import com.typesafe.scalalogging.StrictLogging
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir._
 import sttp.tapir.grpc.protobuf._
 import sttp.tapir.grpc.protobuf.pbdirect._
@@ -21,6 +21,10 @@ import sttp.tapir.grpc.examples.grpc_simple_books_example.gen.{
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.{Await, ExecutionContext, Future}
 
+trait Logging {
+  protected val logger: Logger = LoggerFactory.getLogger(getClass.getName)
+}
+
 case class SimpleBook(id: Long, title: String, description: String)
 case class AddBookMsg(title: String, description: String)
 
@@ -35,7 +39,7 @@ object Endpoints {
   val endpoints = List(addBook)
 }
 
-object SimpleBooksExampleServer extends StrictLogging {
+object SimpleBooksExampleServer extends Logging {
 
   import Endpoints._
 
@@ -59,7 +63,7 @@ object SimpleBooksExampleServer extends StrictLogging {
   }
 }
 
-class ExampleGrpcServer(system: ActorSystem) extends StrictLogging {
+class ExampleGrpcServer(system: ActorSystem) extends Logging {
   def run(): Future[Http.ServerBinding] = {
     // Pekko boot up code
     implicit val sys: ActorSystem = system
@@ -84,7 +88,7 @@ object SimpleBookExampleProtoGenerator extends App {
   )
 }
 
-object SimpleBookExampleClient extends App with StrictLogging {
+object SimpleBookExampleClient extends App with Logging {
 
   import scala.concurrent.duration._
 
