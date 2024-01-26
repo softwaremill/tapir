@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.9.6"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.9.7"
 ```
 
 and import the object:
@@ -128,7 +128,7 @@ import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.ContextRoutes
 
-case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s middleware // the context expected from http4s middleware
+case class SomeCtx(actionAllowed: Boolean) // the context expected from http4s middleware
 
 def countCharacters(in: (String, SomeCtx)): IO[Either[Unit, Int]] = 
   IO.pure(

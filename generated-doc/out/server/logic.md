@@ -46,7 +46,7 @@ val echoEndpoint = endpoint
   
 // using .tupled:
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: PublicEndpoint[(String, Int), Unit, String, Any] = ???  
+val anEndpoint: PublicEndpoint[(String, Int), Unit, String, Any] = ??? 
 val aServerEndpoint: ServerEndpoint[Any, Future] = anEndpoint.serverLogic((logic _).tupled)
 ```
 

@@ -3,7 +3,7 @@
 You can conveniently generate JSON schema from Tapir schema, which can be derived from your Scala types. Use `TapirSchemaToJsonSchema`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.9.6"
+"com.softwaremill.sttp.tapir" %% "tapir-apispec-docs" % "1.9.7"
 ```
 
 Schema generation can now be performed like in the following example:
@@ -18,7 +18,7 @@ import sttp.tapir.generic.auto._
     case class Child(age: Int, height: Option[Int])
   }
   case class Parent(innerChildField: Child, childDetails: Childhood.Child)
-  case class Child(childName: String) // to illustrate unique name generation // to illustrate unique name generation
+  case class Child(childName: String) // to illustrate unique name generation
   val tSchema = implicitly[Schema[Parent]]
 
   val jsonSchema: ASchema = TapirSchemaToJsonSchema(
