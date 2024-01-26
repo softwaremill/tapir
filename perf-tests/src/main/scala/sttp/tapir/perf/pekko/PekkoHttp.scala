@@ -58,16 +58,12 @@ object Vanilla {
 }
 
 object Tapir extends Endpoints {
-  val serverOptions = PekkoHttpServerOptions
-    .customiseInterceptors(ExecutionContext.Implicits.global)
-    .serverLog(None)
-    .options
-
-  def router: Int => ActorSystem => Route = (nRoutes: Int) =>
-    (actorSystem: ActorSystem) =>
-      PekkoHttpServerInterpreter(serverOptions)(actorSystem.dispatcher).toRoute(
-        genEndpointsFuture(nRoutes)
-      )
+  def router(nRoutes: Int, withServerLog: Boolean = false): ActorSystem => Route = { (actorSystem: ActorSystem) =>
+    val serverOptions = buildOptions(PekkoHttpServerOptions.customiseInterceptors(ExecutionContext.Implicits.global), withServerLog)
+    PekkoHttpServerInterpreter(serverOptions)(actorSystem.dispatcher).toRoute(
+      genEndpointsFuture(nRoutes)
+    )
+  }
 }
 
 object PekkoHttp {
@@ -90,5 +86,8 @@ object PekkoHttp {
 
 object TapirServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(1)) }
 object TapirMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(128)) }
+object TapirInterceptorMultiServer extends ServerRunner {
+  override def start = PekkoHttp.runServer(Tapir.router(128, withServerLog = true))
+}
 object VanillaServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(1)) }
 object VanillaMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(128)) }

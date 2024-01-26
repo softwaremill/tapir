@@ -20,11 +20,8 @@ which displays help similar to:
 
 ```
 [error] Usage: perf [options]
-[error]   -s, --server <value>    Comma-separated list of short server names, or '*' for all. Available servers: http4s.TapirMulti, http4s.Tapir, http4s.VanillaMulti, http4s.Vanilla, 
-netty.cats.TapirMulti, netty.cats.Tapir, netty.future.TapirMulti, netty.future.Tapir, pekko.TapirMulti, pekko.Tapir, pekko.VanillaMulti, pekko.Vanilla, play.TapirMulti, play.Tapir,
-play.VanillaMulti, play.Vanilla, vertx.TapirMulti, vertx.Tapir, vertx.VanillaMulti, vertx.Vanilla, vertx.cats.TapirMulti, vertx.cats.Tapir
-[error]   -m, --sim <value>       Comma-separated list of short simulation names, or '*' for all. Available simulations: PostBytes, PostFile, PostLongBytes, PostLongString, 
-PostString, SimpleGetMultiRoute, SimpleGet
+[error]   -s, --server <value>    Comma-separated list of short server names, or groups like 'netty.*', 'pekko.*', etc. Available servers: http4s.TapirInterceptorMulti, http4s.TapirMulti, http4s.Tapir, http4s.VanillaMulti, http4s.Vanilla, netty.cats.TapirInterceptorMulti, netty.cats.TapirMulti, netty.cats.Tapir, netty.future.TapirInterceptorMulti, netty.future.TapirMulti, netty.future.Tapir, pekko.TapirInterceptorMulti, pekko.TapirMulti, pekko.Tapir, pekko.VanillaMulti, pekko.Vanilla, play.TapirInterceptorMulti, play.TapirMulti, play.Tapir, play.VanillaMulti, play.Vanilla, vertx.TapirInterceptorMulti, vertx.TapirMulti, vertx.Tapir, vertx.VanillaMulti, vertx.Vanilla, vertx.cats.TapirInterceptorMulti, vertx.cats.TapirMulti, vertx.cats.Tapir
+[error]   -m, --sim <value>       Comma-separated list of short simulation names, or '*' for all. Available simulations: PostBytes, PostFile, PostLongBytes, PostLongString, PostString, SimpleGetMultiRoute, SimpleGet
 [error]   -u, --users <value>     Number of concurrent users, default is 1
 [error]   -d, --duration <value>  Single simulation duration in seconds, default is 10
 [error]   -g, --gatling-reports   Generate Gatling reports for individuals sims, may significantly affect total time (disabled by default)
@@ -32,9 +29,9 @@ PostString, SimpleGetMultiRoute, SimpleGet
 
 ## Examples
 
-1. Run all sims on all servers with other options set to default (Careful, may take quite some time!):
+1. Run all sims on all pekko-http servers with other options set to default:
 ```
-perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s * -m *
+perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s pekko.* -m *
 ```
 
 2. Run all sims on http4s servers, with each simulation running for 5 seconds:

@@ -12,8 +12,8 @@ import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 import sttp.tapir.server.vertx.VertxFutureServerOptions
 
 object Tapir extends Endpoints {
-  def route: Int => Router => Route = { (nRoutes: Int) => router =>
-    val serverOptions = VertxFutureServerOptions.customiseInterceptors.serverLog(None).options
+  def route(nRoutes: Int, withServerLog: Boolean = false): Router => Route = { router =>
+    val serverOptions = buildOptions(VertxFutureServerOptions.customiseInterceptors, withServerLog)
     val interpreter = VertxFutureServerInterpreter(serverOptions)
     genEndpointsFuture(nRoutes).map(interpreter.route(_)(router)).last
   }
@@ -96,6 +96,9 @@ object VertxRunner {
 }
 
 object TapirServer extends ServerRunner { override def start = VertxRunner.runServer(Tapir.route(1)) }
-object TapirMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Tapir.route(127)) }
+object TapirMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Tapir.route(128)) }
+object TapirInterceptorMultiServer extends ServerRunner {
+  override def start = VertxRunner.runServer(Tapir.route(128, withServerLog = true))
+}
 object VanillaServer extends ServerRunner { override def start = VertxRunner.runServer(Vanilla.route(1)) }
-object VanillaMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Vanilla.route(127)) }
+object VanillaMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Vanilla.route(128)) }

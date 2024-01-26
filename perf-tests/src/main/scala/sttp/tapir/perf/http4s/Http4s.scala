@@ -50,17 +50,14 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
-  val serverOptions = Http4sServerOptions
-    .customiseInterceptors[IO]
-    .serverLog(None)
-    .options
-
-  val router: Int => HttpRoutes[IO] = (nRoutes: Int) =>
+  def router(nRoutes: Int, withServerLog: Boolean = false): HttpRoutes[IO] = {
+    val serverOptions = buildOptions(Http4sServerOptions.customiseInterceptors[IO], withServerLog)
     Router("/" -> {
       Http4sServerInterpreter[IO](serverOptions).toRoutes(
         genEndpointsIO(nRoutes)
       )
     })
+  }
 }
 
 object server {
@@ -78,5 +75,6 @@ object server {
 
 object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
 object TapirMultiServer extends ServerRunner { override def start = server.runServer(Tapir.router(128)) }
+object TapirInterceptorMultiServer extends ServerRunner { override def start = server.runServer(Tapir.router(128, withServerLog = true)) }
 object VanillaServer extends ServerRunner { override def start = server.runServer(Vanilla.router(1)) }
 object VanillaMultiServer extends ServerRunner { override def start = server.runServer(Vanilla.router(128)) }

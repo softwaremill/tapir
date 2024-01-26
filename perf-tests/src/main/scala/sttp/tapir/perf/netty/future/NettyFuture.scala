@@ -14,10 +14,10 @@ object Tapir extends Endpoints
 
 object NettyFuture {
 
-  def runServer(endpoints: List[ServerEndpoint[Any, Future]]): IO[ServerRunner.KillSwitch] = {
+  def runServer(endpoints: List[ServerEndpoint[Any, Future]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
-    val serverOptions = NettyFutureServerOptions.customiseInterceptors.serverLog(None).options
+    val serverOptions = buildOptions(NettyFutureServerOptions.customiseInterceptors, withServerLog)
     // Starting netty server
     val serverBinding: IO[NettyFutureServerBinding] =
       IO.fromFuture(
@@ -36,3 +36,4 @@ object NettyFuture {
 
 object TapirServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(1)) }
 object TapirMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128)) }
+object TapirInterceptorMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128), withServerLog = true) }

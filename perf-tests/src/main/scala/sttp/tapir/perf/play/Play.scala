@@ -74,11 +74,11 @@ object Vanilla extends ControllerHelpers {
 }
 
 object Tapir extends Endpoints {
-  val router: Int => ActorSystem => Routes = (nRoutes: Int) =>
+  def router(nRoutes: Int, withServerLog: Boolean = false): ActorSystem => Routes =
     (actorSystem: ActorSystem) => {
       implicit val actorSystemForMaterializer: ActorSystem = actorSystem
       implicit val ec: ExecutionContext = actorSystem.dispatcher
-      val serverOptions = PlayServerOptions.customiseInterceptors().serverLog(None).options
+      val serverOptions = buildOptions(PlayServerOptions.customiseInterceptors(), withServerLog)
       PlayServerInterpreter(serverOptions).toRoutes(
         genEndpointsFuture(nRoutes)
       )
@@ -109,5 +109,6 @@ object Play {
 
 object TapirServer extends ServerRunner { override def start = Play.runServer(Tapir.router(1)) }
 object TapirMultiServer extends ServerRunner { override def start = Play.runServer(Tapir.router(128)) }
+object TapirInterceptorMultiServer extends ServerRunner { override def start = Play.runServer(Tapir.router(128, withServerLog = true)) }
 object VanillaServer extends ServerRunner { override def start = Play.runServer(Vanilla.router(1)) }
 object VanillaMultiServer extends ServerRunner { override def start = Play.runServer(Vanilla.router(128)) }

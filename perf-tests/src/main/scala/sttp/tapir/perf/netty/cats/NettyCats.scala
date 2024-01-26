@@ -13,12 +13,12 @@ object Tapir extends Endpoints
 
 object NettyCats {
 
-  def runServer(endpoints: List[ServerEndpoint[Any, IO]]): IO[ServerRunner.KillSwitch] = {
+  def runServer(endpoints: List[ServerEndpoint[Any, IO]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
     (for {
       dispatcher <- Dispatcher.parallel[IO]
-      serverOptions = NettyCatsServerOptions.customiseInterceptors(dispatcher).serverLog(None).options
+      serverOptions = buildOptions(NettyCatsServerOptions.customiseInterceptors(dispatcher), withServerLog)
       server <- NettyCatsServer.io()
       _ <-
         Resource.make(
@@ -34,3 +34,6 @@ object NettyCats {
 
 object TapirServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(1)) }
 object TapirMultiServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(128)) }
+object TapirInterceptorMultiServer extends ServerRunner {
+  override def start = NettyCats.runServer(Tapir.genEndpointsIO(128), withServerLog = true)
+}
