@@ -30,7 +30,7 @@ object GatlingLogProcessor {
         .through(text.lines)
         .fold[State](State.initial) { (state, line) =>
           val parts = line.split("\\s+")
-          if (parts.length >= 5 && parts(0) == "REQUEST" && parts(3) != "Warm-Up") {
+          if (parts.length >= 5 && parts(0) == "REQUEST") {
             val requestStartTime = parts(4).toLong
             val minRequestTs = state.minRequestTs.min(requestStartTime)
             val requestEndTime = parts(5).toLong

@@ -197,7 +197,7 @@ implicit val userXmlCodec: Codec[String, User, CodecFormat.Xml] =
     .mapDecode { xml =>
       DecodeResult.fromOption("""<name>(.*?)</name>""".r.findFirstMatchIn(xml).map(_.group(1)).map(User))
     }(user => s"<name>${user.name}</name>")
-    .schema(implicitly[Schema[User]])          
+    .schema(implicitly[Schema[User]])     
 
 oneOfBody(
   jsonBody[User],

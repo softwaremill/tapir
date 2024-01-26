@@ -8,13 +8,13 @@ The `*-zio` modules depend on ZIO 2.x.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.9.6"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.9.7"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.9.6"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.9.7"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
@@ -81,7 +81,7 @@ trait Component2
 type Service1 = Component1
 type Service2 = Component2
 
-val serverEndpoint1: ZServerEndpoint[Service1, Any] = ???                                                            
+val serverEndpoint1: ZServerEndpoint[Service1, Any] = ???                              
 val serverEndpoint2: ZServerEndpoint[Service2, Any] = ???
 
 type Env = Service1 with Service2
@@ -133,7 +133,7 @@ import zio.{Task, Runtime, ZIO}
 import zio.interop.catz._
 import zio.stream.Stream
 
-def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault // provided by ZIOAppDefault
+def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault
 
 implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 

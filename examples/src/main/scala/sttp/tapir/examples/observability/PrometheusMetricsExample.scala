@@ -1,6 +1,6 @@
 package sttp.tapir.examples.observability
 
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import io.circe.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
@@ -14,7 +14,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
-object PrometheusMetricsExample extends App with StrictLogging {
+object PrometheusMetricsExample extends App with Logging {
 
   case class Person(name: String)
 

@@ -2,10 +2,11 @@ package sttp.tapir.server.netty.cats
 
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
-import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.netty.NettyFutureServerOptions.getClass
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -46,7 +47,7 @@ object NettyCatsServerOptions {
       createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog)
 
-  private val log = Logger[NettyCatsServerInterpreter[cats.Id]]
+  private val log = LoggerFactory.getLogger(classOf[NettyCatsServerInterpreter[cats.Id]].getName)
 
   def defaultServerLog[F[_]: Async]: DefaultServerLog[F] = DefaultServerLog(
     doLogWhenReceived = debugLog(_, None),

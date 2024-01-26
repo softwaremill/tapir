@@ -1,14 +1,14 @@
 package sttp.tapir.examples.client
 
 import cats.effect.{ExitCode, IO, IOApp}
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import io.circe.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.client.http4s.Http4sClientInterpreter
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 
-object Http4sClientExample extends IOApp with StrictLogging {
+object Http4sClientExample extends IOApp with Logging {
 
   case class User(id: Int, name: String)
 

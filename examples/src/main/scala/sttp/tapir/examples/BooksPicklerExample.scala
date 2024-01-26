@@ -1,12 +1,12 @@
 package sttp.tapir.examples
 
-import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.examples.logging.Logging
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-object BooksPicklerExample extends App with StrictLogging {
+object BooksPicklerExample extends App with Logging {
   type Limit = Option[Int]
   type AuthToken = String
 

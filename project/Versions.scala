@@ -11,7 +11,7 @@ object Versions {
   val sttp = "3.9.2"
   val sttpModel = "1.7.6"
   val sttpShared = "1.3.17"
-  val sttpApispec = "0.7.3"
+  val sttpApispec = "0.7.4"
   val akkaHttp = "10.2.10"
   val akkaStreams = "2.6.20"
   val pekkoHttp = "1.0.0"
@@ -59,6 +59,8 @@ object Versions {
   val quicklens = "1.9.7"
   val openTelemetry = "1.34.1"
   val mockServer = "5.15.0"
-  val dogstatsdClient = "4.2.0"
+  val dogstatsdClient = "4.3.0"
   val nettyAll = "4.1.106.Final"
+  val logback = "1.4.14"
+  val slf4j = "2.0.11"
 }

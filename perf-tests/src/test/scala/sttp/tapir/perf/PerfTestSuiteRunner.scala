@@ -4,12 +4,13 @@ import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.all._
 import fs2.io.file
 import fs2.text
-import sttp.tapir.perf.apis.ServerRunner
 import sttp.tapir.perf.Common._
+import sttp.tapir.perf.apis.ServerRunner
 
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import scala.concurrent.duration.FiniteDuration
 import scala.reflect.runtime.universe
 
 /** Main entry point for running suites of performance tests and generating aggregated reports. A suite represents a set of Gatling
@@ -23,8 +24,6 @@ object PerfTestSuiteRunner extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] = {
     val params = PerfTestSuiteParams.parse(args)
-    System.setProperty("tapir.perf.user-count", params.users.toString)
-    System.setProperty("tapir.perf.duration-seconds", params.durationSeconds.toString)
     println("===========================================================================================")
     println(s"Running a suite of ${params.totalTests} tests, each for ${params.users} users and ${params.duration}.")
     println(s"Additional warm-up phase of $WarmupDuration will be performed before each simulation.")
@@ -42,8 +41,14 @@ object PerfTestSuiteRunner extends IOApp {
         for {
           serverKillSwitch <- startServerByTypeName(serverName)
           _ <- IO.println(s"Running server $shortServerName")
-          _ <- IO
-            .blocking(GatlingRunner.runSimulationBlocking(simulationName, params))
+          _ <- (for {
+            _ <- IO.println("======================== WARM-UP ===============================================")
+            _ = setSimulationParams(users = WarmupUsers, duration = WarmupDuration, warmup = true)
+            _ <- IO.blocking(GatlingRunner.runSimulationBlocking(simulationName, params)) // warm-up
+            _ <- IO.println("==================== WARM-UP COMPLETED =========================================")
+            _ = setSimulationParams(users = params.users, duration = params.duration, warmup = false)
+            simResultCode <- IO.blocking(GatlingRunner.runSimulationBlocking(simulationName, params)) // actual test
+          } yield simResultCode)
             .guarantee(serverKillSwitch)
             .ensureOr(errCode => new Exception(s"Gatling failed with code $errCode"))(_ == 0)
           serverSimulationResult <- GatlingLogProcessor.processLast(shortSimulationName, shortServerName)
@@ -65,6 +70,15 @@ object PerfTestSuiteRunner extends IOApp {
       case e: Throwable =>
         IO.raiseError(new IllegalArgumentException(s"ERROR! Could not find object $serverName or it doesn't extend ServerRunner", e))
     }
+  }
+
+  /** Gatling doesn't allow to pass parameters to simulations when they are run using `Gatling.fromMap()`, that's why we're using system
+    * parameters as global variables to customize some params.
+    */
+  private def setSimulationParams(users: Int, duration: FiniteDuration, warmup: Boolean): Unit = {
+    System.setProperty("tapir.perf.user-count", users.toString)
+    System.setProperty("tapir.perf.duration-seconds", duration.toSeconds.toString)
+    System.setProperty("tapir.perf.is-warm-up", warmup.toString) : Unit
   }
 
   private def writeCsvReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {

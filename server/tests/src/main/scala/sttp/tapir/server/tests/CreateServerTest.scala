@@ -4,7 +4,6 @@ import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
-import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -15,6 +14,8 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests._
 import org.scalactic.anyvals.FiniteDouble
+import org.slf4j.LoggerFactory
+
 import scala.concurrent.duration.FiniteDuration
 
 trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
@@ -58,8 +59,9 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
 class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE]
-) extends CreateServerTest[F, R, OPTIONS, ROUTE]
-    with StrictLogging {
+) extends CreateServerTest[F, R, OPTIONS, ROUTE] {
+  
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def testServer[I, E, O](
       e: PublicEndpoint[I, E, O, R],
