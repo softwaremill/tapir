@@ -14,9 +14,21 @@ case class PerfTestSuiteParams(
     durationSeconds: Int = PerfTestSuiteParams.defaultDurationSeconds,
     buildGatlingReports: Boolean = false
 ) {
+  /**
+    * Handles server names passed as groups like netty.*, pekko.*, etc. by expanding them into lists of actual server names.
+    * Similarly, handles '*' as a short simulation name, expanding it to a list of all simulations.
+    * @return
+    */
   def adjustWildcards: PerfTestSuiteParams = {
-    val withAdjustedServer: PerfTestSuiteParams =
-      if (shortServerNames == List("*")) copy(shortServerNames = TypeScanner.allServers) else this
+    val withAdjustedServer: PerfTestSuiteParams = {
+      val expandedShortServerNames = shortServerNames.flatMap { shortServerName =>
+        if (shortServerName.contains("*")) {
+          TypeScanner.allServers.filter(_.startsWith(shortServerName.stripSuffix("*")))
+        }
+        else List(shortServerName)
+      }
+      copy(shortServerNames = expandedShortServerNames)
+    }
     if (shortSimulationNames == List("*"))
       withAdjustedServer.copy(shortSimulationNames = TypeScanner.allSimulations)
     else
@@ -49,7 +61,7 @@ object PerfTestSuiteParams {
     opt[Seq[String]]('s', "server")
       .required()
       .action((x, c) => c.copy(shortServerNames = x.toList))
-      .text(s"Comma-separated list of short server names, or '*' for all. Available servers: ${TypeScanner.allServers.mkString(", ")}"),
+      .text(s"Comma-separated list of short server names, or groups like 'netty.*', 'pekko.*', etc. Available servers: ${TypeScanner.allServers.mkString(", ")}"),
     opt[Seq[String]]('m', "sim")
       .required()
       .action((x, c) => c.copy(shortSimulationNames = x.toList))
