@@ -30,7 +30,7 @@ object Versions {
   val scalaTest = "3.2.17"
   val scalaTags = "0.12.0"
   val scalaTestPlusScalaCheck = "3.2.17.0"
-  val refined = "0.11.0"
+  val refined = "0.11.1"
   val iron = "2.4.0"
   val enumeratum = "1.7.3"
   val zio = "2.0.21"
