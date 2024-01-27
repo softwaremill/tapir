@@ -20,16 +20,14 @@ import fs2.interop.reactivestreams.StreamSubscriber
 
 object Fs2StreamCompatible {
 
-private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatible[Fs2Streams[F]] = {
+  private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatible[Fs2Streams[F]] = {
     new StreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 
       override def fromFile(fileRange: FileRange, chunkSize: Int): streams.BinaryStream = {
         val path = Path.fromNioPath(fileRange.file.toPath)
         fileRange.range
-          .flatMap(r =>
-            r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, chunkSize, s._1, s._2))
-          )
+          .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, chunkSize, s._1, s._2)))
           .getOrElse(Files[F](Files.forAsync[F]).readAll(path, chunkSize, Flags.Read))
       }
 
@@ -44,9 +42,9 @@ private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatibl
         // dispatcher, which results in a Resource[], which is hard to afford here
         StreamUnicastPublisher(
           stream.mapChunks { chunk =>
-              val bytes: Chunk.ArraySlice[Byte] = chunk.compact
-              Chunk.singleton(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length)))
-            },
+            val bytes: Chunk.ArraySlice[Byte] = chunk.compact
+            Chunk.singleton(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes.values, bytes.offset, bytes.length)))
+          },
           dispatcher
         )
 
@@ -54,7 +52,13 @@ private[cats] def apply[F[_]: Async](dispatcher: Dispatcher[F]): StreamCompatibl
         val stream = fs2.Stream
           .eval(StreamSubscriber[F, HttpContent](bufferSize = 2))
           .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
-          .flatMap(httpContent => fs2.Stream.chunk(Chunk.byteBuffer(httpContent.content.nioBuffer())))
+          .flatMap(httpContent =>
+            fs2.Stream.chunk {
+              val fs2Chunk = Chunk.byteBuffer(httpContent.content.nioBuffer())
+              httpContent.release() // https://netty.io/wiki/reference-counted-oubjects.html
+              fs2Chunk
+            }
+          )
         maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
       }
 
