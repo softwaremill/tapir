@@ -50,7 +50,11 @@ private[zio] object ZioStreamCompatible {
         val stream =
           Adapters
             .publisherToStream(publisher, bufferSize = 2)
-            .map(httpContent => Chunk.fromByteBuffer(httpContent.content.nioBuffer()))
+            .map { httpContent =>
+              val bytes = Chunk.fromByteBuffer(httpContent.content.nioBuffer())
+              httpContent.release()
+              bytes
+            }
             .flattenChunks
         maxBytes.map(ZioStreams.limitBytes(stream, _)).getOrElse(stream)
       }
