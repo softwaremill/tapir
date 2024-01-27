@@ -38,8 +38,8 @@ paths:
               schema:
                 type: string
       security:
-        - oauth2Auth:
-            - client
+        - oauth2Auth1:
+          - client
   /api3/{p1}:
     get:
       operationId: getApi3P1
@@ -57,8 +57,8 @@ paths:
               schema:
                 type: string
       security:
-        - oauth2Auth:
-            - admin
+        - oauth2Auth2:
+          - admin
 components:
   securitySchemes:
     oauth2Auth:
@@ -66,6 +66,26 @@ components:
       flows:
         authorizationCode:
           authorizationUrl: https://example.com/auth
+          tokenUrl: https://example.com/token
+          refreshUrl: https://example.com/token/refresh
+          scopes:
+            client: scope for clients
+            admin: administration scope
+    oauth2Auth1:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/token
+          refreshUrl: https://example.com/token/refresh
+          scopes:
+            client: scope for clients
+            admin: administration scope
+    oauth2Auth2:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://example.com/auth
+          refreshUrl: https://example.com/token/refresh
           scopes:
             client: scope for clients
             admin: administration scope

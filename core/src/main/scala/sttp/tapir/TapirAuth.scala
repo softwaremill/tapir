@@ -58,6 +58,7 @@ object TapirAuth {
   }
 
   object oauth2 {
+    @deprecated("Use insted authorizationCodeFlow, clientCredentialsFlow or implicitFlow", "")
     def authorizationCode(
         authorizationUrl: Option[String] = None,
         scopes: ListMap[String, String] = ListMap(),
@@ -69,6 +70,49 @@ object TapirAuth {
         header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
         challenge,
         EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl),
+        EndpointInput.AuthInfo.Empty
+      )
+    }
+
+    def authorizationCodeFlow(
+        authorizationUrl: String,
+        tokenUrl: String,
+        refreshUrl: Option[String] = None,
+        scopes: ListMap[String, String] = ListMap(),
+        challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
+    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
+      EndpointInput.Auth(
+        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
+        challenge,
+        EndpointInput.AuthType.OAuth2(Some(authorizationUrl), Some(tokenUrl), scopes, refreshUrl),
+        EndpointInput.AuthInfo.Empty
+      )
+    }
+
+    def clientCredentialsFlow(
+        tokenUrl: String,
+        refreshUrl: Option[String] = None,
+        scopes: ListMap[String, String] = ListMap(),
+        challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
+    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
+      EndpointInput.Auth(
+        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
+        challenge,
+        EndpointInput.AuthType.OAuth2(None, Some(tokenUrl), scopes, refreshUrl),
+        EndpointInput.AuthInfo.Empty
+      )
+    }
+
+    def implicitFlow(
+        authorizationUrl: String,
+        refreshUrl: Option[String] = None,
+        scopes: ListMap[String, String] = ListMap(),
+        challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
+    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
+      EndpointInput.Auth(
+        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
+        challenge,
+        EndpointInput.AuthType.OAuth2(Some(authorizationUrl), None, scopes, refreshUrl),
         EndpointInput.AuthInfo.Empty
       )
     }

@@ -42,6 +42,36 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
+  // It's not a pretty well way to make guess what kind of OAuth2 flow is supposed to be
+  // but we don't have other options instead of combination of optional urls.
+  // Fortunately, if we take in account that `password` flow is'n recommended to use,
+  // according the openapi specification https://swagger.io/docs/specification/authentication/oauth2/,
+  // the combination of optional urls turns to be enough (see table describing flows and requirements of fields)
+  // Of cause it makes a bit mess, but in couple with the smart constructors for
+  // OAuth2 inputs, it should work.
+  private def getOAuth2Flow(a: EndpointInput.AuthType.OAuth2): OAuthFlows = a match {
+    case EndpointInput.AuthType.OAuth2(
+        Some(authorizationUrl),
+        Some(tokenUrl),
+        scopes,
+        refreshUrl
+      ) => OAuthFlows(authorizationCode = Some(OAuthFlow(Some(authorizationUrl), Some(tokenUrl), refreshUrl, scopes)))
+    case EndpointInput.AuthType.OAuth2(
+        None,
+        Some(tokenUrl),
+        scopes,
+        refreshUrl
+      ) => OAuthFlows(clientCredentials = Some(OAuthFlow(None, Some(tokenUrl), refreshUrl, scopes)))
+    case EndpointInput.AuthType.OAuth2(
+        Some(authorizationUrl),
+        None,
+        scopes,
+        refreshUrl
+      ) => OAuthFlows(`implicit` = Some(OAuthFlow(Some(authorizationUrl), None, refreshUrl, scopes)))
+
+    case _ => OAuthFlows()
+  }
+
   private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthType], apiKeyAuthTypeName: String): SecurityScheme = {
     val extensions = DocsExtensions.fromIterable(a.docsExtensions)
     a.authType match {
@@ -50,7 +80,7 @@ private[docs] object SecuritySchemesForEndpoints {
         SecurityScheme(apiKeyAuthTypeName, a.info.description, Some(name), Some(in), None, a.info.bearerFormat, None, None, extensions)
       case EndpointInput.AuthType.Http(scheme) =>
         SecurityScheme("http", a.info.description, None, None, Some(scheme.toLowerCase()), a.info.bearerFormat, None, None, extensions)
-      case EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
+      case oauth2: EndpointInput.AuthType.OAuth2 =>
         SecurityScheme(
           "oauth2",
           a.info.description,
@@ -58,11 +88,11 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          Some(getOAuth2Flow(oauth2)),
           None,
           extensions
         )
-      case EndpointInput.AuthType.ScopedOAuth2(EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
+      case EndpointInput.AuthType.ScopedOAuth2(oauth2, _) =>
         SecurityScheme(
           "oauth2",
           a.info.description,
@@ -70,7 +100,7 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          Some(getOAuth2Flow(oauth2)),
           None,
           extensions
         )
