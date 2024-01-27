@@ -55,7 +55,7 @@ object Fs2StreamCompatible {
           .flatMap(httpContent =>
             fs2.Stream.chunk {
               val fs2Chunk = Chunk.byteBuffer(httpContent.content.nioBuffer())
-              httpContent.release() // https://netty.io/wiki/reference-counted-oubjects.html
+              httpContent.release() // https://netty.io/wiki/reference-counted-objects.html
               fs2Chunk
             }
           )
