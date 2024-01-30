@@ -1874,8 +1874,11 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.client3" %% "zio" % Versions.sttp % Test,
+        "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared % Optional,
+        "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
