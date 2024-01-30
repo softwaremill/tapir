@@ -42,24 +42,35 @@ trait ZioHttpInterpreter[R] {
             zioHttpServerOptions.deleteFile
           )
 
-          val serverRequest = ZioHttpServerRequest(request)
+          def grossInvalidity( request : Request ) : Option[String] =
+            if (request.url.encode.trim.isEmpty)
+              Some("Received apparenty empty request URI from " + request)
+            else
+              None
 
-          interpreter
-            .apply(serverRequest)
-            .foldCauseZIO(
-              cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
-              {
-                case RequestResult.Response(resp) =>
-                  resp.body match {
-                    case None              => handleHttpResponse(resp, None)
-                    case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                    case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
+          grossInvalidity(request) match {
+            case Some( message ) => ZIO.fail(Response.internalServerError(message))
+            case None => {
+              val serverRequest = ZioHttpServerRequest(request)
+              interpreter
+                .apply(serverRequest)
+                .foldCauseZIO(
+                  cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
+                  {
+                    case RequestResult.Response(resp) =>
+                      resp.body match {
+                        case None              => handleHttpResponse(resp, None)
+                        case Some(Right(body)) => handleHttpResponse(resp, Some(body))
+                        case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
+                      }
+
+                    case RequestResult.Failure(_) =>
+                      ZIO.fail(Response.notFound)
                   }
+                )
+            }
+          }
 
-                case RequestResult.Failure(_) =>
-                  ZIO.fail(Response.notFound)
-              }
-            )
         }
       }
     )
