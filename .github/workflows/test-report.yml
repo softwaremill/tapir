@@ -13,7 +13,7 @@ permissions:
 jobs:
   report:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion != 'skipped' && github.event.workflow_run.conclusion != 'cancelled' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - uses: dorny/test-reporter@v1
         with:
