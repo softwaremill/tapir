@@ -49,7 +49,8 @@ trait ZioHttpInterpreter[R] {
               None
 
           grossInvalidity(request) match {
-            case Some( message ) => ZIO.fail(Response.internalServerError(message))
+            case Some( message ) =>
+              ZIO.logError( "Grossly invalid zio-http request: " + message ) *> ZIO.fail(Response.internalServerError(message))
             case None => {
               val serverRequest = ZioHttpServerRequest(request)
               interpreter
