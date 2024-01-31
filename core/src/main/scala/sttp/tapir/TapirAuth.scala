@@ -5,7 +5,7 @@ import sttp.model.headers.{AuthenticationScheme, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.Auth
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{ListMap, Seq}
 
 object TapirAuth {
 
@@ -58,6 +58,14 @@ object TapirAuth {
   }
 
   object oauth2 {
+    val FlowAttribute: AttributeKey[OAuth2Flow] = new AttributeKey[OAuth2Flow]("sttp.tapir.oauth2.flow")
+    sealed trait OAuth2Flow
+    object OAuth2Flow {
+      case object AuthenticationCode extends OAuth2Flow
+      case object ClientCredentials extends OAuth2Flow
+      case object Implicit extends OAuth2Flow
+    }
+
     @deprecated("Use insted authorizationCodeFlow, clientCredentialsFlow or implicitFlow", "")
     def authorizationCode(
         authorizationUrl: Option[String] = None,
@@ -74,48 +82,51 @@ object TapirAuth {
       )
     }
 
+    private def buildInput(
+        baseOAuth: EndpointInput.AuthType.OAuth2,
+        challenge: WWWAuthenticateChallenge,
+        flow: OAuth2Flow
+    ): Auth[String, EndpointInput.AuthType.OAuth2] =
+      EndpointInput
+        .Auth(
+          header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
+          challenge,
+          baseOAuth: EndpointInput.AuthType.OAuth2,
+          EndpointInput.AuthInfo.Empty
+        )
+        .attribute(FlowAttribute, flow)
+
     def authorizationCodeFlow(
         authorizationUrl: String,
         tokenUrl: String,
         refreshUrl: Option[String] = None,
         scopes: ListMap[String, String] = ListMap(),
         challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
-    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
-      EndpointInput.Auth(
-        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
-        challenge,
-        EndpointInput.AuthType.OAuth2(Some(authorizationUrl), Some(tokenUrl), scopes, refreshUrl),
-        EndpointInput.AuthInfo.Empty
-      )
-    }
+    ): Auth[String, EndpointInput.AuthType.OAuth2] = buildInput(
+      EndpointInput.AuthType.OAuth2(Some(authorizationUrl), Some(tokenUrl), scopes, refreshUrl),
+      challenge,
+      OAuth2Flow.AuthenticationCode
+    )
 
     def clientCredentialsFlow(
         tokenUrl: String,
         refreshUrl: Option[String] = None,
         scopes: ListMap[String, String] = ListMap(),
         challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
-    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
-      EndpointInput.Auth(
-        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
-        challenge,
+    ): Auth[String, EndpointInput.AuthType.OAuth2] =
+      buildInput(
         EndpointInput.AuthType.OAuth2(None, Some(tokenUrl), scopes, refreshUrl),
-        EndpointInput.AuthInfo.Empty
+        challenge,
+        OAuth2Flow.ClientCredentials
       )
-    }
 
     def implicitFlow(
         authorizationUrl: String,
         refreshUrl: Option[String] = None,
         scopes: ListMap[String, String] = ListMap(),
         challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer
-    ): Auth[String, EndpointInput.AuthType.OAuth2] = {
-      EndpointInput.Auth(
-        header[String](HeaderNames.Authorization).map(stringPrefixWithSpace(AuthenticationScheme.Bearer.name)),
-        challenge,
-        EndpointInput.AuthType.OAuth2(Some(authorizationUrl), None, scopes, refreshUrl),
-        EndpointInput.AuthInfo.Empty
-      )
-    }
+    ): Auth[String, EndpointInput.AuthType.OAuth2] =
+      buildInput(EndpointInput.AuthType.OAuth2(Some(authorizationUrl), None, scopes, refreshUrl), challenge, OAuth2Flow.Implicit)
 
     private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
   }
