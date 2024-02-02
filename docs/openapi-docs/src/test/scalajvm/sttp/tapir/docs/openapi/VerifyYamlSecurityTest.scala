@@ -121,26 +121,42 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
 
   test("should support Oauth2") {
     val expectedYaml = load("security/expected_oauth2.yml")
-    val oauth2 =
+    val authCodeFlow =
       auth.oauth2
-        .authorizationCode(
-          Some("https://example.com/auth"),
+        .authorizationCodeFlow(
+          "https://example.com/auth",
+          "https://example.com/token",
+          Some("https://example.com/token/refresh"),
+          ListMap("client" -> "scope for clients", "admin" -> "administration scope")
+        )
+    val clientCredFlow =
+      auth.oauth2
+        .clientCredentialsFlow(
+          "https://example.com/token",
+          Some("https://example.com/token/refresh"),
+          ListMap("client" -> "scope for clients", "admin" -> "administration scope")
+        )
+    val implicitFlow =
+      auth.oauth2
+        .implicitFlow(
+          "https://example.com/auth",
+          Some("https://example.com/token/refresh"),
           ListMap("client" -> "scope for clients", "admin" -> "administration scope")
         )
 
     val e1 =
       endpoint
-        .securityIn(oauth2)
+        .securityIn(authCodeFlow)
         .in("api1" / path[String])
         .out(stringBody)
     val e2 =
       endpoint
-        .securityIn(oauth2.requiredScopes(Seq("client")))
+        .securityIn(clientCredFlow.requiredScopes(Seq("client")))
         .in("api2" / path[String])
         .out(stringBody)
     val e3 =
       endpoint
-        .securityIn(oauth2.requiredScopes(Seq("admin")))
+        .securityIn(implicitFlow.requiredScopes(Seq("admin")))
         .in("api3" / path[String])
         .out(stringBody)
 

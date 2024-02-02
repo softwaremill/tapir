@@ -36,10 +36,10 @@ object OAuth2GithubHttp4sServer extends IOApp {
 
   case class AccessDetails(token: String)
 
-  val authorizationUrl = Some("https://github.com/login/oauth/authorize")
-  val accessTokenUrl = Some("https://github.com/login/oauth/access_token")
+  val authorizationUrl = "https://github.com/login/oauth/authorize"
+  val accessTokenUrl = "https://github.com/login/oauth/access_token"
 
-  val authOAuth2 = auth.oauth2.authorizationCode(authorizationUrl, ListMap.empty, accessTokenUrl)
+  val authOAuth2 = auth.oauth2.authorizationCodeFlow(authorizationUrl, accessTokenUrl)
 
   // endpoint declarations
   val login: PublicEndpoint[Unit, Unit, String, Any] =

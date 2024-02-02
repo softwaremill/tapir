@@ -37,9 +37,9 @@ object SwaggerUIOAuth2PekkoServer extends App with RouteConcatenation {
   val secureEndpoint: PartialServerEndpoint[String, String, Unit, Int, Unit, Any, Future] =
     endpoint
       .securityIn(
-        auth.oauth2.authorizationCode(
-          authorizationUrl = Some("http://localhost:8080/realms/myrealm/protocol/openid-connect/auth"),
-          tokenUrl = Some("http://localhost:8080/realms/myrealm/protocol/openid-connect/token")
+        auth.oauth2.authorizationCodeFlow(
+          authorizationUrl = "http://localhost:8080/realms/myrealm/protocol/openid-connect/auth",
+          tokenUrl = "http://localhost:8080/realms/myrealm/protocol/openid-connect/token"
         )
       )
       .errorOut(plainBody[Int])

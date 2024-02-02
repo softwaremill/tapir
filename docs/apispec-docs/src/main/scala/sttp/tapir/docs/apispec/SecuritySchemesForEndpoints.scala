@@ -4,6 +4,7 @@ import sttp.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.internal._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointAuth
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
+import sttp.tapir.TapirAuth.oauth2.OAuth2Flow
 
 import scala.annotation.tailrec
 
@@ -42,6 +43,14 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
+  private def getOAuth2Flow(a: EndpointInput.AuthType.OAuth2, definedFlow: Option[OAuth2Flow]): OAuthFlows = definedFlow match {
+    case Some(OAuth2Flow.AuthenticationCode) =>
+      OAuthFlows(authorizationCode = Some(OAuthFlow(a.authorizationUrl, a.tokenUrl, a.refreshUrl, a.scopes)))
+    case Some(OAuth2Flow.ClientCredentials) => OAuthFlows(clientCredentials = Some(OAuthFlow(None, a.tokenUrl, a.refreshUrl, a.scopes)))
+    case Some(OAuth2Flow.Implicit)          => OAuthFlows(`implicit` = Some(OAuthFlow(a.authorizationUrl, None, a.refreshUrl, a.scopes)))
+    case None => OAuthFlows(authorizationCode = Some(OAuthFlow(a.authorizationUrl, a.tokenUrl, a.refreshUrl, a.scopes)))
+  }
+
   private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthType], apiKeyAuthTypeName: String): SecurityScheme = {
     val extensions = DocsExtensions.fromIterable(a.docsExtensions)
     a.authType match {
@@ -50,7 +59,7 @@ private[docs] object SecuritySchemesForEndpoints {
         SecurityScheme(apiKeyAuthTypeName, a.info.description, Some(name), Some(in), None, a.info.bearerFormat, None, None, extensions)
       case EndpointInput.AuthType.Http(scheme) =>
         SecurityScheme("http", a.info.description, None, None, Some(scheme.toLowerCase()), a.info.bearerFormat, None, None, extensions)
-      case EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl) =>
+      case oauth2: EndpointInput.AuthType.OAuth2 =>
         SecurityScheme(
           "oauth2",
           a.info.description,
@@ -58,11 +67,11 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          Some(getOAuth2Flow(oauth2, a.attribute(OAuth2Flow.Attribute))),
           None,
           extensions
         )
-      case EndpointInput.AuthType.ScopedOAuth2(EndpointInput.AuthType.OAuth2(authorizationUrl, tokenUrl, scopes, refreshUrl), _) =>
+      case EndpointInput.AuthType.ScopedOAuth2(oauth2, _) =>
         SecurityScheme(
           "oauth2",
           a.info.description,
@@ -70,7 +79,7 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          Some(getOAuth2Flow(oauth2, a.attribute(OAuth2Flow.Attribute))),
           None,
           extensions
         )
