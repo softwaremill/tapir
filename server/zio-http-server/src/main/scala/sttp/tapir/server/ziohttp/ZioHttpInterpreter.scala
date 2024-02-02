@@ -42,24 +42,28 @@ trait ZioHttpInterpreter[R] {
             zioHttpServerOptions.deleteFile
           )
 
-          val serverRequest = ZioHttpServerRequest(request)
+          if (request.url.encode.trim.isEmpty) {
+            ZIO.logError("Received an apparently empty request URI, not handling: " + request) *>
+              ZIO.fail(Response.internalServerError("Empty request URI"))
+          } else {
+            val serverRequest = ZioHttpServerRequest(request)
+            interpreter
+              .apply(serverRequest)
+              .foldCauseZIO(
+                cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
+                {
+                  case RequestResult.Response(resp) =>
+                    resp.body match {
+                      case None              => handleHttpResponse(resp, None)
+                      case Some(Right(body)) => handleHttpResponse(resp, Some(body))
+                      case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
+                    }
 
-          interpreter
-            .apply(serverRequest)
-            .foldCauseZIO(
-              cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
-              {
-                case RequestResult.Response(resp) =>
-                  resp.body match {
-                    case None              => handleHttpResponse(resp, None)
-                    case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                    case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
-                  }
-
-                case RequestResult.Failure(_) =>
-                  ZIO.fail(Response.notFound)
-              }
-            )
+                  case RequestResult.Failure(_) =>
+                    ZIO.fail(Response.notFound)
+                }
+              )
+          }
         }
       }
     )
