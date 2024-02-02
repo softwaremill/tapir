@@ -4,7 +4,7 @@ import sttp.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.internal._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointAuth
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
-import sttp.tapir.TapirAuth.oauth2.{FlowAttribute, OAuth2Flow}
+import sttp.tapir.TapirAuth.oauth2.OAuth2Flow
 
 import scala.annotation.tailrec
 
@@ -67,7 +67,7 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(getOAuth2Flow(oauth2, a.attribute(FlowAttribute))),
+          Some(getOAuth2Flow(oauth2, a.attribute(OAuth2Flow.Attribute))),
           None,
           extensions
         )
@@ -79,7 +79,7 @@ private[docs] object SecuritySchemesForEndpoints {
           None,
           None,
           a.info.bearerFormat,
-          Some(getOAuth2Flow(oauth2, a.attribute(FlowAttribute))),
+          Some(getOAuth2Flow(oauth2, a.attribute(OAuth2Flow.Attribute))),
           None,
           extensions
         )

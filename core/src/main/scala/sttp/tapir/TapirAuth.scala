@@ -58,12 +58,13 @@ object TapirAuth {
   }
 
   object oauth2 {
-    val FlowAttribute: AttributeKey[OAuth2Flow] = new AttributeKey[OAuth2Flow]("sttp.tapir.oauth2.flow")
     sealed trait OAuth2Flow
     object OAuth2Flow {
       case object AuthenticationCode extends OAuth2Flow
       case object ClientCredentials extends OAuth2Flow
       case object Implicit extends OAuth2Flow
+
+      val Attribute: AttributeKey[OAuth2Flow] = new AttributeKey[OAuth2Flow]("sttp.tapir.TapirAuth.oauth2.OAuth2Flow")
     }
 
     @deprecated("Use insted authorizationCodeFlow, clientCredentialsFlow or implicitFlow", "")
@@ -94,7 +95,7 @@ object TapirAuth {
           baseOAuth: EndpointInput.AuthType.OAuth2,
           EndpointInput.AuthInfo.Empty
         )
-        .attribute(FlowAttribute, flow)
+        .attribute(OAuth2Flow.Attribute, flow)
 
     def authorizationCodeFlow(
         authorizationUrl: String,
