@@ -100,7 +100,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitlySchema[H[A]]
-    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.H", List("A")))
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.H", List("sttp.tapir.json.pickler.A")))
     schema.schemaType shouldBe SProduct[H[A]](List(field(FieldName("data"), expectedASchema)))
   }
 
@@ -121,7 +121,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
 
   it should "find schema for map of generic products" in {
     val schema = implicitlySchema[Map[String, H[D]]]
-    schema.name shouldBe Some(SName("Map", List("H", "D")))
+    schema.name shouldBe Some(SName("Map", List("sttp.tapir.json.pickler.H", "sttp.tapir.json.pickler.D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, H[D]], H[D]](
       Nil,
       Schema(
@@ -133,7 +133,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
             )
           )
         ),
-        Some(SName("sttp.tapir.json.pickler.H", List("D")))
+        Some(SName("sttp.tapir.json.pickler.H", List("sttp.tapir.json.pickler.D")))
       )
     )(identity)
   }

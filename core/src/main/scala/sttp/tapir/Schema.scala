@@ -332,6 +332,9 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Title] = new AttributeKey[Title]("sttp.tapir.Schema.Title")
   }
 
+  /** @param typeParameterShortNames
+    *   full name of type parameters, name is legacy and kept only for backward compatibility
+    */
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + (if (typeParameterShortNames.isEmpty) "" else typeParameterShortNames.mkString("[", ",", "]"))
   }

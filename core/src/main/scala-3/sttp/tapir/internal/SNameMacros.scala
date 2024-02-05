@@ -34,7 +34,7 @@ object SNameMacros {
       case _               => List.empty[TypeRepr]
     }
 
-    allTypeArguments(tpe).map(_.typeSymbol.name).toList
+    allTypeArguments(tpe).map(_.typeSymbol.fullName).toList
   }
 
 }
