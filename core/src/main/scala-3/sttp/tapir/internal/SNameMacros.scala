@@ -1,7 +1,6 @@
 package sttp.tapir.internal
 
 import scala.quoted.*
-import sttp.tapir.SchemaType.*
 
 // TODO: make private[tapir] once Scala3 compilation is fixed
 object SNameMacros {
@@ -21,9 +20,13 @@ object SNameMacros {
       else if sym == defn.EmptyPackageClass then List.empty
       else if sym == defn.RootPackage then List.empty
       else if sym == defn.RootClass then List.empty
+      else if sym.name.matches("<[^>]+>") then nameChain(sym.owner)
       else nameChain(sym.owner) :+ normalizedName(sym)
 
-    nameChain(tpe.typeSymbol).mkString(".")
+    nameChain(tpe.typeSymbol).mkString(".") match {
+      case "scala.Predef.String" => "java.lang.String"
+      case other                 => other
+    }
   }
 
   def extractTypeArguments(using q: Quotes)(tpe: q.reflect.TypeRepr): List[String] = {
@@ -34,7 +37,7 @@ object SNameMacros {
       case _               => List.empty[TypeRepr]
     }
 
-    allTypeArguments(tpe).map(_.typeSymbol.fullName).toList
+    allTypeArguments(tpe).map(typeFullNameFromTpe).toList
   }
 
 }

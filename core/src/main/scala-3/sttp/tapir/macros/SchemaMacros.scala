@@ -180,11 +180,12 @@ private[tapir] object SchemaCompanionMacros {
     import quotes.reflect.*
 
     val ktpe = TypeRepr.of[K]
-    val ktpeName = ktpe.typeSymbol.fullName
+    val ktpeName = SNameMacros.typeFullNameFromTpe(ktpe)
     val vtpe = TypeRepr.of[V]
 
     val genericTypeParameters = (if (ktpeName.split('.').lastOption.contains("String")) Nil else List(ktpeName)) ++
-      SNameMacros.extractTypeArguments(ktpe) ++ List(vtpe.typeSymbol.fullName) ++ SNameMacros.extractTypeArguments(vtpe)
+      SNameMacros.extractTypeArguments(ktpe) ++ List(SNameMacros.typeFullNameFromTpe(vtpe)) ++
+      SNameMacros.extractTypeArguments(vtpe)
 
     '{
       Schema(
