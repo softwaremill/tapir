@@ -159,7 +159,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
             FieldName("v"),
             Schema(
               SOpenProduct[Map[String, Person], Person](Nil, implicitly[Schema[Person]].description("test"))(identity),
-              Some(SName("Map", List("Person")))
+              Some(SName("Map", List("sttp.tapir.SchemaMacroTestData.Person")))
             )
           )
         )
@@ -183,7 +183,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     // then
     schema shouldBe Schema(
       SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
-      name = Some(SName("Map", List("V")))
+      name = Some(SName("Map", List("sttp.tapir.SchemaMacroTest.V")))
     )
 
     schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].mapFieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
@@ -200,7 +200,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     // then
     schema shouldBe Schema(
       SOpenProduct(Nil, implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
-      name = Some(SName("Map", List("K", "V")))
+      name = Some(
+        SName("Map", List("sttp.tapir.SchemaMacroTest.K", "sttp.tapir.SchemaMacroTest.V"))
+      )
     )
 
     schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].mapFieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
@@ -278,7 +280,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       )
     )
 
-    schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
+    schema.name shouldBe Some(
+      SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("java.lang.String", "scala.Int", "java.lang.String"))
+    )
   }
 
   it should "add the discriminator as a field when using oneOfUsingField" in {
