@@ -106,13 +106,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
 
   it should "find schema for map" in {
     val schema = implicitlySchema[Map[String, Int]]
-    schema.name shouldBe Some(SName("Map", List("Int")))
+    schema.name shouldBe Some(SName("Map", List("scala.Int")))
     schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](Nil, intSchema)(identity)
   }
 
   it should "find schema for map of products" in {
     val schema = implicitlySchema[Map[String, D]]
-    schema.name shouldBe Some(SName("Map", List("D")))
+    schema.name shouldBe Some(SName("Map", List("sttp.tapir.json.pickler.D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
       Nil,
       Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.json.pickler.D")))
