@@ -1,10 +1,11 @@
 package sttp.tapir.perf
 
 object CsvReportPrinter {
-  def print(results: List[GatlingSimulationResult]): String = {
+  def print(results: List[GatlingSimulationResult], initialSimOrdering: List[String]): String = {
 
     val groupedResults = results.groupBy(_.simulationName)
-    val headers = "Simulation" :: groupedResults.values.head.flatMap(r => {
+    val orderedResults = initialSimOrdering.flatMap(simName => groupedResults.get(simName).map(simName -> _))
+    val headers = "Simulation" :: orderedResults.head._2.flatMap(r => {
       val server = r.serverName
       List(
         s"$server-ops/sec",
@@ -14,7 +15,7 @@ object CsvReportPrinter {
         s"$server-latency-p50"
       )
     })
-    val rows: List[String] = groupedResults.toList.map { case (simName, serverResults) =>
+    val rows: List[String] = orderedResults.map { case (simName, serverResults) =>
       (simName :: serverResults.flatMap(singleResult =>
         List(
           singleResult.meanReqsPerSec.toString,

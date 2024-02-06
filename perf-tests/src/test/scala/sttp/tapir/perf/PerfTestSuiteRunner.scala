@@ -40,7 +40,7 @@ object PerfTestSuiteRunner extends IOApp {
       .traverse { case ((simulationName, shortSimulationName), (serverName, shortServerName)) =>
         for {
           serverKillSwitch <- startServerByTypeName(serverName)
-          _ <- IO.println(s"Running server $shortServerName")
+          _ <- IO.println(s"Running server $shortServerName, simulation $simulationName")
           _ <- (for {
             _ <- IO.println("======================== WARM-UP ===============================================")
             _ = setSimulationParams(users = WarmupUsers, duration = WarmupDuration, warmup = true)
@@ -55,7 +55,7 @@ object PerfTestSuiteRunner extends IOApp {
           _ <- IO.println(serverSimulationResult)
         } yield (serverSimulationResult)
       }
-      .flatTap(writeCsvReport(currentTime))
+      .flatTap(writeCsvReport(currentTime, params.simulationNames.map(_._2)))
       .flatTap(writeHtmlReport(currentTime))
       .as(ExitCode.Success)
   }
@@ -78,11 +78,11 @@ object PerfTestSuiteRunner extends IOApp {
   private def setSimulationParams(users: Int, duration: FiniteDuration, warmup: Boolean): Unit = {
     System.setProperty("tapir.perf.user-count", users.toString)
     System.setProperty("tapir.perf.duration-seconds", duration.toSeconds.toString)
-    System.setProperty("tapir.perf.is-warm-up", warmup.toString) : Unit
+    System.setProperty("tapir.perf.is-warm-up", warmup.toString): Unit
   }
 
-  private def writeCsvReport(currentTime: String)(results: List[GatlingSimulationResult]): IO[Unit] = {
-    val csv = CsvReportPrinter.print(results)
+  private def writeCsvReport(currentTime: String, initialSimOrdering: List[String])(results: List[GatlingSimulationResult]): IO[Unit] = {
+    val csv = CsvReportPrinter.print(results, initialSimOrdering)
     writeReportFile(csv, "csv", currentTime)
   }
 
