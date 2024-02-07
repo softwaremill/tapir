@@ -8,11 +8,11 @@ object CsvReportPrinter {
     val headers = "Simulation" :: orderedResults.head._2.flatMap(r => {
       val server = r.serverName
       List(
-        s"$server-ops/sec",
-        s"$server-latency-p99",
-        s"$server-latency-p95",
-        s"$server-latency-p75",
-        s"$server-latency-p50"
+        s"$server reqs/s",
+        s"$server latency-p99",
+        s"$server latency-p95",
+        s"$server latency-p75",
+        s"$server latency-p50"
       )
     })
     val rows: List[String] = orderedResults.map { case (simName, serverResults) =>
