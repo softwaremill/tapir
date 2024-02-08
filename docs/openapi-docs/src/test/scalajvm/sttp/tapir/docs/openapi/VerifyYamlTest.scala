@@ -718,6 +718,19 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should generate full schema name for type params") {
+    val e = endpoint.out(jsonBody[Map[String, FruitAmount]])
+    val expectedYaml = load("expected_full_schema_names.yml")
+
+    val options = OpenAPIDocsOptions.default.copy(schemaName = info => {
+      (info.fullName +: info.typeParameterShortNames).flatMap(_.split('.')).mkString("_")
+    })
+
+    val actualYaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should generate default and example values for nested optional fields") {
     case class Nested(nestedValue: String)
     case class ClassWithNestedOptionalField(
