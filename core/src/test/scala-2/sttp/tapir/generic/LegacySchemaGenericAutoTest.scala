@@ -31,7 +31,7 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "find schema for map of value classes" in {
     val schema = implicitly[Schema[Map[String, IntegerValueClass]]]
-    schema.name shouldBe Some(SName("Map", List("IntegerValueClass")))
+    schema.name shouldBe Some(SName("Map", List("sttp.tapir.generic.IntegerValueClass")))
     schema.schemaType shouldBe SOpenProduct[Map[String, IntegerValueClass], IntegerValueClass](
       Nil,
       Schema(SInteger(), format = Some("int32"))

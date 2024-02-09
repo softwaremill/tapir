@@ -5,8 +5,8 @@ import sttp.tapir.{SchemaType => TSchemaType, Schema => TSchema}
 package object schema {
 
   private[docs] val defaultSchemaName: TSchema.SName => String = info => {
-    val shortName = info.fullName.split('.').last
-    (shortName +: info.typeParameterShortNames).mkString("_")
+    def prepareName(name: String) = name.split('.').last
+    (info.fullName +: info.typeParameterShortNames).map(prepareName).mkString("_")
   }
 
   /*
