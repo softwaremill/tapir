@@ -5,6 +5,7 @@ import cats.syntax.all._
 import com.codahale.metrics.{Histogram, MetricRegistry}
 import fs2.io.file.{Files => Fs2Files}
 import fs2.text
+import sttp.tapir.perf.apis.ServerName
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.stream.Collectors
@@ -20,7 +21,7 @@ object GatlingLogProcessor {
 
   /** Searches for the last modified simulation.log in all simulation logs and calculates results.
     */
-  def processLast(simulationName: String, serverName: String): IO[GatlingSimulationResult] = {
+  def processLast(simulationName: String, serverName: ServerName): IO[GatlingSimulationResult] = {
     for {
       lastLogPath <- IO.fromTry(findLastLogFile)
       _ <- IO.println(s"Processing results from $lastLogPath")
@@ -48,7 +49,7 @@ object GatlingLogProcessor {
           val throughput = (state.histogram.getCount().toDouble / state.totalDurationMs) * 1000
           GatlingSimulationResult(
             simulationName,
-            serverName,
+            serverName.shortName,
             state.totalDurationMs.millis,
             meanReqsPerSec = throughput.toLong,
             latencyP99 = snapshot.get99thPercentile,
