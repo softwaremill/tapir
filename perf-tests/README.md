@@ -3,13 +3,14 @@
 Performance tests are executed by running `PerfTestSuiteRunner`, which is a standard "Main" Scala application, configured by command line parameters. It executes a sequence of tests, where
 each test consist of:
 
-1. Starting a HTTP server (Like Tapir-based Pekko, Vartx, http4s, or a "vanilla", tapirless one)
+1. Starting a HTTP server if specified (Like Tapir-based Pekko, Vartx, http4s, or a "vanilla", tapirless one)
 2. Running a simulation in warm-up mode (5 seconds, 3 concurrent users)
 3. Running a simulation with user-defined duration and concurrent user count
 4. Closing the server
 5. Reading Gatling's simulation.log and building simulation results
 
 The sequence is repeated for a set of servers multiplied by simulations. Afterwards, all individual simulation results will be aggregated into a single report. 
+If no test servers are specified, only simulations are run, assuming a server started externally.
 Command parameters can be viewed by running:
 
 ```
@@ -27,6 +28,15 @@ which displays help similar to:
 [error]   -g, --gatling-reports   Generate Gatling reports for individuals sims, may significantly affect total time (disabled by default)
 ```
 
+If you want to run a test server separately from simulations, use a separate sbt session and start it using `ServerRunner`:
+
+```
+perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.TapirMulti
+```
+
+This is useful when profiling, as `perfTests/runMain` will be a forked JVM isolated from the JVM that runs Gatling, configured with additional options like `"-XX:StartFlightRecording=filename=recording.jfr,...`
+After the simulations, you can open `recording.jfr` in Java Mission Control to analyze performance metrics like heap and CPU usage.
+
 ## Examples
 
 1. Run all sims on all pekko-http servers with other options set to default:
@@ -36,13 +46,20 @@ perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s pekko.* -m *
 
 2. Run all sims on http4s servers, with each simulation running for 5 seconds:
 ```
-perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s http4s.Tapir,http4s.TapirMulti,http4s.Vanilla,http4s.VanillaMulti -s * -d 5
+perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s http4s.Tapir,http4s.TapirMulti,http4s.Vanilla,http4s.VanillaMulti -m * -d 5
 ```
 
 3. Run some simulations on some servers, with 3 concurrent users instead of default 1, each simulation running for 15 seconds, 
 and enabled Gatling report generation:
 ```
-perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s http4s.Tapir,netty.future.Tapir,play.Tapir -s PostLongBytes,PostFile -d 15 -u 3 -g
+perfTests/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -s http4s.Tapir,netty.future.Tapir,play.Tapir -m PostLongBytes,PostFile -d 15 -u 3 -g
+```
+
+4. Run a netty-cats server with profiling, and then PostBytes and PostLongBytes simulation in a separate sbt session, for 25 seconds:
+```
+perfTests/runMain sttp.tapir.perf.apis.ServerRunner netty.cats.TapirMulti
+// in a separate sbt session:
+perfTest/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -m PostBytes,PostLongBytes -d 25
 ```
 
 ## Reports

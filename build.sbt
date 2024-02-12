@@ -499,6 +499,8 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .dependsOn(core, files, circeJson, cats)
 
+lazy val flightRecordingJavaOpts = "-XX:StartFlightRecording=filename=recording.jfr,dumponexit=true,duration=120s"
+
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
   .settings(commonJvmSettings)
@@ -513,7 +515,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.16.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      // Needs to match version used by Gatling
+      "com.github.scopt" %% "scopt" % "3.7.1",
       "io.github.classgraph" % "classgraph" % "4.8.165" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
@@ -526,7 +529,9 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(Gatling / scalaSource := sourceDirectory.value / "test" / "scala")
   .settings(
     fork := true,
-    connectInput := true
+    connectInput := true,
+    Compile / run / javaOptions += flightRecordingJavaOpts,
+    Test / run / javaOptions -= flightRecordingJavaOpts
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)

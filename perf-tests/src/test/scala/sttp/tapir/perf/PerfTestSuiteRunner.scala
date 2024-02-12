@@ -11,16 +11,14 @@ import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.concurrent.duration.FiniteDuration
-import scala.reflect.runtime.universe
 
 /** Main entry point for running suites of performance tests and generating aggregated reports. A suite represents a set of Gatling
   * simulations executed on a set of servers, with some additional parameters like concurrent user count. One can run a single simulation on
   * a single server, as well as a selection of (servers x simulations). The runner then collects Gatling logs from simulation.log files of
-  * individual simulation runs and puts them together into an aggregated report comparing results for all the runs.
+  * individual simulation runs and puts them together into an aggregated report comparing results for all the runs. If no server are
+  * provided in the arguments, the suite will only execute simulations, assuming a server has been started separately.
   */
 object PerfTestSuiteRunner extends IOApp {
-
-  val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
 
   def run(args: List[String]): IO[ExitCode] = {
     val params = PerfTestSuiteParams.parse(args)
@@ -37,10 +35,10 @@ object PerfTestSuiteRunner extends IOApp {
     val currentTime = LocalDateTime.now().format(formatter)
     ((params.simulationNames, params.serverNames)
       .mapN((x, y) => (x, y)))
-      .traverse { case ((simulationName, shortSimulationName), (serverName, shortServerName)) =>
+      .traverse { case ((simulationName, shortSimulationName), serverName) =>
         for {
-          serverKillSwitch <- startServerByTypeName(serverName)
-          _ <- IO.println(s"Running server $shortServerName, simulation $simulationName")
+          serverKillSwitch <- ServerRunner.startServerByTypeName(serverName)
+          _ <- IO.println(s"Running server ${serverName.shortName}, simulation $simulationName")
           _ <- (for {
             _ <- IO.println("======================== WARM-UP ===============================================")
             _ = setSimulationParams(users = WarmupUsers, duration = WarmupDuration, warmup = true)
@@ -51,25 +49,13 @@ object PerfTestSuiteRunner extends IOApp {
           } yield simResultCode)
             .guarantee(serverKillSwitch)
             .ensureOr(errCode => new Exception(s"Gatling failed with code $errCode"))(_ == 0)
-          serverSimulationResult <- GatlingLogProcessor.processLast(shortSimulationName, shortServerName)
+          serverSimulationResult <- GatlingLogProcessor.processLast(shortSimulationName, serverName)
           _ <- IO.println(serverSimulationResult)
         } yield (serverSimulationResult)
       }
       .flatTap(writeCsvReport(currentTime, params.simulationNames.map(_._2)))
       .flatTap(writeHtmlReport(currentTime))
       .as(ExitCode.Success)
-  }
-
-  private def startServerByTypeName(serverName: String): IO[ServerRunner.KillSwitch] = {
-    try {
-      val moduleSymbol = runtimeMirror.staticModule(serverName)
-      val moduleMirror = runtimeMirror.reflectModule(moduleSymbol)
-      val instance: ServerRunner = moduleMirror.instance.asInstanceOf[ServerRunner]
-      instance.start
-    } catch {
-      case e: Throwable =>
-        IO.raiseError(new IllegalArgumentException(s"ERROR! Could not find object $serverName or it doesn't extend ServerRunner", e))
-    }
   }
 
   /** Gatling doesn't allow to pass parameters to simulations when they are run using `Gatling.fromMap()`, that's why we're using system
