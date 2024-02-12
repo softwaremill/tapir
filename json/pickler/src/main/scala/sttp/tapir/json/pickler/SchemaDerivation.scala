@@ -99,7 +99,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
     encodedName match
       case None =>
         def allTypeArguments(tn: TypeInfo): Seq[TypeInfo] = tn.typeParams.toList.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
-        '{ Schema.SName(${ Expr(typeInfo.full) }, ${ Expr.ofList(allTypeArguments(typeInfo).map(_.short).toList.map(Expr(_))) }) }
+        '{ Schema.SName(${ Expr(typeInfo.full) }, ${ Expr.ofList(allTypeArguments(typeInfo).map(_.full).toList.map(Expr(_))) }) }
       case Some(en) =>
         '{ Schema.SName($en, Nil) }
 
@@ -154,7 +154,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
     def topLevelEncodedName: Option[Expr[String]] = findEncodedName(topLevel)
 
     def encodedName: Option[Expr[String]] = findEncodedName(all)
-    
+
     private def findEncodedName(terms: List[Term]): Option[Expr[String]] = terms
       .map(_.asExpr)
       .collectFirst { case '{ $en: Schema.annotations.encodedName } => en }

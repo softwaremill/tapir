@@ -20,16 +20,17 @@ private[tapir] object SchemaMapMacro {
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
       def allTypeArguments(tn: c.Type): Seq[c.Type] = tn.typeArgs.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
-      allTypeArguments(weakType).map(_.typeSymbol.name.decodedName.toString).toList
+      allTypeArguments(weakType).map(_.typeSymbol.fullName).toList
     }
 
     val weakTypeV = weakTypeOf[V]
     val weakTypeK = weakTypeOf[K]
 
-    val keyTypeParameter = weakTypeK.typeSymbol.name.decodedName.toString
+    val keyTypeParameter = weakTypeK.typeSymbol.fullName
 
-    val genericTypeParameters = (if (keyTypeParameter == "String") Nil else List(keyTypeParameter)) ++ extractTypeArguments(weakTypeK) ++
-      List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
+    val genericTypeParameters =
+      (if (keyTypeParameter.split('.').lastOption.contains("String")) Nil else List(keyTypeParameter)) ++
+        extractTypeArguments(weakTypeK) ++ List(weakTypeV.typeSymbol.fullName) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
       q"""{
           val s = $schemaForV

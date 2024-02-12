@@ -93,19 +93,19 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitly[Schema[H[A]]]
-    schema.name shouldBe Some(SName("sttp.tapir.generic.H", List("A")))
+    schema.name shouldBe Some(SName("sttp.tapir.generic.H", List("sttp.tapir.generic.A")))
     schema.schemaType shouldBe SProduct[H[A]](List(field(FieldName("data"), expectedASchema)))
   }
 
   it should "find schema for map" in {
     val schema = implicitly[Schema[Map[String, Int]]]
-    schema.name shouldBe Some(SName("Map", List("Int")))
+    schema.name shouldBe Some(SName("Map", List("scala.Int")))
     schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](Nil, intSchema)(identity)
   }
 
   it should "find schema for map of products" in {
     val schema = implicitly[Schema[Map[String, D]]]
-    schema.name shouldBe Some(SName("Map", List("D")))
+    schema.name shouldBe Some(SName("Map", List("sttp.tapir.generic.D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
       Nil,
       Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.generic.D")))
@@ -114,7 +114,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "find schema for map of generic products" in {
     val schema = implicitly[Schema[Map[String, H[D]]]]
-    schema.name shouldBe Some(SName("Map", List("H", "D")))
+    schema.name shouldBe Some(SName("Map", List("sttp.tapir.generic.H", "sttp.tapir.generic.D")))
     schema.schemaType shouldBe SOpenProduct[Map[String, H[D]], H[D]](
       Nil,
       Schema(
@@ -126,7 +126,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             )
           )
         ),
-        Some(SName("sttp.tapir.generic.H", List("D")))
+        Some(SName("sttp.tapir.generic.H", List("sttp.tapir.generic.D")))
       )
     )(identity)
   }

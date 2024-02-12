@@ -46,7 +46,7 @@ trait SchemaMagnoliaDerivation {
       case Some(altName) =>
         Schema.SName(altName, Nil)
       case None =>
-        Schema.SName(typeName.full, allTypeArguments(typeName).map(_.short).toList)
+        Schema.SName(typeName.full, allTypeArguments(typeName).map(_.full).toList)
     }
   }
 

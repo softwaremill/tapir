@@ -15,8 +15,8 @@ import scala.concurrent.duration.FiniteDuration
 /** Main entry point for running suites of performance tests and generating aggregated reports. A suite represents a set of Gatling
   * simulations executed on a set of servers, with some additional parameters like concurrent user count. One can run a single simulation on
   * a single server, as well as a selection of (servers x simulations). The runner then collects Gatling logs from simulation.log files of
-  * individual simulation runs and puts them together into an aggregated report comparing results for all the runs. If no server are provided
-  * in the arguments, the suite will only execute simulations, assuming a server has been started separately.
+  * individual simulation runs and puts them together into an aggregated report comparing results for all the runs. If no server are
+  * provided in the arguments, the suite will only execute simulations, assuming a server has been started separately.
   */
 object PerfTestSuiteRunner extends IOApp {
 

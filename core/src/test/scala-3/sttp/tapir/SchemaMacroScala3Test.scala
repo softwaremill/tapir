@@ -50,7 +50,7 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     val s: Schema[List[String] | List[Int]] = Schema.derivedUnion[List[String] | List[Int]]
 
     // then
-    s.name.map(_.show) shouldBe Some("scala.collection.immutable.List[String]_or_scala.collection.immutable.List[Int]")
+    s.name.map(_.show) shouldBe Some("scala.collection.immutable.List[java.lang.String]_or_scala.collection.immutable.List[scala.Int]")
 
     s.schemaType should matchPattern { case SchemaType.SCoproduct(_, _) => }
     val coproduct = s.schemaType.asInstanceOf[SchemaType.SCoproduct[List[String] | List[Int]]]
@@ -64,7 +64,7 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     val s: Schema[List[String] | Vector[Int]] = Schema.derivedUnion[List[String] | Vector[Int]]
 
     // then
-    s.name.map(_.show) shouldBe Some("scala.collection.immutable.List[String]_or_scala.collection.immutable.Vector[Int]")
+    s.name.map(_.show) shouldBe Some("scala.collection.immutable.List[java.lang.String]_or_scala.collection.immutable.Vector[scala.Int]")
 
     s.schemaType should matchPattern { case SchemaType.SCoproduct(_, _) => }
     val coproduct = s.schemaType.asInstanceOf[SchemaType.SCoproduct[List[String] | Vector[Int]]]
