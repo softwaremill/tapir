@@ -6,6 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiParameter,
   OpenapiPath,
   OpenapiPathMethod,
+  OpenapiRequestBody,
+  OpenapiRequestBodyContent,
   OpenapiResponse,
   OpenapiResponseContent,
   Resolved
@@ -15,7 +17,13 @@ import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
   OpenapiSecuritySchemeBasicType,
   OpenapiSecuritySchemeApiKeyType
 }
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaBinary,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class EndpointGeneratorSpec extends CompileCheckTestBase {
@@ -177,6 +185,58 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       """.errorOut(statusCode(sttp.model.StatusCode(403)).description("Not authorised"))"""
     ) // error status code, no body
     generatedCode should include(""".out(statusCode(sttp.model.StatusCode(204)).description("No body"))""") // status code, no body
+    generatedCode shouldCompile ()
+  }
+
+  it should "support multipart body" in {
+    val doc = OpenapiDocument(
+      "",
+      null,
+      Seq(
+        OpenapiPath(
+          "file",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "post",
+              parameters = Seq(),
+              responses = Seq(OpenapiResponse("204", "No body", Nil)),
+              requestBody = Some(
+                OpenapiRequestBody(
+                  required = true,
+                  description = None,
+                  content = Seq(
+                    OpenapiRequestBodyContent(
+                      contentType = "multipart/form-data",
+                      schema = OpenapiSchemaRef("#/components/schemas/FileUpload")
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ),
+      Some(
+        OpenapiComponent(
+          schemas = Map(
+            "FileUpload" -> OpenapiSchemaObject(
+              properties = Map(
+                "file" -> OpenapiSchemaBinary(false)
+              ),
+              required = Seq("file"),
+              nullable = false
+            )
+          )
+        )
+      )
+    )
+    val generatedCode = BasicGenerator.generateObjects(doc, "sttp.tapir.generated", "TapirGeneratedEndpoints", targetScala3 = false)
+    generatedCode should include(
+      """file: sttp.model.Part[java.io.File]"""
+    )
+    generatedCode should include(
+      """.in(multipartBody[FileUpload])"""
+    )
     generatedCode shouldCompile ()
   }
 }
