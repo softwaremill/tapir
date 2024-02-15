@@ -4,6 +4,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaBoolean,
+  OpenapiSchemaBinary,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
@@ -70,6 +71,8 @@ object BasicGenerator {
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
+      case OpenapiSchemaBinary(nb) =>
+        ("sttp.model.Part[java.io.File]", nb)
       case OpenapiSchemaAny(nb) =>
         ("io.circe.Json", nb)
       case OpenapiSchemaRef(t) =>
