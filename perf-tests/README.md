@@ -84,3 +84,7 @@ It should be automatically resoled by the `TypeScanner` utility used by the `Per
 
 Similarly with simulations. Go to `src/test/scala` and a class extending `io.gatling.core.Predef.Simulation` under `sttp.tapir.perf`. See the `Simulations.scala` 
 file for examples.
+
+## Testing WebSockets
+
+TODO

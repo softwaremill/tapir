@@ -4,12 +4,15 @@ import io.gatling.core.Predef._
 import io.gatling.core.structure.PopulationBuilder
 import io.gatling.http.Predef._
 import sttp.tapir.perf.Common._
-
+import scala.concurrent.duration._
 import scala.util.Random
+import org.HdrHistogram.ConcurrentHistogram
 import io.gatling.core.structure.ChainBuilder
+import io.gatling.http.action.ws.WsSendTextFrameBuilder
+import org.HdrHistogram.Histogram
 
 object CommonSimulations {
-  private val baseUrl = "http://127.0.0.1:8080"
+  private val baseUrl = "127.0.0.1:8080"
   private val random = new Random()
 
   def randomByteArray(size: Int): Array[Byte] = {
@@ -36,7 +39,8 @@ object CommonSimulations {
   def userCount = getParam("user-count").toInt
   def duration = getParam("duration-seconds").toInt
   def namePrefix = if (getParamOpt("is-warm-up").map(_.toBoolean) == Some(true)) "[WARMUP] " else ""
-  val httpProtocol = http.baseUrl(baseUrl)
+  val httpProtocol = http.baseUrl(s"http://$baseUrl")
+  val wsPubHttpProtocol = http.wsBaseUrl(s"ws://$baseUrl/ws")
 
   def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
     val execHttpGet: ChainBuilder = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
@@ -116,6 +120,7 @@ object CommonSimulations {
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
   }
+
 }
 
 import CommonSimulations._
@@ -146,4 +151,49 @@ class PostStringSimulation extends Simulation {
 
 class PostLongStringSimulation extends Simulation {
   setUp(scenario_post_long_string(0)): Unit
+}
+
+/** Based on https://github.com/kamilkloch/websocket-benchmark/
+  */
+class WebSocketsSimulation extends Simulation {
+  private val numOfMessagesPerUser = 60 * 10 // for websocket scenario: 60 seconds with 10 msg/sec
+  val scenarioUserCount = 25000
+  val scenarioDuration = 30.seconds
+
+  private def wsSubscribe(name: String, histogram: Histogram): WsSendTextFrameBuilder = {
+    val req = ws(name).sendText("0")
+    val check = ws
+      .checkTextMessage(name)
+      .check(bodyString.transform { ts =>
+        histogram.recordValue(Math.max(System.currentTimeMillis() - ts.toLong, 0))
+      })
+
+    Range.inclusive(1, numOfMessagesPerUser).foldLeft(req)((acc, _) => acc.await(1.second)(check))
+  }
+
+  val histogram = new ConcurrentHistogram(1L, 10000L, 3)
+  Runtime.getRuntime.addShutdownHook(new Thread {
+    override def run(): Unit =
+      histogram.outputPercentileDistribution(System.out, 1.0)
+  })
+  val warmup = scenario("WS warmup")
+    .exec(ws("Warmup Connect WS").connect("/ts"))
+    .exec(wsSubscribe("Warmup Subscribe", histogram))
+    .exec(ws("Warmup Close WS").close)
+    .exec(pause(40.seconds))
+    .exec({ session =>
+      histogram.reset()
+      session
+    })
+    .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
+
+  val measurement = scenario("WebSockets measurements")
+    .exec(ws("Connect WS").connect("/ts"))
+    .exec(wsSubscribe("Subscribe", histogram))
+    .exec(ws("Close WS").close)
+    .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
+
+  setUp(
+    warmup.andThen(measurement)
+  ).protocols(wsPubHttpProtocol): Unit
 }

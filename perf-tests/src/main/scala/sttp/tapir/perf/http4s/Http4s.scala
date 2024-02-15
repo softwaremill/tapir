@@ -108,11 +108,15 @@ object Tapir extends Endpoints {
 }
 
 object server {
+  val maxConnections = 65536
+  val connectorPoolSize: Int = Math.max(2, Runtime.getRuntime.availableProcessors() / 4)
   def runServer(router: HttpRoutes[IO], webSocketApp: WebSocketBuilder2[IO] => HttpApp[IO]): IO[ServerRunner.KillSwitch] =
     BlazeServerBuilder[IO]
       .bindHttp(Port, "localhost")
       .withHttpApp(router.orNotFound)
       .withHttpWebSocketApp(webSocketApp)
+      .withMaxConnections(maxConnections)
+      .withConnectorPoolSize(connectorPoolSize)
       .resource
       .allocated
       .map(_._2)
