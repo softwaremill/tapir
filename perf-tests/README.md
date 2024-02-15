@@ -82,9 +82,22 @@ p99, p95, p75, and p50 percentiles for latencies of all requests sent during the
 To add a new server, go to `src/main/scala` and put an object extending `sttp.tapir.perf.apis.ServerRunner` in a subpackage of `sttp.tapir.perf`. 
 It should be automatically resoled by the `TypeScanner` utility used by the `PerfTestSuiteRunner`.
 
-Similarly with simulations. Go to `src/test/scala` and a class extending `io.gatling.core.Predef.Simulation` under `sttp.tapir.perf`. See the `Simulations.scala` 
+Similarly with simulations. Go to `src/test/scala` and a class extending `sttp.tapir.perf.PerfTestSuiteRunnerSimulation` under `sttp.tapir.perf`. See the `Simulations.scala` 
 file for examples.
 
 ## Testing WebSockets
 
-TODO
+`WebSocketsSimulation` cannot be executed using `PerfTestSuiteRunner`, as it requires special warmup and injection setup, it also won't store gatling log in a format expected by our report builder.
+For WebSockets we want to measure latency distribution, not throughput, so use given instructions to run it and read the report:
+
+1. Adjust simulation parameters in the `sttp.tapir.perf.WebSocketsSimulation` class
+2. Start a server using `ServerRunner`, for example:
+```
+perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.Tapir
+```
+3. Run the simulation using Gatling's task:
+```
+perfTests/Gatling/testOnly sttp.tapir.perf.WebSocketsSimulation 
+```
+4. Read the histogram report generated in the end in your stdout.
+5. Stop the server manually.
