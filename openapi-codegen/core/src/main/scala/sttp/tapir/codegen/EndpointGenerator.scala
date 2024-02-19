@@ -1,7 +1,12 @@
 package sttp.tapir.codegen
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaSimpleType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaBinary,
+  OpenapiSchemaRef,
+  OpenapiSchemaSimpleType
+}
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
 import sttp.tapir.codegen.util.JavaEscape
 
@@ -180,7 +185,18 @@ class EndpointGenerator {
         }
         val req = if (required) outT else s"Option[$outT]"
         s"jsonBody[$req]"
-      case x => throw new NotImplementedError(s"We only handle json and text! Found $x")
+
+      case "multipart/form-data" =>
+        schema match {
+          case _: OpenapiSchemaBinary =>
+            "multipartBody"
+          case schemaRef: OpenapiSchemaRef =>
+            val (t, _) = mapSchemaSimpleTypeToType(schemaRef)
+            s"multipartBody[$t]"
+          case x => throw new NotImplementedError(s"$contentType only supports schema ref or binary. Found $x")
+        }
+
+      case x => throw new NotImplementedError(s"Not all content types supported! Found $x")
     }
   }
 
