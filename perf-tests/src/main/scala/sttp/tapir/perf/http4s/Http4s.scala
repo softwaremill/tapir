@@ -21,7 +21,7 @@ import sttp.tapir.{CodecFormat, endpoint, webSocketBody}
 import scala.concurrent.duration._
 
 object Http4sCommon {
-  val wsResponseStream = Stream.fixedRate[IO](100.millis, dampen = false)
+  val wsResponseStream = Stream.fixedRate[IO](WebSocketSingleResponseLag, dampen = false)
 }
 
 object Vanilla {

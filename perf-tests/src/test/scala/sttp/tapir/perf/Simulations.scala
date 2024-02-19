@@ -1,15 +1,13 @@
 package sttp.tapir.perf
 
 import io.gatling.core.Predef._
-import io.gatling.core.structure.PopulationBuilder
+import io.gatling.core.structure.{ChainBuilder, PopulationBuilder}
 import io.gatling.http.Predef._
+import org.HdrHistogram.{ConcurrentHistogram, Histogram}
 import sttp.tapir.perf.Common._
+
 import scala.concurrent.duration._
 import scala.util.Random
-import org.HdrHistogram.ConcurrentHistogram
-import io.gatling.core.structure.ChainBuilder
-import io.gatling.http.action.ws.WsSendTextFrameBuilder
-import org.HdrHistogram.Histogram
 
 object CommonSimulations {
   private val baseUrl = "127.0.0.1:8080"
@@ -155,23 +153,31 @@ class PostLongStringSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_long_string(0)): Unit
 }
 
-/** Based on https://github.com/kamilkloch/websocket-benchmark/
- *  Can't be executed using PerfTestSuiteRunner, see perfTests/README.md
+/** Based on https://github.com/kamilkloch/websocket-benchmark/ Can't be executed using PerfTestSuiteRunner, see perfTests/README.md
   */
 class WebSocketsSimulation extends Simulation {
-  private val numOfMessagesPerUser = 60 * 10 // for websocket scenario: 60 seconds with 10 msg/sec
-  val scenarioUserCount = 25000
+  val scenarioUserCount = 2500
   val scenarioDuration = 30.seconds
 
-  private def wsSubscribe(name: String, histogram: Histogram): WsSendTextFrameBuilder = {
-    val req = ws(name).sendText("0")
-    val check = ws
-      .checkTextMessage(name)
-      .check(bodyString.transform { ts =>
-        histogram.recordValue(Math.max(System.currentTimeMillis() - ts.toLong, 0))
-      })
-
-    Range.inclusive(1, numOfMessagesPerUser).foldLeft(req)((acc, _) => acc.await(1.second)(check))
+  /** Sends requests after connecting a user to a WebSocket. For each request, waits at most 1 second for a response. The response body
+    * carries a timestamp which is subtracted from current timestamp to calculate latency. The latency represents time between server
+    * finishing preparing a message and client receiving the message, so it's unidirectional. Some artificial lag may be introduced on the
+    * server (like 100 milliseconds) producing responses, so that it simulates an emitter producing data as a stream, and our test measures
+    * only the latency of returning data once its prepared. This method has to operate in such a mode because Gatling operates in a
+    * request->response flow.
+    */
+  private def wsSubscribe(name: String, histogram: Histogram): ChainBuilder = {
+    repeat(WebSocketRequestsPerUser, "i")(
+      ws(name)
+        .sendText("0")
+        .await(1.second)(
+          ws
+            .checkTextMessage(name)
+            .check(bodyString.transform { ts =>
+              histogram.recordValue(Math.max(System.currentTimeMillis() - ts.toLong, 0))
+            })
+        )
+    )
   }
 
   val histogram = new ConcurrentHistogram(1L, 10000L, 3)
@@ -180,20 +186,23 @@ class WebSocketsSimulation extends Simulation {
       histogram.outputPercentileDistribution(System.out, 1.0)
   })
   val warmup = scenario("WS warmup")
-    .exec(ws("Warmup Connect WS").connect("/ts"))
-    .exec(wsSubscribe("Warmup Subscribe", histogram))
-    .exec(ws("Warmup Close WS").close)
-    .exec(pause(40.seconds))
-    .exec({ session =>
-      histogram.reset()
-      session
-    })
+    .exec(
+      ws("Warmup Connect WS").connect("/ts"),
+      wsSubscribe("Warmup Subscribe", histogram),
+      ws("Warmup Close WS").close,
+      exec({ session =>
+        histogram.reset()
+        session
+      })
+    )
     .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
 
   val measurement = scenario("WebSockets measurements")
-    .exec(ws("Connect WS").connect("/ts"))
-    .exec(wsSubscribe("Subscribe", histogram))
-    .exec(ws("Close WS").close)
+    .exec(
+      ws("Connect WS").connect("/ts"),
+      wsSubscribe("Subscribe", histogram),
+      ws("Close WS").close
+    )
     .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
 
   setUp(
