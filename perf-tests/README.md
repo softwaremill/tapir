@@ -99,5 +99,6 @@ perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.Tapir
 ```
 perfTests/Gatling/testOnly sttp.tapir.perf.WebSocketsSimulation 
 ```
-4. Read the histogram report generated in the end in your stdout.
+4. A HdrHistogram report will be printed to stdout and to a file. Check output for the full path.
 5. Stop the server manually.
+6. Use [HDR Histogram Plotter](https://hdrhistogram.github.io/HdrHistogram/plotFiles.html) to plot histogram file(s)

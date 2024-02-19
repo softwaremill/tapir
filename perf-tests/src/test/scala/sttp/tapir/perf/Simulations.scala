@@ -6,8 +6,10 @@ import io.gatling.http.Predef._
 import org.HdrHistogram.{ConcurrentHistogram, Histogram}
 import sttp.tapir.perf.Common._
 
+import java.io.{FileOutputStream, PrintStream}
+import java.nio.file.Paths
 import scala.concurrent.duration._
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Using}
 
 object CommonSimulations {
   private val baseUrl = "127.0.0.1:8080"
@@ -182,8 +184,21 @@ class WebSocketsSimulation extends Simulation {
 
   val histogram = new ConcurrentHistogram(1L, 10000L, 3)
   Runtime.getRuntime.addShutdownHook(new Thread {
-    override def run(): Unit =
-      histogram.outputPercentileDistribution(System.out, 1.0)
+    override def run(): Unit = {
+      val baseDir = System.getProperty("user.dir")
+      val targetFilePath = Paths.get(baseDir).resolve(s"websockets-latency-${System.currentTimeMillis()}")
+      Using.Manager { use =>
+        val fos = use(new FileOutputStream(targetFilePath.toFile))
+        val ps = use(new PrintStream(fos))
+        histogram.outputPercentileDistribution(System.out, 1.0)
+        histogram.outputPercentileDistribution(ps, 1.0)
+      } match {
+        case Success(_) =>
+          println(s"******* Histogram saved to $targetFilePath")
+        case Failure(ex) =>
+          ex.printStackTrace
+      }
+    }
   })
   val warmup = scenario("WS warmup")
     .exec(
