@@ -18,9 +18,10 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.{CodecFormat, endpoint, webSocketBody}
 
-import scala.concurrent.duration._
-
 object Http4sCommon {
+  // Websocket response is returned with a lag, so that we can have more concurrent users talking to the server.
+  // This lag is not relevant for measurements, because the server returns a timestamp after having a response ready to send back,
+  // so the client can measure only the latency of the server stack handling the response.
   val wsResponseStream = Stream.fixedRate[IO](WebSocketSingleResponseLag, dampen = false)
 }
 
