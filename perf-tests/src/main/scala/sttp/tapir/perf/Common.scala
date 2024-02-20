@@ -16,9 +16,11 @@ object Common {
   val Port = 8080
   val TmpDir: File = new java.io.File(System.getProperty("java.io.tmpdir")).getAbsoluteFile
   def newTempFilePath(): Path = TmpDir.toPath.resolve(s"tapir-${new Date().getTime}-${Random.nextLong()}")
-  def buildOptions[F[_], O](customiseInterceptors: CustomiseInterceptors[F, O],  withServerLog: Boolean): O = 
+  def buildOptions[F[_], O](customiseInterceptors: CustomiseInterceptors[F, O], withServerLog: Boolean): O =
     (if (withServerLog == false)
-      customiseInterceptors.serverLog(None)
-    else
-      customiseInterceptors).options
+       customiseInterceptors.serverLog(None)
+     else
+       customiseInterceptors).options
+  val WebSocketRequestsPerUser = 600
+  val WebSocketSingleResponseLag = 100.millis
 }

@@ -1,15 +1,18 @@
 package sttp.tapir.perf
 
 import io.gatling.core.Predef._
-import io.gatling.core.structure.PopulationBuilder
+import io.gatling.core.structure.{ChainBuilder, PopulationBuilder}
 import io.gatling.http.Predef._
+import org.HdrHistogram.{ConcurrentHistogram, Histogram}
 import sttp.tapir.perf.Common._
 
-import scala.util.Random
-import io.gatling.core.structure.ChainBuilder
+import java.io.{FileOutputStream, PrintStream}
+import java.nio.file.Paths
+import scala.concurrent.duration._
+import scala.util.{Failure, Random, Success, Using}
 
 object CommonSimulations {
-  private val baseUrl = "http://127.0.0.1:8080"
+  private val baseUrl = "127.0.0.1:8080"
   private val random = new Random()
 
   def randomByteArray(size: Int): Array[Byte] = {
@@ -36,7 +39,8 @@ object CommonSimulations {
   def userCount = getParam("user-count").toInt
   def duration = getParam("duration-seconds").toInt
   def namePrefix = if (getParamOpt("is-warm-up").map(_.toBoolean) == Some(true)) "[WARMUP] " else ""
-  val httpProtocol = http.baseUrl(baseUrl)
+  val httpProtocol = http.baseUrl(s"http://$baseUrl")
+  val wsPubHttpProtocol = http.wsBaseUrl(s"ws://$baseUrl/ws")
 
   def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
     val execHttpGet: ChainBuilder = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
@@ -116,34 +120,107 @@ object CommonSimulations {
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
   }
+
 }
 
 import CommonSimulations._
 
-class SimpleGetSimulation extends Simulation {
+abstract class PerfTestSuiteRunnerSimulation extends Simulation
+
+class SimpleGetSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_simple_get(0)): Unit
 }
 
-class SimpleGetMultiRouteSimulation extends Simulation {
+class SimpleGetMultiRouteSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_simple_get(127)): Unit
 }
 
-class PostBytesSimulation extends Simulation {
+class PostBytesSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_bytes(0)): Unit
 }
 
-class PostLongBytesSimulation extends Simulation {
+class PostLongBytesSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_long_bytes(0)): Unit
 }
 
-class PostFileSimulation extends Simulation {
+class PostFileSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_file(0)): Unit
 }
 
-class PostStringSimulation extends Simulation {
+class PostStringSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_string(0)): Unit
 }
 
-class PostLongStringSimulation extends Simulation {
+class PostLongStringSimulation extends PerfTestSuiteRunnerSimulation {
   setUp(scenario_post_long_string(0)): Unit
+}
+
+/** Based on https://github.com/kamilkloch/websocket-benchmark/ Can't be executed using PerfTestSuiteRunner, see perfTests/README.md
+  */
+class WebSocketsSimulation extends Simulation {
+  val scenarioUserCount = 2500
+  val scenarioDuration = 30.seconds
+
+  /** Sends requests after connecting a user to a WebSocket. For each request, waits at most 1 second for a response. The response body
+    * carries a timestamp which is subtracted from current timestamp to calculate latency. The latency represents time between server
+    * finishing preparing a message and client receiving the message, so it's unidirectional. Some artificial lag may be introduced on the
+    * server (like 100 milliseconds) producing responses, so that it simulates an emitter producing data as a stream, and our test measures
+    * only the latency of returning data once its prepared. This method has to operate in such a mode because Gatling operates in a
+    * request->response flow.
+    */
+  private def wsSubscribe(name: String, histogram: Histogram): ChainBuilder = {
+    repeat(WebSocketRequestsPerUser, "i")(
+      ws(name)
+        .sendText("0")
+        .await(1.second)(
+          ws
+            .checkTextMessage(name)
+            .check(bodyString.transform { ts =>
+              histogram.recordValue(Math.max(System.currentTimeMillis() - ts.toLong, 0))
+            })
+        )
+    )
+  }
+
+  val histogram = new ConcurrentHistogram(1L, 10000L, 3)
+  Runtime.getRuntime.addShutdownHook(new Thread {
+    override def run(): Unit = {
+      val baseDir = System.getProperty("user.dir")
+      val targetFilePath = Paths.get(baseDir).resolve(s"websockets-latency-${System.currentTimeMillis()}")
+      Using.Manager { use =>
+        val fos = use(new FileOutputStream(targetFilePath.toFile))
+        val ps = use(new PrintStream(fos))
+        histogram.outputPercentileDistribution(System.out, 1.0)
+        histogram.outputPercentileDistribution(ps, 1.0)
+      } match {
+        case Success(_) =>
+          println(s"******* Histogram saved to $targetFilePath")
+        case Failure(ex) =>
+          ex.printStackTrace
+      }
+    }
+  })
+  val warmup = scenario("WS warmup")
+    .exec(
+      ws("Warmup Connect WS").connect("/ts"),
+      wsSubscribe("Warmup Subscribe", histogram),
+      ws("Warmup Close WS").close,
+      exec({ session =>
+        histogram.reset()
+        session
+      })
+    )
+    .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
+
+  val measurement = scenario("WebSockets measurements")
+    .exec(
+      ws("Connect WS").connect("/ts"),
+      wsSubscribe("Subscribe", histogram),
+      ws("Close WS").close
+    )
+    .inject(rampUsers(scenarioUserCount).during(scenarioDuration))
+
+  setUp(
+    warmup.andThen(measurement)
+  ).protocols(wsPubHttpProtocol): Unit
 }

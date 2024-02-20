@@ -1,6 +1,5 @@
 package sttp.tapir.perf
 
-import io.gatling.core.scenario.Simulation
 import io.github.classgraph.ClassGraph
 import sttp.tapir.perf.apis.ServerRunner
 
@@ -40,7 +39,7 @@ object TypeScanner {
       .map(c => c.stripPrefix(s"${rootPackage}.").stripSuffix("Server$"))
 
   lazy val allSimulations: List[String] =
-    findAllImplementations[Simulation](rootPackage)
+    findAllImplementations[PerfTestSuiteRunnerSimulation](rootPackage)
       .map(_.getName)
       .map(c => c.stripPrefix(s"${rootPackage}.").stripSuffix("Simulation"))
 
