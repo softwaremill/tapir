@@ -499,6 +499,21 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   )
   .dependsOn(core, files, circeJson, cats)
 
+/**
+  * For optimal memory usage and lower latency.
+  */
+lazy val perfServerJavaOptions = List(
+  "-Dcats.effect.tracing.mode=none",
+  "-Dcats.effect.tracing.exceptions.enhanced=false",
+  "-Dcats.effect.tracing.buffer.size=64",
+  "-Djava.lang.Integer.IntegerCache.high=65536",
+  "-Djava.net.preferIPv4Stack=true",
+  "-Xms32g",
+  "-Xmx32g",
+  "-XX:+AlwaysPreTouch",
+  "-XX:+UseZGC",
+  "-XX:+ZGenerational"
+)
 lazy val flightRecordingJavaOpts = "-XX:StartFlightRecording=filename=recording.jfr,dumponexit=true,duration=120s"
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
@@ -530,8 +545,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     fork := true,
     connectInput := true,
-    Compile / run / javaOptions += flightRecordingJavaOpts,
-    Test / run / javaOptions -= flightRecordingJavaOpts
+    Compile / run / javaOptions ++= flightRecordingJavaOpts :: perfServerJavaOptions,
+    Test / run / javaOptions --= flightRecordingJavaOpts :: perfServerJavaOptions
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)
