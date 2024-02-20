@@ -13,7 +13,6 @@ import sttp.tapir.server.vertx.streams.VertxStreams
 import sttp.tapir.server.vertx.{VertxFutureServerInterpreter, VertxFutureServerOptions}
 
 import scala.concurrent.Future
-import io.vertx.core.http.WebSocket
 
 object Tapir extends Endpoints {
   import sttp.tapir._
