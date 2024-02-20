@@ -16,7 +16,7 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.perf.Common._
 import sttp.tapir.perf.apis._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
-import sttp.tapir.{CodecFormat, endpoint, webSocketBody}
+import sttp.tapir.{CodecFormat, webSocketBody}
 
 object Http4sCommon {
   // Websocket response is returned with a lag, so that we can have more concurrent users talking to the server.
@@ -74,8 +74,7 @@ object Tapir extends Endpoints {
 
   implicit val mErr: MonadError[IO] = new CatsMonadError[IO]
 
-  private val wsEndpoint = endpoint.get
-    .in("ts")
+  private val wsEndpoint = wsBaseEndpoint
     .out(
       webSocketBody[Long, CodecFormat.TextPlain, Long, CodecFormat.TextPlain](Fs2Streams[IO])
         .concatenateFragmentedFrames(false)
@@ -95,7 +94,7 @@ object Tapir extends Endpoints {
 
   def wsApp(withServerLog: Boolean = false): WebSocketBuilder2[IO] => HttpApp[IO] = { wsb =>
     val serverOptions = buildOptions(Http4sServerOptions.customiseInterceptors[IO], withServerLog)
-    Router("/ws" -> {
+    Router("/" -> {
       Http4sServerInterpreter[IO](serverOptions)
         .toWebSocketRoutes(
           wsEndpoint.serverLogicSuccess(_ =>

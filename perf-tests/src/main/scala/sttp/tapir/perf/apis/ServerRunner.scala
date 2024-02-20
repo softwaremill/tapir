@@ -1,7 +1,6 @@
 package sttp.tapir.perf.apis
 
 import cats.effect.{ExitCode, IO, IOApp}
-import sttp.tapir.perf.Common._
 
 import scala.reflect.runtime.universe
 
