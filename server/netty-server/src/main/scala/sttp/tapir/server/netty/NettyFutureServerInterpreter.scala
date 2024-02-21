@@ -37,6 +37,6 @@ object NettyFutureServerInterpreter {
   }
 
   private object FutureRunAsync extends RunAsync[Future] {
-    override def apply[T](f: => Future[T]): Unit = f
+    override def apply(f: => Future[Unit]): Unit = f
   }
 }

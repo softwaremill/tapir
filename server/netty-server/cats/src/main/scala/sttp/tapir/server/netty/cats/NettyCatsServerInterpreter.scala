@@ -23,7 +23,7 @@ trait NettyCatsServerInterpreter[F[_]] {
 
     implicit val monad: MonadError[F] = new CatsMonadError[F]
     val runAsync = new RunAsync[F] {
-      override def apply[T](f: => F[T]): Unit = nettyServerOptions.dispatcher.unsafeRunAndForget(f)
+      override def apply(f: => F[Unit]): Unit = nettyServerOptions.dispatcher.unsafeRunAndForget(f)
     }
     implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
 

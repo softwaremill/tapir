@@ -59,6 +59,6 @@ object NettyZioServerInterpreter {
   }
 
   private[netty] class ZioRunAsync[R](runtime: Runtime[R]) extends RunAsync[RIO[R, *]] {
-    override def apply[T](f: => RIO[R, T]): Unit = Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f))
+    override def apply(f: => RIO[R, Unit]): Unit = Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(f))
   }
 }

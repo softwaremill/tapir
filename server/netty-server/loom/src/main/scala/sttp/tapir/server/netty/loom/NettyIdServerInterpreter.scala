@@ -16,7 +16,7 @@ trait NettyIdServerInterpreter {
       new NettyToResponseBody[Id],
       nettyServerOptions.deleteFile,
       new RunAsync[Id] {
-        override def apply[T](f: => Id[T]): Unit = {
+        override def apply(f: => Id[Unit]): Unit = {
           val _ = f
           ()
         }
