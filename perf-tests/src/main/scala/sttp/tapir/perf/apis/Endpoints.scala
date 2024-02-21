@@ -59,6 +59,8 @@ trait Endpoints {
     )
   }
 
+  val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
+
   def genServerEndpoints[F[_]](routeCount: Int)(reply: String => F[String]): List[ServerEndpoint[Any, F]] =
     serverEndpoints[F](reply).flatMap(gen => (0 to routeCount).map(i => gen(i)))
 
