@@ -88,7 +88,7 @@ object Tapir extends Endpoints {
     val interpreter = Http4sServerInterpreter[IO](serverOptions)
     Router(
       (
-        (("/ws") -> {
+        (("/") -> {
           interpreter
             .toWebSocketRoutes(
               wsEndpoint.serverLogicSuccess(_ =>
