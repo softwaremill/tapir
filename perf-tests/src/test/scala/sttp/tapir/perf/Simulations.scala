@@ -1,15 +1,14 @@
 package sttp.tapir.perf
 
 import io.gatling.core.Predef._
+import io.gatling.core.session.Expression
 import io.gatling.core.structure.{ChainBuilder, PopulationBuilder}
 import io.gatling.http.Predef._
 import org.HdrHistogram.{ConcurrentHistogram, Histogram}
 import sttp.tapir.perf.Common._
 
-import java.io.{FileOutputStream, PrintStream}
-import java.nio.file.Paths
 import scala.concurrent.duration._
-import scala.util.{Failure, Random, Success, Using}
+import scala.util.Random
 
 object CommonSimulations {
   private val baseUrl = "127.0.0.1:8080"
@@ -39,11 +38,24 @@ object CommonSimulations {
   def userCount = getParam("user-count").toInt
   def duration = getParam("duration-seconds").toInt
   def namePrefix = if (getParamOpt("is-warm-up").map(_.toBoolean) == Some(true)) "[WARMUP] " else ""
+  val responseTimeKey = "responseTime"
+  def sessionSaveResponseTime = responseTimeInMillis.saveAs(responseTimeKey)
+  def recordResponseTime(histogram: Histogram): Expression[Session] = { session =>
+    val responseTime = session("responseTime").as[Int]
+    histogram.recordValue(responseTime.toLong)
+    session
+  }
+
   val httpProtocol = http.baseUrl(s"http://$baseUrl")
   val wsPubHttpProtocol = http.wsBaseUrl(s"ws://$baseUrl/ws")
 
-  def scenario_simple_get(routeNumber: Int): PopulationBuilder = {
-    val execHttpGet: ChainBuilder = exec(http(s"HTTP GET /path$routeNumber/4").get(s"/path$routeNumber/4"))
+  def scenario_simple_get(routeNumber: Int, histogram: Histogram): PopulationBuilder = {
+    val execHttpGet: ChainBuilder = exec(
+      http(s"HTTP GET /path$routeNumber/4")
+        .get(s"/path$routeNumber/4")
+        .check(sessionSaveResponseTime)
+    )
+      .exec(recordResponseTime(histogram))
 
     scenario(s"${namePrefix}Repeatedly invoke GET of route number $routeNumber")
       .during(duration)(execHttpGet)
@@ -51,13 +63,15 @@ object CommonSimulations {
       .protocols(httpProtocol)
   }
 
-  def scenario_post_string(routeNumber: Int): PopulationBuilder = {
+  def scenario_post_string(routeNumber: Int, histogram: Histogram): PopulationBuilder = {
     val execHttpPost = exec(
       http(s"HTTP POST /path$routeNumber")
         .post(s"/path$routeNumber")
         .body(StringBody(_ => new String(randomAlphanumByteArray(256))))
         .header("Content-Type", "text/plain")
+        .check(sessionSaveResponseTime)
     )
+      .exec(recordResponseTime(histogram))
 
     scenario(s"${namePrefix}Repeatedly invoke POST with short string body")
       .during(duration)(execHttpPost)
@@ -65,13 +79,15 @@ object CommonSimulations {
       .protocols(httpProtocol)
 
   }
-  def scenario_post_bytes(routeNumber: Int): PopulationBuilder = {
+  def scenario_post_bytes(routeNumber: Int, histogram: Histogram): PopulationBuilder = {
     val execHttpPost = exec(
       http(s"HTTP POST /pathBytes$routeNumber")
         .post(s"/pathBytes$routeNumber")
         .body(ByteArrayBody(_ => randomAlphanumByteArray(256)))
         .header("Content-Type", "text/plain") // otherwise Play complains
+        .check(sessionSaveResponseTime)
     )
+      .exec(recordResponseTime(histogram))
 
     scenario(s"${namePrefix}Repeatedly invoke POST with short byte array body")
       .during(duration)(execHttpPost)
@@ -93,13 +109,15 @@ object CommonSimulations {
       .protocols(httpProtocol)
   }
 
-  def scenario_post_long_bytes(routeNumber: Int): PopulationBuilder = {
+  def scenario_post_long_bytes(routeNumber: Int, histogram: Histogram): PopulationBuilder = {
     val execHttpPost = exec(
       http(s"HTTP POST /pathBytes$routeNumber")
         .post(s"/pathBytes$routeNumber")
         .body(ByteArrayBody(constRandomLongAlphanumBytes))
         .header("Content-Type", "text/plain") // otherwise Play complains
+        .check(sessionSaveResponseTime)
     )
+      .exec(recordResponseTime(histogram))
 
     scenario(s"${namePrefix}Repeatedly invoke POST with large byte array")
       .during(duration)(execHttpPost)
@@ -107,13 +125,15 @@ object CommonSimulations {
       .protocols(httpProtocol)
   }
 
-  def scenario_post_long_string(routeNumber: Int): PopulationBuilder = {
+  def scenario_post_long_string(routeNumber: Int, histogram: Histogram): PopulationBuilder = {
     val execHttpPost = exec(
       http(s"HTTP POST /path$routeNumber")
         .post(s"/path$routeNumber")
         .body(ByteArrayBody(constRandomLongAlphanumBytes))
         .header("Content-Type", "text/plain")
+        .check(sessionSaveResponseTime)
     )
+      .exec(recordResponseTime(histogram))
 
     scenario(s"${namePrefix}Repeatedly invoke POST with large byte array, interpreted to a String")
       .during(duration)(execHttpPost)
@@ -125,22 +145,34 @@ object CommonSimulations {
 
 import CommonSimulations._
 
-abstract class PerfTestSuiteRunnerSimulation extends Simulation
+abstract class PerfTestSuiteRunnerSimulation extends Simulation {
+  lazy val histogram = new ConcurrentHistogram(1L, 10000L, 3)
+
+  before {
+    println("Resetting Histogram")
+    histogram.reset
+  }
+
+  after {
+    HistogramPrinter.saveToFile(histogram, getClass.getSimpleName)
+  }
+}
 
 class SimpleGetSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_simple_get(0)): Unit
+  setUp(scenario_simple_get(0, histogram)): Unit
 }
 
 class SimpleGetMultiRouteSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_simple_get(127)): Unit
+  setUp(scenario_simple_get(127, histogram)): Unit
 }
 
 class PostBytesSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_post_bytes(0)): Unit
+  setUp(scenario_post_bytes(0, histogram)): Unit
+
 }
 
 class PostLongBytesSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_post_long_bytes(0)): Unit
+  setUp(scenario_post_long_bytes(0, histogram)): Unit
 }
 
 class PostFileSimulation extends PerfTestSuiteRunnerSimulation {
@@ -148,11 +180,11 @@ class PostFileSimulation extends PerfTestSuiteRunnerSimulation {
 }
 
 class PostStringSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_post_string(0)): Unit
+  setUp(scenario_post_string(0, histogram)): Unit
 }
 
 class PostLongStringSimulation extends PerfTestSuiteRunnerSimulation {
-  setUp(scenario_post_long_string(0)): Unit
+  setUp(scenario_post_long_string(0, histogram)): Unit
 }
 
 /** Based on https://github.com/kamilkloch/websocket-benchmark/ Can't be executed using PerfTestSuiteRunner, see perfTests/README.md
@@ -160,6 +192,11 @@ class PostLongStringSimulation extends PerfTestSuiteRunnerSimulation {
 class WebSocketsSimulation extends Simulation {
   val scenarioUserCount = 2500
   val scenarioDuration = 30.seconds
+  lazy val histogram = new ConcurrentHistogram(1L, 10000L, 3)
+
+  after {
+    HistogramPrinter.saveToFile(histogram, "ws-latency")
+  }
 
   /** Sends requests after connecting a user to a WebSocket. For each request, waits at most 1 second for a response. The response body
     * carries a timestamp which is subtracted from current timestamp to calculate latency. The latency represents time between server
@@ -181,25 +218,6 @@ class WebSocketsSimulation extends Simulation {
         )
     )
   }
-
-  val histogram = new ConcurrentHistogram(1L, 10000L, 3)
-  Runtime.getRuntime.addShutdownHook(new Thread {
-    override def run(): Unit = {
-      val baseDir = System.getProperty("user.dir")
-      val targetFilePath = Paths.get(baseDir).resolve(s"websockets-latency-${System.currentTimeMillis()}")
-      Using.Manager { use =>
-        val fos = use(new FileOutputStream(targetFilePath.toFile))
-        val ps = use(new PrintStream(fos))
-        histogram.outputPercentileDistribution(System.out, 1.0)
-        histogram.outputPercentileDistribution(ps, 1.0)
-      } match {
-        case Success(_) =>
-          println(s"******* Histogram saved to $targetFilePath")
-        case Failure(ex) =>
-          ex.printStackTrace
-      }
-    }
-  })
   val warmup = scenario("WS warmup")
     .exec(
       ws("Warmup Connect WS").connect("/ts"),
