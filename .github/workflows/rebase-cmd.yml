@@ -6,9 +6,10 @@ jobs:
   rebase:
     runs-on: ubuntu-latest
     steps:
-      - uses: peter-evans/rebase@v2
+      - uses: peter-evans/rebase@v3
         id: rebase
         with:
+          token: ${{ secrets.REPO_GITHUB_TOKEN }} # required so that CI will be triggered, see: https://github.com/peter-evans/create-pull-request/issues/48
           head: ${{ github.event.client_payload.pull_request.head.label }}
       - name: Add reaction
         if: steps.rebase.outputs.rebased-count == 1
