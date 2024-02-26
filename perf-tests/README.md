@@ -27,7 +27,7 @@ which displays help similar to:
 [error]   -d, --duration <value>  Single simulation duration in seconds, default is 10
 [error]   -g, --gatling-reports   Generate Gatling reports for individuals sims, may significantly affect total time (disabled by default)
 ```
-
+Generating Gatling reports is useful if you want to verify additional data like latency or throughput distribution over time.
 If you want to run a test server separately from simulations, use a separate sbt session and start it using `ServerRunner`:
 
 ```
@@ -64,8 +64,16 @@ perfTest/Test/runMain sttp.tapir.perf.PerfTestSuiteRunner -m PostBytes,PostLongB
 
 ## Reports
 
-After all tests finish successfully, your console output will point to report files, 
-containing aggregated results from the entire suite:
+Each single simulation results in a latency HDR Histogram report printed to stdout as well as a file:
+
+```
+[info] ******* Histogram saved to /home/kc/code/oss/tapir/.sbt/matrix/perfTests/SimpleGetSimulation-2024-02-26_10_30_22
+```
+
+You can use [HDR Histogram Plotter](https://hdrhistogram.github.io/HdrHistogram/plotFiles.html) to plot a set of such files.
+
+The main report is generated after all tests, and contains results for standard Gatling latencies and mean throughput in a table combining
+all servers and tests. They will be printed to a HTML and a CSV file after the suite finishes:
 ```
 [info] ******* Test Suite report saved to /home/alice/projects/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.csv
 [info] ******* Test Suite report saved to /home/alice/projects/tapir/.sbt/matrix/perfTests/tapir-perf-tests-2024-01-22_16_33_14.html
