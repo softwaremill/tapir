@@ -33,7 +33,7 @@ input and output parameters. An endpoint specification can be interpreted as:
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](https://tapir.softwaremill.com/en/latest/examples.html) 
-or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works! Or, use [adopt-tapir](https://adopt-tapir.softwaremill.com) to generate a tapir-based project in a couple of clicks! You can also generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8`.
+or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works! Or, use [adopt-tapir](https://adopt-tapir.softwaremill.com) to generate a tapir-based project in a couple of clicks! You can also generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8`. Finally, ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir).
 
 ## Why tapir?
 
@@ -241,4 +241,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2023 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2024 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
