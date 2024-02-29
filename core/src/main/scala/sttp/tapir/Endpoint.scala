@@ -220,10 +220,10 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](o, oneOfDefaultVariant(errorOutput)), identity)
 
-   /** Same as [[errorOutVariantPrepend]], but allows appending multiple variants in one go. */
+  /** Same as [[errorOutVariantPrepend]], but allows appending multiple variants in one go. */
   def errorOutVariantsPrepend[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](oneOfDefaultVariant(errorOutput), first +: other: _*), identity)
- 
+
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
       ct: ClassTag[E],
@@ -339,7 +339,7 @@ trait EndpointMetaOps {
   /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
     * string representation of the method (if any) and path, e.g. `POST /books/add`
     */
-  def showShort: String = info.name match {
+  lazy val showShort: String = info.name match {
     case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
     case Some(name) => s"[$name]"
   }
@@ -347,7 +347,7 @@ trait EndpointMetaOps {
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
     * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
     */
-  def show: String = {
+  lazy val show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
@@ -401,7 +401,7 @@ trait EndpointMetaOps {
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
     */
-  def method: Option[Method] = {
+  lazy val method: Option[Method] = {
     import sttp.tapir.internal._
     input.method.orElse(securityInput.method)
   }
