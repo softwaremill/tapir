@@ -242,7 +242,7 @@ object Validator extends ValidatorMacros {
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def apply(t: T): List[ValidationError[_]] = validators.flatMap(_.apply(t)).toList
 
-    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
+    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) this.asInstanceOf[Validator[TT]] else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
 
