@@ -31,7 +31,7 @@ private[http4s] case class Http4sServerRequest[F[_]](req: Request[F], attributes
       req.uri.scheme.map(_.value),
       req.uri.authority.map(a => Authority(a.userInfo.map(u => UserInfo(u.username, u.password)), HostSegment(a.host.value), a.port)),
       PathSegments.absoluteOrEmptyS(req.uri.path.segments.map(_.decoded()) ++ (if (req.uri.path.endsWithSlash) Seq("") else Nil)),
-      req.uri.query.pairs.map(kv => QuerySegment.KeyValue(kv._1, kv._2.getOrElse(""))),
+      req.uri.query.pairs.map(kv => kv._2.map(v => QuerySegment.KeyValue(kv._1, v)).getOrElse(QuerySegment.Value(kv._1))),
       req.uri.fragment.map(f => FragmentSegment(f))
     )
   override lazy val headers: Seq[Header] = req.headers.headers.map(h => Header(h.name.toString, h.value))
