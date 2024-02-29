@@ -50,7 +50,7 @@ object Versions {
   val newtype = "0.4.4"
   val monixNewtype = "0.2.3"
   val zioPrelude = "1.0.0-RC23"
-  val awsLambdaInterface = "2.4.1"
+  val awsLambdaInterface = "2.4.2"
   val armeria = "1.27.2"
   val scalaJava8Compat = "1.0.2"
   val scalaCollectionCompat = "2.11.0"
@@ -61,6 +61,6 @@ object Versions {
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.3.0"
   val nettyAll = "4.1.107.Final"
-  val logback = "1.5.0"
+  val logback = "1.5.1"
   val slf4j = "2.0.12"
 }
