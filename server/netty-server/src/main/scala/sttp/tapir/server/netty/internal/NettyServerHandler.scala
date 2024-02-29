@@ -85,7 +85,9 @@ class NettyServerHandler[F[_]](
             pendingResponses.length
           )
         }
-        pendingResponses.foreach(_.apply())
+        while(pendingResponses.nonEmpty) {
+          pendingResponses.dequeue().apply()
+        }
       }
     }
   }
