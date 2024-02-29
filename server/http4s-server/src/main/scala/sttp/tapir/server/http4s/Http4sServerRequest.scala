@@ -25,7 +25,6 @@ private[http4s] case class Http4sServerRequest[F[_]](req: Request[F], attributes
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.multiParams)
 
   override def method: Method = Method(req.method.name.toUpperCase)
-  // override def uri: Uri = Uri.unsafeParse(req.uri.toString())
   override lazy val uri: Uri =
     Uri.apply(
       req.uri.scheme.map(_.value),
