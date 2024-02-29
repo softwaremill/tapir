@@ -339,7 +339,7 @@ trait EndpointMetaOps {
   /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
     * string representation of the method (if any) and path, e.g. `POST /books/add`
     */
-  def showShort: String = info.name match {
+  lazy val showShort: String = info.name match {
     case None       => s"${method.map(_.toString()).getOrElse("*")} ${showPathTemplate(showQueryParam = None)}"
     case Some(name) => s"[$name]"
   }
@@ -347,7 +347,7 @@ trait EndpointMetaOps {
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then path, etc.). E.g.:
     * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
     */
-  def show: String = {
+  lazy val show: String = {
     def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
@@ -367,7 +367,7 @@ trait EndpointMetaOps {
     * Endpoint(securityin: -, in: /books POST /add {body as application/json (UTF-8)} {header Authorization}, errout: {body as text/plain (UTF-8)}, out: -)
     * }}}
     */
-  def showDetail: String =
+  lazy val showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   protected def showType: String
 
@@ -401,7 +401,7 @@ trait EndpointMetaOps {
   /** The method defined in a fixed method input in this endpoint, if any (using e.g. [[EndpointInputsOps.get]] or
     * [[EndpointInputsOps.post]]).
     */
-  def method: Option[Method] = {
+  lazy val method: Option[Method] = {
     import sttp.tapir.internal._
     input.method.orElse(securityInput.method)
   }
