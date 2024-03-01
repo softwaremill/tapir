@@ -76,12 +76,17 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
         socketOverride
       )
 
-    nettyChannelFutureToScala(channelFuture).map(ch =>
-      (
-        ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+    nettyChannelFutureToScala(channelFuture)
+      .map(ch =>
+        (
+          ch.localAddress().asInstanceOf[SA],
+          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        )
       )
-    )
+      .recoverWith { case e =>
+        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          .flatMap(_ => Future.failed(e))
+      }
   }
 
   private def waitForClosedChannels(
@@ -115,14 +120,32 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       startNanos = System.nanoTime(),
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     ).flatMap { _ =>
-      nettyFutureToScala(ch.close()).flatMap { _ =>
-        if (config.shutdownEventLoopGroupOnClose) {
-          nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-            .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
-        } else Future.successful(())
-      }
+      nettyFutureToScala(ch.close()).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
     }
   }
+
+  private def stopRecovering(
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Future[Unit] = {
+    isShuttingDown.set(true)
+    waitForClosedChannels(
+      channelGroup,
+      startNanos = System.nanoTime(),
+      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+    ).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
+  }
+
+  private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
+    if (config.shutdownEventLoopGroupOnClose) {
+      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
+        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+    } else Future.successful(())
+  }
+
 }
 
 object NettyFutureServer {
