@@ -1,9 +1,10 @@
 package sttp.tapir.server.http4s
 
 import org.http4s.Request
+import sttp.model.Uri.{Authority, FragmentSegment, HostSegment, PathSegments, QuerySegment, UserInfo}
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.{AttributeKey, AttributeMap}
 
 import scala.collection.immutable.Seq
 
@@ -24,7 +25,14 @@ private[http4s] case class Http4sServerRequest[F[_]](req: Request[F], attributes
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.multiParams)
 
   override def method: Method = Method(req.method.name.toUpperCase)
-  override def uri: Uri = Uri.unsafeParse(req.uri.toString())
+  override lazy val uri: Uri =
+    Uri.apply(
+      req.uri.scheme.map(_.value),
+      req.uri.authority.map(a => Authority(a.userInfo.map(u => UserInfo(u.username, u.password)), HostSegment(a.host.value), a.port)),
+      PathSegments.absoluteOrEmptyS(req.uri.path.segments.map(_.decoded()) ++ (if (req.uri.path.endsWithSlash) Seq("") else Nil)),
+      req.uri.query.pairs.map(kv => kv._2.map(v => QuerySegment.KeyValue(kv._1, v)).getOrElse(QuerySegment.Value(kv._1))),
+      req.uri.fragment.map(f => FragmentSegment(f))
+    )
   override lazy val headers: Seq[Header] = req.headers.headers.map(h => Header(h.name.toString, h.value))
 
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)

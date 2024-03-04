@@ -15,8 +15,8 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
 val scala2_12 = "2.12.19"
-val scala2_13 = "2.13.12"
-val scala3 = "3.3.1"
+val scala2_13 = "2.13.13"
+val scala3 = "3.3.3"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -910,8 +910,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.28.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.28.3",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.3" % Test,
       scalaTest.value % Test
     )
   )
