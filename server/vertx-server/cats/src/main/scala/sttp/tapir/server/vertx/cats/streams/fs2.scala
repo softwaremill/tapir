@@ -192,14 +192,12 @@ object fs2 {
           o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
       ): ReadStream[WebSocketFrame] = {
         val contatenatedFrames = optionallyContatenateFrames(in, o.concatenateFragmentedFrames)
-        val ignorePings = optionallyIgnorePong(contatenatedFrames, o.ignorePong)
+        val ignorePongs = optionallyIgnorePong(contatenatedFrames, o.ignorePong)
 
-        val stream = ignorePings
+        val stream = ignorePongs
           .map(decodeFrame(_, o))
           .through(pipe)
           .map(o.responses.encode)
-          .chunks
-          .flatMap(Stream.chunk)
           .append(Stream(WebSocketFrame.close))
 
         mapToReadStream[WebSocketFrame, WebSocketFrame](stream, identity)
@@ -233,7 +231,7 @@ object fs2 {
             c.stream.append(Stream(Chunk.singleton(WebSocketFrame.close))).unchunks
         }
 
-        mapToReadStream[WebSocketFrame, WebSocketFrame](Stream.eval(mergedStream).flatten, identity)
+        mapToReadStream[WebSocketFrame, WebSocketFrame](Stream.force(mergedStream), identity)
       }
 
       override def webSocketPipe[REQ, RESP](
@@ -241,12 +239,12 @@ object fs2 {
           pipe: streams.Pipe[REQ, RESP],
           o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
       ): ReadStream[WebSocketFrame] = {
-        val stream0 = fromReadStreamInternal(readStream)
+        val stream = fromReadStreamInternal(readStream)
 
         if ((!o.autoPongOnPing) && o.autoPing.isEmpty) {
-          fastPath(stream0, pipe, o)
+          fastPath(stream, pipe, o)
         } else {
-          standardPath(stream0, pipe, o)
+          standardPath(stream, pipe, o)
         }
       }
 
