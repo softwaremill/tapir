@@ -3,6 +3,7 @@ package sttp.tapir.server.akkahttp
 import akka.http.scaladsl.server.RequestContext
 import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
 import akka.http.scaladsl.model.{Uri => AkkaUri}
+import sttp.model.Uri.{Authority, FragmentSegment, HostSegment, PathSegments, QuerySegment}
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -27,7 +28,35 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
   }
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(ctx.request.uri.query().toMultiMap)
   override lazy val method: Method = Method(ctx.request.method.value.toUpperCase)
-  override lazy val uri: Uri = Uri.unsafeParse(ctx.request.uri.toString())
+  
+  private def queryToSegments(query: AkkaUri.Query): List[QuerySegment] = {
+    @tailrec
+    def run(q: AkkaUri.Query, acc: List[QuerySegment]): List[QuerySegment] = q match {
+      case AkkaUri.Query.Cons(k, v, tail) => {
+        if (k.isEmpty)
+          run(tail, QuerySegment.Value(v) :: acc)
+        else if (v.isEmpty)
+          run(tail, QuerySegment.Value(k) :: acc)
+        else
+          run(tail, QuerySegment.KeyValue(k, v) :: acc)
+      }
+      case AkkaUri.Query.Empty => acc.reverse
+    }
+    run(query, Nil)
+  }
+
+  override lazy val uri: Uri = {
+    val pekkoUri = ctx.request.uri
+    Uri(
+      Some(pekkoUri.scheme),
+      // UserInfo is available only as a raw string, but we can skip it as it's not needed
+      Some(Authority(userInfo = None, HostSegment(pekkoUri.authority.host.address), Some(pekkoUri.effectivePort))),
+      PathSegments.absoluteOrEmptyS(pathSegments ++ (if (pekkoUri.path.endsWithSlash) Seq("") else Nil)),
+      queryToSegments(ctx.request.uri.query()),
+      ctx.request.uri.fragment.map(f => FragmentSegment(f))
+    )
+  }
+
 
   private val EmptyContentType = "none/none"
 
