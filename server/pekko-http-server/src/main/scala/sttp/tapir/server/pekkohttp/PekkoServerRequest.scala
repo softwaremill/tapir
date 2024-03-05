@@ -51,8 +51,8 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
       // UserInfo is available only as a raw string, but we can skip it as it's not needed
       Some(Authority(userInfo = None, HostSegment(pekkoUri.authority.host.address), Some(pekkoUri.effectivePort))),
       PathSegments.absoluteOrEmptyS(pathSegments ++ (if (pekkoUri.path.endsWithSlash) Seq("") else Nil)),
-      queryToSegments(ctx.request.uri.query()),
-      ctx.request.uri.fragment.map(f => FragmentSegment(f))
+      queryToSegments(pekkoUri.query()),
+      pekkoUri.fragment.map(f => FragmentSegment(f))
     )
   }
 
