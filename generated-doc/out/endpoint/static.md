@@ -12,7 +12,7 @@ from local files or application resources. These endpoints respect etags, byte r
 In order to use static content endpoints, add the module to your dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.9.10"
+"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.9.11"
 ```
 
 ## Files

@@ -17,6 +17,8 @@ Alternatively, you can generate a stub of a tapir-based application directly fro
 ## Blogs, articles
 
 * [Migrating from Akka HTTP to tapir](https://softwaremill.com/migrating-from-akka-http-to-tapir/)
+* [Benchmarking Tapir: Part 1](https://softwaremill.com/benchmarking-tapir-part-1/)
+* [Benchmarking Tapir: Part 2](https://softwaremill.com/benchmarking-tapir-part-2/)
 * [Tapir 1.0 released](https://softwaremill.com/tapir-1-0-released/)
 * [Security improvements in tapir 0.19](https://softwaremill.com/security-improvements-in-tapir-0-19/)
 * [Tapir serverless: a proof of concept](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)
