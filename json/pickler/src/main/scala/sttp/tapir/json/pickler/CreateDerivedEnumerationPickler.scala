@@ -61,8 +61,7 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     inline erasedValue[Cases] match {
       case _: (enumerationCase *: enumerationCasesTail) =>
         val processedHead = readWriterForEnumerationCase[enumerationCase]
-        val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail]
-        (processedHead +: processedTail)
+        val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail](processedHead +: processedTail)
       case _: EmptyTuple.type => Nil
     }
 

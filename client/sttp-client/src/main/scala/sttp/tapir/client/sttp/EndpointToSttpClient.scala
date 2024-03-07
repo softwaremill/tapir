@@ -73,53 +73,42 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointInput.FixedMethod(_, _, _) => (uri, req)
       case EndpointInput.FixedPath(p, _, _)   => (uri.addPath(p), req)
       case EndpointInput.PathCapture(_, codec, _) =>
-        val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
-        (uri.addPath(v), req)
+        val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)(uri.addPath(v), req)
       case EndpointInput.PathsCapture(codec, _) =>
-        val ps = codec.encode(value)
-        (uri.addPath(ps), req)
+        val ps = codec.encode(value)(uri.addPath(ps), req)
       case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
         (uri.withParams(uri.params.param(name, Nil)), req)
       case EndpointInput.Query(name, _, codec, _) =>
-        val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.addParam(name, v) }
-        (uri2, req)
+        val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.addParam(name, v) }(uri2, req)
       case EndpointInput.Cookie(name, codec, _) =>
-        val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.cookie(name, v) }
-        (uri, req2)
+        val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.cookie(name, v) }(uri, req2)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        val uri2 = uri.addParams(mqp.toSeq: _*)
-        (uri2, req)
+        val uri2 = uri.addParams(mqp.toSeq: _*)(uri2, req)
       case EndpointIO.Empty(_, _) => (uri, req)
       case EndpointIO.Body(bodyType, codec, _) =>
-        val req2 = setBody(value, bodyType, codec, req)
-        (uri, req2)
+        val req2 = setBody(value, bodyType, codec, req)(uri, req2)
       case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, uri, req)
       case EndpointIO.OneOfBody(
             EndpointIO.OneOfBodyVariant(_, Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)))) :: _,
             _
           ) =>
-        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
-        (uri, req2)
+        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])(uri, req2)
       case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
-        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
-        (uri, req2)
+        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])(uri, req2)
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
           .encode(value)
-          .foldLeft(req) { case (r, v) => r.header(name, v) }
-        (uri, req2)
+          .foldLeft(req) { case (r, v) => r.header(name, v) }(uri, req2)
       case EndpointIO.Headers(codec, _) =>
         val headers = codec.encode(value)
         val req2 = headers.foldLeft(req) { case (r, h) =>
           val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(h.name) || HeaderNames.ContentLength.equalsIgnoreCase(h.name)
           r.header(h, replaceExisting)
-        }
-        (uri, req2)
+        }(uri, req2)
       case EndpointIO.FixedHeader(h, _, _) =>
-        val req2 = req.header(h)
-        (uri, req2)
+        val req2 = req.header(h)(uri, req2)
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req)

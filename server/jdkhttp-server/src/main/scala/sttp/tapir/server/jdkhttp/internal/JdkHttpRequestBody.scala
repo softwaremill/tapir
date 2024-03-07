@@ -23,7 +23,12 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     toRaw(serverRequest, bodyType, request.getRequestBody, maxBytes)
   }
 
-  private def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], body: InputStream, maxBytes: Option[Long]): RawValue[RAW] = {
+  private def toRaw[RAW](
+      serverRequest: ServerRequest,
+      bodyType: RawBodyType[RAW],
+      body: InputStream,
+      maxBytes: Option[Long]
+  ): RawValue[RAW] = {
     def asInputStream: InputStream = maxBytes.map(limit => new FailingLimitedInputStream(body, limit)).getOrElse(body)
     def asByteArray: Array[Byte] = asInputStream.readAllBytes()
 

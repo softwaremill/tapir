@@ -44,7 +44,8 @@ case class PerfTestSuiteParams(
 
   /** Returns list of server names
     */
-  def serverNames: List[ServerName] = if (shortServerNames.nonEmpty) shortServerNames.map(ServerName.fromShort).distinct else List(ExternalServerName)
+  def serverNames: List[ServerName] =
+    if (shortServerNames.nonEmpty) shortServerNames.map(ServerName.fromShort).distinct else List(ExternalServerName)
 
   /** Returns pairs of (fullSimulationName, shortSimulationName), for example: (sttp.tapir.perf.SimpleGetSimulation, SimpleGet)
     */

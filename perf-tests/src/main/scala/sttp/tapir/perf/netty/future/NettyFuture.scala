@@ -36,4 +36,6 @@ object NettyFuture {
 
 object TapirServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(1)) }
 object TapirMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128)) }
-object TapirInterceptorMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128), withServerLog = true) }
+object TapirInterceptorMultiServer extends ServerRunner {
+  override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128), withServerLog = true)
+}

@@ -52,7 +52,7 @@ object StaticContentSecurePekkoServer extends App {
 
     assert(response2.code == StatusCode.Ok)
     assert(response2.body == "f1 content")
-    
+
     binding
   }
 

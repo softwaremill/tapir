@@ -189,8 +189,7 @@ object DecodeBasicInputs {
               decodedPathInputs(index) = in.codec.decode(seg)
               matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
             case None =>
-              val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
-              (failure, newCtx)
+              val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)(failure, newCtx)
           }
         case i: EndpointInput.PathsCapture[_] =>
           val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
@@ -206,8 +205,8 @@ object DecodeBasicInputs {
           // shape path mismatch - input path too long; there are more segments in the request path than expected by
           // that input. Reporting a failure on the last path input.
           val failure =
-            DecodeBasicInputsResult.Failure(lastPathInput, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
-          (failure, newCtx)
+            DecodeBasicInputsResult
+              .Failure(lastPathInput, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))(failure, newCtx)
         case _ =>
           (foldDecodedPathInputs(0, pathInputs, decodedPathInputs, decodeValues), ctx)
       }
@@ -307,8 +306,7 @@ object DecodeBasicInputs {
               )
           )
           .map(_.flatten)
-        val decodedCookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)
-        (decodedCookieValue, ctx)
+        val decodedCookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)(decodedCookieValue, ctx)
 
       case EndpointIO.Header(name, codec, _) =>
         (codec.decode(ctx.header(name)), ctx)

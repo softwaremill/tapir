@@ -128,12 +128,10 @@ object ZioWebSockets {
           case (Some(Left(acc)), f: SttpWebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
           case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if f.finalFragment =>
             println(s"final fragment: $f")
-            println(s"acc: $acc")
-            (None, Some(f.copy(payload = acc + f.payload)))
+            println(s"acc: $acc")(None, Some(f.copy(payload = acc + f.payload)))
           case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if !f.finalFragment =>
             println(s"final fragment: $f")
-            println(s"acc: $acc")
-            (Some(Right(acc + f.payload)), None)
+            println(s"acc: $acc")(Some(Right(acc + f.payload)), None)
 
           case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
         }

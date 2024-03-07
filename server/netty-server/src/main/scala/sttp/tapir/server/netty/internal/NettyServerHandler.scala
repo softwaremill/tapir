@@ -80,12 +80,9 @@ class NettyServerHandler[F[_]](
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
       val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
         if (logger.isDebugEnabled) {
-          logger.debug("Http channel to {} closed. Cancelling {} responses.",
-            ctx.channel.remoteAddress,
-            pendingResponses.length
-          )
+          logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
         }
-        while(pendingResponses.nonEmpty) {
+        while (pendingResponses.nonEmpty) {
           pendingResponses.dequeue().apply()
         }
       }

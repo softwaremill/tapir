@@ -20,11 +20,9 @@ private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[JdkHttpRespo
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): JdkHttpResponseBody = {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
-        val bytes = v.asInstanceOf[String].getBytes(charset)
-        (new ByteArrayInputStream(bytes), Some(bytes.length.toLong))
+        val bytes = v.asInstanceOf[String].getBytes(charset)(new ByteArrayInputStream(bytes), Some(bytes.length.toLong))
       case RawBodyType.ByteArrayBody =>
-        val arr = v.asInstanceOf[Array[Byte]]
-        (new ByteArrayInputStream(arr), Some(arr.length.toLong))
+        val arr = v.asInstanceOf[Array[Byte]](new ByteArrayInputStream(arr), Some(arr.length.toLong))
       case RawBodyType.ByteBufferBody =>
         (new ByteBufferBackedInputStream(v.asInstanceOf[ByteBuffer]), None) // TODO can't we provide the length?
       case RawBodyType.InputStreamBody =>
@@ -56,8 +54,7 @@ private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[JdkHttpRespo
         val entity = MultipartEntityBuilder.create()
         v.flatMap(rawPartToFormBodyPart(m, _)).foreach { (formBodyPart: FormBodyPart) => entity.addPart(formBodyPart) }
         val builtEntity = entity.build()
-        val inputStream: InputStream = builtEntity.getContent
-        (inputStream, Some(builtEntity.getContentLength))
+        val inputStream: InputStream = builtEntity.getContent(inputStream, Some(builtEntity.getContentLength))
     }
   }
 
@@ -132,4 +129,3 @@ private class ByteBufferBackedInputStream(buf: ByteBuffer) extends InputStream {
     len2
   }
 }
-
