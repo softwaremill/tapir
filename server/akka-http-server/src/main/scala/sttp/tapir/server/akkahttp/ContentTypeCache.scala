@@ -21,7 +21,8 @@ private[akkahttp] object ContentTypeCache {
       case None =>
         val contentType =
           ContentType.parse(headerValue).getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $headerValue"))
-        if (cache.size <= Limit) cache.putIfAbsent(headerValue, contentType) else ()
+        // We don't want to fill the cache with parameterized media types (BTW charset does not appear in params)
+        val _ = if (cache.size <= Limit && contentType.mediaType.params.isEmpty) cache.putIfAbsent(headerValue, contentType)
         contentType
     }
   }
