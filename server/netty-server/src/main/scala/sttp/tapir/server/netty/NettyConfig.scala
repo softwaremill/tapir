@@ -114,7 +114,7 @@ object NettyConfig {
     requestTimeout = Some(20.seconds),
     connectionTimeout = Some(10.seconds),
     socketTimeout = Some(60.seconds),
-    lingerTimeout = Some(60.seconds),
+    lingerTimeout = None,
     gracefulShutdownTimeout = Some(10.seconds),
     maxConnections = None,
     addLoggingHandler = false,
