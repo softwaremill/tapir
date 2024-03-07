@@ -36,10 +36,6 @@ import scala.concurrent.duration._
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
   *
-  * @param socketTimeout
-  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent. Socket
-  *   timeout also effectively establishes a read timeout.
-  *
   * @param lingerTimeout
   *   Sets the delay for which the Netty waits, while data is being transmitted, before closing a socket after receiving a call to close the
   *   socket
@@ -56,7 +52,6 @@ case class NettyConfig(
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
-    socketTimeout: Option[FiniteDuration],
     lingerTimeout: Option[FiniteDuration],
     socketKeepAlive: Boolean,
     addLoggingHandler: Boolean,
@@ -80,7 +75,6 @@ case class NettyConfig(
 
   def requestTimeout(r: FiniteDuration): NettyConfig = copy(requestTimeout = Some(r))
   def connectionTimeout(c: FiniteDuration): NettyConfig = copy(connectionTimeout = Some(c))
-  def socketTimeout(s: FiniteDuration): NettyConfig = copy(socketTimeout = Some(s))
   def lingerTimeout(l: FiniteDuration): NettyConfig = copy(requestTimeout = Some(l))
 
   def withSocketKeepAlive: NettyConfig = copy(socketKeepAlive = true)
@@ -113,7 +107,6 @@ object NettyConfig {
     socketKeepAlive = true,
     requestTimeout = Some(20.seconds),
     connectionTimeout = Some(10.seconds),
-    socketTimeout = Some(60.seconds),
     lingerTimeout = None,
     gracefulShutdownTimeout = Some(10.seconds),
     maxConnections = None,
