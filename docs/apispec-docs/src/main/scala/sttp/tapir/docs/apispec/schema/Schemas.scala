@@ -14,16 +14,7 @@ class Schemas(
   def apply(schema: TSchema[_]): ASchema = {
     schema.name match {
       case Some(name) => toSchemaReference.map(schema, name)
-      case None =>
-        schema.schemaType match {
-          case TSchemaType.SArray(nested @ TSchema(_, Some(name), isOptional, _, _, _, _, _, _, _, _)) =>
-            val s = ASchema(SchemaType.Array)
-              .copy(items = Some(toSchemaReference.map(nested, name)))
-
-            if (isOptional && markOptionsAsNullable) s.copy(nullable = Some(true)) else s
-          case TSchemaType.SOption(ts) => apply(ts)
-          case _                       => tschemaToASchema(schema)
-        }
+      case None       => tschemaToASchema(schema)
     }
   }
 }
