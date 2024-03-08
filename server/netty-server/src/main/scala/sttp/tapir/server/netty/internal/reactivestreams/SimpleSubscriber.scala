@@ -31,7 +31,7 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
 
   override def onNext(content: HttpContent): Unit = {
     val byteBuf = content.content()
-    if (contentLength.exists(_ == byteBuf.readableBytes())) {
+    if (contentLength.contains(byteBuf.readableBytes())) {
       val finalArray = ByteBufUtil.getBytes(byteBuf)
       byteBuf.release()
       resultBlockingQueue.add(Right(finalArray))
