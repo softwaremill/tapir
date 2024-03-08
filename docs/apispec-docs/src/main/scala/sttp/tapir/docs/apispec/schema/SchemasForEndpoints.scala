@@ -29,7 +29,8 @@ class SchemasForEndpoints(
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedCombinedSchemas.toMap)
     val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
 
-    val keysToSchemas: ListMap[SchemaKey, ASchema] = keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
+    val keysToSchemas: ListMap[SchemaKey, ASchema] =
+      keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2, allowReference = false))).toListMap
     val schemaIds: Map[SchemaKey, (SchemaId, ASchema)] = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
     val schemas = new Schemas(tschemaToASchema, toSchemaReference, markOptionsAsNullable)

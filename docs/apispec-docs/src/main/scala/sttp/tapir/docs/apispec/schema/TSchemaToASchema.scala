@@ -11,67 +11,70 @@ import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve nested references. */
 private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
-  def apply[T](schema: TSchema[T], isOptionElement: Boolean = false): ASchema = {
-    val nullable = markOptionsAsNullable && isOptionElement
-    val result = schema.schemaType match {
-      case TSchemaType.SInteger() => ASchema(SchemaType.Integer)
-      case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
-      case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
-      case TSchemaType.SString()  => ASchema(SchemaType.String)
-      case p @ TSchemaType.SProduct(fields) =>
-        ASchema(SchemaType.Object).copy(
-          required = p.required.map(_.encodedName),
-          properties = extractProperties(fields)
-        )
-      case TSchemaType.SArray(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
-        ASchema(SchemaType.Array).copy(items = Some(toSchemaReference.map(nested, name)))
-      case TSchemaType.SArray(el) => ASchema(SchemaType.Array).copy(items = Some(apply(el)))
-      case opt @ TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
-        // #3288: in case there are multiple different customisations of the nested schema, we need to propagate the
-        // metadata to properly customise the reference. These are also propagated in ToKeyedSchemas when computing
-        // the initial list of schemas.
-        val propagated = propagateMetadataForOption(schema, opt).element
-        val ref = toSchemaReference.map(propagated, name)
-        if (!markOptionsAsNullable) ref else ref.copy(nullable = Some(true))
-      case TSchemaType.SOption(el)    => apply(el, isOptionElement = true)
-      case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
-      case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
-      case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime)
-      case TSchemaType.SRef(fullName) => toSchemaReference.mapDirect(fullName)
-      case TSchemaType.SCoproduct(schemas, d) =>
-        ASchema.oneOf(
-          schemas
-            .filterNot(_.hidden)
-            .map {
-              case nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _) => toSchemaReference.map(nested, name)
-              case t                                                          => apply(t)
-            }
-            .sortBy {
-              case schema if schema.$ref.isDefined => schema.$ref.get
-              case schema => schema.`type`.collect { case t: BasicSchemaType => t.value }.getOrElse("") + schema.toString
-            },
-          d.map(tDiscriminatorToADiscriminator)
-        )
-      case p @ TSchemaType.SOpenProduct(fields, valueSchema) =>
-        ASchema(SchemaType.Object).copy(
-          required = p.required.map(_.encodedName),
-          properties = extractProperties(fields),
-          additionalProperties = Some(valueSchema.name match {
-            case Some(name) => toSchemaReference.map(valueSchema, name)
-            case _          => apply(valueSchema)
-          }).filterNot(_ => valueSchema.hidden)
-        )
-    }
 
-    val primitiveValidators = schema.validator.asPrimitiveValidators
-    val schemaIsWholeNumber = schema.schemaType match {
-      case TSchemaType.SInteger() => true
-      case _                      => false
+  /** @param allowReference
+    *   Can a reference schema be generated, if this is a named schema - should be `false` for top-level component definitions (otherwise
+    *   the definitions are infinitely recursive)
+    */
+  def apply[T](schema: TSchema[T], allowReference: Boolean, isOptionElement: Boolean = false): ASchema = {
+    val nullable = markOptionsAsNullable && isOptionElement
+
+    val result = schema.name match {
+      case Some(name) if allowReference => toSchemaReference.map(schema, name)
+      case _ =>
+        schema.schemaType match {
+          case TSchemaType.SInteger() => ASchema(SchemaType.Integer)
+          case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
+          case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
+          case TSchemaType.SString()  => ASchema(SchemaType.String)
+          case p @ TSchemaType.SProduct(fields) =>
+            ASchema(SchemaType.Object).copy(
+              required = p.required.map(_.encodedName),
+              properties = extractProperties(fields)
+            )
+          case TSchemaType.SArray(el) => ASchema(SchemaType.Array).copy(items = Some(apply(el, allowReference = true)))
+          case opt @ TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
+            // #3288: in case there are multiple different customisations of the nested schema, we need to propagate the
+            // metadata to properly customise the reference. These are also propagated in ToKeyedSchemas when computing
+            // the initial list of schemas.
+            val propagated = propagateMetadataForOption(schema, opt).element
+            val ref = toSchemaReference.map(propagated, name)
+            if (!markOptionsAsNullable) ref else ref.copy(nullable = Some(true))
+          case TSchemaType.SOption(el)    => apply(el, allowReference = true, isOptionElement = true)
+          case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
+          case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
+          case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime)
+          case TSchemaType.SRef(fullName) => toSchemaReference.mapDirect(fullName)
+          case TSchemaType.SCoproduct(schemas, d) =>
+            ASchema.oneOf(
+              schemas
+                .filterNot(_.hidden)
+                .map(apply(_, allowReference = true))
+                .sortBy {
+                  case schema if schema.$ref.isDefined => schema.$ref.get
+                  case schema => schema.`type`.collect { case t: BasicSchemaType => t.value }.getOrElse("") + schema.toString
+                },
+              d.map(tDiscriminatorToADiscriminator)
+            )
+          case p @ TSchemaType.SOpenProduct(fields, valueSchema) =>
+            ASchema(SchemaType.Object).copy(
+              required = p.required.map(_.encodedName),
+              properties = extractProperties(fields),
+              additionalProperties = Some(apply(valueSchema, allowReference = true)).filterNot(_ => valueSchema.hidden)
+            )
+        }
     }
 
     if (result.$ref.isEmpty) {
       // only customising non-reference schemas; references might get enriched with some meta-data if there
       // are multiple different customisations of the referenced schema in ToSchemaReference (#1203)
+
+      val primitiveValidators = schema.validator.asPrimitiveValidators
+      val schemaIsWholeNumber = schema.schemaType match {
+        case TSchemaType.SInteger() => true
+        case _                      => false
+      }
+
       var s = result
       s = if (nullable) s.copy(nullable = Some(true)) else s
       s = addMetadata(s, schema)
@@ -84,12 +87,7 @@ private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, mar
   private def extractProperties[T](fields: List[TSchemaType.SProductField[T]]) = {
     fields
       .filterNot(_.schema.hidden)
-      .map { f =>
-        f.schema.name match {
-          case Some(name) => f.name.encodedName -> toSchemaReference.map(f.schema, name)
-          case None       => f.name.encodedName -> apply(f.schema)
-        }
-      }
+      .map(f => f.name.encodedName -> apply(f.schema, allowReference = true))
       .toListMap
   }
 

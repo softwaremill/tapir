@@ -11,10 +11,5 @@ class Schemas(
 ) {
   def apply[T](codec: Codec[T, _, _]): ASchema = apply(codec.schema)
 
-  def apply(schema: TSchema[_]): ASchema = {
-    schema.name match {
-      case Some(name) => toSchemaReference.map(schema, name)
-      case None       => tschemaToASchema(schema)
-    }
-  }
+  def apply(schema: TSchema[_]): ASchema = tschemaToASchema(schema, true)
 }
