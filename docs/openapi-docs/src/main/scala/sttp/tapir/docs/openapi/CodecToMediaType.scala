@@ -1,12 +1,12 @@
 package sttp.tapir.docs.openapi
 
 import sttp.apispec.openapi.{MediaType => OMediaType}
-import sttp.tapir.docs.apispec.schema.Schemas
+import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.{CodecFormat, _}
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class CodecToMediaType(schemas: Schemas) {
+private[openapi] class CodecToMediaType(tschemaToASchema: TSchemaToASchema) {
   def apply[T, CF <: CodecFormat](
       o: Codec[_, T, CF],
       examples: List[EndpointIO.Example[T]],
@@ -19,7 +19,7 @@ private[openapi] class CodecToMediaType(schemas: Schemas) {
 
     ListMap(
       forcedContentType.getOrElse(o.format.mediaType.noCharset.toString) -> OMediaType(
-        Some(schemas(o)),
+        Some(tschemaToASchema(o)),
         allExamples.singleExample,
         allExamples.multipleExamples
       )

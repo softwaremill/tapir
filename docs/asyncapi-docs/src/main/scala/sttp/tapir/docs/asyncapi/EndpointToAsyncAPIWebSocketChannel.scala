@@ -6,14 +6,14 @@ import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.{DocsExtensions, namedPathComponents}
-import sttp.tapir.docs.apispec.schema.Schemas
+import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.internal.{IterableToListMap, RichEndpoint}
 import sttp.tapir.{AnyEndpoint, Codec, CodecFormat, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
 private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
-    schemas: Schemas,
+                                                            tschemaToASchema: TSchemaToASchema,
     codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions
 ) {
@@ -49,7 +49,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       codec: Codec[_, _, _ <: CodecFormat],
       info: EndpointIO.Info[_]
   ): ((String, Codec[_, _, _ <: CodecFormat]), ASchema) = {
-    val schemaRef = schemas(codec)
+    val schemaRef = tschemaToASchema(codec)
     schemaRef match {
       case schema if schema.$ref.isEmpty =>
         val schemaWithDescription = if (schema.description.isEmpty) schemaRef.copy(description = info.description) else schemaRef
@@ -63,7 +63,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
-      name -> Right(Parameter(info.description, Some(schemas(codec)), None, DocsExtensions.fromIterable(info.docsExtensions)))
+      name -> Right(Parameter(info.description, Some(tschemaToASchema(codec)), None, DocsExtensions.fromIterable(info.docsExtensions)))
     }.toListMap
   }
 
