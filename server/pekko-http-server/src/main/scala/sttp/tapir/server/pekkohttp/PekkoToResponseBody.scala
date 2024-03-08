@@ -132,7 +132,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
   }
 
   private def parseContentType(ct: String): ContentType =
-    ContentType.parse(ct).getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $ct"))
+    ContentTypeCache.getOrParse(ct)
 
   private def charsetToHttpCharset(charset: Charset): HttpCharset = HttpCharset.custom(charset.name())
 
