@@ -7,10 +7,12 @@ import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExampleToAExample}
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal._
-import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
+import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve nested references. */
-private[schema] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
+/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve references. */
+private[docs] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
+
+  def apply[T](codec: Codec[T, _, _]): ASchema = apply(codec.schema, allowReference = true)
 
   /** @param allowReference
     *   Can a reference schema be generated, if this is a named schema - should be `false` for top-level component definitions (otherwise

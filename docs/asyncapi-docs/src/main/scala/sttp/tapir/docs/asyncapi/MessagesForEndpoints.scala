@@ -4,14 +4,14 @@ import sttp.apispec.asyncapi.{Message, SingleMessage}
 import sttp.model.MediaType
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.Schema.SName
-import sttp.tapir.docs.apispec.schema.{Schemas, ToKeyedSchemas, calculateUniqueIds}
+import sttp.tapir.docs.apispec.schema.{TSchemaToASchema, ToKeyedSchemas, calculateUniqueIds}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema}
 import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
 
-private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName => String) {
+private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema, schemaName: SName => String) {
   private type CodecData = Either[(SName, MediaType), TSchema[_]]
 
   private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, _ <: CodecFormat], info: EndpointIO.Info[T])
@@ -42,7 +42,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SName
     val convertedExamples = ExampleConverter.convertExamples(ci.codec, ci.info.examples)
     SingleMessage(
       None,
-      Some(Right(schemas(ci.codec))),
+      Some(Right(tschemaToASchema(ci.codec))),
       None,
       None,
       Some(ci.codec.format.mediaType.toString()),
