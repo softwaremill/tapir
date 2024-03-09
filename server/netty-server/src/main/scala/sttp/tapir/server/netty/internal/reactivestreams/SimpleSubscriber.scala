@@ -5,7 +5,8 @@ import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
 import sttp.capabilities.StreamMaxLengthExceededException
 
-import java.util.concurrent.{ConcurrentLinkedQueue, LinkedBlockingQueue}
+import java.util.concurrent.LinkedBlockingQueue
+import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
 
 private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends PromisingSubscriber[Array[Byte], HttpContent] {
@@ -13,7 +14,7 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
   private val resultPromise = Promise[Array[Byte]]()
   private var totalLength = 0
   private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]]()
-  private val buffers = new ConcurrentLinkedQueue[ByteBuf]()
+  private val buffers = new mutable.ListBuffer[ByteBuf]()
 
   override def future: Future[Array[Byte]] = resultPromise.future
   def resultBlocking(): Either[Throwable, Array[Byte]] = resultBlockingQueue.take()
@@ -31,14 +32,14 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
       resultBlockingQueue.add(Right(finalArray))
       resultPromise.success(finalArray)
     } else {
-      buffers.add(byteBuf)
+      buffers.append(byteBuf)
       totalLength += byteBuf.readableBytes()
     }
     subscription.request(1)
   }
 
   override def onError(t: Throwable): Unit = {
-    buffers.forEach { buf =>
+    buffers.foreach { buf =>
       val _ = buf.release()
     }
     buffers.clear()
@@ -47,10 +48,10 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
   }
 
   override def onComplete(): Unit = {
-    if (!buffers.isEmpty()) {
+    if (!buffers.isEmpty) {
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
-      buffers.forEach { buf =>
+      buffers.foreach { buf =>
         val length = buf.readableBytes()
         buf.getBytes(buf.readerIndex(), mergedArray, currentIndex, length)
         currentIndex += length
