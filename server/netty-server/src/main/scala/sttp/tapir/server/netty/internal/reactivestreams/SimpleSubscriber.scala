@@ -8,13 +8,14 @@ import sttp.capabilities.StreamMaxLengthExceededException
 import java.util.concurrent.LinkedBlockingQueue
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
+import java.util.concurrent.ConcurrentLinkedQueue
 
 private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   private var subscription: Subscription = _
   private val resultPromise = Promise[Array[Byte]]()
-  private var totalLength = 0
+  @volatile private var totalLength = 0
   private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]](1)
-  private val buffers = new mutable.ListBuffer[ByteBuf]()
+  private val buffers = new ConcurrentLinkedQueue[ByteBuf]()
 
   override def future: Future[Array[Byte]] = resultPromise.future
   def resultBlocking(): Either[Throwable, Array[Byte]] = resultBlockingQueue.take()
@@ -39,18 +40,18 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
         subscription.request(1)
       }
     } else {
-      buffers.append(byteBuf)
+      buffers.add(byteBuf)
       totalLength += byteBuf.readableBytes()
       subscription.request(1)
     }
   }
 
   override def onError(t: Throwable): Unit = {
-    buffers.foreach { buf =>
+    buffers.forEach { buf =>
       val _ = buf.release()
     }
     buffers.clear()
-    resultBlockingQueue.add(Left(t))
+    resultBlockingQueue.offer(Left(t))
     resultPromise.failure(t)
   }
 
@@ -58,15 +59,18 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
     if (!buffers.isEmpty) {
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
-      buffers.foreach { buf =>
+      buffers.forEach { buf =>
         val length = buf.readableBytes()
         buf.getBytes(buf.readerIndex(), mergedArray, currentIndex, length)
         currentIndex += length
         val _ = buf.release()
       }
-      resultBlockingQueue.add(Right(mergedArray))
-      resultPromise.success(mergedArray)
       buffers.clear()
+      if (!resultBlockingQueue.offer(Right(mergedArray))) {
+        // Result queue full, which is unexpected.
+        resultPromise.failure(new IllegalStateException("Calling onComplete after result was already returned"))
+      } else
+        resultPromise.success(mergedArray)
     } else {
       () // result already sent in onNext
     }
