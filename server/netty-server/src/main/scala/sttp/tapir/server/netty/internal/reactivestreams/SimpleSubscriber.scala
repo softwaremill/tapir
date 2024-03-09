@@ -13,7 +13,7 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
   private var subscription: Subscription = _
   private val resultPromise = Promise[Array[Byte]]()
   private var totalLength = 0
-  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]]()
+  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]](1)
   private val buffers = new mutable.ListBuffer[ByteBuf]()
 
   override def future: Future[Array[Byte]] = resultPromise.future
@@ -26,16 +26,23 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
 
   override def onNext(content: HttpContent): Unit = {
     val byteBuf = content.content()
+    // If expected content length is known, and we receive exactly this amount of bytes, we assume there's only one chunk and
+    // we can immediately return it without going through the buffer list.
     if (contentLength.contains(byteBuf.readableBytes())) {
       val finalArray = ByteBufUtil.getBytes(byteBuf)
       byteBuf.release()
-      resultBlockingQueue.add(Right(finalArray))
-      resultPromise.success(finalArray)
+      if (!resultBlockingQueue.offer(Right(finalArray))) {
+        // Queue full, which is unexpected. The previous chunk was supposed the be the only one. A malformed request perhaps?
+        subscription.cancel()
+      } else {
+        resultPromise.success(finalArray)
+        subscription.request(1)
+      }
     } else {
       buffers.append(byteBuf)
       totalLength += byteBuf.readableBytes()
+      subscription.request(1)
     }
-    subscription.request(1)
   }
 
   override def onError(t: Throwable): Unit = {
