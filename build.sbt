@@ -522,7 +522,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       // Needs to match version used by Gatling
       "com.github.scopt" %% "scopt" % "3.7.1",
-      "io.github.classgraph" % "classgraph" % "4.8.167" % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.168" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
