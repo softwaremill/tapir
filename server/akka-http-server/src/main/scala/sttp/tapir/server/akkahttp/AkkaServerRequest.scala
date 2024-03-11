@@ -28,7 +28,7 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
   }
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(ctx.request.uri.query().toMultiMap)
   override lazy val method: Method = Method(ctx.request.method.value.toUpperCase)
-  
+
   private def queryToSegments(query: AkkaUri.Query): List[QuerySegment] = {
     @tailrec
     def run(q: AkkaUri.Query, acc: List[QuerySegment]): List[QuerySegment] = q match {
@@ -45,7 +45,7 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
     run(query, Nil)
   }
 
-  override lazy val uriStr: String = s"${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
+  override lazy val showShort: String = s"$method ${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
   override lazy val uri: Uri = {
     val pekkoUri = ctx.request.uri
     Uri(
@@ -57,7 +57,6 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
       ctx.request.uri.fragment.map(f => FragmentSegment(f))
     )
   }
-
 
   private val EmptyContentType = "none/none"
 

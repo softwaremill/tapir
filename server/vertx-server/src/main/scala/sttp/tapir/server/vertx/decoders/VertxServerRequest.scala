@@ -22,7 +22,7 @@ private[vertx] case class VertxServerRequest(rc: RoutingContext, attributes: Att
   }
   override lazy val method: Method = MethodMapping.vertxToSttp(rc.request)
   override lazy val protocol: String = Option(rc.request.scheme).getOrElse("")
-  override lazy val uriStr: String = rc.request.uri
+  override lazy val showShort: String = s"$method ${rc.request.uri}"
   override lazy val uri: Uri = Uri.unsafeParse(rc.request.uri)
   override lazy val headers: Seq[Header] = rc.request.headers.entries.asScala.iterator.map(e => Header(e.getKey, e.getValue)).toList
   override lazy val queryParameters: QueryParams = Uri.unsafeParse(rc.request.uri()).params
