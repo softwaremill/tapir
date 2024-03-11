@@ -1,20 +1,19 @@
 package sttp.tapir.server.netty.internal.reactivestreams
 
-import io.netty.buffer.ByteBufUtil
+import io.netty.buffer.{ByteBuf, ByteBufUtil}
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
+import sttp.capabilities.StreamMaxLengthExceededException
 
-import java.util.concurrent.ConcurrentLinkedQueue
-import scala.collection.JavaConverters._
-import scala.concurrent.{Future, Promise}
 import java.util.concurrent.LinkedBlockingQueue
+import scala.concurrent.{Future, Promise}
 
-private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte], HttpContent] {
+private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   private var subscription: Subscription = _
-  private val chunks = new ConcurrentLinkedQueue[Array[Byte]]()
-  private var size = 0
   private val resultPromise = Promise[Array[Byte]]()
-  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]]()
+  @volatile private var totalLength = 0
+  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]](1)
+  @volatile private var buffers = Vector[ByteBuf]()
 
   override def future: Future[Array[Byte]] = resultPromise.future
   def resultBlocking(): Either[Throwable, Array[Byte]] = resultBlockingQueue.take()
@@ -25,44 +24,93 @@ private[netty] class SimpleSubscriber() extends PromisingSubscriber[Array[Byte],
   }
 
   override def onNext(content: HttpContent): Unit = {
-    val array = ByteBufUtil.getBytes(content.content())
-    content.release()
-    size += array.length
-    chunks.add(array)
-    subscription.request(1)
+    val byteBuf = content.content()
+    // If expected content length is known, and we receive exactly this amount of bytes, we assume there's only one chunk and
+    // we can immediately return it without going through the buffer list.
+    if (contentLength.contains(byteBuf.readableBytes())) {
+      val finalArray = ByteBufUtil.getBytes(byteBuf)
+      byteBuf.release()
+      if (!resultBlockingQueue.offer(Right(finalArray))) {
+        // Queue full, which is unexpected. The previous chunk was supposed the be the only one. A malformed request perhaps?
+        subscription.cancel()
+      } else {
+        resultPromise.success(finalArray)
+        subscription.request(1)
+      }
+    } else {
+      buffers = buffers :+ byteBuf
+      totalLength += byteBuf.readableBytes()
+      subscription.request(1)
+    }
   }
 
   override def onError(t: Throwable): Unit = {
-    chunks.clear()
-    resultBlockingQueue.add(Left(t))
+    buffers.foreach { buf =>
+      val _ = buf.release()
+    }
+    buffers = Vector.empty
+    resultBlockingQueue.offer(Left(t))
     resultPromise.failure(t)
   }
 
   override def onComplete(): Unit = {
-    val result = new Array[Byte](size)
-    val _ = chunks.asScala.foldLeft(0)((currentPosition, array) => {
-      System.arraycopy(array, 0, result, currentPosition, array.length)
-      currentPosition + array.length
-    })
-    chunks.clear()
-    resultBlockingQueue.add(Right(result))
-    resultPromise.success(result)
+    if (!buffers.isEmpty) {
+      val mergedArray = new Array[Byte](totalLength)
+      var currentIndex = 0
+      buffers.foreach { buf =>
+        val length = buf.readableBytes()
+        buf.getBytes(buf.readerIndex(), mergedArray, currentIndex, length)
+        currentIndex += length
+        val _ = buf.release()
+      }
+      buffers = Vector.empty
+      if (!resultBlockingQueue.offer(Right(mergedArray))) {
+        // Result queue full, which is unexpected.
+        resultPromise.failure(new IllegalStateException("Calling onComplete after result was already returned"))
+      } else
+        resultPromise.success(mergedArray)
+    } else {
+      () // result already sent in onNext
+    }
   }
+
 }
 
 object SimpleSubscriber {
-  def processAll(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[Array[Byte]] = {
-    val subscriber = new SimpleSubscriber()
-    publisher.subscribe(maxBytes.map(max => new LimitedLengthSubscriber(max, subscriber)).getOrElse(subscriber))
-    subscriber.future
-  }
 
-  def processAllBlocking(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] = {
-    val subscriber = new SimpleSubscriber()
-    publisher.subscribe(maxBytes.map(max => new LimitedLengthSubscriber(max, subscriber)).getOrElse(subscriber))
-    subscriber.resultBlocking() match {
-      case Right(result) => result
-      case Left(e)       => throw e
+  def processAll(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Future[Array[Byte]] =
+    maxBytes match {
+      case Some(max) if (contentLength.exists(_ > max)) => Future.failed(StreamMaxLengthExceededException(max))
+      case Some(max) => {
+        val subscriber = new SimpleSubscriber(contentLength)
+        publisher.subscribe(new LimitedLengthSubscriber(max, subscriber))
+        subscriber.future
+      }
+      case None => {
+        val subscriber = new SimpleSubscriber(contentLength)
+        publisher.subscribe(subscriber)
+        subscriber.future
+      }
     }
-  }
+
+  def processAllBlocking(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Array[Byte] =
+    maxBytes match {
+      case Some(max) if (contentLength.exists(_ > max)) => throw new StreamMaxLengthExceededException(max)
+      case Some(max) => {
+        val subscriber = new SimpleSubscriber(contentLength)
+        publisher.subscribe(new LimitedLengthSubscriber(max, subscriber))
+        subscriber.resultBlocking() match {
+          case Right(result) => result
+          case Left(e)       => throw e
+        }
+      }
+      case None => {
+        val subscriber = new SimpleSubscriber(contentLength)
+        publisher.subscribe(subscriber)
+        subscriber.resultBlocking() match {
+          case Right(result) => result
+          case Left(e)       => throw e
+        }
+      }
+    }
 }

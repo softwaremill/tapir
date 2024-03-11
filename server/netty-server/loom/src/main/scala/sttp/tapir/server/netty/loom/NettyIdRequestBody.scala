@@ -16,8 +16,8 @@ private[netty] class NettyIdRequestBody(val createFile: ServerRequest => TapirFi
   override implicit val monad: MonadError[Id] = idMonad
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
-  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Array[Byte] =
-    SimpleSubscriber.processAllBlocking(publisher, maxBytes)
+  override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Array[Byte] =
+    SimpleSubscriber.processAllBlocking(publisher, contentLength, maxBytes)
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
     serverRequest.underlying match {

@@ -19,7 +19,11 @@ private[zio] class NettyZioRequestBody[Env](
   override val streams: ZioStreams = ZioStreams
   override implicit val monad: MonadError[RIO[Env, *]] = new RIOMonadError[Env]
 
-  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): RIO[Env, Array[Byte]] =
+  override def publisherToBytes(
+      publisher: Publisher[HttpContent],
+      contentLength: Option[Int],
+      maxBytes: Option[Long]
+  ): RIO[Env, Array[Byte]] =
     streamCompatible.fromPublisher(publisher, maxBytes).run(ZSink.collectAll[Byte]).map(_.toArray)
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): RIO[Env, Unit] =
