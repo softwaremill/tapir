@@ -18,6 +18,11 @@ trait CodecExtensions2 {
     Codec.string
       .map(_.split(delimiter.value).toList)(_.mkString(delimiter.value))
       .mapDecode(ls => DecodeResult.sequence(ls.map(codec.decode)).map(_.toList))(_.map(codec.encode))
-      .schema(codec.schema.asIterable[List].attribute(Schema.Explode.Attribute, Schema.Explode(false)))
+      .schema(
+        codec.schema
+          .asIterable[List]
+          .attribute(Schema.Explode.Attribute, Schema.Explode(false))
+          .attribute(Schema.Delimiter.Attribute, Schema.Delimiter(delimiter.value))
+      )
       .map(Delimited[D, T](_))(_.values)
 }
