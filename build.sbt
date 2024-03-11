@@ -504,7 +504,6 @@ lazy val perfServerJavaOptions = List(
   "-Xmx16g",
   "-XX:+AlwaysPreTouch"
 )
-lazy val flightRecordingJavaOpts = "-XX:StartFlightRecording=filename=recording.jfr,dumponexit=true,duration=120s"
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -535,8 +534,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     fork := true,
     connectInput := true,
-    Compile / run / javaOptions ++= flightRecordingJavaOpts :: perfServerJavaOptions,
-    Test / run / javaOptions --= flightRecordingJavaOpts :: perfServerJavaOptions
+    Compile / run / javaOptions ++= perfServerJavaOptions,
+    Test / run / javaOptions --= perfServerJavaOptions
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)

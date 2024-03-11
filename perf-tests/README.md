@@ -34,8 +34,25 @@ If you want to run a test server separately from simulations, use a separate sbt
 perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.TapirMulti
 ```
 
-This is useful when profiling, as `perfTests/runMain` will be a forked JVM isolated from the JVM that runs Gatling, configured with additional options like `"-XX:StartFlightRecording=filename=recording.jfr,...`
-After the simulations, you can open `recording.jfr` in Java Mission Control to analyze performance metrics like heap and CPU usage.
+This is useful when profiling, as `perfTests/runMain` will be a forked JVM isolated from the JVM that runs Gatling.
+
+## Profiling 
+
+To atach the profiler to a running server, it is recommended to use [async-profiler](https://github.com/async-profiler/async-profiler).
+Start the profiler by calling:
+```
+asprof -e cpu,alloc,lock -f profile.jfr <PID>
+```
+
+After the simulations, you can open `recording.jfr` in IntelliJ IDEA or Java Mission Control to analyze performance metrics like heap and CPU usage.
+It's also useful to build CPU flamegraphs with the [async-profiler converter](https://github.com/async-profiler/async-profiler?tab=readme-ov-file#download):
+```
+java -cp ./converter.jar jfr2flame ./profile.jfr flamegraph.html
+```
+
+After opening the flamegraph in your browser, use the spyglass icon to search for regular expressions and find the total % of registered samples matching the query. Searching for `tapir` will show you what's the Tapir's total share of the load. This can be a useful metric to compare before and after implementing performance improvements.
+
+Note that profiling noticeably affects performance, so it's recommended to measure throughput/latency without the profiler attached.
 
 ## Examples
 
