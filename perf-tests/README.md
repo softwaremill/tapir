@@ -50,9 +50,9 @@ It's also useful to build CPU flamegraphs with the [async-profiler converter](ht
 java -cp ./converter.jar jfr2flame ./profile.jfr flamegraph.html
 ```
 
-After opening the flamegraph in your browser, use the spyglass icon to search for regular expressions and find the total % of registered samples matching the query. Searching for `tapir` will show you what's the overall Tapir's total share of the load. This can be a useful metric to compare before and after implementing performance improvements.
+After opening the flamegraph in your browser, use the spyglass icon to search for regular expressions and find the total % of registered samples matching the query. Searching for `tapir` will show you what's the Tapir's total share of the load. This can be a useful metric to compare before and after implementing performance improvements.
 
-Note that profiling noticeably affects performance, so it's recommended to measure throughput/latency separately.
+Note that profiling noticeably affects performance, so it's recommended to measure throughput/latency without the profiler attached.
 
 ## Examples
 
