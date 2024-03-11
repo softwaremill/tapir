@@ -29,7 +29,19 @@ package object apispec {
   private[docs] def exampleValue(v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
   private[docs] def exampleValue(schema: Schema[_], raw: Any): Option[ExampleValue] = {
-    (raw, schema.schemaType) match {
+    // #3581: if there's a delimiter and the encoded value is a string, the codec will have produced a final
+    // representation (with the delimiter applied), but in the docs we want to show the split values
+    val rawDelimited = schema.attribute(Schema.Delimiter.Attribute) match {
+      case None => raw
+      case Some(Schema.Delimiter(d)) =>
+        raw match {
+          case s: String       => s.split(d).toSeq
+          case List(s: String) => s.split(d).toSeq
+          case _               => raw
+        }
+    }
+
+    (rawDelimited, schema.schemaType) match {
       case (it: Iterable[_], SchemaType.SArray(_)) => Some(ExampleMultipleValue(it.map(rawToString).toList))
       case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
       case (it: Option[_], _)                      => it.map(v => ExampleSingleValue(rawToString(v)))

@@ -325,6 +325,12 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
+  /** Used in combination with explode, to properly represent delimited values in examples and default values (#3581) */
+  case class Delimiter(delimiter: String)
+  object Delimiter {
+    val Attribute: AttributeKey[Delimiter] = new AttributeKey[Delimiter]("sttp.tapir.Schema.Delimiter")
+  }
+
   /** Corresponds to JsonSchema's `title` parameter which should be used for defining title of the object. */
   case class Title(value: String)
 
