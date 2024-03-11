@@ -18,6 +18,12 @@ private[nima] case class NimaServerRequest(r: JavaNimaServerRequest, attributes:
   override def queryParameters: QueryParams = uri.params
   override def method: Method = Method.unsafeApply(r.prologue().method().text())
 
+  override lazy val showShort = {
+    val path = emptyIfNull(r.path().rawPath())
+    val rawQuery = emptyIfNull(r.query().rawValue())
+    if (rawQuery.isEmpty) s"$method $path" else s"$method $path?$rawQuery"
+  }
+
   override lazy val uri: Uri = {
     val protocol = emptyIfNull(r.prologue().protocol())
     val authority = emptyIfNull(r.authority())
