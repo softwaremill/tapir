@@ -6,16 +6,15 @@ import org.reactivestreams.{Publisher, Subscription}
 import sttp.capabilities.StreamMaxLengthExceededException
 
 import java.util.concurrent.LinkedBlockingQueue
-import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Future, Promise}
-import java.util.concurrent.ConcurrentLinkedQueue
 
 private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   private var subscription: Subscription = _
   private val resultPromise = Promise[Array[Byte]]()
   @volatile private var totalLength = 0
   private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Array[Byte]]](1)
-  private val buffers = new ConcurrentLinkedQueue[ByteBuf]()
+  @volatile private var buffers = new ListBuffer[ByteBuf]
 
   override def future: Future[Array[Byte]] = resultPromise.future
   def resultBlocking(): Either[Throwable, Array[Byte]] = resultBlockingQueue.take()
@@ -40,14 +39,14 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
         subscription.request(1)
       }
     } else {
-      buffers.add(byteBuf)
+      buffers = buffers.append(byteBuf)
       totalLength += byteBuf.readableBytes()
       subscription.request(1)
     }
   }
 
   override def onError(t: Throwable): Unit = {
-    buffers.forEach { buf =>
+    buffers.foreach { buf =>
       val _ = buf.release()
     }
     buffers.clear()
@@ -59,7 +58,7 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
     if (!buffers.isEmpty) {
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
-      buffers.forEach { buf =>
+      buffers.foreach { buf =>
         val length = buf.readableBytes()
         buf.getBytes(buf.readerIndex(), mergedArray, currentIndex, length)
         currentIndex += length
