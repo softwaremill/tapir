@@ -45,6 +45,7 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
     run(query, Nil)
   }
 
+  override lazy val uriStr: String = s"${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
   override lazy val uri: Uri = {
     val pekkoUri = ctx.request.uri
     Uri(

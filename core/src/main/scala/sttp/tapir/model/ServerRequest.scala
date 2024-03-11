@@ -10,6 +10,8 @@ import scala.collection.immutable.Seq
 trait ServerRequest extends RequestMetadata {
   def protocol: String
   def connectionInfo: ConnectionInfo
+  /** Override in backend-specific implementation if you want a more efficient implementation and avoid uri parsing overhead */
+  def uriStr: String = uri.copy(scheme = None, authority = None, fragmentSegment = None).toString
   def underlying: Any
 
   /** Can differ from `uri.path`, if the endpoint is deployed in a context */
@@ -50,8 +52,9 @@ trait ServerRequest extends RequestMetadata {
       this
     )
 
+
   /** A short representation of this request, including the request method, path and query. */
-  def showShort: String = s"$method ${uri.copy(scheme = None, authority = None, fragmentSegment = None).toString}"
+  def showShort: String = s"$method $uriStr"
 }
 
 class ServerRequestOverride(
