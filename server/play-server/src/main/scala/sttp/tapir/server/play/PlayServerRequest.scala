@@ -16,6 +16,7 @@ private[play] case class PlayServerRequest(
 ) extends ServerRequest {
   override lazy val method: Method = Method(requestHeader.method.toUpperCase)
   override def protocol: String = requestHeader.version
+  override lazy val showShort: String = s"$method ${requestHeader.target.path}${requestHeader.target.uriString.split('?').mkString("?")}"
   override lazy val uri: Uri = Uri.unsafeParse(requestHeader.uri)
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, Some(requestHeader.secure))
   override lazy val headers: Seq[Header] = requestHeader.headers.headers.map { case (k, v) => Header(k, v) }.toList
