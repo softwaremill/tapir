@@ -64,11 +64,11 @@ object GenScala {
         val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
         def generateCode(doc: OpenapiDocument): IO[Unit] = for {
-          content <- IO.pure(
-            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames)(objectName)
+          contents <- IO.pure(
+            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames)
           )
-          destFile <- writeGeneratedFile(destDir, objectName, content)
-          _ <- IO.println(s"Generated endpoints written to: $destFile")
+          destFiles <- contents.traverse{ case (fileName, content) => writeGeneratedFile(destDir, objectName, content) }
+          _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
         } yield ()
 
         for {

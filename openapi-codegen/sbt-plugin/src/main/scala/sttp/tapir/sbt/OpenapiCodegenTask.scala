@@ -23,7 +23,7 @@ case class OpenapiCodegenTask(
   def file: Task[Seq[File]] = {
     makeFiles(tempDirectory) map { files =>
       files.map { tempFile =>
-        val outFile = outDirectory / s"$objectName.scala"
+        val outFile = outDirectory / tempFile.getName
         cachedCopyFile(tempFile, outFile)(hash(tempFile))
         outFile
       }
