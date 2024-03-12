@@ -67,7 +67,7 @@ object GenScala {
           contents <- IO.pure(
             BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames)
           )
-          destFiles <- contents.traverse{ case (fileName, content) => writeGeneratedFile(destDir, objectName, content) }
+          destFiles <- contents.traverse{ case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
           _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
         } yield ()
 
