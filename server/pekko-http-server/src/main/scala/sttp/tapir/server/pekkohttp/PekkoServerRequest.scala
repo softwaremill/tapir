@@ -44,6 +44,7 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
     run(query, Nil)
   }
 
+  override lazy val showShort: String = s"$method ${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
   override lazy val uri: Uri = {
     val pekkoUri = ctx.request.uri
     Uri(
