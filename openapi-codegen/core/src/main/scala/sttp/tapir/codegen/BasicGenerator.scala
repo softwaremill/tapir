@@ -43,6 +43,8 @@ object BasicGenerator {
            |
            |object $headTag {
            |
+           |${indent(2)(imports)}
+           |
            |${indent(2)(body)}
            |
            |}""".stripMargin
