@@ -99,6 +99,8 @@ private[docs] class TSchemaToASchema(
 
   private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     val fromAttr = tschema.attributes.get(Title.Attribute).map(_.value)
+    // The primary motivation for using schema name as fallback title is to improve Swagger UX with
+    // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
     def fallback = tschema.name.map(fallbackSchemaTitle)
     oschema.copy(title = fromAttr orElse fallback)
   }
