@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     Data1:
+      title: Data1
       required:
         - x
       type: object
@@ -31,6 +32,7 @@ components:
         x:
           type: string
     Data2:
+      title: Data2
       required:
         - a
         - b

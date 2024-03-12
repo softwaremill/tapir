@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
-import sttp.tapir.Schema.Title
+import sttp.tapir.Schema.{SName, Title}
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExampleToAExample}
@@ -10,7 +10,11 @@ import sttp.tapir.internal._
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using `toSchemaReference` to resolve references. */
-private[docs] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markOptionsAsNullable: Boolean) {
+private[docs] class TSchemaToASchema(
+    fallbackSchemaTitle: SName => String,
+    toSchemaReference: ToSchemaReference,
+    markOptionsAsNullable: Boolean
+) {
 
   def apply[T](codec: Codec[T, _, _]): ASchema = apply(codec.schema, allowReference = true)
 
@@ -93,8 +97,11 @@ private[docs] class TSchemaToASchema(toSchemaReference: ToSchemaReference, markO
       .toListMap
   }
 
-  private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema =
-    oschema.copy(title = tschema.attributes.get(Title.Attribute).map(_.value))
+  private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema = {
+    val fromAttr = tschema.attributes.get(Title.Attribute).map(_.value)
+    def fallback = tschema.name.map(fallbackSchemaTitle)
+    oschema.copy(title = fromAttr orElse fallback)
+  }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(

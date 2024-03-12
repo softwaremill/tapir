@@ -27,6 +27,7 @@ paths:
 components:
   schemas:
     CornerStyle:
+      title: CornerStyle
       type: string
       enum:
         - rounded

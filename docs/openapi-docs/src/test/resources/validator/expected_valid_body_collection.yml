@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     BasketOfFruits:
+      title: BasketOfFruits
       type: object
       properties:
         fruits:
@@ -32,6 +33,7 @@ components:
             $ref: '#/components/schemas/ValidFruitAmount'
           minItems: 1
     ValidFruitAmount:
+      title: ValidFruitAmount
       required:
         - fruit
         - amount

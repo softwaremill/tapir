@@ -23,10 +23,12 @@ paths:
 components:
   schemas:
     Entity:
+      title: Entity
       oneOf:
         - $ref: '#/components/schemas/Organization'
         - $ref: '#/components/schemas/Person'
     Organization:
+      title: Organization
       required:
         - name
       type: object
@@ -34,6 +36,7 @@ components:
         name:
           type: string
     Person:
+      title: Person
       required:
         - name
         - age

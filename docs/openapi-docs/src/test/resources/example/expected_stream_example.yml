@@ -27,6 +27,7 @@ paths:
 components:
   schemas:
     Person:
+      title: Person
       required:
         - name
         - age

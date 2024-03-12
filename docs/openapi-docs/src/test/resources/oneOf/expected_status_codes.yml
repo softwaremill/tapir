@@ -30,6 +30,7 @@ paths:
 components:
   schemas:
     NotFound:
+      title: NotFound
       required:
         - what
       type: object
@@ -37,6 +38,7 @@ components:
         what:
           type: string
     Unauthorized:
+      title: Unauthorized
       required:
         - realm
       type: object
@@ -44,6 +46,7 @@ components:
         realm:
           type: string
     Unknown:
+      title: Unknown
       required:
         - code
         - msg

@@ -54,6 +54,7 @@ paths:
 components:
   schemas:
     Entity:
+      title: Entity
       oneOf:
         - $ref: '#/components/schemas/Organization'
         - $ref: '#/components/schemas/Person1'
@@ -63,6 +64,7 @@ components:
           organization: '#/components/schemas/Organization'
           person: '#/components/schemas/Person1'
     Organization:
+      title: Organization
       required:
         - name
         - kind
@@ -73,6 +75,7 @@ components:
         kind:
           type: string
     Person:
+      title: Person
       required:
         - name
         - age
@@ -84,6 +87,7 @@ components:
           type: integer
           format: int32
     Person1:
+      title: Person
       required:
         - name
         - age

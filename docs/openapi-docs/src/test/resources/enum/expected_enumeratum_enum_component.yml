@@ -36,6 +36,7 @@ paths:
 components:
   schemas:
     Belgium:
+      title: Belgium
       required:
         - countryCode
       type: object
@@ -43,12 +44,14 @@ components:
         countryCode:
           $ref: '#/components/schemas/CountryCode'
     CountryCode:
+      title: CountryCode
       type: string
       enum:
         - PL
         - BE
         - LU
     Luxembourg:
+      title: Luxembourg
       required:
         - countryCode
       type: object
@@ -56,6 +59,7 @@ components:
         countryCode:
           $ref: '#/components/schemas/CountryCode'
     Poland:
+      title: Poland
       required:
         - countryCode
       type: object

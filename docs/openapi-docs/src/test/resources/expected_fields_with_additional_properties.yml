@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     FailureInput:
+      title: FailureInput
       required:
         - status
         - message

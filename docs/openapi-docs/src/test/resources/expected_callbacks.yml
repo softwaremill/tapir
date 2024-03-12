@@ -46,6 +46,7 @@ paths:
 components:
   schemas:
     TriggerRequest:
+      title: TriggerRequest
       required:
       - callbackUrl
       type: object
@@ -53,6 +54,7 @@ components:
         callbackUrl:
           type: string
     CallbackRequest:
+      title: CallbackRequest
       required:
       - answer
       type: object

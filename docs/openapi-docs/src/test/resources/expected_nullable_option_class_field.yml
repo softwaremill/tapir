@@ -28,6 +28,7 @@ paths:
 components:
   schemas:
     Bar:
+      title: Bar
       required:
         - bar
       type: object
@@ -36,6 +37,7 @@ components:
           type: integer
           format: int32
     ClassWithOptionClassField:
+      title: ClassWithOptionClassField
       required:
         - requiredStringField
       type: object

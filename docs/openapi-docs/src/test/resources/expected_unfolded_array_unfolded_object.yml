@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     FruitAmount:
+      title: FruitAmount
       required:
         - fruit
         - amount
@@ -27,6 +28,7 @@ components:
           type: integer
           format: int32
     ObjectWithList:
+      title: ObjectWithList
       type: object
       properties:
         data:

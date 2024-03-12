@@ -28,6 +28,7 @@ paths:
 components:
   schemas:
     ClassWithOptionField:
+      title: ClassWithOptionField
       required:
       - requiredStringField
       type: object

@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     Shape:
+      title: Shape
       oneOf:
         - $ref: '#/components/schemas/Square'
       discriminator:
@@ -23,6 +24,7 @@ components:
         mapping:
           Square: '#/components/schemas/Square'
     Square:
+      title: Square
       required:
         - color
         - shapeType

@@ -28,6 +28,7 @@ paths:
 components:
   schemas:
     Pet:
+      title: Pet
       required:
         - name
       type: object
@@ -35,6 +36,7 @@ components:
         name:
           type: string
     Pet1:
+      title: Pet
       required:
         - legsCount
       type: object

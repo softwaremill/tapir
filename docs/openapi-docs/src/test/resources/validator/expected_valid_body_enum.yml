@@ -24,11 +24,13 @@ paths:
 components:
   schemas:
     Color:
+      title: Color
       type: string
       enum:
         - blue
         - red
     ColorWrapper:
+      title: ColorWrapper
       required:
         - color
       type: object

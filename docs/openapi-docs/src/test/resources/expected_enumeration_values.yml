@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     Number:
+      title: Number
       required:
         - value
       type: object
@@ -31,6 +32,7 @@ components:
         value:
           $ref: '#/components/schemas/Numbers'
     Numbers:
+      title: Numbers
       type: string
       enum:
         - One

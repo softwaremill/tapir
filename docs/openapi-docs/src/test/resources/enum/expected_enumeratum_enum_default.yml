@@ -30,11 +30,13 @@ paths:
 components:
   schemas:
     FruitType:
+      title: FruitType
       type: string
       enum:
         - APPLE
         - PEAR
     FruitWithEnum:
+      title: FruitWithEnum
       required:
         - fruit
         - amount

@@ -42,6 +42,7 @@ paths:
 components:
   schemas:
     G_Int:
+      title: G_Int
       required:
         - data
       type: object
@@ -50,6 +51,7 @@ components:
           type: integer
           format: int32
     G_String:
+      title: G_String
       required:
         - data
       type: object

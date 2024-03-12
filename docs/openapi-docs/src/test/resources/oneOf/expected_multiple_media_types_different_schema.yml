@@ -31,6 +31,7 @@ paths:
 components:
   schemas:
     Organization:
+      title: Organization
       required:
         - name
       type: object
@@ -38,6 +39,7 @@ components:
         name:
           type: string
     Person:
+      title: Person
       required:
         - name
         - age

@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     Data2:
+      title: Data2
       required:
         - a
         - b

@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     ObjectWithStrings:
+      title: ObjectWithStrings
       type: object
       properties:
         data:

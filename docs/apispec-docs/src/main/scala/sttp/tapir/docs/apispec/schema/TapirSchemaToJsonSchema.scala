@@ -19,7 +19,7 @@ object TapirSchemaToJsonSchema {
 
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedSchemas.toMap, refRoot = "#/$defs/")
-    val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
+    val tschemaToASchema = new TSchemaToASchema(schemaName, toSchemaReference, markOptionsAsNullable)
     val keysToSchemas = keyedSchemas.map(td => (td._1, tschemaToASchema(td._2, allowReference = false))).toListMap
     val schemaIds = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
