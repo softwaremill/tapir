@@ -70,7 +70,7 @@ class EndpointGenerator {
       if (segment.startsWith("{")) {
         val name = segment.drop(1).dropRight(1)
         val param = parameters.find(_.name == name)
-        param.fold(throw new Error(s"URLParam $name not found!")) { p =>
+        param.fold(bail(s"URLParam $name not found!")) { p =>
           p.schema match {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -104,7 +104,7 @@ class EndpointGenerator {
             s""".securityIn(auth.apiKey($in[String]("$name")))"""
 
           case None =>
-            throw new Error(s"Unknown security scheme $schemeName!")
+            bail(s"Unknown security scheme $schemeName!")
         }
       }
   }
