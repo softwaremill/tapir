@@ -121,7 +121,7 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
     }
     val _ = channelGroup.close().get()
   }
-  
+
   private def stop(
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
@@ -144,13 +144,12 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
   }
 
   private def stopRecovering(
-               
-                    eventLoopGroup: EventLoopGroup,
-                    channelGroup: ChannelGroup,
-                    eventExecutor: DefaultEventExecutor,
-                    isShuttingDown: AtomicBoolean,
-                    gracefulShutdownTimeout: Option[FiniteDuration]
-                  ): Unit = {
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Unit = {
     isShuttingDown.set(true)
     waitForClosedChannels(
       channelGroup,
