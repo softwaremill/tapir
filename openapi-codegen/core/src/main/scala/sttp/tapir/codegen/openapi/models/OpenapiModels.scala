@@ -6,6 +6,14 @@ import cats.syntax.either._
 import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
+  sealed trait SpecificationExtensionValue
+  case object SpecificationExtensionValueNull extends SpecificationExtensionValue
+  case class SpecificationExtensionValueBoolean(value: Boolean) extends SpecificationExtensionValue
+  case class SpecificationExtensionValueLong(value: Long) extends SpecificationExtensionValue
+  case class SpecificationExtensionValueDouble(value: Double) extends SpecificationExtensionValue
+  case class SpecificationExtensionValueString(value: String) extends SpecificationExtensionValue
+  case class SpecificationExtensionValueList(values: Seq[SpecificationExtensionValue]) extends SpecificationExtensionValue
+  case class SpecificationExtensionValueMap(kvs: Map[String, SpecificationExtensionValue]) extends SpecificationExtensionValue
 
   sealed trait Resolvable[T] {
     def resolve(input: Map[String, T]): T
@@ -35,7 +43,8 @@ object OpenapiModels {
   case class OpenapiPath(
       url: String,
       methods: Seq[OpenapiPathMethod],
-      parameters: Seq[Resolvable[OpenapiParameter]] = Nil
+      parameters: Seq[Resolvable[OpenapiParameter]] = Nil,
+      specificationExtensions: Map[String, SpecificationExtensionValue] = Map.empty
   )
 
   case class OpenapiPathMethod(
@@ -46,7 +55,8 @@ object OpenapiModels {
       security: Seq[Seq[String]] = Nil,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
-      operationId: Option[String] = None
+      operationId: Option[String] = None,
+      specificationExtensions: Map[String, SpecificationExtensionValue] = Map.empty
   ) {
     def resolvedParameters: Seq[OpenapiParameter] = parameters.collect { case Resolved(t) => t }
     def withResolvedParentParameters(
@@ -167,6 +177,19 @@ object OpenapiModels {
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
   }
 
+  def decodeSpecificationExtensionValue(json: Json): SpecificationExtensionValue =
+    json.fold(
+      SpecificationExtensionValueNull,
+      SpecificationExtensionValueBoolean.apply,
+      n => n.toLong.map(SpecificationExtensionValueLong.apply).getOrElse(SpecificationExtensionValueDouble(n.toDouble)),
+      SpecificationExtensionValueString.apply,
+      arr => SpecificationExtensionValueList(arr.map(decodeSpecificationExtensionValue)),
+      obj => SpecificationExtensionValueMap(obj.toMap.map { case (k, v) => k -> decodeSpecificationExtensionValue(v) })
+    )
+  implicit val SpecificationExtensionValueDecoder: Decoder[SpecificationExtensionValue] = { (c: HCursor) =>
+    Right(decodeSpecificationExtensionValue(c.value))
+  }
+
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
       parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)
@@ -176,6 +199,10 @@ object OpenapiModels {
       summary <- c.get[Option[String]]("summary")
       tags <- c.get[Option[Seq[String]]]("tags")
       operationId <- c.get[Option[String]]("operationId")
+      specificationExtensionKeys = c.keys.toSeq.flatMap(_.filter(_.startsWith("x-")))
+      specificationExtensions = specificationExtensionKeys
+        .flatMap(key => c.downField(key).as[SpecificationExtensionValue].toOption.map(key.stripPrefix("x-") -> _))
+        .toMap
     } yield {
       OpenapiPathMethod(
         "--partial--",
@@ -185,7 +212,8 @@ object OpenapiModels {
         security.map(_.keys.toSeq),
         summary,
         tags,
-        operationId
+        operationId,
+        specificationExtensions
       )
     }
   }
@@ -198,7 +226,11 @@ object OpenapiModels {
         .map(_.getOrElse(Nil))
       methods <- List("get", "put", "post", "delete", "options", "head", "patch", "connect", "trace")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
-    } yield OpenapiPath("--partial--", methods.flatten, parameters)
+      specificationExtensionKeys = c.keys.toSeq.flatMap(_.filter(_.startsWith("x-")))
+      specificationExtensions = specificationExtensionKeys
+        .flatMap(key => c.downField(key).as[SpecificationExtensionValue].toOption.map(key.stripPrefix("x-") -> _))
+        .toMap
+    } yield OpenapiPath("--partial--", methods.flatten, parameters, specificationExtensions)
   }
 
   implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>

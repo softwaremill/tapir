@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 
 import io.circe.Json
-import sttp.tapir.codegen.openapi.models._
+import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -762,5 +762,88 @@ object TestHelpers {
         Map()
       )
     )
+  )
+
+  val specificationExtensionYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: hello goodbye
+     |  version: '1.0'
+     |paths:
+     |  /hello:
+     |    x-custom-string-extension-on-path: foobar
+     |    x-custom-list-extension-on-path:
+     |      - foo
+     |      - bar
+     |    x-custom-map-extension-on-path:
+     |      bazkey: bazval
+     |      quuxkey:
+     |        - quux1
+     |        - quux2
+     |    post:
+     |      responses: {}
+     |  /goodbye:
+     |    delete:
+     |      x-custom-string-extension-on-operation: bazquux
+     |      x-custom-list-extension-on-operation:
+     |        - baz
+     |        - quux
+     |      x-custom-map-extension-on-operation:
+     |        bazkey: bazval
+     |        quuxkey:
+     |          - quux1
+     |          - quux2
+     |      responses: {}""".stripMargin
+
+  val specificationExtensionDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello goodbye", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(OpenapiPathMethod(methodType = "post", parameters = Seq(), responses = Seq(), requestBody = None)),
+        specificationExtensions = Map(
+          "custom-string-extension-on-path" -> SpecificationExtensionValueString("foobar"),
+          "custom-list-extension-on-path" -> SpecificationExtensionValueList(
+            Vector(SpecificationExtensionValueString("foo"), SpecificationExtensionValueString("bar"))
+          ),
+          "custom-map-extension-on-path" -> SpecificationExtensionValueMap(
+            Map(
+              "bazkey" -> SpecificationExtensionValueString("bazval"),
+              "quuxkey" -> SpecificationExtensionValueList(
+                Vector(SpecificationExtensionValueString("quux1"), SpecificationExtensionValueString("quux2"))
+              )
+            )
+          )
+        )
+      ),
+      OpenapiPath(
+        url = "/goodbye",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "delete",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            specificationExtensions = Map(
+              "custom-string-extension-on-operation" -> SpecificationExtensionValueString("bazquux"),
+              "custom-list-extension-on-operation" -> SpecificationExtensionValueList(
+                Vector(SpecificationExtensionValueString("baz"), SpecificationExtensionValueString("quux"))
+              ),
+              "custom-map-extension-on-operation" -> SpecificationExtensionValueMap(
+                Map(
+                  "bazkey" -> SpecificationExtensionValueString("bazval"),
+                  "quuxkey" -> SpecificationExtensionValueList(
+                    Vector(SpecificationExtensionValueString("quux1"), SpecificationExtensionValueString("quux2"))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    None
   )
 }
