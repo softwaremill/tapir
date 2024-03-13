@@ -30,6 +30,7 @@ channels:
 components:
   schemas:
     Fruit:
+      title: Fruit
       required:
         - f
       type: object
@@ -37,6 +38,7 @@ components:
         f:
           type: string
     FruitAmount:
+      title: FruitAmount
       required:
         - fruit
         - amount
