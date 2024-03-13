@@ -35,13 +35,14 @@ defined case-classes and endpoint definitions.
 The generator currently supports these settings, you can override them in the `build.sbt`;
 
 ```eval_rst
-=================== ==================================== ===========================================
-setting             default value                        description                             
-=================== ==================================== ===========================================
-openapiSwaggerFile  baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
-openapiPackage      sttp.tapir.generated                 The name for the generated package.
-openapiObject       TapirGeneratedEndpoints              The name for the generated object.
-=================== ==================================== ===========================================
+=============================== ==================================== =====================================================================
+setting                         default value                        description
+=============================== ==================================== =====================================================================
+openapiSwaggerFile              baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
+openapiPackage                  sttp.tapir.generated                 The name for the generated package.
+openapiObject                   TapirGeneratedEndpoints              The name for the generated object.
+openapiUseHeadTagForObjectName  false                                If true, put endpoints in separate files based on first declared tag.
+=============================== ==================================== =====================================================================
 ```
 
 The general usage is;
