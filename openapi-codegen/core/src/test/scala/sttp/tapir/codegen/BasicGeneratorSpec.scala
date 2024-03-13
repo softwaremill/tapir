@@ -40,9 +40,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       TestHelpers.enumQueryParamDocs,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
-      targetScala3 = false,
-      useHeadTagForObjectNames = false
-    )("TapirGeneratedEndpoints") shouldCompile ()
+      targetScala3 = false
+    ) shouldCompile ()
   }
 
 }
