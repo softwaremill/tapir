@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     Entity:
+      title: Entity
       oneOf:
         - $ref: '#/components/schemas/Organization'
         - $ref: '#/components/schemas/Person'
@@ -25,6 +26,7 @@ components:
           john: '#/components/schemas/Person'
           sml: '#/components/schemas/Organization'
     NestedEntity:
+      title: NestedEntity
       required:
         - entity
       type: object
@@ -32,6 +34,7 @@ components:
         entity:
           $ref: '#/components/schemas/Entity'
     Organization:
+      title: Organization
       required:
         - name
       type: object
@@ -39,6 +42,7 @@ components:
         name:
           type: string
     Person:
+      title: Person
       required:
         - name
         - age

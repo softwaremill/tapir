@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     ValidFruitAmount:
+      title: ValidFruitAmount
       required:
         - fruit
         - amount

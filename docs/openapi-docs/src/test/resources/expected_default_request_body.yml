@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     ObjectWithDefaults:
+      title: ObjectWithDefaults
       type: object
       properties:
         name:

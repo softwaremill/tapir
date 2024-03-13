@@ -24,10 +24,12 @@ paths:
 components:
   schemas:
     Clause:
+      title: Clause
       oneOf:
         - $ref: '#/components/schemas/Expression'
         - $ref: '#/components/schemas/Not'
     Expression:
+      title: Expression
       required:
         - v
       type: object
@@ -35,6 +37,7 @@ components:
         v:
           type: string
     Not:
+      title: Not
       required:
         - not
       type: object

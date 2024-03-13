@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     Map_String:
+      title: Map_String
       type: object
       additionalProperties:
         type: string

@@ -16,12 +16,14 @@ paths:
 components:
   schemas:
     CountryCode:
+      title: CountryCode
       type: string
       enum:
         - PL
         - BE
         - LU
     CountryCollection:
+      title: CountryCollection
       required:
         - countryCode
       type: object

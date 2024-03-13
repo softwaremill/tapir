@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     MyNumber:
+      title: MyNumber
       type: integer
       description: |-
         * 1 - One
@@ -35,6 +36,7 @@ components:
         - 2
         - 3
     NumberWithMsg:
+      title: NumberWithMsg
       required:
         - number
         - msg

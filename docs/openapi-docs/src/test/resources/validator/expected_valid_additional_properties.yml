@@ -24,10 +24,12 @@ paths:
 components:
   schemas:
     Map_ValidFruitAmount:
+      title: Map_ValidFruitAmount
       type: object
       additionalProperties:
         $ref: '#/components/schemas/ValidFruitAmount'
     ValidFruitAmount:
+      title: ValidFruitAmount
       required:
         - fruit
         - amount

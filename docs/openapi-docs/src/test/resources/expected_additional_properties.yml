@@ -16,10 +16,12 @@ paths:
 components:
   schemas:
     Map_Person:
+      title: Map_Person
       type: object
       additionalProperties:
         $ref: '#/components/schemas/Person'
     Person:
+      title: Person
       required:
         - name
         - age

@@ -81,6 +81,7 @@ paths:
 components:
   schemas:
     FruitAmount:
+      title: FruitAmount
       required:
         - fruit
         - amount

@@ -16,10 +16,12 @@ paths:
 components:
   schemas:
     Map_sttp_tapir_tests_data_FruitAmount:
+      title: Map_sttp_tapir_tests_data_FruitAmount
       type: object
       additionalProperties:
         $ref: '#/components/schemas/sttp_tapir_tests_data_FruitAmount'
     sttp_tapir_tests_data_FruitAmount:
+      title: sttp_tapir_tests_data_FruitAmount
       required:
         - fruit
         - amount

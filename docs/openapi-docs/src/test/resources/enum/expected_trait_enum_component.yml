@@ -26,6 +26,7 @@ paths:
 components:
   schemas:
     CallOfDuty:
+      title: CallOfDuty
       required:
         - game
         - episode
@@ -39,11 +40,13 @@ components:
             - first
             - second
     Game:
+      title: Game
       type: string
       enum:
         - action
         - strategy
     TotalWar:
+      title: TotalWar
       required:
         - game
         - episode
