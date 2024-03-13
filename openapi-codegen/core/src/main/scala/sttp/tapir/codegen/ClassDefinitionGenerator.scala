@@ -15,7 +15,20 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 class ClassDefinitionGenerator {
 
   def classDefs(doc: OpenapiDocument, targetScala3: Boolean = false): Option[String] = {
-    doc.components
+    val generatesEnums = doc.components.exists(_.schemas.exists(_._2.isInstanceOf[OpenapiSchemaEnum]))
+    val enumQuerySerdeHelper =
+      if (!generatesEnums) ""
+      else if (targetScala3) "" // TODO
+      else
+        """  def makeQueryCodecForEnum[T <: EnumEntry](T: Enum[T] with CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+          |    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+          |      .mapDecode(s =>
+          |        // Case-insensitive mapping
+          |        scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+          |          .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_)))(_.entryName)
+          |
+          |""".stripMargin
+    val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(name, obj)
@@ -25,6 +38,7 @@ class ClassDefinitionGenerator {
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
+    defns.map(enumQuerySerdeHelper + _)
   }
 
   private[codegen] def generateMap(name: String, valueSchema: OpenapiSchemaType): Seq[String] = {
@@ -46,6 +60,8 @@ class ClassDefinitionGenerator {
         |object $name extends Enum[$name] with CirceEnum[$name] {
         |  val values = findValues
         |${indent(2)(members.mkString("\n"))}
+        |  implicit val ${name.head.toLower +: name.tail}Codec: sttp.tapir.Codec[List[String], ${name}, sttp.tapir.CodecFormat.TextPlain] =
+        |    makeQueryCodecForEnum(${name})
         |}""".stripMargin :: Nil
   }
 

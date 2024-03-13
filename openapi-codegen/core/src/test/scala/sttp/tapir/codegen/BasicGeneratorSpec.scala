@@ -35,4 +35,14 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
     (schemas + "\n" + (endpoints.linesIterator.filterNot(_ startsWith "package").mkString("\n"))) shouldCompile ()
   }
 
+  it should "compile endpoints with enum query params" in {
+    BasicGenerator.generateObjects(
+      TestHelpers.enumQueryParamDocs,
+      "sttp.tapir.generated",
+      "TapirGeneratedEndpoints",
+      targetScala3 = false,
+      useHeadTagForObjectNames = false
+    )("TapirGeneratedEndpoints") shouldCompile ()
+  }
+
 }

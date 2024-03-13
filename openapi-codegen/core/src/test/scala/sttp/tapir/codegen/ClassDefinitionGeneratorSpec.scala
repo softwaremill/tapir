@@ -355,7 +355,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |  $res
          |}
          |  """.stripMargin
-    println(compileUnit)
+
     compileUnit shouldCompile ()
 
   }

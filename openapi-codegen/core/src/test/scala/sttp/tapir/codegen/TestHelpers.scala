@@ -16,6 +16,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
   OpenapiSchemaInt,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
@@ -512,5 +514,66 @@ object TestHelpers {
       )
     ),
     None
+  )
+
+  val enumQueryParamYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: enum query test
+      |  version: '1.0'
+      |paths:
+      |  /queryTest:
+      |    parameters:
+      |      - name: test
+      |        in: query
+      |        required: false
+      |        schema:
+      |          $ref: '#/components/schemas/Test'
+      |    post:
+      |      responses: {}
+      |
+      |schemas:
+      |  Test:
+      |    title: Test
+      |    type: string
+      |    enum:
+      |      - paperback
+      |      - hardback
+      |""".stripMargin
+
+  val enumQueryParamDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("enum query test", "1.0"),
+    Seq(
+      OpenapiPath(
+        "/queryTest",
+        Seq(
+          OpenapiPathMethod(
+            methodType = "post",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            summary = None,
+            tags = None,
+            operationId = None
+          )
+        ),
+        parameters = Seq(
+          Resolved(OpenapiParameter("test", "query", None, None, OpenapiSchemaRef("#/components/schemas/Test")))
+        )
+      )
+    ),
+    Some(
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaEnum(
+            "string",
+            Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+            false
+          )
+        )
+      )
+    )
   )
 }
