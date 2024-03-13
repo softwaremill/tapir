@@ -6,14 +6,42 @@ import cats.syntax.either._
 import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
-  sealed trait SpecificationExtensionValue
-  case object SpecificationExtensionValueNull extends SpecificationExtensionValue
-  case class SpecificationExtensionValueBoolean(value: Boolean) extends SpecificationExtensionValue
-  case class SpecificationExtensionValueLong(value: Long) extends SpecificationExtensionValue
-  case class SpecificationExtensionValueDouble(value: Double) extends SpecificationExtensionValue
-  case class SpecificationExtensionValueString(value: String) extends SpecificationExtensionValue
-  case class SpecificationExtensionValueList(values: Seq[SpecificationExtensionValue]) extends SpecificationExtensionValue
-  case class SpecificationExtensionValueMap(kvs: Map[String, SpecificationExtensionValue]) extends SpecificationExtensionValue
+  sealed trait SpecificationExtensionValue {
+    def tpe: String
+    def render: String
+    def value: Any
+  }
+  case object SpecificationExtensionValueNull extends SpecificationExtensionValue {
+    val tpe = "Null"
+    val render = "null"
+    val value = null
+  }
+  case class SpecificationExtensionValueBoolean(value: Boolean) extends SpecificationExtensionValue {
+    val render = value.toString
+    val tpe = "Boolean"
+  }
+  case class SpecificationExtensionValueLong(value: Long) extends SpecificationExtensionValue {
+    val render = s"${value}L"
+    val tpe = "Long"
+  }
+  case class SpecificationExtensionValueDouble(value: Double) extends SpecificationExtensionValue {
+    val render = s"${value}d"
+    val tpe = "Double"
+  }
+  case class SpecificationExtensionValueString(value: String) extends SpecificationExtensionValue {
+    val render = '"' +: value :+ '"'
+    val tpe = "String"
+  }
+  case class SpecificationExtensionValueList(values: Seq[SpecificationExtensionValue]) extends SpecificationExtensionValue {
+    val render = s"Vector(${values.map(_.render).mkString(", ")})"
+    def tpe = values.map(_.tpe).distinct match { case single +: Nil => s"Seq[$single]"; case _ => "Seq[Any]" }
+    def value = values.map(_.value)
+  }
+  case class SpecificationExtensionValueMap(kvs: Map[String, SpecificationExtensionValue]) extends SpecificationExtensionValue {
+    val render = s"Map(${kvs.map { case (k, v) => s""""$k" -> ${v.render}""" }.mkString(", ")})"
+    def tpe = kvs.values.map(_.tpe).toSeq.distinct match { case single +: Nil => s"Map[String, $single]"; case _ => "Map[String, Any]" }
+    def value = kvs.map { case (k, v) => k -> v.value }
+  }
 
   sealed trait Resolvable[T] {
     def resolve(input: Map[String, T]): T

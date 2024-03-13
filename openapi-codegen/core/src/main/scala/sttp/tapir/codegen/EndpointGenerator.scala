@@ -1,6 +1,13 @@
 package sttp.tapir.codegen
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiRequestBody,
+  OpenapiResponse,
+  SpecificationExtensionValue
+}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
@@ -68,6 +75,18 @@ class EndpointGenerator {
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
+
+        val attributeString = {
+          val pathAttributes = attributes(p.specificationExtensions)
+          val operationAttributes = attributes(m.specificationExtensions)
+          (pathAttributes, operationAttributes) match {
+            case (None, None)                          => ""
+            case (Some(atts), None)                    => indent(2)(atts)
+            case (None, Some(atts))                    => indent(2)(atts)
+            case (Some(pathAtts), Some(operationAtts)) => indent(2)(pathAtts + "\n" + operationAtts)
+          }
+        }
+
         val definition =
           s"""|endpoint
               |  .${m.methodType}
@@ -76,6 +95,7 @@ class EndpointGenerator {
               |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
               |${indent(2)(outs(m.responses))}
               |${indent(2)(tags(m.tags))}
+              |$attributeString
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
         val name = m.operationId
@@ -195,6 +215,11 @@ class EndpointGenerator {
     // .tags(List("A", "B"))
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
+
+  private def attributes(atts: Map[String, SpecificationExtensionValue]): Option[String] = if (atts.nonEmpty) Some {
+    atts.map { case (k, v) => s""".attribute[${v.tpe}](new AttributeKey[${v.tpe}]("${k}"), ${v.render})""" }.mkString("\n")
+  }
+  else None
 
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r

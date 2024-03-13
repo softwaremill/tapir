@@ -250,4 +250,29 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     generatedCode shouldCompile ()
   }
 
+  it should "generate attributes for specification extensions on path and operation objects" in {
+    val doc = TestHelpers.specificationExtensionDocs
+    val generatedCode = BasicGenerator.generateObjects(
+      doc,
+      "sttp.tapir.generated",
+      "TapirGeneratedEndpoints",
+      targetScala3 = false,
+      useHeadTagForObjectNames = false,
+      jsonSerdeLib = "circe"
+    )("TapirGeneratedEndpoints")
+    generatedCode should include(
+      """.attribute[String](new AttributeKey[String]("custom-string-extension-on-path"), "foobar")"""
+    )
+    generatedCode should include(
+      """.attribute[String](new AttributeKey[String]("custom-string-extension-on-operation"), "bazquux")"""
+    )
+    generatedCode should include(
+      """.attribute[Seq[String]](new AttributeKey[Seq[String]]("custom-list-extension-on-operation"), Vector("baz", "quux"))"""
+    )
+    generatedCode should include(
+      """.attribute[Map[String, Any]](new AttributeKey[Map[String, Any]]("custom-map-extension-on-path"), Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))"""
+    )
+    generatedCode shouldCompile ()
+  }
+
 }
