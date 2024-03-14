@@ -23,7 +23,7 @@ class ClassDefinitionGenerator {
       if (!generatesQueryParamEnums) ""
       else if (targetScala3) "" // TODO
       else
-        """  def makeQueryCodecForEnum[T <: EnumEntry](T: Enum[T] with CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+        """  def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](T: enumeratum.Enum[T] with enumeratum.CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
           |    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
           |      .mapDecode(s =>
           |        // Case-insensitive mapping
@@ -70,8 +70,8 @@ class ClassDefinitionGenerator {
        |  implicit val ${name.head.toLower +: name.tail}Codec: sttp.tapir.Codec[List[String], ${name}, sttp.tapir.CodecFormat.TextPlain] =
        |    makeQueryCodecForEnum(${name})""".stripMargin
       else ""
-    s"""|sealed trait $name extends EnumEntry
-        |object $name extends Enum[$name] with CirceEnum[$name] {
+    s"""|sealed trait $name extends enumeratum.EnumEntry
+        |object $name extends enumeratum.Enum[$name] with enumeratum.CirceEnum[$name] {
         |  val values = findValues
         |${indent(2)(members.mkString("\n"))}$maybeQueryCodecDefn
         |}""".stripMargin :: Nil

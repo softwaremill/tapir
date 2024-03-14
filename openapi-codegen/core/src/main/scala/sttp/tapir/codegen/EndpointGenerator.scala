@@ -4,7 +4,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, Openapi
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
-  OpenapiSchemaEnum,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType
 }

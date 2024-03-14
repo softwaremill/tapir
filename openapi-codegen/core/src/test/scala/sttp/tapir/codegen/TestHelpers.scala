@@ -533,13 +533,14 @@ object TestHelpers {
       |    post:
       |      responses: {}
       |
-      |schemas:
-      |  Test:
-      |    title: Test
-      |    type: string
-      |    enum:
-      |      - paperback
-      |      - hardback
+      |components:
+      |  schemas:
+      |    Test:
+      |      title: Test
+      |      type: string
+      |      enum:
+      |        - paperback
+      |        - hardback
       |""".stripMargin
 
   val enumQueryParamDocs = OpenapiDocument(

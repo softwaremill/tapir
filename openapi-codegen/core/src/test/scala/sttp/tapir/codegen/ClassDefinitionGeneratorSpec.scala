@@ -55,7 +55,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
     // the enumeratum import should be included by the BasicGenerator iff we generated enums
-    "import enumeratum._;" + (new ClassDefinitionGenerator().classDefs(doc).get) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate simple class with reserved propName" in {
@@ -305,8 +305,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    val res = gen.classDefs(doc, false)
-    "import enumeratum._;" + res.get shouldCompile ()
+    gen.classDefs(doc, false).get shouldCompile ()
   }
 
   import cats.implicits._
