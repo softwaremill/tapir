@@ -22,11 +22,35 @@ object BasicGenerator {
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
-  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String, targetScala3: Boolean): String = {
+  def generateObjects(
+      doc: OpenapiDocument,
+      packagePath: String,
+      objName: String,
+      targetScala3: Boolean,
+      useHeadTagForObjectNames: Boolean
+  ): Map[String, String] = {
     val enumImport =
       if (!targetScala3 && doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._"
       else ""
-    s"""|
+
+    val endpointsByTag = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val taggedObjs = endpointsByTag.collect {
+      case (Some(headTag), body) if body.nonEmpty =>
+        val taggedObj =
+          s"""package $packagePath
+           |
+           |import $objName._
+           |
+           |object $headTag {
+           |
+           |${indent(2)(imports)}
+           |
+           |${indent(2)(body)}
+           |
+           |}""".stripMargin
+        headTag -> taggedObj
+    }
+    val mainObj = s"""|
         |package $packagePath
         |
         |object $objName {
@@ -35,10 +59,11 @@ object BasicGenerator {
         |
         |${indent(2)(classGenerator.classDefs(doc, targetScala3).getOrElse(""))}
         |
-        |${indent(2)(endpointGenerator.endpointDefs(doc))}
+        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
         |
         |}
         |""".stripMargin
+    taggedObjs + (objName -> mainObj)
   }
 
   private[codegen] def imports: String =

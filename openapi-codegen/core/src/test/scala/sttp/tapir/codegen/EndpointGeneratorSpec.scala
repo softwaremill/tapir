@@ -56,7 +56,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
+    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
     generatedCode should include("val getTestAsdId =")
     generatedCode shouldCompile ()
   }
@@ -131,7 +131,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       )
     )
     BasicGenerator.imports ++
-      new EndpointGenerator().endpointDefs(doc) shouldCompile ()
+      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None) shouldCompile ()
   }
 
   it should "handle status codes" in {
@@ -174,7 +174,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc)
+    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
     generatedCode should include(
       """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
     ) // status code with body
@@ -230,7 +230,13 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         )
       )
     )
-    val generatedCode = BasicGenerator.generateObjects(doc, "sttp.tapir.generated", "TapirGeneratedEndpoints", targetScala3 = false)
+    val generatedCode = BasicGenerator.generateObjects(
+      doc,
+      "sttp.tapir.generated",
+      "TapirGeneratedEndpoints",
+      targetScala3 = false,
+      useHeadTagForObjectNames = false
+    )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
     )

@@ -19,49 +19,60 @@ class EndpointGenerator {
 
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
-  def endpointDefs(doc: OpenapiDocument): String = {
+  def endpointDefs(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): Map[Option[String], String] = {
     val components = Option(doc.components).flatten
-    val ge = doc.paths.flatMap(generatedEndpoints(components))
-    val definitions = ge
-      .map { case (name, definition) =>
-        s"""|lazy val $name =
+    val geMap =
+      doc.paths.flatMap(generatedEndpoints(components, useHeadTagForObjectNames)).groupBy(_._1).mapValues(_.map(_._2).reduce(_ ++ _))
+    geMap.mapValues { ge =>
+      val definitions = ge
+        .map { case (name, definition) =>
+          s"""|lazy val $name =
             |${indent(2)(definition)}
             |""".stripMargin
-      }
-      .mkString("\n")
-    val allEP = s"lazy val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
+        }
+        .mkString("\n")
+      val allEP = s"lazy val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
 
-    s"""|$definitions
-        |
-        |$allEP
-        |""".stripMargin
+      s"""|$definitions
+          |
+          |$allEP
+          |""".stripMargin
+    }.toMap
   }
 
-  private[codegen] def generatedEndpoints(components: Option[OpenapiComponent])(p: OpenapiPath): Seq[(String, String)] = {
+  private[codegen] def generatedEndpoints(components: Option[OpenapiComponent], useHeadTagForObjectNames: Boolean)(
+      p: OpenapiPath
+  ): Seq[(Option[String], Seq[(String, String)])] = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
 
-    p.methods.map(_.withResolvedParentParameters(parameters, p.parameters)).map { m =>
-      implicit val location: Location = Location(p.url, m.methodType)
-      val definition =
-        s"""|endpoint
-            |  .${m.methodType}
-            |  ${urlMapper(p.url, m.resolvedParameters)}
-            |${indent(2)(security(securitySchemes, m.security))}
-            |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
-            |${indent(2)(outs(m.responses))}
-            |${indent(2)(tags(m.tags))}
-            |""".stripMargin
+    p.methods
+      .map(_.withResolvedParentParameters(parameters, p.parameters))
+      .map { m =>
+        implicit val location: Location = Location(p.url, m.methodType)
+        val definition =
+          s"""|endpoint
+              |  .${m.methodType}
+              |  ${urlMapper(p.url, m.resolvedParameters)}
+              |${indent(2)(security(securitySchemes, m.security))}
+              |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
+              |${indent(2)(outs(m.responses))}
+              |${indent(2)(tags(m.tags))}
+              |""".stripMargin
 
-      val name = m.operationId
-        .getOrElse(m.methodType + p.url.capitalize)
-        .split("[^0-9a-zA-Z$_]")
-        .filter(_.nonEmpty)
-        .zipWithIndex
-        .map { case (part, 0) => part; case (part, _) => part.capitalize }
-        .mkString
-      (name, definition)
-    }
+        val name = m.operationId
+          .getOrElse(m.methodType + p.url.capitalize)
+          .split("[^0-9a-zA-Z$_]")
+          .filter(_.nonEmpty)
+          .zipWithIndex
+          .map { case (part, 0) => part; case (part, _) => part.capitalize }
+          .mkString
+        val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
+        (maybeTargetFileName, (name, definition))
+      }
+      .groupBy(_._1)
+      .toSeq
+      .map { case (maybeTargetFileName, defns) => maybeTargetFileName -> defns.map(_._2) }
   }
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter])(implicit location: Location): String = {

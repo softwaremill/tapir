@@ -35,13 +35,14 @@ defined case-classes and endpoint definitions.
 The generator currently supports these settings, you can override them in the `build.sbt`;
 
 ```eval_rst
-=================== ==================================== ===========================================
-setting             default value                        description                             
-=================== ==================================== ===========================================
-openapiSwaggerFile  baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
-openapiPackage      sttp.tapir.generated                 The name for the generated package.
-openapiObject       TapirGeneratedEndpoints              The name for the generated object.
-=================== ==================================== ===========================================
+=============================== ==================================== =====================================================================
+setting                         default value                        description
+=============================== ==================================== =====================================================================
+openapiSwaggerFile              baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
+openapiPackage                  sttp.tapir.generated                 The name for the generated package.
+openapiObject                   TapirGeneratedEndpoints              The name for the generated object.
+openapiUseHeadTagForObjectName  false                                If true, put endpoints in separate files based on first declared tag.
+=============================== ==================================== =====================================================================
 ```
 
 The general usage is;
@@ -53,6 +54,33 @@ import sttp.tapir.docs.openapi._
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```
+
+### Output files
+
+To expand on the `openapiUseHeadTagForObjectName` setting a little more, suppose we have the following endpoints:
+```yaml
+paths:
+  /foo:
+    get:
+      tags:
+        - Baz
+        - Foo
+    put:
+      tags: []
+  /bar:
+    get:
+      tags:
+        - Baz
+        - Bar
+```
+In this case 'head' tag for `GET /foo` and `GET /bar` would be 'Baz', and `PUT /foo` has no tags (and thus no 'head' tag).
+
+If `openapiUseHeadTagForObjectName = false` (assuming default settings for the other flags) then all endpoint definitions
+will be output to the `TapirGeneratedEndpoints.scala` file, which will contain a single `object TapirGeneratedEndpoints`.
+
+If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` endpoints would be output to a
+`Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
+having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
 ### Limitations
 
