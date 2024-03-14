@@ -119,3 +119,7 @@ val serverBinding: Future[NettyFutureDomainSocketBinding] =
   )
   .startUsingDomainSocket(Paths.get(System.getProperty("java.io.tmpdir"), "hello"))
 ```
+
+## Logging
+
+By default, [logging](debugging.md) of handled requests and exceptions is enabled, and uses an slf4j logger.
