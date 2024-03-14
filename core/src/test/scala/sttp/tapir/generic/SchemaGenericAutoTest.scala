@@ -204,6 +204,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitly[Schema[D]].schemaType shouldBe expectedSnakeCaseNaming
   }
 
+  it should "find schema for a simple case class and use screaming snake case naming transformation" in {
+    val expectedScreamingSnakeCaseNaming =
+      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "SOME_FIELD_NAME"), stringSchema)))
+    implicit val customConf: Configuration = Configuration.default.withScreamingSnakeCaseMemberNames
+    implicitly[Schema[D]].schemaType shouldBe expectedScreamingSnakeCaseNaming
+  }
+
   it should "find schema for a simple case class and use kebab case naming transformation" in {
     val expectedKebabCaseNaming =
       expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
@@ -297,6 +304,20 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           "organization" -> SRef(SName("sttp.tapir.generic.Organization")),
           "person" -> SRef(SName("sttp.tapir.generic.Person")),
           "unknown_entity" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (screaming snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withScreamingSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "ORGANIZATION" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "PERSON" -> SRef(SName("sttp.tapir.generic.Person")),
+          "UNKNOWN_ENTITY" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
         )
       )
     )

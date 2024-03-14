@@ -15,9 +15,11 @@ import java.util.regex.Pattern
   */
 final case class Configuration(toEncodedName: String => String, discriminator: Option[String], toDiscriminatorValue: SName => String) {
   def withSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.snakeCaseTransformation)
+  def withScreamingSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.screamingSnakeCaseTransformation)
   def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
   def withDiscriminator(d: String): Configuration = copy(discriminator = Some(d))
   def withSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortSnakeCaseSubtypeTransformation)
+  def withScreamingSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortScreamingSnakeCaseSubtypeTransformation)
   def withKebabCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortKebabCaseSubtypeTransformation)
   def withFullDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullIdentitySubtypeTransformation)
   def withFullSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullSnakeCaseSubtypeTransformation)
@@ -32,6 +34,11 @@ object Configuration {
   private val snakeCaseTransformation: String => String = s => {
     val partial = basePattern.matcher(s).replaceAll("$1_$2")
     swapPattern.matcher(partial).replaceAll("$1_$2").toLowerCase
+  }
+
+  private val screamingSnakeCaseTransformation: String => String = s => {
+    val partial = basePattern.matcher(s).replaceAll("$1_$2")
+    swapPattern.matcher(partial).replaceAll("$1_$2").toUpperCase
   }
 
   private val kebabCaseTransformation: String => String = s => {
@@ -53,6 +60,9 @@ object Configuration {
 
   private val shortSnakeCaseSubtypeTransformation: SName => String =
     shortIdentitySubtypeTransformation.andThen(snakeCaseTransformation)
+
+  private val shortScreamingSnakeCaseSubtypeTransformation: SName => String =
+    shortIdentitySubtypeTransformation.andThen(screamingSnakeCaseTransformation)
 
   private val shortKebabCaseSubtypeTransformation: SName => String =
     shortIdentitySubtypeTransformation.andThen(kebabCaseTransformation)
