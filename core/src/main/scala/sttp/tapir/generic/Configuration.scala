@@ -15,6 +15,7 @@ import java.util.regex.Pattern
   */
 final case class Configuration(toEncodedName: String => String, discriminator: Option[String], toDiscriminatorValue: SName => String) {
   def withSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.snakeCaseTransformation)
+  def withScreamingSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.screamingSnakeCaseTransformation)
   def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
   def withDiscriminator(d: String): Configuration = copy(discriminator = Some(d))
   def withSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortSnakeCaseSubtypeTransformation)
@@ -32,6 +33,11 @@ object Configuration {
   private val snakeCaseTransformation: String => String = s => {
     val partial = basePattern.matcher(s).replaceAll("$1_$2")
     swapPattern.matcher(partial).replaceAll("$1_$2").toLowerCase
+  }
+
+  private val screamingSnakeCaseTransformation: String => String = s => {
+    val partial = basePattern.matcher(s).replaceAll("$1_$2")
+    swapPattern.matcher(partial).replaceAll("$1_$2").toUpperCase
   }
 
   private val kebabCaseTransformation: String => String = s => {

@@ -81,6 +81,16 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     codec.decode("complicated_name=10") shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
   }
 
+  it should "generate a codec for a one-arg case class using screaming-snake-case naming transformation" in {
+    // given
+    implicit val configuration: Configuration = Configuration.default.withScreamingSnakeCaseMemberNames
+    val codec = implicitly[Codec[String, CaseClassWithComplicatedName, CodecFormat.XWwwFormUrlencoded]]
+
+    // when
+    codec.encode(CaseClassWithComplicatedName(10)) shouldBe "COMPLICATED_NAME=10"
+    codec.decode("COMPLICATED_NAME=10") shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
+  }
+
   it should "generate a codec for a one-arg case class using kebab-case naming transformation" in {
     // given
     implicit val configuration: Configuration = Configuration.default.withKebabCaseMemberNames

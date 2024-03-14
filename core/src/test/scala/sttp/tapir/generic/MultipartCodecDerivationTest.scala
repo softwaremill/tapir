@@ -74,6 +74,16 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     codec.decode(createStringParts(List(("complicated_name", "10")))) shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
   }
 
+  it should "generate a codec for a one-arg case class using screaming-snake-case naming transformation" in {
+    // given
+    implicit val configuration: Configuration = Configuration.default.withScreamingSnakeCaseMemberNames
+    val codec = implicitly[MultipartCodec[CaseClassWithComplicatedName]].codec
+
+    // when
+    toPartData(codec.encode(CaseClassWithComplicatedName(10))) shouldBe List(("COMPLICATED_NAME", "10"))
+    codec.decode(createStringParts(List(("COMPLICATED_NAME", "10")))) shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
+  }
+
   it should "generate a codec for a one-arg case class with list" in {
     // given
     case class Test1(f1: List[Int])

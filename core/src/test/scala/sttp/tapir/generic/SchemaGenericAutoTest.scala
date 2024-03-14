@@ -204,6 +204,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitly[Schema[D]].schemaType shouldBe expectedSnakeCaseNaming
   }
 
+  it should "find schema for a simple case class and use screaming snake case naming transformation" in {
+    val expectedScreamingSnakeCaseNaming =
+      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "SOME_FIELD_NAME"), stringSchema)))
+    implicit val customConf: Configuration = Configuration.default.withScreamingSnakeCaseMemberNames
+    implicitly[Schema[D]].schemaType shouldBe expectedScreamingSnakeCaseNaming
+  }
+
   it should "find schema for a simple case class and use kebab case naming transformation" in {
     val expectedKebabCaseNaming =
       expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
