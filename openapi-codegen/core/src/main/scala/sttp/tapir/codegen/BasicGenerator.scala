@@ -7,7 +7,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBinary,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
-  OpenapiSchemaEnum,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaLong,
