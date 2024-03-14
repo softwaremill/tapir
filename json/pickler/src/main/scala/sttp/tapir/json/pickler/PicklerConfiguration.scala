@@ -13,6 +13,9 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
   def withSnakeCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
     genericDerivationConfig.withSnakeCaseDiscriminatorValues
   )
+  def withScreamingSnakeCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
+    genericDerivationConfig.withScreamingSnakeCaseDiscriminatorValues
+  )
   def withKebabCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
     genericDerivationConfig.withKebabCaseDiscriminatorValues
   )

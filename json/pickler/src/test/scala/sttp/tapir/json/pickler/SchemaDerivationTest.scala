@@ -354,6 +354,21 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
     )
   }
 
+  it should "generate one-of schema using the given discriminator (screaming snake case subtype names)" in {
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withScreamingSnakeCaseDiscriminatorValues
+    implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "ORGANIZATION" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "PERSON" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "UNKNOWN_ENTITY" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
+        )
+      )
+    )
+  }
+
   it should "generate one-of schema using the given discriminator (full subtype names)" in {
     implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
     implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(

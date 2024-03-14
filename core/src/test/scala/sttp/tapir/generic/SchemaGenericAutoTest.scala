@@ -309,6 +309,20 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )
   }
 
+  it should "generate one-of schema using the given discriminator (screaming snake case subtype names)" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withScreamingSnakeCaseDiscriminatorValues
+    implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "ORGANIZATION" -> SRef(SName("sttp.tapir.generic.Organization")),
+          "PERSON" -> SRef(SName("sttp.tapir.generic.Person")),
+          "UNKNOWN_ENTITY" -> SRef(SName("sttp.tapir.generic.UnknownEntity"))
+        )
+      )
+    )
+  }
+
   it should "generate one-of schema using the given discriminator (full subtype names)" in {
     implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i").withFullDiscriminatorValues
     implicitly[Schema[Entity]].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(

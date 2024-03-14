@@ -19,6 +19,7 @@ final case class Configuration(toEncodedName: String => String, discriminator: O
   def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
   def withDiscriminator(d: String): Configuration = copy(discriminator = Some(d))
   def withSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortSnakeCaseSubtypeTransformation)
+  def withScreamingSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortScreamingSnakeCaseSubtypeTransformation)
   def withKebabCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.shortKebabCaseSubtypeTransformation)
   def withFullDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullIdentitySubtypeTransformation)
   def withFullSnakeCaseDiscriminatorValues: Configuration = copy(toDiscriminatorValue = Configuration.fullSnakeCaseSubtypeTransformation)
@@ -59,6 +60,9 @@ object Configuration {
 
   private val shortSnakeCaseSubtypeTransformation: SName => String =
     shortIdentitySubtypeTransformation.andThen(snakeCaseTransformation)
+
+  private val shortScreamingSnakeCaseSubtypeTransformation: SName => String =
+    shortIdentitySubtypeTransformation.andThen(screamingSnakeCaseTransformation)
 
   private val shortKebabCaseSubtypeTransformation: SName => String =
     shortIdentitySubtypeTransformation.andThen(kebabCaseTransformation)
