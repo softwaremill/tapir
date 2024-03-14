@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithSet'
+components:
+  schemas:
+    FruitAmount:
+      title: FruitAmount
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+          format: int32
+    ObjectWithSet:
+      title: ObjectWithSet
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FruitAmount'
+          uniqueItems: true

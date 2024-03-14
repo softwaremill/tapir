@@ -313,6 +313,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should add uniqueItems for set-based array schema") {
+    val expectedYaml = load("expected_unfolded_array_with_unique_items.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.out(jsonBody[ObjectWithSet]), Info("Entities", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("use fixed status code output in response") {
     val expectedYaml = load("expected_fixed_status_code.yml")
 

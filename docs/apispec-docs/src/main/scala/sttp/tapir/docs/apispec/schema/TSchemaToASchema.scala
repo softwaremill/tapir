@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema, _}
-import sttp.tapir.Schema.{SName, Title}
+import sttp.tapir.Schema.{SName, Title, UniqueItems}
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExampleToAExample}
@@ -84,7 +84,7 @@ private[docs] class TSchemaToASchema(
       var s = result
       s = if (nullable) s.copy(nullable = Some(true)) else s
       s = addMetadata(s, schema)
-      s = addTitle(s, schema)
+      s = addAttributes(s, schema)
       s = addConstraints(s, primitiveValidators, schemaIsWholeNumber)
       s
     } else result
@@ -97,12 +97,14 @@ private[docs] class TSchemaToASchema(
       .toListMap
   }
 
-  private def addTitle(oschema: ASchema, tschema: TSchema[_]): ASchema = {
-    val fromAttr = tschema.attributes.get(Title.Attribute).map(_.value)
+  private def addAttributes(oschema: ASchema, tschema: TSchema[_]): ASchema = {
+    val titleFromAttr = tschema.attributes.get(Title.Attribute).map(_.value)
     // The primary motivation for using schema name as fallback title is to improve Swagger UX with
     // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
-    def fallback = tschema.name.map(fallbackSchemaTitle)
-    oschema.copy(title = fromAttr orElse fallback)
+    def fallbackTitle = tschema.name.map(fallbackSchemaTitle)
+    oschema
+      .copy(title = titleFromAttr orElse fallbackTitle)
+      .copy(uniqueItems = tschema.attribute(UniqueItems.Attribute).map(_.uniqueItems))
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
