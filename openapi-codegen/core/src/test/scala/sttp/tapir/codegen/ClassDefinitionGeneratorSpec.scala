@@ -280,10 +280,35 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val gen = new ClassDefinitionGenerator()
     val res = gen.classDefs(doc, true)
-    // can't just check whether this compiles, because our tests only run on scala 2.12 - so instead just eyeball it...
-    res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-        |  case enum1, enum2
-        |}""".stripMargin)
+    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"))
+    // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
+    res shouldBe Some("""
+      |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+      |  case enum1, enum2
+      |}""".stripMargin)
+    resWithQueryParamCodec shouldBe Some("""
+      |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+      |  Map.from(
+      |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+      |  )
+      |
+      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+      |  sttp.tapir.Codec
+      |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(s =>
+      |      // Case-insensitive mapping
+      |      scala.util
+      |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase)) // TODO a nicer error on the stack trace instead of java.util.NoSuchElementException: key not found
+      |        .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_))
+      |    )(_.name)
+      |
+      |object Test {
+      |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
+      |    makeQueryCodecForEnum[Test]
+      |}
+      |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
+      |  case enum1, enum2
+      |}""".stripMargin)
   }
 
   it should "generate named maps" in {

@@ -87,7 +87,7 @@ having no tags, would be output to the `TapirGeneratedEndpoints` file, along wit
 Currently, the generated code depends on `"io.circe" %% "circe-generic"`. In the future probably we will make the encoder/decoder json lib configurable (PRs welcome).
 
 String-like enums in Scala 2 depend on both `"com.beachape" %% "enumeratum"` and `"com.beachape" %% "enumeratum-circe"`.
-For Scala 3 we derive native enums, and depend instead on `"org.latestbit" %% "circe-tagged-adt-codec"`.
+For Scala 3 we derive native enums, and depend on `"org.latestbit" %% "circe-tagged-adt-codec"` for json serdes and `"io.github.bishabosha" %% "enum-extensions"` for query param serdes.
 Other forms of OpenApi enum are not currently supported.
 
 We currently miss a lot of OpenApi features like:

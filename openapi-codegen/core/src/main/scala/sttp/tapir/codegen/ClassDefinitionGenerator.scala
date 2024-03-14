@@ -20,15 +20,30 @@ class ClassDefinitionGenerator {
         .exists(queryParamRefs.contains)
     val enumQuerySerdeHelper =
       if (!generatesQueryParamEnums) ""
-      else if (targetScala3) "" // TODO
-      else
-        """  def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](T: enumeratum.Enum[T] with enumeratum.CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
-          |    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-          |      .mapDecode(s =>
-          |        // Case-insensitive mapping
-          |        scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-          |          .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_)))(_.entryName)
+      else if (targetScala3)
+        """
+          |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+          |  Map.from(
+          |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+          |  )
           |
+          |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+          |  sttp.tapir.Codec
+          |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+          |    .mapDecode(s =>
+          |      // Case-insensitive mapping
+          |      scala.util
+          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase)) // TODO a nicer error on the stack trace instead of java.util.NoSuchElementException: key not found
+          |        .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_))
+          |    )(_.name)
+          |""".stripMargin
+      else
+        """def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](T: enumeratum.Enum[T] with enumeratum.CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+          |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+          |    .mapDecode(s =>
+          |      // Case-insensitive mapping
+          |      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+          |        .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_)))(_.entryName)
           |""".stripMargin
     val defns = doc.components
       .map(_.schemas.flatMap {
@@ -58,7 +73,17 @@ class ClassDefinitionGenerator {
       targetScala3: Boolean,
       queryParamRefs: Set[String]
   ): Seq[String] = if (targetScala3) {
-    s"""enum $name derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    val maybeQueryParamSerdeDerivation = if (queryParamRefs contains name) ", enumextensions.EnumMirror" else ""
+    val maybeCompanion =
+      if (queryParamRefs contains name)
+        s"""
+        |object $name {
+        |  given stringList${name}Codec: sttp.tapir.Codec[List[String], $name, sttp.tapir.CodecFormat.TextPlain] =
+        |    makeQueryCodecForEnum[$name]
+        |}""".stripMargin
+      else ""
+    s"""$maybeCompanion
+       |enum $name derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec$maybeQueryParamSerdeDerivation {
        |  case ${obj.items.map(_.value).mkString(", ")}
        |}""".stripMargin :: Nil
   } else {
