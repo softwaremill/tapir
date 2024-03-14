@@ -301,6 +301,8 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
+  implicit def schemaForSet[T: Schema, C[X] <: scala.collection.Set[X]]: Schema[C[T]] = 
+    schemaForIterable[T, C].attribute(Schema.UniqueItems.Attribute, Schema.UniqueItems(true))
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 
   implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] = {
@@ -336,6 +338,11 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 
   object Title {
     val Attribute: AttributeKey[Title] = new AttributeKey[Title]("sttp.tapir.Schema.Title")
+  }
+  
+  case class UniqueItems(uniqueItems: Boolean)
+  object UniqueItems {
+    val Attribute: AttributeKey[UniqueItems] = new AttributeKey[UniqueItems]("sttp.tapir.Schema.UniqueItems")
   }
 
   /** @param typeParameterShortNames
