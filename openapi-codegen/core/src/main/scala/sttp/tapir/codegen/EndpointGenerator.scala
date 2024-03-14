@@ -10,7 +10,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
 import sttp.tapir.codegen.util.JavaEscape
 
+case class Location(path: String, method: String) {
+  override def toString: String = s"${method.toUpperCase} ${path}"
+}
+
 class EndpointGenerator {
+  private def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
 
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
@@ -37,6 +42,7 @@ class EndpointGenerator {
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
 
     p.methods.map(_.withResolvedParentParameters(parameters, p.parameters)).map { m =>
+      implicit val location: Location = Location(p.url, m.methodType)
       val definition =
         s"""|endpoint
             |  .${m.methodType}
@@ -58,19 +64,19 @@ class EndpointGenerator {
     }
   }
 
-  private def urlMapper(url: String, parameters: Seq[OpenapiParameter]): String = {
+  private def urlMapper(url: String, parameters: Seq[OpenapiParameter])(implicit location: Location): String = {
     // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val inPath = url.split('/').filter(_.nonEmpty) map { segment =>
       if (segment.startsWith("{")) {
         val name = segment.drop(1).dropRight(1)
         val param = parameters.find(_.name == name)
-        param.fold(throw new Error(s"URLParam $name not found!")) { p =>
+        param.fold(bail(s"URLParam $name not found!")) { p =>
           p.schema match {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
               val desc = p.description.fold("")(d => s""".description("$d")""")
               s"""path[$t]("$name")$desc"""
-            case _ => throw new NotImplementedError("Can't create non-simple params to url yet")
+            case _ => bail("Can't create non-simple params to url yet")
           }
         }
       } else {
@@ -80,9 +86,9 @@ class EndpointGenerator {
     ".in((" + inPath.mkString(" / ") + "))"
   }
 
-  private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Seq[Seq[String]]) = {
+  private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Seq[Seq[String]])(implicit location: Location) = {
     if (security.size > 1 || security.exists(_.size > 1))
-      throw new NotImplementedError("We can handle only single security entry!")
+      bail("We can handle only single security entry!")
 
     security.headOption
       .flatMap(_.headOption)
@@ -98,12 +104,12 @@ class EndpointGenerator {
             s""".securityIn(auth.apiKey($in[String]("$name")))"""
 
           case None =>
-            throw new Error(s"Unknown security scheme $schemeName!")
+            bail(s"Unknown security scheme $schemeName!")
         }
       }
   }
 
-  private def ins(parameters: Seq[OpenapiParameter], requestBody: Option[OpenapiRequestBody]): String = {
+  private def ins(parameters: Seq[OpenapiParameter], requestBody: Option[OpenapiRequestBody])(implicit location: Location): String = {
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
     val params = parameters
@@ -114,13 +120,13 @@ class EndpointGenerator {
             val (t, _) = mapSchemaSimpleTypeToType(st)
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$t]("${param.name}")$desc)"""
-          case x => throw new NotImplementedError(s"Can't create non-simple params to input - found $x")
+          case x => bail(s"Can't create non-simple params to input - found $x")
         }
       }
 
     val rqBody = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
-      else if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
+      else if (b.content.size != 1) bail("We can handle only one requestBody content!")
       else Some(s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})")
     }
 
@@ -135,7 +141,7 @@ class EndpointGenerator {
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
-  private def outs(responses: Seq[OpenapiResponse]) = {
+  private def outs(responses: Seq[OpenapiResponse])(implicit location: Location) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
     responses
@@ -159,9 +165,9 @@ class EndpointGenerator {
               case errorStatus(s) =>
                 s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
               case x =>
-                throw new NotImplementedError(s"Statuscode mapping is incomplete! Cannot handle $x")
+                bail(s"Statuscode mapping is incomplete! Cannot handle $x")
             }
-          case _ => throw new NotImplementedError("We can handle only one return content!")
+          case _ => bail("We can handle only one return content!")
         }
       }
       .sorted
@@ -169,7 +175,7 @@ class EndpointGenerator {
       .mkString("\n")
   }
 
-  private def contentTypeMapper(contentType: String, schema: OpenapiSchemaType, required: Boolean = true) = {
+  private def contentTypeMapper(contentType: String, schema: OpenapiSchemaType, required: Boolean = true)(implicit location: Location) = {
     contentType match {
       case "text/plain" =>
         "stringBody"
@@ -181,7 +187,7 @@ class EndpointGenerator {
           case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"List[$t]"
-          case x => throw new NotImplementedError(s"Can't create non-simple or array params as output (found $x)")
+          case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
         s"jsonBody[$req]"
@@ -193,10 +199,10 @@ class EndpointGenerator {
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef)
             s"multipartBody[$t]"
-          case x => throw new NotImplementedError(s"$contentType only supports schema ref or binary. Found $x")
+          case x => bail(s"$contentType only supports schema ref or binary. Found $x")
         }
 
-      case x => throw new NotImplementedError(s"Not all content types supported! Found $x")
+      case x => bail(s"Not all content types supported! Found $x")
     }
   }
 
