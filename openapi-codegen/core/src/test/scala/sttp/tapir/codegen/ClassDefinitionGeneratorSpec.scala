@@ -344,7 +344,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
+      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     }
 
     val compileUnit =

@@ -33,7 +33,7 @@ object BasicGenerator {
       if (!targetScala3 && doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._"
       else ""
 
-    val endpointsByTag = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val EndpointDefs(endpointsByTag, queryParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
         val taggedObj =
@@ -57,7 +57,7 @@ object BasicGenerator {
         |
         |${indent(2)(imports)}$enumImport
         |
-        |${indent(2)(classGenerator.classDefs(doc, targetScala3).getOrElse(""))}
+        |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs).getOrElse(""))}
         |
         |${indent(2)(endpointsByTag.getOrElse(None, ""))}
         |

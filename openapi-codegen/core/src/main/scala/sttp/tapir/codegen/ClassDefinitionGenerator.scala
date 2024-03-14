@@ -14,10 +14,13 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 
 class ClassDefinitionGenerator {
 
-  def classDefs(doc: OpenapiDocument, targetScala3: Boolean = false): Option[String] = {
-    val generatesEnums = doc.components.exists(_.schemas.exists(_._2.isInstanceOf[OpenapiSchemaEnum]))
+  def classDefs(doc: OpenapiDocument, targetScala3: Boolean = false, queryParamRefs: Set[String] = Set.empty): Option[String] = {
+    val generatesQueryParamEnums =
+      doc.components.toSeq
+        .flatMap(_.schemas.collect { case (name, _: OpenapiSchemaEnum) => name })
+        .exists(queryParamRefs.contains)
     val enumQuerySerdeHelper =
-      if (!generatesEnums) ""
+      if (!generatesQueryParamEnums) ""
       else if (targetScala3) "" // TODO
       else
         """  def makeQueryCodecForEnum[T <: EnumEntry](T: Enum[T] with CirceEnum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
@@ -33,7 +36,7 @@ class ClassDefinitionGenerator {
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(name, obj)
         case (name, obj: OpenapiSchemaEnum) =>
-          generateEnum(name, obj, targetScala3)
+          generateEnum(name, obj, targetScala3, queryParamRefs)
         case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
@@ -50,18 +53,27 @@ class ClassDefinitionGenerator {
   }
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
-  private[codegen] def generateEnum(name: String, obj: OpenapiSchemaEnum, targetScala3: Boolean): Seq[String] = if (targetScala3) {
+  private[codegen] def generateEnum(
+      name: String,
+      obj: OpenapiSchemaEnum,
+      targetScala3: Boolean,
+      queryParamRefs: Set[String]
+  ): Seq[String] = if (targetScala3) {
     s"""enum $name derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
        |  case ${obj.items.map(_.value).mkString(", ")}
        |}""".stripMargin :: Nil
   } else {
     val members = obj.items.map { i => s"case object ${i.value} extends $name" }
+    val maybeQueryCodecDefn =
+      if (queryParamRefs contains name)
+        s"""
+       |  implicit val ${name.head.toLower +: name.tail}Codec: sttp.tapir.Codec[List[String], ${name}, sttp.tapir.CodecFormat.TextPlain] =
+       |    makeQueryCodecForEnum(${name})""".stripMargin
+      else ""
     s"""|sealed trait $name extends EnumEntry
         |object $name extends Enum[$name] with CirceEnum[$name] {
         |  val values = findValues
-        |${indent(2)(members.mkString("\n"))}
-        |  implicit val ${name.head.toLower +: name.tail}Codec: sttp.tapir.Codec[List[String], ${name}, sttp.tapir.CodecFormat.TextPlain] =
-        |    makeQueryCodecForEnum(${name})
+        |${indent(2)(members.mkString("\n"))}$maybeQueryCodecDefn
         |}""".stripMargin :: Nil
   }
 
