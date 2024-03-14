@@ -33,8 +33,17 @@ class ClassDefinitionGenerator {
           |    .mapDecode(s =>
           |      // Case-insensitive mapping
           |      scala.util
-          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase)) // TODO a nicer error on the stack trace instead of java.util.NoSuchElementException: key not found
-          |        .fold(sttp.tapir.DecodeResult.Error(s, _), sttp.tapir.DecodeResult.Value(_))
+          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase)) 
+          |        .fold(
+          |          _ =>
+          |            sttp.tapir.DecodeResult.Error(
+          |              s,
+          |              new NoSuchElementException(
+          |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+          |              )
+          |            ),
+          |          sttp.tapir.DecodeResult.Value(_)
+          |        )
           |    )(_.name)
           |""".stripMargin
       else
