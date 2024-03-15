@@ -24,71 +24,7 @@ class ClassDefinitionGenerator {
 
     def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
-      case head +: tail => defJsonParamRefs(head, initialSet, tail)
-    }
-
-    @tailrec
-    def defJsonParamRefs(toCheck: OpenapiSchemaType, checked: Set[String], tail: Seq[OpenapiSchemaType]): Set[String] = {
-      // We sadly cannot use this because it spoils the @tailrec check
-//      def recurseOnTail = tail match {
-//        case Nil          => checked
-//        case next +: rest => defJsonParamRefs(next, checked, rest)
-//      }
-      toCheck match {
-        case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") =>
-          val name = ref.stripPrefix("#/components/schemas/")
-          val maybeAppended = if (checked contains name) None else allSchemas.get(name)
-          (tail ++ maybeAppended) match {
-            case Nil          => checked
-            case next +: rest => defJsonParamRefs(next, checked + name, rest)
-          }
-        case OpenapiSchemaArray(items, _) => defJsonParamRefs(items, checked, tail)
-        case OpenapiSchemaNot(items)      => defJsonParamRefs(items, checked, tail)
-        case OpenapiSchemaMap(items, _)   => defJsonParamRefs(items, checked, tail)
-        case OpenapiSchemaOneOf(types) =>
-          types match {
-            case Nil =>
-              tail match {
-                case Nil          => checked
-                case next +: rest => defJsonParamRefs(next, checked, rest)
-              }
-            case next +: rest => defJsonParamRefs(next, checked, rest ++ tail)
-          }
-        case OpenapiSchemaAnyOf(types) =>
-          types match {
-            case Nil =>
-              tail match {
-                case Nil          => checked
-                case next +: rest => defJsonParamRefs(next, checked, rest)
-              }
-            case next +: rest => defJsonParamRefs(next, checked, rest ++ tail)
-          }
-        case OpenapiSchemaAllOf(types) =>
-          types match {
-            case Nil =>
-              tail match {
-                case Nil          => checked
-                case next +: rest => defJsonParamRefs(next, checked, rest)
-              }
-            case next +: rest => defJsonParamRefs(next, checked, rest ++ tail)
-          }
-
-        case OpenapiSchemaObject(properties, _, _) if properties.isEmpty =>
-          tail match {
-            case Nil          => checked
-            case next +: rest => defJsonParamRefs(next, checked, rest)
-          }
-        case OpenapiSchemaObject(properties, required, nullable) =>
-          val propToCheck = properties.head
-          val (propToCheckName, propToCheckType) = propToCheck
-          defJsonParamRefs(propToCheckType, checked, OpenapiSchemaObject(properties - propToCheckName, required, nullable) +: tail)
-
-        case _ =>
-          tail match {
-            case Nil          => checked
-            case next +: rest => defJsonParamRefs(next, checked, rest)
-          }
-      }
+      case head +: tail => recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
 
     val allTransitiveJsonParamRefs = fetchJsonParamRefs(
@@ -104,54 +40,11 @@ class ClassDefinitionGenerator {
         |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]
         |""".stripMargin
       else ""
-    val enumQuerySerdeHelper =
-      if (!generatesQueryParamEnums) ""
-      else if (targetScala3)
-        """
-          |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
-          |  Map.from(
-          |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
-          |  )
-          |
-          |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
-          |  sttp.tapir.Codec
-          |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-          |    .mapDecode(s =>
-          |      // Case-insensitive mapping
-          |      scala.util
-          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
-          |        .fold(
-          |          _ =>
-          |            sttp.tapir.DecodeResult.Error(
-          |              s,
-          |              new NoSuchElementException(
-          |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-          |              )
-          |            ),
-          |          sttp.tapir.DecodeResult.Value(_)
-          |        )
-          |    )(_.name)
-          |""".stripMargin
-      else
-        """def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
-          |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-          |    .mapDecode(s =>
-          |      // Case-insensitive mapping
-          |      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-          |        .fold(
-          |          _ =>
-          |            sttp.tapir.DecodeResult.Error(
-          |              s,
-          |              new NoSuchElementException(
-          |                s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-          |              )
-          |            ),
-          |          sttp.tapir.DecodeResult.Value(_)
-          |        )
-          |    )(_.entryName)
-          |""".stripMargin
+    val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
+    // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
+    // This should be the set of all json param refs not included in our schema definitions
     val additionalExplicitSerdes = jsonParamRefs.toSeq
-      .filter(x => !allSchemas.contains(x) && !x.contains("java.io.File"))
+      .filter(x => !allSchemas.contains(x))
       .map(s =>
         jsonSerdeLib match {
           case JsonSerdeLib.Jsoniter =>
@@ -173,6 +66,91 @@ class ClassDefinitionGenerator {
       })
       .map(_.mkString("\n"))
     defns.map(additionalExplicitSerdes + maybeJsonSerdeHelpers + enumQuerySerdeHelper + _)
+  }
+
+  private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = if (targetScala3)
+    """
+      |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+      |  Map.from(
+      |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+      |  )
+      |
+      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+      |  sttp.tapir.Codec
+      |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(s =>
+      |      // Case-insensitive mapping
+      |      scala.util
+      |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
+      |        .fold(
+      |          _ =>
+      |            sttp.tapir.DecodeResult.Error(
+      |              s,
+      |              new NoSuchElementException(
+      |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+      |              )
+      |            ),
+      |          sttp.tapir.DecodeResult.Value(_)
+      |        )
+      |    )(_.name)
+      |""".stripMargin
+  else
+    """def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(s =>
+      |      // Case-insensitive mapping
+      |      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+      |        .fold(
+      |          _ =>
+      |            sttp.tapir.DecodeResult.Error(
+      |              s,
+      |              new NoSuchElementException(
+      |                s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+      |              )
+      |            ),
+      |          sttp.tapir.DecodeResult.Value(_)
+      |        )
+      |    )(_.entryName)
+      |""".stripMargin
+
+  @tailrec
+  private def recursiveFindAllReferencedSchemaTypes(
+      allSchemas: Map[String, OpenapiSchemaType]
+  )(toCheck: OpenapiSchemaType, checked: Set[String], tail: Seq[OpenapiSchemaType]): Set[String] = {
+    def nextParamsFromTypeSeq(types: Seq[OpenapiSchemaType]) = types match {
+      case Nil          => None
+      case next +: rest => Some((next, checked, rest ++ tail))
+    }
+    val maybeNextParams = toCheck match {
+      case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") =>
+        val name = ref.stripPrefix("#/components/schemas/")
+        val maybeAppended = if (checked contains name) None else allSchemas.get(name)
+        (tail ++ maybeAppended) match {
+          case Nil          => None
+          case next +: rest => Some((next, checked + name, rest))
+        }
+      case OpenapiSchemaArray(items, _)                                => Some((items, checked, tail))
+      case OpenapiSchemaNot(items)                                     => Some((items, checked, tail))
+      case OpenapiSchemaMap(items, _)                                  => Some((items, checked, tail))
+      case OpenapiSchemaOneOf(types)                                   => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaAnyOf(types)                                   => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaAllOf(types)                                   => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaObject(properties, _, _) if properties.isEmpty => None
+      case OpenapiSchemaObject(properties, required, nullable) =>
+        val propToCheck = properties.head
+        val (propToCheckName, propToCheckType) = propToCheck
+        val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
+        Some((propToCheckType, checked, objectWithoutHeadField +: tail))
+      case _ => None
+    }
+    maybeNextParams match {
+      case None =>
+        tail match {
+          case Nil          => checked
+          case next +: rest => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
+        }
+      case Some((next, checked, rest)) => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
+    }
   }
 
   private[codegen] def generateMap(
@@ -312,7 +290,13 @@ class ClassDefinitionGenerator {
     rec(addName("", name), obj, Nil)
   }
 
-  private def mapSchemaTypeToType(parentName: String, key: String, required: Boolean, schemaType: OpenapiSchemaType, isJson: Boolean): String = {
+  private def mapSchemaTypeToType(
+      parentName: String,
+      key: String,
+      required: Boolean,
+      schemaType: OpenapiSchemaType,
+      isJson: Boolean
+  ): String = {
     val (tpe, optional) = schemaType match {
       case simpleType: OpenapiSchemaSimpleType =>
         mapSchemaSimpleTypeToType(simpleType, multipartForm = !isJson)

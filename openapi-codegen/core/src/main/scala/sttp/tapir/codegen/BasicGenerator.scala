@@ -80,8 +80,6 @@ object BasicGenerator {
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
     val jsonImports = jsonSerdeLib match {
       case JsonSerdeLib.Circe =>
-        // Note: all schema models have explicit decoders and encoders defined using semiauto; however, it can happen
-        // that other types are pulled into
         """import sttp.tapir.json.circe._
           |import io.circe.generic.semiauto._""".stripMargin
       case JsonSerdeLib.Jsoniter =>
