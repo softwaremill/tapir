@@ -2,13 +2,21 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
+import sttp.tapir.codegen.openapi.models.{
+  OpenapiSchemaType,
+  ReifiableValueDouble,
+  ReifiableValueList,
+  ReifiableValueLong,
+  ReifiableValueString,
+  RenderableValue
+}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
 class ClassDefinitionGenerator {
-  val jsoniterDefaultConfig = "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
+  val jsoniterDefaultConfig =
+    "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
 
   def classDefs(
       doc: OpenapiDocument,
@@ -139,7 +147,7 @@ class ClassDefinitionGenerator {
       case OpenapiSchemaObject(properties, _, _) if properties.isEmpty => None
       case OpenapiSchemaObject(properties, required, nullable) =>
         val propToCheck = properties.head
-        val (propToCheckName, propToCheckType) = propToCheck
+        val (propToCheckName, OpenapiSchemaField(propToCheckType, _)) = propToCheck
         val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
         Some((propToCheckType, checked, objectWithoutHeadField +: tail))
       case _ => None
@@ -245,25 +253,26 @@ class ClassDefinitionGenerator {
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
         .collect {
-          case (propName, st: OpenapiSchemaObject) =>
+          case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _)) =>
             val newName = addName(name, propName)
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaMap(st: OpenapiSchemaObject, _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _), _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaArray(st: OpenapiSchemaObject, _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _), _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
         }
         .flatten
         .toList
 
-      val properties = obj.properties.map { case (key, schemaType) =>
+      val properties = obj.properties.map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
         val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson)
         val fixedKey = fixKey(key)
-        s"$fixedKey: $tpe"
+        val default = maybeDefault.map(" = " + renderDefault(obj.required.contains(key), _, schemaType)) getOrElse ""
+        s"$fixedKey: $tpe$default"
       }
 
       val uncapitalisedName = name.head.toLower +: name.tail
@@ -318,6 +327,35 @@ class ClassDefinitionGenerator {
     }
 
     if (optional || !required) s"Option[$tpe]" else tpe
+  }
+
+  private def renderDefault(required: Boolean, default: RenderableValue, schemaType: OpenapiSchemaType): String = {
+    val rendered = default.render
+    val base = (default, schemaType) match {
+      case (ReifiableValueLong(_), OpenapiSchemaInt(_))        => rendered.stripSuffix("L")
+      case (ReifiableValueLong(_), OpenapiSchemaFloat(_))      => rendered.stripSuffix("L") + "f"
+      case (ReifiableValueLong(_), OpenapiSchemaDouble(_))     => rendered.stripSuffix("L") + "d"
+      case (ReifiableValueDouble(_), OpenapiSchemaFloat(_))    => rendered.stripSuffix("d") + "f"
+      case (ReifiableValueString(_), OpenapiSchemaDate(_))     => throw new NotImplementedError("Default date fields are not supported")
+      case (ReifiableValueString(_), OpenapiSchemaDateTime(_)) => throw new NotImplementedError("Default datetime fields are not supported")
+      case (ReifiableValueString(_), OpenapiSchemaByte(_))     => throw new NotImplementedError("Default byte fields are not supported")
+      case (ReifiableValueString(_), OpenapiSchemaBinary(_))   => s"""$rendered.getBytes("utf-8")"""
+      case (ReifiableValueString(_), OpenapiSchemaUUID(_))     => s"java.util.UUID.fromString(${rendered})"
+      // Nasty hacks so that enum defaults sometimes work
+      case (ReifiableValueString(_), OpenapiSchemaEnum(t, _, _)) => s"$t.$rendered".replace("\"", "")
+      case (ReifiableValueString(_), OpenapiSchemaRef(ref)) =>
+        val t = ref.stripPrefix("#/components/schemas/")
+        s"$t.$rendered".replace("\"", "")
+      case (ReifiableValueList(l), OpenapiSchemaArray(OpenapiSchemaEnum(t, _, _), _))
+          if l.headOption.exists(_.isInstanceOf[ReifiableValueString]) =>
+        rendered.replaceAll(""""([^"]+)"""", s"$t.$$1")
+      case (ReifiableValueList(l), OpenapiSchemaArray(OpenapiSchemaRef(ref), _))
+          if l.headOption.exists(_.isInstanceOf[ReifiableValueString]) =>
+        val t = ref.stripPrefix("#/components/schemas/")
+        rendered.replaceAll(""""([^"]+)"""", s"$t.$$1")
+      case _ => rendered
+    }
+    if (schemaType.nullable || !required) s"Some($base)" else base
   }
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")

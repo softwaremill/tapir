@@ -3,7 +3,7 @@ package sttp.tapir.codegen.openapi.models
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
 
-import OpenapiSchemaType.OpenapiSchemaRef
+import OpenapiSchemaType.{OpenapiSchemaRef, ReifiableRenderableValueDecoder}
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -166,6 +166,7 @@ object OpenapiModels {
   implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
   }
+
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
       parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)

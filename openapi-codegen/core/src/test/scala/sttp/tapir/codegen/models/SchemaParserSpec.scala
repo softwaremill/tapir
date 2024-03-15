@@ -4,6 +4,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaArray,
+  OpenapiSchemaField,
   OpenapiSchemaInt,
   OpenapiSchemaMap,
   OpenapiSchemaObject,
@@ -49,7 +50,10 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
         OpenapiComponent(
           Map(
             "User" -> OpenapiSchemaObject(
-              Map("id" -> OpenapiSchemaInt(false), "name" -> OpenapiSchemaString(false)),
+              Map(
+                "id" -> OpenapiSchemaField(OpenapiSchemaInt(false), None),
+                "name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)
+              ),
               Seq("id", "name"),
               false
             )
@@ -81,7 +85,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            Map("attributes" -> OpenapiSchemaMap(OpenapiSchemaString(false), false)),
+            Map("attributes" -> OpenapiSchemaField(OpenapiSchemaMap(OpenapiSchemaString(false), false), None)),
             Seq("attributes"),
             false
           )
@@ -109,7 +113,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            Map("anyValue" -> OpenapiSchemaAny(false)),
+            Map("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false), None)),
             Seq("anyValue"),
             false
           )

@@ -106,9 +106,13 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
+  case class OpenapiSchemaField(
+      `type`: OpenapiSchemaType,
+      default: Option[RenderableValue]
+  )
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
-      properties: Map[String, OpenapiSchemaType],
+      properties: Map[String, OpenapiSchemaField],
       required: Seq[String],
       nullable: Boolean
   ) extends OpenapiSchemaType
@@ -253,14 +257,46 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
   }
 
+  def decodeSpecificationExtensionValue(json: Json): ReifiableRenderableValue =
+    json.fold(
+      ReifiableValueNull,
+      ReifiableValueBoolean.apply,
+      n => n.toLong.map(ReifiableValueLong.apply).getOrElse(ReifiableValueDouble(n.toDouble)),
+      ReifiableValueString.apply,
+      arr => ReifiableValueList(arr.map(decodeSpecificationExtensionValue)),
+      obj => ReifiableValueMap(obj.toMap.map { case (k, v) => k -> decodeSpecificationExtensionValue(v) })
+    )
+  implicit val ReifiableRenderableValueDecoder: Decoder[ReifiableRenderableValue] = { (c: HCursor) =>
+    Right(decodeSpecificationExtensionValue(c.value))
+  }
+  def decodeRenderable(maybeName: Option[String], cursor: ACursor): Option[RenderableValue] = maybeName match {
+    case None => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
+    case Some(name) =>
+      cursor.focus
+        .flatMap(_.asObject match {
+          case Some(o) => Some(RenderableClassModel(name, o.toMap.map { case (k, v) => k -> decodeSpecificationExtensionValue(v) }))
+          case None    => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
+        })
+  }
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[RenderableValue])] = { (c: HCursor) =>
+    for {
+      schemaType <- c.as[OpenapiSchemaType]
+      maybeName = schemaType match {
+        case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => Some(ref.stripPrefix("#/components/schemas/"))
+        case _                                                                => None
+      }
+      maybeDefault = decodeRenderable(maybeName, c.downField("default"))
+    } yield (schemaType, maybeDefault)
+  }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
-      f <- c.downField("properties").as[Option[Map[String, OpenapiSchemaType]]]
+      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[RenderableValue])]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       nb <- c.downField("nullable").as[Option[Boolean]]
+      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
     } yield {
-      OpenapiSchemaObject(f.getOrElse(Map.empty), r.getOrElse(Seq.empty), nb.getOrElse(false))
+      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb.getOrElse(false))
     }
   }
 
