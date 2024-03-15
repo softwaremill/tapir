@@ -1422,6 +1422,7 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
 
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
   .settings(commonJvmSettings)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(

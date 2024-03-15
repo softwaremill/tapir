@@ -43,6 +43,9 @@ import scala.concurrent.duration._
   * @param gracefulShutdownTimeout
   *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
   *   `None`, closes the channels and terminates the server without waiting.
+  *
+  * @param serverHeader
+  *   If set, send this value in the 'Server' response header. If None, don't set the header.
   */
 case class NettyConfig(
     host: String,
@@ -59,7 +62,8 @@ case class NettyConfig(
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
     initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
-    gracefulShutdownTimeout: Option[FiniteDuration]
+    gracefulShutdownTimeout: Option[FiniteDuration],
+    serverHeader: Option[String]
 ) {
   def host(h: String): NettyConfig = copy(host = h)
 
@@ -96,6 +100,8 @@ case class NettyConfig(
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
+
+  def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
 }
 
 object NettyConfig {
@@ -114,7 +120,8 @@ object NettyConfig {
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _)
+    initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
+    serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
   )
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
