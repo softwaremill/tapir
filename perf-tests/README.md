@@ -1,5 +1,7 @@
 # Performance tests
 
+To work with performance tests, make sure you are running JDK 21+, and that the `ALSO_LOOM` environment variable is set, because the `perf-tests` project includes `tapir-netty-loom` and `tapir-nima`, which require Loom JDK feature to be available.
+
 Performance tests are executed by running `PerfTestSuiteRunner`, which is a standard "Main" Scala application, configured by command line parameters. It executes a sequence of tests, where
 each test consist of:
 
