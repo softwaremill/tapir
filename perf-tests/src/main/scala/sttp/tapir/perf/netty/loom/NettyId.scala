@@ -6,10 +6,6 @@ import sttp.tapir.perf.Common._
 import sttp.tapir.server.netty.loom._
 import sttp.tapir.server.ServerEndpoint
 
-import scala.concurrent.ExecutionContext
-import ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 object Tapir extends Endpoints
 
 object NettyId {

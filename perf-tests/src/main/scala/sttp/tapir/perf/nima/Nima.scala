@@ -1,15 +1,11 @@
 package sttp.tapir.perf.nima
 
 import cats.effect.IO
+import io.helidon.webserver.WebServer
 import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common._
-import io.helidon.webserver.WebServer
 import sttp.tapir.server.nima.{Id, NimaServerInterpreter, NimaServerOptions}
 import sttp.tapir.server.ServerEndpoint
-
-import scala.concurrent.ExecutionContext
-import ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 object Tapir extends Endpoints {
   def genEndpointsNId(count: Int): List[ServerEndpoint[Any, Id]] = genServerEndpoints[Id](count)(x => x: Id[String])
@@ -19,7 +15,6 @@ object Nima {
 
   def runServer(endpoints: List[ServerEndpoint[Any, Id]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
-    val declaredHost = "0.0.0.0"
     val serverOptions = buildOptions(NimaServerOptions.customiseInterceptors, withServerLog)
     // Starting Nima server
 
@@ -33,7 +28,7 @@ object Nima {
       .port(declaredPort)
       .build()
       .start()
-    IO(IO(server.stop()))
+    IO(IO { val _ = server.stop() })
   }
 }
 
