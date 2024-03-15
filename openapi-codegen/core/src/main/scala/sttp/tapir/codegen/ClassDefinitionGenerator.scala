@@ -337,7 +337,7 @@ class ClassDefinitionGenerator {
       case (ReifiableValueLong(_), OpenapiSchemaDouble(_))     => rendered.stripSuffix("L") + "d"
       case (ReifiableValueDouble(_), OpenapiSchemaFloat(_))    => rendered.stripSuffix("d") + "f"
       case (ReifiableValueString(_), OpenapiSchemaDate(_))     => throw new NotImplementedError("Default date fields are not supported")
-      case (ReifiableValueString(_), OpenapiSchemaDateTime(_)) => throw new NotImplementedError("Default datetime fields are not supported")
+      case (ReifiableValueString(_), OpenapiSchemaDateTime(_)) => s"java.time.Instant.parse(${rendered})"
       case (ReifiableValueString(_), OpenapiSchemaByte(_))     => throw new NotImplementedError("Default byte fields are not supported")
       case (ReifiableValueString(_), OpenapiSchemaBinary(_))   => s"""$rendered.getBytes("utf-8")"""
       case (ReifiableValueString(_), OpenapiSchemaUUID(_))     => s"java.util.UUID.fromString(${rendered})"
