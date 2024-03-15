@@ -50,19 +50,19 @@ class ClassDefinitionGenerator {
         """def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
           |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
           |    .mapDecode(s =>
-          |        // Case-insensitive mapping
-          |        scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-          |          .fold(
-          |            _ =>
-          |              sttp.tapir.DecodeResult.Error(
-          |                s,
-          |                new NoSuchElementException(
-          |                  s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-          |                )
-          |              ),
-          |            sttp.tapir.DecodeResult.Value(_)
-          |          )
-          |      )(_.entryName)
+          |      // Case-insensitive mapping
+          |      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+          |        .fold(
+          |          _ =>
+          |            sttp.tapir.DecodeResult.Error(
+          |              s,
+          |              new NoSuchElementException(
+          |                s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+          |              )
+          |            ),
+          |          sttp.tapir.DecodeResult.Value(_)
+          |        )
+          |    )(_.entryName)
           |""".stripMargin
     val defns = doc.components
       .map(_.schemas.flatMap {
