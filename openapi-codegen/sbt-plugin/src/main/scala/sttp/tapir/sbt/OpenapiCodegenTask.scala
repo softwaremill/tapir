@@ -10,6 +10,7 @@ case class OpenapiCodegenTask(
     packageName: String,
     objectName: String,
     useHeadTagForObjectName: Boolean,
+    jsonSerdeLib: String,
     dir: File,
     cacheDir: File,
     targetScala3: Boolean
@@ -43,13 +44,15 @@ case class OpenapiCodegenTask(
         .parseFile(IO.readLines(inputYaml).mkString("\n"))
         .left
         .map(d => new RuntimeException(_root_.io.circe.Error.showError.show(d)))
-      BasicGenerator.generateObjects(parsed.toTry.get, packageName, objectName, targetScala3, useHeadTagForObjectName).map {
-        case (objectName, fileBody) =>
+      BasicGenerator
+        .generateObjects(parsed.toTry.get, packageName, objectName, targetScala3, useHeadTagForObjectName, jsonSerdeLib)
+        .map { case (objectName, fileBody) =>
           val file = directory / s"$objectName.scala"
           val lines = fileBody.linesIterator.toSeq
           IO.writeLines(file, lines, IO.utf8)
           file
-      }.toSeq
+        }
+        .toSeq
     }
   }
 }

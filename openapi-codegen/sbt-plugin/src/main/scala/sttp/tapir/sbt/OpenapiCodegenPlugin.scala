@@ -26,7 +26,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
     openapiPackage := "sttp.tapir.generated",
     openapiObject := "TapirGeneratedEndpoints",
-    openapiUseHeadTagForObjectName := false
+    openapiUseHeadTagForObjectName := false,
+    openapiJsonSerdeLib := "circe"
   )
 
   private def codegen = Def.task {
@@ -37,6 +38,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiPackage,
       openapiObject,
       openapiUseHeadTagForObjectName,
+      openapiJsonSerdeLib,
       sourceManaged,
       streams,
       scalaVersion
@@ -46,11 +48,21 @@ object OpenapiCodegenPlugin extends AutoPlugin {
           packageName: String,
           objectName: String,
           useHeadTagForObjectName: Boolean,
+          jsonSerdeLib,
           srcDir: File,
           taskStreams: TaskStreams,
           sv: String
       ) =>
-        OpenapiCodegenTask(swaggerFile, packageName, objectName, useHeadTagForObjectName, srcDir, taskStreams.cacheDirectory, sv.startsWith("3")).file
+        OpenapiCodegenTask(
+          swaggerFile,
+          packageName,
+          objectName,
+          useHeadTagForObjectName,
+          jsonSerdeLib,
+          srcDir,
+          taskStreams.cacheDirectory,
+          sv.startsWith("3")
+        ).file
     }) map (Seq(_))).value
   }
 }

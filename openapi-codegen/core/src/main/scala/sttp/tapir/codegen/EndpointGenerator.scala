@@ -5,6 +5,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
   OpenapiSchemaRef,
+  OpenapiSchemaAny,
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
@@ -14,14 +15,19 @@ case class Location(path: String, method: String) {
   override def toString: String = s"${method.toUpperCase} ${path}"
 }
 
-case class GeneratedEndpoints(namesAndBodies: Seq[(Option[String], Seq[(String, String)])], queryParamRefs: Set[String]) {
+case class GeneratedEndpoints(
+    namesAndBodies: Seq[(Option[String], Seq[(String, String)])],
+    queryParamRefs: Set[String],
+    jsonParamRefs: Set[String]
+) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
       (namesAndBodies ++ that.namesAndBodies).groupBy(_._1).mapValues(_.map(_._2).reduce(_ ++ _)).toSeq,
-      queryParamRefs ++ that.queryParamRefs
+      queryParamRefs ++ that.queryParamRefs,
+      jsonParamRefs ++ that.jsonParamRefs
     )
 }
-case class EndpointDefs(endpointDecls: Map[Option[String], String], queryParamRefs: Set[String])
+case class EndpointDefs(endpointDecls: Map[Option[String], String], queryParamRefs: Set[String], jsonParamRefs: Set[String])
 
 class EndpointGenerator {
   private def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
@@ -30,8 +36,10 @@ class EndpointGenerator {
 
   def endpointDefs(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): EndpointDefs = {
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(geMap, queryParamRefs) =
-      doc.paths.map(generatedEndpoints(components, useHeadTagForObjectNames)).foldLeft(GeneratedEndpoints(Nil, Set.empty))(_ merge _)
+    val GeneratedEndpoints(geMap, queryParamRefs, jsonParamRefs) =
+      doc.paths
+        .map(generatedEndpoints(components, useHeadTagForObjectNames))
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty))(_ merge _)
     val endpointDecls = geMap.map { case (k, ge) =>
       val definitions = ge
         .map { case (name, definition) =>
@@ -47,7 +55,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryParamRefs)
+    EndpointDefs(endpointDecls, queryParamRefs, jsonParamRefs)
   }
 
   private[codegen] def generatedEndpoints(components: Option[OpenapiComponent], useHeadTagForObjectNames: Boolean)(
@@ -56,7 +64,7 @@ class EndpointGenerator {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
 
-    val (fileNamesAndParams, unflattenedQueryParamRefs) = p.methods
+    val (fileNamesAndParams, unflattenedParamRefs) = p.methods
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
@@ -68,7 +76,7 @@ class EndpointGenerator {
               |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
               |${indent(2)(outs(m.responses))}
               |${indent(2)(tags(m.tags))}
-              |""".stripMargin
+              |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
         val name = m.operationId
           .getOrElse(m.methodType + p.url.capitalize)
@@ -82,14 +90,36 @@ class EndpointGenerator {
           .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
           .collect { case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => ref.stripPrefix("#/components/schemas/") }
           .toSet
-        (maybeTargetFileName, (name, definition)) -> queryParamRefs
+        val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
+          m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+          .collect { case (contentType, schema) if contentType == "application/json" => schema }
+          .collect {
+            case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => ref.stripPrefix("#/components/schemas/")
+            case OpenapiSchemaArray(OpenapiSchemaRef(ref), _) if ref.startsWith("#/components/schemas/") =>
+              val name = ref.stripPrefix("#/components/schemas/")
+              name
+            case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
+              bail("Cannot generate schema for 'Any' with jsoniter library")
+            case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _) =>
+              val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+              s"List[$name]"
+            case simple: OpenapiSchemaSimpleType =>
+              BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+          }
+          .toSet
+        ((maybeTargetFileName, (name, definition)), (queryParamRefs, jsonParamRefs))
       }
       .unzip
+    val (unflattenedQueryParamRefs, unflattenedJsonParamRefs) = unflattenedParamRefs.unzip
     val namesAndParamsByFile = fileNamesAndParams
       .groupBy(_._1)
       .toSeq
       .map { case (maybeTargetFileName, defns) => maybeTargetFileName -> defns.map(_._2) }
-    GeneratedEndpoints(namesAndParamsByFile, unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _))
+    GeneratedEndpoints(
+      namesAndParamsByFile,
+      unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
+      unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _)
+    )
   }
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter])(implicit location: Location): String = {
@@ -225,7 +255,7 @@ class EndpointGenerator {
           case _: OpenapiSchemaBinary =>
             "multipartBody"
           case schemaRef: OpenapiSchemaRef =>
-            val (t, _) = mapSchemaSimpleTypeToType(schemaRef)
+            val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
             s"multipartBody[$t]"
           case x => bail(s"$contentType only supports schema ref or binary. Found $x")
         }
