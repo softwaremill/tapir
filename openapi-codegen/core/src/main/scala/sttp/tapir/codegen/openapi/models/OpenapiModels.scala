@@ -3,7 +3,7 @@ package sttp.tapir.codegen.openapi.models
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
 
-import OpenapiSchemaType.{OpenapiSchemaRef, ReifiableRenderableValueDecoder}
+import OpenapiSchemaType.OpenapiSchemaRef
 // https://swagger.io/specification/
 object OpenapiModels {
 
