@@ -33,7 +33,7 @@ class ClassDefinitionGenerator {
           |    .mapDecode(s =>
           |      // Case-insensitive mapping
           |      scala.util
-          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase)) 
+          |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
           |        .fold(
           |          _ =>
           |            sttp.tapir.DecodeResult.Error(
