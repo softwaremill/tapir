@@ -114,7 +114,7 @@ class ClassDefinitionGenerator {
       |""".stripMargin
 
   @tailrec
-  private def recursiveFindAllReferencedSchemaTypes(
+  final def recursiveFindAllReferencedSchemaTypes(
       allSchemas: Map[String, OpenapiSchemaType]
   )(toCheck: OpenapiSchemaType, checked: Set[String], tail: Seq[OpenapiSchemaType]): Set[String] = {
     def nextParamsFromTypeSeq(types: Seq[OpenapiSchemaType]) = types match {
