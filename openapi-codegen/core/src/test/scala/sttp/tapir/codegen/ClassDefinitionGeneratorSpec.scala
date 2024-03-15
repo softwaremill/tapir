@@ -55,7 +55,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
     // the enumeratum import should be included by the BasicGenerator iff we generated enums
-    "import enumeratum._;" + (new ClassDefinitionGenerator().classDefs(doc).get) shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
   }
 
   it should "generate simple class with reserved propName" in {
@@ -280,10 +280,44 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val gen = new ClassDefinitionGenerator()
     val res = gen.classDefs(doc, true)
-    // can't just check whether this compiles, because our tests only run on scala 2.12 - so instead just eyeball it...
-    res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-        |  case enum1, enum2
-        |}""".stripMargin)
+    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"))
+    // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
+    res shouldBe Some("""
+      |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+      |  case enum1, enum2
+      |}""".stripMargin)
+    resWithQueryParamCodec shouldBe Some("""
+      |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+      |  Map.from(
+      |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+      |  )
+      |
+      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+      |  sttp.tapir.Codec
+      |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(s =>
+      |      // Case-insensitive mapping
+      |      scala.util
+      |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
+      |        .fold(
+      |          _ =>
+      |            sttp.tapir.DecodeResult.Error(
+      |              s,
+      |              new NoSuchElementException(
+      |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+      |              )
+      |            ),
+      |          sttp.tapir.DecodeResult.Value(_)
+      |        )
+      |    )(_.name)
+      |
+      |object Test {
+      |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
+      |    makeQueryCodecForEnum[Test]
+      |}
+      |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
+      |  case enum1, enum2
+      |}""".stripMargin)
   }
 
   it should "generate named maps" in {
@@ -305,8 +339,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    val res = gen.classDefs(doc, false)
-    "import enumeratum._;" + res.get shouldCompile ()
+    gen.classDefs(doc, false).get shouldCompile ()
   }
 
   import cats.implicits._
@@ -344,7 +377,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
+      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     }
 
     val compileUnit =
@@ -355,7 +388,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |  $res
          |}
          |  """.stripMargin
-    println(compileUnit)
+
     compileUnit shouldCompile ()
 
   }

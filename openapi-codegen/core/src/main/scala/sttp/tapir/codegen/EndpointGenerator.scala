@@ -14,16 +14,25 @@ case class Location(path: String, method: String) {
   override def toString: String = s"${method.toUpperCase} ${path}"
 }
 
+case class GeneratedEndpoints(namesAndBodies: Seq[(Option[String], Seq[(String, String)])], queryParamRefs: Set[String]) {
+  def merge(that: GeneratedEndpoints): GeneratedEndpoints =
+    GeneratedEndpoints(
+      (namesAndBodies ++ that.namesAndBodies).groupBy(_._1).mapValues(_.map(_._2).reduce(_ ++ _)).toSeq,
+      queryParamRefs ++ that.queryParamRefs
+    )
+}
+case class EndpointDefs(endpointDecls: Map[Option[String], String], queryParamRefs: Set[String])
+
 class EndpointGenerator {
   private def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
 
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
-  def endpointDefs(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): Map[Option[String], String] = {
+  def endpointDefs(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): EndpointDefs = {
     val components = Option(doc.components).flatten
-    val geMap =
-      doc.paths.flatMap(generatedEndpoints(components, useHeadTagForObjectNames)).groupBy(_._1).mapValues(_.map(_._2).reduce(_ ++ _))
-    geMap.mapValues { ge =>
+    val GeneratedEndpoints(geMap, queryParamRefs) =
+      doc.paths.map(generatedEndpoints(components, useHeadTagForObjectNames)).foldLeft(GeneratedEndpoints(Nil, Set.empty))(_ merge _)
+    val endpointDecls = geMap.map { case (k, ge) =>
       val definitions = ge
         .map { case (name, definition) =>
           s"""|lazy val $name =
@@ -33,20 +42,21 @@ class EndpointGenerator {
         .mkString("\n")
       val allEP = s"lazy val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
 
-      s"""|$definitions
+      k -> s"""|$definitions
           |
           |$allEP
           |""".stripMargin
     }.toMap
+    EndpointDefs(endpointDecls, queryParamRefs)
   }
 
   private[codegen] def generatedEndpoints(components: Option[OpenapiComponent], useHeadTagForObjectNames: Boolean)(
       p: OpenapiPath
-  ): Seq[(Option[String], Seq[(String, String)])] = {
+  ): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
 
-    p.methods
+    val (fileNamesAndParams, unflattenedQueryParamRefs) = p.methods
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
@@ -68,11 +78,18 @@ class EndpointGenerator {
           .map { case (part, 0) => part; case (part, _) => part.capitalize }
           .mkString
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
-        (maybeTargetFileName, (name, definition))
+        val queryParamRefs = m.resolvedParameters
+          .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
+          .collect { case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => ref.stripPrefix("#/components/schemas/") }
+          .toSet
+        (maybeTargetFileName, (name, definition)) -> queryParamRefs
       }
+      .unzip
+    val namesAndParamsByFile = fileNamesAndParams
       .groupBy(_._1)
       .toSeq
       .map { case (maybeTargetFileName, defns) => maybeTargetFileName -> defns.map(_._2) }
+    GeneratedEndpoints(namesAndParamsByFile, unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _))
   }
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter])(implicit location: Location): String = {

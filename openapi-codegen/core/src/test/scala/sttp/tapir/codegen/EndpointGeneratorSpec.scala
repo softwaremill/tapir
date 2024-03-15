@@ -56,7 +56,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
+    val generatedCode =
+      BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
     generatedCode shouldCompile ()
   }
@@ -131,7 +132,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       )
     )
     BasicGenerator.imports ++
-      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None) shouldCompile ()
+      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None) shouldCompile ()
   }
 
   it should "handle status codes" in {
@@ -174,7 +175,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode = BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false)(None)
+    val generatedCode =
+      BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     generatedCode should include(
       """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
     ) // status code with body

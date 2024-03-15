@@ -7,7 +7,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBinary,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
-  OpenapiSchemaEnum,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaLong,
@@ -29,11 +28,7 @@ object BasicGenerator {
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean
   ): Map[String, String] = {
-    val enumImport =
-      if (!targetScala3 && doc.components.toSeq.flatMap(_.schemas).exists(_._2.isInstanceOf[OpenapiSchemaEnum])) "\n  import enumeratum._"
-      else ""
-
-    val endpointsByTag = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val EndpointDefs(endpointsByTag, queryParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
         val taggedObj =
@@ -55,9 +50,9 @@ object BasicGenerator {
         |
         |object $objName {
         |
-        |${indent(2)(imports)}$enumImport
+        |${indent(2)(imports)}
         |
-        |${indent(2)(classGenerator.classDefs(doc, targetScala3).getOrElse(""))}
+        |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs).getOrElse(""))}
         |
         |${indent(2)(endpointsByTag.getOrElse(None, ""))}
         |
