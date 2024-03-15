@@ -8,6 +8,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import scala.annotation.tailrec
 
 class ClassDefinitionGenerator {
+  val jsoniterDefaultConfig = "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
 
   def classDefs(
       doc: OpenapiDocument,
@@ -34,10 +35,10 @@ class ClassDefinitionGenerator {
 
     val maybeJsonSerdeHelpers =
       if (jsonParamRefs.nonEmpty && jsonSerdeLib == JsonSerdeLib.Jsoniter)
-        """implicit def seqCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[List[T]] =
-        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[List[T]]
+        s"""implicit def seqCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[List[T]] =
+        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[List[T]]($jsoniterDefaultConfig)
         |implicit def optionCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Option[T]] =
-        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]
+        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]($jsoniterDefaultConfig)
         |""".stripMargin
       else ""
     val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
@@ -50,7 +51,7 @@ class ClassDefinitionGenerator {
           case JsonSerdeLib.Jsoniter =>
             val name = s.replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
             s"""implicit lazy val $name: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$s] =
-            |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$s]""".stripMargin
+            |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$s]($jsoniterDefaultConfig)""".stripMargin
           case _ => ""
         }
       )
@@ -172,7 +173,7 @@ class ClassDefinitionGenerator {
            |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.encodeMap[String, $valueSchemaName]""".stripMargin
       case JsonSerdeLib.Jsoniter =>
         s"""
-           |implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make""".stripMargin
+           |implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)""".stripMargin
     }
     Seq(s"""type $name = Map[String, $valueSchemaName]$maybeJsonCodecDefn""")
   }
@@ -214,7 +215,7 @@ class ClassDefinitionGenerator {
       case JsonSerdeLib.Circe                 => ""
       case JsonSerdeLib.Jsoniter =>
         s"""
-           |  implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make""".stripMargin
+           |  implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)""".stripMargin
     }
     val maybeCodecExtension = jsonSerdeLib match {
       case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
@@ -271,7 +272,7 @@ class ClassDefinitionGenerator {
           s"""implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
              |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
         case JsonSerdeLib.Jsoniter =>
-          s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true))"""
+          s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)"""
       }
       val maybeCompanion =
         if (isJson)
