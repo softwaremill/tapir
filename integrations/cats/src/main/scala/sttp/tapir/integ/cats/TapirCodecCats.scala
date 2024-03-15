@@ -1,6 +1,6 @@
 package sttp.tapir.integ.cats
 
-import cats.data.{Chain, NonEmptyChain, NonEmptyList, NonEmptySet}
+import cats.data.{Chain, NonEmptyChain, NonEmptyList, NonEmptySet, NonEmptyVector}
 import sttp.tapir._
 import sttp.tapir.integ.cats.ValidatorCats.nonEmptyFoldable
 import sttp.tapir.Validator.nonEmpty
@@ -12,6 +12,10 @@ trait TapirCodecCats {
   implicit def schemaForNel[T: Schema]: Schema[NonEmptyList[T]] =
     Schema[NonEmptyList[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toList))
       .validate(nonEmptyFoldable)
+
+  implicit def schemaForNev[T: Schema]: Schema[NonEmptyVector[T]] =
+    Schema[NonEmptyVector[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toVector))
+      .validate(ValidatorCats.nonEmptyFoldable)
 
   implicit def schemaForChain[T: Schema]: Schema[Chain[T]] =
     implicitly[Schema[List[T]]].map(l => Option(Chain.fromSeq(l)))(_.toList)
@@ -28,6 +32,11 @@ trait TapirCodecCats {
     c.schema(_.copy(isOptional = false))
       .validate(nonEmpty)
       .mapDecode { l => DecodeResult.fromOption(NonEmptyList.fromList(l)) }(_.toList)
+
+  implicit def codecForNonEmptyVector[L, H, CF <: CodecFormat](implicit c: Codec[L, Vector[H], CF]): Codec[L, NonEmptyVector[H], CF] =
+    c.schema(_.copy(isOptional = false))
+      .validate(Validator.nonEmpty)
+      .mapDecode { v => DecodeResult.fromOption(NonEmptyVector.fromVector(v)) }(_.toVector)
 
   implicit def codecForChain[L, H, CF <: CodecFormat](implicit c: Codec[L, List[H], CF]): Codec[L, Chain[H], CF] =
     c.map(Chain.fromSeq(_))(_.toList)
