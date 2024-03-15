@@ -42,6 +42,7 @@ openapiSwaggerFile              baseDirectory.value / "swagger.yaml" The swagger
 openapiPackage                  sttp.tapir.generated                 The name for the generated package.
 openapiObject                   TapirGeneratedEndpoints              The name for the generated object.
 openapiUseHeadTagForObjectName  false                                If true, put endpoints in separate files based on first declared tag.
+openapiJsonSerdeLib             circe                                The json serde library to use.
 =============================== ==================================== =====================================================================
 ```
 
@@ -87,14 +88,24 @@ If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` 
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
+### Json Support
+
+```eval_rst
+===================== ================================================================== ===================================================================
+ openapiJsonSerdeLib         required dependencies                                       Conditional requirements
+===================== ================================================================== ===================================================================
+circe                 "io.circe" %% "circe-core"                                         "com.beachape" %% "enumeratum-circe" (scala 2 enum support).
+                      "io.circe" %% "circe-generic"                                      "org.latestbit" %% "circe-tagged-adt-codec" (scala 3 enum support).
+jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"
+                      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros"
+===================== ================================================================== ===================================================================
+```
+
 ### Limitations
 
-Currently, the generated code depends on `"io.circe" %% "circe-generic"`. In the future probably we will make the
-encoder/decoder json lib configurable (PRs welcome).
-
-String-like enums in Scala 2 depend on both `"com.beachape" %% "enumeratum"` and `"com.beachape" %% "enumeratum-circe"`.
-For Scala 3 we derive native enums, and depend on `"org.latestbit" %% "circe-tagged-adt-codec"` for json serdes
-and `"io.github.bishabosha" %% "enum-extensions"` for query param serdes.
+Currently, string-like enums in Scala 2 depend upon the enumeratum library (`"com.beachape" %% "enumeratum"`).
+For Scala 3 we derive native enums, and depend on `"io.github.bishabosha" %% "enum-extensions"` for generating query
+param serdes.
 Other forms of OpenApi enum are not currently supported.
 
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
@@ -102,6 +113,8 @@ representation types for the binary data
 
 We currently miss a lot of OpenApi features like:
 
+- tags
 - ADTs
 - missing model types and meta descriptions (like date, minLength)
+- file handling
 
