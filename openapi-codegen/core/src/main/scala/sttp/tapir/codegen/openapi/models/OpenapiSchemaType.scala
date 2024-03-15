@@ -257,24 +257,24 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
   }
 
-  def decodeSpecificationExtensionValue(json: Json): ReifiableRenderableValue =
+  def decodeReifiableValue(json: Json): ReifiableRenderableValue =
     json.fold(
       ReifiableValueNull,
       ReifiableValueBoolean.apply,
       n => n.toLong.map(ReifiableValueLong.apply).getOrElse(ReifiableValueDouble(n.toDouble)),
       ReifiableValueString.apply,
-      arr => ReifiableValueList(arr.map(decodeSpecificationExtensionValue)),
-      obj => ReifiableValueMap(obj.toMap.map { case (k, v) => k -> decodeSpecificationExtensionValue(v) })
+      arr => ReifiableValueList(arr.map(decodeReifiableValue)),
+      obj => ReifiableValueMap(obj.toMap.map { case (k, v) => k -> decodeReifiableValue(v) })
     )
   implicit val ReifiableRenderableValueDecoder: Decoder[ReifiableRenderableValue] = { (c: HCursor) =>
-    Right(decodeSpecificationExtensionValue(c.value))
+    Right(decodeReifiableValue(c.value))
   }
   def decodeRenderable(maybeName: Option[String], cursor: ACursor): Option[RenderableValue] = maybeName match {
     case None => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
     case Some(name) =>
       cursor.focus
         .flatMap(_.asObject match {
-          case Some(o) => Some(RenderableClassModel(name, o.toMap.map { case (k, v) => k -> decodeSpecificationExtensionValue(v) }))
+          case Some(o) => Some(RenderableClassModel(name, o.toMap.map { case (k, v) => k -> decodeReifiableValue(v) }))
           case None    => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
         })
   }
