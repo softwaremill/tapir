@@ -1,9 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
-import sttp.tapir.SchemaType.SchemaWithValue
 import sttp.tapir.generic.Configuration
-import magnolia1.*
 import sttp.tapir.Schema.SName
 import sttp.tapir.generic.auto.SchemaMagnoliaDerivation
 
@@ -51,7 +49,7 @@ private[tapir] object SchemaMacros {
           val newAcc = acc match {
             /** replace the term controlled by quicklens */
             case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs: _*) :: rest
-            case elements => report.throwError(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
+            case elements => report.errorAndAbort(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
           }
 
           idents.flatMap(toPath(_, newAcc))
@@ -61,7 +59,7 @@ private[tapir] object SchemaMacros {
         case i: Ident =>
           acc
         case t =>
-          report.throwError(s"Unsupported path element $t")
+          report.errorAndAbort(s"Unsupported path element $t")
       }
     }
 
@@ -70,7 +68,7 @@ private[tapir] object SchemaMacros {
       case Inlined(_, _, Block(List(DefDef(_, _, _, Some(p))), _)) =>
         toPath(p, List.empty)
       case _ =>
-        report.throwError(s"Unsupported path [$path]")
+        report.errorAndAbort(s"Unsupported path [$path]")
     }
 
     '{
@@ -220,7 +218,6 @@ private[tapir] object SchemaCompanionMacros {
       import _root_.sttp.tapir.Schema
       import _root_.sttp.tapir.Schema._
       import _root_.sttp.tapir.SchemaType._
-      import _root_.scala.collection.immutable.{List, Map}
 
       val mappingAsList = $mapping.toList
       val mappingAsMap = mappingAsList.toMap
@@ -317,11 +314,7 @@ private[tapir] object SchemaCompanionMacros {
   def derivedEnumerationValueValidator[T: Type](using q: Quotes): Expr[Validator.Enumeration[T]] = {
     import q.reflect.*
 
-    val Enumeration = TypeTree.of[scala.Enumeration].tpe
-
     val tpe = TypeRepr.of[T]
-
-    val owner = tpe.typeSymbol.owner.tree
 
     if (tpe <:< TypeRepr.of[Enumeration#Value]) {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
@@ -444,7 +437,7 @@ private[tapir] object SchemaCompanionMacros {
       import _root_.sttp.tapir.Schema
       import _root_.sttp.tapir.Schema._
       import _root_.sttp.tapir.SchemaType._
-      import _root_.scala.collection.immutable.{List, Map}
+      import _root_.scala.collection.immutable.List
 
       val childSchemas = List(${ Varargs(schemas) }: _*)
       val sname = $snameExpr

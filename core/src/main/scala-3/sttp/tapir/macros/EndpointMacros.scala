@@ -1,9 +1,8 @@
 package sttp.tapir.macros
 
-import sttp.tapir.{EndpointErrorOutputsOps, EndpointSecurityInputsOps, EndpointInputsOps, EndpointOutputsOps, EndpointTransput, Mapping}
+import sttp.tapir.{EndpointErrorOutputsOps, EndpointSecurityInputsOps, EndpointInputsOps, EndpointOutputsOps}
 import sttp.tapir.internal.MappingMacros
 
-import scala.compiletime.erasedValue
 import scala.deriving.Mirror
 
 trait EndpointSecurityInputsMacros[A, I, E, O, -R] { this: EndpointSecurityInputsOps[A, I, E, O, R] =>
