@@ -1,8 +1,7 @@
 package sttp.tapir.macros
 
-import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.{Codec, DecodeResult, Schema, SchemaAnnotations, Validator}
+import sttp.tapir.{Codec, SchemaAnnotations, Validator}
 import sttp.tapir.internal.CodecValueClassMacro
 
 trait CodecMacros {
