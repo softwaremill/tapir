@@ -69,7 +69,7 @@ object Renderer {
           thisType match {
             case ref: OpenapiSchemaRef   => render(allModels, lookup(allModels, ref), isOptional = false)(json)
             case OpenapiSchemaBoolean(_) => jsBool.toString
-            case other                   => throw new IllegalArgumentException(s"Cannot render a boolean as type ${other.getClass.getName}")
+            case other                   => fail("boolean", other)
           },
         jsonNumber =>
           thisType match {
@@ -89,13 +89,13 @@ object Renderer {
             case OpenapiSchemaBinary(_)   => s""""$jsonString".getBytes("utf-8")"""
             case OpenapiSchemaUUID(_)     => s"""java.util.UUID.fromString("$jsonString")"""
             //      case OpenapiSchemaEnum(_, _, _) => // inline enum definitions are not currently supported, so let it throw
-            case other => throw new IllegalArgumentException(s"Cannot render a string as type ${other.getClass.getName}")
+            case other => fail("string", other)
           },
         jsonArray =>
           thisType match {
             case ref: OpenapiSchemaRef        => render(allModels, lookup(allModels, ref), isOptional = false)(json)
             case OpenapiSchemaArray(items, _) => s"Vector(${jsonArray.map(render(allModels, items, isOptional = false)).mkString(", ")})"
-            case other => throw new IllegalArgumentException(s"Cannot render a list as type ${other.getClass.getName}")
+            case other                        => fail("list", other)
           },
         jsonObject =>
           thisType match {
@@ -103,7 +103,7 @@ object Renderer {
               renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
             case OpenapiSchemaMap(types, _) =>
               s"Map(${jsonObject.toMap.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false)(v)}""" }.mkString(", ")})"
-            case other => throw new IllegalArgumentException(s"Cannot render a map as type ${other.getClass.getName}")
+            case other => fail("map", other)
           }
       )
       if (isOptional) s"Some($base)" else base
