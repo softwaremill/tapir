@@ -260,19 +260,23 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe"
     )("TapirGeneratedEndpoints")
-    generatedCode should include(
-      """.attribute[String](new AttributeKey[String]("custom-string-extension-on-path"), "foobar")"""
-    )
-    generatedCode should include(
-      """.attribute[String](new AttributeKey[String]("custom-string-extension-on-operation"), "bazquux")"""
-    )
-    generatedCode should include(
-      """.attribute[Seq[String]](new AttributeKey[Seq[String]]("custom-list-extension-on-operation"), Vector("baz", "quux"))"""
-    )
-    generatedCode should include(
-      """.attribute[Map[String, Any]](new AttributeKey[Map[String, Any]]("custom-map-extension-on-path"), Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))"""
-    )
     generatedCode shouldCompile ()
+    generatedCode should include(
+      """.attribute(customStringExtensionOnPathExtensionKey, "foobar")"""
+    )
+    generatedCode should include(
+      """.attribute(customStringExtensionOnOperationExtensionKey, "bazquux")"""
+    )
+    generatedCode should include(
+      """.attribute(customListExtensionOnOperationExtensionKey, Vector("baz", "quux"))"""
+    )
+    generatedCode should include(
+      """.attribute(customMapExtensionOnPathExtensionKey, Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))"""
+    )
+    generatedCode should include("""type CustomMapExtensionOnOperationExtension = Map[String, Any]""")
+    generatedCode should include(
+      """val customMapExtensionOnOperationExtensionKey = new sttp.tapir.AttributeKey[CustomMapExtensionOnOperationExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.CustomMapExtensionOnOperationExtension")""".stripMargin
+    )
   }
 
 }

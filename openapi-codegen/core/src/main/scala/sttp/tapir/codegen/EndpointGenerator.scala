@@ -1,5 +1,5 @@
 package sttp.tapir.codegen
-import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiParameter,
@@ -98,13 +98,7 @@ class EndpointGenerator {
               |$attributeString
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
-        val name = m.operationId
-          .getOrElse(m.methodType + p.url.capitalize)
-          .split("[^0-9a-zA-Z$_]")
-          .filter(_.nonEmpty)
-          .zipWithIndex
-          .map { case (part, 0) => part; case (part, _) => part.capitalize }
-          .mkString
+        val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
         val queryParamRefs = m.resolvedParameters
           .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
@@ -217,7 +211,13 @@ class EndpointGenerator {
   }
 
   private def attributes(atts: Map[String, SpecificationExtensionValue]): Option[String] = if (atts.nonEmpty) Some {
-    atts.map { case (k, v) => s""".attribute[${v.tpe}](new AttributeKey[${v.tpe}]("${k}"), ${v.render})""" }.mkString("\n")
+    atts
+      .map { case (k, v) =>
+        val camelCaseK = strippedToCamelCase(k)
+        val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
+        s""".attribute(${uncapitalisedName}ExtensionKey, ${v.render})"""
+      }
+      .mkString("\n")
   }
   else None
 

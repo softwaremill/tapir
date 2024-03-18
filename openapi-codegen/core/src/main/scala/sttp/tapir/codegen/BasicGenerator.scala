@@ -61,6 +61,29 @@ object BasicGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
+
+    val maybeSpecificationExtensionKeys = doc.paths
+      .flatMap { p =>
+        p.specificationExtensions.toSeq ++ p.methods.flatMap(_.specificationExtensions.toSeq)
+      }
+      .groupBy(_._1)
+      .map { case (keyName, pairs) =>
+        val values = pairs.map(_._2)
+        val distinctTypes = values.map(_.tpe).distinct
+        if (distinctTypes.size != 1)
+          throw new IllegalArgumentException(
+            s"specification extensions with the same key are expected to all have the same type. Found $distinctTypes for $keyName"
+          )
+        val `type` = distinctTypes.head
+        val name = strippedToCamelCase(keyName)
+        val uncapitalisedName = name.head.toLower + name.tail
+        val capitalisedName = name.head.toUpper + name.tail
+        s"""type ${capitalisedName}Extension = ${`type`}
+           |val ${uncapitalisedName}ExtensionKey = new sttp.tapir.AttributeKey[${capitalisedName}Extension]("$packagePath.$objName.${capitalisedName}Extension")
+           |""".stripMargin
+      }
+      .mkString("\n")
+
     val mainObj = s"""|
         |package $packagePath
         |
@@ -70,8 +93,9 @@ object BasicGenerator {
         |
         |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs).getOrElse(""))}
         |
-        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
+        |${indent(2)(maybeSpecificationExtensionKeys)}
         |
+        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
         |}
         |""".stripMargin
     taggedObjs + (objName -> mainObj)
@@ -127,4 +151,11 @@ object BasicGenerator {
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
+
+  def strippedToCamelCase(string: String): String = string
+    .split("[^0-9a-zA-Z$_]")
+    .filter(_.nonEmpty)
+    .zipWithIndex
+    .map { case (part, 0) => part; case (part, _) => part.capitalize }
+    .mkString
 }
