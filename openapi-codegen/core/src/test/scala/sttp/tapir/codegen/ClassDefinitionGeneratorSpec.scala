@@ -479,7 +479,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .get
     val gen = new ClassDefinitionGenerator()
     val res1 = Try(gen.classDefs(OpenapiDocument("", null, null, Some(doc)))).toEither
-    println(res1)
+
     res1.left.get.getMessage shouldEqual "Cannot render a long as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString"
 
   }
