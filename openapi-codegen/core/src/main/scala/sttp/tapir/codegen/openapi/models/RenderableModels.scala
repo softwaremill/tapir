@@ -124,7 +124,7 @@ case class ReifiableValueMap(kvs: Map[String, ReifiableRenderableValue]) extends
         s"$name(${kvsWithProps
             .map { case (k, (v, p)) => s"""$k = ${v.render(allModels, p.`type`, p.`type`.nullable || !required.contains(k))}""" }
             .mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render a list for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render a map for type ${other.getClass.getName}")
     }
   }
   override def render(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, isOptional: Boolean): String = {
@@ -132,7 +132,7 @@ case class ReifiableValueMap(kvs: Map[String, ReifiableRenderableValue]) extends
       case ref: OpenapiSchemaRef => renderWithName(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaMap(types, _) =>
         s"Map(${kvs.map { case (k, v) => s""""$k" -> ${v.render(allModels, types, isOptional = false)}""" }.mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render a list for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render a map for type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -155,7 +155,7 @@ case class RenderableClassModel(name: String, kvs: Map[String, RenderableValue])
         s"$name(${kvsWithProps
             .map { case (k, (v, p)) => s"""$k = ${v.render(allModels, p.`type`, p.`type`.nullable || !required.contains(k))}""" }
             .mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render a list for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render an object for type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
