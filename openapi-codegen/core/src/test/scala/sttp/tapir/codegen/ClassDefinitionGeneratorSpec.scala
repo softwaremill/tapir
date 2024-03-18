@@ -2,16 +2,8 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaAny,
-  OpenapiSchemaArray,
-  OpenapiSchemaConstantString,
-  OpenapiSchemaEnum,
-  OpenapiSchemaMap,
-  OpenapiSchemaObject,
-  OpenapiSchemaRef,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -279,14 +271,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    val res = gen.classDefs(doc, true)
-    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"))
+    val res = gen.classDefs(doc, true, jsonParamRefs = Set("Test"))
+    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
     res shouldBe Some("""
+      |
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
       |  case enum1, enum2
       |}""".stripMargin)
     resWithQueryParamCodec shouldBe Some("""
+      |
       |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
@@ -346,7 +340,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   import io.circe._
   import io.circe.yaml.parser
 
-  it should "" in {
+  it should "correctly handle quoted strings" in {
     val quotedString = """a "quoted" string"""
     val yaml =
       s"""
@@ -390,6 +384,59 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |  """.stripMargin
 
     compileUnit shouldCompile ()
+
+  }
+
+  it should "be able to find all types referenced by schema" in {
+    val allSchemas = Map(
+      "TopMap" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MapType"), false),
+      "MapType" -> OpenapiSchemaRef("#/components/schemas/MapValue"),
+      "MapValue" -> OpenapiSchemaArray(OpenapiSchemaDateTime(false), false),
+      "TopArray" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/ArrayType"), false),
+      "ArrayType" -> OpenapiSchemaRef("#/components/schemas/ArrayValue"),
+      "ArrayValue" -> OpenapiSchemaArray(OpenapiSchemaByte(false), false),
+      "TopOneOf" -> OpenapiSchemaOneOf(
+        Seq(
+          OpenapiSchemaRef("#/components/schemas/TopMap"),
+          OpenapiSchemaRef("#/components/schemas/TopArray"),
+          OpenapiSchemaRef("#/components/schemas/OneOfValue")
+        )
+      ),
+      "OneOfValue" -> OpenapiSchemaArray(OpenapiSchemaBinary(false), false),
+      "TopObject" -> OpenapiSchemaObject(
+        Map(
+          "innerMap" -> OpenapiSchemaRef("#/components/schemas/TopMap"),
+          "innerArray" -> OpenapiSchemaRef("#/components/schemas/TopArray"),
+          "innerOneOf" -> OpenapiSchemaRef("#/components/schemas/TopOneOf"),
+          "innerBoolean" -> OpenapiSchemaBoolean(false),
+          "recursiveEntry" -> OpenapiSchemaRef("#/components/schemas/TopObject")
+        ),
+        Nil,
+        false
+      )
+    )
+    def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
+      case Nil          => initialSet
+      case head +: tail => new ClassDefinitionGenerator().recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
+    }
+    fetchJsonParamRefs(Set("MapType"), Seq(allSchemas("MapType"))) shouldEqual Set("MapType", "MapValue")
+    fetchJsonParamRefs(Set("TopMap"), Seq(allSchemas("TopMap"))) shouldEqual Set("TopMap", "MapType", "MapValue")
+    fetchJsonParamRefs(Set("TopArray"), Seq(allSchemas("TopArray"))) shouldEqual Set("TopArray", "ArrayType", "ArrayValue")
+    fetchJsonParamRefs(Set("TopOneOf"), Seq(allSchemas("TopOneOf"))) shouldEqual Set(
+      "TopOneOf",
+      "OneOfValue",
+      "TopMap",
+      "MapType",
+      "MapValue",
+      "TopArray",
+      "ArrayType",
+      "ArrayValue"
+    )
+    fetchJsonParamRefs(Set("TopObject"), Seq(allSchemas("TopObject"))) shouldEqual allSchemas.keySet
+    fetchJsonParamRefs(
+      Set("TopMap", "TopArray", "TopObject"),
+      Seq(allSchemas("TopMap"), allSchemas("TopArray"), allSchemas("TopObject"))
+    ) shouldEqual allSchemas.keySet
 
   }
 }

@@ -56,8 +56,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode =
-      BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
     generatedCode shouldCompile ()
   }
@@ -131,7 +131,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         )
       )
     )
-    BasicGenerator.imports ++
+    BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None) shouldCompile ()
   }
 
@@ -175,8 +175,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       null
     )
-    val generatedCode =
-      BasicGenerator.imports ++ new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     generatedCode should include(
       """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
     ) // status code with body
@@ -237,7 +237,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
       targetScala3 = false,
-      useHeadTagForObjectNames = false
+      useHeadTagForObjectNames = false,
+      jsonSerdeLib = "circe"
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -247,4 +248,5 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )
     generatedCode shouldCompile ()
   }
+
 }
