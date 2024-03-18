@@ -75,7 +75,7 @@ case class ReifiableValueDouble(value: Double) extends ReifiableRenderableValue 
 case class ReifiableValueString(value: String) extends ReifiableRenderableValue {
   private def renderWithName(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, name: String): String =
     thisType match {
-      case ref: OpenapiSchemaRef      => render(allModels, lookup(allModels, ref), isOptional = false)
+      case ref: OpenapiSchemaRef      => renderWithName(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaString(_)     => '"' +: value :+ '"'
       case OpenapiSchemaEnum(_, _, _) => s"$name.$value"
       case OpenapiSchemaDateTime(_)   => s"""java.time.Instant.parse("$value")"""
