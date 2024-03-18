@@ -121,7 +121,8 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
       case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
       case _            => Seq.empty[String]
     }
-  }
+  },
+  run / fork := true
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
