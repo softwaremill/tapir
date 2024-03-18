@@ -1,5 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
+import io.circe.Json
+
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
 }
@@ -108,7 +110,7 @@ object OpenapiSchemaType {
 
   case class OpenapiSchemaField(
       `type`: OpenapiSchemaType,
-      default: Option[RenderableValue]
+      default: Option[Json]
   )
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
@@ -257,29 +259,16 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
   }
 
-  def decodeReifiableValue(json: Json): ReifiableRenderableValue =
-    json.fold(
-      ReifiableValueNull,
-      ReifiableValueBoolean.apply,
-      n => n.toLong.map(ReifiableValueLong.apply).getOrElse(ReifiableValueDouble(n.toDouble)),
-      ReifiableValueString.apply,
-      arr => ReifiableValueList(arr.map(decodeReifiableValue)),
-      obj => ReifiableValueMap(obj.toMap.map { case (k, v) => k -> decodeReifiableValue(v) })
-    )
-  implicit val ReifiableRenderableValueDecoder: Decoder[ReifiableRenderableValue] = { (c: HCursor) =>
-    Right(decodeReifiableValue(c.value))
-  }
-
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[RenderableValue])] = { (c: HCursor) =>
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
-      maybeDefault <- c.downField("default").as[Option[ReifiableRenderableValue]]
+      maybeDefault <- c.downField("default").as[Option[Json]]
     } yield (schemaType, maybeDefault)
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
-      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[RenderableValue])]]]
+      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       nb <- c.downField("nullable").as[Option[Boolean]]
       fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }

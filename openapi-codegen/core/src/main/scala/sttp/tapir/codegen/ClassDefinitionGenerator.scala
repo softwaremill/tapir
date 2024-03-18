@@ -1,8 +1,9 @@
 package sttp.tapir.codegen
 
+import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, RenderableValue}
+import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, Renderer}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
@@ -326,11 +327,9 @@ class ClassDefinitionGenerator {
   private def renderDefault(
       allSchemas: Map[String, OpenapiSchemaType],
       required: Boolean,
-      default: RenderableValue,
+      default: Json,
       schemaType: OpenapiSchemaType
-  ): String = {
-    default.render(allModels = allSchemas, thisType = schemaType, schemaType.nullable || !required)
-  }
+  ): String = Renderer.render(allModels = allSchemas, thisType = schemaType, schemaType.nullable || !required)(default)
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 

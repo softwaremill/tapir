@@ -1,5 +1,6 @@
 package sttp.tapir.codegen
 
+import io.circe.Json
 import sttp.tapir.codegen.openapi.models._
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -704,30 +705,30 @@ object TestHelpers {
         Map(
           "ReqWithDefaults" -> OpenapiSchemaObject(
             Map(
-              "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(ReifiableValueString("default string"))),
-              "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false), Some(ReifiableValueLong(1977)))
+              "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("default string"))),
+              "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false), Some(Json.fromLong(1977)))
             ),
             List("f1"),
             false
           ),
           "RespWithDefaults" -> OpenapiSchemaObject(
             Map(
-              "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(ReifiableValueString("default string"))),
-              "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false), Some(ReifiableValueLong(1977))),
-              "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(ReifiableValueString("v1"))),
+              "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(Json.fromString("default string"))),
+              "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false), Some(Json.fromLong(1977))),
+              "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(Json.fromString("v1"))),
               "g4" -> OpenapiSchemaField(
                 OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/AnEnum"), false),
-                Some(ReifiableValueList(Vector(ReifiableValueString("v1"), ReifiableValueString("v2"), ReifiableValueString("v3"))))
+                Some(Json.fromValues(Vector(Json.fromString("v1"), Json.fromString("v2"), Json.fromString("v3"))))
               ),
               "sub" -> OpenapiSchemaField(
                 OpenapiSchemaRef("#/components/schemas/SubObject"),
                 Some(
-                  ReifiableValueMap(
+                  Json.fromFields(
                     Map(
-                      "subsub" -> ReifiableValueMap(
+                      "subsub" -> Json.fromFields(
                         Map(
-                          "value" -> ReifiableValueString("hi there"),
-                          "value2" -> ReifiableValueString("ac8113ed-6105-4f65-a393-e88be2c5d585")
+                          "value" -> Json.fromString("hi there"),
+                          "value2" -> Json.fromString("ac8113ed-6105-4f65-a393-e88be2c5d585")
                         )
                       )
                     )
