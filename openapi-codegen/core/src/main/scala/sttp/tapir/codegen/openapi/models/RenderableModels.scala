@@ -40,7 +40,7 @@ case class ReifiableValueBoolean(value: Boolean) extends ReifiableRenderableValu
     val base = thisType match {
       case ref: OpenapiSchemaRef   => render(allModels, lookup(allModels, ref), isOptional = false)
       case OpenapiSchemaBoolean(_) => value.toString
-      case other                   => throw new IllegalArgumentException(s"Cannot render a boolean for type ${other.getClass.getName}")
+      case other                   => throw new IllegalArgumentException(s"Cannot render a boolean as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -54,7 +54,7 @@ case class ReifiableValueLong(value: Long) extends ReifiableRenderableValue {
       case OpenapiSchemaInt(_)    => value.toString
       case OpenapiSchemaFloat(_)  => s"${value.toFloat}f"
       case OpenapiSchemaDouble(_) => s"${value.toDouble}d"
-      case other                  => throw new IllegalArgumentException(s"Cannot render a long for type ${other.getClass.getName}")
+      case other                  => throw new IllegalArgumentException(s"Cannot render a long as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -66,7 +66,7 @@ case class ReifiableValueDouble(value: Double) extends ReifiableRenderableValue 
       case ref: OpenapiSchemaRef  => render(allModels, lookup(allModels, ref), isOptional = false)
       case OpenapiSchemaFloat(_)  => s"${value.toFloat}f"
       case OpenapiSchemaDouble(_) => s"${value}d"
-      case other                  => throw new IllegalArgumentException(s"Cannot render a double for type ${other.getClass.getName}")
+      case other                  => throw new IllegalArgumentException(s"Cannot render a double as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -81,17 +81,17 @@ case class ReifiableValueString(value: String) extends ReifiableRenderableValue 
       case OpenapiSchemaDateTime(_)   => s"""java.time.Instant.parse("$value")"""
       case OpenapiSchemaBinary(_)     => s""""$value".getBytes("utf-8")"""
       case OpenapiSchemaUUID(_)       => s"""java.util.UUID.fromString("$value")"""
-      case other                      => throw new IllegalArgumentException(s"Cannot render a string for type ${other.getClass.getName}")
+      case other                      => throw new IllegalArgumentException(s"Cannot render a string as type ${other.getClass.getName}")
     }
   override def render(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, isOptional: Boolean): String = {
     val base = thisType match {
-      case ref: OpenapiSchemaRef        => renderWithName(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-      case OpenapiSchemaString(_)       => '"' +: value :+ '"'
-      case OpenapiSchemaEnum(tpe, _, _) => s"$value"
-      case OpenapiSchemaDateTime(_)     => s"""java.time.Instant.parse("$value")"""
-      case OpenapiSchemaBinary(_)       => s""""$value".getBytes("utf-8")"""
-      case OpenapiSchemaUUID(_)         => s"""java.util.UUID.fromString("$value")"""
-      case other                        => throw new IllegalArgumentException(s"Cannot render a string for type ${other.getClass.getName}")
+      case ref: OpenapiSchemaRef    => renderWithName(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
+      case OpenapiSchemaString(_)   => '"' +: value :+ '"'
+      case OpenapiSchemaDateTime(_) => s"""java.time.Instant.parse("$value")"""
+      case OpenapiSchemaBinary(_)   => s""""$value".getBytes("utf-8")"""
+      case OpenapiSchemaUUID(_)     => s"""java.util.UUID.fromString("$value")"""
+//      case OpenapiSchemaEnum(_, _, _) => // inline enum definitions are not currently supported, so let it throw
+      case other => throw new IllegalArgumentException(s"Cannot render a string as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -102,7 +102,7 @@ case class ReifiableValueList(values: Seq[ReifiableRenderableValue]) extends Rei
     val base = thisType match {
       case ref: OpenapiSchemaRef        => render(allModels, lookup(allModels, ref), isOptional = false)
       case OpenapiSchemaArray(items, _) => s"Vector(${values.map(_.render(allModels, items, isOptional = false)).mkString(", ")})"
-      case other                        => throw new IllegalArgumentException(s"Cannot render a list for type ${other.getClass.getName}")
+      case other                        => throw new IllegalArgumentException(s"Cannot render a list as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -124,7 +124,7 @@ case class ReifiableValueMap(kvs: Map[String, ReifiableRenderableValue]) extends
         s"$name(${kvsWithProps
             .map { case (k, (v, p)) => s"""$k = ${v.render(allModels, p.`type`, p.`type`.nullable || !required.contains(k))}""" }
             .mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render a map for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render a map as type ${other.getClass.getName}")
     }
   }
   override def render(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, isOptional: Boolean): String = {
@@ -132,7 +132,7 @@ case class ReifiableValueMap(kvs: Map[String, ReifiableRenderableValue]) extends
       case ref: OpenapiSchemaRef => renderWithName(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaMap(types, _) =>
         s"Map(${kvs.map { case (k, v) => s""""$k" -> ${v.render(allModels, types, isOptional = false)}""" }.mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render a map for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render a map as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }
@@ -155,7 +155,7 @@ case class RenderableClassModel(name: String, kvs: Map[String, RenderableValue])
         s"$name(${kvsWithProps
             .map { case (k, (v, p)) => s"""$k = ${v.render(allModels, p.`type`, p.`type`.nullable || !required.contains(k))}""" }
             .mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render an object for type ${other.getClass.getName}")
+      case other => throw new IllegalArgumentException(s"Cannot render an object as type ${other.getClass.getName}")
     }
     if (isOptional) s"Some($base)" else base
   }

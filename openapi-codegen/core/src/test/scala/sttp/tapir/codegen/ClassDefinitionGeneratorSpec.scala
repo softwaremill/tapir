@@ -6,6 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
+import scala.util.Try
+
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   def noDefault(f: OpenapiSchemaType): OpenapiSchemaField = OpenapiSchemaField(f, None)
 
@@ -452,6 +454,33 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Set("TopMap", "TopArray", "TopObject"),
       Seq(allSchemas("TopMap"), allSchemas("TopArray"), allSchemas("TopObject"))
     ) shouldEqual allSchemas.keySet
+
+  }
+
+  it should "error on illegal default declarations" in {
+    val yaml =
+      """
+         |schemas:
+         |  ReqWithDefaults:
+         |    required:
+         |    - f1
+         |    type: object
+         |    properties:
+         |      f1:
+         |        type: string
+         |        default: 1977
+         |""".stripMargin
+
+    val doc: OpenapiComponent = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
+      .toTry
+      .get
+    val gen = new ClassDefinitionGenerator()
+    val res1 = Try(gen.classDefs(OpenapiDocument("", null, null, Some(doc)))).toEither
+    println(res1)
+    res1.left.get.getMessage shouldEqual "Cannot render a long as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString"
 
   }
 }

@@ -633,7 +633,8 @@ object TestHelpers {
      |          $ref: '#/components/schemas/SubObject'
      |          default:
      |            subsub:
-     |              value: "hi there"
+     |              value: hi there
+     |              value2: ac8113ed-6105-4f65-a393-e88be2c5d585
      |    AnEnum:
      |      title: AnEnum
      |      type: string
@@ -655,6 +656,9 @@ object TestHelpers {
      |      properties:
      |        value:
      |          type: string
+     |        value2:
+     |          type: string
+     |          format: uuid
      |""".stripMargin
 
   val withDefaultsDocs = OpenapiDocument(
@@ -718,7 +722,17 @@ object TestHelpers {
               "sub" -> OpenapiSchemaField(
                 OpenapiSchemaRef("#/components/schemas/SubObject"),
                 Some(
-                  RenderableClassModel("SubObject", Map("subsub" -> ReifiableValueMap(Map("value" -> ReifiableValueString("hi there")))))
+                  RenderableClassModel(
+                    "SubObject",
+                    Map(
+                      "subsub" -> ReifiableValueMap(
+                        Map(
+                          "value" -> ReifiableValueString("hi there"),
+                          "value2" -> ReifiableValueString("ac8113ed-6105-4f65-a393-e88be2c5d585")
+                        )
+                      )
+                    )
+                  )
                 )
               )
             ),
@@ -735,7 +749,14 @@ object TestHelpers {
             List("subsub"),
             false
           ),
-          "SubSubObject" -> OpenapiSchemaObject(Map("value" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("value"), false)
+          "SubSubObject" -> OpenapiSchemaObject(
+            Map(
+              "value" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
+              "value2" -> OpenapiSchemaField(OpenapiSchemaUUID(false), None)
+            ),
+            List("value"),
+            false
+          )
         ),
         Map(),
         Map()
