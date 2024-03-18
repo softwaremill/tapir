@@ -85,7 +85,7 @@ NettyFutureServer(NettyConfig.default.socketBacklog(256))
 
 ## Graceful shutdown
 
-A Netty should can be gracefully closed using function `NettyFutureServerBinding.stop()` (and analogous functions available in Cats and ZIO bindings). This function ensures that the server will wait at most 10 seconds for in-flight requests to complete, while rejecting all new requests with 503 during this period. Afterwards, it closes all server resources.
+A Netty server can be gracefully closed using the function `NettyFutureServerBinding.stop()` (and analogous functions available in Cats and ZIO bindings). This function ensures that the server will wait at most 10 seconds for in-flight requests to complete, while rejecting all new requests with 503 during this period. Afterwards, it closes all server resources.
 You can customize this behavior in `NettyConfig`:
 
 ```scala mdoc:compile-only

@@ -1,8 +1,5 @@
 package sttp.tapir.macros
 
-import sttp.model.StatusCode
-import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.{EndpointOutput, Tapir}
 import sttp.tapir.typelevel.ErasureSameAsType
 
 import scala.quoted.*
@@ -13,7 +10,6 @@ trait ErasureSameAsTypeMacros {
 
 private[tapir] object ErasureSameAsTypeMacros {
   def instanceImpl[T: Type](using Quotes): Expr[ErasureSameAsType[T]] = {
-    import quotes.reflect._
     mustBeEqualToItsErasure[T]
     '{ new ErasureSameAsType[T] {} }
   }
@@ -31,7 +27,7 @@ private[tapir] object ErasureSameAsTypeMacros {
     }
 
     if (!isAllowed(t)) {
-      report.throwError(
+      report.errorAndAbort(
         s"Type ${t.show}, $t is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify " +
           s"that the input matches the desired type. Use other methods to match the input to the appropriate variant " +
           s"instead."

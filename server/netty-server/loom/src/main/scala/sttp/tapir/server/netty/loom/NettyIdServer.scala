@@ -97,7 +97,8 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
         route,
         unsafeRunF,
         channelGroup,
-        isShuttingDown
+        isShuttingDown,
+        config.serverHeader
       ),
       eventLoopGroup,
       socketOverride

@@ -2,9 +2,7 @@ package sttp.tapir.typelevel
 
 import scala.quoted.Quotes
 
-import scala.annotation.implicitNotFound
 import scala.quoted.*
-import scala.collection.View.Empty
 
 trait UnionTypeMirror[A] {
 

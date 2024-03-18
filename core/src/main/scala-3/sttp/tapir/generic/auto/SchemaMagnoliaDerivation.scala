@@ -76,7 +76,6 @@ trait SchemaMagnoliaDerivation {
       }
 
       override def split[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
-        val annotations = mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations)
         withCache(ctx.typeInfo, ctx.annotations) {
           val subtypesByName =
             ctx.subtypes.toList

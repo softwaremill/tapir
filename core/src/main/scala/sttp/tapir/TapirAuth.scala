@@ -5,7 +5,7 @@ import sttp.model.headers.{AuthenticationScheme, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.Auth
 
-import scala.collection.immutable.{ListMap, Seq}
+import scala.collection.immutable.ListMap
 
 object TapirAuth {
 
