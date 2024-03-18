@@ -139,25 +139,3 @@ case class ReifiableValueMap(kvs: Map[String, ReifiableRenderableValue]) extends
   def tpe = kvs.values.map(_.tpe).toSeq.distinct match { case single +: Nil => s"Map[String, $single]"; case _ => "Map[String, Any]" }
   def value = kvs.map { case (k, v) => k -> v.value }
 }
-case class RenderableClassModel(name: String, kvs: Map[String, RenderableValue]) extends RenderableValue {
-  private def errorForKey(k: String): Nothing = throw new IllegalArgumentException(
-    s"Cannot find property $k in schema $name when constructing default value"
-  )
-  override def render(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, isOptional: Boolean): String = {
-    val base = thisType match {
-      case ref: OpenapiSchemaRef if !ref.name.endsWith(s"/$name") =>
-        throw new IllegalArgumentException(s"Cannot render $name as ${ref.name.split('/').last}")
-      case ref: OpenapiSchemaRef => render(allModels, lookup(allModels, ref), isOptional = false)
-      case OpenapiSchemaMap(types, _) =>
-        s"$name(${kvs.map { case (k, v) => s"""$k = ${v.render(allModels, types, isOptional = false)}""" }.mkString(", ")})"
-      case OpenapiSchemaObject(properties, required, _) =>
-        val kvsWithProps = kvs.map { case (k, v) => (k, (v, properties.getOrElse(k, errorForKey(k)))) }
-        s"$name(${kvsWithProps
-            .map { case (k, (v, p)) => s"""$k = ${v.render(allModels, p.`type`, p.`type`.nullable || !required.contains(k))}""" }
-            .mkString(", ")})"
-      case other => throw new IllegalArgumentException(s"Cannot render an object as type ${other.getClass.getName}")
-    }
-    if (isOptional) s"Some($base)" else base
-  }
-  def tpe = name
-}

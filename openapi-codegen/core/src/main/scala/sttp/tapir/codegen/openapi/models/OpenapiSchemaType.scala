@@ -269,23 +269,11 @@ object OpenapiSchemaType {
   implicit val ReifiableRenderableValueDecoder: Decoder[ReifiableRenderableValue] = { (c: HCursor) =>
     Right(decodeReifiableValue(c.value))
   }
-  def decodeRenderable(maybeName: Option[String], cursor: ACursor): Option[RenderableValue] = maybeName match {
-    case None => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
-    case Some(name) =>
-      cursor.focus
-        .flatMap(_.asObject match {
-          case Some(o) => Some(RenderableClassModel(name, o.toMap.map { case (k, v) => k -> decodeReifiableValue(v) }))
-          case None    => cursor.as[Option[ReifiableRenderableValue]].toOption.flatten
-        })
-  }
+
   implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[RenderableValue])] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
-      maybeName = schemaType match {
-        case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => Some(ref.stripPrefix("#/components/schemas/"))
-        case _                                                                => None
-      }
-      maybeDefault = decodeRenderable(maybeName, c.downField("default"))
+      maybeDefault <- c.downField("default").as[Option[ReifiableRenderableValue]]
     } yield (schemaType, maybeDefault)
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>

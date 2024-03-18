@@ -2,14 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.{
-  OpenapiSchemaType,
-  ReifiableValueDouble,
-  ReifiableValueList,
-  ReifiableValueLong,
-  ReifiableValueString,
-  RenderableValue
-}
+import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, RenderableValue}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec

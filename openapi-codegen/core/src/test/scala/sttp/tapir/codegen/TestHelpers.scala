@@ -722,8 +722,7 @@ object TestHelpers {
               "sub" -> OpenapiSchemaField(
                 OpenapiSchemaRef("#/components/schemas/SubObject"),
                 Some(
-                  RenderableClassModel(
-                    "SubObject",
+                  ReifiableValueMap(
                     Map(
                       "subsub" -> ReifiableValueMap(
                         Map(
