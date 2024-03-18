@@ -62,9 +62,10 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
         """f1: String = "default string"""",
         """f2: Option[Int] = Some(1977)""",
         """g1: Option[java.util.UUID] = Some(java.util.UUID.fromString("default string"))""",
-        """g2: Float = 1977f""",
+        """g2: Float = 1977.0f""",
         """g3: Option[AnEnum] = Some(AnEnum.v1)""",
-        """g4: Option[Seq[AnEnum]] = Some(Vector(AnEnum.v1, AnEnum.v2, AnEnum.v3))"""
+        """g4: Option[Seq[AnEnum]] = Some(Vector(AnEnum.v1, AnEnum.v2, AnEnum.v3))""",
+        """sub: Option[SubObject] = Some(SubObject(subsub = SubSubObject(value = "hi there")))"""
       )
       expectedDefaultDeclarations foreach (decln => genWithParams should include(decln))
 

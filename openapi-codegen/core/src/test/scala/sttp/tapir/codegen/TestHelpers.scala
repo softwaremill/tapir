@@ -629,6 +629,11 @@ object TestHelpers {
      |          items:
      |            $ref: '#/components/schemas/AnEnum'
      |          default: [v1, v2, v3]
+     |        sub:
+     |          $ref: '#/components/schemas/SubObject'
+     |          default:
+     |            subsub:
+     |              value: "hi there"
      |    AnEnum:
      |      title: AnEnum
      |      type: string
@@ -636,6 +641,20 @@ object TestHelpers {
      |        - v1
      |        - v2
      |        - v3
+     |    SubObject:
+     |      required:
+     |      - subsub
+     |      type: object
+     |      properties:
+     |        subsub:
+     |          $ref: '#/components/schemas/SubSubObject'
+     |    SubSubObject:
+     |      required:
+     |      - value
+     |      type: object
+     |      properties:
+     |        value:
+     |          type: string
      |""".stripMargin
 
   val withDefaultsDocs = OpenapiDocument(
@@ -695,6 +714,12 @@ object TestHelpers {
               "g4" -> OpenapiSchemaField(
                 OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/AnEnum"), false),
                 Some(ReifiableValueList(Vector(ReifiableValueString("v1"), ReifiableValueString("v2"), ReifiableValueString("v3"))))
+              ),
+              "sub" -> OpenapiSchemaField(
+                OpenapiSchemaRef("#/components/schemas/SubObject"),
+                Some(
+                  RenderableClassModel("SubObject", Map("subsub" -> ReifiableValueMap(Map("value" -> ReifiableValueString("hi there")))))
+                )
               )
             ),
             List("g2"),
@@ -704,7 +729,13 @@ object TestHelpers {
             "string",
             List(OpenapiSchemaConstantString("v1"), OpenapiSchemaConstantString("v2"), OpenapiSchemaConstantString("v3")),
             false
-          )
+          ),
+          "SubObject" -> OpenapiSchemaObject(
+            Map("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
+            List("subsub"),
+            false
+          ),
+          "SubSubObject" -> OpenapiSchemaObject(Map("value" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("value"), false)
         ),
         Map(),
         Map()

@@ -67,7 +67,7 @@ class ClassDefinitionGenerator {
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
-          generateClass(name, obj, jsonSerdeLib, allTransitiveJsonParamRefs)
+          generateClass(allSchemas, name, obj, jsonSerdeLib, allTransitiveJsonParamRefs)
         case (name, obj: OpenapiSchemaEnum) =>
           generateEnum(name, obj, targetScala3, queryParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
         case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema, jsonSerdeLib, allTransitiveJsonParamRefs)
@@ -244,6 +244,7 @@ class ClassDefinitionGenerator {
   }
 
   private[codegen] def generateClass(
+      allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       obj: OpenapiSchemaObject,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
@@ -271,7 +272,7 @@ class ClassDefinitionGenerator {
       val properties = obj.properties.map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
         val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson)
         val fixedKey = fixKey(key)
-        val default = maybeDefault.map(" = " + renderDefault(obj.required.contains(key), _, schemaType)) getOrElse ""
+        val default = maybeDefault.map(" = " + renderDefault(allSchemas, obj.required.contains(key), _, schemaType)) getOrElse ""
         s"$fixedKey: $tpe$default"
       }
 
@@ -329,33 +330,13 @@ class ClassDefinitionGenerator {
     if (optional || !required) s"Option[$tpe]" else tpe
   }
 
-  private def renderDefault(required: Boolean, default: RenderableValue, schemaType: OpenapiSchemaType): String = {
-    val rendered = default.render
-    val base = (default, schemaType) match {
-      case (ReifiableValueLong(_), OpenapiSchemaInt(_))        => rendered.stripSuffix("L")
-      case (ReifiableValueLong(_), OpenapiSchemaFloat(_))      => rendered.stripSuffix("L") + "f"
-      case (ReifiableValueLong(_), OpenapiSchemaDouble(_))     => rendered.stripSuffix("L") + "d"
-      case (ReifiableValueDouble(_), OpenapiSchemaFloat(_))    => rendered.stripSuffix("d") + "f"
-      case (ReifiableValueString(_), OpenapiSchemaDate(_))     => throw new NotImplementedError("Default date fields are not supported")
-      case (ReifiableValueString(_), OpenapiSchemaDateTime(_)) => s"java.time.Instant.parse(${rendered})"
-      case (ReifiableValueString(_), OpenapiSchemaByte(_))     => throw new NotImplementedError("Default byte fields are not supported")
-      case (ReifiableValueString(_), OpenapiSchemaBinary(_))   => s"""$rendered.getBytes("utf-8")"""
-      case (ReifiableValueString(_), OpenapiSchemaUUID(_))     => s"java.util.UUID.fromString(${rendered})"
-      // Nasty hacks so that enum defaults sometimes work
-      case (ReifiableValueString(_), OpenapiSchemaEnum(t, _, _)) => s"$t.$rendered".replace("\"", "")
-      case (ReifiableValueString(_), OpenapiSchemaRef(ref)) =>
-        val t = ref.stripPrefix("#/components/schemas/")
-        s"$t.$rendered".replace("\"", "")
-      case (ReifiableValueList(l), OpenapiSchemaArray(OpenapiSchemaEnum(t, _, _), _))
-          if l.headOption.exists(_.isInstanceOf[ReifiableValueString]) =>
-        rendered.replaceAll(""""([^"]+)"""", s"$t.$$1")
-      case (ReifiableValueList(l), OpenapiSchemaArray(OpenapiSchemaRef(ref), _))
-          if l.headOption.exists(_.isInstanceOf[ReifiableValueString]) =>
-        val t = ref.stripPrefix("#/components/schemas/")
-        rendered.replaceAll(""""([^"]+)"""", s"$t.$$1")
-      case _ => rendered
-    }
-    if (schemaType.nullable || !required) s"Some($base)" else base
+  private def renderDefault(
+      allSchemas: Map[String, OpenapiSchemaType],
+      required: Boolean,
+      default: RenderableValue,
+      schemaType: OpenapiSchemaType
+  ): String = {
+    default.render(allModels = allSchemas, thisType = schemaType, schemaType.nullable || !required)
   }
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
