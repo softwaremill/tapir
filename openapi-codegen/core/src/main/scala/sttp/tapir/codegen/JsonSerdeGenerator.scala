@@ -34,7 +34,7 @@ object JsonSerdeGenerator {
           allSchemas,
           jsonParamRefs,
           allTransitiveJsonParamRefs,
-          adtInheritanceMap, // probably don't need this
+          adtInheritanceMap,
           if (fullModelPath.isEmpty) None else Some(fullModelPath)
         )
     }
@@ -197,9 +197,9 @@ object JsonSerdeGenerator {
 
   private def genJsoniterClassSerde(adtInheritanceMap: Map[String, Seq[String]])(name: String): String = {
     val uncapitalisedName = name.head.toLower +: name.tail
-    if (adtInheritanceMap.getOrElse(name, Nil).isEmpty) // TODO: make work if top level in oneOf and also raw.
+    if (adtInheritanceMap.getOrElse(name, Nil).isEmpty)
       s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
-    else ""
+    else throw new NotImplementedError(s"A class cannot be used both in a oneOf at the top level when using jsoniter serdes at $name")
   }
 
   private def genJsoniterEnumSerde(name: String): String = {
