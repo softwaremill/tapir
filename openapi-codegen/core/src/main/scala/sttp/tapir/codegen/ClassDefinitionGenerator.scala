@@ -266,7 +266,9 @@ class ClassDefinitionGenerator {
       val properties = obj.properties.map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
         val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson)
         val fixedKey = fixKey(key)
-        val default = maybeDefault.map(" = " + renderDefault(allSchemas, obj.required.contains(key), _, schemaType)) getOrElse ""
+        val optional = schemaType.nullable || !obj.required.contains(key)
+        val maybeExplicitDefault = maybeDefault.map(" = " + Renderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+        val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
         s"$fixedKey: $tpe$default"
       }
 
