@@ -326,13 +326,6 @@ class ClassDefinitionGenerator {
     if (optional || !required) s"Option[$tpe]" else tpe
   }
 
-  private def renderDefault(
-      allSchemas: Map[String, OpenapiSchemaType],
-      required: Boolean,
-      default: Json,
-      schemaType: OpenapiSchemaType
-  ): String = Renderer.render(allModels = allSchemas, thisType = schemaType, schemaType.nullable || !required)(default)
-
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
   private val reservedKeys = scala.reflect.runtime.universe.asInstanceOf[scala.reflect.internal.SymbolTable].nme.keywords.map(_.toString)
