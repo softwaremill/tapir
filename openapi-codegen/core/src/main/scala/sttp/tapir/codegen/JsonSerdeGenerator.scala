@@ -82,7 +82,8 @@ object JsonSerdeGenerator {
         // We generate the serde if it's referenced in any json model
         case (name, _: OpenapiSchemaObject | _: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
           Some(genCirceNamedSerde(name))
-        case (name, schema: OpenapiSchemaOneOf) => Some(genCirceAdtSerde(schema, name))
+        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+          Some(genCirceAdtSerde(schema, name))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
@@ -186,7 +187,8 @@ object JsonSerdeGenerator {
         case (name, _: OpenapiSchemaEnum) if allTransitiveJsonParamRefs.contains(name) =>
           Some(genJsoniterEnumSerde(name))
         // For ADTs, generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaOneOf) => Some(generateJsoniterAdtSerde(name, schema, fullModelPath))
+        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+          Some(generateJsoniterAdtSerde(name, schema, fullModelPath))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
