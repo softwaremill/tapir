@@ -2,7 +2,6 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
@@ -12,7 +11,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   def noDefault(f: OpenapiSchemaType): OpenapiSchemaField = OpenapiSchemaField(f, None)
 
   it should "generate the example class defs" in {
-    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc).get.classRepr shouldCompile ()
   }
 
   it should "generate simple class" in {
@@ -29,7 +28,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate simple enum" in {
@@ -50,7 +49,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
     // the enumeratum import should be included by the BasicGenerator iff we generated enums
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate simple class with reserved propName" in {
@@ -67,7 +66,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with array" in {
@@ -88,7 +87,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with map" in {
@@ -109,7 +108,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with any type" in {
@@ -126,7 +125,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with inner class" in {
@@ -149,7 +148,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with array with inner class" in {
@@ -178,7 +177,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "generate class with map with inner class" in {
@@ -207,7 +206,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
   it should "nonrequired and required are not the same" in {
@@ -236,8 +235,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
     val gen = new ClassDefinitionGenerator()
-    val res1 = gen.classDefs(doc1)
-    val res2 = gen.classDefs(doc2)
+    val res1 = gen.classDefs(doc1).map(_.classRepr)
+    val res2 = gen.classDefs(doc2).map(_.classRepr)
     res1 shouldNot be(res2)
     res1.get shouldCompile ()
     res2.get shouldCompile ()
@@ -268,8 +267,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       )
     )
     val gen = new ClassDefinitionGenerator()
-    val res1 = gen.classDefs(doc1)
-    val res2 = gen.classDefs(doc2)
+    val res1 = gen.classDefs(doc1).map(_.classRepr)
+    val res2 = gen.classDefs(doc2).map(_.classRepr)
     res1 shouldBe res2
   }
 
@@ -288,21 +287,19 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    val res = gen.classDefs(doc, true, jsonParamRefs = Set("Test"))
-    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
+    val res = gen.classDefs(doc, true, jsonParamRefs = Set("Test")).map(_.classRepr)
+    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test")).map(_.classRepr)
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
     res shouldBe Some("""
       |
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
       |  case enum1, enum2
-      |}""".stripMargin)
-    resWithQueryParamCodec shouldBe Some("""
-      |
-      |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+      |}
+      |""".stripMargin)
+    resWithQueryParamCodec shouldBe Some("""def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
       |  )
-      |
       |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
       |  sttp.tapir.Codec
       |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
@@ -328,7 +325,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2
-      |}""".stripMargin)
+      |}
+      |""".stripMargin)
   }
 
   it should "generate named maps" in {
@@ -350,7 +348,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    gen.classDefs(doc, false).get shouldCompile ()
+    gen.classDefs(doc, false).get.classRepr shouldCompile ()
   }
 
   import cats.implicits._
@@ -482,5 +480,35 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     res1.left.get.getMessage shouldEqual "Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 
+  }
+
+  it should "generate ADTs for oneOf schemas (jsoniter)" in {
+    val gen = new ClassDefinitionGenerator()
+    val GeneratedClassDefinitions(res, extra) =
+      gen.classDefs(TestHelpers.oneOfDocs, false, jsonSerdeLib = JsonSerdeLib.Jsoniter, jsonParamRefs = Set("ReqWithVariants")).get
+
+    val fullRes = (res + "\n" + extra.get)
+    res shouldCompile ()
+    fullRes shouldCompile ()
+    extra.get should include(
+      """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+    )
+  }
+
+  it should "generate ADTs for oneOf schemas (circe)" in {
+    val gen = new ClassDefinitionGenerator()
+    val GeneratedClassDefinitions(fullRes, extra) =
+      gen.classDefs(TestHelpers.oneOfDocs, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
+
+    fullRes shouldCompile ()
+    val expectedLines = Seq(
+      """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
+      """case x: ReqSubtype1 => io.circe.Encoder[ReqSubtype1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ReqSubtype1")))""",
+      """implicit lazy val reqWithVariantsJsonDecoder: io.circe.Decoder[ReqWithVariants]""",
+      """discriminator <- c.downField("type").as[String]""",
+      """case "ReqSubtype1" => c.as[ReqSubtype1]"""
+    )
+    expectedLines.foreach(line => fullRes should include(line))
+    extra should be(empty)
   }
 }

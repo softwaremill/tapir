@@ -189,4 +189,15 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       TestHelpers.specificationExtensionDocs
     ))
   }
+
+  it should "parse oneOf schemas" in {
+    val res = parser
+      .parse(TestHelpers.oneOfYaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+
+    res shouldBe Right(
+      TestHelpers.oneOfDocs
+    )
+  }
 }

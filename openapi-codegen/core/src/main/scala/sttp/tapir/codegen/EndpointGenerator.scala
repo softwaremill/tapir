@@ -96,16 +96,14 @@ class EndpointGenerator {
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
         val queryParamRefs = m.resolvedParameters
           .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
-          .collect { case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => ref.stripPrefix("#/components/schemas/") }
+          .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           .toSet
         val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
           m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
           .collect { case (contentType, schema) if contentType == "application/json" => schema }
           .collect {
-            case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") => ref.stripPrefix("#/components/schemas/")
-            case OpenapiSchemaArray(OpenapiSchemaRef(ref), _) if ref.startsWith("#/components/schemas/") =>
-              val name = ref.stripPrefix("#/components/schemas/")
-              name
+            case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+            case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
             case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
               bail("Cannot generate schema for 'Any' with jsoniter library")
             case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _) =>

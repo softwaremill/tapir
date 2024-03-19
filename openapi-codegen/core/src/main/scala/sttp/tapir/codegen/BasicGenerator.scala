@@ -46,12 +46,22 @@ object BasicGenerator {
     }
 
     val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val GeneratedClassDefinitions(classDefns, extras) =
+      classGenerator
+        .classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs, s"$packagePath.$objName")
+        .getOrElse(GeneratedClassDefinitions("", None))
+    val isSplit = extras.nonEmpty
+    val internalImports =
+      if (isSplit)
+        s"""import $packagePath.$objName._
+         |import ${objName}JsonSerdes._""".stripMargin
+      else s"import $objName._"
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
         val taggedObj =
           s"""package $packagePath
            |
-           |import $objName._
+           |$internalImports
            |
            |object $headTag {
            |
@@ -61,6 +71,24 @@ object BasicGenerator {
            |
            |}""".stripMargin
         headTag -> taggedObj
+    }
+    val extraObj = extras.map { body =>
+      s"""package $packagePath
+         |
+         |object ${objName}JsonSerdes {
+         |  import $packagePath.$objName._
+         |${indent(2)(body)}
+         |}""".stripMargin
+    }
+    val endpointsInMain = endpointsByTag.getOrElse(None, "")
+    def splitMsg = "Json serdes had to be written to a separate file from class defns"
+    if (isSplit && !useHeadTagForObjectNames)
+      throw new NotImplementedError(s"$splitMsg. openapiUseHeadTagForObjectName must be set to true")
+    if (isSplit && endpointsInMain.nonEmpty) {
+      val untagged = doc.paths.flatMap(p => p.methods.filter(_.tags.forall(_.isEmpty)).map(m => s"${m.methodType.toUpperCase} ${p.url}"))
+      val shortList =
+        if (untagged.size > 5) untagged.take(5).mkString("", ", ", s"... & ${untagged.size - 5} more") else untagged.mkString(", ")
+      throw new NotImplementedError(s"$splitMsg. All endpoints must be tagged (found ${untagged.size} untagged routes: $shortList)")
     }
 
     val maybeSpecificationExtensionKeys = doc.paths
@@ -87,14 +115,15 @@ object BasicGenerator {
         |
         |${indent(2)(imports(normalisedJsonLib))}
         |
-        |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs).getOrElse(""))}
+        |${indent(2)(classDefns)}
         |
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
-        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
+        |${indent(2)(endpointsInMain)}
+        |
         |}
         |""".stripMargin
-    taggedObjs + (objName -> mainObj)
+    taggedObjs ++ extraObj.map(s"${objName}JsonSerdes" -> _) + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
