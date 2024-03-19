@@ -12,8 +12,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 
 object JsonSerdeGenerator {
-  val jsoniterBaseConfig = "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true)"
-  val jsoniteEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
   def serdeDefs(
       doc: OpenapiDocument,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
@@ -113,6 +111,11 @@ object JsonSerdeGenerator {
   ///
   /// Jsoniter
   ///
+  private val jsoniterPkgRoot = "com.github.plokhotnyuk.jsoniter_scala"
+  private val jsoniterPkgCore = s"$jsoniterPkgRoot.core"
+  private val jsoniterPkgMacros = s"$jsoniterPkgRoot.macros"
+  private val jsoniterBaseConfig = s"$jsoniterPkgMacros.CodecMakerConfig.withAllowRecursiveTypes(true)"
+  private val jsoniteEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
   private def genJsoniterSerdes(
       doc: OpenapiDocument,
       allSchemas: Map[String, OpenapiSchemaType],
@@ -126,18 +129,18 @@ object JsonSerdeGenerator {
       .filter(x => !allSchemas.contains(x))
       .map { s =>
         val name = s.replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
-        s"""implicit lazy val $name: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$s] =
-           |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$s]""".stripMargin
+        s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
+           |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
       }
       .mkString("", "\n", "\n")
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
     val jsonSerdeHelpers =
       s"""
-           |implicit def seqCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[List[T]] =
-           |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[List[T]]
-           |implicit def optionCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Option[T]] =
-           |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]
+           |implicit def seqCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[List[T]] =
+           |  $jsoniterPkgMacros.JsonCodecMaker.make[List[T]]
+           |implicit def optionCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[Option[T]] =
+           |  $jsoniterPkgMacros.JsonCodecMaker.make[Option[T]]
            |""".stripMargin
     doc.components
       .map(_.schemas.flatMap {
@@ -159,13 +162,13 @@ object JsonSerdeGenerator {
   private def genJsoniterEnumSerde(name: String): String = {
     val uncapitalisedName = name.head.toLower +: name.tail
     s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
+       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniteEnumConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
   }
 
   private def genJsoniterNamedSerde(name: String): String = {
     val uncapitalisedName = name.head.toLower +: name.tail
     s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
+       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
   }
 
   private def generateJsoniterAdtSerde(
@@ -194,21 +197,21 @@ object JsonSerdeGenerator {
           val config =
             s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper{$discriminatorMap}"""
           val serde =
-            s"implicit lazy val ${uncapitalisedName}Codec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($config)"
+            s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
 
           s"""$serde
              |""".stripMargin
         } else {
           val config =
             s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
-          s"implicit lazy val ${uncapitalisedName}Codec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($config)"
+          s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
         }
         body
 
       case OpenapiSchemaOneOf(_, None) =>
         val config = s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(None)"""
         val serde =
-          s"implicit lazy val ${uncapitalisedName}Codec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($config)"
+          s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
         serde
     }
   }
