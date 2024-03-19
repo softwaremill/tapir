@@ -133,13 +133,13 @@ object JsonSerdeGenerator {
           case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
         }
         val encoders = subtypeNames.map(t => s"case x: $t => io.circe.Encoder[$t].apply(x)").mkString("\n")
-        val decoders = subtypeNames.map(t => s"Decoder[$t].widen").mkString(",    \n")
+        val decoders = subtypeNames.map(t => s"io.circe.Decoder[$t].asInstanceOf[io.circe.Decoder[$name]]").mkString(",\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
            |${indent(2)(encoders)}
            |}
-           |lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] =
+           |implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] =
            |  List[io.circe.Decoder[$name]](
-           |    $decoders
+           |${indent(4)(decoders)}
            |  ).reduceLeft(_ or _)""".stripMargin
     }
   }
