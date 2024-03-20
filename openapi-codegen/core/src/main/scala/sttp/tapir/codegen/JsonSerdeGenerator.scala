@@ -264,6 +264,7 @@ object JsonSerdeGenerator {
           indent(2)(s""".foldLeft(Option.empty[$name]) {
           |  case (Some(v), _) => Some(v)
           |  case (None, next) =>
+          |    in.setMark()
           |    scala.util.Try(next.asInstanceOf[$jsoniterPkgCore.JsonValueCodec[$name]].decodeValue(in, default))
           |      .fold(_ => { in.rollbackToMark(); None }, Some(_))
           |}.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ${name}"))""".stripMargin)
@@ -271,7 +272,6 @@ object JsonSerdeGenerator {
         val serde =
           s"""implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = new $jsoniterPkgCore.JsonValueCodec[$name] {
              |  def decodeValue(in: $jsoniterPkgCore.JsonReader, default: $name): $name = {
-             |    in.setMark()
              |${indent(4)(doDecode)}
              |  }
              |  def encodeValue(x: $name, out: $jsoniterPkgCore.JsonWriter): Unit = x match {
