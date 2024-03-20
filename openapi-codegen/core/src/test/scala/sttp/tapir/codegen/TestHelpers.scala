@@ -772,10 +772,14 @@ object TestHelpers {
      |  version: '1.0'
      |paths:
      |  /hello:
-     |    x-custom-string-extension-on-path: foobar
+     |    x-custom-string-extension-on-path-any-type: foobar
+     |    x-custom-string-extension-on-path-double-type: 123
+     |    x-custom-string-extension-on-path: null
      |    x-custom-list-extension-on-path:
      |      - foo
      |      - bar
+     |    x-custom-list-extension-on-path-any-type:
+     |      - string
      |    x-custom-map-extension-on-path:
      |      bazkey: bazval
      |      quuxkey:
@@ -784,6 +788,16 @@ object TestHelpers {
      |    post:
      |      responses: {}
      |  /goodbye:
+     |    x-custom-string-extension-on-path-any-type: 123
+     |    x-custom-string-extension-on-path-double-type: 123.456
+     |    x-custom-string-extension-on-path: another string
+     |    x-custom-list-extension-on-path: []
+     |    x-custom-list-extension-on-path-any-type:
+     |      - 123
+     |    x-custom-map-extension-on-path: {}
+     |    x-custom-map-extension-on-path-single-value-type:
+     |      bazkey: bazval
+     |      quuxkey: quuxval
      |    delete:
      |      x-custom-string-extension-on-operation: bazquux
      |      x-custom-list-extension-on-operation:
@@ -804,15 +818,17 @@ object TestHelpers {
         url = "/hello",
         methods = Seq(OpenapiPathMethod(methodType = "post", parameters = Seq(), responses = Seq(), requestBody = None)),
         specificationExtensions = Map(
-          "custom-string-extension-on-path" -> SpecificationExtensionValueString("foobar"),
-          "custom-list-extension-on-path" -> SpecificationExtensionValueList(
-            Vector(SpecificationExtensionValueString("foo"), SpecificationExtensionValueString("bar"))
+          "custom-string-extension-on-path-any-type" -> Json.fromString("foobar"),
+          "custom-string-extension-on-path-double-type" -> Json.fromLong(123L),
+          "custom-list-extension-on-path" -> Json.fromValues(
+            Vector(Json.fromString("foo"), Json.fromString("bar"))
           ),
-          "custom-map-extension-on-path" -> SpecificationExtensionValueMap(
+          "custom-list-extension-on-path-any-type" -> Json.arr(Json.fromString("string")),
+          "custom-map-extension-on-path" -> Json.fromFields(
             Map(
-              "bazkey" -> SpecificationExtensionValueString("bazval"),
-              "quuxkey" -> SpecificationExtensionValueList(
-                Vector(SpecificationExtensionValueString("quux1"), SpecificationExtensionValueString("quux2"))
+              "bazkey" -> Json.fromString("bazval"),
+              "quuxkey" -> Json.fromValues(
+                Vector(Json.fromString("quux1"), Json.fromString("quux2"))
               )
             )
           )
@@ -827,18 +843,32 @@ object TestHelpers {
             responses = Seq(),
             requestBody = None,
             specificationExtensions = Map(
-              "custom-string-extension-on-operation" -> SpecificationExtensionValueString("bazquux"),
-              "custom-list-extension-on-operation" -> SpecificationExtensionValueList(
-                Vector(SpecificationExtensionValueString("baz"), SpecificationExtensionValueString("quux"))
+              "custom-string-extension-on-operation" -> Json.fromString("bazquux"),
+              "custom-list-extension-on-operation" -> Json.fromValues(
+                Vector(Json.fromString("baz"), Json.fromString("quux"))
               ),
-              "custom-map-extension-on-operation" -> SpecificationExtensionValueMap(
+              "custom-map-extension-on-operation" -> Json.fromFields(
                 Map(
-                  "bazkey" -> SpecificationExtensionValueString("bazval"),
-                  "quuxkey" -> SpecificationExtensionValueList(
-                    Vector(SpecificationExtensionValueString("quux1"), SpecificationExtensionValueString("quux2"))
+                  "bazkey" -> Json.fromString("bazval"),
+                  "quuxkey" -> Json.fromValues(
+                    Vector(Json.fromString("quux1"), Json.fromString("quux2"))
                   )
                 )
               )
+            )
+          )
+        ),
+        specificationExtensions = Map(
+          "custom-string-extension-on-path-any-type" -> Json.fromLong(123L),
+          "custom-string-extension-on-path-double-type" -> Json.fromDouble(123.456d).get,
+          "custom-string-extension-on-path" -> Json.fromString("another string"),
+          "custom-list-extension-on-path" -> Json.arr(),
+          "custom-list-extension-on-path-any-type" -> Json.arr(Json.fromLong(123L)),
+          "custom-map-extension-on-path" -> Json.fromFields(Map.empty),
+          "custom-map-extension-on-path-single-value-type" -> Json.fromFields(
+            Map(
+              "bazkey" -> Json.fromString("bazval"),
+              "quuxkey" -> Json.fromString("quuxval")
             )
           )
         )

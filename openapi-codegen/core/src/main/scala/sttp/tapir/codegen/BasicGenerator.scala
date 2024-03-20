@@ -3,8 +3,8 @@ package sttp.tapir.codegen
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
-  OpenapiSchemaBoolean,
   OpenapiSchemaBinary,
+  OpenapiSchemaBoolean,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaFloat,
@@ -15,6 +15,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString,
   OpenapiSchemaUUID
 }
+import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 
 object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter = Value
@@ -69,12 +70,7 @@ object BasicGenerator {
       .groupBy(_._1)
       .map { case (keyName, pairs) =>
         val values = pairs.map(_._2)
-        val distinctTypes = values.map(_.tpe).distinct
-        if (distinctTypes.size != 1)
-          throw new IllegalArgumentException(
-            s"specification extensions with the same key are expected to all have the same type. Found $distinctTypes for $keyName"
-          )
-        val `type` = distinctTypes.head
+        val `type` = SpecificationExtensionRenderer.renderCombinedType(values)
         val name = strippedToCamelCase(keyName)
         val uncapitalisedName = name.head.toLower + name.tail
         val capitalisedName = name.head.toUpper + name.tail

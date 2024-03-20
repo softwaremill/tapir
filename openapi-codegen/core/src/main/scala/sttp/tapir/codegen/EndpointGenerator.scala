@@ -1,21 +1,15 @@
 package sttp.tapir.codegen
+import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiRequestBody,
-  OpenapiResponse,
-  SpecificationExtensionValue
-}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
   OpenapiSchemaRef,
-  OpenapiSchemaAny,
   OpenapiSchemaSimpleType
 }
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, SpecificationExtensionRenderer}
 import sttp.tapir.codegen.util.JavaEscape
 
 case class Location(path: String, method: String) {
@@ -210,12 +204,12 @@ class EndpointGenerator {
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
 
-  private def attributes(atts: Map[String, SpecificationExtensionValue]): Option[String] = if (atts.nonEmpty) Some {
+  private def attributes(atts: Map[String, Json]): Option[String] = if (atts.nonEmpty) Some {
     atts
       .map { case (k, v) =>
         val camelCaseK = strippedToCamelCase(k)
         val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
-        s""".attribute(${uncapitalisedName}ExtensionKey, ${v.render})"""
+        s""".attribute[${camelCaseK.capitalize}Extension](${uncapitalisedName}ExtensionKey, ${SpecificationExtensionRenderer.renderValue(v)})"""
       }
       .mkString("\n")
   }
