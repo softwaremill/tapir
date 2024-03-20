@@ -4,6 +4,7 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
@@ -25,6 +26,8 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import sttp.tapir.EndpointInput.AuthType.Http
+import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -212,6 +215,12 @@ class NettyServerHandler[F[_]](
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
       },
+      wsHandler = (channelPromise) => {
+      logger.error("Unexpected WebSocket processor response received in NettyServerHandler, it should be handled only in the ReactiveWebSocketHandler")
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+      val _ = ctx.writeAndFlush(res)
+      },
       noBodyHandler = () => {
         val res = new DefaultFullHttpResponse(
           req.protocolVersion(),
@@ -234,6 +243,7 @@ class NettyServerHandler[F[_]](
         chunkedStreamHandler: (ChannelPromise, ChunkedStream) => Unit,
         chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
         reactiveStreamHandler: (ChannelPromise, Publisher[HttpContent]) => Unit,
+        wsHandler: ChannelPromise => Unit,
         noBodyHandler: () => Unit
     ): Unit = {
       r.body match {
@@ -245,6 +255,7 @@ class NettyServerHandler[F[_]](
             case r: ChunkedStreamNettyResponseContent     => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
             case r: ChunkedFileNettyResponseContent       => chunkedFileHandler(r.channelPromise, r.chunkedFile)
             case r: ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
+            case r: ReactiveWebSocketProcessorNettyResponseContent => wsHandler(r.channelPromise)
           }
         }
         case None => noBodyHandler()

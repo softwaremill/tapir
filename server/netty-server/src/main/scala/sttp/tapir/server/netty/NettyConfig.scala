@@ -61,7 +61,7 @@ case class NettyConfig(
     sslContext: Option[SslContext],
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
-    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
+    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler, ChannelHandler) => Unit,
     gracefulShutdownTimeout: Option[FiniteDuration],
     serverHeader: Option[String]
 ) {
@@ -96,7 +96,7 @@ case class NettyConfig(
   def eventLoopConfig(elc: EventLoopConfig): NettyConfig = copy(eventLoopConfig = elc)
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
-  def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
+  def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
@@ -120,14 +120,15 @@ object NettyConfig {
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
+    initPipeline = cfg => defaultInitPipeline(cfg)(_, _, _),
     serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
   )
 
-  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler, wsHandler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
-    pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpStreamsServerHandler())
+    pipeline.addLast("serverCodecHandler", new HttpServerCodec())
+    pipeline.addLast("streamsHandler", new HttpStreamsServerHandler())
+    pipeline.addLast("wsHandler", wsHandler)
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()

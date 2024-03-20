@@ -40,7 +40,11 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerStreamingTests(createServerTest).tests(Fs2Streams[IO])(drainFs2) ++
             new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests() ++
             new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
-            new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests()
+            new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests() ++
+            new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
+              override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+              override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
+            }.tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

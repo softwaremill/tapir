@@ -16,6 +16,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, blocking}
+import sttp.tapir.server.netty.internal.ReactiveWebSocketHandler
 
 case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureServerOptions, config: NettyConfig)(implicit
     ec: ExecutionContext
@@ -72,6 +73,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
       NettyBootstrap(
         config,
         new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader),
+        new ReactiveWebSocketHandler(route, channelGroup, unsafeRunAsync, config.sslContext.isDefined),
         eventLoopGroup,
         socketOverride
       )

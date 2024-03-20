@@ -7,7 +7,7 @@ import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, ReactiveWebSocketHandler}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
@@ -93,6 +93,7 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
           isShuttingDown,
           config.serverHeader
         ),
+        new ReactiveWebSocketHandler[RIO[R, *]](route, channelGroup, unsafeRunAsync(runtime), config.sslContext.isDefined),
         eventLoopGroup,
         socketOverride
       )

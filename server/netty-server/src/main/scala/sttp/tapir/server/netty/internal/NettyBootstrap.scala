@@ -12,6 +12,7 @@ object NettyBootstrap {
   def apply[F[_]](
       nettyConfig: NettyConfig,
       handler: => NettyServerHandler[F],
+      wsHandler: => ReactiveWebSocketHandler[F],
       eventLoopGroup: EventLoopGroup,
       overrideSocketAddress: Option[SocketAddress]
   ): ChannelFuture = {
@@ -27,8 +28,12 @@ object NettyBootstrap {
 
           nettyConfig.requestTimeout match {
             case Some(requestTimeout) =>
-              nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
-            case None => nettyConfigBuilder(ch.pipeline(), handler)
+              nettyConfigBuilder(
+                ch.pipeline().addLast("readTimeoutHandler", new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)),
+                handler,
+                wsHandler
+              )
+            case None => nettyConfigBuilder(ch.pipeline(), handler, wsHandler)
           }
 
           connectionCounterOpt.map(counter => {

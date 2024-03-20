@@ -43,11 +43,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             _ <- ws.sendText("test2")
             m1 <- ws.receiveText()
             m2 <- ws.receiveText()
-          } yield List(m1, m2)
+            _ <- ws.close()
+            m3 <- ws.eitherClose(ws.receiveText())                      
+          } yield List(m1, m2, m3)
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body shouldBe Right(List("echo: test1", "echo: test2")))
+        .map(_.body shouldBe Right(List("echo: test1", "echo: test2", Left(WebSocketFrame.Close(1000, "normal closure")))))
     }, {
 
       val reqCounter = newRequestCounter[F]

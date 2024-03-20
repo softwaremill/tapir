@@ -1,9 +1,10 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.handler.codec.http.HttpContent
-import org.reactivestreams.Publisher
+import io.netty.handler.codec.http.websocketx.WebSocketFrame
+import org.reactivestreams.{Processor, Publisher}
 import sttp.capabilities.Streams
-import sttp.tapir.FileRange
+import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
 
@@ -27,4 +28,6 @@ private[netty] trait StreamCompatible[S <: Streams[S]] {
 
   def publisherFromInputStream(is: () => InputStream, chunkSize: Int, length: Option[Long]): Publisher[HttpContent] =
     asPublisher(fromInputStream(is, chunkSize, length))
+
+  def asWsProcessor[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]): Processor[WebSocketFrame, WebSocketFrame]
 }

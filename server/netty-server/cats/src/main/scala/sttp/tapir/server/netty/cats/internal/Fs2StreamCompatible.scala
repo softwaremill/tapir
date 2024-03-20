@@ -1,22 +1,19 @@
 package sttp.tapir.server.netty.cats.internal
 
+import cats.effect.kernel.{Async, Sync}
+import cats.effect.std.Dispatcher
+import fs2.interop.reactivestreams.{StreamSubscriber, StreamUnicastPublisher}
+import fs2.io.file.{Files, Flags, Path}
+import fs2.{Chunk, Pipe}
 import io.netty.buffer.Unpooled
+import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
-import org.reactivestreams.Publisher
-import sttp.tapir.FileRange
+import org.reactivestreams.{Processor, Publisher}
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.netty.internal._
+import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
-import cats.effect.std.Dispatcher
-import sttp.capabilities.fs2.Fs2Streams
-import fs2.io.file.Path
-import fs2.io.file.Files
-import cats.effect.kernel.Async
-import fs2.io.file.Flags
-import fs2.interop.reactivestreams.StreamUnicastPublisher
-import cats.effect.kernel.Sync
-import fs2.Chunk
-import fs2.interop.reactivestreams.StreamSubscriber
 
 object Fs2StreamCompatible {
 
@@ -67,6 +64,12 @@ object Fs2StreamCompatible {
 
       override def emptyStream: streams.BinaryStream =
         fs2.Stream.empty
+
+      override def asWsProcessor[REQ, RESP](
+          pipe: Pipe[F, REQ, RESP],
+          o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
+      ): Processor[WebSocketFrame, WebSocketFrame] =
+        new WebSocketPipeProcessor[F, REQ, RESP](pipe, dispatcher, o)
 
       private def inputStreamToFs2(inputStream: () => InputStream, chunkSize: Int) =
         fs2.io.readInputStream(

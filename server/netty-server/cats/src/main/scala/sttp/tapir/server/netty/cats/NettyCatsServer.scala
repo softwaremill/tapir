@@ -23,12 +23,14 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import sttp.capabilities.WebSockets
+import sttp.tapir.server.netty.internal.ReactiveWebSocketHandler
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F], F]]): NettyCatsServer[F] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(options).toRoute(ses)
   )
   def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F], F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
@@ -75,6 +77,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       NettyBootstrap(
         config,
         new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader),
+        new ReactiveWebSocketHandler(route, channelGroup, unsafeRunAsync, config.sslContext.isDefined),
         eventLoopGroup,
         socketOverride
       )
