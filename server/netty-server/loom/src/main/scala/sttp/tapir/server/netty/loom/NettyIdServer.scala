@@ -104,19 +104,18 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       socketOverride
     )
     try {
-      channelIdFuture.await()
+      channelIdFuture.sync()
       val channelId = channelIdFuture.channel()
       (
         channelId.localAddress().asInstanceOf[SA],
         () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
       )
     } catch {
-      case NonFatal(startFailureCause) => 
-        try { 
-          stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout) 
-        } 
-        catch { 
-          case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause) 
+      case NonFatal(startFailureCause) =>
+        try {
+          stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        } catch {
+          case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
         }
         throw startFailureCause
     }
