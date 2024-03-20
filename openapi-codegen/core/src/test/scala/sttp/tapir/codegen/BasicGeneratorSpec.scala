@@ -48,6 +48,30 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       )("TapirGeneratedEndpoints") shouldCompile ()
     }
 
+    it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
+      val genWithParams = BasicGenerator.generateObjects(
+        TestHelpers.withDefaultsDocs,
+        "sttp.tapir.generated",
+        "TapirGeneratedEndpoints",
+        targetScala3 = false,
+        useHeadTagForObjectNames = false,
+        jsonSerdeLib = jsonSerdeLib
+      )("TapirGeneratedEndpoints")
+
+      val expectedDefaultDeclarations = Seq(
+        """f1: String = "default string"""",
+        """f2: Option[Int] = Some(1977)""",
+        """g1: Option[java.util.UUID] = Some(java.util.UUID.fromString("default string"))""",
+        """g2: Float = 1977.0f""",
+        """g3: Option[AnEnum] = Some(AnEnum.v1)""",
+        """g4: Option[Seq[AnEnum]] = Some(Vector(AnEnum.v1, AnEnum.v2, AnEnum.v3))""",
+        """sub: Option[SubObject] = Some(SubObject(subsub = SubSubObject(value = "hi there", value2 = Some(java.util.UUID.fromString("ac8113ed-6105-4f65-a393-e88be2c5d585")))))"""
+      )
+      expectedDefaultDeclarations foreach (decln => genWithParams should include(decln))
+
+      genWithParams shouldCompile ()
+    }
+
   }
   Seq("circe", "jsoniter") foreach testJsonLib
 

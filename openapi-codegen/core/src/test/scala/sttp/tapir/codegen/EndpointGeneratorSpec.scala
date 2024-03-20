@@ -20,6 +20,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
+  OpenapiSchemaField,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaString
@@ -223,7 +224,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           schemas = Map(
             "FileUpload" -> OpenapiSchemaObject(
               properties = Map(
-                "file" -> OpenapiSchemaBinary(false)
+                "file" -> OpenapiSchemaField(OpenapiSchemaBinary(false), None)
               ),
               required = Seq("file"),
               nullable = false

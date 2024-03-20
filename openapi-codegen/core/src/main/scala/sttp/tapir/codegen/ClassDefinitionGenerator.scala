@@ -1,14 +1,16 @@
 package sttp.tapir.codegen
 
+import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
+import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, Renderer}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
 class ClassDefinitionGenerator {
-  val jsoniterDefaultConfig = "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
+  val jsoniterDefaultConfig =
+    "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
 
   def classDefs(
       doc: OpenapiDocument,
@@ -59,7 +61,7 @@ class ClassDefinitionGenerator {
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
-          generateClass(name, obj, jsonSerdeLib, allTransitiveJsonParamRefs)
+          generateClass(allSchemas, name, obj, jsonSerdeLib, allTransitiveJsonParamRefs)
         case (name, obj: OpenapiSchemaEnum) =>
           generateEnum(name, obj, targetScala3, queryParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
         case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema, jsonSerdeLib, allTransitiveJsonParamRefs)
@@ -139,7 +141,7 @@ class ClassDefinitionGenerator {
       case OpenapiSchemaObject(properties, _, _) if properties.isEmpty => None
       case OpenapiSchemaObject(properties, required, nullable) =>
         val propToCheck = properties.head
-        val (propToCheckName, propToCheckType) = propToCheck
+        val (propToCheckName, OpenapiSchemaField(propToCheckType, _)) = propToCheck
         val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
         Some((propToCheckType, checked, objectWithoutHeadField +: tail))
       case _ => None
@@ -236,6 +238,7 @@ class ClassDefinitionGenerator {
   }
 
   private[codegen] def generateClass(
+      allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       obj: OpenapiSchemaObject,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
@@ -245,25 +248,28 @@ class ClassDefinitionGenerator {
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
         .collect {
-          case (propName, st: OpenapiSchemaObject) =>
+          case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _)) =>
             val newName = addName(name, propName)
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaMap(st: OpenapiSchemaObject, _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _), _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaArray(st: OpenapiSchemaObject, _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _), _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
         }
         .flatten
         .toList
 
-      val properties = obj.properties.map { case (key, schemaType) =>
+      val properties = obj.properties.map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
         val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson)
         val fixedKey = fixKey(key)
-        s"$fixedKey: $tpe"
+        val optional = schemaType.nullable || !obj.required.contains(key)
+        val maybeExplicitDefault = maybeDefault.map(" = " + Renderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+        val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
+        s"$fixedKey: $tpe$default"
       }
 
       val uncapitalisedName = name.head.toLower +: name.tail

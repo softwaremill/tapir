@@ -1,5 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
+import io.circe.Json
+
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
 }
@@ -106,9 +108,13 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
+  case class OpenapiSchemaField(
+      `type`: OpenapiSchemaType,
+      default: Option[Json]
+  )
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
-      properties: Map[String, OpenapiSchemaType],
+      properties: Map[String, OpenapiSchemaField],
       required: Seq[String],
       nullable: Boolean
   ) extends OpenapiSchemaType
@@ -253,14 +259,21 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
   }
 
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
+    for {
+      schemaType <- c.as[OpenapiSchemaType]
+      maybeDefault <- c.downField("default").as[Option[Json]]
+    } yield (schemaType, maybeDefault)
+  }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
-      f <- c.downField("properties").as[Option[Map[String, OpenapiSchemaType]]]
+      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       nb <- c.downField("nullable").as[Option[Boolean]]
+      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
     } yield {
-      OpenapiSchemaObject(f.getOrElse(Map.empty), r.getOrElse(Seq.empty), nb.getOrElse(false))
+      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb.getOrElse(false))
     }
   }
 
