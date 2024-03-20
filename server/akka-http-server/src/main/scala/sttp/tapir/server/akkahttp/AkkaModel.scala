@@ -13,8 +13,8 @@ private[akkahttp] object AkkaModel {
 
   def parseHeadersOrThrowWithoutContentHeaders(hs: HasHeaders): Seq[HttpHeader] =
     hs.headers
-      .map(parseHeaderOrThrow)
       .filterNot(h => h.is(ctHeaderNameLowerCase) || h.is(clHeaderNameLowerCase) || h.is(teHeaderNameLowerCase))
+      .map(parseHeaderOrThrow)
 
   def parseHeaderOrThrow(h: Header): HttpHeader =
     HttpHeader.parse(h.name, h.value) match {

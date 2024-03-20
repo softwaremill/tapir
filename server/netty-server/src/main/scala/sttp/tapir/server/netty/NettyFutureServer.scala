@@ -71,7 +71,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader),
         eventLoopGroup,
         socketOverride
       )

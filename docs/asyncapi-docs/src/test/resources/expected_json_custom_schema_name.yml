@@ -18,6 +18,7 @@ channels:
 components:
   schemas:
     sttp.tapir.tests.data.Fruit:
+      title: sttp.tapir.tests.data.Fruit
       required:
         - f
       type: object

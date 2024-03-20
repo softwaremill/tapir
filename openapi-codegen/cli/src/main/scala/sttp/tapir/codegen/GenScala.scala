@@ -40,6 +40,15 @@ object GenScala {
       )
       .orNone
 
+  private val targetScala3Opt: Opts[Boolean] =
+    Opts.flag("scala3", "Whether to generate Scala 3 code", "3").orFalse
+
+  private val headTagForNamesOpt: Opts[Boolean] =
+    Opts.flag("headTagForNames", "Whether to group generated endpoints by first declared tag", "t").orFalse
+
+  private val jsonLibOpt: Opts[Option[String]] =
+    Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -53,22 +62,25 @@ object GenScala {
       }
 
   val cmd: Command[IO[ExitCode]] = Command("genscala", "Generate Scala classes", helpFlag = true) {
-    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt).mapN { case (file, packageName, destDir, maybeObjectName) =>
-      val objectName = maybeObjectName.getOrElse(DefaultObjectName)
+    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt).mapN {
+      case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib) =>
+        val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
-      def generateCode(doc: OpenapiDocument): IO[Unit] = for {
-        content <- IO.pure(BasicGenerator.generateObjects(doc, packageName, objectName, false))
-        destFile <- writeGeneratedFile(destDir, objectName, content)
-        _ <- IO.println(s"Generated endpoints written to: $destFile")
-      } yield ()
+        def generateCode(doc: OpenapiDocument): IO[Unit] = for {
+          contents <- IO.pure(
+            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames, jsonLib.getOrElse("circe"))
+          )
+          destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
+          _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
+        } yield ()
 
-      for {
-        parsed <- readFile(file).map(YamlParser.parseFile)
-        exitCode <- parsed match {
-          case Left(err)  => IO.println(s"Invalid YAML file: ${err.getMessage}").as(ExitCode.Error)
-          case Right(doc) => generateCode(doc).as(ExitCode.Success)
-        }
-      } yield exitCode
+        for {
+          parsed <- readFile(file).map(YamlParser.parseFile)
+          exitCode <- parsed match {
+            case Left(err)  => IO.println(s"Invalid YAML file: ${err.getMessage}").as(ExitCode.Error)
+            case Right(doc) => generateCode(doc).as(ExitCode.Success)
+          }
+        } yield exitCode
     }
   }
 

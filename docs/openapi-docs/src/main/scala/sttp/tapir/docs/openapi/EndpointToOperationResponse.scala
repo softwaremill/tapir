@@ -6,14 +6,14 @@ import sttp.apispec.openapi._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
-import sttp.tapir.docs.apispec.schema.Schemas
+import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.internal._
 import sttp.tapir.model.StatusCodeRange
 
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOperationResponse(
-    schemas: Schemas,
+    tschemaToASchema: TSchemaToASchema,
     codecToMediaType: CodecToMediaType,
     options: OpenAPIDocsOptions
 ) {
@@ -114,7 +114,7 @@ private[openapi] class EndpointToOperationResponse(
             Header(
               description = info.description,
               required = Some(!codec.schema.isOptional),
-              schema = Some(schemas(codec)),
+              schema = Some(tschemaToASchema(codec)),
               example = info.example.flatMap(exampleValue(codec, _))
             )
           )

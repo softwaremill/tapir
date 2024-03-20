@@ -8,6 +8,7 @@ object VerifyYamlTestData {
   case class G[T](data: T)
   case class ObjectWrapper(value: FruitAmount)
   case class ObjectWithList(data: List[FruitAmount])
+  case class ObjectWithSet(data: Set[FruitAmount])
   case class ObjectWithOption(data: Option[FruitAmount])
   case class ObjectWithDefaults(@default("foo") name: String, @default(12) count: Int)
 }

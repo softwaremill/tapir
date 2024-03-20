@@ -18,8 +18,8 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
 
-  override def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): Future[Array[Byte]] =
-    SimpleSubscriber.processAll(publisher, maxBytes)
+  override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Future[Array[Byte]] =
+    SimpleSubscriber.processAll(publisher, contentLength, maxBytes)
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
     serverRequest.underlying match {

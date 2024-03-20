@@ -26,6 +26,7 @@ paths:
 components:
   schemas:
     Error1Response:
+      title: Error1Response
       required:
         - error
       type: object
@@ -33,6 +34,7 @@ components:
         error:
           $ref: '#/components/schemas/ErrorCode'
     Error2Response:
+      title: Error2Response
       required:
         - error
       type: object
@@ -40,6 +42,7 @@ components:
         error:
           $ref: '#/components/schemas/ErrorCode'
     ErrorCode:
+      title: ErrorCode
       type: integer
       format: int32
       enum:

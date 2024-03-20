@@ -5,15 +5,19 @@ import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.apispec.openapi._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
-import sttp.tapir.docs.apispec.schema.Schemas
+import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
 import sttp.tapir.internal._
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
-  private val codecToMediaType = new CodecToMediaType(schemas)
-  private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
+private[openapi] class EndpointToOpenAPIPaths(
+    tschemaToASchema: TSchemaToASchema,
+    securitySchemes: SecuritySchemes,
+    options: OpenAPIDocsOptions
+) {
+  private val codecToMediaType = new CodecToMediaType(tschemaToASchema)
+  private val endpointToOperationResponse = new EndpointToOperationResponse(tschemaToASchema, codecToMediaType, options)
   private val securityRequirementsForEndpoint = new SecurityRequirementsForEndpoints(securitySchemes)
 
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
@@ -103,16 +107,19 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     }
   }
 
-  private def headerToParameter[T](header: EndpointIO.Header[T]) = EndpointInputToParameterConverter.from(header, schemas(header.codec))
+  private def headerToParameter[T](header: EndpointIO.Header[T]) =
+    EndpointInputToParameterConverter.from(header, tschemaToASchema(header.codec))
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) =
     EndpointInputToParameterConverter.from(header, ASchema(ASchemaType.String))
-  private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
-  private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = EndpointInputToParameterConverter.from(p, schemas(p.codec))
+  private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) =
+    EndpointInputToParameterConverter.from(cookie, tschemaToASchema(cookie.codec))
+  private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) =
+    EndpointInputToParameterConverter.from(p, tschemaToASchema(p.codec))
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = query.codec.format match {
     // use `schema` for simple plain text scenarios and `content` for complex serializations, e.g. JSON
     // see https://swagger.io/docs/specification/describing-parameters/#schema-vs-content
-    case CodecFormat.TextPlain() => EndpointInputToParameterConverter.from(query, schemas(query.codec))
+    case CodecFormat.TextPlain() => EndpointInputToParameterConverter.from(query, tschemaToASchema(query.codec))
     case _ => EndpointInputToParameterConverter.from(query, codecToMediaType(query.codec, query.info.examples, None, Nil))
   }
 

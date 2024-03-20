@@ -28,6 +28,7 @@ paths:
 components:
   schemas:
     FruitData:
+      title: FruitData
       required:
         - data
       type: object

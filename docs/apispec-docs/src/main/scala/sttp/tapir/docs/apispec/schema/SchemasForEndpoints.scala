@@ -18,7 +18,7 @@ class SchemasForEndpoints(
     *   A tuple: the first element can be used to create the components section in the docs. The second can be used to resolve (possible)
     *   top-level references from parameters / bodies.
     */
-  def apply(): (ListMap[SchemaId, ASchema], Schemas) = {
+  def apply(): (ListMap[SchemaId, ASchema], TSchemaToASchema) = {
     val keyedCombinedSchemas: Iterable[KeyedSchema] = ToKeyedSchemas.uniqueCombined(
       es.flatMap(e =>
         forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)
@@ -27,14 +27,13 @@ class SchemasForEndpoints(
     val keysToIds: Map[SchemaKey, SchemaId] = calculateUniqueIds(keyedCombinedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
 
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedCombinedSchemas.toMap)
-    val tschemaToASchema = new TSchemaToASchema(toSchemaReference, markOptionsAsNullable)
+    val tschemaToASchema = new TSchemaToASchema(schemaName, toSchemaReference, markOptionsAsNullable)
 
-    val keysToSchemas: ListMap[SchemaKey, ASchema] = keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2))).toListMap
+    val keysToSchemas: ListMap[SchemaKey, ASchema] =
+      keyedCombinedSchemas.map(td => (td._1, tschemaToASchema(td._2, allowReference = false))).toListMap
     val schemaIds: Map[SchemaKey, (SchemaId, ASchema)] = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
-    val schemas = new Schemas(tschemaToASchema, toSchemaReference, markOptionsAsNullable)
-
-    (schemaIds.values.toListMap, schemas)
+    (schemaIds.values.toListMap, tschemaToASchema)
   }
 
   private def forInput(input: EndpointInput[_]): List[KeyedSchema] = {

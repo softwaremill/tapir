@@ -1,25 +1,19 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiInfo,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiPathMethod,
-  OpenapiRequestBody,
-  OpenapiRequestBodyContent,
-  OpenapiResponse,
-  OpenapiResponseContent,
-  Ref,
-  Resolved
-}
+import io.circe.Json
+import sttp.tapir.codegen.openapi.models._
+import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaField,
+  OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
-  OpenapiSchemaString
+  OpenapiSchemaString,
+  OpenapiSchemaUUID
 }
 
 object TestHelpers {
@@ -230,7 +224,7 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         schemas = Map(
-          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaString(false)), Seq("title"), false)
+          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), Seq("title"), false)
         ),
         securitySchemes = Map.empty,
         parameters = Map(
@@ -364,12 +358,12 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaString(false)), List("name"), false),
+          "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("name"), false),
           "Book" -> OpenapiSchemaObject(
             properties = Map(
-              "title" -> OpenapiSchemaString(false),
-              "year" -> OpenapiSchemaInt(false),
-              "author" -> OpenapiSchemaRef("#/components/schemas/Author")
+              "title" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
+              "year" -> OpenapiSchemaField(OpenapiSchemaInt(false), None),
+              "author" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Author"), None)
             ),
             required = Seq("title", "year", "author"),
             nullable = false
@@ -512,5 +506,261 @@ object TestHelpers {
       )
     ),
     None
+  )
+
+  val enumQueryParamYaml =
+    """
+      |openapi: 3.1.0
+      |info:
+      |  title: enum query test
+      |  version: '1.0'
+      |paths:
+      |  /queryTest:
+      |    parameters:
+      |      - name: test
+      |        in: query
+      |        required: false
+      |        schema:
+      |          $ref: '#/components/schemas/Test'
+      |    post:
+      |      responses: {}
+      |
+      |components:
+      |  schemas:
+      |    Test:
+      |      title: Test
+      |      type: string
+      |      enum:
+      |        - paperback
+      |        - hardback
+      |""".stripMargin
+
+  val enumQueryParamDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("enum query test", "1.0"),
+    Seq(
+      OpenapiPath(
+        "/queryTest",
+        Seq(
+          OpenapiPathMethod(
+            methodType = "post",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            summary = None,
+            tags = None,
+            operationId = None
+          )
+        ),
+        parameters = Seq(
+          Resolved(OpenapiParameter("test", "query", None, None, OpenapiSchemaRef("#/components/schemas/Test")))
+        )
+      )
+    ),
+    Some(
+      OpenapiComponent(
+        Map(
+          "Test" -> OpenapiSchemaEnum(
+            "string",
+            Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+            false
+          )
+        )
+      )
+    )
+  )
+
+  val withDefaultsYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: default test
+     |  version: '1.0'
+     |paths:
+     |  /hello:
+     |    post:
+     |      requestBody:
+     |        description: Foo
+     |        required: true
+     |        content:
+     |          application/json:
+     |            schema:
+     |              $ref: '#/components/schemas/ReqWithDefaults'
+     |      responses:
+     |        '200':
+     |          description: Bar
+     |          content:
+     |            application/json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/RespWithDefaults'
+     |components:
+     |  schemas:
+     |    ReqWithDefaults:
+     |      required:
+     |      - f1
+     |      type: object
+     |      properties:
+     |        f1:
+     |          type: string
+     |          default: default string
+     |        f2:
+     |          type: integer
+     |          format: int32
+     |          default: 1977
+     |    RespWithDefaults:
+     |      required:
+     |      - g2
+     |      type: object
+     |      properties:
+     |        g1:
+     |          type: string
+     |          format: uuid
+     |          default: default string
+     |        g2:
+     |          type: number
+     |          format: float
+     |          default: 1977
+     |        g3:
+     |          $ref: '#/components/schemas/AnEnum'
+     |          default: v1
+     |        g4:
+     |          type: array
+     |          items:
+     |            $ref: '#/components/schemas/AnEnum'
+     |          default: [v1, v2, v3]
+     |        sub:
+     |          $ref: '#/components/schemas/SubObject'
+     |          default:
+     |            subsub:
+     |              value: hi there
+     |              value2: ac8113ed-6105-4f65-a393-e88be2c5d585
+     |    AnEnum:
+     |      title: AnEnum
+     |      type: string
+     |      enum:
+     |        - v1
+     |        - v2
+     |        - v3
+     |    SubObject:
+     |      required:
+     |      - subsub
+     |      type: object
+     |      properties:
+     |        subsub:
+     |          $ref: '#/components/schemas/SubSubObject'
+     |    SubSubObject:
+     |      required:
+     |      - value
+     |      type: object
+     |      properties:
+     |        value:
+     |          type: string
+     |        value2:
+     |          type: string
+     |          format: uuid
+     |""".stripMargin
+
+  val withDefaultsDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("default test", "1.0"),
+    List(
+      OpenapiPath(
+        "/hello",
+        List(
+          OpenapiPathMethod(
+            "post",
+            List(),
+            List(
+              OpenapiResponse(
+                "200",
+                "Bar",
+                List(
+                  OpenapiResponseContent(
+                    "application/json",
+                    OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/RespWithDefaults"), false)
+                  )
+                )
+              )
+            ),
+            Some(
+              OpenapiRequestBody(
+                true,
+                Some("Foo"),
+                List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
+              )
+            ),
+            List(),
+            None,
+            None,
+            None
+          )
+        ),
+        List()
+      )
+    ),
+    Some(
+      OpenapiComponent(
+        Map(
+          "ReqWithDefaults" -> OpenapiSchemaObject(
+            Map(
+              "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("default string"))),
+              "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false), Some(Json.fromLong(1977)))
+            ),
+            List("f1"),
+            false
+          ),
+          "RespWithDefaults" -> OpenapiSchemaObject(
+            Map(
+              "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(Json.fromString("default string"))),
+              "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false), Some(Json.fromLong(1977))),
+              "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(Json.fromString("v1"))),
+              "g4" -> OpenapiSchemaField(
+                OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/AnEnum"), false),
+                Some(Json.fromValues(Vector(Json.fromString("v1"), Json.fromString("v2"), Json.fromString("v3"))))
+              ),
+              "sub" -> OpenapiSchemaField(
+                OpenapiSchemaRef("#/components/schemas/SubObject"),
+                Some(
+                  Json.fromFields(
+                    Map(
+                      "subsub" -> Json.fromFields(
+                        Map(
+                          "value" -> Json.fromString("hi there"),
+                          "value2" -> Json.fromString("ac8113ed-6105-4f65-a393-e88be2c5d585")
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+            List("g2"),
+            false
+          ),
+          "AnEnum" -> OpenapiSchemaEnum(
+            "string",
+            List(OpenapiSchemaConstantString("v1"), OpenapiSchemaConstantString("v2"), OpenapiSchemaConstantString("v3")),
+            false
+          ),
+          "SubObject" -> OpenapiSchemaObject(
+            Map("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
+            List("subsub"),
+            false
+          ),
+          "SubSubObject" -> OpenapiSchemaObject(
+            Map(
+              "value" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
+              "value2" -> OpenapiSchemaField(OpenapiSchemaUUID(false), None)
+            ),
+            List("value"),
+            false
+          )
+        ),
+        Map(),
+        Map()
+      )
+    )
   )
 }

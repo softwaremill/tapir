@@ -24,11 +24,13 @@ paths:
 components:
   schemas:
     ClassWithNestedOptionalField:
+      title: ClassWithNestedOptionalField
       type: object
       properties:
         value:
           $ref: '#/components/schemas/Nested'
     Nested:
+      title: Nested
       required:
       - nestedValue
       type: object

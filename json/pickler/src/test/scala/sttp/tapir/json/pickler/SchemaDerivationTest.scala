@@ -233,6 +233,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
     implicitlySchema[D].schemaType shouldBe expectedSnakeCaseNaming
   }
 
+  it should "find schema for a simple case class and use screaming snake case naming transformation" in {
+    val expectedScreamingSnakeCaseNaming =
+      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "SOME_FIELD_NAME"), stringSchema)))
+    implicit val customConf: PicklerConfiguration = PicklerConfiguration.default.withScreamingSnakeCaseMemberNames
+    implicitlySchema[D].schemaType shouldBe expectedScreamingSnakeCaseNaming
+  }
+
   it should "find schema for a simple case class and use kebab case naming transformation" in {
     val expectedKebabCaseNaming =
       expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
@@ -342,6 +349,21 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
           "organization" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
           "person" -> SRef(SName("sttp.tapir.json.pickler.Person")),
           "unknown_entity" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator (screaming snake case subtype names)" in {
+    implicit val customConf: PicklerConfiguration =
+      PicklerConfiguration.default.withDiscriminator("who_am_i").withScreamingSnakeCaseDiscriminatorValues
+    implicitlySchema[Entity].schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(
+      SDiscriminator(
+        FieldName("who_am_i"),
+        Map(
+          "ORGANIZATION" -> SRef(SName("sttp.tapir.json.pickler.Organization")),
+          "PERSON" -> SRef(SName("sttp.tapir.json.pickler.Person")),
+          "UNKNOWN_ENTITY" -> SRef(SName("sttp.tapir.json.pickler.UnknownEntity"))
         )
       )
     )

@@ -16,11 +16,13 @@ paths:
 components:
   schemas:
     CornerStyle:
+      title: CornerStyle
       type: string
       enum:
         - rounded
         - straight
     Square:
+      title: Square
       type: object
       properties:
         cornerStyle:
@@ -30,6 +32,7 @@ components:
           items:
             $ref: '#/components/schemas/Tag'
     Tag:
+      title: Tag
       type: string
       enum:
         - tag1

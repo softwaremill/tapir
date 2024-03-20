@@ -123,10 +123,11 @@ object DecodeBasicInputs {
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     def matchPathInnerUsingLast(last: EndpointInput.Basic[_]) = matchPathInner(
+      index = 0,
       pathInputs = pathInputs,
       ctx = ctx.copy(previousLastPathInput = Some(last)),
       decodeValues = decodeValues,
-      decodedPathInputs = Vector.empty,
+      decodedPathInputs = new Array(pathInputs.size),
       lastPathInput = last,
       matchWholePath = matchWholePath
     )
@@ -145,84 +146,92 @@ object DecodeBasicInputs {
     }
   }
 
+  // Important: method uses a mutable Array[DecodeResult[_]] for performance
   @tailrec
   private def matchPathInner(
+      index: Int,
       pathInputs: Vector[IndexedBasicInput],
       ctx: DecodeInputsContext,
       decodeValues: DecodeBasicInputsResult.Values,
-      decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
+      decodedPathInputs: Array[DecodeResult[_]],
       lastPathInput: EndpointInput.Basic[_],
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
-    pathInputs.headAndTail match {
-      case Some((idxInput @ IndexedBasicInput(in, _), restInputs)) =>
-        in match {
-          case EndpointInput.FixedPath(expectedSegment, codec, _) =>
-            val (nextSegment, newCtx) = ctx.nextPathSegment
-            nextSegment match {
-              case Some(seg) =>
-                if (seg == expectedSegment) {
-                  val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode(seg)))
-                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
-                } else {
-                  val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
-                  (failure, newCtx)
-                }
-              case None =>
-                if (expectedSegment.isEmpty) {
-                  // FixedPath("") matches an empty path
-                  val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode("")))
-                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
-                } else {
-                  // shape path mismatch - input path too short
-                  val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
-                  (failure, newCtx)
-                }
-            }
-          case i: EndpointInput.PathCapture[_] =>
-            val (nextSegment, newCtx) = ctx.nextPathSegment
-            nextSegment match {
-              case Some(seg) =>
-                val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(seg)))
-                matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
-              case None =>
+    if (index < pathInputs.size) {
+      val idxInput = pathInputs(index)
+      idxInput.input match {
+        case in @ EndpointInput.FixedPath(expectedSegment, codec, _) =>
+          val (nextSegment, newCtx) = ctx.nextPathSegment
+          nextSegment match {
+            case Some(seg) =>
+              if (seg == expectedSegment) {
+                decodedPathInputs(index) = codec.decode(seg)
+                matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
+              } else {
+                val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
+                (failure, newCtx)
+              }
+            case None =>
+              if (expectedSegment.isEmpty) {
+                // FixedPath("") matches an empty path
+                decodedPathInputs(index) = codec.decode("")
+                matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
+              } else {
+                // shape path mismatch - input path too short
                 val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
                 (failure, newCtx)
-            }
-          case i: EndpointInput.PathsCapture[_] =>
-            val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
-            val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(paths.toList)))
-            matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput.input, matchWholePath)
-          case _ =>
-            throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
-        }
-      case None =>
-        val (extraSegmentOpt, newCtx) = ctx.nextPathSegment
-        extraSegmentOpt match {
-          case Some(_) if matchWholePath =>
-            // shape path mismatch - input path too long; there are more segments in the request path than expected by
-            // that input. Reporting a failure on the last path input.
-            val failure =
-              DecodeBasicInputsResult.Failure(lastPathInput, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
-            (failure, newCtx)
-          case _ =>
-            (foldDecodedPathInputs(decodedPathInputs, decodeValues), ctx)
-        }
+              }
+          }
+        case in: EndpointInput.PathCapture[_] =>
+          val (nextSegment, newCtx) = ctx.nextPathSegment
+          nextSegment match {
+            case Some(seg) =>
+              decodedPathInputs(index) = in.codec.decode(seg)
+              matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
+            case None =>
+              val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
+              (failure, newCtx)
+          }
+        case i: EndpointInput.PathsCapture[_] =>
+          val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
+          decodedPathInputs(index) = i.codec.decode(paths.toList)
+          matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
+        case in =>
+          throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
+      }
+    } else {
+      val (extraSegmentOpt, newCtx) = ctx.nextPathSegment
+      extraSegmentOpt match {
+        case Some(_) if matchWholePath =>
+          // shape path mismatch - input path too long; there are more segments in the request path than expected by
+          // that input. Reporting a failure on the last path input.
+          val failure =
+            DecodeBasicInputsResult.Failure(lastPathInput, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
+          (failure, newCtx)
+        case _ =>
+          (foldDecodedPathInputs(0, pathInputs, decodedPathInputs, decodeValues), ctx)
+      }
     }
   }
 
+  // Important: method uses a mutable Array[DecodeResult[_]] for performance
   @tailrec
   private def foldDecodedPathInputs(
-      decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
+      index: Int,
+      pathInputs: Vector[IndexedBasicInput],
+      decodedPathInputs: Array[DecodeResult[_]],
       acc: DecodeBasicInputsResult.Values
   ): DecodeBasicInputsResult = {
-    decodedPathInputs.headAndTail match {
-      case None => acc
-      case Some((t, ts)) =>
-        t match {
-          case (indexedInput, failure: DecodeResult.Failure) => DecodeBasicInputsResult.Failure(indexedInput.input, failure)
-          case (indexedInput, DecodeResult.Value(v))         => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
-        }
+    if (index < pathInputs.size) {
+      val indexedInput = pathInputs(index)
+      decodedPathInputs(index) match {
+        case failure: DecodeResult.Failure =>
+          DecodeBasicInputsResult.Failure(indexedInput.input, failure)
+        case DecodeResult.Value(v) =>
+          foldDecodedPathInputs(index + 1, pathInputs, decodedPathInputs, acc.setBasicInputValue(v, indexedInput.index))
+      }
+    } else {
+      acc
     }
   }
 

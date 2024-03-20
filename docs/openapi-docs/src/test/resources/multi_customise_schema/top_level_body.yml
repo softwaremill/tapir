@@ -30,6 +30,7 @@ paths:
 components:
   schemas:
     Data1:
+      title: Data1
       required:
         - x
       type: object

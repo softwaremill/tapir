@@ -2,14 +2,12 @@ package sttp.tapir.internal
 
 import sttp.tapir._
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.internal.{CaseClass, CaseClassField}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.model.{QueryParams, Header, StatusCode}
 import sttp.model.headers.{Cookie, CookieWithMeta, CookieValueWithMeta}
 
 import scala.collection.mutable
 import scala.quoted.*
-import scala.deriving.Mirror
 
 private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   import quotes.reflect.*
@@ -41,7 +39,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
                 inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> idx)
                 wrapInput[f](field, makePathInput[f](field))
           case None =>
-            report.throwError(s"${caseClass.name}.${fieldName} must have the @path annotation, as it is referenced from @endpointInput.")
+            report.errorAndAbort(s"${caseClass.name}.${fieldName} must have the @path annotation, as it is referenced from @endpointInput.")
         }
       } else {
         makeFixedPath(segment)
@@ -51,7 +49,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val (pathFields, nonPathFields) = fieldsWithIndex.partition((f, _) => f.annotated(pathAnnotationSymbol))
 
     if (inputIdxToFieldIdx.size != pathFields.size) {
-      report.throwError(s"Not all fields of ${caseClass.name} annotated with @path are captured in the path in @endpointInput.")
+      report.errorAndAbort(s"Not all fields of ${caseClass.name} annotated with @path are captured in the path in @endpointInput.")
     }
 
     val nonPathInputs = nonPathFields.map { case (field, fieldIdx) =>
@@ -77,7 +75,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
                 .map(makeBasicAuthInput[f](field, field.annotation(securitySchemeNameAnnotationSymbol), _))
             )
             .getOrElse {
-              report.throwError(
+              report.errorAndAbort(
                 s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.annotations. No annotations for field: ${field.name}."
               )
             }
@@ -125,7 +123,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             .orElse(if (field.annotated(cookiesAnnotationSymbol)) Some(makeCookiesIO[f](field)) else None)
             .orElse(if (field.annotated(setCookiesAnnotationSymbol)) Some(makeSetCookiesOutput[f](field)) else None)
             .getOrElse {
-              report.throwError(
+              report.errorAndAbort(
                 s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.annotations. No annotations for field: ${field.name}."
               )
             }
@@ -190,14 +188,14 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   // util
   private def summonCodec[L: Type, H: Type, CF <: CodecFormat: Type](field: CaseClassField[q.type, T]): Expr[Codec[L, H, CF]] =
     Expr.summon[Codec[L, H, CF]].getOrElse {
-      report.throwError(
+      report.errorAndAbort(
         s"Cannot summon codec from: ${Type.show[L]}, to: ${Type.show[H]}, formatted as: ${Type.show[CF]}, for field: ${field.name}."
       )
     }
 
   private def summonMultipartCodec[H: Type](field: CaseClassField[q.type, T]): Expr[MultipartCodec[H]] =
     Expr.summon[MultipartCodec[H]].getOrElse {
-      report.throwError(
+      report.errorAndAbort(
         s"Cannot summon multipart codec for type: ${Type.show[H]}, for field: ${field.name}."
       )
     }
@@ -245,20 +243,20 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   private def makeQueryParamsInput[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointInput.Basic[f]] = {
     summon[Type[f]] match {
       case '[QueryParams] => '{ queryParams.asInstanceOf[EndpointInput.Basic[f]] }
-      case _              => report.throwError(annotationErrorMsg[f, QueryParams]("@params", field))
+      case _              => report.errorAndAbort(annotationErrorMsg[f, QueryParams]("@params", field))
     }
   }
 
   private def makeHeadersIO[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointIO.Basic[f]] =
     summon[Type[f]] match {
       case '[List[Header]] => '{ headers.asInstanceOf[EndpointIO.Basic[f]] }
-      case _               => report.throwError(annotationErrorMsg[f, List[Header]]("@headers", field))
+      case _               => report.errorAndAbort(annotationErrorMsg[f, List[Header]]("@headers", field))
     }
 
   private def makeCookiesIO[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointIO.Basic[f]] =
     summon[Type[f]] match {
       case '[List[Cookie]] => '{ cookies.asInstanceOf[EndpointIO.Basic[f]] }
-      case _               => report.throwError(annotationErrorMsg[f, List[Cookie]]("@cookies", field))
+      case _               => report.errorAndAbort(annotationErrorMsg[f, List[Cookie]]("@cookies", field))
     }
 
   private def makePathInput[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointInput.Basic[f]] = {
@@ -271,7 +269,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   private def makeStatusCodeOutput[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointOutput.Basic[f]] = {
     summon[Type[f]] match {
       case '[StatusCode] => '{ statusCode.asInstanceOf[EndpointOutput.Basic[f]] }
-      case _             => report.throwError(annotationErrorMsg[f, StatusCode]("@statusCode", field))
+      case _             => report.errorAndAbort(annotationErrorMsg[f, StatusCode]("@statusCode", field))
     }
   }
 
@@ -279,14 +277,14 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val name = Expr(altName.getOrElse(field.name))
     summon[Type[f]] match {
       case '[CookieValueWithMeta] => '{ setCookie($name).asInstanceOf[EndpointOutput.Basic[f]] }
-      case _                      => report.throwError(annotationErrorMsg[f, CookieValueWithMeta]("@setCookie", field))
+      case _                      => report.errorAndAbort(annotationErrorMsg[f, CookieValueWithMeta]("@setCookie", field))
     }
   }
 
   private def makeSetCookiesOutput[f: Type](field: CaseClassField[q.type, T]): Expr[EndpointOutput.Basic[f]] = {
     summon[Type[f]] match {
       case '[List[CookieWithMeta]] => '{ setCookies.asInstanceOf[EndpointOutput.Basic[f]] }
-      case _                       => report.throwError(annotationErrorMsg[f, List[CookieWithMeta]]("@setCookies", field))
+      case _                       => report.errorAndAbort(annotationErrorMsg[f, List[CookieWithMeta]]("@setCookies", field))
     }
   }
 
@@ -420,7 +418,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       case '[EndpointTransput.Atom[`f`]] =>
         '{ $f($transput.asInstanceOf[EndpointTransput.Atom[f]]).asInstanceOf[EndpointTransput.Atom[f]] }
       case t =>
-        report.throwError(
+        report.errorAndAbort(
           s"Schema metadata can only be added to basic inputs/outputs, but got: ${Type.show(using t)}, on field: ${field.name}"
         )
     }

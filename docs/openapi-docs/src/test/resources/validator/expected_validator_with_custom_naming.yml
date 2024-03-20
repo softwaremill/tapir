@@ -24,6 +24,7 @@ paths:
 components:
   schemas:
     MyClass:
+      title: MyClass
       required:
         - my_attribute
       type: object

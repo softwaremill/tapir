@@ -256,13 +256,13 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
   }
 
 }
@@ -504,7 +504,6 @@ lazy val perfServerJavaOptions = List(
   "-Xmx16g",
   "-XX:+AlwaysPreTouch"
 )
-lazy val flightRecordingJavaOpts = "-XX:StartFlightRecording=filename=recording.jfr,dumponexit=true,duration=120s"
 
 lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .enablePlugins(GatlingPlugin)
@@ -517,12 +516,12 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.10.4" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.16.1",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       // Needs to match version used by Gatling
       "com.github.scopt" %% "scopt" % "3.7.1",
-      "io.github.classgraph" % "classgraph" % "4.8.165" % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.168" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -535,11 +534,22 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .settings(
     fork := true,
     connectInput := true,
-    Compile / run / javaOptions ++= flightRecordingJavaOpts :: perfServerJavaOptions,
-    Test / run / javaOptions --= flightRecordingJavaOpts :: perfServerJavaOptions
+    Compile / run / javaOptions ++= perfServerJavaOptions,
+    Test / run / javaOptions --= perfServerJavaOptions
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)
+  .dependsOn(
+    core,
+    pekkoHttpServer,
+    http4sServer,
+    nettyServer,
+    nettyServerCats,
+    nettyServerLoom,
+    playServer,
+    vertxServer,
+    vertxServerCats,
+    nimaServer
+  )
 
 // integrations
 
@@ -910,8 +920,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.28.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.28.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.4" % Test,
       scalaTest.value % Test
     )
   )
@@ -1423,6 +1433,7 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
 
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
   .settings(commonJvmSettings)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
@@ -1972,10 +1983,12 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.7.3" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test
+      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
     )
   )
-  .dependsOn(core % Test, circeJson % Test)
+  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test)
 
 lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)

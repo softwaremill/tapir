@@ -9,7 +9,7 @@ private[tapir] class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
   val symbol = tpe.typeSymbol
 
   if !symbol.flags.is(Flags.Case) then
-    report.throwError(s"CaseClass can be instantiated only for case classes, but got: ${summon[Type[T]]}")
+    report.errorAndAbort(s"CaseClass can be instantiated only for case classes, but got: ${summon[Type[T]]}")
 
   def name = symbol.name
 
@@ -51,7 +51,7 @@ private[tapir] class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
     symbol.getAnnotation(annSymbol).map {
       case Apply(_, List(Select(_, "$lessinit$greater$default$1")))             => None
       case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => Some(c.value.asInstanceOf[String])
-      case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from class: ${symbol.name}")
+      case _ => report.errorAndAbort(s"Cannot extract annotation: @${annSymbol.name}, from class: ${symbol.name}")
     }
   }
 }
@@ -70,7 +70,7 @@ private[tapir] class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
   /** Extracts an argument from an annotation with a single string-valued argument. */
   def extractStringArgFromAnnotation(annSymbol: Symbol): Option[String] = constructorField.getAnnotation(annSymbol).map {
     case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => c.value.asInstanceOf[String]
-    case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+    case _ => report.errorAndAbort(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
   }
 
   /** Extracts an optional argument from an annotation with a single string-valued argument with a default value. */
@@ -78,18 +78,18 @@ private[tapir] class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(
     constructorField.getAnnotation(annSymbol).map {
       case Apply(_, List(Select(_, "$lessinit$greater$default$1")))             => None
       case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => Some(c.value.asInstanceOf[String])
-      case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+      case _ => report.errorAndAbort(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
     }
   }
 
   def extractTreeFromAnnotation(annSymbol: Symbol): Option[Tree] = constructorField.getAnnotation(annSymbol).map {
     case Apply(_, List(t)) => t
-    case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+    case _ => report.errorAndAbort(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
   }
 
   def extractFirstTreeArgFromAnnotation(annSymbol: Symbol): Option[Tree] = constructorField.getAnnotation(annSymbol).map {
     case Apply(_, List(t, _*)) => t
-    case _ => report.throwError(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
+    case _ => report.errorAndAbort(s"Cannot extract annotation: @${annSymbol.name}, from field: ${symbol.name}, of type: ${Type.show[T]}")
   }
 
   def annotated(annSymbol: Symbol): Boolean = annotation(annSymbol).isDefined

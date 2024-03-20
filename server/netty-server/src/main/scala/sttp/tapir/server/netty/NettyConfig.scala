@@ -36,10 +36,6 @@ import scala.concurrent.duration._
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
   *
-  * @param socketTimeout
-  *   Refers to the duration for which a socket operation will wait before throwing an exception if no data is received or sent. Socket
-  *   timeout also effectively establishes a read timeout.
-  *
   * @param lingerTimeout
   *   Sets the delay for which the Netty waits, while data is being transmitted, before closing a socket after receiving a call to close the
   *   socket
@@ -47,6 +43,9 @@ import scala.concurrent.duration._
   * @param gracefulShutdownTimeout
   *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
   *   `None`, closes the channels and terminates the server without waiting.
+  *
+  * @param serverHeader
+  *   If set, send this value in the 'Server' response header. If None, don't set the header.
   */
 case class NettyConfig(
     host: String,
@@ -56,7 +55,6 @@ case class NettyConfig(
     socketBacklog: Int,
     requestTimeout: Option[FiniteDuration],
     connectionTimeout: Option[FiniteDuration],
-    socketTimeout: Option[FiniteDuration],
     lingerTimeout: Option[FiniteDuration],
     socketKeepAlive: Boolean,
     addLoggingHandler: Boolean,
@@ -64,7 +62,8 @@ case class NettyConfig(
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
     initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
-    gracefulShutdownTimeout: Option[FiniteDuration]
+    gracefulShutdownTimeout: Option[FiniteDuration],
+    serverHeader: Option[String]
 ) {
   def host(h: String): NettyConfig = copy(host = h)
 
@@ -80,7 +79,6 @@ case class NettyConfig(
 
   def requestTimeout(r: FiniteDuration): NettyConfig = copy(requestTimeout = Some(r))
   def connectionTimeout(c: FiniteDuration): NettyConfig = copy(connectionTimeout = Some(c))
-  def socketTimeout(s: FiniteDuration): NettyConfig = copy(socketTimeout = Some(s))
   def lingerTimeout(l: FiniteDuration): NettyConfig = copy(requestTimeout = Some(l))
 
   def withSocketKeepAlive: NettyConfig = copy(socketKeepAlive = true)
@@ -102,6 +100,8 @@ case class NettyConfig(
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
+
+  def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
 }
 
 object NettyConfig {
@@ -113,15 +113,15 @@ object NettyConfig {
     socketKeepAlive = true,
     requestTimeout = Some(20.seconds),
     connectionTimeout = Some(10.seconds),
-    socketTimeout = Some(60.seconds),
-    lingerTimeout = Some(60.seconds),
+    lingerTimeout = None, // see #3576
     gracefulShutdownTimeout = Some(10.seconds),
     maxConnections = None,
     addLoggingHandler = false,
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _)
+    initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
+    serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
   )
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {

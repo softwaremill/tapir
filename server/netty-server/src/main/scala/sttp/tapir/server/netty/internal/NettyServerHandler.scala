@@ -7,7 +7,7 @@ import io.netty.handler.codec.http._
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -35,7 +35,8 @@ class NettyServerHandler[F[_]](
     route: Route[F],
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
     channelGroup: ChannelGroup,
-    isShuttingDown: AtomicBoolean
+    isShuttingDown: AtomicBoolean,
+    serverHeader: Option[String]
 )(implicit
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
@@ -80,12 +81,11 @@ class NettyServerHandler[F[_]](
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
       val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
         if (logger.isDebugEnabled) {
-          logger.debug("Http channel to {} closed. Cancelling {} responses.",
-            ctx.channel.remoteAddress,
-            pendingResponses.length
-          )
+          logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
         }
-        pendingResponses.foreach(_.apply())
+        while (pendingResponses.nonEmpty) {
+          pendingResponses.dequeue().apply()
+        }
       }
     }
   }
@@ -254,6 +254,7 @@ class NettyServerHandler[F[_]](
 
   private implicit class RichHttpMessage(val m: HttpMessage) {
     def setHeadersFrom(response: ServerResponse[_]): Unit = {
+      serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
         .groupBy(_.name)
         .foreach { case (k, v) =>

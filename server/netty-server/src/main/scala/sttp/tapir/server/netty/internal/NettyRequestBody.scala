@@ -16,6 +16,7 @@ import sttp.tapir.InputStreamRange
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import sttp.capabilities.Streams
+import sttp.model.HeaderNames
 
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
 private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
@@ -29,12 +30,14 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     *
     * @param publisher
     *   reactive publisher emitting byte chunks.
+    * @param contentLength
+    *   Total content length, if known
     * @param maxBytes
     *   optional request length limit. If exceeded, The effect `F` is failed with a [[sttp.capabilities.StreamMaxLengthExceededException]]
     * @return
     *   An effect which finishes with a single array of all collected bytes.
     */
-  def publisherToBytes(publisher: Publisher[HttpContent], maxBytes: Option[Long]): F[Array[Byte]]
+  def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): F[Array[Byte]]
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
     *
@@ -76,7 +79,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
         monad.unit(Array.empty[Byte])
       case req: StreamedHttpRequest =>
-        publisherToBytes(req, maxBytes)
+        val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toInt)
+        publisherToBytes(req, contentLength, maxBytes)
       case other => monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
     }
 }

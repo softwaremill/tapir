@@ -34,6 +34,7 @@ paths:
 components:
   schemas:
     Organization:
+      title: Organization
       required:
         - name
       type: object

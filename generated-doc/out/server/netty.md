@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.9.10"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.0"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.9.10"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.10.0"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.9.10"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.0"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.9.10"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.0"
 ```
 
 Then, use:
@@ -119,3 +119,7 @@ val serverBinding: Future[NettyFutureDomainSocketBinding] =
   )
   .startUsingDomainSocket(Paths.get(System.getProperty("java.io.tmpdir"), "hello"))
 ```
+
+## Logging
+
+By default, [logging](debugging.md) of handled requests and exceptions is enabled, and uses an slf4j logger.

@@ -7,6 +7,11 @@ import sttp.tapir.AttributeKey
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
+/** Implement for specific request representation of a particular server. Consider overriding [[ServerRequest#uri]] and
+  * [[ServerRequest#showShort]] for a backend-specific implementation of constructing the Uri and printing the path + query params. This way
+  * you'll avoid a performance overhead of parsing [[sttp.model.Uri]]. See https://softwaremill.com/benchmarking-tapir-part-2/ for more
+  * details.
+  */
 trait ServerRequest extends RequestMetadata {
   def protocol: String
   def connectionInfo: ConnectionInfo

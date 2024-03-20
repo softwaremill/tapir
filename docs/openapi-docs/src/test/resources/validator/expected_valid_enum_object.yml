@@ -16,6 +16,7 @@ paths:
 components:
   schemas:
     ColorValue:
+      title: ColorValue
       required:
         - color
         - value

@@ -28,17 +28,20 @@ paths:
 components:
   schemas:
     FruitQueryWithEncoded:
+      title: FruitQueryWithEncoded
       type: object
       properties:
         fruitType:
           $ref: '#/components/schemas/FruitType'
           default: PEAR
     FruitType:
+      title: FruitType
       type: string
       enum:
         - APPLE
         - PEAR
     FruitWithEnum:
+      title: FruitWithEnum
       required:
         - fruit
         - amount

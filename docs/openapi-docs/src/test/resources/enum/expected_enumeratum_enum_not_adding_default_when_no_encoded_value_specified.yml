@@ -28,16 +28,19 @@ paths:
 components:
   schemas:
     FruitQuery:
+      title: FruitQuery
       type: object
       properties:
         fruitType:
           $ref: '#/components/schemas/FruitType'
     FruitType:
+      title: FruitType
       type: string
       enum:
         - APPLE
         - PEAR
     FruitWithEnum:
+      title: FruitWithEnum
       required:
         - fruit
         - amount

@@ -42,12 +42,15 @@ paths:
 components:
   schemas:
     GenericEntity_Int:
+      title: GenericEntity_Int
       oneOf:
         - $ref: '#/components/schemas/GenericPerson_Int'
     GenericEntity_String:
+      title: GenericEntity_String
       oneOf:
         - $ref: '#/components/schemas/GenericPerson_String'
     GenericPerson_Int:
+      title: GenericPerson_Int
       required:
         - data
       type: object
@@ -56,6 +59,7 @@ components:
           type: integer
           format: int32
     GenericPerson_String:
+      title: GenericPerson_String
       required:
         - data
       type: object

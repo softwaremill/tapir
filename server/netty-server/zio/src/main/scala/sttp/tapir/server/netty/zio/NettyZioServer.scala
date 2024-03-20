@@ -90,7 +90,8 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
           route,
           unsafeRunAsync(runtime),
           channelGroup,
-          isShuttingDown
+          isShuttingDown,
+          config.serverHeader
         ),
         eventLoopGroup,
         socketOverride
