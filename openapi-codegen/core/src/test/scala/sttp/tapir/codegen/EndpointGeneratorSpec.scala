@@ -265,7 +265,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",
       """.attribute[CustomStringExtensionOnOperationExtension](customStringExtensionOnOperationExtensionKey, "bazquux")""",
       """.attribute[CustomListExtensionOnOperationExtension](customListExtensionOnOperationExtensionKey, Vector("baz", "quux"))""",
-      """.attribute[CustomMapExtensionOnPathExtension](customMapExtensionOnPathExtensionKey, Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))"""
+      """.attribute[CustomMapExtensionOnPathExtension](customMapExtensionOnPathExtensionKey, Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))""",
+      """.attribute[CustomStringExtensionOnPathDoubleTypeExtension](customStringExtensionOnPathDoubleTypeExtensionKey, 123L)"""
     )
     expectedAttrDecls foreach (decl => generatedCode should include(decl))
     generatedCode should include(
