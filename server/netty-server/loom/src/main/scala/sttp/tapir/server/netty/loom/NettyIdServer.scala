@@ -102,13 +102,23 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       eventLoopGroup,
       socketOverride
     )
-    channelIdFuture.await()
-    val channelId = channelIdFuture.channel()
-
-    (
-      channelId.localAddress().asInstanceOf[SA],
-      () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-    )
+    try {
+      channelIdFuture.await()
+      val channelId = channelIdFuture.channel()
+      (
+        channelId.localAddress().asInstanceOf[SA],
+        () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+      )
+    } catch {
+      case NonFatal(startFailureCause) => 
+        try { 
+          stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout) 
+        } 
+        catch { 
+          case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause) 
+        }
+        throw startFailureCause
+    }
   }
 
   private def waitForClosedChannels(
