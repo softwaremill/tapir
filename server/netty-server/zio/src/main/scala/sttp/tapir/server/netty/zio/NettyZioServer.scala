@@ -17,7 +17,6 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
-
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -98,12 +97,17 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
         socketOverride
       )
     }
-    binding <- nettyChannelFutureToScala(channelFuture).map(ch =>
-      (
-        ch.localAddress().asInstanceOf[SA],
-        () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+    binding <- nettyChannelFutureToScala(channelFuture)
+      .map(ch =>
+        (
+          ch.localAddress().asInstanceOf[SA],
+          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        )
       )
-    )
+      .catchAll { e =>
+        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout) *>
+          ZIO.fail(e)
+      }
   } yield binding
 
   private def waitForClosedChannels(
@@ -126,20 +130,43 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
+    stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+      ZIO.suspend {
+        nettyFutureToScala(ch.close()).flatMap { _ =>
+          stopEventLoopGroup(eventLoopGroup, eventExecutor)
+        }
+      }
+  }
+
+  private def stopRecovering(
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): RIO[R, Unit] = {
+    stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+      stopEventLoopGroup(eventLoopGroup, eventExecutor)
+  }
+
+  private def stopChannelGroup(
+      channelGroup: ChannelGroup,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ) = {
     ZIO.attempt(isShuttingDown.set(true)) *>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),
         gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-      ) *>
-      ZIO.suspend {
-        nettyFutureToScala(ch.close()).flatMap { _ =>
-          if (config.shutdownEventLoopGroupOnClose) {
-            nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-              .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
-          } else ZIO.succeed(())
-        }
-      }
+      )
+  }
+
+  private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
+    if (config.shutdownEventLoopGroupOnClose) {
+      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
+        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+    } else ZIO.succeed(())
   }
 }
 

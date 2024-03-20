@@ -103,13 +103,22 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       eventLoopGroup,
       socketOverride
     )
-    channelIdFuture.await()
-    val channelId = channelIdFuture.channel()
-
-    (
-      channelId.localAddress().asInstanceOf[SA],
-      () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-    )
+    try {
+      channelIdFuture.sync()
+      val channelId = channelIdFuture.channel()
+      (
+        channelId.localAddress().asInstanceOf[SA],
+        () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+      )
+    } catch {
+      case NonFatal(startFailureCause) =>
+        try {
+          stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        } catch {
+          case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
+        }
+        throw startFailureCause
+    }
   }
 
   private def waitForClosedChannels(
@@ -122,6 +131,7 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
     }
     val _ = channelGroup.close().get()
   }
+
   private def stop(
       ch: Channel,
       eventLoopGroup: EventLoopGroup,
@@ -137,6 +147,25 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     )
     ch.close().get()
+    if (config.shutdownEventLoopGroupOnClose) {
+      val _ = eventLoopGroup.shutdownGracefully().get()
+      val _ = eventExecutor.shutdownGracefully().get()
+    }
+  }
+
+  private def stopRecovering(
+      eventLoopGroup: EventLoopGroup,
+      channelGroup: ChannelGroup,
+      eventExecutor: DefaultEventExecutor,
+      isShuttingDown: AtomicBoolean,
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Unit = {
+    isShuttingDown.set(true)
+    waitForClosedChannels(
+      channelGroup,
+      startNanos = System.nanoTime(),
+      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+    )
     if (config.shutdownEventLoopGroupOnClose) {
       val _ = eventLoopGroup.shutdownGracefully().get()
       val _ = eventExecutor.shutdownGracefully().get()
