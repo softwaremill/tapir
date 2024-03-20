@@ -13,7 +13,7 @@ object OpenapiSchemaType {
   // https://swagger.io/specification/v3/#discriminator-object
   case class Discriminator(
       propertyName: String,
-      mapping: Map[String, String] = Map.empty
+      mapping: Option[Map[String, String]] = None
   )
   // https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/
   case class OpenapiSchemaOneOf(
@@ -218,7 +218,7 @@ object OpenapiSchemaType {
   implicit val DiscriminatorDecoder: Decoder[Discriminator] = { (c: HCursor) =>
     for {
       propertyName <- c.downField("propertyName").as[String]
-      mapping <- c.downField("mapping").as[Map[String, String]]
+      mapping <- c.downField("mapping").as[Option[Map[String, String]]]
     } yield Discriminator(propertyName, mapping)
   }
 

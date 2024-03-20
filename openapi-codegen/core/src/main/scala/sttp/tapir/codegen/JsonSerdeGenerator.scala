@@ -4,6 +4,7 @@ import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  Discriminator,
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
   OpenapiSchemaObject,
@@ -56,9 +57,9 @@ object JsonSerdeGenerator {
         }
         val validatedChildren = children.collect { case Right(kv) => kv }
         schema.discriminator match {
-          case None =>
-          case Some(d) =>
-            val targetClassNames = d.mapping.values.map(_.split('/').last).toSet
+          case None | Some(Discriminator(_, None)) =>
+          case Some(Discriminator(_, Some(mapping))) =>
+            val targetClassNames = mapping.values.map(_.split('/').last).toSet
             if (targetClassNames != validatedChildren.toSet)
               throw new IllegalArgumentException(
                 s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
@@ -99,12 +100,14 @@ object JsonSerdeGenerator {
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
-        val schemaToJsonMapping = discriminator.mapping
-          .map { case (jsonValue, fullRef) => fullRef.stripPrefix("#/components/schemas/") -> jsonValue }
-
         val subtypeNames = schema.types.map {
           case ref: OpenapiSchemaRef => ref.stripped
           case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
+        }
+        val schemaToJsonMapping = discriminator.mapping match {
+          case Some(mapping) =>
+            mapping.map { case (jsonValue, fullRef) => fullRef.stripPrefix("#/components/schemas/") -> jsonValue }
+          case None => subtypeNames.map(s => s -> s).toMap
         }
         val encoders = subtypeNames
           .map { t =>
@@ -232,8 +235,15 @@ object JsonSerdeGenerator {
     val uncapitalisedName = name.head.toLower +: name.tail
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
-        val schemaToJsonMapping = discriminator.mapping
-          .map { case (jsonValue, fullRef) => fullRef.stripPrefix("#/components/schemas/") -> jsonValue }
+        def subtypeNames = schema.types.map {
+          case ref: OpenapiSchemaRef => ref.stripped
+          case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
+        }
+        val schemaToJsonMapping = discriminator.mapping match {
+          case Some(mapping) =>
+            mapping.map { case (jsonValue, fullRef) => fullRef.stripPrefix("#/components/schemas/") -> jsonValue }
+          case None => subtypeNames.map(s => s -> s).toMap
+        }
         val body = if (schemaToJsonMapping.exists { case (className, jsonValue) => className != jsonValue }) {
           val discriminatorMap = indent(2)(
             schemaToJsonMapping

@@ -34,9 +34,9 @@ class ClassDefinitionGenerator {
         }
         val validatedChildren = children.collect { case Right(kv) => kv }
         schema.discriminator match {
-          case None =>
-          case Some(d) =>
-            val targetClassNames = d.mapping.values.map(_.split('/').last).toSet
+          case None | Some(Discriminator(_, None)) =>
+          case Some(Discriminator(_, Some(mapping))) =>
+            val targetClassNames = mapping.values.map(_.split('/').last).toSet
             if (targetClassNames != validatedChildren.toSet)
               throw new IllegalArgumentException(
                 s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"

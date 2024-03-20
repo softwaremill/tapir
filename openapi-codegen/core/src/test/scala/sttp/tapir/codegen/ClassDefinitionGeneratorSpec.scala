@@ -483,32 +483,40 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   }
 
   it should "generate ADTs for oneOf schemas (jsoniter)" in {
-    val gen = new ClassDefinitionGenerator()
-    val GeneratedClassDefinitions(res, extra) =
-      gen.classDefs(TestHelpers.oneOfDocs, false, jsonSerdeLib = JsonSerdeLib.Jsoniter, jsonParamRefs = Set("ReqWithVariants")).get
+    def testDoc(doc: OpenapiDocument) = {
+      val gen = new ClassDefinitionGenerator()
+      val GeneratedClassDefinitions(res, extra) =
+        gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Jsoniter, jsonParamRefs = Set("ReqWithVariants")).get
 
-    val fullRes = (res + "\n" + extra.get)
-    res shouldCompile ()
-    fullRes shouldCompile ()
-    extra.get should include(
-      """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
-    )
+      val fullRes = (res + "\n" + extra.get)
+      res shouldCompile ()
+      fullRes shouldCompile ()
+      extra.get should include(
+        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+      )
+    }
+    testDoc(TestHelpers.oneOfDocs)
+    testDoc(TestHelpers.oneOfDocsNoMapping)
   }
 
   it should "generate ADTs for oneOf schemas (circe)" in {
-    val gen = new ClassDefinitionGenerator()
-    val GeneratedClassDefinitions(fullRes, extra) =
-      gen.classDefs(TestHelpers.oneOfDocs, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
+    def testDoc(doc: OpenapiDocument) = {
+      val gen = new ClassDefinitionGenerator()
+      val GeneratedClassDefinitions(fullRes, extra) =
+        gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
-    fullRes shouldCompile ()
-    val expectedLines = Seq(
-      """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
-      """case x: ReqSubtype1 => io.circe.Encoder[ReqSubtype1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ReqSubtype1")))""",
-      """implicit lazy val reqWithVariantsJsonDecoder: io.circe.Decoder[ReqWithVariants]""",
-      """discriminator <- c.downField("type").as[String]""",
-      """case "ReqSubtype1" => c.as[ReqSubtype1]"""
-    )
-    expectedLines.foreach(line => fullRes should include(line))
-    extra should be(empty)
+      fullRes shouldCompile ()
+      val expectedLines = Seq(
+        """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
+        """case x: ReqSubtype1 => io.circe.Encoder[ReqSubtype1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ReqSubtype1")))""",
+        """implicit lazy val reqWithVariantsJsonDecoder: io.circe.Decoder[ReqWithVariants]""",
+        """discriminator <- c.downField("type").as[String]""",
+        """case "ReqSubtype1" => c.as[ReqSubtype1]"""
+      )
+      expectedLines.foreach(line => fullRes should include(line))
+      extra should be(empty)
+    }
+    testDoc(TestHelpers.oneOfDocs)
+    testDoc(TestHelpers.oneOfDocsNoMapping)
   }
 }

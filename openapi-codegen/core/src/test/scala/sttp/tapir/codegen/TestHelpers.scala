@@ -962,7 +962,7 @@ object TestHelpers {
     |          type: string
     |""".stripMargin
 
-  val oneOfDocs = OpenapiDocument(
+  def genOneOfDocs(withDiscriminatorMapping: Boolean) = OpenapiDocument(
     "3.1.0",
     OpenapiInfo("oneOf test", "1.0"),
     List(
@@ -1008,12 +1008,16 @@ object TestHelpers {
             Some(
               Discriminator(
                 "type",
-                Map(
-                  "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
-                  "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
-                  "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
-                  "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
-                )
+                if (withDiscriminatorMapping)
+                  Some(
+                    Map(
+                      "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
+                      "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
+                      "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
+                      "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
+                    )
+                  )
+                else None
               )
             )
           ),
@@ -1037,4 +1041,6 @@ object TestHelpers {
       )
     )
   )
+  val oneOfDocs = genOneOfDocs(withDiscriminatorMapping = true)
+  val oneOfDocsNoMapping = genOneOfDocs(withDiscriminatorMapping = false)
 }
