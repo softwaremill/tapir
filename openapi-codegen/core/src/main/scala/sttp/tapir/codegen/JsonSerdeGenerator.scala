@@ -117,7 +117,7 @@ object JsonSerdeGenerator {
         // if lhs has some required non-nullable fields with no default that rhs will never contain, then right cannot be mistaken for left
         if ((requiredL.keySet -- anyR.keySet).nonEmpty) false
         else {
-          // otherwise, if any required field on lhs can't look like the similarly-named field on rhs, then l can't look like r
+          // otherwise, if any required field on rhs can't look like the similarly-named field on lhs, then r can't look like l
           val rForRequiredL = anyR.filter(requiredL.keySet contains _._1)
           requiredL.forall { case (k, lhsV) => rCanLookLikeL(lhsV.`type`, rForRequiredL(k).`type`) }
         }
