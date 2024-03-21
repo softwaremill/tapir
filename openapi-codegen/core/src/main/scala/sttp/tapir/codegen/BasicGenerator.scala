@@ -33,7 +33,8 @@ object BasicGenerator {
       objName: String,
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
-      jsonSerdeLib: String
+      jsonSerdeLib: String,
+      validateNonDiscriminatedOneOfs: Boolean
   ): Map[String, String] = {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -48,7 +49,15 @@ object BasicGenerator {
     val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
     val GeneratedClassDefinitions(classDefns, extras) =
       classGenerator
-        .classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs, s"$packagePath.$objName")
+        .classDefs(
+          doc,
+          targetScala3,
+          queryParamRefs,
+          normalisedJsonLib,
+          jsonParamRefs,
+          s"$packagePath.$objName",
+          validateNonDiscriminatedOneOfs
+        )
         .getOrElse(GeneratedClassDefinitions("", None))
     val isSplit = extras.nonEmpty
     val internalImports =

@@ -15,7 +15,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       "TapirGeneratedEndpoints",
       targetScala3 = false,
       useHeadTagForObjectNames = useHeadTagForObjectNames,
-      jsonSerdeLib = jsonSerdeLib
+      jsonSerdeLib = jsonSerdeLib,
+      validateNonDiscriminatedOneOfs = true
     )
   }
   def gen(

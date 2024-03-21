@@ -197,7 +197,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[OpenapiDocument])
 
     res shouldBe Right(
-      TestHelpers.oneOfDocs
+      TestHelpers.oneOfDocsWithMapping
     )
   }
 }

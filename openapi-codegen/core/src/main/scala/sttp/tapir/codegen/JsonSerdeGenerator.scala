@@ -5,12 +5,19 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   Discriminator,
+  OpenapiSchemaArray,
+  OpenapiSchemaBoolean,
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
+  OpenapiSchemaNumericType,
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
-  OpenapiSchemaRef
+  OpenapiSchemaRef,
+  OpenapiSchemaString,
+  OpenapiSchemaStringType
 }
+
+import scala.annotation.tailrec
 
 object JsonSerdeGenerator {
   def serdeDefs(
@@ -18,7 +25,8 @@ object JsonSerdeGenerator {
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
       jsonParamRefs: Set[String] = Set.empty,
       allTransitiveJsonParamRefs: Set[String] = Set.empty,
-      fullModelPath: String = ""
+      fullModelPath: String = "",
+      validateNonDiscriminatedOneOfs: Boolean = true
   ): Option[String] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -26,7 +34,7 @@ object JsonSerdeGenerator {
     val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
 
     jsonSerdeLib match {
-      case JsonSerdeLib.Circe => genCirceSerdes(doc, allTransitiveJsonParamRefs)
+      case JsonSerdeLib.Circe => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
       case JsonSerdeLib.Jsoniter =>
         genJsoniterSerdes(
           doc,
@@ -34,7 +42,8 @@ object JsonSerdeGenerator {
           jsonParamRefs,
           allTransitiveJsonParamRefs,
           adtInheritanceMap,
-          if (fullModelPath.isEmpty) None else Some(fullModelPath)
+          if (fullModelPath.isEmpty) None else Some(fullModelPath),
+          validateNonDiscriminatedOneOfs
         )
     }
   }
@@ -70,10 +79,71 @@ object JsonSerdeGenerator {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
 
+  private def checkForSoundness(allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaRef]) = if (variants.size <= 1) false
+  else {
+    @tailrec def resolve(variant: OpenapiSchemaRef): OpenapiSchemaType = allSchemas(variant.stripped) match {
+      case ref: OpenapiSchemaRef => resolve(ref)
+      case resolved              => resolved
+    }
+    def maybeResolve(variant: OpenapiSchemaType): OpenapiSchemaType = variant match {
+      case ref: OpenapiSchemaRef => resolve(ref)
+      case other                 => other
+    }
+    def rCanLookLikeL(lhs: OpenapiSchemaType, rhs: OpenapiSchemaType): Boolean = (lhs, rhs) match {
+      // check for equality first
+      case (l, r) if l == r => true
+      // then resolve any refs
+      case (l: OpenapiSchemaRef, r) => rCanLookLikeL(resolve(l), r)
+      case (l, r: OpenapiSchemaRef) => rCanLookLikeL(l, resolve(r))
+      // nullable types can always look like each other since can be null
+      case (l, r) if l.nullable && r.nullable => true
+      // l enum can look like r enum if there's a value in common
+      case (l: OpenapiSchemaEnum, r: OpenapiSchemaEnum) => l.items.map(_.value).toSet.intersect(r.items.map(_.value).toSet).nonEmpty
+      // stringy subclasses of same type can look like each other
+      case (l: OpenapiSchemaStringType, r: OpenapiSchemaStringType) if l.getClass == r.getClass => true
+      // a string can look like any stringy type, and vice-versa
+      case (_: OpenapiSchemaString, _: OpenapiSchemaStringType) | (_: OpenapiSchemaStringType, _: OpenapiSchemaString) => true
+      // any numeric type can always look like any other (123 is valid for all subtypes, for example)
+      case (_: OpenapiSchemaNumericType, _: OpenapiSchemaNumericType) => true
+      // bools can always look like each other
+      case (_: OpenapiSchemaBoolean, _: OpenapiSchemaBoolean) => true
+      // arrays can always look like each other (if empty). We don't know about non-empty arrays yet.
+      case (_: OpenapiSchemaArray, _: OpenapiSchemaArray) => true
+      // objects need to recurse
+      case (l: OpenapiSchemaObject, r: OpenapiSchemaObject) =>
+        val requiredL =
+          l.properties.filter(l.required contains _._1).filter { case (_, t) => t.default.isEmpty && !maybeResolve(t.`type`).nullable }
+        val anyR = r.properties
+        // if lhs has some required non-nullable fields with no default that rhs will never contain, then right cannot be mistaken for left
+        if ((requiredL.keySet -- anyR.keySet).nonEmpty) false
+        else {
+          // otherwise, if any required field on lhs can't look like the similarly-named field on rhs, then l can't look like r
+          val rForRequiredL = anyR.filter(requiredL.keySet contains _._1)
+          requiredL.forall { case (k, lhsV) => rCanLookLikeL(lhsV.`type`, rForRequiredL(k).`type`) }
+        }
+      // Let's not support nested oneOfs for now, it's complex and I'm not sure if it's legal
+      case (_: OpenapiSchemaOneOf, _) | (_, _: OpenapiSchemaOneOf) => throw new NotImplementedError("Not supported")
+      // I think at this point we're ok
+      case _ => false
+    }
+    val withAllSubsequent = variants.scanRight(Seq.empty[OpenapiSchemaRef])(_ +: _).collect {
+      case h +: t if t.nonEmpty => (h, t)
+    }
+    val problems = withAllSubsequent
+      .flatMap { case (variant, fallbacks) => fallbacks.filter(rCanLookLikeL(variant, _)).map(variant -> _) }
+      .map { case (l, r) => s"${l.name} appears before ${r.name}, but a ${r.name} can be a valid ${l.name}" }
+    if (problems.nonEmpty)
+      throw new IllegalArgumentException(problems.mkString("Problems in non-discriminated oneOf declaration (", "; ", ")"))
+  }
   ///
   /// Circe
   ///
-  private def genCirceSerdes(doc: OpenapiDocument, allTransitiveJsonParamRefs: Set[String]): Option[String] = {
+  private def genCirceSerdes(
+      doc: OpenapiDocument,
+      allSchemas: Map[String, OpenapiSchemaType],
+      allTransitiveJsonParamRefs: Set[String],
+      validateNonDiscriminatedOneOfs: Boolean
+  ): Option[String] = {
     doc.components
       .map(_.schemas.flatMap {
         // Enum serdes are generated at the declaration site
@@ -82,7 +152,7 @@ object JsonSerdeGenerator {
         case (name, _: OpenapiSchemaObject | _: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
           Some(genCirceNamedSerde(name))
         case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genCirceAdtSerde(schema, name))
+          Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
@@ -95,7 +165,12 @@ object JsonSerdeGenerator {
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
 
-  private def genCirceAdtSerde(schema: OpenapiSchemaOneOf, name: String): String = {
+  private def genCirceAdtSerde(
+      allSchemas: Map[String, OpenapiSchemaType],
+      schema: OpenapiSchemaOneOf,
+      name: String,
+      validateNonDiscriminatedOneOfs: Boolean
+  ): String = {
     val uncapitalisedName = name.head.toLower +: name.tail
 
     schema match {
@@ -134,6 +209,7 @@ object JsonSerdeGenerator {
           case ref: OpenapiSchemaRef => ref.stripped
           case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
         }
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val encoders = subtypeNames.map(t => s"case x: $t => io.circe.Encoder[$t].apply(x)").mkString("\n")
         val decoders = subtypeNames.map(t => s"io.circe.Decoder[$t].asInstanceOf[io.circe.Decoder[$name]]").mkString(",\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
@@ -160,7 +236,8 @@ object JsonSerdeGenerator {
       jsonParamRefs: Set[String],
       allTransitiveJsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[String]],
-      fullModelPath: Option[String]
+      fullModelPath: Option[String],
+      validateNonDiscriminatedOneOfs: Boolean
   ): Option[String] = {
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
     // This should be the set of all json param refs not included in our schema definitions
@@ -197,7 +274,7 @@ object JsonSerdeGenerator {
           Some(genJsoniterEnumSerde(name))
         // For ADTs, generate the serde if it's referenced in any json model
         case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(generateJsoniterAdtSerde(name, schema, fullModelPath))
+          Some(generateJsoniterAdtSerde(allSchemas, name, schema, fullModelPath, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
@@ -227,9 +304,11 @@ object JsonSerdeGenerator {
   }
 
   private def generateJsoniterAdtSerde(
+      allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       schema: OpenapiSchemaOneOf,
-      maybeFullModelPath: Option[String]
+      maybeFullModelPath: Option[String],
+      validateNonDiscriminatedOneOfs: Boolean
   ): String = {
     val fullPathPrefix = maybeFullModelPath.map(_ + ".").getOrElse("")
     val uncapitalisedName = name.head.toLower +: name.tail
@@ -265,6 +344,7 @@ object JsonSerdeGenerator {
         body
 
       case OpenapiSchemaOneOf(schemas, None) =>
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val childNameAndSerde = schemas.collect { case ref: OpenapiSchemaRef =>
           val name = ref.stripped
           name -> s"${name.head.toLower +: name.tail}JsonCodec"

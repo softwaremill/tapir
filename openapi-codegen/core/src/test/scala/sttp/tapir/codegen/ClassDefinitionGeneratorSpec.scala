@@ -483,8 +483,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   }
 
   it should "generate ADTs for oneOf schemas (jsoniter)" in {
-    def testDoc(doc: OpenapiDocument) = {
-      val gen = new ClassDefinitionGenerator()
+    val gen = new ClassDefinitionGenerator()
+    def testOK(doc: OpenapiDocument) = {
       val GeneratedClassDefinitions(res, extra) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Jsoniter, jsonParamRefs = Set("ReqWithVariants")).get
 
@@ -495,13 +495,18 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
       )
     }
-    testDoc(TestHelpers.oneOfDocs)
-    testDoc(TestHelpers.oneOfDocsNoMapping)
+    testOK(TestHelpers.oneOfDocsWithMapping)
+    testOK(TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    val failed = Try(
+      gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
+    )
+    failed.isFailure shouldEqual true
+    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf declaration (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
   }
 
   it should "generate ADTs for oneOf schemas (circe)" in {
-    def testDoc(doc: OpenapiDocument) = {
-      val gen = new ClassDefinitionGenerator()
+    val gen = new ClassDefinitionGenerator()
+    def testOK(doc: OpenapiDocument) = {
       val GeneratedClassDefinitions(fullRes, extra) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
@@ -516,7 +521,12 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       expectedLines.foreach(line => fullRes should include(line))
       extra should be(empty)
     }
-    testDoc(TestHelpers.oneOfDocs)
-    testDoc(TestHelpers.oneOfDocsNoMapping)
+    testOK(TestHelpers.oneOfDocsWithMapping)
+    testOK(TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    val failed = Try(
+      gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
+    )
+    failed.isFailure shouldEqual true
+    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf declaration (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
   }
 }

@@ -938,7 +938,7 @@ object TestHelpers {
     |      type: object
     |      properties:
     |        foo:
-    |          type: string
+    |          type: integer
     |    ReqSubtype2:
     |      required:
     |      - foo
@@ -952,7 +952,7 @@ object TestHelpers {
     |      type: object
     |      properties:
     |        foo:
-    |          type: integer
+    |          type: string
     |    ReqSubtype4:
     |      required:
     |      - bar
@@ -962,7 +962,7 @@ object TestHelpers {
     |          type: string
     |""".stripMargin
 
-  def genOneOfDocs(withDiscriminatorMapping: Boolean) = OpenapiDocument(
+  def genOneOfDocs(withDiscriminator: Boolean, withMapping: Boolean) = OpenapiDocument(
     "3.1.0",
     OpenapiInfo("oneOf test", "1.0"),
     List(
@@ -1005,21 +1005,23 @@ object TestHelpers {
               OpenapiSchemaRef("#/components/schemas/ReqSubtype3"),
               OpenapiSchemaRef("#/components/schemas/ReqSubtype4")
             ),
-            Some(
-              Discriminator(
-                "type",
-                if (withDiscriminatorMapping)
-                  Some(
-                    Map(
-                      "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
-                      "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
-                      "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
-                      "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
+            if (withDiscriminator)
+              Some(
+                Discriminator(
+                  "type",
+                  if (withMapping)
+                    Some(
+                      Map(
+                        "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
+                        "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
+                        "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
+                        "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
+                      )
                     )
-                  )
-                else None
+                  else None
+                )
               )
-            )
+            else None
           ),
           "ReqSubtype" -> OpenapiSchemaEnum(
             "string",
@@ -1031,9 +1033,9 @@ object TestHelpers {
             ),
             false
           ),
-          "ReqSubtype1" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
+          "ReqSubtype1" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false), None)), List("foo"), false),
           "ReqSubtype2" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
-          "ReqSubtype3" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false), None)), List("foo"), false),
+          "ReqSubtype3" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
           "ReqSubtype4" -> OpenapiSchemaObject(Map("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("bar"), false)
         ),
         Map(),
@@ -1041,6 +1043,7 @@ object TestHelpers {
       )
     )
   )
-  val oneOfDocs = genOneOfDocs(withDiscriminatorMapping = true)
-  val oneOfDocsNoMapping = genOneOfDocs(withDiscriminatorMapping = false)
+  val oneOfDocsWithMapping = genOneOfDocs(withDiscriminator = true, withMapping = true)
+  val oneOfDocsWithDiscriminatorNoMapping = genOneOfDocs(withDiscriminator = true, withMapping = false)
+  val oneOfDocsNoDiscriminator = genOneOfDocs(withDiscriminator = false, withMapping = false)
 }

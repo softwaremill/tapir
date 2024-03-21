@@ -17,7 +17,8 @@ class ClassDefinitionGenerator {
       queryParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
       jsonParamRefs: Set[String] = Set.empty,
-      fullModelPath: String = ""
+      fullModelPath: String = "",
+      validateNonDiscriminatedOneOfs: Boolean = true
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
