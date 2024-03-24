@@ -97,12 +97,13 @@ trait ZioHttpInterpreter[R] {
 
     ZIO.succeed(
       Response(
-        status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
+        status = Status.fromInt(statusCode),
         headers = ZioHttpHeaders(allHeaders),
         body = body
           .map {
-            case ZioStreamHttpResponseBody(stream, _) => Body.fromStream(stream)
-            case ZioRawHttpResponseBody(chunk, _)     => Body.fromChunk(chunk)
+            case ZioStreamHttpResponseBody(stream, Some(cl)) => Body.fromStream(stream, cl)
+            case ZioStreamHttpResponseBody(stream, None)     => Body.fromStreamChunked(stream)
+            case ZioRawHttpResponseBody(chunk, _)            => Body.fromChunk(chunk)
           }
           .getOrElse(Body.empty)
       )
