@@ -22,9 +22,9 @@ trait NettyFutureServerInterpreter {
       ses,
       nettyServerOptions.interceptors,
       new NettyFutureRequestBody(nettyServerOptions.createFile),
-      new NettyToResponseBody[Future](),
+      new NettyToResponseBody[Future](RunAsync.Future),
       nettyServerOptions.deleteFile,
-      FutureRunAsync
+      RunAsync.Future
     )
   }
 }
@@ -34,9 +34,5 @@ object NettyFutureServerInterpreter {
     new NettyFutureServerInterpreter {
       override def nettyServerOptions: NettyFutureServerOptions = serverOptions
     }
-  }
-
-  private object FutureRunAsync extends RunAsync[Future] {
-    override def apply(f: => Future[Unit]): Unit = f
   }
 }
