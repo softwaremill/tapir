@@ -144,7 +144,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .send(backend)
         .map(
           _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
-            List(Right("echo: test1"), Right("echo: test2"), Left(WebSocketFrame.close.statusCode))
+            List(Right("echo: test1"), Right("echo: test2"), Left(1011))
           )
         )
     },

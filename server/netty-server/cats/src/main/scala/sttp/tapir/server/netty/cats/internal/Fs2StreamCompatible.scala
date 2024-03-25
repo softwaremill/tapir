@@ -73,12 +73,16 @@ object Fs2StreamCompatible {
       ): Processor[WebSocketFrame, WebSocketFrame] = {
         val onCancelPromise = ctx.newPromise()
         onCancelPromise.addListener((f: ChannelFuture) => {
-          // A special callback that has to be used when a SteramSubscription cancels.
+          // A special callback that has to be used when a SteramSubscription cancels or fails.
           // This can happen in case of errors in the pipeline which are not signalled correctly,
           // like throwing exceptions directly.
           // Without explicit Close frame a client may hang on waiting and not knowing about closed channel.
-          if (f.isSuccess)
+          if (f.isCancelled) {
             val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Canceled"))
+          }
+          else if (!f.isSuccess) {
+            val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Error"))
+          }
         })
         new WebSocketPipeProcessor[F, REQ, RESP](pipe, dispatcher, o, onCancelPromise)
       }
