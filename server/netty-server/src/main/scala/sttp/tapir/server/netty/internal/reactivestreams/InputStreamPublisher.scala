@@ -53,6 +53,8 @@ class InputStreamPublisher[F[_]](
           case _                                        => chunkSize
         }
 
+        // Note: the effect F may be Id, in which case everything here will be synchronous and blocking
+        // (which technically is against the reactive streams spec).
         runAsync(monad
           .blocking(
             stream.readNBytes(expectedBytes)
