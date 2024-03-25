@@ -4,19 +4,17 @@ import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
-import sttp.monad.MonadError
-import sttp.monad.syntax._
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.RequestBody
-import sttp.tapir.RawBodyType
-import sttp.tapir.TapirFile
-import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.FileRange
-import sttp.tapir.InputStreamRange
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
 import sttp.capabilities.Streams
 import sttp.model.HeaderNames
+import sttp.monad.MonadError
+import sttp.monad.syntax._
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.netty.internal.reactivestreams.SubscriberInputStream
+
+import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.ByteBuffer
 
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
 private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
@@ -64,17 +62,16 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     case RawBodyType.ByteBufferBody =>
       readAllBytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)))
     case RawBodyType.InputStreamBody =>
-      // Possibly can be optimized to avoid loading all data eagerly into memory
-      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)))
+      monad.eval(RawValue(readAsStream(serverRequest, maxBytes)))
     case RawBodyType.InputStreamRangeBody =>
-      // Possibly can be optimized to avoid loading all data eagerly into memory
-      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
+      monad.unit(RawValue(InputStreamRange(() => readAsStream(serverRequest, maxBytes))))
     case RawBodyType.FileBody =>
       for {
         file <- createFile(serverRequest)
         _ <- writeToFile(serverRequest, file, maxBytes)
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
-    case _: RawBodyType.MultipartBody => monad.error(new UnsupportedOperationException)
+    case _: RawBodyType.MultipartBody => 
+      monad.error(new UnsupportedOperationException)
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
@@ -87,4 +84,16 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       case other => 
         monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}"))
     }
+    
+  private def readAsStream(serverRequest: ServerRequest, maxBytes: Option[Long]): InputStream = {
+    serverRequest.underlying match {
+      case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
+        InputStream.nullInputStream()
+      case req: StreamedHttpRequest =>
+        val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toLong)
+        SubscriberInputStream.processAsStream(req, contentLength, maxBytes)
+      case other => 
+        throw new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}")
+    }
+  }
 }
