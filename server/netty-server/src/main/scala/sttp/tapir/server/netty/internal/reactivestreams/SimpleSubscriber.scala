@@ -8,13 +8,10 @@ import sttp.capabilities.StreamMaxLengthExceededException
 import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
-import scala.util.Success
 
-private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends PromisingSubscriber[Array[Byte], HttpContent] {
+private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   // These don't need to be volatile as Reactive Streams guarantees that onSubscribe/onNext/onError/onComplete are
   // called serially (https://github.com/reactive-streams/reactive-streams-jvm?tab=readme-ov-file#1-publisher-code - rule 3)
-  // The only other methods are `future` and `resultBlocking` which are protected against any memory visibility issues
-  // by the result Promise.
   private var subscription: Subscription = _
   private var buffers = Vector[ByteBuf]()
   private var totalLength = 0
@@ -78,17 +75,17 @@ private[netty] class SimpleSubscriber(contentLength: Option[Int]) extends Promis
 
 object SimpleSubscriber {
 
-  def processAll(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Future[Array[Byte]] =
+  def processAll(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Future[Array[Byte]] =
     maxBytes match {
       case Some(max) if contentLength.exists(_ > max) =>
         Future.failed(StreamMaxLengthExceededException(max))
       case _ =>
         val subscriber = new SimpleSubscriber(contentLength)
-        val maybeLimitedSubscriber = maxBytes.fold(subscriber)(new LimitedLengthSubscriber(_, subscriber))
+        val maybeLimitedSubscriber = maxBytes.map(new LimitedLengthSubscriber(_, subscriber)).getOrElse(subscriber)
         publisher.subscribe(maybeLimitedSubscriber)
         subscriber.future
     }
 
-  def processAllBlocking(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): Array[Byte] =
+  def processAllBlocking(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     Await.result(processAll(publisher, contentLength, maxBytes), Duration.Inf)
 }
