@@ -10,7 +10,6 @@ import scala.concurrent.duration.FiniteDuration
 
 /** If auto ping is enabled for an endpoint, this handler will be plugged into the pipeline. Its responsibility is to manage start and stop
   * of the ping scheduler.
-  * TODO: should we include logic for closing the channel and reporting an error if some kind of ping timeout is exceeded?
   * @param pingInterval
   *   time interval to be used between sending pings to the client.
   * @param frame
@@ -31,7 +30,8 @@ class WebSocketAutoPingHandler(pingInterval: FiniteDuration, frame: sttp.ws.WebS
           val _ = ctx.writeAndFlush(nettyFrame.retain())
         }
       }
-      pingTask = ctx.channel().eventLoop().scheduleAtFixedRate(sendPing, pingInterval.toMillis, pingInterval.toMillis, TimeUnit.MILLISECONDS)
+      pingTask =
+        ctx.channel().eventLoop().scheduleAtFixedRate(sendPing, pingInterval.toMillis, pingInterval.toMillis, TimeUnit.MILLISECONDS)
     }
   }
 
