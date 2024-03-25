@@ -5,8 +5,9 @@ import org.reactivestreams.{Publisher, Subscription}
 
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{Path, StandardOpenOption}
-import scala.concurrent.{Future, Promise}
 import java.util.concurrent.LinkedBlockingQueue
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future, Promise}
 
 /** A Reactive Streams subscriber which receives chunks of bytes and writes them to a file.
   */
@@ -22,11 +23,7 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
   /** Used to signal completion, so that external code can represent writing to a file as Future[Unit] */
   private val resultPromise = Promise[Unit]()
 
-  /** An alternative way to signal completion, so that non-effectful servers can await on the response (like netty-loom) */
-  private val resultBlockingQueue = new LinkedBlockingQueue[Either[Throwable, Unit]]()
-
   override def future: Future[Unit] = resultPromise.future
-  private def waitForResultBlocking(): Either[Throwable, Unit] = resultBlockingQueue.take()
 
   override def onSubscribe(s: Subscription): Unit = {
     this.subscription = s
@@ -58,13 +55,11 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
 
   override def onError(t: Throwable): Unit = {
     fileChannel.close()
-    resultBlockingQueue.add(Left(t))
     resultPromise.failure(t)
   }
 
   override def onComplete(): Unit = {
     fileChannel.close()
-    val _ = resultBlockingQueue.add(Right(()))
     resultPromise.success(())
   }
 }
@@ -76,9 +71,6 @@ object FileWriterSubscriber {
     subscriber.future
   }
 
-  def processAllBlocking(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Unit = {
-    val subscriber = new FileWriterSubscriber(path)
-    publisher.subscribe(maxBytes.map(new LimitedLengthSubscriber(_, subscriber)).getOrElse(subscriber))
-    subscriber.waitForResultBlocking().left.foreach(e => throw e)
-  }
+  def processAllBlocking(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Unit =
+    Await.result(processAll(publisher, path, maxBytes), Duration.Inf)
 }
