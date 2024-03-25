@@ -17,6 +17,8 @@ import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 
+/** A Reactive Streams Processor[NettyWebSocketFrame, NettyWebSocketFrame] built from a fs2.Pipe[F, REQ, RESP] passed from an WS endpoint.
+  */
 class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     pipe: Pipe[F, REQ, RESP],
     dispatcher: Dispatcher[F],
@@ -27,7 +29,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
   private var subscription: Subscription = _
 
   override def onSubscribe(s: Subscription): Unit = {
+    // Not really that unsafe. Subscriber creation doesn't do any IO, only initializes an AtomicReference in an initial state.
     subscriber = dispatcher.unsafeRunSync(
+      // If bufferSize > 1, the stream may stale and not emit responses until enough requests are buffered
       StreamSubscriber[F, NettyWebSocketFrame](bufferSize = 1)
     )
     subscription = s
@@ -49,7 +53,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
         .map(r => frameToNettyFrame(o.responses.encode(r)))
         .append(fs2.Stream(frameToNettyFrame(WebSocketFrame.close)))
 
+    // Trigger listening for WS frames in the underlying fs2 StreamSubscribber
     subscriber.sub.onSubscribe(s)
+    // Signal that a Publisher is ready to send result frames
     publisher.success(StreamUnicastPublisher(stream, dispatcher))
   }
 
@@ -66,6 +72,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
   }
 
   override def subscribe(s: Subscriber[_ >: NettyWebSocketFrame]): Unit = {
+    // A subscriber may come to read from our internal Publisher. It has to wait for the Publisher to be initialized.
     publisher.future.onComplete {
       case Success(p) =>
         p.subscribe(s)

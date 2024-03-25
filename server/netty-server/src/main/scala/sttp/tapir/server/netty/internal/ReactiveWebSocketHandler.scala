@@ -99,9 +99,10 @@ class ReactiveWebSocketHandler[F[_]](
                             decodeCloseRequests = r.decodeCloseRequests
                           )
                         )
-                        r.autoPing.foreach { case (interval, pingMsg) =>
+                      r.autoPing.foreach { case (interval, pingMsg) =>
                         ctx.pipeline().addFirst("wsAutoPingHandler", new WebSocketAutoPingHandler(interval, pingMsg))
                       }
+                      // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
                       r.channelPromise.setSuccess()
                       val _ = ctx.writeAndFlush(
                         // Push a special message down the pipeline, it will be handled by HttpStreamsServerHandler
