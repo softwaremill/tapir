@@ -262,25 +262,25 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(
-      """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",
-      """.attribute[CustomStringExtensionOnOperationExtension](customStringExtensionOnOperationExtensionKey, "bazquux")""",
-      """.attribute[CustomListExtensionOnOperationExtension](customListExtensionOnOperationExtensionKey, Vector("baz", "quux"))""",
-      """.attribute[CustomMapExtensionOnPathExtension](customMapExtensionOnPathExtensionKey, Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))""",
-      """.attribute[CustomStringExtensionOnPathDoubleTypeExtension](customStringExtensionOnPathDoubleTypeExtensionKey, 123L)"""
+      """.attribute[XSpecificationExtension[CustomStringExtensionOnPathX]](customStringExtensionOnPathXKey, XSpecificationExtension[CustomStringExtensionOnPathX]("another string"))""",
+      """.attribute[XSpecificationExtension[CustomStringExtensionOnOperationX]](customStringExtensionOnOperationXKey, XSpecificationExtension[CustomStringExtensionOnOperationX]("bazquux"))""",
+      """.attribute[XSpecificationExtension[CustomListExtensionOnOperationX]](customListExtensionOnOperationXKey, XSpecificationExtension[CustomListExtensionOnOperationX](Vector("baz", "quux")))""",
+      """.attribute[XSpecificationExtension[CustomMapExtensionOnPathX]](customMapExtensionOnPathXKey, XSpecificationExtension[CustomMapExtensionOnPathX](Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2")))""",
+      """.attribute[XSpecificationExtension[CustomStringExtensionOnPathDoubleTypeX]](customStringExtensionOnPathDoubleTypeXKey, XSpecificationExtension[CustomStringExtensionOnPathDoubleTypeX](123L))"""
     )
     expectedAttrDecls foreach (decl => generatedCode should include(decl))
     generatedCode should include(
-      """val customMapExtensionOnOperationExtensionKey = new sttp.tapir.AttributeKey[CustomMapExtensionOnOperationExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.CustomMapExtensionOnOperationExtension")""".stripMargin
+      """val customMapExtensionOnOperationXKey = new sttp.tapir.AttributeKey[XSpecificationExtension[CustomMapExtensionOnOperationX]]("sttp.tapir.generated.TapirGeneratedEndpoints.XSpecificationExtension[sttp.tapir.generated.TapirGeneratedEndpoints.CustomMapExtensionOnOperationX]")""".stripMargin
     )
     val expectedKeyDeclarations = Seq(
-      """type CustomMapExtensionOnOperationExtension = Map[String, Any]""",
-      """type CustomListExtensionOnPathAnyTypeExtension = Seq[Any]""",
-      """type CustomMapExtensionOnPathSingleValueTypeExtension = Map[String, String]""",
-      """type CustomListExtensionOnOperationExtension = Seq[String]""",
-      """type CustomStringExtensionOnPathAnyTypeExtension = Any""",
-      """type CustomStringExtensionOnPathDoubleTypeExtension = Double""",
-      """type CustomListExtensionOnPathExtension = Seq[String]""",
-      """type CustomStringExtensionOnPathExtension = String"""
+      """type CustomMapExtensionOnOperationX = Map[String, Any]""",
+      """type CustomListExtensionOnPathAnyTypeX = Seq[Any]""",
+      """type CustomMapExtensionOnPathSingleValueTypeX = Map[String, String]""",
+      """type CustomListExtensionOnOperationX = Seq[String]""",
+      """type CustomStringExtensionOnPathAnyTypeX = Any""",
+      """type CustomStringExtensionOnPathDoubleTypeX = Double""",
+      """type CustomListExtensionOnPathX = Seq[String]""",
+      """type CustomStringExtensionOnPathX = String"""
     )
     expectedKeyDeclarations foreach (decl => generatedCode should include(decl))
   }
