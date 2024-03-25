@@ -7,11 +7,11 @@ import sttp.capabilities.Streams
 import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
+import io.netty.channel.ChannelHandlerContext
 
-/**
-  * Operations on streams that have to be implemented for each streaming integration (fs2, zio-streams, etc) used by Netty backends.
-  * This includes conversions like building a stream from a `File`, an `InputStream`, or a reactive `Publisher`.
-  * We also need implementation of a failed (errored) stream, as well as an empty stream (for handling empty requests).
+/** Operations on streams that have to be implemented for each streaming integration (fs2, zio-streams, etc) used by Netty backends. This
+  * includes conversions like building a stream from a `File`, an `InputStream`, or a reactive `Publisher`. We also need implementation of a
+  * failed (errored) stream, as well as an empty stream (for handling empty requests).
   */
 private[netty] trait StreamCompatible[S <: Streams[S]] {
   val streams: S
@@ -29,5 +29,9 @@ private[netty] trait StreamCompatible[S <: Streams[S]] {
   def publisherFromInputStream(is: () => InputStream, chunkSize: Int, length: Option[Long]): Publisher[HttpContent] =
     asPublisher(fromInputStream(is, chunkSize, length))
 
-  def asWsProcessor[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]): Processor[WebSocketFrame, WebSocketFrame]
+  def asWsProcessor[REQ, RESP](
+      pipe: streams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S],
+      ctx: ChannelHandlerContext
+  ): Processor[WebSocketFrame, WebSocketFrame]
 }

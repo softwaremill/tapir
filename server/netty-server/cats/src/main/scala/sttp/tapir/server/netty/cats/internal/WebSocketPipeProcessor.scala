@@ -1,12 +1,15 @@
 package sttp.tapir.server.netty.cats.internal
 
 import cats.Applicative
-import cats.effect.kernel.Async
+import cats.effect.kernel.{Async, Sync}
 import cats.effect.std.Dispatcher
+import cats.syntax.all._
 import fs2.interop.reactivestreams.{StreamSubscriber, StreamUnicastPublisher}
 import fs2.{Pipe, Stream}
+import io.netty.channel.ChannelPromise
 import io.netty.handler.codec.http.websocketx.{WebSocketFrame => NettyWebSocketFrame}
 import org.reactivestreams.{Processor, Publisher, Subscriber, Subscription}
+import org.slf4j.LoggerFactory
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.WebSocketFrameConverters._
@@ -15,6 +18,7 @@ import sttp.ws.WebSocketFrame
 
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /** A Reactive Streams Processor[NettyWebSocketFrame, NettyWebSocketFrame] built from a fs2.Pipe[F, REQ, RESP] passed from an WS endpoint.
@@ -22,11 +26,14 @@ import scala.util.{Failure, Success}
 class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     pipe: Pipe[F, REQ, RESP],
     dispatcher: Dispatcher[F],
-    o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
+    o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
+    onCancel: ChannelPromise
 ) extends Processor[NettyWebSocketFrame, NettyWebSocketFrame] {
   private var subscriber: StreamSubscriber[F, NettyWebSocketFrame] = _
   private val publisher: Promise[Publisher[NettyWebSocketFrame]] = Promise[Publisher[NettyWebSocketFrame]]()
   private var subscription: Subscription = _
+
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def onSubscribe(s: Subscription): Unit = {
     // Not really that unsafe. Subscriber creation doesn't do any IO, only initializes an AtomicReference in an initial state.
@@ -34,7 +41,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       // If bufferSize > 1, the stream may stale and not emit responses until enough requests are buffered
       StreamSubscriber[F, NettyWebSocketFrame](bufferSize = 1)
     )
-    subscription = s
+    subscription = new ChannelAwareSubscription(s, onCancel)
     val in: Stream[F, NettyWebSocketFrame] = subscriber.sub.stream(Applicative[F].unit)
     val sttpFrames = in.map { f =>
       val sttpFrame = nettyFrameToFrame(f)
@@ -51,10 +58,13 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
         )
         .through(pipe)
         .map(r => frameToNettyFrame(o.responses.encode(r)))
+        .onError { case NonFatal(t) =>
+          Stream.eval(Sync[F].delay(logger.error("Error occured in WebSocket channel", t)))
+        }
         .append(fs2.Stream(frameToNettyFrame(WebSocketFrame.close)))
 
     // Trigger listening for WS frames in the underlying fs2 StreamSubscribber
-    subscriber.sub.onSubscribe(s)
+    subscriber.sub.onSubscribe(subscription)
     // Signal that a Publisher is ready to send result frames
     publisher.success(StreamUnicastPublisher(stream, dispatcher))
   }
@@ -65,10 +75,12 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
 
   override def onError(t: Throwable): Unit = {
     subscriber.sub.onError(t)
+    val _ = onCancel.cancel(true)
   }
 
   override def onComplete(): Unit = {
     subscriber.sub.onComplete()
+    val _ = onCancel.cancel(true)
   }
 
   override def subscribe(s: Subscriber[_ >: NettyWebSocketFrame]): Unit = {
@@ -98,4 +110,22 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
         case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
       }.collect { case (_, Some(f)) => f }
     } else s
+}
+
+/** This wrapped is needed to intercept the logic of StreamSubscription which calls cancel() in case of fatally failing streams. This makes
+  * errors get swallowed, so we replace delegate.onCancel() with our own onCancel callback that would trigger custom handling logging in
+  * Netty. Additionally, the stream will fail properly and any errors from the pipeline will be logged.
+  *
+  * @param delegate
+  *   a channel subscription which we don't want to notify about cancelation.
+  * @param onCancel
+  *   our custom cancellation callback.
+  */
+class ChannelAwareSubscription(delegate: Subscription, onCancel: ChannelPromise) extends Subscription {
+  override def cancel(): Unit = {
+    val _ = onCancel.setSuccess()
+  }
+  override def request(n: Long): Unit = {
+    delegate.request(n)
+  }
 }

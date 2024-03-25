@@ -44,7 +44,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m1 <- ws.receiveText()
             m2 <- ws.receiveText()
             _ <- ws.close()
-            m3 <- ws.eitherClose(ws.receiveText())                      
+            m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
         .get(baseUri.scheme("ws"))
@@ -107,6 +107,34 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")
             _ <- ws.sendText("end")
+            m1 <- ws.eitherClose(ws.receiveText())
+            m2 <- ws.eitherClose(ws.receiveText())
+            m3 <- ws.eitherClose(ws.receiveText())
+          } yield List(m1, m2, m3)
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map(
+          _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
+            List(Right("echo: test1"), Right("echo: test2"), Left(WebSocketFrame.close.statusCode))
+          )
+        )
+    },
+    testServer(
+      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
+      "failing pipe"
+    )((_: Unit) =>
+      pureResult(functionToPipe[String, String] {
+        case "error-trigger" => throw new Exception("Boom!")
+        case msg             => s"echo: $msg"
+      }.asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test1")
+            _ <- ws.sendText("test2")
+            _ <- ws.sendText("error-trigger")
             m1 <- ws.eitherClose(ws.receiveText())
             m2 <- ws.eitherClose(ws.receiveText())
             m3 <- ws.eitherClose(ws.receiveText())

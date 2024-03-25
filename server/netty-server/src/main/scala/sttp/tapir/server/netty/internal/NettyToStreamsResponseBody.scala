@@ -79,7 +79,8 @@ private[netty] class NettyToStreamsResponseBody[S <: Streams[S]](streamCompatibl
       ctx.newPromise(),
       streamCompatible.asWsProcessor(
         pipe.asInstanceOf[streamCompatible.streams.Pipe[REQ, RESP]],
-        o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]]
+        o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]],
+        ctx
       ),
       ignorePong = o.ignorePong,
       autoPongOnPing = o.autoPongOnPing,

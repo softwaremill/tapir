@@ -6,7 +6,8 @@ import fs2.interop.reactivestreams.{StreamSubscriber, StreamUnicastPublisher}
 import fs2.io.file.{Files, Flags, Path}
 import fs2.{Chunk, Pipe}
 import io.netty.buffer.Unpooled
-import io.netty.handler.codec.http.websocketx.WebSocketFrame
+import io.netty.channel.{ChannelFuture, ChannelHandlerContext}
+import io.netty.handler.codec.http.websocketx._
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
 import org.reactivestreams.{Processor, Publisher}
 import sttp.capabilities.fs2.Fs2Streams
@@ -67,9 +68,20 @@ object Fs2StreamCompatible {
 
       override def asWsProcessor[REQ, RESP](
           pipe: Pipe[F, REQ, RESP],
-          o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
-      ): Processor[WebSocketFrame, WebSocketFrame] =
-        new WebSocketPipeProcessor[F, REQ, RESP](pipe, dispatcher, o)
+          o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
+          ctx: ChannelHandlerContext
+      ): Processor[WebSocketFrame, WebSocketFrame] = {
+        val onCancelPromise = ctx.newPromise()
+        onCancelPromise.addListener((f: ChannelFuture) => {
+          // A special callback that has to be used when a SteramSubscription cancels.
+          // This can happen in case of errors in the pipeline which are not signalled correctly,
+          // like throwing exceptions directly.
+          // Without explicit Close frame a client may hang on waiting and not knowing about closed channel.
+          if (f.isSuccess)
+            val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Canceled"))
+        })
+        new WebSocketPipeProcessor[F, REQ, RESP](pipe, dispatcher, o, onCancelPromise)
+      }
 
       private def inputStreamToFs2(inputStream: () => InputStream, chunkSize: Int) =
         fs2.io.readInputStream(
