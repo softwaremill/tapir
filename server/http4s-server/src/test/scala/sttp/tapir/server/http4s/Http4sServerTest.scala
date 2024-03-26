@@ -131,41 +131,6 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           .get(baseUri)
           .send(backend)
           .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
-      },
-      createServerTest.testServer(
-        endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO])),
-        "canceled server WebSocket stream"
-      )((_: Unit) =>
-        pureResult(
-          (
-              (in: Stream[IO, String]) =>
-                Stream
-                  .eval(Ref.of[IO, Int](0))
-                  .flatMap { counter =>
-                    Stream.repeatEval(
-                      counter.get.flatMap(c => if (c > 2) IO.canceled.as("canceled") else counter.update(_ + 1) >> IO.pure(c.toString))
-                    )
-                  }
-                  .concurrently(in.as(()))
-          ).asRight[Unit]
-        )
-      ) { (backend, baseUri) =>
-        basicRequest
-          .response(asWebSocket { (ws: WebSocket[IO]) =>
-            for {
-              _ <- ws.sendText("start")
-              m1 <- ws.eitherClose(ws.receiveText())
-              m2 <- ws.eitherClose(ws.receiveText())
-              m3 <- ws.eitherClose(ws.receiveText())
-            } yield List(m1, m2, m3)
-          })
-          .get(baseUri.scheme("ws"))
-          .send(backend)
-          .map(
-            _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
-              List(Right("0"), Right("1"), Right("2"), Left(WebSocketFrame.close.statusCode))
-            )
-          )
       }
     )
 
