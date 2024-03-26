@@ -31,16 +31,15 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
       .covary[IO]
       .toUnicastPublisher
 
-    val readBytes = publisherResource.use { publisher =>
+    val io = publisherResource.use { publisher =>
       IO {
         val subscriberInputStream = new SubscriberInputStream(maxBufferedChunks)
         publisher.subscribe(subscriberInputStream)
-        subscriberInputStream.readAllBytes()
+        subscriberInputStream.readAllBytes() shouldBe bytes
       }
     }
 
-    readBytes.unsafeRunSync() shouldBe bytes
-    ()
+    io.unsafeRunSync()
   }
 
   "empty stream" in {
