@@ -1,19 +1,25 @@
 package sttp.tapir.server.netty.internal
 
+import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.handler.codec.http.websocketx._
 import io.netty.handler.codec.http.websocketx.{WebSocketFrame => NettyWebSocketFrame}
 import sttp.ws.WebSocketFrame
-import io.netty.buffer.Unpooled
 
 object WebSocketFrameConverters {
+
+  def getBytes(buf: ByteBuf): Array[Byte] = {
+    val bytes = new Array[Byte](buf.readableBytes())
+    buf.readBytes(bytes)
+    bytes
+  }
 
   def nettyFrameToFrame(nettyFrame: NettyWebSocketFrame): WebSocketFrame = {
     nettyFrame match {
       case text: TextWebSocketFrame   => WebSocketFrame.Text(text.text, text.isFinalFragment, Some(text.rsv))
       case close: CloseWebSocketFrame => WebSocketFrame.Close(close.statusCode, close.reasonText)
-      case ping: PingWebSocketFrame   => WebSocketFrame.Ping(ping.content().nioBuffer().array())
-      case pong: PongWebSocketFrame   => WebSocketFrame.Pong(pong.content().nioBuffer().array())
-      case _ => WebSocketFrame.Binary(nettyFrame.content().nioBuffer().array(), nettyFrame.isFinalFragment, Some(nettyFrame.rsv))
+      case ping: PingWebSocketFrame   => WebSocketFrame.Ping(getBytes(ping.content()))
+      case pong: PongWebSocketFrame   => WebSocketFrame.Pong(getBytes(pong.content()))
+      case _ => WebSocketFrame.Binary(getBytes(nettyFrame.content()), nettyFrame.isFinalFragment, Some(nettyFrame.rsv))
     }
   }
 
