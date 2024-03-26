@@ -176,6 +176,54 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         )
     },
     testServer(
+      endpoint.out(
+        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+          .autoPing(None)
+          .autoPongOnPing(true)
+      ),
+      "pong on ping"
+    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test1")
+            _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
+            m1 <- ws.receive()
+            _ <- ws.sendText("test2")
+            m2 <- ws.receive()
+          } yield List(m1, m2)
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
+          assert(r.body.value.exists(_.isInstanceOf[WebSocketFrame.Pong]), s"Missing Pong frame in WS responses: $r")
+        )
+    },
+    testServer(
+      endpoint.out(
+        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+          .autoPing(None)
+          .autoPongOnPing(false)
+      ),
+      "not pong on ping if disabled"
+    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test1")
+            _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
+            m1 <- ws.receiveText()
+            _ <- ws.sendText("test2")
+            m2 <- ws.receiveText()
+          } yield List(m1, m2)
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map(
+          _.body shouldBe Right(List("echo: test1", "echo: test2"))
+        )
+    },
+    testServer(
       endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>

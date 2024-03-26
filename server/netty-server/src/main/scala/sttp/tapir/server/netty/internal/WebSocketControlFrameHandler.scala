@@ -6,16 +6,17 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
 
-/**
-  * Handles Ping, Pong, and Close frames for WebSockets.
+/** Handles Ping, Pong, and Close frames for WebSockets.
   */
 class NettyControlFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean, decodeCloseRequests: Boolean)
     extends ChannelInboundHandlerAdapter {
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     msg match {
-      case ping: PingWebSocketFrame if autoPongOnPing =>
-        val _ = ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()))
+      case ping: PingWebSocketFrame =>
+        if (autoPongOnPing) {
+          val _ = ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()))
+        }
       case pong: PongWebSocketFrame if !ignorePong =>
         val _ = ctx.fireChannelRead(pong)
       case close: CloseWebSocketFrame =>
