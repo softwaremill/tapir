@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame
+import io.netty.handler.codec.http.websocketx._
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{ScheduledFuture, TimeUnit}
@@ -22,6 +22,7 @@ class WebSocketAutoPingHandler(pingInterval: FiniteDuration, frame: sttp.ws.WebS
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit = {
+    super.handlerAdded(ctx)
     if (ctx.channel.isActive) {
       logger.debug(s"STARTING WebSocket Ping scheduler for channel ${ctx.channel}, interval = $pingInterval")
       val sendPing: Runnable = new Runnable {
@@ -30,6 +31,7 @@ class WebSocketAutoPingHandler(pingInterval: FiniteDuration, frame: sttp.ws.WebS
           val _ = ctx.writeAndFlush(nettyFrame.retain())
         }
       }
+      // FIXME should not start before the handshake response is sent!
       pingTask =
         ctx.channel().eventLoop().scheduleAtFixedRate(sendPing, pingInterval.toMillis, pingInterval.toMillis, TimeUnit.MILLISECONDS)
     }

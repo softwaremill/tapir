@@ -100,7 +100,9 @@ class ReactiveWebSocketHandler[F[_]](
                           )
                         )
                       r.autoPing.foreach { case (interval, pingMsg) =>
-                        ctx.pipeline().addFirst("wsAutoPingHandler", new WebSocketAutoPingHandler(interval, pingMsg))
+                        ctx
+                          .pipeline()
+                          .addAfter("wsControlFrameHandler", "wsAutoPingHandler", new WebSocketAutoPingHandler(interval, pingMsg))
                       }
                       // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
                       r.channelPromise.setSuccess()

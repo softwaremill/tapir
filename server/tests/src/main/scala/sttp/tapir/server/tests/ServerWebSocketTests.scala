@@ -4,6 +4,7 @@ import cats.effect.IO
 import cats.syntax.all._
 import io.circe.generic.auto._
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.EitherValues
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.client3._
 import sttp.monad.MonadError
@@ -16,13 +17,14 @@ import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
+import scala.concurrent.duration._
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
     val streams: S
 )(implicit
     m: MonadError[F]
-) {
+) extends EitherValues {
   import createServerTest._
 
   def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]
@@ -146,6 +148,31 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
             List(Right("echo: test1"), Right("echo: test2"), Left(1011))
           )
+        )
+    },
+    testServer(
+      endpoint.out(
+        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+          .autoPing(Some((200.millis, WebSocketFrame.ping)))
+      ),
+      "auto ping"
+    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test1")
+            _ <- IO.sleep(250.millis)
+            _ <- ws.sendText("test2")
+            m1 <- ws.receive()
+            m2 <- ws.receive()
+            _ <- ws.sendText("test3")
+            m3 <- ws.receive()
+          } yield List(m1, m2, m3)
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
+          assert(r.body.value.exists(_.isInstanceOf[WebSocketFrame.Ping]), s"Missing Ping frame in WS responses: $r")
         )
     },
     testServer(
