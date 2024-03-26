@@ -13,14 +13,9 @@ trait NettyIdServerInterpreter {
       ses,
       nettyServerOptions.interceptors,
       new NettyIdRequestBody(nettyServerOptions.createFile),
-      new NettyToResponseBody[Id],
+      new NettyToResponseBody[Id](RunAsync.Id),
       nettyServerOptions.deleteFile,
-      new RunAsync[Id] {
-        override def apply(f: => Id[Unit]): Unit = {
-          val _ = f
-          ()
-        }
-      }
+      RunAsync.Id
     )
   }
 }

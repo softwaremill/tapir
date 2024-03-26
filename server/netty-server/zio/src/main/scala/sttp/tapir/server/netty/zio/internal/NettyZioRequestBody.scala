@@ -21,7 +21,7 @@ private[zio] class NettyZioRequestBody[Env](
 
   override def publisherToBytes(
       publisher: Publisher[HttpContent],
-      contentLength: Option[Int],
+      contentLength: Option[Long],
       maxBytes: Option[Long]
   ): RIO[Env, Array[Byte]] =
     streamCompatible.fromPublisher(publisher, maxBytes).run(ZSink.collectAll[Byte]).map(_.toArray)

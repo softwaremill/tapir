@@ -37,7 +37,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     * @return
     *   An effect which finishes with a single array of all collected bytes.
     */
-  def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Int], maxBytes: Option[Long]): F[Array[Byte]]
+  def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]]
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
     *
@@ -52,26 +52,29 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     */
   def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
 
-  override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): F[RawValue[RAW]] = {
-    bodyType match {
-      case RawBodyType.StringBody(charset) => readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
-      case RawBodyType.ByteArrayBody =>
-        readAllBytes(serverRequest, maxBytes).map(RawValue(_))
-      case RawBodyType.ByteBufferBody =>
-        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)))
-      case RawBodyType.InputStreamBody =>
-        // Possibly can be optimized to avoid loading all data eagerly into memory
-        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)))
-      case RawBodyType.InputStreamRangeBody =>
-        // Possibly can be optimized to avoid loading all data eagerly into memory
-        readAllBytes(serverRequest, maxBytes).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
-      case RawBodyType.FileBody =>
-        for {
-          file <- createFile(serverRequest)
-          _ <- writeToFile(serverRequest, file, maxBytes)
-        } yield RawValue(FileRange(file), Seq(FileRange(file)))
-      case _: RawBodyType.MultipartBody => monad.error(new UnsupportedOperationException())
-    }
+  override def toRaw[RAW](
+      serverRequest: ServerRequest,
+      bodyType: RawBodyType[RAW],
+      maxBytes: Option[Long]
+  ): F[RawValue[RAW]] = bodyType match {
+    case RawBodyType.StringBody(charset) =>
+      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
+    case RawBodyType.ByteArrayBody =>
+      readAllBytes(serverRequest, maxBytes).map(RawValue(_))
+    case RawBodyType.ByteBufferBody =>
+      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)))
+    case RawBodyType.InputStreamBody =>
+      // Possibly can be optimized to avoid loading all data eagerly into memory
+      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)))
+    case RawBodyType.InputStreamRangeBody =>
+      // Possibly can be optimized to avoid loading all data eagerly into memory
+      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
+    case RawBodyType.FileBody =>
+      for {
+        file <- createFile(serverRequest)
+        _ <- writeToFile(serverRequest, file, maxBytes)
+      } yield RawValue(FileRange(file), Seq(FileRange(file)))
+    case _: RawBodyType.MultipartBody => monad.error(new UnsupportedOperationException)
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
@@ -79,8 +82,9 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
         monad.unit(Array.empty[Byte])
       case req: StreamedHttpRequest =>
-        val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toInt)
+        val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toLong)
         publisherToBytes(req, contentLength, maxBytes)
-      case other => monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass().getName()}"))
+      case other => 
+        monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}"))
     }
 }

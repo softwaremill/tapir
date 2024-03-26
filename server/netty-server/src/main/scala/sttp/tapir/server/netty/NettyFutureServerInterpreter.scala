@@ -2,7 +2,6 @@ package sttp.tapir.server.netty
 
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.NettyFutureServerInterpreter.FutureRunAsync
 import sttp.tapir.server.netty.internal.{NettyFutureRequestBody, NettyServerInterpreter, NettyToResponseBody, RunAsync}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,9 +21,9 @@ trait NettyFutureServerInterpreter {
       ses,
       nettyServerOptions.interceptors,
       new NettyFutureRequestBody(nettyServerOptions.createFile),
-      new NettyToResponseBody[Future](),
+      new NettyToResponseBody[Future](RunAsync.Future),
       nettyServerOptions.deleteFile,
-      FutureRunAsync
+      RunAsync.Future
     )
   }
 }
@@ -34,9 +33,5 @@ object NettyFutureServerInterpreter {
     new NettyFutureServerInterpreter {
       override def nettyServerOptions: NettyFutureServerOptions = serverOptions
     }
-  }
-
-  private object FutureRunAsync extends RunAsync[Future] {
-    override def apply(f: => Future[Unit]): Unit = f
   }
 }

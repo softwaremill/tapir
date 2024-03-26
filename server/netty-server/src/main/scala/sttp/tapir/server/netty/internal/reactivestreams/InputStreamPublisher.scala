@@ -3,15 +3,22 @@ package sttp.tapir.server.netty.internal.reactivestreams
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.InputStreamRange
+import sttp.tapir.server.netty.internal.RunAsync
 
 import java.io.InputStream
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import scala.util.Try
-import sttp.monad.MonadError
-import sttp.monad.syntax._
 
-class InputStreamPublisher[F[_]](range: InputStreamRange, chunkSize: Int)(implicit monad: MonadError[F]) extends Publisher[HttpContent] {
+class InputStreamPublisher[F[_]](
+    range: InputStreamRange,
+    chunkSize: Int,
+    runAsync: RunAsync[F]
+)(implicit
+    monad: MonadError[F]
+) extends Publisher[HttpContent] {
   override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
     val subscription = new InputStreamSubscription(subscriber, range, chunkSize)
@@ -46,7 +53,9 @@ class InputStreamPublisher[F[_]](range: InputStreamRange, chunkSize: Int)(implic
           case _                                        => chunkSize
         }
 
-        val _ = monad
+        // Note: the effect F may be Id, in which case everything here will be synchronous and blocking
+        // (which technically is against the reactive streams spec).
+        runAsync(monad
           .blocking(
             stream.readNBytes(expectedBytes)
           )
@@ -69,11 +78,10 @@ class InputStreamPublisher[F[_]](range: InputStreamRange, chunkSize: Int)(implic
             }
           }
           .handleError {
-            case e => {
+            case e =>
               val _ = Try(stream.close())
               monad.unit(subscriber.onError(e))
-            }
-          }
+          })
       }
     }
 
