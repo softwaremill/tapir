@@ -20,7 +20,7 @@ private[tapir] object FormCodecMacros {
     val encodedNameAnnotationSymbol = TypeTree.of[Schema.annotations.encodedName].tpe.typeSymbol
 
     def summonCodec[f: Type](field: CaseClassField[q.type, T]) = Expr.summon[Codec[List[String], f, CodecFormat.TextPlain]].getOrElse {
-      report.throwError(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")
+      report.errorAndAbort(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")
     }
 
     def encodeDefBody(tTerm: Term): Term = {
@@ -95,7 +95,7 @@ private[tapir] object FormCodecMacros {
     '{
       Codec.formSeqUtf8
         .mapDecode($decodeExpr)($encodeExpr)
-        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${Type.show[T]}].")) })
+        .schema(${ Expr.summon[Schema[T]].getOrElse(report.errorAndAbort(s"Cannot find a given Schema[${Type.show[T]}].")) })
     }
   }
 }

@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, FileRange, MultipartCodec, PartCodec, RawBodyType, Schema}
+import sttp.tapir.{Codec, CodecFormat, FileRange, MultipartCodec, PartCodec, RawBodyType, Schema}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.{CaseClass, CaseClassField}
 import sttp.model.Part
@@ -44,7 +44,7 @@ private[tapir] object MultipartCodecMacros {
       @tailrec
       def firstNotEmpty(c: List[() => Option[Expr[PartCodec[_, _]]]]): Expr[PartCodec[_, _]] = c match {
         case Nil =>
-          report.throwError(s"Cannot find a codec between a List[Part[T]] for some basic type T and: ${field.tpe}")
+          report.errorAndAbort(s"Cannot find a codec between a List[Part[T]] for some basic type T and: ${field.tpe}")
         case h :: t =>
           h() match {
             case None    => firstNotEmpty(t)
@@ -69,13 +69,6 @@ private[tapir] object MultipartCodecMacros {
       }
 
       '{ ListMap(${ Varargs(partCodecPairs) }: _*) }
-    }
-
-    def termMethodByNameUnsafe(term: Term, name: String): Symbol = term.tpe.typeSymbol.memberMethod(name).head
-
-    def getter(term: Term, name: String, skipArgList: Boolean = false): Term = {
-      val base = term.select(termMethodByNameUnsafe(term, name))
-      if (skipArgList) base else base.appliedToNone
     }
 
     def encodeDefBody(tTerm: Term): Term = {
@@ -135,7 +128,7 @@ private[tapir] object MultipartCodecMacros {
       Codec
         .multipart($partCodecs, None)
         .map($decodeExpr)($encodeExpr)
-        .schema(${ Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${Type.show[T]}].")) })
+        .schema(${ Expr.summon[Schema[T]].getOrElse(report.errorAndAbort(s"Cannot find a given Schema[${Type.show[T]}].")) })
     }
   }
 }

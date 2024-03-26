@@ -46,6 +46,9 @@ object GenScala {
   private val headTagForNamesOpt: Opts[Boolean] =
     Opts.flag("headTagForNames", "Whether to group generated endpoints by first declared tag", "t").orFalse
 
+  private val jsonLibOpt: Opts[Option[String]] =
+    Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -59,15 +62,15 @@ object GenScala {
       }
 
   val cmd: Command[IO[ExitCode]] = Command("genscala", "Generate Scala classes", helpFlag = true) {
-    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt).mapN {
-      case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames) =>
+    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt).mapN {
+      case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib) =>
         val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
         def generateCode(doc: OpenapiDocument): IO[Unit] = for {
           contents <- IO.pure(
-            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames)
+            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames, jsonLib.getOrElse("circe"))
           )
-          destFiles <- contents.toVector.traverse{ case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
+          destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
           _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
         } yield ()
 

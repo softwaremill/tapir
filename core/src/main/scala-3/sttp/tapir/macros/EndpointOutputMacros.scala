@@ -4,7 +4,6 @@ import sttp.tapir.EndpointOutput
 import sttp.tapir.internal.AnnotationsMacros
 
 import scala.quoted.*
-import scala.deriving.Mirror
 
 trait EndpointOutputMacros {
 

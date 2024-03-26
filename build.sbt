@@ -256,13 +256,13 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima")))
+    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
   }
 
 }
@@ -538,7 +538,18 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     Test / run / javaOptions --= perfServerJavaOptions
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(core, pekkoHttpServer, http4sServer, nettyServer, nettyServerCats, playServer, vertxServer, vertxServerCats)
+  .dependsOn(
+    core,
+    pekkoHttpServer,
+    http4sServer,
+    nettyServer,
+    nettyServerCats,
+    nettyServerLoom,
+    playServer,
+    vertxServer,
+    vertxServerCats,
+    nimaServer
+  )
 
 // integrations
 
@@ -1014,8 +1025,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.1.0",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.1.0",
+      "io.prometheus" % "prometheus-metrics-core" % "1.2.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.2.0",
       scalaTest.value % Test
     )
   )
@@ -1422,6 +1433,7 @@ lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-s
 
 lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-server"))
   .settings(commonJvmSettings)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "tapir-netty-server",
     libraryDependencies ++= Seq(
@@ -1971,10 +1983,12 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.7.3" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test
+      "com.beachape" %% "enumeratum-circe" % "1.7.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
     )
   )
-  .dependsOn(core % Test, circeJson % Test)
+  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test)
 
 lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)

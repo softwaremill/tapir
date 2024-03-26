@@ -1,6 +1,6 @@
 package sttp.tapir.macros
 
-import scala.annotation.compileTimeOnly
+import scala.annotation.nowarn
 import scala.collection.Factory
 
 trait ModifyMacroSupport extends ModifyMacroFunctorSupport {
@@ -10,7 +10,7 @@ trait ModifyMacroSupport extends ModifyMacroFunctorSupport {
   ): ModifyFunctor[F, A] =
     new ModifyFunctor[F, A] {}
 
-  implicit class ModifyEachMap[F[_, _], K, T](t: F[K, T])(implicit fac: Factory[(K, T), F[K, T]]) {
+  implicit class ModifyEachMap[F[_, _], K, T](t: F[K, T])(implicit @nowarn fac: Factory[(K, T), F[K, T]]) {
     // @compileTimeOnly(canOnlyBeUsedInsideModify("each")) TODO
     def each: T = sys.error("")
   }

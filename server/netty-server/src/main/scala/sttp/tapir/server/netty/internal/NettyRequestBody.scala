@@ -70,7 +70,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         file <- createFile(serverRequest)
         _ <- writeToFile(serverRequest, file, maxBytes)
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
-    case _: RawBodyType.MultipartBody => 
+    case _: RawBodyType.MultipartBody =>
       monad.error(new UnsupportedOperationException)
   }
 
@@ -81,10 +81,10 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       case req: StreamedHttpRequest =>
         val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toLong)
         publisherToBytes(req, contentLength, maxBytes)
-      case other => 
+      case other =>
         monad.error(new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}"))
     }
-    
+
   private def readAsStream(serverRequest: ServerRequest, maxBytes: Option[Long]): InputStream = {
     serverRequest.underlying match {
       case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // Empty request
@@ -92,7 +92,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       case req: StreamedHttpRequest =>
         val contentLength = Option(req.headers().get(HeaderNames.ContentLength)).map(_.toLong)
         SubscriberInputStream.processAsStream(req, contentLength, maxBytes)
-      case other => 
+      case other =>
         throw new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}")
     }
   }
