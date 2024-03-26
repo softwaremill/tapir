@@ -735,7 +735,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
 
   def inputStreamTests(): List[Test] = List(
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
-      pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
+      blockingResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { (backend, baseUri) => basicRequest.post(uri"$baseUri/api/echo").body("mango").send(backend).map(_.body shouldBe Right("mango")) },
     testServer(in_string_out_stream_with_header)(_ => pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))) {
       (backend, baseUri) =>
@@ -795,7 +795,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         "checks payload limit and returns OK on content length  below or equal max (request)"
       )(i => {
         // Forcing server logic to drain the InputStream
-        suspendResult(i.readAllBytes()).map(_ => new ByteArrayInputStream(Array.empty[Byte]).asRight[Unit])
+        blockingResult(i.readAllBytes()).map(_ => new ByteArrayInputStream(Array.empty[Byte]).asRight[Unit])
       }) { (backend, baseUri) =>
         val tooLargeBody: String = List.fill(maxLength)('x').mkString
         basicRequest.post(uri"$baseUri/api/echo").body(tooLargeBody).response(asByteArray).send(backend).map { r =>
