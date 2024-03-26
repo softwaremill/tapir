@@ -17,6 +17,7 @@ import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
+
 import scala.concurrent.duration._
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
@@ -144,11 +145,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(
-          _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
-            List(Right("echo: test1"), Right("echo: test2"), Left(1011))
-          )
-        )
+        .map { r =>
+          val results = r.body.map(_.map(_.left.map(_.statusCode))).value
+          results.take(2) shouldBe
+            List(Right("echo: test1"), Right("echo: test2"))
+          val closeCode = results.last.left.value
+          assert(closeCode == 1000 || closeCode == 1011) // some servers respond with Close(normal), some with Close(error)
+        }
     },
     testServer(
       endpoint.out(
