@@ -12,6 +12,7 @@ import sttp.tapir.server.netty.internal._
 import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
+import io.netty.channel.ChannelHandlerContext
 
 private[zio] object ZioStreamCompatible {
 
@@ -68,7 +69,8 @@ private[zio] object ZioStreamCompatible {
 
       override def asWsProcessor[REQ, RESP](
           pipe: Stream[Throwable, REQ] => Stream[Throwable, RESP],
-          o: WebSocketBodyOutput[Stream[Throwable, REQ] => Stream[Throwable, RESP], REQ, RESP, ?, ZioStreams]
+          o: WebSocketBodyOutput[Stream[Throwable, REQ] => Stream[Throwable, RESP], REQ, RESP, ?, ZioStreams],
+          ctx: ChannelHandlerContext
       ): Processor[WebSocketFrame, WebSocketFrame] =
         throw new UnsupportedOperationException("TODO")
     }
