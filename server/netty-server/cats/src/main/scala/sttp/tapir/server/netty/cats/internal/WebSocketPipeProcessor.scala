@@ -29,9 +29,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
     wsCompletedPromise: ChannelPromise
 ) extends Processor[NettyWebSocketFrame, NettyWebSocketFrame] {
-  private var subscriber: StreamSubscriber[F, NettyWebSocketFrame] = _
+  @volatile private var subscriber: StreamSubscriber[F, NettyWebSocketFrame] = _
   private val publisher: Promise[Publisher[NettyWebSocketFrame]] = Promise[Publisher[NettyWebSocketFrame]]()
-  private var subscription: Subscription = _
+  @volatile private var subscription: Subscription = _
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
