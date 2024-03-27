@@ -10,6 +10,7 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
+import sttp.tapir.server.netty.internal._
 
 import scala.concurrent.duration._
 
@@ -105,6 +106,9 @@ case class NettyConfig(
 }
 
 object NettyConfig {
+  private val WebSocketHandlerName = "wsHandler"
+  val StreamsHandlerName = "streamsHandler"
+
   def default: NettyConfig = NettyConfig(
     host = "localhost",
     port = 8080,
@@ -126,9 +130,9 @@ object NettyConfig {
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler, wsHandler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
-    pipeline.addLast("serverCodecHandler", new HttpServerCodec())
-    pipeline.addLast("streamsHandler", new HttpStreamsServerHandler())
-    pipeline.addLast("wsHandler", wsHandler)
+    pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
+    pipeline.addLast(StreamsHandlerName, new HttpStreamsServerHandler())
+    pipeline.addLast(WebSocketHandlerName, wsHandler)
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()

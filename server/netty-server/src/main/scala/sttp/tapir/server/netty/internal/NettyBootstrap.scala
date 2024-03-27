@@ -9,6 +9,8 @@ import java.net.{InetSocketAddress, SocketAddress}
 
 object NettyBootstrap {
 
+  private val ReadTimeoutHandlerName = "readTimeoutHandler"
+
   def apply[F[_]](
       nettyConfig: NettyConfig,
       handler: => NettyServerHandler[F],
@@ -29,7 +31,7 @@ object NettyBootstrap {
           nettyConfig.requestTimeout match {
             case Some(requestTimeout) =>
               nettyConfigBuilder(
-                ch.pipeline().addLast("readTimeoutHandler", new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)),
+                ch.pipeline().addLast(ReadTimeoutHandlerName, new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)),
                 handler,
                 wsHandler
               )

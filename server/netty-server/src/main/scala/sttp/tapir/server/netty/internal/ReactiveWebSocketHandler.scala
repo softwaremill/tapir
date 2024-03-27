@@ -2,8 +2,9 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.channel.group.ChannelGroup
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
-import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.codec.http._
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
+import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.ReferenceCountUtil
 import org.playframework.netty.http.DefaultWebSocketHttpResponse
 import org.slf4j.LoggerFactory
@@ -37,6 +38,7 @@ class ReactiveWebSocketHandler[F[_]](
   private[this] var eventLoopContext: ExecutionContext = _
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
+  private val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
 
   def isWsHandshake(req: HttpRequest): Boolean =
     "Websocket".equalsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE)) &&
@@ -70,7 +72,7 @@ class ReactiveWebSocketHandler[F[_]](
     msg match {
       case req: FullHttpRequest if isWsHandshake(req) =>
         ctx.pipeline().remove(this)
-        ctx.pipeline().remove("readTimeoutHandler")
+        ctx.pipeline().remove(classOf[ReadTimeoutHandler])
         ReferenceCountUtil.release(msg)
         val (runningFuture, _) = unsafeRunAsync { () =>
           route(NettyServerRequest(req.retain()))
@@ -91,8 +93,8 @@ class ReactiveWebSocketHandler[F[_]](
                       ctx
                         .pipeline()
                         .addAfter(
-                          "serverCodecHandler",
-                          "wsControlFrameHandler",
+                          ServerCodecHandlerName,
+                          WebSocketControlFrameHandlerName,
                           new NettyControlFrameHandler(
                             ignorePong = r.ignorePong,
                             autoPongOnPing = r.autoPongOnPing,
@@ -102,7 +104,7 @@ class ReactiveWebSocketHandler[F[_]](
                       r.autoPing.foreach { case (interval, pingMsg) =>
                         ctx
                           .pipeline()
-                          .addAfter("wsControlFrameHandler", "wsAutoPingHandler", new WebSocketAutoPingHandler(interval, pingMsg))
+                          .addAfter(WebSocketControlFrameHandlerName, WebSocketAutoPingHandlerName, new WebSocketAutoPingHandler(interval, pingMsg))
                       }
                       // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
                       r.channelPromise.setSuccess()

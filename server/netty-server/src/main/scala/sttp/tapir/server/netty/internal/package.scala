@@ -10,4 +10,7 @@ package object internal {
     def toHeaderSeq: List[Header] =
       underlying.asScala.map(e => Header(e.getKey, e.getValue)).toList
   }
+
+  val ServerCodecHandlerName = "serverCodecHandler"
+  val WebSocketControlFrameHandlerName = "wsControlFrameHandler"
 }
