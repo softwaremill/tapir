@@ -16,10 +16,14 @@ class NettyControlFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean, dec
       case ping: PingWebSocketFrame =>
         if (autoPongOnPing) {
           val _ = ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()))
+        } else {
+          val _ = ping.content().release()
         }
-      case pong: PongWebSocketFrame => 
+      case pong: PongWebSocketFrame =>
         if (!ignorePong) {
           val _ = ctx.fireChannelRead(pong)
+        } else {
+          val _ = pong.content().release()
         }
       case close: CloseWebSocketFrame =>
         if (decodeCloseRequests) {
