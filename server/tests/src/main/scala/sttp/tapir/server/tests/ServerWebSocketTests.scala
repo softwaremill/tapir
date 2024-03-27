@@ -148,10 +148,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .get(baseUri.scheme("ws"))
         .send(backend)
         .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
-          assert(r.body.value exists { 
-            case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
-            case _ => false
-          }, s"Missing Pong(test-ping-text) in ${r.body}")
+          assert(
+            r.body.value exists {
+              case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
+              case _                          => false
+            },
+            s"Missing Pong(test-ping-text) in ${r.body}"
+          )
         )
     },
     testServer(
@@ -209,7 +212,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         testServer(
           endpoint.out(
             webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-              .autoPing(Some((200.millis, WebSocketFrame.ping)))
+              .autoPing(Some((50.millis, WebSocketFrame.ping)))
           ),
           "auto ping"
         )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
@@ -217,7 +220,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
-                _ <- IO.sleep(250.millis)
+                _ <- IO.sleep(150.millis)
                 _ <- ws.sendText("test2")
                 m1 <- ws.receive()
                 m2 <- ws.receive()
@@ -234,6 +237,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       )
     else List.empty
 
+  // Optional, because some backends don't handle exceptions in the pipe gracefully, they just swallow it silently and hang forever
   val failingPipeTests =
     if (failingPipe)
       List(
@@ -270,42 +274,46 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       )
     else List.empty
 
-  val handlePongTests = if (handlePong) List(
-  testServer(
-    {
-      implicit def textOrPongWebSocketFrame[A, CF <: CodecFormat](implicit
-          stringCodec: Codec[String, A, CF]
-      ): Codec[WebSocketFrame, A, CF] =
-        Codec // A custom codec to handle Pongs
-          .id[WebSocketFrame, CF](stringCodec.format, Schema.string)
-          .mapDecode {
-            case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
-            case WebSocketFrame.Pong(payload) => 
-              stringCodec.decode(new String(payload))
-            case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
-          }(a => WebSocketFrame.text(stringCodec.encode(a)))
-          .schema(stringCodec.schema)
+  val handlePongTests =
+    if (handlePong)
+      List(
+        testServer(
+          {
+            implicit def textOrPongWebSocketFrame[A, CF <: CodecFormat](implicit
+                stringCodec: Codec[String, A, CF]
+            ): Codec[WebSocketFrame, A, CF] =
+              Codec // A custom codec to handle Pongs
+                .id[WebSocketFrame, CF](stringCodec.format, Schema.string)
+                .mapDecode {
+                  case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
+                  case WebSocketFrame.Pong(payload) =>
+                    stringCodec.decode(new String(payload))
+                  case f => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
+                }(a => WebSocketFrame.text(stringCodec.encode(a)))
+                .schema(stringCodec.schema)
 
-      endpoint.out(
-        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-          .autoPing(None)
-          .ignorePong(false)
+            endpoint.out(
+              webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+                .autoPing(None)
+                .ignorePong(false)
+            )
+          },
+          "not ignore pong"
+        )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+          basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              for {
+                _ <- ws.sendText("test1")
+                _ <- ws.send(WebSocketFrame.Pong("test-pong-text".getBytes()))
+                m1 <- ws.receiveText()
+                _ <- ws.sendText("test2")
+                m2 <- ws.receiveText()
+              } yield List(m1, m2)
+            })
+            .get(baseUri.scheme("ws"))
+            .send(backend)
+            .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
+        }
       )
-    },
-    "not ignore pong"
-  )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
-    basicRequest
-      .response(asWebSocket { (ws: WebSocket[IO]) =>
-        for {
-          _ <- ws.sendText("test1")
-          _ <- ws.send(WebSocketFrame.Pong("test-pong-text".getBytes()))
-          m1 <- ws.receiveText()
-          _ <- ws.sendText("test2")
-          m2 <- ws.receiveText()
-        } yield List(m1, m2)
-      })
-      .get(baseUri.scheme("ws"))
-      .send(backend)
-      .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
-  }) else List.empty
+    else List.empty
 }

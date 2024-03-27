@@ -31,7 +31,6 @@ class WebSocketAutoPingHandler(pingInterval: FiniteDuration, frame: sttp.ws.WebS
           val _ = ctx.writeAndFlush(nettyFrame.retain())
         }
       }
-      // FIXME should not start before the handshake response is sent!
       pingTask =
         ctx.channel().eventLoop().scheduleAtFixedRate(sendPing, pingInterval.toMillis, pingInterval.toMillis, TimeUnit.MILLISECONDS)
     }

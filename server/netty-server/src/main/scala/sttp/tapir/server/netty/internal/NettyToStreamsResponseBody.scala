@@ -6,13 +6,16 @@ import sttp.capabilities.Streams
 import sttp.model.HasHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.NettyResponseContent.{
+  ByteBufNettyResponseContent,
+  ReactivePublisherNettyResponseContent,
+  ReactiveWebSocketProcessorNettyResponseContent
+}
 import sttp.tapir.server.netty.internal.NettyToResponseBody._
-import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
 
 /** Common logic for producing response body in all Netty backends that support streaming. These backends use streaming libraries like fs2
   * or zio-streams to obtain reactive Publishers representing responses like InputStreamBody, InputStreamRangeBody or FileBody. Other kinds

@@ -4,7 +4,6 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
-import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
@@ -16,7 +15,8 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
   ChunkedFileNettyResponseContent,
   ChunkedStreamNettyResponseContent,
-  ReactivePublisherNettyResponseContent
+  ReactivePublisherNettyResponseContent,
+  ReactiveWebSocketProcessorNettyResponseContent
 }
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
@@ -26,8 +26,6 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
-import sttp.tapir.EndpointInput.AuthType.Http
-import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -216,10 +214,12 @@ class NettyServerHandler[F[_]](
 
       },
       wsHandler = (channelPromise) => {
-      logger.error("Unexpected WebSocket processor response received in NettyServerHandler, it should be handled only in the ReactiveWebSocketHandler")
-      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-      val _ = ctx.writeAndFlush(res)
+        logger.error(
+          "Unexpected WebSocket processor response received in NettyServerHandler, it should be handled only in the ReactiveWebSocketHandler"
+        )
+        val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+        res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+        val _ = ctx.writeAndFlush(res)
       },
       noBodyHandler = () => {
         val res = new DefaultFullHttpResponse(
@@ -251,10 +251,10 @@ class NettyServerHandler[F[_]](
           val values = function(ctx)
 
           values match {
-            case r: ByteBufNettyResponseContent           => byteBufHandler(r.channelPromise, r.byteBuf)
-            case r: ChunkedStreamNettyResponseContent     => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
-            case r: ChunkedFileNettyResponseContent       => chunkedFileHandler(r.channelPromise, r.chunkedFile)
-            case r: ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
+            case r: ByteBufNettyResponseContent                    => byteBufHandler(r.channelPromise, r.byteBuf)
+            case r: ChunkedStreamNettyResponseContent              => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
+            case r: ChunkedFileNettyResponseContent                => chunkedFileHandler(r.channelPromise, r.chunkedFile)
+            case r: ReactivePublisherNettyResponseContent          => reactiveStreamHandler(r.channelPromise, r.publisher)
             case r: ReactiveWebSocketProcessorNettyResponseContent => wsHandler(r.channelPromise)
           }
         }

@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.internal
 
+import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import org.reactivestreams.{Processor, Publisher}
@@ -7,7 +8,6 @@ import sttp.capabilities.Streams
 import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
-import io.netty.channel.ChannelHandlerContext
 
 /** Operations on streams that have to be implemented for each streaming integration (fs2, zio-streams, etc) used by Netty backends. This
   * includes conversions like building a stream from a `File`, an `InputStream`, or a reactive `Publisher`. We also need implementation of a

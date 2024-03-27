@@ -3,11 +3,11 @@ package sttp.tapir.server.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelPromise
 import io.netty.handler.codec.http.HttpContent
-import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
-import org.reactivestreams.Publisher
-import org.reactivestreams.Processor
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
+import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
+import org.reactivestreams.{Processor, Publisher}
 import sttp.ws.{WebSocketFrame => SttpWebSocketFrame}
+
 import scala.concurrent.duration.FiniteDuration
 
 sealed trait NettyResponseContent {
