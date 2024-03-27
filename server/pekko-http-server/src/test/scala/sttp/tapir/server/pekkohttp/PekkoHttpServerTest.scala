@@ -105,7 +105,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
 
       new AllServerTests(createServerTest, interpreter, backend).tests() ++
         new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
-        new ServerWebSocketTests(createServerTest, PekkoStreams) {
+        new ServerWebSocketTests(createServerTest, PekkoStreams, autoPing = false, failingPipe = true, handlePong = false) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++

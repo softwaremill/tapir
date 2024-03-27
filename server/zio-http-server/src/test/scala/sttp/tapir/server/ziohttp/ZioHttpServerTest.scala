@@ -266,7 +266,7 @@ class ZioHttpServerTest extends TestSuite {
           ).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
-          new ServerWebSocketTests(createServerTest, ZioStreams) {
+          new ServerWebSocketTests(createServerTest, ZioStreams, autoPing = true, failingPipe = false, handlePong = false) {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
           }.tests() ++
