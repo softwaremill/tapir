@@ -2196,6 +2196,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     sprayJson,
     http4sClient,
     http4sServerZio,
+    nettyServerCats,
     sttpClient,
     playClient,
     sttpStubServer,
