@@ -13,7 +13,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -64,12 +64,23 @@ class ReactiveWebSocketHandler[F[_]](
   }
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
-    def writeError500(req: HttpRequest, reason: Throwable): Unit = {
+    def replyWithError500(reason: Throwable): Unit = {
       logger.error("Error while processing the request", reason)
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       val _ = ctx.writeAndFlush(res)
     }
+
+    def rejectHandshakeForRegularEndpoint(content: NettyResponseContent): Unit = {
+      val message = "Unexpected WebSocket handhake on a regular HTTP endpoint"
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(message.getBytes))
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, message.length())
+      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+      content.channelPromise.setFailure(new IllegalStateException("Unexpected response content"))
+      val _ = ctx.writeAndFlush(res)
+    }
+
     msg match {
       case req: FullHttpRequest if isWsHandshake(req) =>
         ctx.pipeline().remove(this)
@@ -90,69 +101,26 @@ class ReactiveWebSocketHandler[F[_]](
                 case Some(function) => {
                   val content = function(ctx)
                   content match {
-                    case r: ReactiveWebSocketProcessorNettyResponseContent => {
-                      ctx
-                        .pipeline()
-                        .addAfter(
-                          ServerCodecHandlerName,
-                          WebSocketControlFrameHandlerName,
-                          new NettyControlFrameHandler(
-                            ignorePong = r.ignorePong,
-                            autoPongOnPing = r.autoPongOnPing,
-                            decodeCloseRequests = r.decodeCloseRequests
-                          )
-                        )
-                      r.autoPing.foreach { case (interval, pingMsg) =>
-                        ctx
-                          .pipeline()
-                          .addAfter(
-                            WebSocketControlFrameHandlerName,
-                            WebSocketAutoPingHandlerName,
-                            new WebSocketAutoPingHandler(interval, pingMsg)
-                          )
-                      }
-                      // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
-                      r.channelPromise.setSuccess()
-                      val _ = ctx.writeAndFlush(
-                        // Push a special message down the pipeline, it will be handled by HttpStreamsServerHandler
-                        // and from now on that handler will take control of the flow (our NettyServerHandler will not receive messages)
-                        new DefaultWebSocketHttpResponse(
-                          req.protocolVersion(),
-                          HttpResponseStatus.valueOf(200),
-                          r.processor, // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
-                          new WebSocketServerHandshakerFactory(wsUrl(req), null, false)
-                        )
-                      )
-                    }
+                    case r: ReactiveWebSocketProcessorNettyResponseContent =>
+                      initWsPipeline(ctx, r, req)
                     case otherContent =>
-                      logger.error(s"Unexpected response content: $otherContent")
-                      val res = new DefaultFullHttpResponse(
-                        HttpVersion.HTTP_1_1,
-                        HttpResponseStatus.BAD_REQUEST,
-                        Unpooled.wrappedBuffer("WebSocket handshake received on a regular HTTP endpoint".getBytes)
-                      )
-                      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-                      otherContent.channelPromise.setFailure(new IllegalStateException("Unexpected response content"))
-                      val _ = ctx.writeAndFlush(res)
+                      rejectHandshakeForRegularEndpoint(otherContent)
                   }
                 }
                 case None =>
-                  logger.error("Missing response body, expected WebSocketProcessorNettyResponseContent")
-                  val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                  res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-                  val _ = ctx.writeAndFlush(res)
+                  replyWithError500(new IllegalArgumentException("Missing response body, expected WebSocketProcessorNettyResponseContent"))
               }
               Success(())
             } catch {
               case NonFatal(ex) =>
-                writeError500(req, ex)
+                replyWithError500(ex)
                 Failure(ex)
             } finally {
               val _ = req.release()
             }
           case Failure(NonFatal(ex)) =>
             try {
-              writeError500(req, ex)
+              replyWithError500(ex)
               Failure(ex)
             } finally {
               val _ = req.release()
@@ -165,6 +133,45 @@ class ReactiveWebSocketHandler[F[_]](
         ctx.pipeline.remove(this)
         val _ = ctx.fireChannelRead(other)
     }
+  }
+
+  private def initWsPipeline(
+      ctx: ChannelHandlerContext,
+      r: ReactiveWebSocketProcessorNettyResponseContent,
+      handshakeReq: FullHttpRequest
+  ) = {
+    ctx
+      .pipeline()
+      .addAfter(
+        ServerCodecHandlerName,
+        WebSocketControlFrameHandlerName,
+        new NettyControlFrameHandler(
+          ignorePong = r.ignorePong,
+          autoPongOnPing = r.autoPongOnPing,
+          decodeCloseRequests = r.decodeCloseRequests
+        )
+      )
+    r.autoPing.foreach { case (interval, pingMsg) =>
+      ctx
+        .pipeline()
+        .addAfter(
+          WebSocketControlFrameHandlerName,
+          WebSocketAutoPingHandlerName,
+          new WebSocketAutoPingHandler(interval, pingMsg)
+        )
+    }
+    // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
+    r.channelPromise.setSuccess()
+    val _ = ctx.writeAndFlush(
+      // Push a special message down the pipeline, it will be handled by HttpStreamsServerHandler
+      // and from now on that handler will take control of the flow (our NettyServerHandler will not receive messages)
+      new DefaultWebSocketHttpResponse(
+        handshakeReq.protocolVersion(),
+        HttpResponseStatus.valueOf(200),
+        r.processor, // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
+        new WebSocketServerHandshakerFactory(wsUrl(handshakeReq), null, false)
+      )
+    )
   }
 
   // Only ancient WS protocol versions will use this in the response header.
