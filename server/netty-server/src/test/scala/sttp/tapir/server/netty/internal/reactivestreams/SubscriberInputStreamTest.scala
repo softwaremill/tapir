@@ -74,6 +74,8 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
 
   "multiple chunks, read batch smaller than chunk" in {
     testReading(totalSize = 105, publishedChunkLimit = 20, readBatchSize = 17)
+    testReading(totalSize = 105, publishedChunkLimit = 20, readBatchSize = 7)
+    testReading(totalSize = 105, publishedChunkLimit = 20, readBatchSize = 5)
   }
 
   "multiple chunks, large publishing buffer" in {
