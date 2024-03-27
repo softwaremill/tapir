@@ -18,7 +18,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaUUID
 }
 
-object Renderer {
+object DefaultValueRenderer {
   private def lookup(allModels: Map[String, OpenapiSchemaType], ref: OpenapiSchemaRef): OpenapiSchemaType = allModels(
     ref.name.stripPrefix("#/components/schemas/")
   )

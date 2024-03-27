@@ -3,8 +3,8 @@ package sttp.tapir.codegen
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
-  OpenapiSchemaBoolean,
   OpenapiSchemaBinary,
+  OpenapiSchemaBoolean,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaFloat,
@@ -15,6 +15,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString,
   OpenapiSchemaUUID
 }
+import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 
 object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter = Value
@@ -61,6 +62,24 @@ object BasicGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
+
+    val maybeSpecificationExtensionKeys = doc.paths
+      .flatMap { p =>
+        p.specificationExtensions.toSeq ++ p.methods.flatMap(_.specificationExtensions.toSeq)
+      }
+      .groupBy(_._1)
+      .map { case (keyName, pairs) =>
+        val values = pairs.map(_._2)
+        val `type` = SpecificationExtensionRenderer.renderCombinedType(values)
+        val name = strippedToCamelCase(keyName)
+        val uncapitalisedName = name.head.toLower + name.tail
+        val capitalisedName = name.head.toUpper + name.tail
+        s"""type ${capitalisedName}Extension = ${`type`}
+           |val ${uncapitalisedName}ExtensionKey = new sttp.tapir.AttributeKey[${capitalisedName}Extension]("$packagePath.$objName.${capitalisedName}Extension")
+           |""".stripMargin
+      }
+      .mkString("\n")
+
     val mainObj = s"""|
         |package $packagePath
         |
@@ -70,8 +89,9 @@ object BasicGenerator {
         |
         |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs).getOrElse(""))}
         |
-        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
+        |${indent(2)(maybeSpecificationExtensionKeys)}
         |
+        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
         |}
         |""".stripMargin
     taggedObjs + (objName -> mainObj)
@@ -127,4 +147,11 @@ object BasicGenerator {
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
+
+  def strippedToCamelCase(string: String): String = string
+    .split("[^0-9a-zA-Z$_]")
+    .filter(_.nonEmpty)
+    .zipWithIndex
+    .map { case (part, 0) => part; case (part, _) => part.capitalize }
+    .mkString
 }

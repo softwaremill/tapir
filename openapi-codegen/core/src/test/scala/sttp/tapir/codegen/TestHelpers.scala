@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 
 import io.circe.Json
-import sttp.tapir.codegen.openapi.models._
+import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -762,5 +762,118 @@ object TestHelpers {
         Map()
       )
     )
+  )
+
+  val specificationExtensionYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: hello goodbye
+     |  version: '1.0'
+     |paths:
+     |  /hello:
+     |    x-custom-string-extension-on-path-any-type: foobar
+     |    x-custom-string-extension-on-path-double-type: 123
+     |    x-custom-string-extension-on-path: null
+     |    x-custom-list-extension-on-path:
+     |      - foo
+     |      - bar
+     |    x-custom-list-extension-on-path-any-type:
+     |      - string
+     |    x-custom-map-extension-on-path:
+     |      bazkey: bazval
+     |      quuxkey:
+     |        - quux1
+     |        - quux2
+     |    post:
+     |      responses: {}
+     |  /goodbye:
+     |    x-custom-string-extension-on-path-any-type: 123
+     |    x-custom-string-extension-on-path-double-type: 123.456
+     |    x-custom-string-extension-on-path: another string
+     |    x-custom-list-extension-on-path: []
+     |    x-custom-list-extension-on-path-any-type:
+     |      - 123
+     |    x-custom-map-extension-on-path: {}
+     |    x-custom-map-extension-on-path-single-value-type:
+     |      bazkey: bazval
+     |      quuxkey: quuxval
+     |    delete:
+     |      x-custom-string-extension-on-operation: bazquux
+     |      x-custom-list-extension-on-operation:
+     |        - baz
+     |        - quux
+     |      x-custom-map-extension-on-operation:
+     |        bazkey: bazval
+     |        quuxkey:
+     |          - quux1
+     |          - quux2
+     |      responses: {}""".stripMargin
+
+  val specificationExtensionDocs = OpenapiDocument(
+    "3.1.0",
+    OpenapiInfo("hello goodbye", "1.0"),
+    Seq(
+      OpenapiPath(
+        url = "/hello",
+        methods = Seq(OpenapiPathMethod(methodType = "post", parameters = Seq(), responses = Seq(), requestBody = None)),
+        specificationExtensions = Map(
+          "custom-string-extension-on-path-any-type" -> Json.fromString("foobar"),
+          "custom-string-extension-on-path-double-type" -> Json.fromLong(123L),
+          "custom-list-extension-on-path" -> Json.fromValues(
+            Vector(Json.fromString("foo"), Json.fromString("bar"))
+          ),
+          "custom-list-extension-on-path-any-type" -> Json.arr(Json.fromString("string")),
+          "custom-map-extension-on-path" -> Json.fromFields(
+            Map(
+              "bazkey" -> Json.fromString("bazval"),
+              "quuxkey" -> Json.fromValues(
+                Vector(Json.fromString("quux1"), Json.fromString("quux2"))
+              )
+            )
+          )
+        )
+      ),
+      OpenapiPath(
+        url = "/goodbye",
+        methods = Seq(
+          OpenapiPathMethod(
+            methodType = "delete",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            specificationExtensions = Map(
+              "custom-string-extension-on-operation" -> Json.fromString("bazquux"),
+              "custom-list-extension-on-operation" -> Json.fromValues(
+                Vector(Json.fromString("baz"), Json.fromString("quux"))
+              ),
+              "custom-map-extension-on-operation" -> Json.fromFields(
+                Map(
+                  "bazkey" -> Json.fromString("bazval"),
+                  "quuxkey" -> Json.fromValues(
+                    Vector(Json.fromString("quux1"), Json.fromString("quux2"))
+                  )
+                )
+              )
+            )
+          )
+        ),
+        specificationExtensions = Map(
+          "custom-string-extension-on-path-any-type" -> Json.fromLong(123L),
+          "custom-string-extension-on-path-double-type" -> Json.fromDouble(123.456d).get,
+          "custom-string-extension-on-path" -> Json.fromString("another string"),
+          "custom-list-extension-on-path" -> Json.arr(),
+          "custom-list-extension-on-path-any-type" -> Json.arr(Json.fromLong(123L)),
+          "custom-map-extension-on-path" -> Json.fromFields(Map.empty),
+          "custom-map-extension-on-path-single-value-type" -> Json.fromFields(
+            Map(
+              "bazkey" -> Json.fromString("bazval"),
+              "quuxkey" -> Json.fromString("quuxval")
+            )
+          )
+        )
+      )
+    ),
+    None
   )
 }

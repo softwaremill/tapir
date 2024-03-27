@@ -250,4 +250,39 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     generatedCode shouldCompile ()
   }
 
+  it should "generate attributes for specification extensions on path and operation objects" in {
+    val doc = TestHelpers.specificationExtensionDocs
+    val generatedCode = BasicGenerator.generateObjects(
+      doc,
+      "sttp.tapir.generated",
+      "TapirGeneratedEndpoints",
+      targetScala3 = false,
+      useHeadTagForObjectNames = false,
+      jsonSerdeLib = "circe"
+    )("TapirGeneratedEndpoints")
+    generatedCode shouldCompile ()
+    val expectedAttrDecls = Seq(
+      """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",
+      """.attribute[CustomStringExtensionOnOperationExtension](customStringExtensionOnOperationExtensionKey, "bazquux")""",
+      """.attribute[CustomListExtensionOnOperationExtension](customListExtensionOnOperationExtensionKey, Vector("baz", "quux"))""",
+      """.attribute[CustomMapExtensionOnPathExtension](customMapExtensionOnPathExtensionKey, Map("bazkey" -> "bazval", "quuxkey" -> Vector("quux1", "quux2"))""",
+      """.attribute[CustomStringExtensionOnPathDoubleTypeExtension](customStringExtensionOnPathDoubleTypeExtensionKey, 123L)"""
+    )
+    expectedAttrDecls foreach (decl => generatedCode should include(decl))
+    generatedCode should include(
+      """val customMapExtensionOnOperationExtensionKey = new sttp.tapir.AttributeKey[CustomMapExtensionOnOperationExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.CustomMapExtensionOnOperationExtension")""".stripMargin
+    )
+    val expectedKeyDeclarations = Seq(
+      """type CustomMapExtensionOnOperationExtension = Map[String, Any]""",
+      """type CustomListExtensionOnPathAnyTypeExtension = Seq[Any]""",
+      """type CustomMapExtensionOnPathSingleValueTypeExtension = Map[String, String]""",
+      """type CustomListExtensionOnOperationExtension = Seq[String]""",
+      """type CustomStringExtensionOnPathAnyTypeExtension = Any""",
+      """type CustomStringExtensionOnPathDoubleTypeExtension = Double""",
+      """type CustomListExtensionOnPathExtension = Seq[String]""",
+      """type CustomStringExtensionOnPathExtension = String"""
+    )
+    expectedKeyDeclarations foreach (decl => generatedCode should include(decl))
+  }
+
 }

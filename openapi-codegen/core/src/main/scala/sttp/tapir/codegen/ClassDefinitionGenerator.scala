@@ -1,9 +1,8 @@
 package sttp.tapir.codegen
 
-import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, Renderer}
+import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, DefaultValueRenderer}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
@@ -267,7 +266,8 @@ class ClassDefinitionGenerator {
         val tpe = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson)
         val fixedKey = fixKey(key)
         val optional = schemaType.nullable || !obj.required.contains(key)
-        val maybeExplicitDefault = maybeDefault.map(" = " + Renderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+        val maybeExplicitDefault =
+          maybeDefault.map(" = " + DefaultValueRenderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
         val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
         s"$fixedKey: $tpe$default"
       }

@@ -1,14 +1,15 @@
 package sttp.tapir.codegen
-import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import io.circe.Json
+import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
   OpenapiSchemaRef,
-  OpenapiSchemaAny,
   OpenapiSchemaSimpleType
 }
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType}
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, SpecificationExtensionRenderer}
 import sttp.tapir.codegen.util.JavaEscape
 
 case class Location(path: String, method: String) {
@@ -68,6 +69,18 @@ class EndpointGenerator {
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
+
+        val attributeString = {
+          val pathAttributes = attributes(p.specificationExtensions)
+          val operationAttributes = attributes(m.specificationExtensions)
+          (pathAttributes, operationAttributes) match {
+            case (None, None)                          => ""
+            case (Some(atts), None)                    => indent(2)(atts)
+            case (None, Some(atts))                    => indent(2)(atts)
+            case (Some(pathAtts), Some(operationAtts)) => indent(2)(pathAtts + "\n" + operationAtts)
+          }
+        }
+
         val definition =
           s"""|endpoint
               |  .${m.methodType}
@@ -76,15 +89,10 @@ class EndpointGenerator {
               |${indent(2)(ins(m.resolvedParameters, m.requestBody))}
               |${indent(2)(outs(m.responses))}
               |${indent(2)(tags(m.tags))}
+              |$attributeString
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
-        val name = m.operationId
-          .getOrElse(m.methodType + p.url.capitalize)
-          .split("[^0-9a-zA-Z$_]")
-          .filter(_.nonEmpty)
-          .zipWithIndex
-          .map { case (part, 0) => part; case (part, _) => part.capitalize }
-          .mkString
+        val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
         val queryParamRefs = m.resolvedParameters
           .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
@@ -195,6 +203,17 @@ class EndpointGenerator {
     // .tags(List("A", "B"))
     openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
+
+  private def attributes(atts: Map[String, Json]): Option[String] = if (atts.nonEmpty) Some {
+    atts
+      .map { case (k, v) =>
+        val camelCaseK = strippedToCamelCase(k)
+        val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
+        s""".attribute[${camelCaseK.capitalize}Extension](${uncapitalisedName}ExtensionKey, ${SpecificationExtensionRenderer.renderValue(v)})"""
+      }
+      .mkString("\n")
+  }
+  else None
 
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
