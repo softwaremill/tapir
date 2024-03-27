@@ -7,26 +7,38 @@ import fs2.Stream
 import fs2.interop.reactivestreams._
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.DefaultHttpContent
+import org.scalactic.source.Position
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalactic.source.Position
 
+import java.io.InputStream
+import scala.annotation.tailrec
 import scala.util.Random
 
 class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
   private implicit def runtime: IORuntime = IORuntime.global
 
+  private def readAll(is: InputStream, batchSize: Int): Array[Byte] = {
+    val buf = Unpooled.buffer(batchSize)
+    @tailrec def writeLoop(): Array[Byte] = buf.writeBytes(is, batchSize) match {
+      case -1 => buf.array().take(buf.readableBytes())
+      case _  => writeLoop()
+    }
+    writeLoop()
+  }
+
   private def testReading(
-      size: Int,
-      chunkLimit: Int = 1024,
+      totalSize: Int,
+      publishedChunkLimit: Int,
+      readBatchSize: Int,
       maxBufferedChunks: Int = 1
   )(implicit pos: Position): Unit = {
-    val bytes = new Array[Byte](size)
+    val bytes = new Array[Byte](totalSize)
     Random.nextBytes(bytes)
 
     val publisherResource = Stream
       .emits(bytes)
-      .chunkLimit(chunkLimit)
+      .chunkLimit(publishedChunkLimit)
       .map(ch => new DefaultHttpContent(Unpooled.wrappedBuffer(ch.toByteBuffer)))
       .covary[IO]
       .toUnicastPublisher
@@ -35,7 +47,7 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
       IO {
         val subscriberInputStream = new SubscriberInputStream(maxBufferedChunks)
         publisher.subscribe(subscriberInputStream)
-        subscriberInputStream.readAllBytes() shouldBe bytes
+        readAll(subscriberInputStream, readBatchSize) shouldBe bytes
       }
     }
 
@@ -43,23 +55,29 @@ class SubscriberInputStreamTest extends AnyFreeSpec with Matchers {
   }
 
   "empty stream" in {
-    testReading(0)
+    testReading(totalSize = 0, publishedChunkLimit = 1024, readBatchSize = 1024)
   }
 
-  "single chunk stream" in {
-    testReading(10)
+  "single chunk stream, one read batch" in {
+    testReading(totalSize = 10, publishedChunkLimit = 1024, readBatchSize = 1024)
   }
 
-  "multiple chunks" in {
-    testReading(100, 10)
+  "single chunk stream, multiple read batches" in {
+    testReading(totalSize = 100, publishedChunkLimit = 1024, readBatchSize = 10)
+    testReading(totalSize = 100, publishedChunkLimit = 1024, readBatchSize = 11)
   }
 
-  "multiple chunks with larger buffer" in {
-    testReading(100, 10, maxBufferedChunks = 5)
+  "multiple chunks, read batch larger than chunk" in {
+    testReading(totalSize = 100, publishedChunkLimit = 10, readBatchSize = 1024)
+    testReading(totalSize = 105, publishedChunkLimit = 10, readBatchSize = 1024)
   }
 
-  "multiple chunks with smaller last chunk" in {
-    testReading(105, 10)
+  "multiple chunks, read batch smaller than chunk" in {
+    testReading(totalSize = 105, publishedChunkLimit = 20, readBatchSize = 17)
+  }
+
+  "multiple chunks, large publishing buffer" in {
+    testReading(totalSize = 105, publishedChunkLimit = 10, readBatchSize = 1024, maxBufferedChunks = 5)
   }
 
   "closing the stream should cancel the subscription" in {
