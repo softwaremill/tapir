@@ -18,6 +18,10 @@ val scala2_12 = "2.12.19"
 val scala2_13 = "2.13.13"
 val scala3 = "3.3.3"
 
+// The `idea.managed` property is set automatically by IntelliJ when it runs sbt for build or import
+val ideaManaged = System.getProperty("idea.managed", "false").toBoolean
+val ideScalaVersion = if(ideaManaged) scala2_13 else scala3
+
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
@@ -67,8 +71,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     }
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using enableMimaSettings
-  ideSkipProject := (scalaVersion.value == scala2_12) ||
-    (scalaVersion.value == scala2_13) ||
+  ideSkipProject := (scalaVersion.value != ideScalaVersion) ||
     thisProjectRef.value.project.contains("Native") ||
     thisProjectRef.value.project.contains("JS"),
   bspEnabled := !ideSkipProject.value,
