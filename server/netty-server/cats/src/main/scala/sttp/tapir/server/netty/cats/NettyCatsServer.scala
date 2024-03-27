@@ -8,13 +8,14 @@ import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.util.concurrent.DefaultEventExecutor
+import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, ReactiveWebSocketHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -23,17 +24,15 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import sttp.capabilities.WebSockets
-import sttp.tapir.server.netty.internal.ReactiveWebSocketHandler
 
 case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
-  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F]): NettyCatsServer[F] = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
+  def addEndpoint(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): NettyCatsServer[F] = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F] with WebSockets, overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
     addEndpoints(List(se), overrideOptions)
   def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F], F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(overrideOptions).toRoute(ses)
   )
 
