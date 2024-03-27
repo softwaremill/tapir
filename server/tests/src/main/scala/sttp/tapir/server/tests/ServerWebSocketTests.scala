@@ -281,7 +281,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           .mapDecode {
             case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
             case WebSocketFrame.Pong(payload) => 
-              println(payload.length)
               stringCodec.decode(new String(payload))
             case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
           }(a => WebSocketFrame.text(stringCodec.encode(a)))
