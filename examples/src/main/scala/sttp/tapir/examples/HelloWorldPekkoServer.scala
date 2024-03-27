@@ -31,7 +31,7 @@ object HelloWorldPekkoServer extends App {
     println("Got result: " + result)
 
     assert(result == "Hello, Frodo!")
-    
+
     binding
   }
 

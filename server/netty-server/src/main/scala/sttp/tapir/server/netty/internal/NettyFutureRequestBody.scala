@@ -26,7 +26,7 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(()) // Empty request
     }
-  
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = 
+
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
 }

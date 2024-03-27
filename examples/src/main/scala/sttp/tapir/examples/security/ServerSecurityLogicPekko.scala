@@ -83,7 +83,7 @@ object ServerSecurityLogicPekko extends App {
     assert(testWith("hello", "Cześć", "berries") == "Cześć, Papa Smurf!")
     assert(testWith("hello", "Hello", "apple") == "1001")
     assert(testWith("hello", "Hello", "smurf") == "Not saying hello to Gargamel!")
-    
+
     binding
   }
 

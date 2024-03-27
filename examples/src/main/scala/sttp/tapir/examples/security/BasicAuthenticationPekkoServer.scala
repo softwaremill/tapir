@@ -40,7 +40,7 @@ object BasicAuthenticationPekkoServer extends App {
     println("Got result: " + result)
     assert(result.code == StatusCode.Ok)
     assert(result.body == Right("Hello, user!"))
-    
+
     binding
   }
 

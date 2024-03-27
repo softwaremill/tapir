@@ -27,7 +27,7 @@ class VertxServerTest extends TestSuite {
       def drainVertx[T](source: ReadStream[T]): Future[Unit] = {
         val p = Promise[Unit]()
         // Handler for stream data - do nothing with the data
-        val dataHandler: Handler[T] = (_: T) => () 
+        val dataHandler: Handler[T] = (_: T) => ()
 
         // End handler - complete the promise when the stream ends
         val endHandler: Handler[Void] = (_: Void) => p.success(())

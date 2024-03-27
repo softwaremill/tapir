@@ -15,9 +15,9 @@ import cats.effect.implicits._
 
 private[http4s] object Http4sWebSockets {
   def pipeToBody[F[_]: Temporal, REQ, RESP](
-                                             pipe: Pipe[F, REQ, RESP],
-                                             o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
-                                           ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
+      pipe: Pipe[F, REQ, RESP],
+      o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+  ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
     if ((!o.autoPongOnPing) && o.autoPing.isEmpty) {
       // fast track: lift Http4sWebSocketFrames into REQ, run through pipe, convert RESP back to Http4sWebSocketFrame
 
@@ -36,7 +36,8 @@ private[http4s] object Http4sWebSockets {
           .through(pipe)
           .mapChunks(_.map(r => frameToHttp4sFrame(o.responses.encode(r))))
           .append(Stream(frameToHttp4sFrame(WebSocketFrame.close)))
-    }.pure[F] else {
+    }.pure[F]
+    else {
       // concurrently merge business logic response, autoPings, autoPongOnPing
       // use fs2.Channel to perform the merge (more efficient than Stream#mergeHaltL / Stream#parJoin)
 
@@ -75,20 +76,20 @@ private[http4s] object Http4sWebSockets {
 
   private def http4sFrameToFrame(f: Http4sWebSocketFrame): WebSocketFrame =
     f match {
-      case t: Http4sWebSocketFrame.Text => WebSocketFrame.Text(t.str, t.last, None)
-      case x: Http4sWebSocketFrame.Ping => WebSocketFrame.Ping(x.data.toArray)
-      case x: Http4sWebSocketFrame.Pong => WebSocketFrame.Pong(x.data.toArray)
+      case t: Http4sWebSocketFrame.Text  => WebSocketFrame.Text(t.str, t.last, None)
+      case x: Http4sWebSocketFrame.Ping  => WebSocketFrame.Ping(x.data.toArray)
+      case x: Http4sWebSocketFrame.Pong  => WebSocketFrame.Pong(x.data.toArray)
       case c: Http4sWebSocketFrame.Close => WebSocketFrame.Close(c.closeCode, "")
-      case _ => WebSocketFrame.Binary(f.data.toArray, f.last, None)
+      case _                             => WebSocketFrame.Binary(f.data.toArray, f.last, None)
     }
 
   private def frameToHttp4sFrame(w: WebSocketFrame): Http4sWebSocketFrame =
     w match {
-      case x: WebSocketFrame.Text => Http4sWebSocketFrame.Text(x.payload, x.finalFragment)
+      case x: WebSocketFrame.Text   => Http4sWebSocketFrame.Text(x.payload, x.finalFragment)
       case x: WebSocketFrame.Binary => Http4sWebSocketFrame.Binary(ByteVector(x.payload), x.finalFragment)
-      case x: WebSocketFrame.Ping => Http4sWebSocketFrame.Ping(ByteVector(x.payload))
-      case x: WebSocketFrame.Pong => Http4sWebSocketFrame.Pong(ByteVector(x.payload))
-      case x: WebSocketFrame.Close => Http4sWebSocketFrame.Close(x.statusCode, x.reasonText).fold(throw _, identity)
+      case x: WebSocketFrame.Ping   => Http4sWebSocketFrame.Ping(ByteVector(x.payload))
+      case x: WebSocketFrame.Pong   => Http4sWebSocketFrame.Pong(ByteVector(x.payload))
+      case x: WebSocketFrame.Close  => Http4sWebSocketFrame.Close(x.statusCode, x.reasonText).fold(throw _, identity)
     }
 
   private def optionallyConcatenateFrames[F[_]](s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] =
@@ -96,14 +97,14 @@ private[http4s] object Http4sWebSockets {
       type Accumulator = Option[Either[Array[Byte], String]]
 
       s.mapAccumulate(None: Accumulator) {
-        case (None, f: WebSocketFrame.Ping) => (None, Some(f))
-        case (None, f: WebSocketFrame.Pong) => (None, Some(f))
-        case (None, f: WebSocketFrame.Close) => (None, Some(f))
-        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment => (None, Some(f))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment => (None, Some(f.copy(payload = acc ++ f.payload)))
+        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
+        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
         case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment => (None, Some(f.copy(payload = acc + f.payload)))
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment => (Some(Right(acc + f.payload)), None)
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
         case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
       }.collect { case (_, Some(f)) => f }
     } else s
@@ -112,21 +113,21 @@ private[http4s] object Http4sWebSockets {
     if (doIgnore) {
       s.filter {
         case _: WebSocketFrame.Pong => false
-        case _ => true
+        case _                      => true
       }
     } else s
   }
 
-  private def optionallyAutoPong[F[_] : Monad](
-                                                s: Stream[F, WebSocketFrame],
-                                                c: Channel[F, Chunk[Http4sWebSocketFrame]],
-                                                doAuto: Boolean
-                                              ): Stream[F, WebSocketFrame] =
+  private def optionallyAutoPong[F[_]: Monad](
+      s: Stream[F, WebSocketFrame],
+      c: Channel[F, Chunk[Http4sWebSocketFrame]],
+      doAuto: Boolean
+  ): Stream[F, WebSocketFrame] =
     if (doAuto) {
       val trueF = true.pure[F]
       s.evalFilter {
         case ping: WebSocketFrame.Ping => c.send(Chunk.singleton(frameToHttp4sFrame(WebSocketFrame.Pong(ping.payload)))).map(_ => false)
-        case _ => trueF
+        case _                         => trueF
       }
     } else s
 
@@ -134,7 +135,7 @@ private[http4s] object Http4sWebSockets {
     if (!doDecodeClose) {
       s.takeWhile {
         case _: Http4sWebSocketFrame.Close => false
-        case _ => true
+        case _                             => true
       }
     } else s
 }

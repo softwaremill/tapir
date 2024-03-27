@@ -41,7 +41,7 @@ object NimaServerOptions {
     if (log.isDebugEnabled) {
       exOpt match {
         case Some(e) => log.debug(msg, e)
-        case None => log.debug(msg)
+        case None    => log.debug(msg)
       }
     }
 }

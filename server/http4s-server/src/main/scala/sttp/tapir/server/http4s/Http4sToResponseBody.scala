@@ -41,26 +41,22 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
   private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): (EntityBody[F], Option[Long]) = {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
-        val bytes = r.toString.getBytes(charset)
-        (fs2.Stream.chunk(Chunk.array(bytes)), Some(bytes.length))
+        val bytes = r.toString.getBytes(charset)(fs2.Stream.chunk(Chunk.array(bytes)), Some(bytes.length))
       case RawBodyType.ByteArrayBody   => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
       case RawBodyType.ByteBufferBody  => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
       case RawBodyType.InputStreamBody => (inputStreamToFs2(() => r), None)
       case RawBodyType.InputStreamRangeBody =>
         val fs2Stream = r.range
           .map(range => inputStreamToFs2(r.inputStreamFromRangeStart).take(range.contentLength))
-          .getOrElse(inputStreamToFs2(r.inputStream))
-        (fs2Stream, None)
+          .getOrElse(inputStreamToFs2(r.inputStream))(fs2Stream, None)
       case RawBodyType.FileBody =>
         val tapirFile = r
         val stream = tapirFile.range
           .flatMap(r => r.startAndEnd.map(s => Files[F].readRange(tapirFile.file.toPath, r.contentLength.toInt, s._1, s._2)))
-          .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))
-        (stream, Some(tapirFile.file.length))
+          .getOrElse(Files[F].readAll(tapirFile.file.toPath, serverOptions.ioChunkSize))(stream, Some(tapirFile.file.length))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
-        val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
-        (body, None)
+        val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body(body, None)
     }
   }
 

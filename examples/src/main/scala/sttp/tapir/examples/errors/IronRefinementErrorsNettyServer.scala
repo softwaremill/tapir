@@ -37,7 +37,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   // Decoder throwing custom exception when refinement fails
   inline given (using inline constraint: Constraint[Int, Positive]): Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
     unrefinedValue.refineEither[Positive] match
-      case Right(value) => value
+      case Right(value)       => value
       case Left(errorMessage) => throw IronException(s"Could not refine value $unrefinedValue: $errorMessage")
   )
 
@@ -58,8 +58,8 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   // and we can add the failure details to the error message.
   private def failureDetailMessage(failure: DecodeResult.Failure): Option[String] = failure match {
     case Error(_, JsonDecodeException(_, IronException(errorMessage))) => Some(errorMessage)
-    case Error(_, IronException(errorMessage)) => Some(errorMessage)
-    case other => FailureMessages.failureDetailMessage(other)
+    case Error(_, IronException(errorMessage))                         => Some(errorMessage)
+    case other                                                         => FailureMessages.failureDetailMessage(other)
   }
 
   private def failureMessage(ctx: DecodeFailureContext): String = {

@@ -16,8 +16,7 @@ private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) exte
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val str = v.asInstanceOf[String]
-        val r = if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else str
-        (r, Some(str.length.toLong))
+        val r = if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else str(r, Some(str.length.toLong))
 
       case RawBodyType.ByteArrayBody =>
         val bytes = v.asInstanceOf[Array[Byte]]

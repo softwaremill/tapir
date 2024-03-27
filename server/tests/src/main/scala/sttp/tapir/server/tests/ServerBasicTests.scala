@@ -787,7 +787,6 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.code shouldBe StatusCode.PayloadTooLarge
         }
       },
-
       testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(

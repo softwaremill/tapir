@@ -18,8 +18,7 @@ private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) exte
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val str = v.asInstanceOf[String]
-        val r = if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else str
-        (r, Some(str.length.toLong))
+        val r = if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else str(r, Some(str.length.toLong))
 
       case RawBodyType.ByteArrayBody =>
         val bytes = v.asInstanceOf[Array[Byte]]
@@ -34,15 +33,16 @@ private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) exte
       case RawBodyType.InputStreamBody =>
         val stream = v.asInstanceOf[InputStream]
         val r =
-          if (options.encodeResponseBody) Base64.getEncoder.encodeToString(stream.readAllBytes()) else new String(stream.readAllBytes())
-        (r, None)
+          if (options.encodeResponseBody) Base64.getEncoder.encodeToString(stream.readAllBytes()) else new String(stream.readAllBytes())(
+            r,
+            None
+          )
       case RawBodyType.InputStreamRangeBody =>
         val bytes: Array[Byte] = v.range
           .map(r => v.inputStreamFromRangeStart().readNBytes(r.contentLength.toInt))
           .getOrElse(v.inputStream().readAllBytes())
         val body =
-          if (options.encodeResponseBody) Base64.getEncoder.encodeToString(bytes) else new String(bytes)
-        (body, Some(bytes.length.toLong))
+          if (options.encodeResponseBody) Base64.getEncoder.encodeToString(bytes) else new String(bytes)(body, Some(bytes.length.toLong))
 
       case RawBodyType.FileBody         => throw new UnsupportedOperationException
       case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException

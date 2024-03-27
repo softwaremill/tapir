@@ -49,7 +49,7 @@ object NettyZioServerOptions {
 
   private def debugLog[R](msg: String, exOpt: Option[Throwable]): RIO[R, Unit] =
     exOpt match {
-      case None => ZIO.logDebug(msg)
+      case None     => ZIO.logDebug(msg)
       case Some(ex) => ZIO.logDebugCause(msg, Cause.fail(ex))
     }
 

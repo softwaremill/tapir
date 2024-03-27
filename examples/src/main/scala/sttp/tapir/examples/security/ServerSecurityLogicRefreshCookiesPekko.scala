@@ -64,7 +64,7 @@ object ServerSecurityLogicRefreshCookiesPekko extends App {
 
     assert(response.body == "Welcome, Steve!")
     assert(response.unsafeCookies.map(_.value).toList == List("new token"))
-    
+
     binding
   }
 

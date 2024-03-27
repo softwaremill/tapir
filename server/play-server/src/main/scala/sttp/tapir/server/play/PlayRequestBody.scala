@@ -127,7 +127,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
                 charset(partType),
                 () => FileIO.fromPath(f.ref.path),
                 Some(f.ref.toFile),
-                maxBytes = None,
+                maxBytes = None
               ).map(body =>
                 Some(
                   Part(

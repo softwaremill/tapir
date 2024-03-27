@@ -65,8 +65,7 @@ class ZioHttpServerTest extends TestSuite {
     new FutureOutcome(outcome.toFuture.flatMap {
       case Exceptional(e) =>
         println(s"Test ${test.name} failed, retrying.")
-        e.printStackTrace()
-        (if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
+        e.printStackTrace()(if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
       case other => Future.successful(other)
     })
   }

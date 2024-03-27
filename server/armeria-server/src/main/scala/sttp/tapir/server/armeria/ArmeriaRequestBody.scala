@@ -25,7 +25,10 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     streamCompatible
-      .fromArmeriaStream(armeriaCtx(serverRequest).request().filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]], maxBytes)
+      .fromArmeriaStream(
+        armeriaCtx(serverRequest).request().filter(x => x.isInstanceOf[HttpData]).asInstanceOf[StreamMessage[HttpData]],
+        maxBytes
+      )
       .asInstanceOf[streams.BinaryStream]
   }
 

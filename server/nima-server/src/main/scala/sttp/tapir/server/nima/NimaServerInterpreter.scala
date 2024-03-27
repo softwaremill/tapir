@@ -49,8 +49,7 @@ trait NimaServerInterpreter {
 
         // If endpoint matching fails, we return control to Nima
         case RequestResult.Failure(_) =>
-          helidonResponse.next()
-          ()
+          helidonResponse.next()()
       }
     }
   }

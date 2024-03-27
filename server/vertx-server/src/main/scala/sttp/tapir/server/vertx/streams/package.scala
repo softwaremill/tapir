@@ -18,7 +18,7 @@ package object streams {
     override def asReadStream(readStream: ReadStream[Buffer]): ReadStream[Buffer] =
       readStream
 
-    override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): ReadStream[Buffer] = 
+    override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): ReadStream[Buffer] =
       maxBytes.map(new LimitedReadStream(readStream, _)).getOrElse(readStream)
 
     override def webSocketPipe[REQ, RESP](
