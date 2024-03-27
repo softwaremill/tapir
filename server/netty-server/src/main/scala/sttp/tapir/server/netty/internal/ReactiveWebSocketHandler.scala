@@ -1,5 +1,6 @@
 package sttp.tapir.server.netty.internal
 
+import io.netty.buffer.Unpooled
 import io.netty.channel.group.ChannelGroup
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http._
@@ -104,7 +105,11 @@ class ReactiveWebSocketHandler[F[_]](
                       r.autoPing.foreach { case (interval, pingMsg) =>
                         ctx
                           .pipeline()
-                          .addAfter(WebSocketControlFrameHandlerName, WebSocketAutoPingHandlerName, new WebSocketAutoPingHandler(interval, pingMsg))
+                          .addAfter(
+                            WebSocketControlFrameHandlerName,
+                            WebSocketAutoPingHandlerName,
+                            new WebSocketAutoPingHandler(interval, pingMsg)
+                          )
                       }
                       // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
                       r.channelPromise.setSuccess()
@@ -121,7 +126,11 @@ class ReactiveWebSocketHandler[F[_]](
                     }
                     case otherContent =>
                       logger.error(s"Unexpected response content: $otherContent")
-                      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                      val res = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1,
+                        HttpResponseStatus.BAD_REQUEST,
+                        Unpooled.wrappedBuffer("WebSocket handshake received on a regular HTTP endpoint".getBytes)
+                      )
                       res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
                       otherContent.channelPromise.setFailure(new IllegalStateException("Unexpected response content"))
                       val _ = ctx.writeAndFlush(res)
