@@ -7,6 +7,7 @@ import sttp.capabilities.StreamMaxLengthExceededException
 
 import java.io.{IOException, InputStream}
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.locks.ReentrantLock
 import scala.annotation.tailrec
 import scala.concurrent.Promise
 
@@ -14,19 +15,29 @@ import scala.concurrent.Promise
   * @param maxBufferedChunks
   *   maximum number of unread chunks that can be buffered before blocking the publisher
   */
-private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1) 
-  extends InputStream with Subscriber[HttpContent] {
-  
+private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1) extends InputStream with Subscriber[HttpContent] {
+
   require(maxBufferedChunks > 0)
 
   import SubscriberInputStream._
 
   // volatile because used in both InputStream & Subscriber methods
   @volatile private[this] var closed = false
+
   // Calls on the subscription must be synchronized in order to satisfy the Reactive Streams spec
   // (https://github.com/reactive-streams/reactive-streams-jvm?tab=readme-ov-file#2-subscriber-code - rule 7)
   // because they are called both from InputStream & Subscriber methods.
   private[this] var subscription: Subscription = _
+  private[this] val lock = new ReentrantLock
+
+  private def locked[T](code: => T): T =
+    try {
+      lock.lock()
+      code
+    } finally {
+      lock.unlock()
+    }
+
   private[this] var currentItem: Item = _
   // the queue serves as a buffer to allow for possible parallelism between the subscriber and the publisher
   private val queue = new LinkedBlockingQueue[Item](maxBufferedChunks + 1) // +1 to have a spot for End/Error
@@ -35,7 +46,7 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1)
     if (currentItem eq null) {
       currentItem = if (blocking) queue.take() else queue.poll()
       currentItem match {
-        case _: Chunk => synchronized(subscription.request(1))
+        case _: Chunk => locked(subscription.request(1))
         case _        =>
       }
     }
@@ -71,7 +82,7 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1)
       }
 
   override def close(): Unit = if (!closed) {
-    synchronized(subscription.cancel())
+    locked(subscription.cancel())
     closed = true
     clearQueue()
   }
@@ -84,7 +95,7 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1)
       case _ =>
     }
 
-  override def onSubscribe(s: Subscription): Unit = synchronized {
+  override def onSubscribe(s: Subscription): Unit = locked {
     if (s eq null) {
       throw new NullPointerException("Subscription must not be null")
     }
@@ -97,7 +108,7 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1)
       // This should be impossible according to the Reactive Streams spec,
       // if it happens then it's a bug in the implementation of the subscriber of publisher
       chunk.release()
-      synchronized(subscription.cancel())
+      locked(subscription.cancel())
     } else if (closed) {
       clearQueue()
     }
