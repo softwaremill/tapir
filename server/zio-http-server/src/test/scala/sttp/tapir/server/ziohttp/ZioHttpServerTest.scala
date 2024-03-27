@@ -259,9 +259,6 @@ class ZioHttpServerTest extends TestSuite {
             interpreter,
             backend,
             basic = false,
-            staticContent = true,
-            multipart = false,
-            file = true,
             options = false
           ).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
