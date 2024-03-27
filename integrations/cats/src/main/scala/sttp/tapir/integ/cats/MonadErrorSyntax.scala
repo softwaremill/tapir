@@ -21,6 +21,8 @@ trait MonadErrorSyntax {
           })
 
         override def ensure[T](f: G[T], e: => G[Unit]): G[T] = fk(mef.ensure(gK(f), gK(e)))
+
+        override def blocking[T](t: => T): G[T] = fk(mef.blocking(t))
       }
   }
 }

@@ -19,5 +19,7 @@ object TestMonadError {
       rt.catchSome(h)
 
     override def ensure[T](f: TestEffect[T], e: => TestEffect[Unit]): TestEffect[T] = f.ensuring(e.ignore)
+
+    override def blocking[T](t: => T): TestEffect[T] = ZIO.attemptBlocking(t)
   }
 }

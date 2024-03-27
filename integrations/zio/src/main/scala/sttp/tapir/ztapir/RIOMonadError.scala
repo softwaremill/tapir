@@ -13,4 +13,5 @@ class RIOMonadError[R] extends MonadError[RIO[R, *]] {
   override def suspend[T](t: => RIO[R, T]): RIO[R, T] = ZIO.suspend(t)
   override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
   override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
+  override def blocking[T](t: => T): RIO[R, T] = ZIO.attemptBlocking(t)
 }
