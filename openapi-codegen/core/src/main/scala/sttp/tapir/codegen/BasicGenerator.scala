@@ -63,24 +63,22 @@ object BasicGenerator {
         headTag -> taggedObj
     }
 
-    val specificationExtensions = doc.paths
+    val maybeSpecificationExtensionKeys = doc.paths
       .flatMap { p =>
         p.specificationExtensions.toSeq ++ p.methods.flatMap(_.specificationExtensions.toSeq)
       }
       .groupBy(_._1)
-    val specificationExtensionWrapper = if (specificationExtensions.isEmpty) "" else "case class XSpecificationExtension[T](value: T)\n"
-    val maybeSpecificationExtensionKeys = specificationExtensions
       .map { case (keyName, pairs) =>
         val values = pairs.map(_._2)
         val `type` = SpecificationExtensionRenderer.renderCombinedType(values)
         val name = strippedToCamelCase(keyName)
         val uncapitalisedName = name.head.toLower + name.tail
         val capitalisedName = name.head.toUpper + name.tail
-        s"""type ${capitalisedName}X = ${`type`}
-           |val ${uncapitalisedName}XKey = new sttp.tapir.AttributeKey[XSpecificationExtension[${capitalisedName}X]]("$packagePath.$objName.XSpecificationExtension[$packagePath.$objName.${capitalisedName}X]")
+        s"""type ${capitalisedName}Extension = ${`type`}
+           |val ${uncapitalisedName}ExtensionKey = new sttp.tapir.AttributeKey[${capitalisedName}Extension]("$packagePath.$objName.${capitalisedName}Extension")
            |""".stripMargin
       }
-      .mkString(specificationExtensionWrapper, "\n", "")
+      .mkString("\n")
 
     val mainObj = s"""|
         |package $packagePath

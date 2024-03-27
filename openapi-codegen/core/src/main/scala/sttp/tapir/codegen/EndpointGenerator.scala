@@ -209,9 +209,7 @@ class EndpointGenerator {
       .map { case (k, v) =>
         val camelCaseK = strippedToCamelCase(k)
         val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
-        val extensionType = s"${camelCaseK.capitalize}X"
-        val wrappedValue = s"XSpecificationExtension[$extensionType](${SpecificationExtensionRenderer.renderValue(v)})"
-        s""".attribute[XSpecificationExtension[$extensionType]](${uncapitalisedName}XKey, $wrappedValue)"""
+        s""".attribute[${camelCaseK.capitalize}Extension](${uncapitalisedName}ExtensionKey, ${SpecificationExtensionRenderer.renderValue(v)})"""
       }
       .mkString("\n")
   }
