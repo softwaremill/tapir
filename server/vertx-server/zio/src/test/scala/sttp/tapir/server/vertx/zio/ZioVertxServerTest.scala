@@ -43,7 +43,14 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           partOtherHeaderSupport = false
         ).tests() ++ additionalTests() ++
         new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
-        new ServerWebSocketTests(createServerTest, ZioStreams, autoPing = true, failingPipe = true, handlePong = true) {
+        new ServerWebSocketTests(
+          createServerTest,
+          ZioStreams,
+          autoPing = true,
+          failingPipe = true,
+          handlePong = true,
+          rejectNonWsEndpoints = false
+        ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
         }.tests()

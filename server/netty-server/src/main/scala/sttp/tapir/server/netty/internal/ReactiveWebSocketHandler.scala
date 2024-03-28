@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.group.ChannelGroup
-import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
+import io.netty.channel.{ChannelFuture, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
@@ -69,16 +69,22 @@ class ReactiveWebSocketHandler[F[_]](
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
       res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-      val _ = ctx.writeAndFlush(res)
+      val _ = ctx.writeAndFlush(res).close()
     }
 
-    def rejectHandshakeForRegularEndpoint(content: NettyResponseContent): Unit = {
+    def rejectHandshakeForRegularEndpoint(content: Option[NettyResponseContent]): Unit = {
       val message = "Unexpected WebSocket handshake on a regular HTTP endpoint"
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(message.getBytes))
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, message.length())
       res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-      content.channelPromise.setFailure(new IllegalStateException("Unexpected response content"))
-      val _ = ctx.writeAndFlush(res)
+      content.foreach(_.channelPromise.setFailure(new IllegalStateException("Unexpected response content")))
+      val _ = ctx.writeAndFlush(res).close()
+    }
+
+    def replyNotFound(): Unit = {
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND)
+      res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+      val _ = ctx.writeAndFlush(res).close()
     }
 
     msg match {
@@ -94,7 +100,9 @@ class ReactiveWebSocketHandler[F[_]](
             }
         }
 
-        val _ = runningFuture.transform {
+        runningFuture.onComplete {
+          case Success(serverResponse) if serverResponse == ServerResponse.notFound =>
+            replyNotFound()
           case Success(serverResponse) =>
             try {
               serverResponse.body match {
@@ -104,28 +112,24 @@ class ReactiveWebSocketHandler[F[_]](
                     case r: ReactiveWebSocketProcessorNettyResponseContent =>
                       initWsPipeline(ctx, r, req)
                     case otherContent =>
-                      rejectHandshakeForRegularEndpoint(otherContent)
+                      rejectHandshakeForRegularEndpoint(Some(otherContent))
                   }
                 }
                 case None =>
-                  replyWithError500(new IllegalArgumentException("Missing response body, expected WebSocketProcessorNettyResponseContent"))
+                  rejectHandshakeForRegularEndpoint(content = None)
               }
-              Success(())
             } catch {
               case NonFatal(ex) =>
                 replyWithError500(ex)
-                Failure(ex)
             } finally {
               val _ = req.release()
             }
-          case Failure(NonFatal(ex)) =>
+          case Failure(ex) =>
             try {
               replyWithError500(ex)
-              Failure(ex)
             } finally {
               val _ = req.release()
             }
-          case Failure(fatalException) => Failure(fatalException)
         }(eventLoopContext)
 
       case other =>

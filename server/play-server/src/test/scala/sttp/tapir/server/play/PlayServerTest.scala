@@ -122,7 +122,14 @@ class PlayServerTest extends TestSuite {
         ).tests() ++
         new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
-        new ServerWebSocketTests(createServerTest, PekkoStreams, autoPing = false, failingPipe = true, handlePong = false) {
+        new ServerWebSocketTests(
+          createServerTest,
+          PekkoStreams,
+          autoPing = false,
+          failingPipe = true,
+          handlePong = false,
+          rejectNonWsEndpoints = false
+        ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++

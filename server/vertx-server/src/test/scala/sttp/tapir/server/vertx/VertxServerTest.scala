@@ -53,7 +53,14 @@ class VertxServerTest extends TestSuite {
           partContentTypeHeaderSupport = true,
           partOtherHeaderSupport = false
         ).tests() ++ new ServerStreamingTests(createServerTest).tests(VertxStreams)(drainVertx[Buffer]) ++
-        (new ServerWebSocketTests(createServerTest, VertxStreams, autoPing = false, failingPipe = false, handlePong = true) {
+        (new ServerWebSocketTests(
+          createServerTest,
+          VertxStreams,
+          autoPing = false,
+          failingPipe = false,
+          handlePong = true,
+          rejectNonWsEndpoints = false
+        ) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()
         }).tests()

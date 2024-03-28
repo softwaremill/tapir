@@ -55,7 +55,14 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
 
     new AllServerTests(createServerTest, interpreter, backend).tests() ++
       new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
-      new ServerWebSocketTests(createServerTest, ZioStreams, autoPing = true, failingPipe = false, handlePong = false) {
+      new ServerWebSocketTests(
+        createServerTest,
+        ZioStreams,
+        autoPing = true,
+        failingPipe = false,
+        handlePong = false,
+        rejectNonWsEndpoints = false
+      ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
       }.tests() ++

@@ -3,14 +3,16 @@ package sttp.tapir.server.tests
 import cats.effect.IO
 import cats.syntax.all._
 import io.circe.generic.auto._
-import org.scalatest.matchers.should.Matchers._
 import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.client3._
+import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir.model.UnsupportedWebSocketFrameException
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest._
@@ -19,14 +21,14 @@ import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.duration._
-import sttp.tapir.model.UnsupportedWebSocketFrameException
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
     val streams: S,
     autoPing: Boolean,
     failingPipe: Boolean,
-    handlePong: Boolean
+    handlePong: Boolean,
+    rejectNonWsEndpoints: Boolean
 )(implicit
     m: MonadError[F]
 ) extends EitherValues {
@@ -57,6 +59,21 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .get(baseUri.scheme("ws"))
         .send(backend)
         .map(_.body shouldBe Right(List("echo: test1", "echo: test2", Left(WebSocketFrame.Close(1000, "normal closure")))))
+    },
+    testServer(
+      endpoint.in("elsewhere").out(stringBody),
+      "WS handshake to a non-existing endpoint"
+    )((_: Unit) => pureResult("hello".asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test")
+            m1 <- ws.receiveText()
+          } yield m1
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map(_.code shouldBe StatusCode.NotFound)
     }, {
 
       val reqCounter = newRequestCounter[F]
@@ -202,9 +219,11 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .response(asString)
         .get(baseUri.scheme("http"))
         .send(backend)
-        .map(_.body shouldBe Left("Not a WS!"))
+        .map { r =>
+          r.body shouldBe Left("Not a WS!")
+        }
     }
-  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests
+  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ rejectNonWsEndpointsTests
 
   val autoPingTests =
     if (autoPing)
@@ -313,6 +332,42 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
+        }
+      )
+    else List.empty
+
+  val rejectNonWsEndpointsTests =
+    if (rejectNonWsEndpoints)
+      List(
+        testServer(
+          endpoint.out(stringBody),
+          "WS handshake to a non-WS endpoint"
+        )((_: Unit) => pureResult("hello".asRight[Unit])) { (backend, baseUri) =>
+          basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              for {
+                _ <- ws.sendText("test")
+                m1 <- ws.receiveText()
+              } yield List(m1)
+            })
+            .get(baseUri.scheme("ws"))
+            .send(backend)
+            .map(_.code shouldBe StatusCode.BadRequest)
+        },
+        testServer(
+          endpoint.out(emptyOutput),
+          "WS handshake to a non-WS endpoint with empty output" // to make sure this won't be treated as 404
+        )((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
+          basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              for {
+                _ <- ws.sendText("test")
+                m1 <- ws.receiveText()
+              } yield List(m1)
+            })
+            .get(baseUri.scheme("ws"))
+            .send(backend)
+            .map(_.code shouldBe StatusCode.BadRequest)
         }
       )
     else List.empty

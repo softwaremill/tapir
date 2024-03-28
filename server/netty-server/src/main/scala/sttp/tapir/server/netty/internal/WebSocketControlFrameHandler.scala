@@ -32,8 +32,7 @@ class NettyControlFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean, dec
         } else {
           // Responding with Close immediately
           val _ = ctx
-            .writeAndFlush(close)
-            .addListener(_ => { val _ = ctx.close() })
+            .writeAndFlush(close).close()
         }
       case other =>
         val _ = ctx.fireChannelRead(other)
