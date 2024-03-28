@@ -10,6 +10,7 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
+import sttp.tapir.server.netty.internal._
 
 import scala.concurrent.duration._
 
@@ -61,7 +62,7 @@ case class NettyConfig(
     sslContext: Option[SslContext],
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
-    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
+    initPipeline: NettyConfig => (ChannelPipeline, List[ChannelHandler]) => Unit,
     gracefulShutdownTimeout: Option[FiniteDuration],
     serverHeader: Option[String]
 ) {
@@ -96,7 +97,7 @@ case class NettyConfig(
   def eventLoopConfig(elc: EventLoopConfig): NettyConfig = copy(eventLoopConfig = elc)
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
-  def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
+  def initPipeline(f: NettyConfig => (ChannelPipeline, List[ChannelHandler]) => Unit): NettyConfig = copy(initPipeline = f)
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
@@ -105,6 +106,8 @@ case class NettyConfig(
 }
 
 object NettyConfig {
+  val StreamsHandlerName = "streamsHandler"
+
   def default: NettyConfig = NettyConfig(
     host = "localhost",
     port = 8080,
@@ -124,11 +127,11 @@ object NettyConfig {
     serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
   )
 
-  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
+  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handlers: List[ChannelHandler]): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
-    pipeline.addLast(new HttpServerCodec())
-    pipeline.addLast(new HttpStreamsServerHandler())
-    pipeline.addLast(handler)
+    pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
+    pipeline.addLast(StreamsHandlerName, new HttpStreamsServerHandler())
+    handlers.foreach(pipeline.addLast(_))
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()
   }

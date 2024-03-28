@@ -27,7 +27,7 @@ class VertxServerTest extends TestSuite {
       def drainVertx[T](source: ReadStream[T]): Future[Unit] = {
         val p = Promise[Unit]()
         // Handler for stream data - do nothing with the data
-        val dataHandler: Handler[T] = (_: T) => () 
+        val dataHandler: Handler[T] = (_: T) => ()
 
         // End handler - complete the promise when the stream ends
         val endHandler: Handler[Void] = (_: Void) => p.success(())
@@ -53,7 +53,13 @@ class VertxServerTest extends TestSuite {
           partContentTypeHeaderSupport = true,
           partOtherHeaderSupport = false
         ).tests() ++ new ServerStreamingTests(createServerTest).tests(VertxStreams)(drainVertx[Buffer]) ++
-        (new ServerWebSocketTests(createServerTest, VertxStreams) {
+        (new ServerWebSocketTests(
+          createServerTest,
+          VertxStreams,
+          autoPing = false,
+          failingPipe = false,
+          handlePong = true
+        ) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()
         }).tests()

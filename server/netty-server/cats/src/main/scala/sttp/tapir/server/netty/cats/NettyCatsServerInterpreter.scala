@@ -14,12 +14,13 @@ import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, Serve
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.cats.internal.NettyCatsRequestBody
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.capabilities.WebSockets
 
 trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
   def nettyServerOptions: NettyCatsServerOptions[F]
 
-  def toRoute(ses: List[ServerEndpoint[Fs2Streams[F], F]]): Route[F] = {
+  def toRoute(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): Route[F] = {
 
     implicit val monad: MonadError[F] = new CatsMonadError[F]
     val runAsync = new RunAsync[F] {
@@ -31,7 +32,7 @@ trait NettyCatsServerInterpreter[F[_]] {
     val createFile = nettyServerOptions.createFile
     val deleteFile = nettyServerOptions.deleteFile
 
-    val serverInterpreter = new ServerInterpreter[Fs2Streams[F], F, NettyResponse, Fs2Streams[F]](
+    val serverInterpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, F, NettyResponse, Fs2Streams[F]](
       FilterServerEndpoints(ses),
       new NettyCatsRequestBody(createFile, Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
       new NettyToStreamsResponseBody(Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),

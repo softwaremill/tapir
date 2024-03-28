@@ -4,13 +4,15 @@ import _root_.zio._
 import _root_.zio.interop.reactivestreams._
 import _root_.zio.stream.{Stream, ZStream}
 import io.netty.buffer.Unpooled
+import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
-import org.reactivestreams.Publisher
+import org.reactivestreams.{Processor, Publisher}
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.FileRange
 import sttp.tapir.server.netty.internal._
+import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
+import io.netty.channel.ChannelHandlerContext
 
 private[zio] object ZioStreamCompatible {
 
@@ -64,6 +66,13 @@ private[zio] object ZioStreamCompatible {
 
       override def emptyStream: streams.BinaryStream =
         ZStream.empty
+
+      override def asWsProcessor[REQ, RESP](
+          pipe: Stream[Throwable, REQ] => Stream[Throwable, RESP],
+          o: WebSocketBodyOutput[Stream[Throwable, REQ] => Stream[Throwable, RESP], REQ, RESP, ?, ZioStreams],
+          ctx: ChannelHandlerContext
+      ): Processor[WebSocketFrame, WebSocketFrame] =
+        throw new UnsupportedOperationException("TODO")
     }
   }
 }

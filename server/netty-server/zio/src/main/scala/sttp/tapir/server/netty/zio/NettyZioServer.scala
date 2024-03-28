@@ -86,12 +86,14 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
 
       NettyBootstrap[RIO[R, *]](
         config,
-        new NettyServerHandler[RIO[R, *]](
-          route,
-          unsafeRunAsync(runtime),
-          channelGroup,
-          isShuttingDown,
-          config.serverHeader
+        List(
+          new NettyServerHandler[RIO[R, *]](
+            route,
+            unsafeRunAsync(runtime),
+            channelGroup,
+            isShuttingDown,
+            config.serverHeader
+          )
         ),
         eventLoopGroup,
         socketOverride

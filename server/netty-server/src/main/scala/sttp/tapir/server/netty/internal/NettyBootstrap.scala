@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
+import io.netty.channel.{Channel, ChannelFuture, ChannelHandler, ChannelInitializer, ChannelOption, EventLoopGroup}
 import io.netty.handler.timeout.ReadTimeoutHandler
 import sttp.tapir.server.netty.NettyConfig
 
@@ -9,9 +9,11 @@ import java.net.{InetSocketAddress, SocketAddress}
 
 object NettyBootstrap {
 
+  private val ReadTimeoutHandlerName = "readTimeoutHandler"
+
   def apply[F[_]](
       nettyConfig: NettyConfig,
-      handler: => NettyServerHandler[F],
+      handlers: => List[ChannelHandler],
       eventLoopGroup: EventLoopGroup,
       overrideSocketAddress: Option[SocketAddress]
   ): ChannelFuture = {
@@ -27,8 +29,11 @@ object NettyBootstrap {
 
           nettyConfig.requestTimeout match {
             case Some(requestTimeout) =>
-              nettyConfigBuilder(ch.pipeline().addLast(new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)), handler)
-            case None => nettyConfigBuilder(ch.pipeline(), handler)
+              nettyConfigBuilder(
+                ch.pipeline().addLast(ReadTimeoutHandlerName, new ReadTimeoutHandler(requestTimeout.toSeconds.toInt)),
+                handlers,
+              )
+            case None => nettyConfigBuilder(ch.pipeline(), handlers)
           }
 
           connectionCounterOpt.map(counter => {
