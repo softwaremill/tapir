@@ -46,6 +46,15 @@ object GenScala {
   private val headTagForNamesOpt: Opts[Boolean] =
     Opts.flag("headTagForNames", "Whether to group generated endpoints by first declared tag", "t").orFalse
 
+  private val validateNonDiscriminatedOneOfsOpt: Opts[Boolean] =
+    Opts
+      .flag(
+        "validateNonDiscriminatedOneOfs",
+        "Whether to validated that all variants of oneOfs without discriminators can be disambiguated",
+        "v"
+      )
+      .orFalse
+
   private val jsonLibOpt: Opts[Option[String]] =
     Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
 
@@ -62,13 +71,21 @@ object GenScala {
       }
 
   val cmd: Command[IO[ExitCode]] = Command("genscala", "Generate Scala classes", helpFlag = true) {
-    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt).mapN {
-      case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib) =>
+    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt, validateNonDiscriminatedOneOfsOpt)
+      .mapN { case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib, validateNonDiscriminatedOneOfs) =>
         val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
         def generateCode(doc: OpenapiDocument): IO[Unit] = for {
           contents <- IO.pure(
-            BasicGenerator.generateObjects(doc, packageName, objectName, targetScala3, headTagForNames, jsonLib.getOrElse("circe"))
+            BasicGenerator.generateObjects(
+              doc,
+              packageName,
+              objectName,
+              targetScala3,
+              headTagForNames,
+              jsonLib.getOrElse("circe"),
+              validateNonDiscriminatedOneOfs
+            )
           )
           destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
           _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
@@ -81,7 +98,7 @@ object GenScala {
             case Right(doc) => generateCode(doc).as(ExitCode.Success)
           }
         } yield exitCode
-    }
+      }
   }
 
   private def readFile(file: File): IO[String] = {
