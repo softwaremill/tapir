@@ -17,7 +17,7 @@ import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.Promise
 import scala.util.Success
 
 /** A Reactive Streams Processor[NettyWebSocketFrame, NettyWebSocketFrame] built from a fs2.Pipe[F, REQ, RESP] passed from an WS endpoint.
@@ -94,7 +94,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       case Success(p) =>
         p.subscribe(s)
       case _ => // Never happens, we call succecss() explicitly
-    }(ExecutionContext.parasitic)
+    }(ExecutionContexts.sameThread)
 
   }
 
