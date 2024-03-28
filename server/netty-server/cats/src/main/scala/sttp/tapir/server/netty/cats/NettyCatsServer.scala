@@ -80,7 +80,14 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
       NettyBootstrap(
         config,
         List(
-          new ReactiveWebSocketHandler(route, channelGroup, unsafeRunAsync, config.sslContext.isDefined),
+          new ReactiveWebSocketHandler(
+            route,
+            channelGroup,
+            unsafeRunAsync,
+            config.sslContext.isDefined,
+            isShuttingDown,
+            config.serverHeader
+          ),
           new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader)
         ),
         eventLoopGroup,

@@ -58,8 +58,7 @@ class VertxServerTest extends TestSuite {
           VertxStreams,
           autoPing = false,
           failingPipe = false,
-          handlePong = true,
-          rejectNonWsEndpoints = false
+          handlePong = true
         ) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()

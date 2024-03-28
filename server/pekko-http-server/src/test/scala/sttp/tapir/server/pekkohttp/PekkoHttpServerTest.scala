@@ -110,8 +110,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           PekkoStreams,
           autoPing = false,
           failingPipe = true,
-          handlePong = false,
-          rejectNonWsEndpoints = false
+          handlePong = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)

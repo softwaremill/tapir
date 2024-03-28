@@ -46,8 +46,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
               Fs2Streams[IO],
               autoPing = true,
               failingPipe = true,
-              handlePong = true,
-              rejectNonWsEndpoints = true
+              handlePong = true
             ) {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
               override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty

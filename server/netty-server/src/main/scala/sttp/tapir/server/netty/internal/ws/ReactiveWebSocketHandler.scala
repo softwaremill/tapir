@@ -19,6 +19,10 @@ import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import sttp.tapir.server.netty.NettyResponseContent.ByteBufNettyResponseContent
+import io.netty.channel.ChannelPromise
+import io.netty.buffer.ByteBuf
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Handles a WS handshake and initiates the communication by calling Tapir interpreter to get a Pipe, then sends that Pipe to the rest of
   * the processing pipeline and removes itself from the pipeline.
@@ -27,7 +31,9 @@ class ReactiveWebSocketHandler[F[_]](
     route: Route[F],
     channelGroup: ChannelGroup,
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
-    isSsl: Boolean
+    isSsl: Boolean,
+    isShuttingDown: AtomicBoolean,
+    serverHeader: Option[String]
 )(implicit m: MonadError[F])
     extends ChannelInboundHandlerAdapter {
 
@@ -73,12 +79,10 @@ class ReactiveWebSocketHandler[F[_]](
       val _ = ctx.writeAndFlush(res).close()
     }
 
-    def rejectHandshakeForRegularEndpoint(content: Option[NettyResponseContent]): Unit = {
-      val message = "Unexpected WebSocket handshake on a regular HTTP endpoint"
-      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(message.getBytes))
-      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, message.length())
+    def replyWith503(): Unit = {
+      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
       res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-      content.foreach(_.channelPromise.setFailure(new IllegalStateException("Unexpected response content")))
       val _ = ctx.writeAndFlush(res).close()
     }
 
@@ -88,54 +92,74 @@ class ReactiveWebSocketHandler[F[_]](
       val _ = ctx.writeAndFlush(res).close()
     }
 
+    def replyWithRouteResponse(
+        req: HttpRequest,
+        serverResponse: ServerResponse[NettyResponse],
+        channelPromise: ChannelPromise,
+        byteBuf: ByteBuf
+    ): Unit = {
+      val res = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.valueOf(serverResponse.code.code), byteBuf)
+      res.setHeadersFrom(serverResponse, serverHeader)
+      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, byteBuf.readableBytes())
+      val _ = ctx.writeAndFlush(res, channelPromise)
+    }
+
     msg match {
       case req: FullHttpRequest if isWsHandshake(req) =>
-        ctx.pipeline().remove(this)
-        ctx.pipeline().remove(classOf[ReadTimeoutHandler])
-        ReferenceCountUtil.release(msg)
-        val (runningFuture, _) = unsafeRunAsync { () =>
-          route(NettyServerRequest(req.retain()))
-            .map {
-              case Some(response) => response
-              case None           => ServerResponse.notFound
-            }
-        }
-
-        runningFuture.onComplete {
-          case Success(serverResponse) if serverResponse == ServerResponse.notFound =>
-            replyNotFound()
-          case Success(serverResponse) =>
-            try {
-              serverResponse.body match {
-                case Some(function) => {
-                  val content = function(ctx)
-                  content match {
-                    case r: ReactiveWebSocketProcessorNettyResponseContent =>
-                      initWsPipeline(ctx, r, req)
-                    case otherContent =>
-                      rejectHandshakeForRegularEndpoint(Some(otherContent))
-                  }
-                }
-                case None =>
-                  rejectHandshakeForRegularEndpoint(content = None)
+        if (isShuttingDown.get()) {
+          logger.info("Rejecting WS handshake request because the server is shutting down.")
+          replyWith503()
+        } else {
+          ReferenceCountUtil.release(msg)
+          val (runningFuture, _) = unsafeRunAsync { () =>
+            route(NettyServerRequest(req.retain()))
+              .map {
+                case Some(response) => response
+                case None           => ServerResponse.notFound
               }
-            } catch {
-              case NonFatal(ex) =>
-                replyWithError500(ex)
-            } finally {
-              val _ = req.release()
-            }
-          case Failure(ex) =>
-            try {
-              replyWithError500(ex)
-            } finally {
-              val _ = req.release()
-            }
-        }(eventLoopContext)
+          }
 
+          runningFuture.onComplete {
+            case Success(serverResponse) if serverResponse == ServerResponse.notFound =>
+              replyNotFound()
+            case Success(serverResponse) =>
+              try {
+                serverResponse.body match {
+                  case Some(function) => {
+                    val content = function(ctx)
+                    content match {
+                      case r: ReactiveWebSocketProcessorNettyResponseContent =>
+                        initWsPipeline(ctx, r, req)
+                      case ByteBufNettyResponseContent(channelPromise, byteBuf) =>
+                        // Handshake didn't return a Pipe, but a regular response. Returning it back.
+                        replyWithRouteResponse(req, serverResponse, channelPromise, byteBuf)
+                      case otherContent =>
+                        // An unsupported type of regular response, returning 500
+                        replyWithError500(
+                          new IllegalArgumentException(s"Unsupported response type for a WS endpoint: ${otherContent.getClass.getName}")
+                        )
+                    }
+                  }
+                  case None =>
+                    // Handshake didn't return a Pipe, but a regular response with empty body. Returning it back.
+                    replyWithRouteResponse(req, serverResponse, ctx.newPromise(), Unpooled.EMPTY_BUFFER)
+                }
+              } catch {
+                case NonFatal(ex) =>
+                  replyWithError500(ex)
+              } finally {
+                val _ = req.release()
+              }
+            case Failure(ex) =>
+              try {
+                replyWithError500(ex)
+              } finally {
+                val _ = req.release()
+              }
+          }(eventLoopContext)
+        }
       case other =>
-        // not a WS handshake, from now on process messages as normal HTTP requests in this channel
-        ctx.pipeline.remove(this)
+        // not a WS handshake
         val _ = ctx.fireChannelRead(other)
     }
   }
@@ -145,6 +169,8 @@ class ReactiveWebSocketHandler[F[_]](
       r: ReactiveWebSocketProcessorNettyResponseContent,
       handshakeReq: FullHttpRequest
   ) = {
+    ctx.pipeline().remove(this)
+    ctx.pipeline().remove(classOf[ReadTimeoutHandler])
     ctx
       .pipeline()
       .addAfter(

@@ -1,8 +1,8 @@
 package sttp.tapir.server.netty.cats.internal
 
 import cats.Applicative
-import cats.effect.kernel.{Async, Sync}
 import cats.effect.kernel.Resource.ExitCase
+import cats.effect.kernel.{Async, Sync}
 import cats.effect.std.Dispatcher
 import cats.syntax.all._
 import fs2.interop.reactivestreams.{StreamSubscriber, StreamUnicastPublisher}
@@ -17,9 +17,8 @@ import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
-import scala.concurrent.ExecutionContext.Implicits
-import scala.concurrent.Promise
-import scala.util.{Failure, Success}
+import scala.concurrent.{ExecutionContext, Promise}
+import scala.util.Success
 
 /** A Reactive Streams Processor[NettyWebSocketFrame, NettyWebSocketFrame] built from a fs2.Pipe[F, REQ, RESP] passed from an WS endpoint.
   */
@@ -29,19 +28,16 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
     wsCompletedPromise: ChannelPromise
 ) extends Processor[NettyWebSocketFrame, NettyWebSocketFrame] {
-  @volatile private var subscriber: StreamSubscriber[F, NettyWebSocketFrame] = _
+  // Not really that unsafe. Subscriber creation doesn't do any IO, only initializes an AtomicReference in an initial state.
+  private val subscriber: StreamSubscriber[F, NettyWebSocketFrame] = dispatcher.unsafeRunSync(
+    // If bufferSize > 1, the stream may stale and not emit responses until enough requests are buffered
+    StreamSubscriber[F, NettyWebSocketFrame](bufferSize = 1)
+  )
   private val publisher: Promise[Publisher[NettyWebSocketFrame]] = Promise[Publisher[NettyWebSocketFrame]]()
-  @volatile private var subscription: Subscription = _
-
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def onSubscribe(s: Subscription): Unit = {
-    // Not really that unsafe. Subscriber creation doesn't do any IO, only initializes an AtomicReference in an initial state.
-    subscriber = dispatcher.unsafeRunSync(
-      // If bufferSize > 1, the stream may stale and not emit responses until enough requests are buffered
-      StreamSubscriber[F, NettyWebSocketFrame](bufferSize = 1)
-    )
-    subscription = new NonCancelingSubscription(s)
+    val subscription = new NonCancelingSubscription(s)
     val in: Stream[F, NettyWebSocketFrame] = subscriber.sub.stream(Applicative[F].unit)
     val sttpFrames = in.map { f =>
       val sttpFrame = nettyFrameToFrame(f)
@@ -97,10 +93,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     publisher.future.onComplete {
       case Success(p) =>
         p.subscribe(s)
-      case Failure(ex) =>
-        subscriber.sub.onError(ex)
-        subscription.cancel
-    }(Implicits.global)
+      case _ => // Never happens, we call succecss() explicitly
+    }(ExecutionContext.parasitic)
+
   }
 
   private def optionallyConcatenateFrames(s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] =

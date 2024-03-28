@@ -27,8 +27,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     val streams: S,
     autoPing: Boolean,
     failingPipe: Boolean,
-    handlePong: Boolean,
-    rejectNonWsEndpoints: Boolean
+    handlePong: Boolean
 )(implicit
     m: MonadError[F]
 ) extends EitherValues {
@@ -210,20 +209,55 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     },
     testServer(
       endpoint
-        .in(isWebSocket)
+        .in(query[String]("securityToken"))
         .errorOut(stringBody)
         .out(stringWs),
-      "non web-socket request"
-    )(isWS => if (isWS) pureResult(stringEcho.asRight) else pureResult("Not a WS!".asLeft)) { (backend, baseUri) =>
-      basicRequest
-        .response(asString)
-        .get(baseUri.scheme("http"))
-        .send(backend)
-        .map { r =>
-          r.body shouldBe Left("Not a WS!")
+      "switch to WS after a normal HTTP request"
+    )(token => if (token == "correctToken") pureResult(stringEcho.asRight) else pureResult("Incorrect token!".asLeft)) {
+      (backend, baseUri) =>
+        for {
+          response1 <- basicRequest
+            .response(asString)
+            .get(uri"$baseUri?securityToken=wrong".scheme("http"))
+            .send(backend)
+          response2 <- basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              ws.sendText("testOk") >> ws.receiveText()
+            })
+            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
+            .send(backend)
+        } yield {
+          response1.body shouldBe Left("Incorrect token!")
+          response2.body shouldBe Right("echo: testOk")
+        }
+    },
+    testServer(
+      endpoint
+        .in(query[String]("securityToken"))
+        .errorOut(stringBody)
+        .out(stringWs),
+      "reject WS handshake, then accept a corrected one"
+    )(token => if (token == "correctToken") pureResult(stringEcho.asRight) else pureResult("Incorrect token!".asLeft)) {
+      (backend, baseUri) =>
+        for {
+          response1 <- basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              ws.sendText("testWrong") >> ws.receiveText()
+            })
+            .get(uri"$baseUri?securityToken=wrong".scheme("ws"))
+            .send(backend)
+          response2 <- basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              ws.sendText("testOk") >> ws.receiveText()
+            })
+            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
+            .send(backend)
+        } yield {
+          response1.code shouldBe StatusCode.BadRequest
+          response2.body shouldBe Right("echo: testOk")
         }
     }
-  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ rejectNonWsEndpointsTests
+  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests
 
   val autoPingTests =
     if (autoPing)
@@ -332,42 +366,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
-        }
-      )
-    else List.empty
-
-  val rejectNonWsEndpointsTests =
-    if (rejectNonWsEndpoints)
-      List(
-        testServer(
-          endpoint.out(stringBody),
-          "WS handshake to a non-WS endpoint"
-        )((_: Unit) => pureResult("hello".asRight[Unit])) { (backend, baseUri) =>
-          basicRequest
-            .response(asWebSocket { (ws: WebSocket[IO]) =>
-              for {
-                _ <- ws.sendText("test")
-                m1 <- ws.receiveText()
-              } yield List(m1)
-            })
-            .get(baseUri.scheme("ws"))
-            .send(backend)
-            .map(_.code shouldBe StatusCode.BadRequest)
-        },
-        testServer(
-          endpoint.out(emptyOutput),
-          "WS handshake to a non-WS endpoint with empty output" // to make sure this won't be treated as 404
-        )((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
-          basicRequest
-            .response(asWebSocket { (ws: WebSocket[IO]) =>
-              for {
-                _ <- ws.sendText("test")
-                m1 <- ws.receiveText()
-              } yield List(m1)
-            })
-            .get(baseUri.scheme("ws"))
-            .send(backend)
-            .map(_.code shouldBe StatusCode.BadRequest)
         }
       )
     else List.empty
