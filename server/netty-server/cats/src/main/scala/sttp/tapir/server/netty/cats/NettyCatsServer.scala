@@ -15,7 +15,8 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, ReactiveWebSocketHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.ws.ReactiveWebSocketHandler
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -32,7 +33,10 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
   def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(options).toRoute(ses)
   )
-  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]], overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] = addRoute(
+  def addEndpoints(
+      ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
+      overrideOptions: NettyCatsServerOptions[F]
+  ): NettyCatsServer[F] = addRoute(
     NettyCatsServerInterpreter(overrideOptions).toRoute(ses)
   )
 

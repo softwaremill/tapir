@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.internal
+package sttp.tapir.server.netty.internal.ws
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}

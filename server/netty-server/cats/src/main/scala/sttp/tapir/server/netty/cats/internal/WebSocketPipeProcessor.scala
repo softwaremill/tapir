@@ -13,7 +13,7 @@ import org.reactivestreams.{Processor, Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.model.WebSocketFrameDecodeFailure
-import sttp.tapir.server.netty.internal.WebSocketFrameConverters._
+import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 

@@ -4,6 +4,7 @@ import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import io.netty.handler.timeout.ReadTimeoutHandler
 import sttp.tapir.server.netty.NettyConfig
+import ws.ReactiveWebSocketHandler
 
 import java.net.{InetSocketAddress, SocketAddress}
 

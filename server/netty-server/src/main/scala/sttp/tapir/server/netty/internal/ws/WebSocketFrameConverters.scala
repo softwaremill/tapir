@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.internal
+package sttp.tapir.server.netty.internal.ws
 
 import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.handler.codec.http.websocketx._

@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.internal
+package sttp.tapir.server.netty.internal.ws
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.group.ChannelGroup
@@ -13,6 +13,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
+import sttp.tapir.server.netty.internal._
 import sttp.tapir.server.netty.{NettyResponse, NettyResponseContent, NettyServerRequest, Route}
 
 import scala.concurrent.{ExecutionContext, Future}
