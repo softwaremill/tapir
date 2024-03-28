@@ -73,7 +73,7 @@ class ReactiveWebSocketHandler[F[_]](
     }
 
     def rejectHandshakeForRegularEndpoint(content: NettyResponseContent): Unit = {
-      val message = "Unexpected WebSocket handhake on a regular HTTP endpoint"
+      val message = "Unexpected WebSocket handshake on a regular HTTP endpoint"
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(message.getBytes))
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, message.length())
       res.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
