@@ -25,7 +25,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
-import sttp.tapir.server.netty.internal.ReactiveWebSocketHandler
 
 case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions, config: NettyConfig) {
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
@@ -94,14 +93,15 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 
     val channelIdFuture = NettyBootstrap(
       config,
-      new NettyServerHandler(
-        route,
-        unsafeRunF,
-        channelGroup,
-        isShuttingDown,
-        config.serverHeader
+      List(
+        new NettyServerHandler(
+          route,
+          unsafeRunF,
+          channelGroup,
+          isShuttingDown,
+          config.serverHeader
+        )
       ),
-      new ReactiveWebSocketHandler(route, channelGroup, unsafeRunF, config.sslContext.isDefined),
       eventLoopGroup,
       socketOverride
     )

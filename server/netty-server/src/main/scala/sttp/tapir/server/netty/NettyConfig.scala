@@ -62,7 +62,7 @@ case class NettyConfig(
     sslContext: Option[SslContext],
     eventLoopConfig: EventLoopConfig,
     socketConfig: NettySocketConfig,
-    initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler, ChannelHandler) => Unit,
+    initPipeline: NettyConfig => (ChannelPipeline, List[ChannelHandler]) => Unit,
     gracefulShutdownTimeout: Option[FiniteDuration],
     serverHeader: Option[String]
 ) {
@@ -97,7 +97,7 @@ case class NettyConfig(
   def eventLoopConfig(elc: EventLoopConfig): NettyConfig = copy(eventLoopConfig = elc)
   def eventLoopGroup(elg: EventLoopGroup): NettyConfig = copy(eventLoopConfig = EventLoopConfig.useExisting(elg))
 
-  def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
+  def initPipeline(f: NettyConfig => (ChannelPipeline, List[ChannelHandler]) => Unit): NettyConfig = copy(initPipeline = f)
 
   def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
@@ -106,7 +106,6 @@ case class NettyConfig(
 }
 
 object NettyConfig {
-  private val WebSocketHandlerName = "wsHandler"
   val StreamsHandlerName = "streamsHandler"
 
   def default: NettyConfig = NettyConfig(
@@ -124,16 +123,15 @@ object NettyConfig {
     sslContext = None,
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
-    initPipeline = cfg => defaultInitPipeline(cfg)(_, _, _),
+    initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
     serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
   )
 
-  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler, wsHandler: ChannelHandler): Unit = {
+  def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handlers: List[ChannelHandler]): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
     pipeline.addLast(StreamsHandlerName, new HttpStreamsServerHandler())
-    pipeline.addLast(WebSocketHandlerName, wsHandler)
-    pipeline.addLast(handler)
+    handlers.foreach(pipeline.addLast(_))
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()
   }
