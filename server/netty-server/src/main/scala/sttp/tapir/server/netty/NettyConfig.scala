@@ -108,7 +108,6 @@ case class NettyConfig(
 }
 
 object NettyConfig {
-  val StreamsHandlerName = "streamsHandler"
 
   def default: NettyConfig = NettyConfig(
     host = "localhost",
@@ -132,7 +131,7 @@ object NettyConfig {
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
-    pipeline.addLast(StreamsHandlerName, new HttpStreamsServerHandler())
+    pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()
