@@ -16,7 +16,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.internal.ws.ReactiveWebSocketHandler
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -79,17 +78,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
     val channelFuture =
       NettyBootstrap(
         config,
-        List(
-          new ReactiveWebSocketHandler(
-            route,
-            channelGroup,
-            unsafeRunAsync,
-            config.sslContext.isDefined,
-            isShuttingDown,
-            config.serverHeader
-          ),
-          new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader)
-        ),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader, config.isSsl),
         eventLoopGroup,
         socketOverride
       )

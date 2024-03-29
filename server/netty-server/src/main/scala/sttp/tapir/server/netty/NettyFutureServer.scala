@@ -9,7 +9,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil._
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.internal.ws.ReactiveWebSocketHandler
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
@@ -72,7 +71,7 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
     val channelFuture =
       NettyBootstrap(
         config,
-        List(new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader)),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader, config.isSsl),
         eventLoopGroup,
         socketOverride
       )

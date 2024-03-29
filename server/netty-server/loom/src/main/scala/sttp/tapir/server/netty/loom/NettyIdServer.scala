@@ -93,14 +93,13 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 
     val channelIdFuture = NettyBootstrap(
       config,
-      List(
-        new NettyServerHandler(
-          route,
-          unsafeRunF,
-          channelGroup,
-          isShuttingDown,
-          config.serverHeader
-        )
+      new NettyServerHandler(
+        route,
+        unsafeRunF,
+        channelGroup,
+        isShuttingDown,
+        config.serverHeader,
+        config.isSsl
       ),
       eventLoopGroup,
       socketOverride
