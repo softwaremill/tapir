@@ -8,7 +8,7 @@ import sttp.tapir.server.model.ServerResponse
 import scala.collection.JavaConverters._
 
 package object internal {
-  implicit class RichNettyHttpHeaders(underlying: HttpHeaders) {
+  implicit class RichNettyHttpHeaders(private val underlying: HttpHeaders) extends AnyVal {
     def toHeaderSeq: List[Header] =
       underlying.asScala.map(e => Header(e.getKey, e.getValue)).toList
   }
@@ -19,7 +19,7 @@ package object internal {
     }
   }
 
-  implicit class RichHttpMessage(val m: HttpMessage) {
+  implicit class RichHttpMessage(private val m: HttpMessage) extends AnyVal {
     def setHeadersFrom(response: ServerResponse[_], serverHeader: Option[String]): Unit = {
       serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
@@ -29,6 +29,6 @@ package object internal {
         }
     }
   }
-  val ServerCodecHandlerName = "serverCodecHandler"
-  val WebSocketControlFrameHandlerName = "wsControlFrameHandler"
+  final val ServerCodecHandlerName = "serverCodecHandler"
+  final val WebSocketControlFrameHandlerName = "wsControlFrameHandler"
 }

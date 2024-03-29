@@ -236,7 +236,7 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
+  private implicit class RichServerNettyResponse(r: ServerResponse[NettyResponse]) {
     def handle(
         ctx: ChannelHandlerContext,
         byteBufHandler: (ChannelPromise, ByteBuf) => Unit,
@@ -263,7 +263,7 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  private implicit class RichHttpMessage(val m: HttpMessage) {
+  private implicit class RichHttpMessage(m: HttpMessage) {
     def setHeadersFrom(response: ServerResponse[_]): Unit = {
       serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
@@ -289,7 +289,7 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  private implicit class RichChannelFuture(val cf: ChannelFuture) {
+  private implicit class RichChannelFuture(cf: ChannelFuture) {
     def closeIfNeeded(request: HttpRequest): Unit = {
       if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get()) {
         cf.addListener(ChannelFutureListener.CLOSE)
