@@ -20,7 +20,8 @@ object IntersectionTypeMirror {
   private def derivedImpl[A](using Quotes, Type[A]): Expr[IntersectionTypeMirror[A]] = {
     import quotes.reflect.*
 
-    val tplPrependType = TypeRepr.of[? *: ?]
+    val tplPrependType = TypeRepr.of[? *: ?] match
+      case AppliedType(tycon, _) => tycon
     val tplConcatType = TypeRepr.of[Tuple.Concat]
 
     def prependTypes(head: TypeRepr, tail: TypeRepr): TypeRepr =
