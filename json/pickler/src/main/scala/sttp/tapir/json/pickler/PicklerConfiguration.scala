@@ -6,7 +6,9 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
   export genericDerivationConfig.{toEncodedName, discriminator, toDiscriminatorValue}
 
   def withSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withSnakeCaseMemberNames)
-  def withScreamingSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withScreamingSnakeCaseMemberNames)
+  def withScreamingSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(
+    genericDerivationConfig.withScreamingSnakeCaseMemberNames
+  )
   def withKebabCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withKebabCaseMemberNames)
   def withDiscriminator(d: String): PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withDiscriminator(d))
   def withToEncodedName(toEncodedName: String => String) = PicklerConfiguration(genericDerivationConfig.copy(toEncodedName = toEncodedName))

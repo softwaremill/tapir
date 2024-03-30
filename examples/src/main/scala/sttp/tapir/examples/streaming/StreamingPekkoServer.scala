@@ -35,7 +35,7 @@ object StreamingPekkoServer extends App {
     println("Got result: " + result)
 
     assert(result == "Hello!" * 10)
-    
+
     binding
   }
 

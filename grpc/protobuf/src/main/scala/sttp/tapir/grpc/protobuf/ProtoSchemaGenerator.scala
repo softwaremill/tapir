@@ -9,7 +9,7 @@ import sttp.tapir.AnyEndpoint
 import sttp.tapir.grpc.protobuf.model._
 
 object ProtoSchemaGenerator {
-  
+
   private val logger = LoggerFactory.getLogger(getClass.getName)
   def renderToFile(path: String, packageName: PackageName, endpoints: Iterable[AnyEndpoint]): Unit = {
     logger.info("Generating proto file")

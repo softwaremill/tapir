@@ -55,33 +55,34 @@ class InputStreamPublisher[F[_]](
 
         // Note: the effect F may be Id, in which case everything here will be synchronous and blocking
         // (which technically is against the reactive streams spec).
-        runAsync(monad
-          .blocking(
-            stream.readNBytes(expectedBytes)
-          )
-          .map { bytes =>
-            val bytesRead = bytes.length
-            if (bytesRead == 0) {
-              cancel()
-              subscriber.onComplete()
-            } else {
-              position.addAndGet(bytesRead.toLong)
-              subscriber.onNext(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes)))
-              if (bytesRead < expectedBytes) {
+        runAsync(
+          monad
+            .blocking(
+              stream.readNBytes(expectedBytes)
+            )
+            .map { bytes =>
+              val bytesRead = bytes.length
+              if (bytesRead == 0) {
                 cancel()
                 subscriber.onComplete()
               } else {
-                demand.decrementAndGet()
-                readingInProgress.set(false)
-                readNextChunkIfNeeded()
+                position.addAndGet(bytesRead.toLong)
+                subscriber.onNext(new DefaultHttpContent(Unpooled.wrappedBuffer(bytes)))
+                if (bytesRead < expectedBytes) {
+                  cancel()
+                  subscriber.onComplete()
+                } else {
+                  demand.decrementAndGet()
+                  readingInProgress.set(false)
+                  readNextChunkIfNeeded()
+                }
               }
             }
-          }
-          .handleError {
-            case e =>
+            .handleError { case e =>
               val _ = Try(stream.close())
               monad.unit(subscriber.onError(e))
-          })
+            }
+        )
       }
     }
 

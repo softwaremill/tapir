@@ -13,7 +13,7 @@ import sttp.tapir.{AnyEndpoint, Codec, CodecFormat, EndpointIO, EndpointInput}
 import scala.collection.immutable.ListMap
 
 private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
-                                                            tschemaToASchema: TSchemaToASchema,
+    tschemaToASchema: TSchemaToASchema,
     codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions
 ) {

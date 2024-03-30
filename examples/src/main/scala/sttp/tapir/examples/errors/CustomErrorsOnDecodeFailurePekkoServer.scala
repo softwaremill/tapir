@@ -41,7 +41,8 @@ object CustomErrorsOnDecodeFailurePekkoServer extends App {
     )
     .options
 
-  val amountRoute: Route = PekkoHttpServerInterpreter(customServerOptions).toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
+  val amountRoute: Route =
+    PekkoHttpServerInterpreter(customServerOptions).toRoute(amountEndpoint.serverLogicSuccess(_ => Future.successful(())))
 
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { binding =>

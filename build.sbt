@@ -20,7 +20,7 @@ val scala3 = "3.3.3"
 
 // The `idea.managed` property is set automatically by IntelliJ when it runs sbt for build or import
 val ideaManaged = System.getProperty("idea.managed", "false").toBoolean
-val ideScalaVersion = if(ideaManaged) scala2_13 else scala3
+val ideScalaVersion = if (ideaManaged) scala2_13 else scala3
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)

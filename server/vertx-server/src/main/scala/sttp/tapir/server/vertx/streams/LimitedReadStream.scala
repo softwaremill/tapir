@@ -5,14 +5,13 @@ import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import sttp.capabilities.StreamMaxLengthExceededException
 
-/**
-  * An adapter for Vertx ReadStream[Buffer], which passes bytes through, but fails with a [[sttp.capabilities.StreamMaxLengthExceededException]] if exceeds given limit.
-  * This exception should be handled by [[sttp.tapir.server.interceptor.exception.DefaultExceptionHandler]] in order to return a HTTP 413 Payload Too Large.
-  
+/** An adapter for Vertx ReadStream[Buffer], which passes bytes through, but fails with a
+  * [[sttp.capabilities.StreamMaxLengthExceededException]] if exceeds given limit. This exception should be handled by
+  * [[sttp.tapir.server.interceptor.exception.DefaultExceptionHandler]] in order to return a HTTP 413 Payload Too Large.
   */
 private[vertx] class LimitedReadStream(source: ReadStream[Buffer], maxBytes: Long) extends ReadStream[Buffer] {
 
-  // Safe, Vertx uses a single thread 
+  // Safe, Vertx uses a single thread
   private var bytesReadSoFar: Long = 0
   private var endHandler: Handler[Void] = _
   private var exceptionHandler: Handler[Throwable] = _

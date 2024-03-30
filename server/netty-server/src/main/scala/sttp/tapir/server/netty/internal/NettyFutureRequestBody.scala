@@ -18,7 +18,11 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
 
-  override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Future[Array[Byte]] =
+  override def publisherToBytes(
+      publisher: Publisher[HttpContent],
+      contentLength: Option[Long],
+      maxBytes: Option[Long]
+  ): Future[Array[Byte]] =
     SimpleSubscriber.processAll(publisher, contentLength, maxBytes)
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
@@ -26,7 +30,7 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(()) // Empty request
     }
-  
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = 
+
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
 }
