@@ -50,7 +50,7 @@ object GenScala {
     Opts
       .flag(
         "validateNonDiscriminatedOneOfs",
-        "Whether to validated that all variants of oneOfs without discriminators can be disambiguated",
+        "Whether to validate that all variants of oneOfs without discriminators can be disambiguated",
         "v"
       )
       .orFalse

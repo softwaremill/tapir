@@ -4,7 +4,6 @@ import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  Discriminator,
   OpenapiSchemaArray,
   OpenapiSchemaBoolean,
   OpenapiSchemaEnum,
@@ -22,16 +21,14 @@ import scala.annotation.tailrec
 object JsonSerdeGenerator {
   def serdeDefs(
       doc: OpenapiDocument,
-      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
-      jsonParamRefs: Set[String] = Set.empty,
-      allTransitiveJsonParamRefs: Set[String] = Set.empty,
-      fullModelPath: String = "",
-      validateNonDiscriminatedOneOfs: Boolean = true
+      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
+      jsonParamRefs: Set[String],
+      allTransitiveJsonParamRefs: Set[String],
+      fullModelPath: String,
+      validateNonDiscriminatedOneOfs: Boolean,
+      adtInheritanceMap: Map[String, Seq[String]]
   ): Option[String] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
-    val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
-
-    val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
 
     jsonSerdeLib match {
       case JsonSerdeLib.Circe => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
@@ -51,34 +48,6 @@ object JsonSerdeGenerator {
   ///
   /// Helpers
   ///
-
-  private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
-    allOneOfSchemas
-      .flatMap { case (name, schema) =>
-        val children = schema.types.map {
-          case ref: OpenapiSchemaRef if ref.isSchema => Right(ref.stripped)
-          case other                                 => Left(other.getClass.getName)
-        }
-        children.collect { case Left(unsupportedChild) =>
-          throw new NotImplementedError(
-            s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
-          )
-        }
-        val validatedChildren = children.collect { case Right(kv) => kv }
-        schema.discriminator match {
-          case None | Some(Discriminator(_, None)) =>
-          case Some(Discriminator(_, Some(mapping))) =>
-            val targetClassNames = mapping.values.map(_.split('/').last).toSet
-            if (targetClassNames != validatedChildren.toSet)
-              throw new IllegalArgumentException(
-                s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
-              )
-        }
-        validatedChildren.map(_ -> name)
-      }
-      .groupBy(_._1)
-      .mapValues(_.map(_._2))
-
   private def checkForSoundness(allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaRef]) = if (variants.size <= 1) false
   else {
     @tailrec def resolve(variant: OpenapiSchemaRef): OpenapiSchemaType = allSchemas(variant.stripped) match {

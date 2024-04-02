@@ -22,31 +22,7 @@ class ClassDefinitionGenerator {
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
-    val adtInheritanceMap: Map[String, Seq[String]] = allOneOfSchemas
-      .flatMap { case (name, schema) =>
-        val children = schema.types.map {
-          case ref: OpenapiSchemaRef if ref.isSchema => Right(ref.stripped)
-          case other                                 => Left(other.getClass.getName)
-        }
-        children.collect { case Left(unsupportedChild) =>
-          throw new NotImplementedError(
-            s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
-          )
-        }
-        val validatedChildren = children.collect { case Right(kv) => kv }
-        schema.discriminator match {
-          case None | Some(Discriminator(_, None)) =>
-          case Some(Discriminator(_, Some(mapping))) =>
-            val targetClassNames = mapping.values.map(_.split('/').last).toSet
-            if (targetClassNames != validatedChildren.toSet)
-              throw new IllegalArgumentException(
-                s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
-              )
-        }
-        validatedChildren.map(_ -> name)
-      }
-      .groupBy(_._1)
-      .mapValues(_.map(_._2))
+    val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
     val generatesQueryParamEnums =
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
@@ -64,7 +40,15 @@ class ClassDefinitionGenerator {
 
     val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
-    val postDefns = JsonSerdeGenerator.serdeDefs(doc, jsonSerdeLib, jsonParamRefs, allTransitiveJsonParamRefs, fullModelPath)
+    val postDefns = JsonSerdeGenerator.serdeDefs(
+      doc,
+      jsonSerdeLib,
+      jsonParamRefs,
+      allTransitiveJsonParamRefs,
+      fullModelPath,
+      validateNonDiscriminatedOneOfs,
+      adtInheritanceMap
+    )
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
@@ -84,6 +68,32 @@ class ClassDefinitionGenerator {
       defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, postDefns))
     else defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr + postDefns.map("\n" + _).getOrElse(""), None))
   }
+
+  private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
+    allOneOfSchemas
+      .flatMap { case (name, schema) =>
+        val validatedChildren = schema.types.map {
+          case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+          case other =>
+            val unsupportedChild = other.getClass.getName
+            throw new NotImplementedError(
+              s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
+            )
+        }
+        // If defined, check that the discriminator mappings match the oneOf refs
+        schema.discriminator match {
+          case None | Some(Discriminator(_, None)) => // if there's no discriminator or no mapping, nothing to validate
+          case Some(Discriminator(_, Some(mapping))) =>
+            val targetClassNames = mapping.values.map(_.split('/').last).toSet
+            if (targetClassNames != validatedChildren.toSet)
+              throw new IllegalArgumentException(
+                s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
+              )
+        }
+        validatedChildren.map(_ -> name)
+      }
+      .groupBy(_._1)
+      .mapValues(_.map(_._2))
 
   private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = if (targetScala3)
     """
