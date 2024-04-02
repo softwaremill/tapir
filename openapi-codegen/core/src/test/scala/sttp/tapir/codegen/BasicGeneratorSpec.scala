@@ -31,7 +31,7 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
     )
     val main = genned("TapirGeneratedEndpoints")
     val maybeJson = genned.get("TapirGeneratedEndpointsJsonSerdes")
-    maybeJson.map(_ + "\n").getOrElse("") + main
+    main + maybeJson.map("\n" + _).getOrElse("")
   }
   def testJsonLib(jsonSerdeLib: String) = {
     it should s"generate the bookshop example using ${jsonSerdeLib} serdes" in {
@@ -47,23 +47,26 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
         jsonSerdeLib = jsonSerdeLib
       )
       val schemas = generated("TapirGeneratedEndpoints")
+      val serdes = generated("TapirGeneratedEndpointsJsonSerdes")
       val endpoints = generated("Bookshop")
       // schema file on its own should compile
       schemas shouldCompile ()
       // schema file should contain no endpoint definitions
       schemas.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 0
+      // schema file with serde file should compile
+      (schemas + "\n" + serdes) shouldCompile ()
       // Bookshop file should contain all endpoint definitions
       endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 3
       // endpoint file depends on schema file. For simplicity of testing, just strip the package declaration from the
       // endpoint file, and concat the two, before testing for compilation
-      (schemas + "\n" + endpoints.linesIterator.filterNot(_ startsWith "package").mkString("\n")) shouldCompile ()
+      (schemas + "\n" + serdes + "\n" + endpoints) shouldCompile ()
     }
 
     it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
       gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
     }
 
-    // jsoniter fails this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpoints$1`
+    // jsoniter fails this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
     if (jsonSerdeLib != "jsoniter") it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
       val genWithParams = gen(TestHelpers.withDefaultsDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 

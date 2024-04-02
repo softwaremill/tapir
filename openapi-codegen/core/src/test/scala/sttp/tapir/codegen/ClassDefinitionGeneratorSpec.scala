@@ -287,15 +287,15 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    val res = gen.classDefs(doc, true, jsonParamRefs = Set("Test")).map(_.classRepr)
-    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test")).map(_.classRepr)
+    val res = gen
+      .classDefs(doc, true, jsonParamRefs = Set("Test"))
+      .map(_.classRepr.linesIterator.filterNot(_.trim.isEmpty).mkString("\n"))
+    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
+      .map(_.classRepr.linesIterator.filterNot(_.trim.isEmpty).mkString("\n"))
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
-    res shouldBe Some("""
-      |
-      |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
       |  case enum1, enum2
-      |}
-      |""".stripMargin)
+      |}""".stripMargin)
     resWithQueryParamCodec shouldBe Some("""def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
@@ -318,15 +318,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |          sttp.tapir.DecodeResult.Value(_)
       |        )
       |    )(_.name)
-      |
       |object Test {
       |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
       |    makeQueryCodecForEnum[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2
-      |}
-      |""".stripMargin)
+      |}""".stripMargin)
   }
 
   it should "generate named maps" in {
@@ -507,9 +505,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate ADTs for oneOf schemas (circe)" in {
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(fullRes, extra) =
+      val GeneratedClassDefinitions(res, extra) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
+      val fullRes = (res + "\n" + extra.get)
       fullRes shouldCompile ()
       val expectedLines = Seq(
         """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
@@ -519,7 +518,6 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         """case "ReqSubtype1" => c.as[ReqSubtype1]"""
       )
       expectedLines.foreach(line => fullRes should include(line))
-      extra should be(empty)
     }
     testOK(TestHelpers.oneOfDocsWithMapping)
     testOK(TestHelpers.oneOfDocsWithDiscriminatorNoMapping)

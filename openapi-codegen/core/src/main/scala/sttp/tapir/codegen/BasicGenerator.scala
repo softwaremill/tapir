@@ -50,13 +50,13 @@ object BasicGenerator {
     val GeneratedClassDefinitions(classDefns, extras) =
       classGenerator
         .classDefs(
-          doc,
-          targetScala3,
-          queryParamRefs,
-          normalisedJsonLib,
-          jsonParamRefs,
-          s"$packagePath.$objName",
-          validateNonDiscriminatedOneOfs
+          doc = doc,
+          targetScala3 = targetScala3,
+          queryParamRefs = queryParamRefs,
+          jsonSerdeLib = normalisedJsonLib,
+          jsonParamRefs = jsonParamRefs,
+          fullModelPath = s"$packagePath.$objName",
+          validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs
         )
         .getOrElse(GeneratedClassDefinitions("", None))
     val isSplit = extras.nonEmpty
@@ -90,15 +90,6 @@ object BasicGenerator {
          |}""".stripMargin
     }
     val endpointsInMain = endpointsByTag.getOrElse(None, "")
-    def splitMsg = "Json serdes had to be written to a separate file from class defns"
-    if (isSplit && !useHeadTagForObjectNames)
-      throw new NotImplementedError(s"$splitMsg. openapiUseHeadTagForObjectName must be set to true")
-    if (isSplit && endpointsInMain.nonEmpty) {
-      val untagged = doc.paths.flatMap(p => p.methods.filter(_.tags.forall(_.isEmpty)).map(m => s"${m.methodType.toUpperCase} ${p.url}"))
-      val shortList =
-        if (untagged.size > 5) untagged.take(5).mkString("", ", ", s"... & ${untagged.size - 5} more") else untagged.mkString(", ")
-      throw new NotImplementedError(s"$splitMsg. All endpoints must be tagged (found ${untagged.size} untagged routes: $shortList)")
-    }
 
     val maybeSpecificationExtensionKeys = doc.paths
       .flatMap { p =>
@@ -117,12 +108,13 @@ object BasicGenerator {
       }
       .mkString("\n")
 
+    val serdeImport = if (isSplit && endpointsInMain.nonEmpty) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val mainObj = s"""|
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports(normalisedJsonLib))}
+        |${indent(2)(imports(normalisedJsonLib) + serdeImport)}
         |
         |${indent(2)(classDefns)}
         |

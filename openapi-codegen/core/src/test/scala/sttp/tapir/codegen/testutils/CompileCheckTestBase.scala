@@ -23,7 +23,13 @@ trait CompileCheckTestBase extends AnyFlatSpec with Matchers with Checkers {
   }
 
   def compileWithoutHeader(code: String): Try[Unit] = {
-    compile(code.linesIterator.filter(!_.trim.startsWith("package")).mkString("\n"))
+    compile {
+      val (pkgLines, rest) = code.linesIterator.partition(_.trim.startsWith("package"))
+      // Need to strip the package prefix for references since removing decl
+      val pkgNames = pkgLines.map(s => s.stripPrefix("package").trim).toSeq.distinct
+      assert(pkgNames.size <= 1, "output was split into more than one package")
+      pkgNames.headOption.foldLeft(rest.mkString("\n"))((body, pkg) => body.replaceAll(s"${pkg}.", ""))
+    }
   }
 
   implicit class StringShouldCompileHelper(code: String)(implicit pos: source.Position) {

@@ -63,10 +63,8 @@ class ClassDefinitionGenerator {
     val helpers = (enumQuerySerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
-    // Jsoniter-scala ADT serdes need to live in a separate file from the class defns
-    if (adtInheritanceMap.nonEmpty && jsonSerdeLib == JsonSerdeLib.Jsoniter)
-      defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, postDefns))
-    else defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr + postDefns.map("\n" + _).getOrElse(""), None))
+    // Json  serdes live in a separate file from the class defns
+    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, postDefns))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
