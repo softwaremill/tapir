@@ -489,8 +489,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       scalaTest.value,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       logback
-    ),
-    publishArtifact := false
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
