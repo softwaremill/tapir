@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.1"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.10.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.10.1"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.1"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.0"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.1"
 ```
 
 Then, use:
@@ -83,9 +83,74 @@ NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None)
 NettyFutureServer(NettyConfig.default.socketBacklog(256))
 ```
 
+## Web sockets
+
+The netty-cats interpreter supports web sockets, with pipes of type `fs2.Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
+for more details.
+
+To create a web socket endpoint, use Tapir's `out(webSocketBody)` output type:
+
+```scala
+import cats.effect.kernel.Resource
+import cats.effect.{IO, ResourceApp}
+import cats.syntax.all._
+import fs2.Pipe
+import sttp.capabilities.fs2.Fs2Streams
+import sttp.tapir._
+import sttp.tapir.server.netty.cats.NettyCatsServer
+import sttp.ws.WebSocketFrame
+
+import scala.concurrent.duration._
+
+object WebSocketsNettyCatsServer extends ResourceApp.Forever {
+
+  // Web socket endpoint
+  val wsEndpoint =
+    endpoint.get
+      .in("ws")
+      .out(
+        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO])
+          .concatenateFragmentedFrames(false) // All these options are supported by tapir-netty
+          .ignorePong(true)
+          .autoPongOnPing(true)
+          .decodeCloseRequests(false)
+          .decodeCloseResponses(false)
+          .autoPing(Some((10.seconds, WebSocketFrame.Ping("ping-content".getBytes))))
+      )
+
+  // Your processor transforming a stream of requests into a stream of responses
+  val pipe: Pipe[IO, String, String] = requestStream => requestStream.evalMap(str => IO.pure(str.toUpperCase))
+  // Alternatively, requests can be ignored and the backend can be turned into a stream emitting frames to the client:
+  // val pipe: Pipe[IO, String, String] = requestStream => someDataEmittingStream.concurrently(requestStream.as(()))
+
+  val wsServerEndpoint = wsEndpoint.serverLogicSuccess(_ => IO.pure(pipe))
+
+  // A regular /GET endpoint
+  val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
+    endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
+
+  val helloWorldServerEndpoint = helloWorldEndpoint
+    .serverLogicSuccess(name => IO.pure(s"Hello, $name!"))
+
+  override def run(args: List[String]) = NettyCatsServer
+    .io()
+    .flatMap { server =>
+      Resource
+        .make(
+          server
+            .port(8080)
+            .host("localhost")
+            .addEndpoints(List(wsServerEndpoint, helloWorldServerEndpoint))
+            .start()
+        )(_.stop())
+        .as(())
+    }
+}
+```
+
 ## Graceful shutdown
 
-A Netty should can be gracefully closed using function `NettyFutureServerBinding.stop()` (and analogous functions available in Cats and ZIO bindings). This function ensures that the server will wait at most 10 seconds for in-flight requests to complete, while rejecting all new requests with 503 during this period. Afterwards, it closes all server resources.
+A Netty server can be gracefully closed using the function `NettyFutureServerBinding.stop()` (and analogous functions available in Cats and ZIO bindings). This function ensures that the server will wait at most 10 seconds for in-flight requests to complete, while rejecting all new requests with 503 during this period. Afterwards, it closes all server resources.
 You can customize this behavior in `NettyConfig`:
 
 ```scala

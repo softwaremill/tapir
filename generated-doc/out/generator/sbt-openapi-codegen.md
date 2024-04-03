@@ -11,7 +11,7 @@
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.0")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.1")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -26,8 +26,8 @@ Add your OpenApi file to the project, and override the `openapiSwaggerFile` sett
 openapiSwaggerFile := baseDirectory.value / "swagger.yaml"
 ```
 
-At this point your compile step will try to generate the endpoint definitions 
-to the `sttp.tapir.generated.TapirGeneratedEndpoints` object, where you can access the 
+At this point your compile step will try to generate the endpoint definitions
+to the `sttp.tapir.generated.TapirGeneratedEndpoints` object, where you can access the
 defined case-classes and endpoint definitions.
 
 ## Usage and options
@@ -35,14 +35,16 @@ defined case-classes and endpoint definitions.
 The generator currently supports these settings, you can override them in the `build.sbt`;
 
 ```eval_rst
-=============================== ==================================== =====================================================================
-setting                         default value                        description
-=============================== ==================================== =====================================================================
-openapiSwaggerFile              baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
-openapiPackage                  sttp.tapir.generated                 The name for the generated package.
-openapiObject                   TapirGeneratedEndpoints              The name for the generated object.
-openapiUseHeadTagForObjectName  false                                If true, put endpoints in separate files based on first declared tag.
-=============================== ==================================== =====================================================================
+===================================== ==================================== =======================================================================================
+setting                               default value                        description
+===================================== ==================================== =======================================================================================
+openapiSwaggerFile                    baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
+openapiPackage                        sttp.tapir.generated                 The name for the generated package.
+openapiObject                         TapirGeneratedEndpoints              The name for the generated object.
+openapiUseHeadTagForObjectName        false                                If true, put endpoints in separate files based on first declared tag.
+openapiJsonSerdeLib                   circe                                The json serde library to use.
+openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
+===================================== ==================================== =======================================================================================
 ```
 
 The general usage is;
@@ -58,6 +60,7 @@ val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "
 ### Output files
 
 To expand on the `openapiUseHeadTagForObjectName` setting a little more, suppose we have the following endpoints:
+
 ```yaml
 paths:
   /foo:
@@ -66,33 +69,53 @@ paths:
         - Baz
         - Foo
     put:
-      tags: []
+      tags: [ ]
   /bar:
     get:
       tags:
         - Baz
         - Bar
 ```
-In this case 'head' tag for `GET /foo` and `GET /bar` would be 'Baz', and `PUT /foo` has no tags (and thus no 'head' tag).
 
-If `openapiUseHeadTagForObjectName = false` (assuming default settings for the other flags) then all endpoint definitions
-will be output to the `TapirGeneratedEndpoints.scala` file, which will contain a single `object TapirGeneratedEndpoints`.
+In this case 'head' tag for `GET /foo` and `GET /bar` would be 'Baz', and `PUT /foo` has no tags (and thus no 'head'
+tag).
+
+If `openapiUseHeadTagForObjectName = false` (assuming default settings for the other flags) then all endpoint
+definitions
+will be output to the `TapirGeneratedEndpoints.scala` file, which will contain a
+single `object TapirGeneratedEndpoints`.
 
 If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` endpoints would be output to a
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
+### Json Support
+
+```eval_rst
+===================== ================================================================== ===================================================================
+ openapiJsonSerdeLib         required dependencies                                       Conditional requirements
+===================== ================================================================== ===================================================================
+circe                 "io.circe" %% "circe-core"                                         "com.beachape" %% "enumeratum-circe" (scala 2 enum support).
+                      "io.circe" %% "circe-generic"                                      "org.latestbit" %% "circe-tagged-adt-codec" (scala 3 enum support).
+jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"
+                      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros"
+===================== ================================================================== ===================================================================
+```
+
 ### Limitations
 
-Currently, the generated code depends on `"io.circe" %% "circe-generic"`. In the future probably we will make the encoder/decoder json lib configurable (PRs welcome).
-
-String-like enums in Scala 2 depend on both `"com.beachape" %% "enumeratum"` and `"com.beachape" %% "enumeratum-circe"`.
-For Scala 3 we derive native enums, and depend on `"org.latestbit" %% "circe-tagged-adt-codec"` for json serdes and `"io.github.bishabosha" %% "enum-extensions"` for query param serdes.
+Currently, string-like enums in Scala 2 depend upon the enumeratum library (`"com.beachape" %% "enumeratum"`).
+For Scala 3 we derive native enums, and depend on `"io.github.bishabosha" %% "enum-extensions"` for generating query
+param serdes.
 Other forms of OpenApi enum are not currently supported.
 
+Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
+representation types for the binary data
+
 We currently miss a lot of OpenApi features like:
- - tags
- - ADTs
- - missing model types and meta descriptions (like date, minLength)
- - file handling
+
+- tags
+- anyOf/allOf
+- missing model types and meta descriptions (like date, minLength)
+- file handling
 
