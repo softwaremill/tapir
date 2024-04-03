@@ -1573,6 +1573,7 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-zio-tests",
+    publishArtifact := false,
     assembly / assemblyJarName := "tapir-aws-lambda-zio-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
@@ -1646,6 +1647,7 @@ lazy val awsLambdaCatsEffectTests: ProjectMatrix = (projectMatrix in file("serve
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-cats-effect-tests",
+    publishArtifact := false,
     assembly / assemblyJarName := "tapir-aws-lambda-cats-effect-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
@@ -1814,7 +1816,8 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
     name := "tapir-aws-examples",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %%% "cats" % Versions.sttp
-    )
+    ),
+    publishArtifact := false
   )
   .jvmPlatform(
     scalaVersions = scala2Versions,
@@ -1846,7 +1849,9 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonJvmSettings)
-  .settings(name := "tapir-client-tests")
+  .settings(
+    name := "tapir-client-tests"
+  )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2And3Versions,
