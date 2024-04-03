@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
+import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
@@ -12,8 +13,8 @@ import sttp.capabilities.fs2.Fs2Streams
 import scala.concurrent.duration.FiniteDuration
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Fs2Streams[IO], NettyCatsServerOptions[IO], Route[IO]] {
-  override def route(es: List[ServerEndpoint[Fs2Streams[IO], IO]], interceptors: Interceptors): Route[IO] = {
+    extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, NettyCatsServerOptions[IO], Route[IO]] {
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Route[IO] = {
     val serverOptions: NettyCatsServerOptions[IO] = interceptors(
       NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
     ).options

@@ -12,6 +12,7 @@ import sttp.tapir.TapirFile
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.{NettyStreamingRequestBody, StreamCompatible}
+import sttp.capabilities.WebSockets
 
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
@@ -24,7 +25,8 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
     streamCompatible.fromPublisher(publisher, maxBytes).compile.to(Chunk).map(_.toArray[Byte])
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
-    (toStream(serverRequest, maxBytes).asInstanceOf[streamCompatible.streams.BinaryStream])
+    (toStream(serverRequest, maxBytes)
+      .asInstanceOf[streamCompatible.streams.BinaryStream])
       .through(
         Files[F](Files.forAsync[F]).writeAll(Path.fromNioPath(file.toPath))
       )

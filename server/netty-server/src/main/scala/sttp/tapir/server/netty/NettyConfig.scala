@@ -10,6 +10,7 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
+import sttp.tapir.server.netty.internal._
 
 import scala.concurrent.duration._
 
@@ -102,9 +103,12 @@ case class NettyConfig(
   def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
 
   def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
+
+  def isSsl: Boolean = sslContext.isDefined
 }
 
 object NettyConfig {
+
   def default: NettyConfig = NettyConfig(
     host = "localhost",
     port = 8080,
@@ -126,7 +130,7 @@ object NettyConfig {
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
-    pipeline.addLast(new HttpServerCodec())
+    pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())

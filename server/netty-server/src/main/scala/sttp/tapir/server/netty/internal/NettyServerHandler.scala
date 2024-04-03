@@ -4,8 +4,10 @@ import io.netty.buffer.{ByteBuf, Unpooled}
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
-import org.playframework.netty.http.{DefaultStreamedHttpResponse, StreamedHttpRequest}
+import io.netty.handler.timeout.ReadTimeoutHandler
+import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 import sttp.monad.MonadError
@@ -15,8 +17,10 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
   ChunkedFileNettyResponseContent,
   ChunkedStreamNettyResponseContent,
-  ReactivePublisherNettyResponseContent
+  ReactivePublisherNettyResponseContent,
+  ReactiveWebSocketProcessorNettyResponseContent
 }
+import sttp.tapir.server.netty.internal.ws.{NettyControlFrameHandler, WebSocketAutoPingHandler}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.atomic.AtomicBoolean
@@ -36,7 +40,8 @@ class NettyServerHandler[F[_]](
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
     channelGroup: ChannelGroup,
     isShuttingDown: AtomicBoolean,
-    serverHeader: Option[String]
+    serverHeader: Option[String],
+    isSsl: Boolean = false
 )(implicit
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
@@ -62,6 +67,7 @@ class NettyServerHandler[F[_]](
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
+  private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -212,6 +218,17 @@ class NettyServerHandler[F[_]](
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
       },
+      wsHandler = (responseContent) => {
+        if (isWsHandshake(req))
+          initWsPipeline(ctx, responseContent, req)
+        else {
+          val buf = Unpooled.wrappedBuffer("Incorrect Web Socket handshake".getBytes)
+          val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, buf)
+          res.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes())
+          res.handleCloseAndKeepAliveHeaders(req)
+          ctx.writeAndFlush(res).closeIfNeeded(req)
+        }
+      },
       noBodyHandler = () => {
         val res = new DefaultFullHttpResponse(
           req.protocolVersion(),
@@ -227,13 +244,64 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  private implicit class RichServerNettyResponse(val r: ServerResponse[NettyResponse]) {
+  private def initWsPipeline(
+      ctx: ChannelHandlerContext,
+      r: ReactiveWebSocketProcessorNettyResponseContent,
+      handshakeReq: HttpRequest
+  ) = {
+    ctx.pipeline().remove(this)
+    ctx.pipeline().remove(classOf[ReadTimeoutHandler])
+    ctx
+      .pipeline()
+      .addAfter(
+        ServerCodecHandlerName,
+        WebSocketControlFrameHandlerName,
+        new NettyControlFrameHandler(
+          ignorePong = r.ignorePong,
+          autoPongOnPing = r.autoPongOnPing,
+          decodeCloseRequests = r.decodeCloseRequests
+        )
+      )
+    r.autoPing.foreach { case (interval, pingMsg) =>
+      ctx
+        .pipeline()
+        .addAfter(
+          WebSocketControlFrameHandlerName,
+          WebSocketAutoPingHandlerName,
+          new WebSocketAutoPingHandler(interval, pingMsg)
+        )
+    }
+    // Manually completing the promise, for some reason it won't be completed in writeAndFlush. We need its completion for NettyBodyListener to call back properly
+    r.channelPromise.setSuccess()
+    val _ = ctx.writeAndFlush(
+      // Push a special message down the pipeline, it will be handled by HttpStreamsServerHandler
+      // and from now on that handler will take control of the flow (our NettyServerHandler will not receive messages)
+      new DefaultWebSocketHttpResponse(
+        handshakeReq.protocolVersion(),
+        HttpResponseStatus.valueOf(200),
+        r.processor, // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
+        new WebSocketServerHandshakerFactory(wsUrl(handshakeReq), null, false)
+      )
+    )
+  }
+
+  private def isWsHandshake(req: HttpRequest): Boolean =
+    "Websocket".equalsIgnoreCase(req.headers().get(HttpHeaderNames.UPGRADE)) &&
+      "Upgrade".equalsIgnoreCase(req.headers().get(HttpHeaderNames.CONNECTION))
+
+  // Only ancient WS protocol versions will use this in the response header.
+  private def wsUrl(req: HttpRequest): String = {
+    val scheme = if (isSsl) "wss" else "ws"
+    s"$scheme://${req.headers().get(HttpHeaderNames.HOST)}${req.uri()}"
+  }
+  private implicit class RichServerNettyResponse(r: ServerResponse[NettyResponse]) {
     def handle(
         ctx: ChannelHandlerContext,
         byteBufHandler: (ChannelPromise, ByteBuf) => Unit,
         chunkedStreamHandler: (ChannelPromise, ChunkedStream) => Unit,
         chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
         reactiveStreamHandler: (ChannelPromise, Publisher[HttpContent]) => Unit,
+        wsHandler: ReactiveWebSocketProcessorNettyResponseContent => Unit,
         noBodyHandler: () => Unit
     ): Unit = {
       r.body match {
@@ -241,10 +309,11 @@ class NettyServerHandler[F[_]](
           val values = function(ctx)
 
           values match {
-            case r: ByteBufNettyResponseContent           => byteBufHandler(r.channelPromise, r.byteBuf)
-            case r: ChunkedStreamNettyResponseContent     => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
-            case r: ChunkedFileNettyResponseContent       => chunkedFileHandler(r.channelPromise, r.chunkedFile)
-            case r: ReactivePublisherNettyResponseContent => reactiveStreamHandler(r.channelPromise, r.publisher)
+            case r: ByteBufNettyResponseContent                    => byteBufHandler(r.channelPromise, r.byteBuf)
+            case r: ChunkedStreamNettyResponseContent              => chunkedStreamHandler(r.channelPromise, r.chunkedStream)
+            case r: ChunkedFileNettyResponseContent                => chunkedFileHandler(r.channelPromise, r.chunkedFile)
+            case r: ReactivePublisherNettyResponseContent          => reactiveStreamHandler(r.channelPromise, r.publisher)
+            case r: ReactiveWebSocketProcessorNettyResponseContent => wsHandler(r)
           }
         }
         case None => noBodyHandler()
@@ -252,7 +321,7 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  private implicit class RichHttpMessage(val m: HttpMessage) {
+  private implicit class RichHttpMessage(m: HttpMessage) {
     def setHeadersFrom(response: ServerResponse[_]): Unit = {
       serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
@@ -278,7 +347,7 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  private implicit class RichChannelFuture(val cf: ChannelFuture) {
+  private implicit class RichChannelFuture(cf: ChannelFuture) {
     def closeIfNeeded(request: HttpRequest): Unit = {
       if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get()) {
         cf.addListener(ChannelFutureListener.CLOSE)

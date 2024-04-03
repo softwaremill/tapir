@@ -1,22 +1,20 @@
 package sttp.tapir.server.netty.cats.internal
 
+import cats.effect.kernel.{Async, Sync}
+import cats.effect.std.Dispatcher
+import fs2.interop.reactivestreams.{StreamSubscriber, StreamUnicastPublisher}
+import fs2.io.file.{Files, Flags, Path}
+import fs2.{Chunk, Pipe}
 import io.netty.buffer.Unpooled
+import io.netty.channel.{ChannelFuture, ChannelHandlerContext}
+import io.netty.handler.codec.http.websocketx._
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
-import org.reactivestreams.Publisher
-import sttp.tapir.FileRange
+import org.reactivestreams.{Processor, Publisher}
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.netty.internal._
+import sttp.tapir.{FileRange, WebSocketBodyOutput}
 
 import java.io.InputStream
-import cats.effect.std.Dispatcher
-import sttp.capabilities.fs2.Fs2Streams
-import fs2.io.file.Path
-import fs2.io.file.Files
-import cats.effect.kernel.Async
-import fs2.io.file.Flags
-import fs2.interop.reactivestreams.StreamUnicastPublisher
-import cats.effect.kernel.Sync
-import fs2.Chunk
-import fs2.interop.reactivestreams.StreamSubscriber
 
 object Fs2StreamCompatible {
 
@@ -67,6 +65,26 @@ object Fs2StreamCompatible {
 
       override def emptyStream: streams.BinaryStream =
         fs2.Stream.empty
+
+      override def asWsProcessor[REQ, RESP](
+          pipe: Pipe[F, REQ, RESP],
+          o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
+          ctx: ChannelHandlerContext
+      ): Processor[WebSocketFrame, WebSocketFrame] = {
+        val wsCompletedPromise = ctx.newPromise()
+        wsCompletedPromise.addListener((f: ChannelFuture) => {
+          // A special callback that has to be used when a SteramSubscription cancels or fails.
+          // This can happen in case of errors in the pipeline which are not signalled correctly,
+          // like throwing exceptions directly.
+          // Without explicit Close frame a client may hang on waiting and not knowing about closed channel.
+          if (f.isCancelled) {
+            val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Canceled"))
+          } else if (!f.isSuccess) {
+            val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Error"))
+          }
+        })
+        new WebSocketPipeProcessor[F, REQ, RESP](pipe, dispatcher, o, wsCompletedPromise)
+      }
 
       private def inputStreamToFs2(inputStream: () => InputStream, chunkSize: Int) =
         fs2.io.readInputStream(
