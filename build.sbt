@@ -1206,8 +1206,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
-    ),
-    publishArtifact := false
+    )
   )
   .dependsOn(tests, sttpStubServer, enumeratum)
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1852,8 +1851,7 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-client-tests",
-    publishArtifact := false
+    name := "tapir-client-tests"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
