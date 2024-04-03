@@ -24,13 +24,17 @@ object CorsInterceptorPekkoServer extends App {
   // Add CORSInterceptor to ServerOptions. Allow http://example.com origin, GET methods, credentials and some custom
   // headers.
   val customServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions.customiseInterceptors
-    .corsInterceptor(CORSInterceptor.customOrThrow(CORSConfig.default
-    .allowOrigin(Origin.Host("http", "example.com"))
-    .allowMethods(Method.GET)
-    .allowHeaders("X-Foo", "X-Bar")
-    .allowCredentials
-    .maxAge(42.seconds)
-    )).options
+    .corsInterceptor(
+      CORSInterceptor.customOrThrow(
+        CORSConfig.default
+          .allowOrigin(Origin.Host("http", "example.com"))
+          .allowMethods(Method.GET)
+          .allowHeaders("X-Foo", "X-Bar")
+          .allowCredentials
+          .maxAge(42.seconds)
+      )
+    )
+    .options
 
   val helloCorsRoute: Route =
     PekkoHttpServerInterpreter(customServerOptions).toRoute(helloCors.serverLogicSuccess(name => Future.successful(s"Hello!")))
@@ -44,8 +48,9 @@ object CorsInterceptorPekkoServer extends App {
       .options(uri"http://localhost:8080/hello")
       .headers(
         Header.origin(Origin.Host("http", "example.com")),
-        Header.accessControlRequestMethod(Method.GET),
-      ).send(backend)
+        Header.accessControlRequestMethod(Method.GET)
+      )
+      .send(backend)
 
     assert(preflightResponse.code == StatusCode.NoContent)
     assert(preflightResponse.headers.contains(Header.accessControlAllowOrigin("http://example.com")))
@@ -60,8 +65,9 @@ object CorsInterceptorPekkoServer extends App {
       .options(uri"http://localhost:8080/hello")
       .headers(
         Header.origin(Origin.Host("http", "unallowed.com")),
-        Header.accessControlRequestMethod(Method.GET),
-      ).send(backend)
+        Header.accessControlRequestMethod(Method.GET)
+      )
+      .send(backend)
 
     // Check response does not contain allowed origin header
     assert(preflightResponseForUnallowedOrigin.code == StatusCode.NoContent)
@@ -70,7 +76,9 @@ object CorsInterceptorPekkoServer extends App {
     println("Got expected response for preflight request for wrong origin. No allowed origin header in response")
 
     // Sending regular request from allowed origin
-    val requestResponse = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello")
+    val requestResponse = basicRequest
+      .response(asStringAlways)
+      .get(uri"http://localhost:8080/hello")
       .headers(Header.origin(Origin.Host("http", "example.com")), Header.authorization("Bearer", "dummy-credentials"))
       .send(backend)
 

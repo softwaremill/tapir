@@ -12,4 +12,3 @@ case class GatlingSimulationResult(
     latencyP75: Double,
     latencyP50: Double
 )
-

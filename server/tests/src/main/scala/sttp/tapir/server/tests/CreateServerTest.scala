@@ -60,7 +60,7 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE]
 ) extends CreateServerTest[F, R, OPTIONS, ROUTE] {
-  
+
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def testServer[I, E, O](

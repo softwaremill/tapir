@@ -7,13 +7,13 @@ trait RunAsync[F[_]] {
 }
 object RunAsync {
   type Id[A] = A
-  
+
   final val Id: RunAsync[Id] = new RunAsync[Id] {
     override def apply(f: => Id[Unit]): Unit = f
   }
-  
+
   final val Future: RunAsync[Future] = new RunAsync[Future] {
-    override def apply(f: => Future[Unit]): Unit = 
+    override def apply(f: => Future[Unit]): Unit =
       f: Unit
   }
 }
