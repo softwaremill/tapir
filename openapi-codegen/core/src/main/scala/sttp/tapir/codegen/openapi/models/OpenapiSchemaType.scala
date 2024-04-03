@@ -10,9 +10,15 @@ object OpenapiSchemaType {
   sealed trait OpenapiSchemaMixedType extends OpenapiSchemaType
   sealed trait OpenapiSchemaSimpleType extends OpenapiSchemaType
 
+  // https://swagger.io/specification/v3/#discriminator-object
+  case class Discriminator(
+      propertyName: String,
+      mapping: Option[Map[String, String]] = None
+  )
   // https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/
   case class OpenapiSchemaOneOf(
-      types: Seq[OpenapiSchemaSimpleType]
+      types: Seq[OpenapiSchemaSimpleType],
+      discriminator: Option[Discriminator] = None
   ) extends OpenapiSchemaMixedType {
     val nullable: Boolean = false
   }
@@ -83,6 +89,8 @@ object OpenapiSchemaType {
       name: String
   ) extends OpenapiSchemaSimpleType {
     val nullable = false
+    def isSchema: Boolean = name.startsWith("#/components/schemas/")
+    def stripped: String = name.stripPrefix("#/components/schemas/")
   }
 
   case class OpenapiSchemaAny(
@@ -207,11 +215,19 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaNumericType].widen
     ).reduceLeft(_ or _)
 
+  implicit val DiscriminatorDecoder: Decoder[Discriminator] = { (c: HCursor) =>
+    for {
+      propertyName <- c.downField("propertyName").as[String]
+      mapping <- c.downField("mapping").as[Option[Map[String, String]]]
+    } yield Discriminator(propertyName, mapping)
+  }
+
   implicit val OpenapiSchemaOneOfDecoder: Decoder[OpenapiSchemaOneOf] = { (c: HCursor) =>
     for {
-      d <- c.downField("oneOf").as[Seq[OpenapiSchemaSimpleType]]
+      variants <- c.downField("oneOf").as[Seq[OpenapiSchemaSimpleType]]
+      discriminator <- c.downField("discriminator").as[Option[Discriminator]]
     } yield {
-      OpenapiSchemaOneOf(d)
+      OpenapiSchemaOneOf(variants, discriminator)
     }
   }
 

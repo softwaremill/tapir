@@ -11,6 +11,7 @@ case class OpenapiCodegenTask(
     objectName: String,
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
+    validateNonDiscriminatedOneOfs: Boolean,
     dir: File,
     cacheDir: File,
     targetScala3: Boolean
@@ -45,7 +46,15 @@ case class OpenapiCodegenTask(
         .left
         .map(d => new RuntimeException(_root_.io.circe.Error.showError.show(d)))
       BasicGenerator
-        .generateObjects(parsed.toTry.get, packageName, objectName, targetScala3, useHeadTagForObjectName, jsonSerdeLib)
+        .generateObjects(
+          parsed.toTry.get,
+          packageName,
+          objectName,
+          targetScala3,
+          useHeadTagForObjectName,
+          jsonSerdeLib,
+          validateNonDiscriminatedOneOfs
+        )
         .map { case (objectName, fileBody) =>
           val file = directory / s"$objectName.scala"
           val lines = fileBody.linesIterator.toSeq

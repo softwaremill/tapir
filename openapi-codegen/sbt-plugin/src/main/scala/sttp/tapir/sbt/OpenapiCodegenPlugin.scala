@@ -27,7 +27,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiPackage := "sttp.tapir.generated",
     openapiObject := "TapirGeneratedEndpoints",
     openapiUseHeadTagForObjectName := false,
-    openapiJsonSerdeLib := "circe"
+    openapiJsonSerdeLib := "circe",
+    openapiValidateNonDiscriminatedOneOfs := true
   )
 
   private def codegen = Def.task {
@@ -39,6 +40,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiObject,
       openapiUseHeadTagForObjectName,
       openapiJsonSerdeLib,
+      openapiValidateNonDiscriminatedOneOfs,
       sourceManaged,
       streams,
       scalaVersion
@@ -48,7 +50,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
           packageName: String,
           objectName: String,
           useHeadTagForObjectName: Boolean,
-          jsonSerdeLib,
+          jsonSerdeLib: String,
+          validateNonDiscriminatedOneOfs: Boolean,
           srcDir: File,
           taskStreams: TaskStreams,
           sv: String
@@ -59,6 +62,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
           objectName,
           useHeadTagForObjectName,
           jsonSerdeLib,
+          validateNonDiscriminatedOneOfs,
           srcDir,
           taskStreams.cacheDirectory,
           sv.startsWith("3")

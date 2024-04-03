@@ -7,18 +7,22 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
+case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String])
+
 class ClassDefinitionGenerator {
-  val jsoniterDefaultConfig =
-    "com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withDiscriminatorFieldName(scala.None)"
 
   def classDefs(
       doc: OpenapiDocument,
       targetScala3: Boolean = false,
       queryParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
-      jsonParamRefs: Set[String] = Set.empty
-  ): Option[String] = {
+      jsonParamRefs: Set[String] = Set.empty,
+      fullModelPath: String = "",
+      validateNonDiscriminatedOneOfs: Boolean = true
+  ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
+    val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
+    val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
     val generatesQueryParamEnums =
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
@@ -34,41 +38,60 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val maybeJsonSerdeHelpers =
-      if (jsonParamRefs.nonEmpty && jsonSerdeLib == JsonSerdeLib.Jsoniter)
-        s"""implicit def seqCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[List[T]] =
-        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[List[T]]($jsoniterDefaultConfig)
-        |implicit def optionCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Option[T]] =
-        |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]($jsoniterDefaultConfig)
-        |""".stripMargin
-      else ""
+    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
-    // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
-    // This should be the set of all json param refs not included in our schema definitions
-    val additionalExplicitSerdes = jsonParamRefs.toSeq
-      .filter(x => !allSchemas.contains(x))
-      .map(s =>
-        jsonSerdeLib match {
-          case JsonSerdeLib.Jsoniter =>
-            val name = s.replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
-            s"""implicit lazy val $name: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$s] =
-            |  com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[$s]($jsoniterDefaultConfig)""".stripMargin
-          case _ => ""
-        }
-      )
-      .mkString("", "\n", "\n")
+    val postDefns = JsonSerdeGenerator.serdeDefs(
+      doc,
+      jsonSerdeLib,
+      jsonParamRefs,
+      allTransitiveJsonParamRefs,
+      fullModelPath,
+      validateNonDiscriminatedOneOfs,
+      adtInheritanceMap
+    )
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
-          generateClass(allSchemas, name, obj, jsonSerdeLib, allTransitiveJsonParamRefs)
+          generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap)
         case (name, obj: OpenapiSchemaEnum) =>
           generateEnum(name, obj, targetScala3, queryParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema, jsonSerdeLib, allTransitiveJsonParamRefs)
+        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
+        case (_, _: OpenapiSchemaOneOf)               => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
-    defns.map(additionalExplicitSerdes + maybeJsonSerdeHelpers + enumQuerySerdeHelper + _)
+    val helpers = (enumQuerySerdeHelper + adtTypes).linesIterator
+      .filterNot(_.forall(_.isWhitespace))
+      .mkString("\n")
+    // Json  serdes live in a separate file from the class defns
+    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, postDefns))
   }
+
+  private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
+    allOneOfSchemas
+      .flatMap { case (name, schema) =>
+        val validatedChildren = schema.types.map {
+          case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+          case other =>
+            val unsupportedChild = other.getClass.getName
+            throw new NotImplementedError(
+              s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
+            )
+        }
+        // If defined, check that the discriminator mappings match the oneOf refs
+        schema.discriminator match {
+          case None | Some(Discriminator(_, None)) => // if there's no discriminator or no mapping, nothing to validate
+          case Some(Discriminator(_, Some(mapping))) =>
+            val targetClassNames = mapping.values.map(_.split('/').last).toSet
+            if (targetClassNames != validatedChildren.toSet)
+              throw new IllegalArgumentException(
+                s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
+              )
+        }
+        validatedChildren.map(_ -> name)
+      }
+      .groupBy(_._1)
+      .mapValues(_.map(_._2))
 
   private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = if (targetScala3)
     """
@@ -124,8 +147,8 @@ class ClassDefinitionGenerator {
       case next +: rest => Some((next, checked, rest ++ tail))
     }
     val maybeNextParams = toCheck match {
-      case OpenapiSchemaRef(ref) if ref.startsWith("#/components/schemas/") =>
-        val name = ref.stripPrefix("#/components/schemas/")
+      case ref: OpenapiSchemaRef if ref.isSchema =>
+        val name = ref.stripped
         val maybeAppended = if (checked contains name) None else allSchemas.get(name)
         (tail ++ maybeAppended) match {
           case Nil          => None
@@ -134,7 +157,7 @@ class ClassDefinitionGenerator {
       case OpenapiSchemaArray(items, _)                                => Some((items, checked, tail))
       case OpenapiSchemaNot(items)                                     => Some((items, checked, tail))
       case OpenapiSchemaMap(items, _)                                  => Some((items, checked, tail))
-      case OpenapiSchemaOneOf(types)                                   => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaOneOf(types, _)                                => nextParamsFromTypeSeq(types)
       case OpenapiSchemaAnyOf(types)                                   => nextParamsFromTypeSeq(types)
       case OpenapiSchemaAllOf(types)                                   => nextParamsFromTypeSeq(types)
       case OpenapiSchemaObject(properties, _, _) if properties.isEmpty => None
@@ -157,26 +180,13 @@ class ClassDefinitionGenerator {
 
   private[codegen] def generateMap(
       name: String,
-      valueSchema: OpenapiSchemaType,
-      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
-      jsonParamRefs: Set[String]
+      valueSchema: OpenapiSchemaType
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
       case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
     }
-    val uncapitalisedName = name.head.toLower +: name.tail
-    val maybeJsonCodecDefn = jsonSerdeLib match {
-      case _ if !jsonParamRefs.contains(name) => ""
-      case JsonSerdeLib.Circe =>
-        s"""
-           |implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.Decoder.decodeMap[String, $valueSchemaName]
-           |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.encodeMap[String, $valueSchemaName]""".stripMargin
-      case JsonSerdeLib.Jsoniter =>
-        s"""
-           |implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[$name] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)""".stripMargin
-    }
-    Seq(s"""type $name = Map[String, $valueSchemaName]$maybeJsonCodecDefn""")
+    Seq(s"""type $name = Map[String, $valueSchemaName]""")
   }
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
@@ -211,13 +221,6 @@ class ClassDefinitionGenerator {
   } else {
     val uncapitalisedName = name.head.toLower +: name.tail
     val members = obj.items.map { i => s"case object ${i.value} extends $name" }
-    val maybeJsonCodecDefn = jsonSerdeLib match {
-      case _ if !jsonParamRefs.contains(name) => ""
-      case JsonSerdeLib.Circe                 => ""
-      case JsonSerdeLib.Jsoniter =>
-        s"""
-           |  implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)""".stripMargin
-    }
     val maybeCodecExtension = jsonSerdeLib match {
       case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
       case JsonSerdeLib.Circe                                                   => s" with enumeratum.CirceEnum[$name]"
@@ -229,9 +232,10 @@ class ClassDefinitionGenerator {
        |  implicit val ${uncapitalisedName}QueryCodec: sttp.tapir.Codec[List[String], ${name}, sttp.tapir.CodecFormat.TextPlain] =
        |    makeQueryCodecForEnum("${name}", ${name})""".stripMargin
       else ""
-    s"""|sealed trait $name extends enumeratum.EnumEntry
+    s"""
+        |sealed trait $name extends enumeratum.EnumEntry
         |object $name extends enumeratum.Enum[$name]$maybeCodecExtension {
-        |  val values = findValues$maybeJsonCodecDefn
+        |  val values = findValues
         |${indent(2)(members.mkString("\n"))}$maybeQueryCodecDefn
         |}""".stripMargin :: Nil
   }
@@ -240,8 +244,8 @@ class ClassDefinitionGenerator {
       allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       obj: OpenapiSchemaObject,
-      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
-      jsonParamRefs: Set[String]
+      jsonParamRefs: Set[String],
+      adtInheritanceMap: Map[String, Seq[String]]
   ): Seq[String] = {
     val isJson = jsonParamRefs contains name
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
@@ -272,26 +276,14 @@ class ClassDefinitionGenerator {
         s"$fixedKey: $tpe$default"
       }
 
-      val uncapitalisedName = name.head.toLower +: name.tail
-      def jsonCodec = jsonSerdeLib match {
-        case JsonSerdeLib.Circe =>
-          s"""implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
-             |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
-        case JsonSerdeLib.Jsoniter =>
-          s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterDefaultConfig)"""
+      val parents = adtInheritanceMap.getOrElse(name, Nil) match {
+        case Nil => ""
+        case ps  => ps.mkString(" extends ", " with ", "")
       }
-      val maybeCompanion =
-        if (isJson)
-          s"""
-          |object $name {
-          |${indent(2)(jsonCodec)}
-          |}"""
-        else ""
 
-      s"""|$maybeCompanion
-          |case class $name (
+      s"""|case class $name (
           |${indent(2)(properties.mkString(",\n"))}
-          |)""".stripMargin :: innerClasses ::: acc
+          |)$parents""".stripMargin :: innerClasses ::: acc
     }
 
     rec(addName("", name), obj, Nil)

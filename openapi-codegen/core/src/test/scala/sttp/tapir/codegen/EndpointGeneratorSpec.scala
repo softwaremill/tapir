@@ -239,7 +239,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       "TapirGeneratedEndpoints",
       targetScala3 = false,
       useHeadTagForObjectNames = false,
-      jsonSerdeLib = "circe"
+      jsonSerdeLib = "circe",
+      validateNonDiscriminatedOneOfs = true
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -258,7 +259,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       "TapirGeneratedEndpoints",
       targetScala3 = false,
       useHeadTagForObjectNames = false,
-      jsonSerdeLib = "circe"
+      jsonSerdeLib = "circe",
+      validateNonDiscriminatedOneOfs = true
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

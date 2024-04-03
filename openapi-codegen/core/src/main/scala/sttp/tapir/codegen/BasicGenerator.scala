@@ -33,7 +33,8 @@ object BasicGenerator {
       objName: String,
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
-      jsonSerdeLib: String
+      jsonSerdeLib: String,
+      validateNonDiscriminatedOneOfs: Boolean
   ): Map[String, String] = {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -46,12 +47,30 @@ object BasicGenerator {
     }
 
     val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val GeneratedClassDefinitions(classDefns, extras) =
+      classGenerator
+        .classDefs(
+          doc = doc,
+          targetScala3 = targetScala3,
+          queryParamRefs = queryParamRefs,
+          jsonSerdeLib = normalisedJsonLib,
+          jsonParamRefs = jsonParamRefs,
+          fullModelPath = s"$packagePath.$objName",
+          validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs
+        )
+        .getOrElse(GeneratedClassDefinitions("", None))
+    val isSplit = extras.nonEmpty
+    val internalImports =
+      if (isSplit)
+        s"""import $packagePath.$objName._
+         |import ${objName}JsonSerdes._""".stripMargin
+      else s"import $objName._"
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
         val taggedObj =
           s"""package $packagePath
            |
-           |import $objName._
+           |$internalImports
            |
            |object $headTag {
            |
@@ -62,6 +81,15 @@ object BasicGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
+    val extraObj = extras.map { body =>
+      s"""package $packagePath
+         |
+         |object ${objName}JsonSerdes {
+         |  import $packagePath.$objName._
+         |${indent(2)(body)}
+         |}""".stripMargin
+    }
+    val endpointsInMain = endpointsByTag.getOrElse(None, "")
 
     val maybeSpecificationExtensionKeys = doc.paths
       .flatMap { p =>
@@ -80,21 +108,23 @@ object BasicGenerator {
       }
       .mkString("\n")
 
+    val serdeImport = if (isSplit && endpointsInMain.nonEmpty) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val mainObj = s"""|
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports(normalisedJsonLib))}
+        |${indent(2)(imports(normalisedJsonLib) + serdeImport)}
         |
-        |${indent(2)(classGenerator.classDefs(doc, targetScala3, queryParamRefs, normalisedJsonLib, jsonParamRefs).getOrElse(""))}
+        |${indent(2)(classDefns)}
         |
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
-        |${indent(2)(endpointsByTag.getOrElse(None, ""))}
+        |${indent(2)(endpointsInMain)}
+        |
         |}
         |""".stripMargin
-    taggedObjs + (objName -> mainObj)
+    taggedObjs ++ extraObj.map(s"${objName}JsonSerdes" -> _) + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
