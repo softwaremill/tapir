@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.2"
 ```
 
 Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
@@ -142,7 +142,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.1"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.2"
 ```
 
 And the following imports:
@@ -197,7 +197,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.1"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.2"
 ```
 
 Imports:
@@ -268,7 +268,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.1"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.2"
 ```
 
 ### Shadowed endpoints
@@ -294,7 +294,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x/y/x, is shadowed by: GET /x/*, GET /x, is shadowed by: GET /x/*)"
+// res2: String = "Set(GET /x, is shadowed by: GET /x/*, GET /x/y/x, is shadowed by: GET /x/*)"
 ```
 
 Example 2:
