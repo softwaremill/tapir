@@ -32,8 +32,8 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithoutD1("a string+SubtypeWithoutD1", Some(123), Seq("string 1", "string 2"))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"i":123,"s":"a string"}"""
-      respJsonBody shouldEqual """{"a":["string 1","string 2"],"i":123,"s":"a string+SubtypeWithoutD1"}"""
+      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"absent":null,"i":123,"s":"a string"}"""
+      respJsonBody shouldEqual """{"a":["string 1","string 2"],"absent":null,"i":123,"s":"a string+SubtypeWithoutD1"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
@@ -52,8 +52,8 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithoutD2(Seq("string 1", "string 2", "+SubtypeWithoutD2"))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"a":["string 1","string 2"]}"""
-      respJsonBody shouldEqual """{"a":["string 1","string 2","+SubtypeWithoutD2"]}"""
+      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"absent":null}"""
+      respJsonBody shouldEqual """{"a":["string 1","string 2","+SubtypeWithoutD2"],"absent":null}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
@@ -72,8 +72,8 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(23.4))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string"}"""
-      respJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string+SubtypeWithoutD3"}"""
+      reqJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string"}"""
+      respJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string+SubtypeWithoutD3"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")

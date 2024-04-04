@@ -106,6 +106,8 @@ components:
           type: array
           items:
             type: string
+        absent:
+          type: string
     SubtypeWithoutD2:
       type: object
       required:
@@ -115,6 +117,8 @@ components:
           type: array
           items:
             type: string
+        absent:
+          type: string
     SubtypeWithoutD3:
       type: object
       required:
@@ -127,3 +131,5 @@ components:
         d:
           type: number
           format: double
+        absent:
+          type: string

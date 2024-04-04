@@ -18,7 +18,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     val route = TapirGeneratedEndpoints.putAdtTest.serverLogic[Future]({
       case foo: SubtypeWithoutD1 =>
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
-      case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a + "+SubtypeWithoutD2"))
+      case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a :+ "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.d))
     })
@@ -30,12 +30,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
 
     def normalise(json: String): String = parse(json).toTry.get.noSpacesSortKeys
     locally {
-      val reqBody: ADTWithoutDiscriminator = SubtypeWithoutD1("a string", Some(123), "another string")
+      val reqBody = SubtypeWithoutD1("a string", Some(123), Seq("string 1", "string 2"))
       val reqJsonBody = writeToString(reqBody)
-      val respBody: ADTWithoutDiscriminator = SubtypeWithoutD1("a string+SubtypeWithoutD1", Some(123), "another string")
+      val respBody = SubtypeWithoutD1("a string+SubtypeWithoutD1", Some(123), Seq("string 1", "string 2"))
       val respJsonBody = writeToString(respBody)
-      reqJsonBody shouldEqual """{"s":"a string","i":123,"a":"another string"}"""
-      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD1","i":123,"a":"another string"}"""
+      reqJsonBody shouldEqual """{"s":"a string","i":123,"a":["string 1","string 2"]}"""
+      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD1","i":123,"a":["string 1","string 2"]}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
@@ -50,12 +50,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody = SubtypeWithoutD2("another string")
+      val reqBody = SubtypeWithoutD2(Seq("string 1", "string 2"))
       val reqJsonBody = writeToString(reqBody)
-      val respBody = SubtypeWithoutD2("another string+SubtypeWithoutD2")
+      val respBody = SubtypeWithoutD2(Seq("string 1", "string 2", "+SubtypeWithoutD2"))
       val respJsonBody = writeToString(respBody)
-      reqJsonBody shouldEqual """{"a":"another string"}"""
-      respJsonBody shouldEqual """{"a":"another string+SubtypeWithoutD2"}"""
+      reqJsonBody shouldEqual """{"a":["string 1","string 2"]}"""
+      respJsonBody shouldEqual """{"a":["string 1","string 2","+SubtypeWithoutD2"]}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")

@@ -17,7 +17,8 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
-    a: String
+    a: Seq[String],
+    absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithD1 (
     s: String,
@@ -27,10 +28,12 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
-    d: Option[Double] = None
+    d: Option[Double] = None,
+    absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithoutD2 (
-    a: String
+    a: Seq[String],
+    absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithD2 (
     s: String,
