@@ -105,11 +105,10 @@ components:
     SubtypeWithoutD2:
       type: object
       required:
-        - l
+        - a
       properties:
-        l:
-          type: integer
-          format: int64
+        a:
+          type: string
     SubtypeWithoutD3:
       type: object
       required:

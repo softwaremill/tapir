@@ -18,7 +18,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     val route = TapirGeneratedEndpoints.putAdtTest.serverLogic[Future]({
       case foo: SubtypeWithoutD1 =>
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
-      case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.l + 9L))
+      case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a + "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.d))
     })
@@ -50,12 +50,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody = SubtypeWithoutD2(9000L)
+      val reqBody = SubtypeWithoutD2("another string")
       val reqJsonBody = writeToString(reqBody)
-      val respBody = SubtypeWithoutD2(9009L)
+      val respBody = SubtypeWithoutD2("another string+SubtypeWithoutD2")
       val respJsonBody = writeToString(respBody)
-      reqJsonBody shouldEqual """{"l":9000}"""
-      respJsonBody shouldEqual """{"l":9009}"""
+      reqJsonBody shouldEqual """{"a":"another string"}"""
+      respJsonBody shouldEqual """{"a":"another string+SubtypeWithoutD2"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")

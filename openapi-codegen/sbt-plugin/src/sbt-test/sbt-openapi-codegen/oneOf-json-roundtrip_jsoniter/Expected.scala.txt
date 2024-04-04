@@ -30,7 +30,7 @@ object TapirGeneratedEndpoints {
     d: Option[Double] = None
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithoutD2 (
-    l: Long
+    a: String
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithD2 (
     s: String,
