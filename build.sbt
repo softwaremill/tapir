@@ -1028,8 +1028,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.2.0",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.2.0",
+      "io.prometheus" % "prometheus-metrics-core" % "1.2.1",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.2.1",
       scalaTest.value % Test
     )
   )
