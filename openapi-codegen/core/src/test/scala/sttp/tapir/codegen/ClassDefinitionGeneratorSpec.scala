@@ -490,7 +490,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       res shouldCompile ()
       fullRes shouldCompile ()
       extra.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
       )
     }
     testOK(TestHelpers.oneOfDocsWithMapping)
