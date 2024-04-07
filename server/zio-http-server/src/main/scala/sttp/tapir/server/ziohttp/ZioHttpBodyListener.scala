@@ -1,7 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import sttp.tapir.server.interpreter.BodyListener
-import zio.{RIO, ZIO}
+import zio.{Cause, RIO, ZIO}
 import zio.stream.ZStream
 
 import scala.util.{Failure, Success, Try}
@@ -11,19 +11,18 @@ private[ziohttp] class ZioHttpBodyListener[R] extends BodyListener[RIO[R, *], Zi
     ZIO
       .environmentWithZIO[R]
       .apply { r =>
+        def succeed = cb(Success(())).provideEnvironment(r)
+        def failed(cause: Cause[Throwable]) = cb(Failure(cause.squash)).orDie.provideEnvironment(r)
+
         body match {
           case Right(ZioStreamHttpResponseBody(stream, contentLength)) =>
             ZIO.right(
               ZioStreamHttpResponseBody(
-                stream.onError(cause => cb(Failure(cause.squash)).orDie.provideEnvironment(r)) ++ ZStream
-                  .fromZIO(cb(Success(())))
-                  .provideEnvironment(r)
-                  .drain,
+                stream.onError(failed) ++ ZStream.fromZIO(succeed).drain,
                 contentLength
               )
             )
-          case raw @ Right(_: ZioRawHttpResponseBody) => cb(Success(())).provideEnvironment(r).map(_ => raw)
-          case ws @ Left(_)                           => cb(Success(())).provideEnvironment(r).map(_ => ws)
+          case rawOrWs => succeed.as(rawOrWs)
         }
       }
 }

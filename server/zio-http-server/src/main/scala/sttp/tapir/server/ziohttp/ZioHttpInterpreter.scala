@@ -88,7 +88,7 @@ trait ZioHttpInterpreter[R] {
       resp: ServerResponse[ZioResponseBody],
       body: Option[ZioHttpResponseBody]
   ): UIO[Response] = {
-    val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
+    val baseHeaders = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList
     val allHeaders = body.flatMap(_.contentLength) match {
       case Some(contentLength) if resp.contentLength.isEmpty => ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
       case _                                                 => baseHeaders
@@ -97,20 +97,21 @@ trait ZioHttpInterpreter[R] {
 
     ZIO.succeed(
       Response(
-        status = Status.fromInt(statusCode).getOrElse(Status.Custom(statusCode)),
+        status = Status.fromInt(statusCode),
         headers = ZioHttpHeaders(allHeaders),
         body = body
           .map {
-            case ZioStreamHttpResponseBody(stream, _) => Body.fromStream(stream)
-            case ZioRawHttpResponseBody(chunk, _)     => Body.fromChunk(chunk)
+            case ZioStreamHttpResponseBody(stream, Some(contentLength)) => Body.fromStream(stream, contentLength)
+            case ZioStreamHttpResponseBody(stream, None)                => Body.fromStreamChunked(stream)
+            case ZioRawHttpResponseBody(chunk, _)                       => Body.fromChunk(chunk)
           }
           .getOrElse(Body.empty)
       )
     )
   }
 
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): List[ZioHttpHeader] =
-    List(ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", ")))
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
+    ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", "))
 }
 
 object ZioHttpInterpreter {
