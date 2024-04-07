@@ -9,7 +9,7 @@ In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (whic
 To use pickler, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.3"
+"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.4"
 ```
 
 Please note that it is available only for Scala 3 and Scala.JS 3.
