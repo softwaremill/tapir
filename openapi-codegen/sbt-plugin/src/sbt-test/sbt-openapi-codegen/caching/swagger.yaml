@@ -17,12 +17,14 @@ paths:
         required: true
         schema:
           type: integer
+          format: int32
       - name: limit
         in: query
         description: Maximum number of books to retrieve
         required: true
         schema:
           type: integer
+          format: int32
       - name: X-Auth-Token
         in: header
         required: true
@@ -37,7 +39,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Book'
-        default:
+        '400':
           description: ''
           content:
             text/plain:
@@ -46,6 +48,7 @@ paths:
 components:
   schemas:
     Book:
+      title: Book
       required:
       - title
       type: object

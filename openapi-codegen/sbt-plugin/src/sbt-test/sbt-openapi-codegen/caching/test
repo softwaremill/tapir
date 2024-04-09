@@ -1,6 +1,6 @@
 > clean
 > run
 > check
-$ copy-file target/scala-2.12/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala target/TapirGeneratedEndpoints.scala
+$ copy-file target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala target/TapirGeneratedEndpoints.scala
 > compile
-$ newer target/TapirGeneratedEndpoints.scala target/scala-2.12/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala
+$ newer target/TapirGeneratedEndpoints.scala target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala

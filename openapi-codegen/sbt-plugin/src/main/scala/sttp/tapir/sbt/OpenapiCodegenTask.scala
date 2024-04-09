@@ -33,7 +33,7 @@ case class OpenapiCodegenTask(
   }
 
   def cachedCopyFile(tempFile: File, outFile: File) =
-    inputChanged(cacheDir / "sbt-openapi-codegen-inputs") { (inChanged, _: HashFileInfo) =>
+    inputChanged(cacheDir / s"sbt-openapi-codegen-inputs-${tempFile.getName}") { (inChanged, _: HashFileInfo) =>
       if (inChanged || !outFile.exists) {
         IO.copyFile(tempFile, outFile, preserveLastModified = true)
       }

@@ -22,7 +22,7 @@ object Main extends App {
   import sttp.apispec.openapi.circe.yaml._
   import sttp.tapir.docs.openapi._
 
-  val docs = MyExampleEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
+  val docs = OpenAPIDocsInterpreter().toOpenAPI(MyExampleEndpoints.generatedEndpoints, "My Bookshop", "1.0")
 
   import java.nio.file.{Paths, Files}
   import java.nio.charset.StandardCharsets
