@@ -1456,9 +1456,12 @@ lazy val nettyServerLoom: ProjectMatrix =
     .settings(
       name := "tapir-netty-server-loom",
       // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false
+      useCoursier := false,
+      libraryDependencies ++= Seq(
+         "com.softwaremill.ox" %% "core" % Versions.ox
+      )
     )
-    .jvmPlatform(scalaVersions = scala2_13And3Versions)
+    .jvmPlatform(scalaVersions = List(scala3))
     .dependsOn(nettyServer, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
