@@ -257,7 +257,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           response2.body shouldBe Right("echo: testOk")
         }
     }
-  ) //++ autoPingTests ++ handlePongTests
+  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests
 
   val autoPingTests =
     if (autoPing)
