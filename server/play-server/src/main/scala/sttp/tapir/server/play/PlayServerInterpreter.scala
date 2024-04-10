@@ -61,10 +61,8 @@ trait PlayServerInterpreter {
 
       override def apply(header: RequestHeader): Handler =
         if (isWebSocket(header)) {
-          // For some reason the RequestHeader returned by acceptOrResult will gives a different path when redirect to tapir route from routes file.
-          // Which cause problem bcs we using the original one in isDefined, so ignore it.
-          WebSocket.acceptOrResult { _ =>
-            getResponse(header, header.withBody(Source.empty))
+          WebSocket.acceptOrResult { request =>
+            getResponse(header, request.withBody(Source.empty))
           }
         } else
           playServerOptions.defaultActionBuilder.async(streamParser) { request =>
