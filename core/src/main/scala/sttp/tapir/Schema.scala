@@ -298,6 +298,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
   implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
   implicit val schemaForUri: Schema[Uri] = Schema(SString())
+    .encodedExample(Uri("https", "example.com"))
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
