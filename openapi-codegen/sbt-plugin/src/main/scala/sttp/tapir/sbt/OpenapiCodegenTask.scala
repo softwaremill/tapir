@@ -12,6 +12,7 @@ case class OpenapiCodegenTask(
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
     validateNonDiscriminatedOneOfs: Boolean,
+    maxSchemasPerFile: Int,
     dir: File,
     cacheDir: File,
     targetScala3: Boolean
@@ -53,7 +54,8 @@ case class OpenapiCodegenTask(
           targetScala3,
           useHeadTagForObjectName,
           jsonSerdeLib,
-          validateNonDiscriminatedOneOfs
+          validateNonDiscriminatedOneOfs,
+          maxSchemasPerFile
         )
         .map { case (objectName, fileBody) =>
           val file = directory / s"$objectName.scala"
