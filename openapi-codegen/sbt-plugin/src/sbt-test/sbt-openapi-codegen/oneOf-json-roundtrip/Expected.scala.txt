@@ -1,0 +1,61 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpoints {
+
+  import sttp.tapir._
+  import sttp.tapir.model._
+  import sttp.tapir.generic.auto._
+  import sttp.tapir.json.circe._
+  import io.circe.generic.semiauto._
+  
+  import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
+
+  sealed trait ADTWithoutDiscriminator
+  sealed trait ADTWithDiscriminator
+  sealed trait ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD1 (
+    s: String,
+    i: Option[Int] = None,
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD3 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None,
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+
+
+
+  lazy val putAdtTest =
+    endpoint
+      .put
+      .in(("adt" / "test"))
+      .in(jsonBody[ADTWithoutDiscriminator])
+      .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
+  
+  lazy val postAdtTest =
+    endpoint
+      .post
+      .in(("adt" / "test"))
+      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
+  
+  
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
+
+}

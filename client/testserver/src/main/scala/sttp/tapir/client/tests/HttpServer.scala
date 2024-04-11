@@ -12,7 +12,8 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
-import org.http4s.{multipart, _}
+import org.http4s._
+import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
 import sttp.tapir.client.tests.HttpServer._
@@ -30,7 +31,7 @@ object HttpServer {
 
 class HttpServer(port: Port) {
 
-  private val logger = org.log4s.getLogger
+  private val logger = LoggerFactory.getLogger(getClass)
 
   private var stopServer: IO[Unit] = _
 

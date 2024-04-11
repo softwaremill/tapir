@@ -13,5 +13,5 @@ scripted
 cd sbt/sbt-openapi-codegen/src/sbt-test/sbt-openapi-codegen/minimal/
 sbt -Dplugin.version=0.1-SNAPSHOT run
 cat target/swagger.yaml
-cat target/scala-2.12/classes/sttp/tapir/generated/TapirGeneratedEndpoints.scala
+cat target/scala-2.13/classes/sttp/tapir/generated/TapirGeneratedEndpoints.scala
 ```
