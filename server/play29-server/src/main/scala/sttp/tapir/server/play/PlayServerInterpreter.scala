@@ -61,8 +61,8 @@ trait PlayServerInterpreter {
 
       override def apply(header: RequestHeader): Handler =
         if (isWebSocket(header))
-          WebSocket.acceptOrResult { header =>
-            getResponse(header, header.withBody(Source.empty))
+          WebSocket.acceptOrResult { request =>
+            getResponse(header, request.withBody(Source.empty))
           }
         else
           playServerOptions.defaultActionBuilder.async(streamParser) { request =>

@@ -60,11 +60,11 @@ trait PlayServerInterpreter {
       }
 
       override def apply(header: RequestHeader): Handler =
-        if (isWebSocket(header))
-          WebSocket.acceptOrResult { header =>
-            getResponse(header, header.withBody(Source.empty))
+        if (isWebSocket(header)) {
+          WebSocket.acceptOrResult { request =>
+            getResponse(header, request.withBody(Source.empty))
           }
-        else
+        } else
           playServerOptions.defaultActionBuilder.async(streamParser) { request =>
             getResponse(header, request).flatMap {
               case Left(result) => Future.successful(result)
